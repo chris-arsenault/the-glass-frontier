@@ -20,6 +20,10 @@ while true; do
       COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. For this cycle do not complete TODOs or feature development work. For this session only focus on archtiectual rsearch and technincal debt. identify one system/component that needs research in order to come up with an implementation and do that research. identify one area of the code base that requires standardization (e.g. in the case of a new system or format) and update all occurrences in the codebase."
   fi
 
+  if (( sessionNum < 31 )); then
+    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are in the narrative phase of this project. Analyze NARRATIVE.md and follow the instructions in it in addition to AGENTS.md"
+  fi
+
   if (( sessionNum < 21 )); then
     COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are in the design phase of this project. Analyze DESIGN.md and follow the instructions in it in addition to AGENTS.md"
   fi
