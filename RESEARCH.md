@@ -4,7 +4,16 @@
 
 Guide autonomous Sessions 1–10 through **market and contextual research** for *The Glass Frontier* while remaining fully aligned with the operating loop in `AGENTS.md`. Each session must leave a clear MCP trail (handoff, backlog updates, cached findings) that downstream phases can query without ambiguity.
 
-Use `REQUIREMENTS.md` as the reference point for user-defined goals so research directly informs the baseline features and technical constraints expected in later phases.
+Use `REQUIREMENTS.md` as the reference point for user-defined goals so research directly informs the baseline features and technical constraints expected in later phases, with special attention to the design intent shift toward freeform storytelling and the associated negative requirements.
+
+## Design Intent Shift Research Targets
+
+- Prioritize studies of cooperative GM-style narrative systems that enable open-ended player intent and variable scene duration.
+- Document best practices for feeding a continuously updated shared world without constraining narrative freedom; treat world consistency as secondary to creative expression unless safety or anti power-creep issues arise.
+- Investigate lightweight conflict deconfliction models as rare interventions rather than core loops.
+- Capture evidence that text-action parsers or rigid verb gating harms the desired experience outside MUD hubs; ensure MUD research isolates hub-specific constraints.
+- Audit approaches for enforcing prohibited capabilities and preventing reality-breaking powers from entering canon.
+- Compare self-hosted search/indexing stacks suitable for bootstrap phases and explicitly exclude managed services like Elasticsearch from recommendations.
 
 ## MCP-Integrated Session Workflow
 

@@ -5,7 +5,7 @@
 sessionNum=$(cat .session || echo 1)
 
 while true; do
-  branch="session-${sessionNum}-codex"
+  branch="v2-s${sessionNum}"
   echo "=== Starting ${branch} ==="
 
   # Create and switch to new branch

@@ -4,7 +4,16 @@
 
 Sessions 11–20 translate the research corpus and `REQUIREMENTS.md` into actionable system design for *The Glass Frontier*. The design cycle must strictly follow the operating loop in `AGENTS.md`, with every insight reflected in the MCP backlog, handoffs, and architecture registry.
 
-Always ground design choices in the baseline feature and technical commitments captured in `REQUIREMENTS.md`.
+Always ground design choices in the baseline feature and technical commitments captured in `REQUIREMENTS.md`, with the design intent shift emphasizing freeform storytelling and narrative-first flexibility.
+
+## Design Intent Shift Integration
+
+- Architect systems so solo sessions feel like cooperative GM-style freeform storytelling; mechanics must accommodate scene lengths ranging from minutes to months without enforcing rigid turn pacing.
+- Treat the continuously updated shared world as a downstream consumer of player narratives—protect consistency, but let narrative freedom lead unless safety, moderation, or anti power-creep rules demand intervention.
+- Keep conflict/crisis resolution tooling lightweight and rare; model it as an escalation path only when world edits materially clash.
+- Reject text parser-style verb menus outside of MUD hubs. Everywhere else, design interfaces and resolution mechanics that accept open-ended natural language intent.
+- Enforce the Prohibited Capabilities List through system design to prevent reality-breaking superpowers from entering canon.
+- Prefer self-hosted search/indexing options during bootstrap; explicitly rule out managed stacks such as Elasticsearch in proposed architectures.
 
 ## MCP-Integrated Session Workflow
 

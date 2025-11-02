@@ -4,7 +4,15 @@
 
 Sessions 21–30 deliver the **worldbuilding and narrative foundation** for *The Glass Frontier*. Follow the operating loop in `AGENTS.md` while producing the Day‑0 world state: cosmology, history, geography, factions, technology, settlements, anomalies, and the consolidated world bible. Narrative work must leave an auditable trail across the MCP backlog, handoff ledger, and narrative knowledge stores.
 
-Ground narrative decisions in the baseline expectations defined in `REQUIREMENTS.md` so major factions, themes, and systems evolve consistently with user-provided requirements.
+Ground narrative decisions in the baseline expectations defined in `REQUIREMENTS.md` so major factions, themes, and systems evolve consistently with user-provided requirements, especially the design intent shift favoring freeform storytelling and its negative requirements.
+
+## Design Intent Shift Narrative Focus
+
+- Craft solo session materials that feel like cooperative GM-led freeform storytelling; embrace scene pacing that can stretch from moments to months.
+- Let the continuously updated shared world reflect narrative outcomes without hamstringing creative inputs—only constrain when safety, moderation, or anti power-creep policy applies.
+- Treat conflict-resolution or crisis workflows as last-resort tools when narrative deltas truly collide; avoid centering them in core story beats.
+- Keep open-ended natural language inputs available across narrative systems; only enforce strict verbs inside designated MUD hubs.
+- Reinforce the Prohibited Capabilities List in every lore decision to prevent reality-breaking superpowers from entering canon.
 
 ## MCP-Integrated Session Workflow
 

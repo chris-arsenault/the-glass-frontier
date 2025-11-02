@@ -72,6 +72,14 @@ Medium-complexity 2D action-adventure built with vanilla JavaScript and Canvas. 
 
 Always consult `REQUIREMENTS.md` for the authoritative list of user-provided requirements that guide these systems; treat that document as the baseline scope for research, design, narrative, and implementation decisions.
 
+### Design Intent Shift Alignment
+- Center every decision on cooperative GM-style **freeform storytelling** during solo sessions; narrative breadth outweighs mechanical parsing, and story beats may span minutes to months.
+- Treat the continuously updated shared world as secondary; maintain world consistency without constraining player creativity unless safety or anti-power-creep rules are at risk, and let narrative freedom take precedence when trade-offs arise.
+- Restrict conflict-resolution workflows to exceptional cases when world edits are materially incompatible.
+- Reject text-action parsers or rigid verb lists outside of MUD hubs; keep creative inputs open-ended elsewhere.
+- Uphold the Prohibited Capabilities List—no reality-breaking or open-ended superpowers.
+- Favor self-hosted search solutions; do not introduce managed stacks such as Elasticsearch during bootstrap.
+
 ### Technology Stack
 - **Engine:** Vanilla JavaScript (ES6+) / React
 - **Rendering:** HTML5 Canvas API
