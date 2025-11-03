@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant PlayerA as Player A
+    participant PlayerB as Player B / Rival
+    participant NarrativeEngine as Narrative Engine (LangGraph)
+    participant ContestCoordinator as Contest Coordinator
+    participant Temporal as Temporal Check Runner
+    participant CompQueue as Shared Complication Queue
+    participant NarrativeWeaver as Narrative Weaver
+    participant WebUI as Web UI Shell
+    participant Admin as Admin Console
+
+    PlayerA->>NarrativeEngine: Utterance + context (intent A)
+    PlayerB->>NarrativeEngine: Utterance + context (intent B)
+    NarrativeEngine->>NarrativeEngine: Detect collision hints (target, stakes, timing)
+    NarrativeEngine->>ContestCoordinator: intent.checkRequest (A, collisionHints)
+    NarrativeEngine->>ContestCoordinator: intent.checkRequest (B, collisionHints)
+    ContestCoordinator->>ContestCoordinator: Wait 8s/2 turns for matching hints
+    ContestCoordinator->>ContestCoordinator: Create contestId + contestSeed
+    ContestCoordinator->>Temporal: contest.bundle (A,B metadata, shared seeds)
+
+    loop For each participant
+        Temporal->>Temporal: Spawn contest.check child workflow
+        Temporal->>Temporal: Derive dice seed hash(contestSeed + participantId)
+        Temporal->>Temporal: Resolve roll + modifiers
+        Temporal-->>ContestCoordinator: contest.checkResult (tier, total, complications)
+    end
+
+    ContestCoordinator->>ContestCoordinator: Rank results (tier > total > momentum > stat)
+    ContestCoordinator->>CompQueue: Upsert shared complications
+    ContestCoordinator->>NarrativeWeaver: contest.resolution (ordered outcomes + queue refs)
+    ContestCoordinator->>Admin: telemetry.contest.start/resolved (auditRef)
+
+    NarrativeWeaver->>WebUI: Contested turn packet (per participant outcomes, complications)
+    NarrativeWeaver->>Admin: contest.override hooks + safety flags
+    WebUI->>PlayerA: Display contested badge + breakdown
+    WebUI->>PlayerB: Display contested badge + breakdown
+
+    Admin-->>NarrativeWeaver: moderation.decision (optional override)
+    NarrativeWeaver-->>WebUI: Updated contest narration (if override triggered)

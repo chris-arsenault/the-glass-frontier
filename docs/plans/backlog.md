@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 12 (design phase).
+Last updated for Session 14 (design phase).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -19,6 +19,6 @@ Last updated for Session 12 (design phase).
 | DES-CORE: Foundational Design | DES-13: Narrative Rules Framework & LLM Hand-Off | done | P1 | phase:design, cycle:2, discipline:systems, discipline:rules | Spec in `docs/design/DES-13-rules-framework.md`, diagram `docs/design/diagrams/DES-13-rules-flow.mmd`, architecture decision `80b1e54f-5052-4d77-a3ca-ca73dd99c08a`, pattern `momentum-driven-success-ladder`; follow-ups logged as DES-EDGE-01, DES-PVP-01, DES-MOD-01. |
 | DES-CORE: Foundational Design | IMP-AXE-01: Accessibility Automation Pipeline | todo | P1 | phase:implementation, discipline:qa, discipline:accessibility, automation | Backlog entry to implement `npm run test:accessibility` harness with axe-core + Playwright per DES-12 follow-up; depends on DES-12. |
 | DES-CORE: Foundational Design | DES-BENCH-01: Temporal Throughput Benchmarking | todo | P2 | phase:design, discipline:systems, discipline:performance, cycle:2 | Spike to validate Temporal latency budgets and telemetry retention planning; depends on DES-11 and DES-12 artefacts. |
-| DES-CORE: Foundational Design | DES-EDGE-01: Contested Move Resolution Playbook | todo | P2 | phase:design, discipline:rules, cycle:2 | Future design task to detail contested move mechanics building on DES-13 outputs. |
+| DES-CORE: Foundational Design | DES-EDGE-01: Contested Move Resolution Playbook | done | P2 | phase:design, discipline:rules, cycle:2 | Spec in `docs/design/DES-EDGE-01-contested-move-playbook.md`, diagram `docs/design/diagrams/DES-EDGE-01-contested-move-flow.mmd`, architecture decision `bd99f3ee-44c6-4b38-b5ab-d1258c5b42bc`; follow-ups tracked in DES-PVP-01, DES-BENCH-01, DES-MOD-01. |
 | DES-CORE: Foundational Design | DES-PVP-01: Hub PvP Resolution Schema | todo | P3 | phase:design, discipline:systems, discipline:rules, cycle:2 | Backlog for hub PvP design leveraging DES-13 taxonomy and DES-EDGE-01 contested move playbook. |
 | DES-CORE: Foundational Design | DES-MOD-01: Moderation Override UX | todo | P2 | phase:design, discipline:ux, discipline:moderation, cycle:2 | Upcoming work to define admin override flows for automated check results aligned with DES-13 safety hooks. |
