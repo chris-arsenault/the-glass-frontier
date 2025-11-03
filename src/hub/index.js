@@ -14,6 +14,9 @@ const { HubNarrativeBridge } = require("./narrative/hubNarrativeBridge");
 const { HubVerbRepository } = require("./verbs/hubVerbRepository");
 const { HubVerbCatalogStore } = require("./verbs/hubVerbCatalogStore");
 const { HubVerbService } = require("./verbs/hubVerbService");
+const { HubOrchestrator } = require("./orchestrator/hubOrchestrator");
+const { InMemoryRoomStateStore } = require("./state/inMemoryRoomStateStore");
+const { RedisRoomStateStore } = require("./state/redisRoomStateStore");
 
 module.exports = {
   createHubApplication,
@@ -29,5 +32,8 @@ module.exports = {
   HubNarrativeBridge,
   HubVerbRepository,
   HubVerbCatalogStore,
-  HubVerbService
+  HubVerbService,
+  HubOrchestrator,
+  InMemoryRoomStateStore,
+  RedisRoomStateStore
 };

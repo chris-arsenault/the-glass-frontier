@@ -44,6 +44,55 @@ class HubTelemetry {
   recordCatalogBroadcastFailed({ hubId, connectionId, error }) {
     this.emit("telemetry.hub.catalogBroadcastFailed", { hubId, connectionId, error });
   }
+
+  recordStateUpdated({ hubId, roomId, version, verbId, actorId }) {
+    this.emit("telemetry.hub.stateUpdated", {
+      hubId,
+      roomId,
+      version,
+      verbId,
+      actorId
+    });
+  }
+
+  recordStateBroadcastFailed({ hubId, roomId, connectionId, error }) {
+    this.emit("telemetry.hub.stateBroadcastFailed", {
+      hubId,
+      roomId,
+      connectionId,
+      error
+    });
+  }
+
+  recordWorkflowStarted({ hubId, roomId, actorId, verbId, workflowId, runId }) {
+    this.emit("telemetry.hub.workflowStarted", {
+      hubId,
+      roomId,
+      actorId,
+      verbId,
+      workflowId,
+      runId
+    });
+  }
+
+  recordWorkflowFailed({ hubId, roomId, actorId, verbId, error }) {
+    this.emit("telemetry.hub.workflowFailed", {
+      hubId,
+      roomId,
+      actorId,
+      verbId,
+      error
+    });
+  }
+
+  recordStateSnapshotSent({ hubId, roomId, connectionId, version }) {
+    this.emit("telemetry.hub.stateSnapshotSent", {
+      hubId,
+      roomId,
+      connectionId,
+      version
+    });
+  }
 }
 
 module.exports = {

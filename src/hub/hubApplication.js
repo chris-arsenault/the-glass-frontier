@@ -7,6 +7,7 @@ const { CommandParser } = require("./commandParser");
 const { HubGateway } = require("./hubGateway");
 const { InMemoryPresenceStore } = require("./presence/inMemoryPresenceStore");
 const { InMemoryActionLogRepository } = require("./actionLog/inMemoryActionLogRepository");
+const { InMemoryRoomStateStore } = require("./state/inMemoryRoomStateStore");
 const { HubTelemetry } = require("./telemetry/hubTelemetry");
 const { HubNarrativeBridge } = require("./narrative/hubNarrativeBridge");
 const { HubVerbCatalogStore } = require("./verbs/hubVerbCatalogStore");
@@ -45,6 +46,7 @@ function createHubApplication({
   verbRepository = null,
   verbCatalogStore = null,
   presenceStore = new InMemoryPresenceStore(),
+  roomStateStore = new InMemoryRoomStateStore(),
   actionLogRepository = new InMemoryActionLogRepository(),
   telemetryEmitter = null,
   narrativeEngine = null,
@@ -106,6 +108,7 @@ function createHubApplication({
     rateLimiter,
     commandParser,
     presenceStore,
+    roomStateStore,
     actionLogRepository,
     telemetry,
     narrativeBridge,

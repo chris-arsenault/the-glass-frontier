@@ -33,6 +33,7 @@ class HubGateway {
     this.clock = clock;
     this.replayLimit = replayLimit;
     this.commandBus = new EventEmitter();
+    this.lifecycleBus = new EventEmitter();
     this.connections = new Map();
 
     if (this.verbCatalogStore) {
@@ -47,6 +48,68 @@ class HubGateway {
 
   removeCommandHandler(handler) {
     this.commandBus.off("command", handler);
+  }
+
+  onConnectionOpened(handler) {
+    this.lifecycleBus.on("connectionOpened", handler);
+  }
+
+  removeConnectionOpenedHandler(handler) {
+    this.lifecycleBus.off("connectionOpened", handler);
+  }
+
+  onConnectionClosed(handler) {
+    this.lifecycleBus.on("connectionClosed", handler);
+  }
+
+  removeConnectionClosedHandler(handler) {
+    this.lifecycleBus.off("connectionClosed", handler);
+  }
+
+  sendToConnection(connectionId, message) {
+    const connection = this.connections.get(connectionId);
+    if (!connection) {
+      return false;
+    }
+    const payload = typeof message === "string" ? message : JSON.stringify(message);
+    try {
+      connection.transport.send(payload);
+      return true;
+    } catch (error) {
+      if (this.telemetry && typeof this.telemetry.recordStateBroadcastFailed === "function") {
+        this.telemetry.recordStateBroadcastFailed({
+          hubId: connection.hubId,
+          roomId: connection.roomId,
+          connectionId,
+          error: error.message
+        });
+      }
+      return false;
+    }
+  }
+
+  broadcastToRoom(roomId, message, { excludeConnectionId = null } = {}) {
+    const payload = typeof message === "string" ? message : JSON.stringify(message);
+    this.connections.forEach((connection) => {
+      if (connection.roomId !== roomId || connection.connectionId === excludeConnectionId) {
+        return;
+      }
+      try {
+        connection.transport.send(payload);
+      } catch (error) {
+        if (
+          this.telemetry &&
+          typeof this.telemetry.recordStateBroadcastFailed === "function"
+        ) {
+          this.telemetry.recordStateBroadcastFailed({
+            hubId: connection.hubId,
+            roomId: connection.roomId,
+            connectionId: connection.connectionId,
+            error: error.message
+          });
+        }
+      }
+    });
   }
 
   async acceptConnection({ transport, handshake }) {
@@ -69,7 +132,8 @@ class HubGateway {
       sessionId: context.sessionId,
       actorCapabilities: context.actorCapabilities || [],
       transport,
-      metadata: context.metadata || {}
+      metadata: context.metadata || {},
+      connectedAt: this.clock && typeof this.clock.now === "function" ? this.clock.now() : Date.now()
     };
 
     this.connections.set(connectionId, connection);
@@ -121,6 +185,19 @@ class HubGateway {
         })
       );
     }
+
+    const lifecyclePayload = {
+      connectionId,
+      hubId: connection.hubId,
+      roomId: connection.roomId,
+      actorId: connection.actorId,
+      characterId: connection.characterId,
+      sessionId: connection.sessionId,
+      actorCapabilities: connection.actorCapabilities,
+      metadata: connection.metadata,
+      connectedAt: connection.connectedAt
+    };
+    this.lifecycleBus.emit("connectionOpened", lifecyclePayload);
   }
 
   async _authenticate(handshake = {}) {
@@ -305,6 +382,16 @@ class HubGateway {
         actorId: connection.actorId
       });
     }
+
+    this.lifecycleBus.emit("connectionClosed", {
+      connectionId,
+      hubId: connection.hubId,
+      roomId: connection.roomId,
+      actorId: connection.actorId,
+      characterId: connection.characterId,
+      sessionId: connection.sessionId,
+      metadata: connection.metadata
+    });
 
     this.connections.delete(connectionId);
   }
