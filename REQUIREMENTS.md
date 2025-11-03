@@ -10,7 +10,7 @@
 ## Backlog Governance
 
 * Manage high-level initiatives as MCP **features**; each feature encapsulates scope spanning multiple PBIs or sessions.
-* Before opening new PBIs, confirm the correct feature exists via `mcp__game-mcp-server__list_features` or `mcp__game-mcp-server__list_feature_backlog_items`; create or update the feature with `mcp__game-mcp-server__create_feature` / `mcp__game-mcp-server__update_feature` as needed.
+* Before opening new PBIs, confirm the correct feature exists via `mcp__game-mcp-server__list_features` (features are returned in priority order; select a new feature only after completing the current one, following that ranking) or `mcp__game-mcp-server__list_feature_backlog_items`; create or update the feature with `mcp__game-mcp-server__create_feature` / `mcp__game-mcp-server__update_feature` as needed.
 * Every PBI must be linked to its owning feature using `mcp__game-mcp-server__assign_backlog_to_feature`; backlog items without a feature are non‑compliant with the delivery process.
 
 ---

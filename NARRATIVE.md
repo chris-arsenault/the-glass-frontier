@@ -25,7 +25,7 @@ Ground narrative decisions in the baseline expectations defined in `REQUIREMENTS
    - Review existing lore and story entries through `mcp__game-mcp-server__search_narrative_elements`, `mcp__game-mcp-server__search_lore`, and `mcp__game-mcp-server__find_dialogue` to avoid duplication and ensure continuity.
 
 2. **Backlog & Feature Stewardship**
-   - Maintain the narrative feature `NAR-CORE`; confirm or create it with `mcp__game-mcp-server__list_features` / `mcp__game-mcp-server__create_feature`, and keep scope current via `mcp__game-mcp-server__update_feature`.
+   - Maintain the narrative feature `NAR-CORE`; confirm or create it with `mcp__game-mcp-server__list_features` (features are returned in priority order—only choose a new focus after finishing the current feature, following that ranking) / `mcp__game-mcp-server__create_feature`, and keep scope current via `mcp__game-mcp-server__update_feature`.
    - Track child stories `NAR-21` … `NAR-30`, tagged `phase:narrative`, `cycle:[#]`, `discipline:lore/narrative`. Use `mcp__game-mcp-server__assign_backlog_to_feature` to ensure each story is linked to `NAR-CORE`.
    - At session start, move the relevant backlog item to `in-progress` with `mcp__game-mcp-server__update_backlog_item`, aligning acceptance criteria with the Session Grid focus areas.
    - Record interim notes, checklists, and external references directly on the backlog item so downstream agents inherit context.
