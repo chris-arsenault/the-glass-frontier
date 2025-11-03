@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    participant Player
+    participant WebUI as Web UI
+    participant LangGraph as Narrative Engine (LangGraph)
+    participant Router as Rules Router Node
+    participant Safety as Safety Filter
+    participant Temporal as Temporal Check Workflow
+    participant Moderator as Moderation Console
+    participant UIEvent as Event Stream
+
+    Player->>WebUI: Freeform intent + context
+    WebUI->>LangGraph: `player.intent` with session snapshot
+    LangGraph->>Router: Parse move, momentum, stakes
+    Router->>Safety: Evaluate prohibited capabilities / content policy
+    alt Safety veto
+        Safety-->>Router: `checkVetoed(reason)`
+        Router-->>LangGraph: Emit `event.checkVetoed`
+        LangGraph->>UIEvent: `admin.alert` + narrative apology
+        LangGraph->>WebUI: Narrate soft fail tagged `safety`
+    else Safety clear
+        Router->>Router: Build `rulesContextPrompt`, difficulty, modifiers
+        Router->>Temporal: Publish `intent.checkRequest`
+        Temporal->>Temporal: Resolve dice, apply modifiers
+        Temporal-->>Router: `event.checkResolved` with tier & rationale
+        Router-->>LangGraph: Forward result & momentum delta
+        LangGraph->>UIEvent: `session.message` + `check.result`
+        LangGraph->>UIEvent: Update `session.marker` if momentum threshold crossed
+        UIEvent->>WebUI: Stream overlay updates, badges, tooltips
+        alt Hard miss or safety flag
+            UIEvent->>Moderator: `admin.alert` with `auditRef`
+            Moderator-->>LangGraph: Optional `moderation.decision` override
+            LangGraph->>UIEvent: Revised narration / annotations
+        end
+    end
