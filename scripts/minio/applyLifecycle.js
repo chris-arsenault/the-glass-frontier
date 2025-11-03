@@ -572,5 +572,12 @@ if (require.main === module) {
 }
 
 module.exports = {
-  main
+  main,
+  runRemoteTierRehearsal,
+  evaluateLifecycleDrift,
+  resolveRemoteTierName,
+  resolveBoolean,
+  resolveNumber,
+  resolveStorageClass,
+  buildRehearsalBucketList
 };

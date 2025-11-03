@@ -67,4 +67,4 @@ All buckets retain object versions; delete markers are preserved until manual cl
 ## Open Follow-Ups
 - Terraform integration for MinIO remote tier bootstrap (separate IaC backlog).
 - Extend AttachmentPlanner to swap in real MinIO client once platform storage landing zone is live (ties into IMP-OFFLINE items).
-- Add automated test harness that mocks MinIO lifecycle endpoints (future QA work).
+- Automated test harness covering MinIO lifecycle + remote tier rehearsal lives in `__tests__/unit/platform/minioLifecycle.test.js`; expand with new policy fixtures as additional buckets come online.
