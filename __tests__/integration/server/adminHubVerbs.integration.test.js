@@ -52,6 +52,11 @@ function createAppWithService() {
   const narrativeEngine = {
     async handlePlayerMessage() {
       return { narrativeEvent: null, checkRequest: null };
+    },
+    sessionMemory: {
+      getMomentumState() {
+        return { current: 0, floor: -2, ceiling: 3 };
+      }
     }
   };
 

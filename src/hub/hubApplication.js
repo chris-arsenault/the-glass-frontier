@@ -87,7 +87,7 @@ function createHubApplication({
 
   const telemetry = new HubTelemetry({ emitter: telemetryEmitter });
   const narrativeBridge = narrativeEngine
-    ? new HubNarrativeBridge({ narrativeEngine })
+    ? new HubNarrativeBridge({ narrativeEngine, stateStore: roomStateStore, clock })
     : null;
 
   const gateway = new HubGateway({

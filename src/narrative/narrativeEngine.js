@@ -91,6 +91,15 @@ class NarrativeEngine {
       }
     });
 
+    if (metadata?.topic === "intent.hubNarration" && graphContext.checkRequest) {
+      await this.tools.escalateModeration(sessionId, {
+        auditRef: graphContext.checkRequest.auditRef,
+        severity: "medium",
+        flags: ["hub-contested-action"],
+        reason: "hub_contested_action"
+      });
+    }
+
     if (graphContext.safety?.escalate) {
       await this.tools.escalateModeration(sessionId, {
         auditRef: graphContext.safety.auditRef,

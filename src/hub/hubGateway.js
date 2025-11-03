@@ -1,6 +1,7 @@
 "use strict";
 
 const EventEmitter = require("events");
+const { v4: uuid } = require("uuid");
 const { HubAuthenticationError, HubValidationError } = require("./commandErrors");
 const { SseTransport } = require("./transport/sseTransport");
 
@@ -278,6 +279,35 @@ class HubGateway {
         { verbCatalog: catalogOverride }
       );
 
+      const safetyFlagSet = new Set();
+      (Array.isArray(parsed.verb.safetyTags) ? parsed.verb.safetyTags : []).forEach((tag) =>
+        safetyFlagSet.add(`tag:${tag}`)
+      );
+      (Array.isArray(payload.metadata?.safetyFlags) ? payload.metadata.safetyFlags : []).forEach((flag) =>
+        safetyFlagSet.add(flag)
+      );
+      (Array.isArray(parsed.metadata?.safetyFlags) ? parsed.metadata.safetyFlags : []).forEach((flag) =>
+        safetyFlagSet.add(flag)
+      );
+
+      const capabilityRefs = Array.isArray(parsed.verb.capabilities)
+        ? parsed.verb.capabilities.map((ref) => ({ ...ref }))
+        : [];
+
+      const commandMetadata = {
+        ...parsed.metadata,
+        capabilityRefs,
+        safetyFlags: Array.from(safetyFlagSet),
+        momentumCost: parsed.verb?.momentum || null,
+        narrativeTemplate: parsed.verb?.narrative?.narrationTemplate || null
+      };
+
+      if (!commandMetadata.auditRef) {
+        commandMetadata.auditRef = `hub-command:${uuid()}`;
+      }
+
+      parsed.metadata = commandMetadata;
+
       const entry = {
         hubId: parsed.hubId,
         roomId: parsed.roomId,
@@ -285,10 +315,14 @@ class HubGateway {
         command: {
           verbId: parsed.verb.verbId,
           args: parsed.args,
-          metadata: parsed.metadata
+          metadata: commandMetadata
         },
         narrativeEscalation: parsed.requiresNarrative ? parsed.verb.narrative : null,
-        metadata: parsed.metadata
+        metadata: commandMetadata,
+        safety: {
+          tags: Array.isArray(parsed.verb.safetyTags) ? [...parsed.verb.safetyTags] : [],
+          capabilityRefs
+        }
       };
 
       if (this.actionLogRepository) {
@@ -319,13 +353,63 @@ class HubGateway {
           });
         }
         const result = await this.narrativeBridge.escalate(parsed);
+
+        commandMetadata.auditRef = result.auditRef;
+        commandMetadata.hubContext = result.hubContext || null;
+        entry.command.metadata = commandMetadata;
+        entry.metadata = commandMetadata;
+        entry.narrative = {
+          auditRef: result.auditRef,
+          safety: result.safety || null,
+          checkRequestId: result.checkRequest?.id || null
+        };
+
+        if (this.telemetry) {
+          this.telemetry.recordNarrativeDelivered({
+            hubId: parsed.hubId,
+            roomId: parsed.roomId,
+            actorId: parsed.actorId,
+            verbId: parsed.verb.verbId,
+            auditRef: result.auditRef,
+            contested: Boolean(result.checkRequest),
+            safetyEscalated: Boolean(result.safety?.escalate)
+          });
+
+          if (result.checkRequest) {
+            this.telemetry.recordContestedAction({
+              hubId: parsed.hubId,
+              roomId: parsed.roomId,
+              actorId: parsed.actorId,
+              verbId: parsed.verb.verbId,
+              auditRef: result.auditRef,
+              checkId: result.checkRequest.id || null
+            });
+          }
+
+          if (result.safety?.escalate) {
+            this.telemetry.recordSafetyEscalated({
+              hubId: parsed.hubId,
+              roomId: parsed.roomId,
+              actorId: parsed.actorId,
+              verbId: parsed.verb.verbId,
+              auditRef: result.safety.auditRef || result.auditRef,
+              severity: result.safety.severity || "high",
+              flags: result.safety.flags || []
+            });
+          }
+        }
         connection.transport.send(
           JSON.stringify({
             type: "hub.narrative.update",
             payload: {
               verbId: parsed.verb.verbId,
               narrativeEvent: result?.narrativeEvent || null,
-              checkRequest: result?.checkRequest || null
+              checkRequest: result?.checkRequest || null,
+              safety: result?.safety || null,
+              auditTrail: result?.auditTrail || [],
+              promptPackets: result?.promptPackets || [],
+              auditRef: result.auditRef,
+              hubContext: result?.hubContext || null
             }
           })
         );

@@ -89,6 +89,45 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
     expect(events.some((entry) => entry.message === "telemetry.session.safety")).toBe(true);
   });
 
+  test("escalates contested hub actions to moderation when checks are requested", async () => {
+    const engine = new NarrativeEngine({ sessionMemory, checkBus });
+
+    jest.spyOn(engine.tools, "appendPlayerMessage").mockResolvedValue();
+    jest.spyOn(engine.tools, "appendGmMessage").mockResolvedValue();
+    jest.spyOn(engine.tools, "dispatchCheckRequest").mockResolvedValue();
+    const escalateSpy = jest.spyOn(engine.tools, "escalateModeration").mockResolvedValue();
+
+    engine.graph.run = jest.fn().mockResolvedValue({
+      sessionId: "session-hub",
+      turnSequence: 1,
+      narrativeEvent: { content: "Hub contested response" },
+      checkRequest: { id: "check-1", auditRef: "audit-hub" },
+      safety: null,
+      promptPackets: [],
+      auditTrail: []
+    });
+
+    await engine.handlePlayerMessage({
+      sessionId: "session-hub",
+      playerId: "actor-hub",
+      content: "I challenge the trade offer and want a ruling.",
+      metadata: {
+        topic: "intent.hubNarration",
+        hubContext: {
+          safety: { contested: true }
+        }
+      }
+    });
+
+    expect(escalateSpy).toHaveBeenCalledWith(
+      "session-hub",
+      expect.objectContaining({
+        reason: "hub_contested_action",
+        auditRef: "audit-hub"
+      })
+    );
+  });
+
   test("records check resolution via bus event", () => {
     const { telemetry } = createTelemetrySpy();
     const engine = new NarrativeEngine({ sessionMemory, checkBus, telemetry });

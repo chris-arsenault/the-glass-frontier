@@ -36,6 +36,11 @@ function buildApp(overrides = {}) {
           narrativeEvent: { content: "Narrative response" },
           checkRequest: null
         };
+      },
+      sessionMemory: {
+        getMomentumState() {
+          return { current: 0, floor: -2, ceiling: 3 };
+        }
       }
     };
 
@@ -154,6 +159,81 @@ describe("HubGateway integration", () => {
       verbId: "verb.say",
       args: { message: "Hello hub" }
     });
+  });
+
+  test("emits telemetry for contested and safety escalations", async () => {
+    const telemetryEmitter = new EventEmitter();
+    const contestedEvents = [];
+    const safetyEvents = [];
+    const deliveredEvents = [];
+    telemetryEmitter.on("telemetry.hub.contestedAction", (event) => contestedEvents.push(event));
+    telemetryEmitter.on("telemetry.hub.safetyEscalated", (event) => safetyEvents.push(event));
+    telemetryEmitter.on("telemetry.hub.narrativeDelivered", (event) => deliveredEvents.push(event));
+
+    const narrativeEngine = {
+      async handlePlayerMessage() {
+        return {
+          narrativeEvent: { content: "Contest resolved" },
+          checkRequest: { id: "check-42", auditRef: "audit-42" },
+          safety: {
+            escalate: true,
+            severity: "high",
+            flags: ["tag:ritual"],
+            auditRef: "audit-42"
+          },
+          promptPackets: [],
+          auditTrail: []
+        };
+      },
+      sessionMemory: {
+        getMomentumState() {
+          return { current: 2, floor: -2, ceiling: 3 };
+        }
+      }
+    };
+
+    const app = createHubApplication({
+      verbCatalogPath: path.join(
+        __dirname,
+        "../../../src/hub/config/defaultVerbCatalog.json"
+      ),
+      telemetryEmitter,
+      narrativeEngine,
+      presenceStore: new InMemoryPresenceStore(),
+      actionLogRepository: new InMemoryActionLogRepository(),
+      clock: {
+        now: () => Date.now()
+      }
+    });
+
+    const transport = new MockTransport();
+    await app.gateway.acceptConnection({
+      transport,
+      handshake: {
+        hubId: "hub-telemetry",
+        roomId: "room-1",
+        actorId: "actor-1",
+        sessionId: "session-telemetry",
+        connectionId: "conn-telemetry",
+        actorCapabilities: ["capability.spectrumless-manifest"]
+      }
+    });
+
+    await transport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.invokeRelic",
+        args: { relicId: "relic-9" },
+        metadata: { safetyFlags: ["manual-flag"], auditRef: "audit-42" }
+      }
+    });
+
+    expect(contestedEvents).toHaveLength(1);
+    expect(contestedEvents[0].checkId).toBe("check-42");
+    expect(safetyEvents).toHaveLength(1);
+    expect(safetyEvents[0].auditRef).toBe("audit-42");
+    expect(deliveredEvents).toHaveLength(1);
+    expect(deliveredEvents[0].auditRef).toBe("audit-42");
   });
 
   test("broadcasts catalog sync and updates when verb catalog changes", async () => {

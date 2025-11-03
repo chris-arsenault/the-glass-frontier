@@ -19,6 +19,11 @@ function buildApp(overrides = {}) {
           narrativeEvent: { content: "Narrative response" },
           checkRequest: null
         };
+      },
+      sessionMemory: {
+        getMomentumState() {
+          return { current: 0, floor: -2, ceiling: 3 };
+        }
       }
     };
 
@@ -106,6 +111,7 @@ describe("HubOrchestrator integration", () => {
       item: "Glass Shard",
       status: "proposed"
     });
+    expect(stateUpdate.payload.state.recentCommands[0].auditRef).toEqual(expect.any(String));
 
     const snapshot = await app.roomStateStore.getRoomState({
       hubId: "hub-state",

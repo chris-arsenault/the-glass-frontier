@@ -37,6 +37,41 @@ class HubTelemetry {
     this.emit("telemetry.hub.narrativeEscalation", { hubId, roomId, actorId, verbId });
   }
 
+  recordNarrativeDelivered({ hubId, roomId, actorId, verbId, auditRef, contested, safetyEscalated }) {
+    this.emit("telemetry.hub.narrativeDelivered", {
+      hubId,
+      roomId,
+      actorId,
+      verbId,
+      auditRef,
+      contested,
+      safetyEscalated
+    });
+  }
+
+  recordContestedAction({ hubId, roomId, actorId, verbId, auditRef, checkId }) {
+    this.emit("telemetry.hub.contestedAction", {
+      hubId,
+      roomId,
+      actorId,
+      verbId,
+      auditRef,
+      checkId
+    });
+  }
+
+  recordSafetyEscalated({ hubId, roomId, actorId, verbId, auditRef, severity, flags }) {
+    this.emit("telemetry.hub.safetyEscalated", {
+      hubId,
+      roomId,
+      actorId,
+      verbId,
+      auditRef,
+      severity,
+      flags
+    });
+  }
+
   recordCatalogUpdated({ hubId, versionStamp, verbCount }) {
     this.emit("telemetry.hub.catalogUpdated", { hubId, versionStamp, verbCount });
   }

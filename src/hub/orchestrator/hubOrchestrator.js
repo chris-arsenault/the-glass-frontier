@@ -504,7 +504,8 @@ class HubOrchestrator extends EventEmitter {
     next.lastCommand = {
       actorId: entry.actorId || null,
       verbId: entry.command?.verbId || null,
-      issuedAt
+      issuedAt,
+      auditRef: entry.command?.metadata?.auditRef || null
     };
 
     next.recentCommands = this._boundedPush(
@@ -513,7 +514,21 @@ class HubOrchestrator extends EventEmitter {
         actorId: entry.actorId || null,
         verbId: entry.command?.verbId || null,
         args: clone(entry.command?.args || {}),
-        issuedAt
+        issuedAt,
+        auditRef: entry.command?.metadata?.auditRef || null,
+        safetyFlags: Array.isArray(entry.command?.metadata?.safetyFlags)
+          ? [...entry.command.metadata.safetyFlags]
+          : [],
+        capabilityRefs: Array.isArray(entry.command?.metadata?.capabilityRefs)
+          ? entry.command.metadata.capabilityRefs.map((ref) => ({ ...ref }))
+          : [],
+        narrative: entry.narrative
+          ? {
+              auditRef: entry.narrative.auditRef || null,
+              safety: entry.narrative.safety || null,
+              checkRequestId: entry.narrative.checkRequestId || null
+            }
+          : null
       },
       this.maxRecentCommands
     );
