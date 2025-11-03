@@ -13,6 +13,7 @@
     "test": "jest --runInBand",
     "test:e2e": "playwright test",
     "test:accessibility": "playwright test tests/e2e/accessibility.spec.js",
+    "bench:check-runner": "node scripts/benchmarks/checkRunnerBenchmark.js",
     "db:seed:hub-verbs": "node scripts/seedHubVerbs.js"
   },
   "keywords": [
