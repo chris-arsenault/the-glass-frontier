@@ -47,16 +47,17 @@ function normalizeArgs(parameters, provided = {}) {
 }
 
 class CommandParser {
-  constructor({ verbCatalog, rateLimiter, clock = Date }) {
-    if (!verbCatalog) {
+  constructor({ verbCatalog, rateLimiter, clock = Date, catalogResolver = null }) {
+    if (!verbCatalog && typeof catalogResolver !== "function") {
       throw new HubValidationError("missing_verb_catalog");
     }
-    this.verbCatalog = verbCatalog;
+    this.verbCatalog = verbCatalog || null;
+    this.catalogResolver = catalogResolver || null;
     this.rateLimiter = rateLimiter;
     this.clock = clock;
   }
 
-  parse(command) {
+  parse(command, { verbCatalog } = {}) {
     const { verb: verbId, actorId, roomId, hubId, args = {}, metadata = {} } = command || {};
 
     if (!verbId) {
@@ -72,7 +73,16 @@ class CommandParser {
       throw new HubValidationError("missing_hub_id");
     }
 
-    const definition = this.verbCatalog.get(verbId);
+    const catalog =
+      verbCatalog ||
+      this.verbCatalog ||
+      (this.catalogResolver ? this.catalogResolver(hubId) : null);
+
+    if (!catalog) {
+      throw new HubValidationError("missing_verb_catalog");
+    }
+
+    const definition = catalog.get(verbId);
     if (!definition) {
       throw new HubValidationError("unknown_verb", { verbId });
     }

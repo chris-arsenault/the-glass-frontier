@@ -93,12 +93,28 @@ export function useSessionConnection({ sessionId: override } = {}) {
   const [lastPlayerControl, setLastPlayerControl] = useState(null);
   const [pendingControl, setPendingControl] = useState(false);
   const [controlError, setControlError] = useState(null);
+  const [hubCatalog, setHubCatalog] = useState(null);
   const wsRef = useRef(null);
   const sseRef = useRef(null);
   const sequenceRef = useRef({ turnSequence: -1, subSequence: -1 });
   const queuedIntentsRef = useRef([]);
   const isOfflineRef = useRef(isOffline);
   const flushInProgressRef = useRef(false);
+  const adminConfig = useMemo(() => {
+    if (typeof window === "undefined") {
+      return {
+        isAdmin: false,
+        adminHubId: "global",
+        adminUser: "admin@glassfrontier"
+      };
+    }
+    const params = new URLSearchParams(window.location.search);
+    return {
+      isAdmin: params.get("admin") === "1",
+      adminHubId: params.get("adminHubId") || "global",
+      adminUser: params.get("adminUser") || "admin@glassfrontier"
+    };
+  }, []);
 
   const ensureOverlayPendingFlag = useCallback(
     (pending) => {
@@ -843,10 +859,16 @@ export function useSessionConnection({ sessionId: override } = {}) {
       lastPlayerControl,
       sendPlayerControl,
       isSendingControl: pendingControl,
-      controlError
+      controlError,
+      hubCatalog,
+      setHubCatalog,
+      isAdmin: adminConfig.isAdmin,
+      adminHubId: adminConfig.adminHubId,
+      adminUser: adminConfig.adminUser
     }),
     [
       activeCheck,
+      adminConfig,
       connectionState,
       controlError,
       flushQueuedIntents,
@@ -862,7 +884,8 @@ export function useSessionConnection({ sessionId: override } = {}) {
       sendPlayerControl,
       sendPlayerMessage,
       sessionId,
-      transportError
+      transportError,
+      hubCatalog
     ]
   );
 

@@ -1,6 +1,7 @@
 import { useSessionContext } from "../context/SessionContext.jsx";
 import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
 import { CheckOverlay } from "./CheckOverlay.jsx";
+import { AdminVerbCatalogPanel } from "./AdminVerbCatalogPanel.jsx";
 
 const FALLBACK_CHARACTER = {
   name: "Avery Glass",
@@ -123,6 +124,7 @@ export function OverlayDock() {
           ))}
         </ul>
       </section>
+      <AdminVerbCatalogPanel />
     </aside>
   );
 }

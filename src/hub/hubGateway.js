@@ -12,6 +12,7 @@ class HubGateway {
     telemetry,
     narrativeBridge,
     authenticator,
+    verbCatalogStore = null,
     clock = Date,
     replayLimit = 50
   }) {
@@ -28,10 +29,16 @@ class HubGateway {
     this.telemetry = telemetry;
     this.narrativeBridge = narrativeBridge;
     this.authenticator = authenticator || (async () => ({}));
+    this.verbCatalogStore = verbCatalogStore;
     this.clock = clock;
     this.replayLimit = replayLimit;
     this.commandBus = new EventEmitter();
     this.connections = new Map();
+
+    if (this.verbCatalogStore) {
+      this._onCatalogUpdated = this._onCatalogUpdated.bind(this);
+      this.verbCatalogStore.on("catalogUpdated", this._onCatalogUpdated);
+    }
   }
 
   onCommand(handler) {
@@ -47,6 +54,10 @@ class HubGateway {
     const connectionId = context.connectionId || handshake.connectionId;
     if (!connectionId) {
       throw new HubAuthenticationError("hub_connection_missing_id");
+    }
+
+    if (this.verbCatalogStore) {
+      await this.verbCatalogStore.ensureCatalog(context.hubId);
     }
 
     const connection = {
@@ -95,6 +106,21 @@ class HubGateway {
         }
       })
     );
+
+    if (this.verbCatalogStore) {
+      const versionStamp = this.verbCatalogStore.getVersionStamp(connection.hubId);
+      const verbs = this.verbCatalogStore.listVerbs(connection.hubId);
+      transport.send(
+        JSON.stringify({
+          type: "hub.catalog.sync",
+          payload: {
+            hubId: connection.hubId,
+            versionStamp,
+            verbs
+          }
+        })
+      );
+    }
   }
 
   async _authenticate(handshake = {}) {
@@ -155,19 +181,25 @@ class HubGateway {
 
   async _handleCommand(connection, payload = {}) {
     try {
-      const parsed = this.commandParser.parse({
-        verb: payload.verb,
-        actorId: connection.actorId,
-        roomId: connection.roomId,
-        hubId: connection.hubId,
-        args: payload.args,
-        metadata: {
-          ...payload.metadata,
-          actorCapabilities: connection.actorCapabilities,
-          sessionId: connection.sessionId,
-          issuedAt: this.clock.now ? this.clock.now() : Date.now()
-        }
-      });
+      const catalogOverride = this.verbCatalogStore
+        ? this._getVerbCatalog(connection.hubId)
+        : null;
+      const parsed = this.commandParser.parse(
+        {
+          verb: payload.verb,
+          actorId: connection.actorId,
+          roomId: connection.roomId,
+          hubId: connection.hubId,
+          args: payload.args,
+          metadata: {
+            ...payload.metadata,
+            actorCapabilities: connection.actorCapabilities,
+            sessionId: connection.sessionId,
+            issuedAt: this.clock.now ? this.clock.now() : Date.now()
+          }
+        },
+        { verbCatalog: catalogOverride }
+      );
 
       const entry = {
         hubId: parsed.hubId,
@@ -299,6 +331,61 @@ class HubGateway {
         }))
       })
     );
+  }
+
+  _getVerbCatalog(hubId) {
+    if (!this.verbCatalogStore) {
+      return null;
+    }
+    const catalog = this.verbCatalogStore.getCatalog(hubId);
+    if (!catalog) {
+      throw new HubValidationError("hub_catalog_missing", { hubId });
+    }
+    return catalog;
+  }
+
+  _onCatalogUpdated({ hubId, versionStamp, verbs }) {
+    if (!this.connections || this.connections.size === 0) {
+      return;
+    }
+
+    if (this.telemetry && typeof this.telemetry.recordCatalogUpdated === "function") {
+      this.telemetry.recordCatalogUpdated({
+        hubId: hubId || "GLOBAL",
+        versionStamp,
+        verbCount: Array.isArray(verbs) ? verbs.length : 0
+      });
+    }
+
+    this.connections.forEach((connection) => {
+      if (hubId && connection.hubId !== hubId) {
+        return;
+      }
+      this._sendCatalogUpdate(connection, { versionStamp, verbs });
+    });
+  }
+
+  _sendCatalogUpdate(connection, { versionStamp, verbs }) {
+    try {
+      connection.transport.send(
+        JSON.stringify({
+          type: "hub.catalog.updated",
+          payload: {
+            hubId: connection.hubId,
+            versionStamp,
+            verbs
+          }
+        })
+      );
+    } catch (error) {
+      if (this.telemetry && typeof this.telemetry.recordCatalogBroadcastFailed === "function") {
+        this.telemetry.recordCatalogBroadcastFailed({
+          hubId: connection.hubId,
+          connectionId: connection.connectionId,
+          error: error.message
+        });
+      }
+    }
   }
 
   attachHttpInterface({

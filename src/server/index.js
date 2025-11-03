@@ -1,6 +1,8 @@
 "use strict";
 
 const http = require("http");
+const path = require("path");
+const { Pool } = require("pg");
 const { WebSocketServer } = require("ws");
 const { SessionMemoryFacade } = require("../memory/sessionMemory");
 const {
@@ -16,6 +18,12 @@ const { Broadcaster } = require("./broadcaster");
 const { createApp } = require("./app");
 const { log } = require("../utils/logger");
 const { CheckMetrics } = require("../telemetry/checkMetrics");
+const {
+  HubVerbRepository,
+  HubVerbCatalogStore,
+  HubVerbService,
+  VerbCatalog
+} = require("../hub");
 
 const sessionMemory = new SessionMemoryFacade();
 const checkBus = new CheckBus();
@@ -30,7 +38,44 @@ const checkRunner = new CheckRunner({
 
 checkRunner.start();
 
-const app = createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory });
+let hubVerbService = null;
+let hubVerbPool = null;
+
+if (process.env.HUB_VERB_DATABASE_URL) {
+  try {
+    hubVerbPool = new Pool({ connectionString: process.env.HUB_VERB_DATABASE_URL });
+    const hubVerbRepository = new HubVerbRepository({ client: hubVerbPool });
+    const fallbackCatalogPath = path.join(
+      __dirname,
+      "..",
+      "hub",
+      "config",
+      "defaultVerbCatalog.json"
+    );
+    const fallbackCatalog = VerbCatalog.fromFile(fallbackCatalogPath);
+    const hubVerbCatalogStore = new HubVerbCatalogStore({
+      repository: hubVerbRepository,
+      fallbackCatalog,
+      clock: Date
+    });
+    hubVerbService = new HubVerbService({
+      repository: hubVerbRepository,
+      catalogStore: hubVerbCatalogStore
+    });
+  } catch (error) {
+    log("error", "Failed to initialise hub verb service", {
+      message: error.message
+    });
+  }
+}
+
+const app = createApp({
+  narrativeEngine,
+  checkBus,
+  broadcaster,
+  sessionMemory,
+  hubVerbService
+});
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -104,6 +149,11 @@ server.listen(port, () => {
 
 function shutdown() {
   log("info", "Shutting down narrative engine server");
+  if (hubVerbPool) {
+    hubVerbPool.end().catch((error) => {
+      log("warn", "Failed to close hub verb pool", { error: error.message });
+    });
+  }
   wss.close();
   server.close(() => process.exit(0));
 }

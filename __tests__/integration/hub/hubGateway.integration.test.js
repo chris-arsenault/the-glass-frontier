@@ -40,6 +40,22 @@ class MockTransport {
   }
 }
 
+class FakeVerbRepository {
+  constructor(records = []) {
+    this.records = records;
+  }
+
+  setRecords(records) {
+    this.records = records;
+  }
+
+  async listActiveVerbs({ hubId }) {
+    return this.records.filter(
+      (record) => record.hubId === null || record.hubId === hubId
+    );
+  }
+}
+
 function buildApp(overrides = {}) {
   const presenceStore = overrides.presenceStore || new InMemoryPresenceStore();
   const actionLogRepository =
@@ -171,5 +187,79 @@ describe("HubGateway integration", () => {
       verbId: "verb.say",
       args: { message: "Hello hub" }
     });
+  });
+
+  test("broadcasts catalog sync and updates when verb catalog changes", async () => {
+    const repository = new FakeVerbRepository([
+      {
+        hubId: null,
+        verbId: "verb.say",
+        version: 1,
+        updatedAt: new Date("2025-11-04T10:00:00Z"),
+        definition: { verbId: "verb.say", label: "Say" }
+      }
+    ]);
+
+    const presenceStore = new InMemoryPresenceStore();
+    const actionLogRepository = new InMemoryActionLogRepository();
+    const telemetryEmitter = new EventEmitter();
+
+    const app = createHubApplication({
+      verbCatalogPath: path.join(
+        __dirname,
+        "../../../src/hub/config/defaultVerbCatalog.json"
+      ),
+      verbRepository: repository,
+      presenceStore,
+      actionLogRepository,
+      telemetryEmitter,
+      clock: { now: () => Date.now() }
+    });
+
+    const transport = new MockTransport();
+    await app.gateway.acceptConnection({
+      transport,
+      handshake: {
+        hubId: "hub-verb",
+        roomId: "room-1",
+        actorId: "actor-1",
+        sessionId: "session-1",
+        connectionId: "conn-1"
+      }
+    });
+
+    const syncMessage = transport.messages.find(
+      (message) => message.type === "hub.catalog.sync"
+    );
+    expect(syncMessage).toBeDefined();
+    expect(syncMessage.payload.verbs.some((verb) => verb.verbId === "verb.say")).toBe(true);
+
+    repository.setRecords([
+      {
+        hubId: null,
+        verbId: "verb.say",
+        version: 2,
+        updatedAt: new Date("2025-11-04T11:00:00Z"),
+        definition: { verbId: "verb.say", label: "Say (v2)" }
+      },
+      {
+        hubId: "hub-verb",
+        verbId: "verb.wave",
+        version: 1,
+        updatedAt: new Date("2025-11-04T11:05:00Z"),
+        definition: { verbId: "verb.wave", label: "Wave" }
+      }
+    ]);
+
+    await app.verbCatalogStore.reload("hub-verb");
+
+    const updateMessage = transport.messages.find(
+      (message) => message.type === "hub.catalog.updated"
+    );
+    expect(updateMessage).toBeDefined();
+    expect(updateMessage.payload.versionStamp.startsWith("2:")).toBe(true);
+    expect(
+      updateMessage.payload.verbs.some((verb) => verb.verbId === "verb.wave")
+    ).toBe(true);
   });
 });

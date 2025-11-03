@@ -36,6 +36,14 @@ class HubTelemetry {
   recordNarrativeEscalation({ hubId, roomId, actorId, verbId }) {
     this.emit("telemetry.hub.narrativeEscalation", { hubId, roomId, actorId, verbId });
   }
+
+  recordCatalogUpdated({ hubId, versionStamp, verbCount }) {
+    this.emit("telemetry.hub.catalogUpdated", { hubId, versionStamp, verbCount });
+  }
+
+  recordCatalogBroadcastFailed({ hubId, connectionId, error }) {
+    this.emit("telemetry.hub.catalogBroadcastFailed", { hubId, connectionId, error });
+  }
 }
 
 module.exports = {

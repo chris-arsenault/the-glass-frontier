@@ -9,6 +9,7 @@ const { InMemoryPresenceStore } = require("./presence/inMemoryPresenceStore");
 const { InMemoryActionLogRepository } = require("./actionLog/inMemoryActionLogRepository");
 const { HubTelemetry } = require("./telemetry/hubTelemetry");
 const { HubNarrativeBridge } = require("./narrative/hubNarrativeBridge");
+const { HubVerbCatalogStore } = require("./verbs/hubVerbCatalogStore");
 
 function defaultAuthenticator(handshake) {
   const {
@@ -41,6 +42,8 @@ function defaultAuthenticator(handshake) {
 
 function createHubApplication({
   verbCatalogPath = path.join(__dirname, "config", "defaultVerbCatalog.json"),
+  verbRepository = null,
+  verbCatalogStore = null,
   presenceStore = new InMemoryPresenceStore(),
   actionLogRepository = new InMemoryActionLogRepository(),
   telemetryEmitter = null,
@@ -49,9 +52,37 @@ function createHubApplication({
   clock = Date,
   replayLimit = 50
 } = {}) {
-  const verbCatalog = VerbCatalog.fromFile(verbCatalogPath);
+  const fallbackCatalog = VerbCatalog.fromFile(verbCatalogPath);
   const rateLimiter = new RateLimiter({ clock });
-  const commandParser = new CommandParser({ verbCatalog, rateLimiter, clock });
+  let store = verbCatalogStore || null;
+  let commandParser;
+
+  if (verbRepository) {
+    store =
+      store ||
+      new HubVerbCatalogStore({
+        repository: verbRepository,
+        fallbackCatalog,
+        clock
+      });
+
+    commandParser = new CommandParser({
+      rateLimiter,
+      clock,
+      catalogResolver: (hubId) => {
+        if (store) {
+          const dynamicCatalog = store.getCatalog(hubId);
+          if (dynamicCatalog) {
+            return dynamicCatalog;
+          }
+        }
+        return fallbackCatalog;
+      }
+    });
+  } else {
+    commandParser = new CommandParser({ verbCatalog: fallbackCatalog, rateLimiter, clock });
+  }
+
   const telemetry = new HubTelemetry({ emitter: telemetryEmitter });
   const narrativeBridge = narrativeEngine
     ? new HubNarrativeBridge({ narrativeEngine })
@@ -64,12 +95,14 @@ function createHubApplication({
     telemetry,
     narrativeBridge,
     authenticator,
+    verbCatalogStore: store,
     clock,
     replayLimit
   });
 
   return {
-    verbCatalog,
+    verbCatalog: fallbackCatalog,
+    verbCatalogStore: store,
     rateLimiter,
     commandParser,
     presenceStore,

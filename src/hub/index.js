@@ -11,6 +11,9 @@ const { InMemoryActionLogRepository } = require("./actionLog/inMemoryActionLogRe
 const { CouchActionLogRepository } = require("./actionLog/couchActionLogRepository");
 const { HubTelemetry } = require("./telemetry/hubTelemetry");
 const { HubNarrativeBridge } = require("./narrative/hubNarrativeBridge");
+const { HubVerbRepository } = require("./verbs/hubVerbRepository");
+const { HubVerbCatalogStore } = require("./verbs/hubVerbCatalogStore");
+const { HubVerbService } = require("./verbs/hubVerbService");
 
 module.exports = {
   createHubApplication,
@@ -23,5 +26,8 @@ module.exports = {
   InMemoryActionLogRepository,
   CouchActionLogRepository,
   HubTelemetry,
-  HubNarrativeBridge
+  HubNarrativeBridge,
+  HubVerbRepository,
+  HubVerbCatalogStore,
+  HubVerbService
 };

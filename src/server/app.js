@@ -4,8 +4,9 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { log } = require("../utils/logger");
+const { createAdminHubVerbRouter } = require("./routes/adminHubVerbs");
 
-function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory }) {
+function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory, hubVerbService = null }) {
   if (!sessionMemory) {
     throw new Error("sessionMemory is required");
   }
@@ -309,6 +310,10 @@ function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory }) {
       next(error);
     }
   });
+
+  if (hubVerbService) {
+    app.use("/admin/hubs", createAdminHubVerbRouter({ hubVerbService }));
+  }
 
   const staticDir = path.resolve(__dirname, "../../dist");
   if (fs.existsSync(staticDir)) {
