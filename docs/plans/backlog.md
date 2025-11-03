@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 4 (research phase).
+Last updated for Session 5 (research phase).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -8,3 +8,4 @@ Last updated for Session 4 (research phase).
 | RES-CORE: Foundational Research | RES-02: Extended Narrative Benchmarking | done | P1 | phase:research, cycle:1, discipline:lore, discipline:market | Findings in `docs/research/session-02-extended-narrative-benchmarking.md`, MCP cache `8bb87b27-7d88-4b7c-beb1-5320e9b34bdb`. |
 | RES-CORE: Foundational Research | RES-03: Gameplay & System Comparables | done | P1 | phase:research, cycle:1, discipline:systems, discipline:mechanics | Findings in `docs/research/session-03-gameplay-system-comparables.md`, MCP cache `8d888e77-b09b-4c8a-b8b4-126063c82421`. |
 | RES-CORE: Foundational Research | RES-04: Automated Check Runner Tradeoffs | done | P1 | phase:research, cycle:1, discipline:systems, discipline:mechanics | Findings in `docs/research/session-04-automated-check-runner-tradeoffs.md`, MCP cache `53f00d71-a60b-4b70-ad63-37126355480c`. |
+| RES-CORE: Foundational Research | RES-05: Player Experience & UX Patterns | done | P1 | phase:research, cycle:1, discipline:ux, discipline:systems | Findings in `docs/research/session-05-player-experience-ux.md`, MCP cache `783ae922-e057-457c-93d3-2f6609a6e50e`. |
