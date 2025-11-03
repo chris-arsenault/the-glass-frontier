@@ -1,0 +1,83 @@
+graph TD
+    subgraph Edge["Edge Layer"]
+        Caddy[Caddy Reverse Proxy]
+        ServiceWorker[Service Worker Assets]
+    end
+
+    subgraph AppPlane["Application Plane"]
+        NarrativeProxy[LLM Proxy / LangGraph Router]
+        LangGraph1[LangGraph Worker 1]
+        LangGraph2[LangGraph Worker 2]
+        HubGateway[Hub Gateway (uWS)]
+        HubOrchestrator[Hub Orchestrator Workers]
+        TemporalFront[Temporal Frontend/Matching]
+        TemporalWorkers[Temporal Workflow Workers]
+    end
+
+    subgraph DataLayer["Data & State Layer"]
+        CouchDB[(CouchDB Cluster)]
+        Postgres[(PostgreSQL HA Pair)]
+        Redis[(Redis Streams/Cache)]
+        MinIO[(MinIO Object Store)]
+        Meilisearch[(Meilisearch Index)]
+        Kafka[(Kafka/Redpanda Bus)]
+    end
+
+    subgraph Observability["Observability & Ops"]
+        OTEL[OpenTelemetry Collectors]
+        Victoria[VictoriaMetrics]
+        Loki[Loki Logs]
+        Grafana[Grafana Dashboards]
+        Vault[Vault Secrets]
+    end
+
+    subgraph External["External Providers"]
+        OpenAI[OpenAI GPT-4.1]
+        Anthropic[Anthropic Claude]
+        B2[Backblaze B2 Cold Storage]
+    end
+
+    Caddy -->|HTTPS| NarrativeProxy
+    Caddy -->|WSS| HubGateway
+    Caddy -->|Static| ServiceWorker
+
+    NarrativeProxy --> LangGraph1
+    NarrativeProxy --> LangGraph2
+
+    LangGraph1 -->|Session Events| CouchDB
+    LangGraph2 -->|Telemetry| Kafka
+
+    HubGateway --> HubOrchestrator
+    HubOrchestrator -->|Command Streams| Redis
+    HubOrchestrator -->|Action Logs| CouchDB
+    HubOrchestrator -->|Escalations| NarrativeProxy
+
+    NarrativeProxy -->|LLM Requests| OpenAI
+    NarrativeProxy -. fallback .-> Anthropic
+
+    TemporalFront --> TemporalWorkers
+    TemporalWorkers -->|Workflows| CouchDB
+    TemporalWorkers -->|Summaries| Postgres
+    TemporalWorkers -->|Attachments| MinIO
+    TemporalWorkers -->|Delta Events| Kafka
+
+    Kafka -->|Moderation Alerts| HubGateway
+    Kafka -->|Admin Alerts| Caddy
+    Kafka --> OTEL
+
+    CouchDB -->|Replication| B2
+    Postgres -->|WAL Shipping| B2
+    MinIO -->|Lifecycle| B2
+
+    OTEL --> Victoria
+    OTEL --> Loki
+    Victoria --> Grafana
+    Loki --> Grafana
+
+    Vault --> NarrativeProxy
+    Vault --> TemporalWorkers
+    Vault --> HubOrchestrator
+
+    Redis --> NarrativeProxy
+    Redis --> HubGateway
+
