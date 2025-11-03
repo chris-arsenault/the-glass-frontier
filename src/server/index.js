@@ -3,16 +3,32 @@
 const http = require("http");
 const { WebSocketServer } = require("ws");
 const { SessionMemoryFacade } = require("../memory/sessionMemory");
-const { CheckBus, CHECK_REQUEST_TOPIC, CHECK_RESOLVED_TOPIC } = require("../events/checkBus");
+const {
+  CheckBus,
+  CHECK_REQUEST_TOPIC,
+  CHECK_RESOLVED_TOPIC,
+  CHECK_VETOED_TOPIC,
+  ADMIN_ALERT_TOPIC
+} = require("../events/checkBus");
 const { NarrativeEngine } = require("../narrative/narrativeEngine");
+const { CheckRunner } = require("../checkRunner/checkRunner");
 const { Broadcaster } = require("./broadcaster");
 const { createApp } = require("./app");
 const { log } = require("../utils/logger");
+const { CheckMetrics } = require("../telemetry/checkMetrics");
 
 const sessionMemory = new SessionMemoryFacade();
 const checkBus = new CheckBus();
 const broadcaster = new Broadcaster();
 const narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
+const checkMetrics = new CheckMetrics();
+const checkRunner = new CheckRunner({
+  checkBus,
+  sessionMemory,
+  telemetry: checkMetrics
+});
+
+checkRunner.start();
 
 const app = createApp({ narrativeEngine, checkBus, broadcaster });
 const server = http.createServer(app);
@@ -41,6 +57,20 @@ checkBus.onCheckRequest((envelope) => {
 checkBus.onCheckResolved((envelope) => {
   broadcaster.publish(envelope.sessionId, {
     type: CHECK_RESOLVED_TOPIC,
+    payload: envelope
+  });
+});
+
+checkBus.onCheckVetoed((envelope) => {
+  broadcaster.publish(envelope.sessionId, {
+    type: CHECK_VETOED_TOPIC,
+    payload: envelope
+  });
+});
+
+checkBus.onAdminAlert((envelope) => {
+  broadcaster.publish(envelope.sessionId, {
+    type: ADMIN_ALERT_TOPIC,
     payload: envelope
   });
 });

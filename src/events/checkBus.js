@@ -6,6 +6,8 @@ const { log } = require("../utils/logger");
 
 const CHECK_REQUEST_TOPIC = "intent.checkRequest";
 const CHECK_RESOLVED_TOPIC = "event.checkResolved";
+const CHECK_VETOED_TOPIC = "event.checkVetoed";
+const ADMIN_ALERT_TOPIC = "admin.alert";
 
 class CheckBus extends EventEmitter {
   constructor() {
@@ -46,10 +48,53 @@ class CheckBus extends EventEmitter {
   onCheckResolved(listener) {
     this.on(CHECK_RESOLVED_TOPIC, listener);
   }
+
+  emitCheckVetoed(payload) {
+    const envelope = {
+      id: payload.id || uuid(),
+      sessionId: payload.sessionId,
+      topic: CHECK_VETOED_TOPIC,
+      createdAt: new Date().toISOString(),
+      auditRef: payload.auditRef || uuid(),
+      reason: payload.reason,
+      safetyFlags: payload.safetyFlags || [],
+      data: payload.data || {}
+    };
+
+    this.emit(CHECK_VETOED_TOPIC, envelope);
+    log("warn", "event.checkVetoed dispatched", { envelope });
+    return envelope;
+  }
+
+  onCheckVetoed(listener) {
+    this.on(CHECK_VETOED_TOPIC, listener);
+  }
+
+  emitAdminAlert(payload) {
+    const envelope = {
+      id: payload.id || uuid(),
+      sessionId: payload.sessionId,
+      topic: ADMIN_ALERT_TOPIC,
+      createdAt: new Date().toISOString(),
+      severity: payload.severity || "high",
+      reason: payload.reason,
+      data: payload.data || {}
+    };
+
+    this.emit(ADMIN_ALERT_TOPIC, envelope);
+    log("warn", "admin.alert dispatched", { envelope });
+    return envelope;
+  }
+
+  onAdminAlert(listener) {
+    this.on(ADMIN_ALERT_TOPIC, listener);
+  }
 }
 
 module.exports = {
   CheckBus,
   CHECK_REQUEST_TOPIC,
-  CHECK_RESOLVED_TOPIC
+  CHECK_RESOLVED_TOPIC,
+  CHECK_VETOED_TOPIC,
+  ADMIN_ALERT_TOPIC
 };

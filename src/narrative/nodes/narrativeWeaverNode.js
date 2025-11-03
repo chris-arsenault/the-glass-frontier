@@ -12,7 +12,7 @@ function narrativeWeaverNode(context) {
       sessionId: session.sessionId,
       role: "gm",
       content: narration,
-      markers: createMarkers(intent, checkRequest)
+      markers: createMarkers(intent, checkRequest, session)
     }
   };
 }
@@ -27,6 +27,11 @@ function buildNarration(intent, session, checkRequest) {
     base.push(
       `A ${checkRequest.data.move} check is required (${checkRequest.data.difficulty}, ${checkRequest.data.ability}).`
     );
+  }
+
+
+  if (typeof session?.momentum?.current === "number") {
+    base.push(`Momentum currently rests at ${session.momentum.current}.`);
   }
 
   return base.join(" ");
@@ -49,7 +54,7 @@ function describeIntent(intent) {
   }
 }
 
-function createMarkers(intent, checkRequest) {
+function createMarkers(intent, checkRequest, session) {
   const markers = [
     {
       type: "session.marker",
@@ -64,6 +69,22 @@ function createMarkers(intent, checkRequest) {
       marker: "check-requested",
       move: checkRequest.data.move,
       ability: checkRequest.data.ability
+    });
+
+    if (typeof checkRequest.data.momentum === "number") {
+      markers.push({
+        type: "session.marker",
+        marker: "momentum-snapshot",
+        value: checkRequest.data.momentum
+      });
+    }
+  }
+
+  if (typeof session?.momentum?.current === "number") {
+    markers.push({
+      type: "session.marker",
+      marker: "momentum-state",
+      value: session.momentum.current
     });
   }
 

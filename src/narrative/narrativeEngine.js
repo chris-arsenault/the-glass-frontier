@@ -12,6 +12,9 @@ class NarrativeEngine {
     if (this.checkBus && typeof this.checkBus.onCheckResolved === "function") {
       this.checkBus.onCheckResolved((envelope) => this.handleCheckResolved(envelope));
     }
+    if (this.checkBus && typeof this.checkBus.onCheckVetoed === "function") {
+      this.checkBus.onCheckVetoed((envelope) => this.handleCheckVetoed(envelope));
+    }
   }
 
   async handlePlayerMessage({ sessionId, playerId, content, metadata = {} }) {
@@ -73,6 +76,18 @@ class NarrativeEngine {
     log("info", "Narrative engine recorded check resolution", {
       sessionId: envelope.sessionId,
       result: envelope.result
+    });
+  }
+
+  handleCheckVetoed(envelope) {
+    if (!envelope?.sessionId) {
+      throw new Error("Check veto missing sessionId");
+    }
+
+    this.sessionMemory.recordCheckVeto(envelope.sessionId, envelope);
+    log("warn", "Narrative engine recorded check veto", {
+      sessionId: envelope.sessionId,
+      reason: envelope.reason
     });
   }
 }

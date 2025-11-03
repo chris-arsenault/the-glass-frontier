@@ -5,6 +5,7 @@ const { createApp } = require("../../src/server/app");
 const { NarrativeEngine } = require("../../src/narrative/narrativeEngine");
 const { SessionMemoryFacade } = require("../../src/memory/sessionMemory");
 const { CheckBus } = require("../../src/events/checkBus");
+const { CheckRunner } = require("../../src/checkRunner/checkRunner");
 
 describe("Narrative Engine HTTP API", () => {
   let sessionMemory;
@@ -12,11 +13,22 @@ describe("Narrative Engine HTTP API", () => {
   let narrativeEngine;
   let broadcaster;
   let app;
+  let checkRunner;
 
   beforeEach(() => {
     sessionMemory = new SessionMemoryFacade();
     checkBus = new CheckBus();
     narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
+    checkRunner = new CheckRunner({
+      checkBus,
+      sessionMemory,
+      telemetry: {
+        recordCheckRun: jest.fn(),
+        recordCheckVeto: jest.fn(),
+        recordCheckError: jest.fn()
+      }
+    });
+    checkRunner.start();
     broadcaster = { publish: jest.fn() };
     app = createApp({ narrativeEngine, checkBus, broadcaster });
   });
@@ -41,15 +53,18 @@ describe("Narrative Engine HTTP API", () => {
     const result = await request(app)
       .post("/sessions/test-session/checks/check-123/resolve")
       .send({
-        result: "success",
-        outcome: "partial",
+        tier: "full-success",
+        outcome: "full-success",
         rationale: "Quick thinking saved the day.",
-        momentumDelta: 1
+        momentumDelta: 1,
+        flags: [],
+        safetyFlags: []
       });
 
     expect(result.status).toBe(202);
     const state = sessionMemory.getSessionState("test-session");
     expect(state.resolvedChecks).toHaveLength(1);
-    expect(state.resolvedChecks[0].result).toBe("success");
+    expect(state.resolvedChecks[0].result).toBe("full-success");
+    expect(state.momentum.current).toBe(1);
   });
 });

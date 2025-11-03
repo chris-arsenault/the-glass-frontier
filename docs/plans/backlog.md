@@ -7,7 +7,7 @@ Last updated for Session 31 (implementation grooming kickoff).
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
 | IMP-GM: Narrative Engine & Check Runner | IMP-GM-01: LangGraph Narrative Engine Skeleton | done | P1 | phase:implementation, pillar:gameplay | Stand up LangGraph flow, chat intake, and check dispatch per DES-11/12/13. |
-| IMP-GM: Narrative Engine & Check Runner | IMP-GM-02: Temporal Check Runner & Momentum Engine | todo | P1 | phase:implementation, pillar:gameplay | Deterministic dice workflows, momentum updates, and safety veto hooks. |
+| IMP-GM: Narrative Engine & Check Runner | IMP-GM-02: Temporal Check Runner & Momentum Engine | done | P1 | phase:implementation, pillar:gameplay | Deterministic check runner landed in `src/checkRunner/checkRunner.js`; see `docs/implementation/IMP-GM-02-check-runner.md` for telemetry + follow-ups. |
 | IMP-GM: Narrative Engine & Check Runner | IMP-GM-03: Session Memory & Character Facade | todo | P1 | phase:implementation, pillar:gameplay | Hard memory shards for characters/inventory with moderation-aware APIs. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-01: Story Consolidation Workflow MVP | todo | P1 | phase:implementation, pillar:pipeline | Temporal workflow to summarize transcripts into player/admin recaps. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-02: Entity Extraction & Delta Queue | todo | P1 | phase:implementation, pillar:pipeline | spaCy/heuristic entity pass producing immutable delta proposals. |

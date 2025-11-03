@@ -42,11 +42,22 @@ function createApp({ narrativeEngine, checkBus, broadcaster }) {
       const envelope = {
         id: checkId,
         sessionId,
-        result: req.body.result,
-        outcome: req.body.outcome,
+        result: req.body.tier || req.body.result,
+        tier: req.body.tier || req.body.result,
+        outcome: req.body.outcome || req.body.tier || req.body.result,
         rationale: req.body.rationale,
-        momentumDelta: req.body.momentumDelta || 0,
-        auditRef: req.body.auditRef
+        momentumDelta: req.body.momentumDelta ?? 0,
+        momentum: req.body.momentum,
+        momentumReset: req.body.momentumReset,
+        statAdjustments: req.body.statAdjustments,
+        dice: req.body.dice,
+        difficulty: req.body.difficulty,
+        flags: req.body.flags || [],
+        safetyFlags: req.body.safetyFlags || [],
+        auditRef: req.body.auditRef,
+        move: req.body.move,
+        tags: req.body.tags || [],
+        telemetry: req.body.telemetry
       };
 
       const recorded = checkBus.emitCheckResolved(envelope);
