@@ -5,7 +5,7 @@
 sessionNum=$(cat .session || echo 1)
 
 while true; do
-  branch="v2-s${sessionNum}"
+  branch="v3-s${sessionNum}"
   echo "=== Starting ${branch} ==="
 
   # Create and switch to new branch
@@ -13,17 +13,15 @@ while true; do
 
   # Run Codex autonomous development
   COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and use result to plan and execute an autonomous development cycle"
-  if (( sessionNum % 10 == 9 )); then
-    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. For this cycle do not complete TODOS or development work. focus only on clean up and backlog management. review existing state of stories and the project and close stories if possible. clean up unnecessary artifacts. for this cycle do not create any new content. For any backlogs items that are in review or awaiting input mark those as review approved. Update all backlog items to remove dependence on manual processes in favor of pure automation. Update TODO with carry over from previous handoff and high priority backlogs items from grooming."
+  if (( sessionNum % 10 == 1 )); then
+    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are just starting the implementation phase of this project. Analyze GROOMING.md and follow the instructions in it in addition to AGENTS.md"
   fi
-  if (( sessionNum % 10 == 8 )); then
-      COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. For this cycle do not complete TODOs or feature development work. For this session only focus on archtiectual rsearch and technincal debt. identify one system/component that needs research in order to come up with an implementation and do that research. identify one area of the code base that requires standardization (e.g. in the case of a new system or format) and update all occurrences in the codebase."
+  if (( sessionNum < 32 )); then
+    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are just starting the implementation phase of this project. Analyze GROOMING.md and follow the instructions in it in addition to AGENTS.md. This is the first grooming after the initial phase 0 research and design, so focus on creation of features and PBIs based on output of DESIGN/RESEARCH/NARRATIVE phases."
   fi
-
   if (( sessionNum < 31 )); then
     COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are in the narrative phase of this project. Analyze NARRATIVE.md and follow the instructions in it in addition to AGENTS.md"
   fi
-
   if (( sessionNum < 21 )); then
     COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are in the design phase of this project. Analyze DESIGN.md and follow the instructions in it in addition to AGENTS.md"
   fi
@@ -49,4 +47,3 @@ while true; do
   # Delay before next cycle (adjust as needed)
   sleep 15
 done
-

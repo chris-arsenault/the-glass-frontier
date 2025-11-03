@@ -8,11 +8,14 @@ Use `REQUIREMENTS.md` as the reference point for user-defined goals so research 
 
 ## Design Intent Shift Research Targets
 
-- Prioritize studies of cooperative GM-style narrative systems that enable open-ended player intent and variable scene duration.
-- Document best practices for feeding a continuously updated shared world without constraining narrative freedom; treat world consistency as secondary to creative expression unless safety or anti power-creep issues arise.
+- Prioritize studies of cooperative GM-style narrative systems that enable open-ended player intent and variable scene duration, with emphasis on direct ChatGPT-like conversations augmented by hard memory context (character sheets, inventory, relationships, prior session summaries).
+- Document best practices for feeding a continuously updated shared world without constraining narrative freedom; treat world consistency as secondary to creative expression unless safety or anti power-creep issues arise, and focus on offline post-session publishing pipelines rather than live-session writes.
+- Investigate transparent success-check orchestration patterns where background services evaluate player input, execute rolls, and return results that the narrative engine can weave into responses without breaking immersion.
+- Analyze UX patterns for sessions that can span hundreds of turns, including UI cues for narrative breakpoints and player-driven wrap-up signals.
 - Investigate lightweight conflict deconfliction models as rare interventions rather than core loops.
 - Capture evidence that text-action parsers or rigid verb gating harms the desired experience outside MUD hubs; ensure MUD research isolates hub-specific constraints.
 - Audit approaches for enforcing prohibited capabilities and preventing reality-breaking powers from entering canon.
+- Evaluate fully web-based client architectures that unify chat, overlays, account handling, and admin controls, staying within bootstrap cost envelopes.
 - Compare self-hosted search/indexing stacks suitable for bootstrap phases and explicitly exclude managed services like Elasticsearch from recommendations.
 
 ## MCP-Integrated Session Workflow
@@ -41,11 +44,11 @@ Use `REQUIREMENTS.md` as the reference point for user-defined goals so research 
 | Session | Backlog Anchor | Research Focus | Required MCP Artifacts |
 |---------|----------------|----------------|------------------------|
 | 1–2 | `RES-01`, `RES-02` | Narrative & genre benchmarking (tone map, naming conventions, AI-driven narrative precedents). | Cached research entries for tone archetypes + naming lexicon; backlog notes summarizing comparable IPs; handoff excerpt referencing new datasets. |
-| 3–4 | `RES-03`, `RES-04` | Gameplay and system comps (narrative RPG mechanics, risk points, autonomy tradeoffs). | Cached comparative matrix; backlog acceptance criteria checked off for mechanics viability; risks logged in handoff. |
-| 5–6 | `RES-05`, `RES-06` | Player experience & UX (chat-first UIs, text overlay patterns, engagement metrics). | Cached UI pattern library; backlog notes on engagement data; links to referenced products. |
-| 7–8 | `RES-07`, `RES-08` | Multiplayer world integration (shared lore, moderation, persistence models). | Cached summaries of world update pipelines; backlog items include follow-up tasks for moderation frameworks; potential architecture decision drafts flagged. |
-| 9 | `RES-09` | Technical landscape (LLM orchestration, persistence layers, cost analysis). | Cached vendor/stack comparison table; backlog record of tradeoffs; draft architecture notes tagged for Session 20 follow-up. |
-| 10 | `RES-10` | Full synthesis into Market Research Brief. | Cached final brief reference; backlog item marked complete with links to `MARKET_RESEARCH_SUMMARY.md`; handoff highlights unresolved questions for design phase. |
+| 3–4 | `RES-03`, `RES-04` | Gameplay and system comps (narrative RPG mechanics, success-check orchestration, autonomy tradeoffs). | Cached comparative matrix; backlog acceptance criteria checked off for mechanics viability; risks logged in handoff; notes on transparent background check runners. |
+| 5–6 | `RES-05`, `RES-06` | Player experience & UX (chat-first web clients, memory-assisted prompts, long-session pacing cues). | Cached UI pattern library; backlog notes on engagement data; links to referenced products; findings on wrap-up signals and breakpoint surfacing. |
+| 7–8 | `RES-07`, `RES-08` | Multiplayer world integration (offline post-session pipelines, moderation, persistence models). | Cached summaries of Story Consolidation → NER & Delta Determination workflows; backlog items include follow-up tasks for moderation frameworks; potential architecture decision drafts flagged. |
+| 9 | `RES-09` | Technical landscape (LLM orchestration, background task infrastructure, persistence layers, cost analysis). | Cached vendor/stack comparison table; backlog record of tradeoffs; draft architecture notes tagged for Session 20 follow-up; cost estimates for the unified web client and offline pipeline. |
+| 10 | `RES-10` | Full synthesis into Market Research Brief. | Cached final brief reference; backlog item marked complete with links to `MARKET_RESEARCH_SUMMARY.md`; handoff highlights unresolved questions for design phase and documents recommended pipeline cadence. |
 
 ## Output Requirements
 

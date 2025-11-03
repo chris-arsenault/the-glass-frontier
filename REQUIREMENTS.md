@@ -17,13 +17,15 @@
 
 ## 2. Design Intent Shift (Important)
 
-* **Primary**: Cooperative GM‑style **freeform storytelling** in single‑player sessions. Narrative breadth over strict action parsing. Story beats may span minutes to months (e.g., infiltration, legislation, town‑building).
-* **Secondary**: A **continuously updated world** that surfaces distilled outcomes as lore and news. World consistency matters, but **narrative freedom takes precedence** within safety and anti‑power‑creep constraints.
+* **Primary**: Cooperative GM‑style **freeform storytelling** via a direct ChatGPT‑like conversation between the GM Engine and the player. The player’s input is augmented with **hard memory context** (character sheet, inventory, traits, relationships, last‑session summary, relevant location/faction facts) to inform interpretation—not to coerce actions.
+* **Secondary**: A **continuously updated world** that surfaces distilled outcomes as lore and news. **Narrative co‑authorship outweighs state→action→update patterns** during live play.
+* **World deltas**: Generated **only after a session completes**, through an offline pipeline. Live sessions should not emit persistent world changes except ephemeral notes.
 * **Conflict deconfliction**: Rare. Only invoked when overlapping world edits are materially incompatible.
 
 ### Negative Requirements
 
 * Do **not** design the solo narrative as a text action game or intent parser that forces discrete command verbs.
+* Do **not** center live play around state→action→update mechanics; treat them as backstage, post‑session processes.
 * Do **not** prioritize crisis resolution systems or conflicting‑edit workflows as core gameplay. They are **edge cases**.
 * Do **not** block creative player inputs behind enumerated actions, outside of MUD hubs.
 * Do **not** introduce open‑ended superpowers or reality‑breaking abilities; maintain the **Prohibited Capabilities List**.
@@ -41,9 +43,9 @@
 
 ## 4. Core Loops
 
-1. **Solo Story Loop**: Player intent (freeform NL) → scene framing → turn‑based chat → rules/stat checks as needed → character updates → proposed world delta(s).
-2. **World Distillation Loop**: Transcripts → extract candidate facts/events → dedupe/light conflict handling → **auto‑publish** to world state on cadence → surface as lore + news.
-3. **Hub Loop (MUD‑style)**: Players connect to hubs (rooms, exits, NPCs) → **strict command verbs only here** → local chat, trades, quests → hub state impacts world.
+1. **Solo Story Loop**: Player intent (freeform NL) ↔ GM framing and consequence → optional checks → ephemeral notes to session context. **No persistent world writes during the session.**
+2. **Post‑Session Publishing Loop**: Raw transcript → **Story Consolidation** (produce a public‑facing session write‑up for the wiki) → **Named Entity Resolution & Delta Determination** (extract entities, propose deltas) → light deconflict → **auto‑publish on cadence** with admin override.
+3. **Hub Loop (MUD‑style)**: Players connect to hubs (rooms, exits, NPCs) → **strict command verbs only here** → local chat, trades, quests → hub state impacts world via the same **post‑session** pipeline for durable changes.
 
 ---
 
@@ -67,6 +69,7 @@
 
 * **Style**: Custom narrative‑rich system inspired by Monster of the Week.
 * **Resolution**: Degrees of success, criticals, advantage. **Rule of cool**: advantage may be granted when the LLM judges a player’s input as sufficiently interesting.
+* **Momentum/Success Checks**: All checks occur **transparently**. A dedicated background task evaluates user input, determines whether a roll or success check is needed, executes it, and forwards both the user input and check outcome to the **primary narrative engine**. The narrative engine then integrates that result naturally into the story response.
 * **Interaction model**: Freeform NL. The engine **suggests** moves/checks; it **does not require** mapping inputs to a finite verb set. Moves are advisory scaffolds, not constraints.
 * **To be finalized by the Development Engine** during research:
 
@@ -110,18 +113,19 @@
 
   * **Structured store**: normalized/graph entities and relations.
   * **Lore store**: versioned documents; public read via wiki.
-* **Publishing cadence**: auto‑publish approved deltas on a configurable cadence (default TBD). Admin can revert anytime.
-* **Conflict handling**: **lightweight**. Only escalate to **Crisis Points** when two published‑ready edits are materially incompatible and impactful; otherwise prefer soft merges.
+* **Publishing cadence**: world deltas and lore updates are produced **after sessions** by the pipeline and published on a configurable cadence (default TBD). Admin can revert anytime.
+* **Conflict handling**: **lightweight**. Only escalate to **Crisis Points** when two publish‑ready edits are materially incompatible and impactful; otherwise prefer soft merges.
 * **Surfacing**: convert published deltas into short news items tagged by region/faction/topic; show in client feed and on hub billboards.
 
 ---
 
 ## 11. Data Pipeline
 
-* **Ingest**: store raw transcripts and tool calls per session.
-* **Extraction**: identify candidate world facts/events with confidence scores.
-* **Deconflict**: dedupe by entity/time/location; detect rare oppositions; spawn Crisis Points **only when justified**.
-* **Governance**: single‑approver model for manual edits and reversals.
+* **Phase A — Ingest**: capture raw transcripts and tool calls per session; store immutable logs.
+* **Phase B — Story Consolidation**: transform transcript into a concise, readable **public story** for the wiki with provenance and tags.
+* **Phase C — NER & Delta Determination**: perform named‑entity resolution, extract candidate world facts/events with confidence; map to structured entities.
+* **Phase D — Deconflict & Governance**: dedupe by entity/time/location; detect rare oppositions; spawn Crisis Points **only when justified**; apply single‑approver review if needed.
+* **Phase E — Publish**: batch publish lore + deltas on cadence; emit news items and hooks.
 * **Retention**: transcripts/logs retained for 1 year.
 
 ---
@@ -136,6 +140,7 @@
 
 ## 13. UX and Access
 
+* **Web-based Interface Requirement**: A fully functional **web-based UI** providing chat interaction, character management, map and lore integration, and account handling is a **primary critical deliverable**. This interface must unify gameplay, narrative interaction, and administrative functions, serving as the central access point for players and administrators.
 * **Chat pane**: streaming messages with turn markers, check results, tool‑use badges.
 * **Overlays**: character sheet, map, inventory, quest log, faction standings, news.
 * **Wiki**: accessible on the web or in‑client; editing locked for anonymous users; read‑only for the public.
@@ -145,7 +150,8 @@
 
 ## 14. Multiplayer and Sessions
 
-* **Sessions**: single‑player narratives with session id and rate limits; outcomes feed the world pipeline.
+* **Sessions**: single‑player narratives with session id and rate limits; outcomes feed the world pipeline. Sessions may be **long**, extending into **hundreds of turns**; the system must support persistence and continuity over extended interactions.
+* **UI Interaction**: the interface should indicate **narrative breakpoints** for natural story conclusions and allow players to signal that a session is **nearing completion**, prompting the GM to wrap up in **1–3 turns**.
 * **Presence**: hub rosters and local chat; private messages within hubs only.
 * **Anti‑grief**: hub mute/report/throttle.
 
@@ -171,20 +177,20 @@
 
 ## 17. Tools/Function Interfaces (contract layer)
 
-* `fetch_character(id)` → structured + unstructured view
-* `update_character(patch)` → validated patch
-* `fetch_location(id)` / `fetch_faction(id)` / `fetch_npc(id)`
-* `roll_check(kind, dc | target, modifiers, advantage?)` → result {outcome, degree, notes}
-* `propose_world_delta(payload)` → queued candidate with provenance
-* `spawn_crisis_point(conflict_spec)` → crisis id, parameters, expiry (rare path)
-* `log_transcript(session_id, turn, content, tools_used)`
+This section is intentionally reserved for the **Design Engine**. During the design phase, the engine must:
+
+* Identify which system interfaces and tool functions are necessary to support the narrative engine, world pipeline, and administrative workflows.
+* Define parameters, expected input/output schemas, and their relationships to internal systems (character, world, faction, hub, and narrative services).
+* Propose clear interface contracts between core subsystems and external components (e.g., MCP, storage, or LLM integration layers).
+
+The current list of function stubs will be replaced with finalized specifications once the Design Engine produces a complete integration map.
 
 ---
 
 ## 18. Acceptance Criteria (non‑implementation)
 
-* **Story flow**: player completes a 6+ turn session; at least one check gates action; character updates persist; at least one candidate world delta generated with provenance.
-* **Pipeline**: a transcript produces at least one published news item on cadence; **conflict handling remains unused in most test runs**, but when synthetic conflict is injected, it yields a Crisis Point.
+* **Story flow**: player completes a 6+ turn session; at least one check gates action; character updates persist **only as session notes** during play; no persistent world writes occur mid‑session.
+* **Pipeline**: the completed session produces (a) a consolidated **wiki story** with tags and provenance, and (b) at least one candidate world delta from NER/Delta Determination. **Conflict handling remains unused in most test runs**, but when synthetic conflict is injected, it yields a Crisis Point.
 * **Admin**: admin can edit an entity, approve/revert a delta, and update Prohibited Capabilities List.
 * **Hubs**: multiple players can chat, move rooms, trade with NPC, and see news billboards.
 * **Wiki**: displays published lore; anonymous editing disabled.

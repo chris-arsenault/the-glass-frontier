@@ -8,12 +8,15 @@ Always ground design choices in the baseline feature and technical commitments c
 
 ## Design Intent Shift Integration
 
-- Architect systems so solo sessions feel like cooperative GM-style freeform storytelling; mechanics must accommodate scene lengths ranging from minutes to months without enforcing rigid turn pacing.
-- Treat the continuously updated shared world as a downstream consumer of player narratives—protect consistency, but let narrative freedom lead unless safety, moderation, or anti power-creep rules demand intervention.
-- Keep conflict/crisis resolution tooling lightweight and rare; model it as an escalation path only when world edits materially clash.
+- Engineer the GM Engine as a direct ChatGPT-like conversational partner that augments every exchange with hard memory context (character sheet, inventory, relationships, last-session summary, relevant location/faction facts) without railroading player intent.
+- Preserve narrative freedom during play by restricting persistent world mutations to ephemeral session notes; all durable deltas must route through the offline post-session publishing pipeline.
+- Model success checks as a transparent background task that inspects player input, executes rolls when needed, and forwards both the input and result back to the primary narrative engine for seamless integration.
+- Expect sessions to stretch into hundreds of turns; surface UI cues for natural breakpoints and let players signal when they want the GM to wrap in 1–3 turns.
+- Keep conflict/crisis resolution tooling lightweight and rare; escalate only when world edits materially clash.
 - Reject text parser-style verb menus outside of MUD hubs. Everywhere else, design interfaces and resolution mechanics that accept open-ended natural language intent.
 - Enforce the Prohibited Capabilities List through system design to prevent reality-breaking superpowers from entering canon.
 - Prefer self-hosted search/indexing options during bootstrap; explicitly rule out managed stacks such as Elasticsearch in proposed architectures.
+- Treat a fully web-based interface that unifies chat, character management, map, lore, account handling, and admin controls as a critical deliverable of the design phase.
 
 ## MCP-Integrated Session Workflow
 
@@ -41,12 +44,12 @@ Always ground design choices in the baseline feature and technical commitments c
 
 | Session | Backlog Anchor | Design Focus | Required MCP Artifacts |
 |---------|----------------|--------------|------------------------|
-| 11–12 | `DES-11`, `DES-12` | Global systems map (Narrative Engine, Character System, World State Pipeline, Lore/Wiki, Hub System). | Architecture decisions for system boundaries; backlog notes linking to canvas/system diagrams; consistency check results logged. |
-| 13–14 | `DES-13`, `DES-14` | Narrative + rules framework (success ladders, LLM integration contracts, moderation schema). | Architecture decisions for rules enforcement + LLM hand-off; stored patterns for resolution templates; backlog tasks for rule edge cases. |
-| 15–16 | `DES-15`, `DES-16` | Persistence, lore, and data pipelines (storage schemas, delta workflow, provenance rules). | Architecture decisions describing data models and cadence; stored patterns for lore publishing; backlog note of retention policy risks. |
+| 11–12 | `DES-11`, `DES-12` | Global systems map (Narrative Engine, Character System, offline Post-Session Pipeline, Lore/Wiki, Hub System, Web UI shell). | Architecture decisions for system boundaries; backlog notes linking to canvas/system diagrams; consistency check results logged. |
+| 13–14 | `DES-13`, `DES-14` | Narrative + rules framework (success ladders, LLM integration contracts, moderation schema, background check runner). | Architecture decisions for rules enforcement + LLM hand-off; stored patterns for resolution templates; backlog tasks for rule edge cases and transparency safeguards. |
+| 15–16 | `DES-15`, `DES-16` | Persistence, lore, and data pipelines (Story Consolidation, NER & Delta Determination, publishing cadence, provenance rules). | Architecture decisions describing pipeline phases and cadence; stored patterns for lore publishing; backlog note of retention policy risks. |
 | 17 | `DES-17` | Multiplayer hubs and real-time stack (command parser, rooms, sync). | Architecture decision for hub event flow; pattern for WebSocket/session handling; backlog follow-ups for load tests. |
 | 18 | `DES-18` | Admin & moderation workflows (roles, permissions, audit trails). | Architecture decisions capturing moderation pipeline; backlog actions for tooling prototypes. |
-| 19 | `DES-19` | Infrastructure & scaling (LLM orchestration, databases, networking). | Architecture decisions on orchestration topology; backlog updates for cost/risk analysis; store pattern for deployment pipeline. |
+| 19 | `DES-19` | Infrastructure & scaling (LLM orchestration, databases, networking, web delivery). | Architecture decisions on orchestration topology; backlog updates for cost/risk analysis; store pattern for deployment pipeline. |
 | 20 | `DES-20` | System synthesis and SDD production. | Final architecture decision summarizing target stack; backlog item pointing to `SYSTEM_DESIGN_SPEC.md`; handoff enumerating open implementation risks. |
 
 ## Artefact Expectations
@@ -63,3 +66,4 @@ Each session must create:
 - Maintain versioned design assets under `docs/design/`, with filenames keyed to backlog IDs for traceability.  
 - Compile `SYSTEM_DESIGN_SPEC.md` during Session 20, citing all relevant backlog stories and architecture decision IDs.  
 - Ensure unresolved implementation questions roll forward as new backlog items tagged `phase:implementation` so build cycles start with a groomed queue.
+- Produce interface and interaction specs for the unified web client (chat, overlays, admin panes) and tie them to `DES-11`/`DES-12` outputs to honor the web-based UI mandate from `REQUIREMENTS.md`.
