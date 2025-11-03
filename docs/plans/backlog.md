@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 9 (research phase).
+Last updated for Session 10 (research phase).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -13,3 +13,4 @@ Last updated for Session 9 (research phase).
 | RES-CORE: Foundational Research | RES-07: Offline Post-Session Pipelines & Moderation | done | P1 | phase:research, cycle:1, discipline:systems, discipline:moderation | Findings in `docs/research/session-07-offline-pipelines-and-moderation.md`, MCP cache `7b9222b6-b7e4-47d2-be4d-a3372780d89b`. |
 | RES-CORE: Foundational Research | RES-08: Story Consolidation & World Delta Integration | done | P1 | phase:research, cycle:1, discipline:systems, discipline:moderation, discipline:lore | Findings in `docs/research/session-08-story-consolidation-world-deltas.md`, MCP cache `93ab540d-5f7a-4076-a16a-2e6fac8792af`. |
 | RES-CORE: Foundational Research | RES-09: Technical Landscape Deep Dive | done | P1 | phase:research, cycle:1, discipline:technical | Findings in `docs/research/session-09-technical-landscape.md`, MCP cache `73b3791b-b896-4805-af3e-5c50ae6ad874`. |
+| RES-CORE: Foundational Research | RES-10: Market Research Synthesis Brief | done | P0 | phase:research, cycle:1, discipline:market, discipline:strategy | Summary in `MARKET_RESEARCH_SUMMARY.md` and `docs/research/session-10-market-research-brief.md`, MCP cache `94a66ac4-9fba-4bf2-9588-4f0d87205fc8`. |
