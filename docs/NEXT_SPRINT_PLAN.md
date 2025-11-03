@@ -1,16 +1,16 @@
-# Next Sprint Plan – Sessions 31–40
-Updated: 2025-11-03
+# Next Sprint Plan – Sessions 41-50
 
-| Priority | Focus & Outcomes | Key Backlog Items | Notes |
-|----------|-----------------|-------------------|-------|
-| P1 | Gameplay implementation: LangGraph GM engine, momentum check runner, and hard memory context online. | `IMP-GM-01`, `IMP-GM-02`, `IMP-GM-03` | Blocks all downstream systems; complete before enabling player-facing loops. |
-| P1 | Unified web client & accessibility overlays delivering chat-first play with transparent checks. | `IMP-CLIENT-01`, `IMP-CLIENT-02`, `IMP-CLIENT-03`, `IMP-AXE-01` | Aligns with Tier 1a requirements; collaborate closely with GM engine to validate events. |
-| P1 | Offline post-session pipeline for story consolidation, delta proposals, and cadence scheduler. | `IMP-OFFLINE-01`, `IMP-OFFLINE-02`, `IMP-OFFLINE-03` | Enables lore publishing without live-session world writes; depends on GM memory telemetry. |
-| P1 | Core hub loop scaffolding (gateway, orchestrator, narrative bridge) to support shared spaces. | `IMP-HUB-01`, `IMP-HUB-02`, `IMP-HUB-03` | Ensure verb DSL + safety hooks mirror Prohibited Capabilities list. |
-| P1 | Platform baseline: IaC deployment and observability to host narrative, hub, and pipeline services. | `IMP-IAC-01`, `IMP-OBS-01` | Provide reproducible environments and telemetry before expanding surface area. |
-| P1 | Moderation-publishing handshake to keep unsafe deltas from shipping. | `IMP-MOD-03` | Coordinate with offline pipeline to enforce SLA timers and cadence gating. |
-| P2 | Moderator tooling & policy governance for manual interventions and capability updates. | `IMP-MOD-01`, `IMP-MOD-02` | Start after GM/UI loops stabilize; required before public release but can trail initial MVP. |
-| P2 | Storage and search hardening (retention tiers, differential indexing). | `IMP-MINIO-01`, `IMP-SEARCH-01` | Execute alongside publishing pipeline hardening once core workflows function. |
-| P3 | Stretch/benchmarks: performance harnesses, CI orchestration, additional automation. | Future tickets (e.g., `DES-BENCH-01` follow-ups) | Capture as follow-ons if capacity opens; do not preempt Tier 1 execution. |
+| Tier | Priority | Focus Area | Linked Backlog Items | Key Outcomes |
+|------|----------|-------------|----------------------|--------------|
+| Tier 1 | P1 | Gameplay Implementation | `IMP-GM-04`, `IMP-HUB-02`, `IMP-HUB-03`, `IMP-HUB-04` | Ship LangGraph production graph, hub orchestrators, narrative bridge, and verb catalog persistence so live sessions and hubs operate end-to-end. |
+| Tier 1 | P1 | Offline Post-Session Pipeline | `IMP-OFFLINE-01`, `IMP-OFFLINE-03` | Deliver story consolidation workflow and publishing cadence/search sync to enable offline world updates after each run. |
+| Tier 1a | P1 | Unified Web Client | `IMP-CLIENT-04` | Launch account and session management UI with role-aware navigation and session resume controls. |
+| Tier 2 | P2 | Moderation & Admin Surfaces | `IMP-MOD-01`, `IMP-MOD-02`, `IMP-MOD-03` | Build moderation dashboard, capability registry, and publishing sync so safety teams can govern deltas before release. |
+| Tier 3 | P2 | Platform Foundations | `IMP-IAC-01`, `IMP-MINIO-01`, `IMP-SEARCH-01` | Prepare infrastructure-as-code, storage lifecycle, and search indexing automation needed once Tier 1 systems stabilize. |
+| Tier 3 | P3 | Observability & Incident Response | `IMP-OBS-01` | Stand up observability stack (Grafana/VictoriaMetrics/Loki) after core loops reach MVP completeness. |
 
-**Capacity guardrails:** Keep ≤10 items in active execution. Pull from P1 rows first, starting with GM engine + web client pairing, then pipeline and hubs once shared schemas stabilize.
+## Supporting Notes
+
+- Tier 1 scopes run in parallel but must converge on a playable solo + hub experience feeding the offline pipeline within the next 10 sessions.
+- Tier 2 moderation tooling depends on pipeline outputs; sequencing begins once story consolidation and publishing cadence reach functional status.
+- Tier 3 items remain queued; elevate only when Tier 1/1a delivery is unblocked or requires platform support.

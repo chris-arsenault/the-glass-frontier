@@ -1,31 +1,34 @@
 # Backlog Snapshot
 
-Last updated for Session 31 (implementation grooming kickoff).
+Updated for Session 41 grooming.
 
 ## Active Implementation Backlog
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
 | IMP-GM: Narrative Engine & Check Runner | IMP-GM-01: LangGraph Narrative Engine Skeleton | done | P1 | phase:implementation, pillar:gameplay | Stand up LangGraph flow, chat intake, and check dispatch per DES-11/12/13. |
-| IMP-GM: Narrative Engine & Check Runner | IMP-GM-02: Temporal Check Runner & Momentum Engine | done | P1 | phase:implementation, pillar:gameplay | Deterministic check runner landed in `src/checkRunner/checkRunner.js`; see `docs/implementation/IMP-GM-02-check-runner.md` for telemetry + follow-ups. |
-| IMP-GM: Narrative Engine & Check Runner | IMP-GM-03: Session Memory & Character Facade | done | P1 | phase:implementation, pillar:gameplay | REST + change-feed facade captured in `docs/implementation/IMP-GM-03-session-memory.md`; LangGraph client wiring queued next. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-01: Story Consolidation Workflow MVP | todo | P1 | phase:implementation, pillar:pipeline | Temporal workflow to summarize transcripts into player/admin recaps. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-02: Entity Extraction & Delta Queue | done | P1 | phase:implementation, pillar:pipeline | Entity extractor + world delta queue shipped; see `docs/implementation/IMP-OFFLINE-02-entity-extraction-delta-queue.md`, unit tests under `__tests__/unit/offline`. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-03: Publishing Cadence & Search Sync | todo | P1 | phase:implementation, pillar:pipeline | Applies approved deltas, schedules releases, keeps search indexes fresh. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-01: Web Client Shell & Chat Canvas | done | P1 | phase:implementation, pillar:client | React/Vite shell with chat-first UX, WebSocket/SSE transport, doc: `docs/implementation/IMP-CLIENT-01-client-shell.md`. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-02: Overlay System & Pacing Ribbon | done | P1 | phase:implementation, pillar:client | Overlay sync, check disclosures, pacing ribbon controls – see `docs/implementation/IMP-CLIENT-02-overlay-system.md`. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-03: Service Worker & Offline Continuity | done | P1 | phase:implementation, pillar:client | Service worker, IndexedDB caching, offline intent queue documented in `docs/implementation/IMP-CLIENT-03-service-worker-offline.md`. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-AXE-01: Accessibility Automation Pipeline | done | P1 | phase:implementation, discipline:qa | `npm run test:accessibility` publishes axe-core JSON/HTML reports under `artifacts/accessibility` for chat shell and offline states. |
+| IMP-GM: Narrative Engine & Check Runner | IMP-GM-02: Temporal Check Runner & Momentum Engine | done | P1 | phase:implementation, pillar:gameplay | Deterministic check runner landed in `src/checkRunner/checkRunner.js`; see `docs/implementation/IMP-GM-02-check-runner.md`. |
+| IMP-GM: Narrative Engine & Check Runner | IMP-GM-03: Session Memory & Character Facade | done | P1 | phase:implementation, pillar:gameplay | REST + change-feed facade captured in `docs/implementation/IMP-GM-03-session-memory.md`. |
+| IMP-GM: Narrative Engine & Check Runner | **IMP-GM-04: LangGraph Narrative Nodes & Tool Harness** | todo | P1 | phase:implementation, pillar:gameplay | Production LangGraph graph, tool harness adapters, telemetry + safety instrumentation. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-01: Story Consolidation Workflow MVP** | todo | P1 | phase:implementation, pillar:pipeline | Temporal workflow to summarize transcripts into player/admin recaps. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-02: Entity Extraction & Delta Queue | done | P1 | phase:implementation, pillar:pipeline | Entity extractor + world delta queue shipped; see `docs/implementation/IMP-OFFLINE-02-entity-extraction-delta-queue.md`. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-03: Publishing Cadence & Search Sync** | todo | P1 | phase:implementation, pillar:pipeline | Applies approved deltas, schedules releases, keeps search indexes fresh. |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-01: Hub Gateway & Command Parser Skeleton | done | P1 | phase:implementation, pillar:multiplayer | Hub gateway, verb DSL, SSE fallback, telemetry scaffolding – see `docs/implementation/IMP-HUB-01-hub-gateway-parser.md`. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-02: Hub Orchestrator & Temporal Hooks | todo | P1 | phase:implementation, pillar:multiplayer | Redis presence/replay, Temporal escalation workflows. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-03: Hub Narrative Bridge & Safety Telemetry | todo | P1 | phase:implementation, pillar:multiplayer | Hub narration bridge, capability enforcement, moderation telemetry. |
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-IAC-01: Nomad & Vault Operations Modules | todo | P1 | phase:implementation, pillar:platform | Terraform/Nomad deployments, Vault policies, secrets automation. |
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-OBS-01: Observability & Incident Dashboards | todo | P1 | phase:implementation, pillar:platform | OTEL collectors, VictoriaMetrics/Loki/Grafana dashboards, alerts. |
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-MINIO-01: MinIO Lifecycle Automation | todo | P2 | phase:implementation, discipline:storage | Retention tiers and lifecycle rules for lore/hub artefacts. |
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | phase:implementation, discipline:search | Incremental indexing jobs and drift monitoring for self-hosted search. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-01: Moderation Dashboard & Live Overrides | todo | P1 | phase:implementation, pillar:moderation | Admin console for alert triage, overrides, and audit logging. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | phase:implementation, pillar:moderation | Capability registry CRUD, role assignments, sync events. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | todo | P1 | phase:implementation, pillar:moderation | Moderation SLA timers connected to publishing cadence controls. |
+| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-02: Hub Orchestrator & Temporal Hooks** | todo | P1 | phase:implementation, pillar:multiplayer | Redis presence/replay, Temporal escalation workflows. |
+| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-03: Hub Narrative Bridge & Safety Telemetry** | todo | P1 | phase:implementation, pillar:multiplayer | Hub narration bridge, capability enforcement, moderation telemetry. |
+| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-04: Verb Catalog Persistence & Admin Controls** | todo | P1 | phase:implementation, pillar:multiplayer | PostgreSQL-backed verb catalogs, admin CRUD, cache invalidation broadcasting. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-01: Web Client Shell & Chat Canvas | done | P1 | phase:implementation, pillar:client | React/Vite shell with chat-first UX, WebSocket/SSE transport. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-02: Overlay System & Pacing Ribbon | done | P1 | phase:implementation, pillar:client | Overlay sync, check disclosures, pacing ribbon controls. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-03: Service Worker & Offline Continuity | done | P1 | phase:implementation, pillar:client | Service worker, IndexedDB caching, offline intent queue. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-AXE-01: Accessibility Automation Pipeline | done | P1 | phase:implementation, discipline:qa | `npm run test:accessibility` publishes axe-core JSON/HTML reports. |
+| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-04: Account & Session Management UI** | todo | P1 | phase:implementation, pillar:client | Authentication flows, session resume dashboard, RBAC-aware navigation. |
+| IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-01: Moderation Dashboard & Live Overrides** | todo | P2 | phase:implementation, pillar:moderation | Admin console for alert triage, overrides, and audit logging. |
+| IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-02: Prohibited Capability Registry & Policy Editor** | todo | P2 | phase:implementation, pillar:moderation | Capability registry CRUD, role assignments, sync events. |
+| IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-03: Moderation Queue & Publishing Sync** | todo | P2 | phase:implementation, pillar:moderation | Moderation SLA timers connected to publishing cadence controls. |
+| IMP-PLATFORM: Platform Implementation Foundations | **IMP-IAC-01: Nomad & Vault Operations Modules** | todo | P2 | phase:implementation, pillar:platform | Terraform/Nomad deployments, Vault policies, secrets automation. |
+| IMP-PLATFORM: Platform Implementation Foundations | **IMP-MINIO-01: MinIO Lifecycle Automation** | todo | P2 | phase:implementation, discipline:storage | Retention tiers and lifecycle rules for lore/hub artefacts. |
+| IMP-PLATFORM: Platform Implementation Foundations | **IMP-SEARCH-01: Lore Search Differential Indexing** | todo | P2 | phase:implementation, discipline:search | Incremental indexing jobs and drift monitoring for self-hosted search. |
+| IMP-PLATFORM: Platform Implementation Foundations | **IMP-OBS-01: Observability & Incident Dashboards** | todo | P3 | phase:implementation, pillar:platform | OTEL collectors, VictoriaMetrics/Loki/Grafana dashboards, alerts. |
 
 ## Delivered Discovery Backlog
 
