@@ -1,0 +1,15 @@
+path "${kv_mount_path}/data/api/*" {
+  capabilities = ["create", "read", "update", "list", "delete"]
+}
+
+path "${kv_mount_path}/data/session-state/*" {
+  capabilities = ["read", "list"]
+}
+
+path "${kv_mount_path}/data/prohibited-capabilities" {
+  capabilities = ["read"]
+}
+
+path "sys/leases/renew" {
+  capabilities = ["update"]
+}

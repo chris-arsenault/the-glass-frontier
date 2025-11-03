@@ -1,0 +1,15 @@
+path "${kv_mount_path}/data/providers/*" {
+  capabilities = ["read", "list"]
+}
+
+path "${kv_mount_path}/data/llm/cache/*" {
+  capabilities = ["read", "list", "update", "delete"]
+}
+
+path "${transit_mount_path}/sign/${namespace}-story-signing" {
+  capabilities = ["update"]
+}
+
+path "sys/leases/renew" {
+  capabilities = ["update"]
+}

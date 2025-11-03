@@ -1,0 +1,69 @@
+{
+  "id": null,
+  "title": "Temporal Health Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Workflow Lag (p95)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate({{ lag_metric }}_bucket[5m])) by (le)) * 1000",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${victoria_datasource}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": ${latency_target_ms}
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Recent Safety Overrides",
+      "targets": [
+        {
+          "query": "{app=\"moderation\"} |= \"override\" | json",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  }
+}

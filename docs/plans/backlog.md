@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Updated for Session 41 grooming.
+Updated for Session 49 autonomous cycle.
 
 ## Active Implementation Backlog
 
@@ -25,7 +25,7 @@ Updated for Session 41 grooming.
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-01: Moderation Dashboard & Live Overrides** | todo | P2 | phase:implementation, pillar:moderation | Admin console for alert triage, overrides, and audit logging. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-02: Prohibited Capability Registry & Policy Editor** | todo | P2 | phase:implementation, pillar:moderation | Capability registry CRUD, role assignments, sync events. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-03: Moderation Queue & Publishing Sync** | todo | P2 | phase:implementation, pillar:moderation | Moderation SLA timers connected to publishing cadence controls. |
-| IMP-PLATFORM: Platform Implementation Foundations | **IMP-IAC-01: Nomad & Vault Operations Modules** | todo | P2 | phase:implementation, pillar:platform | Terraform/Nomad deployments, Vault policies, secrets automation. |
+| IMP-PLATFORM: Platform Implementation Foundations | **IMP-IAC-01: Nomad & Vault Operations Modules** | done | P2 | phase:implementation, pillar:platform | Terraform modules for Nomad core, Vault AppRoles/rotation, and observability artefacts live under `infra/terraform/**`. |
 | IMP-PLATFORM: Platform Implementation Foundations | **IMP-MINIO-01: MinIO Lifecycle Automation** | todo | P2 | phase:implementation, discipline:storage | Retention tiers and lifecycle rules for lore/hub artefacts. |
 | IMP-PLATFORM: Platform Implementation Foundations | **IMP-SEARCH-01: Lore Search Differential Indexing** | todo | P2 | phase:implementation, discipline:search | Incremental indexing jobs and drift monitoring for self-hosted search. |
 | IMP-PLATFORM: Platform Implementation Foundations | **IMP-OBS-01: Observability & Incident Dashboards** | todo | P3 | phase:implementation, pillar:platform | OTEL collectors, VictoriaMetrics/Loki/Grafana dashboards, alerts. |
