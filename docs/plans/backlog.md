@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 27 (magitech tiers & relic industry codex).
+Last updated for Session 28 (settlements & magitech infrastructure dossiers).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -39,3 +39,4 @@ Last updated for Session 27 (magitech tiers & relic industry codex).
 | NAR-CORE: Worldbuilding Foundations | NAR-25: Faction Influence Matrices & Governance Atlas | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:25 | `docs/lore/FACTIONS.md`; MCP narrative element `63c6b951-9aae-456b-ae18-74176af46d73`, lore entry `12899b27-3b85-44ae-950e-80ef19c8da14`, dialogue scene `eb21b0b4-c51e-4a31-9dd2-c6930d783843`; consistency check (2025-11-04) aligned with modular systems map and Temporal lore cadence architecture guidance—no conflicts detected. |
 | NAR-CORE: Worldbuilding Foundations | NAR-26: Alliance Drift & Conflict Escalation Ledger | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:26 | `docs/lore/FACTION_CONFLICTS.md`; MCP narrative element `5c158f7e-38f9-4658-a2bf-ce0aa0b0f732`, lore entry `06f331bb-0dce-4281-8d2c-39190588dc99`; consistency check (2025-11-04) returned no architectural matches—record follow-up alignment once DES-MOD-01 automation mapping lands. |
 | NAR-CORE: Worldbuilding Foundations | NAR-27: Magitech Tiers & Relic Industry Codex | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:27 | `docs/lore/TECHNOLOGY.md`; MCP narrative element `214540bd-3112-4d26-8f68-4f6a8042fc88`, lore entry `bab34b7d-3a73-43f1-9efe-953d0977beb9`; `mcp__game-mcp-server__check_consistency` (2025-11-04) logged no architectural matches—coordinate with implementation teams when DES-MOD-01 automation mapping resumes. |
+| NAR-CORE: Worldbuilding Foundations | NAR-28: Settlements & Magitech Infrastructure Dossiers | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:28 | `docs/lore/SETTLEMENTS.md`; MCP narrative element `df29e84a-e13f-4b34-a01a-69383b948a0a`, lore entry `f4455211-979d-42c1-86bd-6b21b1826581`; `mcp__game-mcp-server__check_consistency` (2025-11-04) surfaced architecture cadence alignments with no blocking conflicts—next steps track anomaly integration and DES-MOD-01 hook wiring. |
