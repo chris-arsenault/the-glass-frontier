@@ -1,0 +1,110 @@
+%% Mermaid diagram summarizing the integrated system design for Session 20
+flowchart LR
+    subgraph Client["Player & Admin Client"]
+        Chat["Chat Canvas\n& Narrative UI"]
+        Overlays["Character / Map / Lore\nOverlays"]
+        AdminConsole["Admin & Moderation\nConsole"]
+        HubPanel["Hub Command\nPalette"]
+    end
+
+    subgraph SessionGateway["Session Gateway & APIs"]
+        Socket["Session WebSocket\nGateway"]
+        RestAPI["Session REST / GraphQL\nFacade"]
+    end
+
+    subgraph LiveNarrative["Live Narrative Services"]
+        Narrative["LangGraph Narrative\nOrchestrator"]
+        Memory["Session Memory &\nCharacter Service"]
+        CheckInvoker["Check Invocation\nBus"]
+    end
+
+    subgraph TemporalChecks["Temporal Workflow Plane"]
+        CheckRunner["Check Runner\nWorkflows"]
+        HubWorkflows["Hub Action\nWorkflows"]
+    end
+
+    subgraph HubStack["Multiplayer Hub Stack"]
+        HubGateway["uWebSockets Hub\nGateway"]
+        CommandDSL["Verb-Limited\nCommand Parser"]
+        HubOrchestrator["Hub Orchestrator\nWorkers"]
+    end
+
+    subgraph EventCapture["Event Capture & Storage"]
+        CouchDB[("CouchDB\nEvent Log")]
+        Redis[("Redis Streams\n& Presence")]
+        Postgres[("PostgreSQL\nCanon Store")]
+    end
+
+    subgraph OfflinePipeline["Offline Post-Session Pipeline"]
+        StoryConsolidation["Story Consolidation"]
+        EntityExtraction["Entity Extraction\n& Graph Enrichment"]
+        DeltaDetermination["Delta Determination\n& Safety Review"]
+        Publishing["Publishing Cadence\n(Batch + Digest)"]
+    end
+
+    subgraph ContentSurfaces["Lore & Content Surfaces"]
+        LoreBundles["Lore Bundles / Wiki"]
+        NewsFeed["News Feed & Digest"]
+        SearchIndex["Self-Hosted Search\n(Meilisearch / pg_trgm)"]
+        MinIO[("MinIO Object\nStorage")]
+    end
+
+    subgraph OpsPlane["Operations & Governance"]
+        Vault["Vault Secrets\n& Policy"]
+        Observability["OTel Collectors\n→ VictoriaMetrics/Loki"]
+        Grafana["Grafana / Alerting"]
+        ProhibitedList["Prohibited Capabilities\nRegistry"]
+    end
+
+    Chat -->|WebSocket / SSE| Socket
+    Overlays -->|REST / GraphQL| RestAPI
+    HubPanel -->|WebSocket| HubGateway
+    AdminConsole -->|Moderation API| RestAPI
+
+    Socket --> Narrative
+    RestAPI --> Memory
+    Narrative --> Memory
+    Narrative --> CheckInvoker
+    CheckInvoker --> CheckRunner
+    CheckRunner --> Narrative
+    Narrative -->|session.message| Chat
+    Narrative -->|check.prompt/result| Overlays
+    Narrative -->|telemetry| Observability
+    Narrative -->|events| CouchDB
+
+    HubGateway --> CommandDSL
+    CommandDSL --> HubOrchestrator
+    HubOrchestrator --> Redis
+    HubOrchestrator --> HubWorkflows
+    HubWorkflows --> HubOrchestrator
+    HubOrchestrator --> Narrative
+
+    Redis --> HubGateway
+    Memory --> Postgres
+    CouchDB --> StoryConsolidation
+    StoryConsolidation --> EntityExtraction
+    EntityExtraction --> DeltaDetermination
+    DeltaDetermination --> Publishing
+    DeltaDetermination --> AdminConsole
+
+    Publishing --> LoreBundles
+    Publishing --> NewsFeed
+    Publishing --> SearchIndex
+    Publishing --> MinIO
+    LoreBundles --> Overlays
+    NewsFeed --> Overlays
+
+    Vault --> SessionGateway
+    Vault --> LiveNarrative
+    Vault --> HubStack
+    ProhibitedList --> CommandDSL
+    ProhibitedList --> Narrative
+    Observability --> Grafana
+
+    Publishing --> Observability
+    TemporalChecks --> Observability
+    HubStack --> Observability
+
+    AdminConsole --> ProhibitedList
+    AdminConsole --> DeltaDetermination
+
