@@ -1,0 +1,23 @@
+%% DES-16 publishing cadence sequence
+sequenceDiagram
+    participant Session as Session Closed
+    participant Temporal as Temporal Orchestrator
+    participant Moderation as Admin Moderation
+    participant Publish as Publishing Batch
+    participant Digest as Daily Digest
+    participant Index as Search/Storage
+    participant Monitoring as Observability
+    participant UI as Client Surfaces
+
+    Session->>Temporal: emit summaryReady + deltaQueue
+    Temporal->>Moderation: start moderationWindowWorkflow\n(45 min SLA)
+    Moderation-->>Temporal: approve/rewrite/escalate decisions\nupdates publishing_state
+    Temporal->>Publish: trigger loreBatchPublishWorkflow\n(batch hourly)
+    Publish->>Index: write loreBundle/newsCard\nupdate Meilisearch + PostgreSQL
+    Publish->>UI: broadcast overlay.loreLink events
+    Publish->>Temporal: report publish status\n(provide backlog metrics)
+    Temporal->>Digest: schedule dailyDigestWorkflow\n(02:00 local)
+    Digest->>Index: persist digest chapters (MinIO + PostgreSQL)
+    Digest->>UI: notify players/admins via overlays/email
+    Temporal->>Monitoring: emit telemetry.publish.* metrics
+    Monitoring-->>UI: drive dashboards/backlog flags

@@ -1,0 +1,26 @@
+```mermaid
+sequenceDiagram
+    participant Client as Player Client
+    participant Gateway as Hub Gateway
+    participant Parser as Command Parser
+    participant Orchestrator as Hub Orchestrator
+    participant Redis as Redis Presence/State
+    participant Narrative as Narrative Bridge (LangGraph)
+    participant Temporal as Temporal Check Runner (Temporal)
+    participant Offline as Offline Pipeline
+
+    Client->>Gateway: /trade scrap npc=Orlan
+    Gateway->>Parser: hub.command + hubContext
+    Parser->>Redis: validate verb, fetch rate limits
+    Parser-->>Gateway: reject if invalid (safety/verb)
+    Parser->>Orchestrator: enqueue validated hub.command
+    Orchestrator->>Redis: update room state, presence
+    Orchestrator->>Narrative: intent.hubNarration (context payload)
+    Narrative-->>Orchestrator: session.message + optional check.prompt
+    Orchestrator->>Temporal: start hubActionWorkflow (if mechanical check)
+    Temporal-->>Orchestrator: check.result / telemetry
+    Orchestrator->>Gateway: hub.stateUpdate + session.message
+    Gateway-->>Client: broadcast updates to room participants
+    Orchestrator->>Offline: append hub.actionLog / snapshot
+    Offline-->>Temporal: trigger Story Consolidation & delta queue
+```

@@ -1,0 +1,28 @@
+```mermaid
+graph TD
+    subgraph "Live Session Capture"
+        UI[Unified Web UI & Narrative Engine] -->|session beats| EV[Session Event Log (CouchDB)]
+    end
+
+    EV -->|change feed| SC(Temporal Story Consolidation Workflow)
+    SC --> SUM[PostgreSQL session_summaries]
+    SC --> ATT[MinIO Attachments Bucket]
+
+    SUM --> EX(Temporal Entity Extraction Workflow)
+    EX --> ENT[Entity Mentions / Graph Projection]
+
+    ENT --> DD(Delta Determination & Safety Workflow)
+    DD --> SAF[Safety Checks\nProhibited Capabilities & Timeline Guard]
+    DD --> DELTA[world_delta_queue (PostgreSQL)]
+
+    DELTA --> MOD[Moderation Console Tasks]
+    SAF --> MOD
+
+    MOD -->|approve| PUB(Publishing Workflow)
+    MOD -->|rewrite| COMP[Compensating Event Append]
+    COMP --> EV
+
+    PUB --> LORE[Lore Tables & News Feeds]
+    PUB --> IDX[Search Index (Meilisearch / pg_trgm)]
+    PUB --> UI
+```

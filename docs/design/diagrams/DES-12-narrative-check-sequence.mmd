@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant Player as Player Client
+    participant WebUI as Unified Web UI
+    participant Narrative as Narrative Engine (LangGraph)
+    participant CheckRunner as Temporal Check Runner
+    participant Telemetry as Telemetry Stream
+
+    Player->>WebUI: Intent + character context
+    WebUI->>Narrative: session.message(intentPayload)
+    Narrative->>Narrative: Analyze intent (tone, move, stakes)
+    Narrative-->>WebUI: session.marker(optional pacing cue)
+    alt Check required
+        Narrative->>CheckRunner: intent.checkRequest(checkContext)
+        CheckRunner->>CheckRunner: Execute workflow / roll
+        CheckRunner->>Telemetry: telemetry.check(request+result)
+        CheckRunner-->>Narrative: event.checkResolved(result payload)
+        Narrative->>WebUI: check.prompt(check summary)
+        Narrative->>WebUI: session.message(GM narration with checkReference)
+        WebUI->>Player: Render narration + overlay update
+        WebUI->>Player: Screen reader announces result (aria-live)
+    else No check
+        Narrative->>WebUI: session.message(GM narration)
+        WebUI->>Player: Render narration
+    end
+    WebUI->>Telemetry: telemetry.clientLag(metrics)
