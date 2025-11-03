@@ -101,6 +101,29 @@ class PublishingCadence {
       overrides: []
     };
 
+    const existing = this.stateStore.getSession(sessionId);
+
+    if (existing) {
+      this.stateStore.updateSession(sessionId, (state) => {
+        state.sessionClosedAt = schedule.sessionClosedAt;
+        state.moderation = schedule.moderation;
+        state.batches = schedule.batches;
+        state.digest = schedule.digest;
+        state.overrides = [];
+        return state;
+      });
+      this.stateStore.appendHistory(sessionId, {
+        type: "cadence.reinitialised",
+        payload: {
+          sessionClosedAt: schedule.sessionClosedAt,
+          moderationStartAt: schedule.moderation.startAt,
+          loreBatchRunAt: schedule.batches[0].runAt,
+          digestRunAt: schedule.digest.runAt
+        }
+      });
+      return this.stateStore.getSession(sessionId);
+    }
+
     this.stateStore.createSession(sessionId, schedule);
     this.stateStore.appendHistory(sessionId, {
       type: "cadence.initialised",

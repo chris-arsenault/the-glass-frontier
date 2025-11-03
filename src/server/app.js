@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
+const { v4: uuid } = require("uuid");
 const { log } = require("../utils/logger");
 const { createAdminHubVerbRouter } = require("./routes/adminHubVerbs");
 const { AccountService } = require("../auth/accountService");
@@ -10,6 +11,7 @@ const { SessionDirectory } = require("../auth/sessionDirectory");
 const { PublishingCadence } = require("../offline/publishing/publishingCadence");
 const { createAuthRouter } = require("./routes/auth");
 const { createAccountsRouter } = require("./routes/accounts");
+const { SessionClosureCoordinator } = require("../offline/sessionClosureCoordinator");
 
 function createApp({
   narrativeEngine,
@@ -19,6 +21,7 @@ function createApp({
   hubVerbService = null,
   accountService = null,
   sessionDirectory = null,
+  offlineCoordinator = null,
   publishingCadence = null,
   clock = () => new Date(),
   seedAccounts = true
@@ -51,9 +54,14 @@ function createApp({
       seed: seedAccounts
     });
 
+  const closures =
+    offlineCoordinator ||
+    new SessionClosureCoordinator();
+
   const app = express();
   app.locals.accountService = accounts;
   app.locals.sessionDirectory = directory;
+  app.locals.offlineCoordinator = closures;
   app.use(express.json());
 
   function handleMemoryError(error, res, next) {
@@ -83,6 +91,25 @@ function createApp({
       default:
         return next ? false : false;
     }
+  }
+
+  function authenticate(req, res, next) {
+    const authHeader = req.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) {
+      res.status(401).json({ error: "auth_token_required" });
+      return;
+    }
+
+    const account = accounts.getLiveAccountByToken(token);
+    if (!account) {
+      res.status(401).json({ error: "auth_token_invalid" });
+      return;
+    }
+
+    req.account = account;
+    req.token = token;
+    next();
   }
 
   app.get("/sessions/:sessionId/events", (req, res) => {
@@ -134,6 +161,106 @@ function createApp({
       });
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.post("/sessions/:sessionId/close", authenticate, (req, res, next) => {
+    const { sessionId } = req.params;
+    const { reason } = req.body || {};
+    const auditRef = `session.close:${sessionId}:${uuid()}`;
+
+    try {
+      const summary = accounts.closeSession(req.account.id, sessionId, {
+        reason: reason || "session.closed",
+        closedBy: req.account.id,
+        auditRef
+      });
+
+      sessionMemory.appendTranscript(sessionId, {
+        role: "system",
+        type: "system.event",
+        auditRef,
+        content: `${req.account.displayName || req.account.email || req.account.id} closed the session.`,
+        metadata: {
+          reason: reason || "session.closed",
+          actorId: req.account.id,
+          closedAt: summary.updatedAt
+        }
+      });
+
+      const sessionState = sessionMemory.getSessionState(sessionId);
+      const pendingChecks = sessionState.pendingChecks
+        ? Array.from(sessionState.pendingChecks.values()).map((check) => ({
+            id: check.id || null,
+            move: check.data?.move || check.move || null,
+            requestedAt: check.requestedAt || null
+          }))
+        : [];
+
+      let closureJob = null;
+      try {
+        closureJob = closures.enqueueClosure({
+          sessionId,
+          auditRef,
+          reason: reason || "session.closed",
+          closedAt: summary.updatedAt,
+          accountId: req.account.id,
+          momentum: sessionState.momentum || {},
+          pendingChecks,
+          changeCursor: sessionState.changeCursor,
+          lastAckCursor: sessionState.lastAckCursor
+        });
+      } catch (error) {
+        log("error", "Failed to enqueue session closure", {
+          sessionId,
+          auditRef,
+          message: error.message
+        });
+        checkBus.emitAdminAlert({
+          sessionId,
+          reason: "offline.enqueue_failed",
+          severity: "high",
+          data: {
+            auditRef,
+            error: error.message
+          }
+        });
+      }
+
+      const statusPayload = {
+        sessionId,
+        status: summary.status,
+        closedAt: summary.updatedAt,
+        auditRef,
+        pendingOffline: summary.offlinePending,
+        cadence: summary.cadence || null
+      };
+
+      broadcaster.publish(sessionId, {
+        type: "session.statusChanged",
+        payload: statusPayload
+      });
+
+      broadcaster.publish(sessionId, {
+        type: "session.closed",
+        payload: {
+          ...statusPayload,
+          reason: reason || "session.closed",
+          momentum: sessionState.momentum || {},
+          pendingChecks: pendingChecks.length
+        }
+      });
+
+      res.status(202).json({
+        session: summary,
+        closureJob
+      });
+    } catch (error) {
+      if (error.message === "session_directory_access_denied") {
+        res.status(404).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
   });
 

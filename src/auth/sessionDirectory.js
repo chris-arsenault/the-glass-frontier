@@ -107,6 +107,29 @@ class SessionDirectory {
     return this.buildSummary(record);
   }
 
+  closeSession(accountId, sessionId, options = {}) {
+    const record = this.getOwnedSession(accountId, sessionId);
+    const closedAt = isoNow(this.clock);
+    record.status = "closed";
+    record.lastActiveAt = closedAt;
+    record.updatedAt = closedAt;
+    record.lastClosedAt = closedAt;
+    record.cadence = this.publishingCadence.planForSession({
+      sessionId,
+      sessionClosedAt: closedAt
+    });
+
+    this.sessionMemory.markSessionClosed(sessionId, {
+      closedAt,
+      closedBy: options.closedBy || accountId,
+      reason: options.reason,
+      auditRef: options.auditRef
+    });
+
+    this.sessions.set(sessionId, record);
+    return this.buildSummary(record);
+  }
+
   approveSession(accountId, sessionId, actorAccount) {
     const record = this.getOwnedSession(accountId, sessionId);
     record.requiresApproval = false;

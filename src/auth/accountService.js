@@ -200,6 +200,10 @@ class AccountService {
     return this.sessionDirectory.resumeSession(accountId, sessionId);
   }
 
+  closeSession(accountId, sessionId, options = {}) {
+    return this.sessionDirectory.closeSession(accountId, sessionId, options);
+  }
+
   approveSession(accountId, sessionId, actorAccount) {
     return this.sessionDirectory.approveSession(accountId, sessionId, actorAccount);
   }

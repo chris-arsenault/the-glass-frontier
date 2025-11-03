@@ -171,6 +171,31 @@ class SessionMemoryFacade {
     return session;
   }
 
+  markSessionClosed(sessionId, options = {}) {
+    const session = this.ensureSession(sessionId);
+    const closedAt =
+      options.closedAt instanceof Date
+        ? options.closedAt.toISOString()
+        : options.closedAt || new Date().toISOString();
+    session.pendingOfflineReconcile = true;
+    session.closedAt = closedAt;
+    session.updatedAt = closedAt;
+    if (options.closedBy) {
+      session.closedBy = options.closedBy;
+    }
+    if (options.reason) {
+      session.closureReason = options.reason;
+    }
+    if (options.auditRef) {
+      session.lastClosureAuditRef = options.auditRef;
+    }
+    return {
+      sessionId,
+      closedAt: session.closedAt,
+      pendingOfflineReconcile: session.pendingOfflineReconcile
+    };
+  }
+
   recordCheckRequest(sessionId, envelope) {
     const session = this.ensureSession(sessionId);
     const sequence = session.turnSequence + 1;

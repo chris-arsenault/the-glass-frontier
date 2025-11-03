@@ -24,6 +24,7 @@ const {
   HubVerbService,
   VerbCatalog
 } = require("../hub");
+const { SessionClosureCoordinator } = require("../offline/sessionClosureCoordinator");
 
 const sessionMemory = new SessionMemoryFacade();
 const checkBus = new CheckBus();
@@ -74,7 +75,8 @@ const app = createApp({
   checkBus,
   broadcaster,
   sessionMemory,
-  hubVerbService
+  hubVerbService,
+  offlineCoordinator: new SessionClosureCoordinator()
 });
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });

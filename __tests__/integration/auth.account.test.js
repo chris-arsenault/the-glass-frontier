@@ -12,6 +12,7 @@ describe("Account & auth API", () => {
   let checkBus;
   let narrativeEngine;
   let broadcaster;
+  let offlineCoordinator;
 
   beforeEach(() => {
     sessionMemory = new SessionMemoryFacade();
@@ -21,12 +22,19 @@ describe("Account & auth API", () => {
       publish: jest.fn(),
       registerStream: jest.fn()
     };
+    offlineCoordinator = {
+      enqueueClosure: jest.fn().mockReturnValue({
+        jobId: "job-1",
+        status: "queued"
+      })
+    };
 
     app = createApp({
       narrativeEngine,
       checkBus,
       broadcaster,
       sessionMemory,
+      offlineCoordinator,
       seedAccounts: false
     });
   });
@@ -132,5 +140,58 @@ describe("Account & auth API", () => {
       .set(authHeader);
 
     expect(approveResponse.status).toBe(403);
+  });
+
+  test("closes a session and queues the offline pipeline", async () => {
+    const registerResponse = await request(app)
+      .post("/auth/register")
+      .send({
+        email: "closer@example.com",
+        password: "frontier-close",
+        displayName: "Closer"
+      });
+
+    const token = registerResponse.body.token;
+    const authHeader = { Authorization: `Bearer ${token}` };
+
+    await request(app)
+      .post("/accounts/me/sessions")
+      .set(authHeader)
+      .send({
+        sessionId: "closure-session",
+        title: "Closure Session"
+      });
+
+    const closeResponse = await request(app)
+      .post("/sessions/closure-session/close")
+      .set(authHeader)
+      .send({ reason: "wrap-up" });
+
+    expect(closeResponse.status).toBe(202);
+    expect(closeResponse.body.session.status).toBe("closed");
+    expect(closeResponse.body.session.offlinePending).toBe(true);
+    expect(closeResponse.body.closureJob).toEqual(
+      expect.objectContaining({
+        jobId: "job-1",
+        status: "queued"
+      })
+    );
+
+    expect(offlineCoordinator.enqueueClosure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "closure-session",
+        reason: "wrap-up",
+        auditRef: expect.stringContaining("session.close:closure-session")
+      })
+    );
+
+    const publishCalls = broadcaster.publish.mock.calls.filter(
+      ([sessionId]) => sessionId === "closure-session"
+    );
+    const eventTypes = publishCalls.map(([, event]) => event.type);
+    expect(eventTypes).toEqual(expect.arrayContaining(["session.statusChanged", "session.closed"]));
+
+    const sessionState = sessionMemory.getSessionState("closure-session");
+    expect(sessionState.pendingOfflineReconcile).toBe(true);
   });
 });

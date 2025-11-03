@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Updated for Session 49 autonomous cycle.
+Updated for Session 51 autonomous cycle.
 
 ## Active Implementation Backlog
 
@@ -10,9 +10,11 @@ Updated for Session 49 autonomous cycle.
 | IMP-GM: Narrative Engine & Check Runner | IMP-GM-02: Temporal Check Runner & Momentum Engine | done | P1 | phase:implementation, pillar:gameplay | Deterministic check runner landed in `src/checkRunner/checkRunner.js`; see `docs/implementation/IMP-GM-02-check-runner.md`. |
 | IMP-GM: Narrative Engine & Check Runner | IMP-GM-03: Session Memory & Character Facade | done | P1 | phase:implementation, pillar:gameplay | REST + change-feed facade captured in `docs/implementation/IMP-GM-03-session-memory.md`. |
 | IMP-GM: Narrative Engine & Check Runner | **IMP-GM-04: LangGraph Narrative Nodes & Tool Harness** | done | P1 | phase:implementation, pillar:gameplay | Production LangGraph graph + harness shipped (`docs/implementation/IMP-GM-04-langgraph-production-graph.md`). |
+| IMP-GM: Narrative Engine & Check Runner | **IMP-GM-05: Session Closure & Offline Triggering** | done | P1 | phase:implementation, pillar:gameplay, pillar:pipeline | Close-session API + offline trigger to hand off live runs to post-session pipeline. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-01: Story Consolidation Workflow MVP** | done | P1 | phase:implementation, pillar:pipeline | `StoryConsolidationWorkflow` orchestrator, summary composer, and telemetry landed – see `docs/implementation/IMP-OFFLINE-01-story-consolidation-workflow.md`. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-02: Entity Extraction & Delta Queue | done | P1 | phase:implementation, pillar:pipeline | Entity extractor + world delta queue shipped; see `docs/implementation/IMP-OFFLINE-02-entity-extraction-delta-queue.md`. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-03: Publishing Cadence & Search Sync** | done | P1 | phase:implementation, pillar:pipeline | Cadence scheduler, bundler, search sync landed – see `docs/implementation/IMP-OFFLINE-03-publishing-cadence.md`. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-04: Closure Triggered Workflow Orchestration** | todo | P1 | phase:implementation, pillar:pipeline | Wire session closure events into story consolidation, entity extraction, and cadence scheduling. |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-01: Hub Gateway & Command Parser Skeleton | done | P1 | phase:implementation, pillar:multiplayer | Hub gateway, verb DSL, SSE fallback, telemetry scaffolding – see `docs/implementation/IMP-HUB-01-hub-gateway-parser.md`. |
 | IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-02: Hub Orchestrator & Temporal Hooks** | done | P1 | phase:implementation, pillar:multiplayer | HubOrchestrator worker, room state caches, Temporal workflow hooks shipped (docs/implementation/IMP-HUB-02-hub-orchestrator.md). |
 | IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-03: Hub Narrative Bridge & Safety Telemetry** | done | P1 | phase:implementation, pillar:multiplayer | Hub narration bridge, capability enforcement, moderation telemetry. |
@@ -22,6 +24,7 @@ Updated for Session 49 autonomous cycle.
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-03: Service Worker & Offline Continuity | done | P1 | phase:implementation, pillar:client | Service worker, IndexedDB caching, offline intent queue. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-AXE-01: Accessibility Automation Pipeline | done | P1 | phase:implementation, discipline:qa | `npm run test:accessibility` publishes axe-core JSON/HTML reports. |
 | IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-04: Account & Session Management UI** | done | P1 | phase:implementation, pillar:client | Authentication flows, session resume dashboard, RBAC-aware navigation. |
+| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-05: Session Closure Controls & Offline Status** | todo | P1 | phase:implementation, pillar:client | Dashboard closure controls, status indicators, cadence reminders tied to new API. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-01: Moderation Dashboard & Live Overrides** | todo | P2 | phase:implementation, pillar:moderation | Admin console for alert triage, overrides, and audit logging. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-02: Prohibited Capability Registry & Policy Editor** | todo | P2 | phase:implementation, pillar:moderation | Capability registry CRUD, role assignments, sync events. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-03: Moderation Queue & Publishing Sync** | todo | P2 | phase:implementation, pillar:moderation | Moderation SLA timers connected to publishing cadence controls. |
@@ -54,3 +57,9 @@ Updated for Session 49 autonomous cycle.
 | DES-CORE: Foundational Design | DES-20: System Synthesis & SDD Production | done | P1 | phase:design, cycle:5 | `SYSTEM_DESIGN_SPEC.md`, diagram `docs/design/diagrams/DES-20-system-synthesis.mmd`. |
 | DES-CORE: Foundational Design | DES-BENCH-01: Temporal Throughput Benchmarking | done | P2 | phase:design, discipline:systems, discipline:performance, cycle:2 | Harness in `scripts/benchmarks/checkRunnerBenchmark.js`, report `docs/implementation/DES-BENCH-01-temporal-throughput-benchmark.md`, alert thresholds captured in architecture decision `4ed47803-6c02-4721-a15c-acef3357997d`. |
 | NAR-CORE: Worldbuilding Foundations | NAR-30: Day-0 World Bible Consolidation | done | P1 | phase:narrative, cycle:6 | `docs/lore/WORLD_BIBLE.md`, MCP narrative `6c329d6f-35d2-42d6-a142-c0b7599aec5a`, lore entry `4e18e698-b85d-4f53-b27c-2940d268a3f0`. |
+
+## Outstanding Design Backlog
+
+| Feature | Item | Status | Priority | Tags | Notes |
+|---------|------|--------|----------|------|-------|
+| DES-CORE: Foundational Design | **DES-PVP-01: Hub PvP Resolution Schema** | todo | P3 | phase:design, discipline:systems, discipline:rules | Awaiting refined hub PvP move taxonomy and moderation coordination before implementation hand-off. |
