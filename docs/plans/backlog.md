@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 11 (design phase).
+Last updated for Session 12 (design phase).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -15,3 +15,4 @@ Last updated for Session 11 (design phase).
 | RES-CORE: Foundational Research | RES-09: Technical Landscape Deep Dive | done | P1 | phase:research, cycle:1, discipline:technical | Findings in `docs/research/session-09-technical-landscape.md`, MCP cache `73b3791b-b896-4805-af3e-5c50ae6ad874`. |
 | RES-CORE: Foundational Research | RES-10: Market Research Synthesis Brief | done | P0 | phase:research, cycle:1, discipline:market, discipline:strategy | Summary in `MARKET_RESEARCH_SUMMARY.md` and `docs/research/session-10-market-research-brief.md`, MCP cache `94a66ac4-9fba-4bf2-9588-4f0d87205fc8`. |
 | DES-CORE: Foundational Design | DES-11: Global Systems Map Foundations | done | P1 | phase:design, cycle:1, discipline:systems | Artefacts in `docs/design/DES-11-global-systems-map.md`, diagram `docs/design/diagrams/DES-11-global-systems-map.mmd`, architecture decision `87fc0d21-0b54-463e-85c0-02f9a903004f`; outstanding follow-ups captured in backlog next steps. |
+| DES-CORE: Foundational Design | DES-12: Interface Schemas & Accessibility Hooks | done | P1 | phase:design, cycle:1, discipline:systems | Spec in `docs/design/DES-12-interface-schemas.md`, sequence diagram `docs/design/diagrams/DES-12-narrative-check-sequence.mmd`, architecture decision `45bccdf8-7ab8-47e4-8cb9-6ccda3ef720e`; follow-ups include accessibility automation backlog, rules taxonomy sync, and Temporal throughput benchmarking. |
