@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 20 (design phase wrap).
+Last updated for Session 21 (narrative kickoff).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -32,3 +32,4 @@ Last updated for Session 20 (design phase wrap).
 | IMP-PLATFORM: Platform Implementation Foundations | IMP-MINIO-01: MinIO Lifecycle Automation | todo | P2 | phase:implementation, cycle:6, discipline:infrastructure, discipline:storage | Automate MinIO retention tiers and telemetry for lore bundles, digests, and hub logs per DES-16 retention policies. |
 | IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | phase:implementation, cycle:6, discipline:platform, discipline:search | Implement incremental indexing, drift telemetry, and rebuild tooling for self-hosted lore/news search; references DES-16 risks. |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-01: Hub Gateway & Command Parser Skeleton | todo | P1 | phase:implementation, cycle:6, discipline:multiplayer, discipline:systems | Build uWebSockets gateway, declarative verb parser, and Redis/CouchDB logging to bootstrap hub interactions; coordinates with DES-PVP-01 and DES-BENCH-01 benchmarks. |
+| NAR-CORE: Worldbuilding Foundations | NAR-21: Cosmology & Historical Timeline Foundations | done | P0 | phase:narrative, cycle:6, discipline:lore, session:21 | `docs/lore/COSMOLOGY.md`, `docs/lore/CHRONOLOGY.md`; MCP narrative element `54476f33-9ec3-40f9-8b8b-08bfe1e1d20c`, lore entry `6ef78c8c-125e-46c2-9de1-302fd344e62e`; consistency check returned no direct matches—document follow-up architecture alignment. |
