@@ -57,7 +57,7 @@ The system-level relationship diagram lives in `docs/design/diagrams/DES-20-syst
 - **PostgreSQL:** Canonical structured data (characters, lore bundles, moderation state, publishing cadence).
 - **CouchDB:** Event sourcing for sessions, hub action logs, moderation decisions with replication to offline processors.
 - **Redis:** Presence, rate limiting, transient caches for hub state and narrative summarisation.
-- **MinIO:** Attachment storage for recaps, daily digests, and asset bundles with lifecycle rules (DES-16 risk notes).
+- **MinIO:** Attachment storage for recaps, daily digests, and asset bundles with lifecycle rules (DES-16 risk notes). Buckets (`gf-digests`, `gf-attachments`, `gf-hub-logs`) are provisioned and tiered via `scripts/minio/applyLifecycle.js` consuming `infra/minio/lifecycle-policies.json`.
 - **Search Layer:** Self-hosted Meilisearch (or pg_trgm fallback) powering lore/news retrieval, observing the “no managed Elasticsearch” mandate.
 - **Kafka/Redpanda:** Telemetry/event bus for streaming metrics and narrative instrumentation (DES-11, DES-19).
 
@@ -87,7 +87,7 @@ Backlog updates referencing this spec must link to `DES-20` and `SYSTEM_DESIGN_S
 - **Latency Regression:** Mitigate via DES-BENCH-01 benchmarks, scaling triggers, and caching strategies (Redis, session summaries). Failure to meet budgets triggers backlog escalations tagged `risk:latency`.
 - **Moderation Overload:** Cadence workflows auto-flag backlog thresholds; DES-MOD-01 must include batch decision tooling and visibility of `moderationBacklog` signals.
 - **Search Drift & Index Failure:** Require automated retries, differential indexing job, and fallback to pg_trgm queries. Document incident response runbooks in implementation phase.
-- **Storage Growth:** Enforce MinIO lifecycle, CouchDB compaction, and archival pipelines; monitor via `telemetry.storage.*`.
+- **Storage Growth:** Enforce MinIO lifecycle, CouchDB compaction, and archival pipelines; monitor via `telemetry.storage.*` (`StorageMetrics` emits bucket usage + drift events).
 - **Policy Drift:** Architecture decisions and Prohibited Capabilities updates must be stored in MCP and mirrored in policy docs to prevent divergence between live enforcement and offline governance.
 
 ## Consistency & Governance

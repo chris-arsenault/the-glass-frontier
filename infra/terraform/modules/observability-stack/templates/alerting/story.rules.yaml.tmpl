@@ -19,3 +19,21 @@ groups:
         annotations:
           summary: "Story consolidation retries spiking"
           description: "Review change feed ingestion for malformed transcripts or Vault credential issues."
+      - alert: StorageBucketCapacityHigh
+        expr: max_over_time(telemetry_storage_bucket_usage_capacityPercent[10m]) > 70
+        for: 15m
+        labels:
+          severity: warning
+          service: ${alert_label_service}
+        annotations:
+          summary: "MinIO bucket above 70% capacity"
+          description: "Investigate lifecycle automation or expand bucket capacity before archival queue overflows."
+      - alert: StorageLifecycleDrift
+        expr: max_over_time(telemetry_storage_bucket_lifecycle_drift_driftDays[15m]) > 1
+        for: 30m
+        labels:
+          severity: warning
+          service: ${alert_label_service}
+        annotations:
+          summary: "Lifecycle drift detected for MinIO bucket"
+          description: "Lifecycle manager reports archive lag beyond allowance — check cron job and Backblaze B2 connectivity."
