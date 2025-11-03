@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 28 (settlements & magitech infrastructure dossiers).
+Last updated for Session 30 (world bible consolidation in progress).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -41,3 +41,4 @@ Last updated for Session 28 (settlements & magitech infrastructure dossiers).
 | NAR-CORE: Worldbuilding Foundations | NAR-27: Magitech Tiers & Relic Industry Codex | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:27 | `docs/lore/TECHNOLOGY.md`; MCP narrative element `214540bd-3112-4d26-8f68-4f6a8042fc88`, lore entry `bab34b7d-3a73-43f1-9efe-953d0977beb9`; `mcp__game-mcp-server__check_consistency` (2025-11-04) logged no architectural matches—coordinate with implementation teams when DES-MOD-01 automation mapping resumes. |
 | NAR-CORE: Worldbuilding Foundations | NAR-28: Settlements & Magitech Infrastructure Dossiers | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:28 | `docs/lore/SETTLEMENTS.md`; MCP narrative element `df29e84a-e13f-4b34-a01a-69383b948a0a`, lore entry `f4455211-979d-42c1-86bd-6b21b1826581`; `mcp__game-mcp-server__check_consistency` (2025-11-04) surfaced architecture cadence alignments with no blocking conflicts—next steps track anomaly integration and DES-MOD-01 hook wiring. |
 | NAR-CORE: Worldbuilding Foundations | NAR-29: Anomalies & Unique Phenomena Ledger | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:29, focus:anomalies | `docs/lore/UNIQUE_PHENOMENA.md`; MCP narrative element `e68cba71-2260-4518-86e1-280d87bad175`, lore entry `e3ee3206-2a3d-432a-97f8-baa7a402513e`; `mcp__game-mcp-server__check_consistency` (2025-11-04) surfaced no direct architectural matches—flagged for Session 30 world bible alignment and DES-MOD-01 hook registration. |
+| NAR-CORE: Worldbuilding Foundations | NAR-30: Day-0 World Bible Consolidation | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:30, focus:world-bible | `docs/lore/WORLD_BIBLE.md`; MCP narrative element `6c329d6f-35d2-42d6-a142-c0b7599aec5a`, lore entry `4e18e698-b85d-4f53-b27c-2940d268a3f0`; `mcp__game-mcp-server__check_consistency` (2025-11-04) aligned with system synthesis and temporal lore cadence decisions; follow-ups: register anomaly `mod.review.*` hooks within DES-MOD-01 workflows, sync Custodian ledger IDs into DES-16 cadence notes, log moderation automation outcome in a future handoff. |
