@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 14 (design phase).
+Last updated for Session 15 (design phase).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -17,6 +17,7 @@ Last updated for Session 14 (design phase).
 | DES-CORE: Foundational Design | DES-11: Global Systems Map Foundations | done | P1 | phase:design, cycle:1, discipline:systems | Artefacts in `docs/design/DES-11-global-systems-map.md`, diagram `docs/design/diagrams/DES-11-global-systems-map.mmd`, architecture decision `87fc0d21-0b54-463e-85c0-02f9a903004f`; outstanding follow-ups captured in backlog next steps. |
 | DES-CORE: Foundational Design | DES-12: Interface Schemas & Accessibility Hooks | done | P1 | phase:design, cycle:1, discipline:systems | Spec in `docs/design/DES-12-interface-schemas.md`, sequence diagram `docs/design/diagrams/DES-12-narrative-check-sequence.mmd`, architecture decision `45bccdf8-7ab8-47e4-8cb9-6ccda3ef720e`; follow-ups include accessibility automation backlog, rules taxonomy sync, and Temporal throughput benchmarking. |
 | DES-CORE: Foundational Design | DES-13: Narrative Rules Framework & LLM Hand-Off | done | P1 | phase:design, cycle:2, discipline:systems, discipline:rules | Spec in `docs/design/DES-13-rules-framework.md`, diagram `docs/design/diagrams/DES-13-rules-flow.mmd`, architecture decision `80b1e54f-5052-4d77-a3ca-ca73dd99c08a`, pattern `momentum-driven-success-ladder`; follow-ups logged as DES-EDGE-01, DES-PVP-01, DES-MOD-01. |
+| DES-CORE: Foundational Design | DES-15: Persistence & Lore Pipeline Blueprint | done | P1 | phase:design, cycle:3, discipline:systems, discipline:lore | Spec in `docs/design/DES-15-persistence-lore-pipeline.md`, diagram `docs/design/diagrams/DES-15-persistence-pipeline.mmd`, architecture decision `5ff61d14-f7c2-450a-a130-70e61d858646`, pattern `couchdb-temporal-post-session-pipeline`; coordinating follow-ups with DES-BENCH-01 and DES-MOD-01. |
 | DES-CORE: Foundational Design | IMP-AXE-01: Accessibility Automation Pipeline | todo | P1 | phase:implementation, discipline:qa, discipline:accessibility, automation | Backlog entry to implement `npm run test:accessibility` harness with axe-core + Playwright per DES-12 follow-up; depends on DES-12. |
 | DES-CORE: Foundational Design | DES-BENCH-01: Temporal Throughput Benchmarking | todo | P2 | phase:design, discipline:systems, discipline:performance, cycle:2 | Spike to validate Temporal latency budgets and telemetry retention planning; depends on DES-11 and DES-12 artefacts. |
 | DES-CORE: Foundational Design | DES-EDGE-01: Contested Move Resolution Playbook | done | P2 | phase:design, discipline:rules, cycle:2 | Spec in `docs/design/DES-EDGE-01-contested-move-playbook.md`, diagram `docs/design/diagrams/DES-EDGE-01-contested-move-flow.mmd`, architecture decision `bd99f3ee-44c6-4b38-b5ab-d1258c5b42bc`; follow-ups tracked in DES-PVP-01, DES-BENCH-01, DES-MOD-01. |
