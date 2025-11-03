@@ -122,3 +122,25 @@ resource "nomad_job" "api_gateway" {
     enable_ws    = var.api_gateway_enable_ws
   }))
 }
+
+resource "nomad_job" "minio_lifecycle" {
+  count = var.enable_minio_lifecycle_job ? 1 : 0
+
+  jobspec = templatefile("${path.module}/templates/minio-lifecycle.nomad.hcl", merge(local.job_context, {
+    job_name            = "${var.prefix}-minio-lifecycle"
+    docker_image        = var.minio_lifecycle_image
+    cron_schedule       = var.minio_lifecycle_cron
+    cpu                 = var.minio_lifecycle_cpu
+    memory              = var.minio_lifecycle_memory
+    minio_endpoint      = var.minio_endpoint
+    minio_port          = tostring(var.minio_port)
+    minio_use_ssl       = var.minio_use_ssl ? "1" : "0"
+    minio_access_key    = var.minio_access_key
+    minio_secret_key    = var.minio_secret_key
+    minio_region        = var.minio_region
+    minio_remote_tier   = var.minio_remote_tier
+    lifecycle_policy    = trimspace(var.minio_lifecycle_policy)
+    b2_key_id           = var.minio_b2_key_id
+    b2_application_key  = var.minio_b2_application_key
+  }))
+}

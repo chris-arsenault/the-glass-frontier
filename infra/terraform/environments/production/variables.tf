@@ -87,3 +87,63 @@ variable "loki_url" {
   type        = string
   default     = "http://loki.service.consul:3100/loki/api/v1/push"
 }
+
+variable "minio_endpoint" {
+  description = "Production MinIO endpoint."
+  type        = string
+  default     = "minio.prod.service.consul"
+}
+
+variable "minio_port" {
+  description = "Production MinIO API port."
+  type        = number
+  default     = 9000
+}
+
+variable "minio_use_ssl" {
+  description = "Enable TLS when connecting to MinIO."
+  type        = bool
+  default     = true
+}
+
+variable "minio_region" {
+  description = "Production MinIO region setting."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "minio_access_key" {
+  description = "Production MinIO access key."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_secret_key" {
+  description = "Production MinIO secret key."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_remote_tier" {
+  description = "Configured remote tier identifier for production."
+  type        = string
+  default     = "b2-archive"
+}
+
+variable "minio_b2_key_id" {
+  description = "Backblaze B2 key id for production."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_b2_application_key" {
+  description = "Backblaze B2 application key for production."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_lifecycle_cron" {
+  description = "Cron schedule for the production lifecycle job."
+  type        = string
+  default     = "15 */4 * * *"
+}

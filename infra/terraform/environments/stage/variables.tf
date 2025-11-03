@@ -87,3 +87,63 @@ variable "consul_http_addr" {
   type        = string
   default     = "http://consul.service.consul:8500"
 }
+
+variable "minio_endpoint" {
+  description = "Stage MinIO endpoint."
+  type        = string
+  default     = "minio.stage.service.consul"
+}
+
+variable "minio_port" {
+  description = "Stage MinIO API port."
+  type        = number
+  default     = 9000
+}
+
+variable "minio_use_ssl" {
+  description = "Enable TLS for MinIO connections."
+  type        = bool
+  default     = false
+}
+
+variable "minio_region" {
+  description = "Stage MinIO region setting."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "minio_access_key" {
+  description = "Stage MinIO access key."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_secret_key" {
+  description = "Stage MinIO secret key."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_remote_tier" {
+  description = "Stage MinIO remote tier identifier."
+  type        = string
+  default     = "b2-archive"
+}
+
+variable "minio_b2_key_id" {
+  description = "Backblaze B2 key id for stage."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_b2_application_key" {
+  description = "Backblaze B2 application key for stage."
+  type        = string
+  sensitive   = true
+}
+
+variable "minio_lifecycle_cron" {
+  description = "Cron schedule for the stage lifecycle job."
+  type        = string
+  default     = "0 */6 * * *"
+}

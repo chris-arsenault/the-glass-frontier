@@ -39,6 +39,13 @@ All buckets retain object versions; delete markers are preserved until manual cl
   - Critical alert if lifecycle drift > 6 hours (cron or workflow failures).
 - Alerting templates live beside existing observability stack outputs (`infra/terraform/modules/observability-stack/templates`).
 
+## Deployment Integration
+- `infra/terraform/modules/nomad-core/templates/minio-lifecycle.nomad.hcl` defines a periodic Nomad batch job that invokes the lifecycle manager from a `platform-tasks` container image.
+- Stage and production environments enable the job via `enable_minio_lifecycle_job = true`, scheduling runs every 6 hours (stage) and every 4 hours (production). Terraform variables surface MinIO endpoint, credentials, and Backblaze B2 keys so the job remains environment-specific.
+- Lifecycle policies are injected at runtime by rendering `infra/minio/lifecycle-policies.json` into the allocation (`MINIO_LIFECYCLE_CONFIG=/local/lifecycle-policies.json`) ensuring the job consumes the same declarative rules as local runs.
+- Provide `minio_access_key`, `minio_secret_key`, `minio_b2_key_id`, and `minio_b2_application_key` through Terraform variables or Vault-backed pipelines before applying the environment plan; the periodic run will fail fast if credentials are missing.
+- Operations teams should monitor `telemetry.storage.bucket.lifecycle_drift` for overlap alerts—Nomad blocks overlapping runs (`prohibit_overlap = true`) so a sustained drift indicates credential or MinIO remote tier issues that require investigation.
+
 ## Archive Recovery Notes
 1. Use `mc ilm restore --days N alias/bucket/object` or S3 `RestoreObject` API to stage archived items into warm storage.
 2. Lifecycle manager detects items in restore progress and logs `telemetry.storage.bucket.lifecycle_drift` with `status:"restore_in_progress"`.

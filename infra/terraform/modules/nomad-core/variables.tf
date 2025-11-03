@@ -323,3 +323,97 @@ variable "api_gateway_enable_ws" {
   type        = bool
   default     = true
 }
+
+variable "enable_minio_lifecycle_job" {
+  description = "Toggle deployment of the MinIO lifecycle automation job."
+  type        = bool
+  default     = false
+}
+
+variable "minio_lifecycle_image" {
+  description = "Container image that bundles the lifecycle manager script."
+  type        = string
+  default     = "registry.local/platform-tasks:latest"
+}
+
+variable "minio_lifecycle_cron" {
+  description = "Cron expression controlling how often lifecycle automation runs."
+  type        = string
+  default     = "0 */6 * * *"
+}
+
+variable "minio_lifecycle_cpu" {
+  description = "CPU allocation for the lifecycle job."
+  type        = number
+  default     = 200
+}
+
+variable "minio_lifecycle_memory" {
+  description = "Memory allocation (MB) for the lifecycle job."
+  type        = number
+  default     = 256
+}
+
+variable "minio_endpoint" {
+  description = "Endpoint address for the MinIO cluster."
+  type        = string
+  default     = "minio.service.consul"
+}
+
+variable "minio_port" {
+  description = "Port for the MinIO API."
+  type        = number
+  default     = 9000
+}
+
+variable "minio_use_ssl" {
+  description = "Whether the MinIO client should use TLS."
+  type        = bool
+  default     = false
+}
+
+variable "minio_access_key" {
+  description = "Access key for MinIO authentication."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "minio_secret_key" {
+  description = "Secret key for MinIO authentication."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "minio_region" {
+  description = "Default region used by the MinIO client."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "minio_remote_tier" {
+  description = "Remote storage tier identifier configured on MinIO."
+  type        = string
+  default     = "b2-archive"
+}
+
+variable "minio_b2_key_id" {
+  description = "Backblaze B2 key identifier for remote tier access."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "minio_b2_application_key" {
+  description = "Backblaze B2 application key for remote tier access."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "minio_lifecycle_policy" {
+  description = "Rendered lifecycle policy JSON applied by the automation job."
+  type        = string
+  default     = ""
+}

@@ -73,6 +73,20 @@ module "nomad_core" {
   temporal_worker_image   = "registry.prod/temporal-worker:2025.11.0"
   temporal_frontend_image = "temporalio/server:1.23.0"
   api_gateway_image       = "registry.prod/api-gateway:2025.11.0"
+
+  enable_minio_lifecycle_job = true
+  minio_lifecycle_image      = "registry.prod/platform-tasks:2025.11.0"
+  minio_lifecycle_cron       = var.minio_lifecycle_cron
+  minio_endpoint             = var.minio_endpoint
+  minio_port                 = var.minio_port
+  minio_use_ssl              = var.minio_use_ssl
+  minio_region               = var.minio_region
+  minio_access_key           = var.minio_access_key
+  minio_secret_key           = var.minio_secret_key
+  minio_remote_tier          = var.minio_remote_tier
+  minio_b2_key_id            = var.minio_b2_key_id
+  minio_b2_application_key   = var.minio_b2_application_key
+  minio_lifecycle_policy     = file("${path.module}/../../minio/lifecycle-policies.json")
 }
 
 module "observability" {
