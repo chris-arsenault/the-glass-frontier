@@ -1,0 +1,23 @@
+flowchart LR
+    UI[Unified Web UI Shell]
+    NE[Narrative Engine\n(LangGraph)]
+    CR[Check Runner\n(Temporal Workflows)]
+    SM[Session Memory\nCharacter Sheets, Tone Artefacts]
+    HUB[Hub System\n(MUD Command Router)]
+    PIPE[Offline Post-Session Pipeline]
+    LORE[Lore & Wiki Publishing]
+    TELE[Telemetry & Audit Store]
+
+    UI <--> NE
+    NE --> CR
+    CR --> NE
+    NE --> SM
+    HUB --> NE
+    UI <--> HUB
+    NE --> PIPE
+    HUB --> PIPE
+    PIPE --> LORE
+    NE --> TELE
+    CR --> TELE
+    UI --> TELE
+    PIPE --> TELE
