@@ -1,0 +1,90 @@
+{
+  "verbs": [
+    {
+      "verbId": "verb.say",
+      "label": "Say",
+      "category": "communication",
+      "description": "Broadcast an in-character statement to everyone in the hub room.",
+      "parameters": [
+        {
+          "name": "message",
+          "type": "string",
+          "required": true,
+          "maxLength": 280
+        }
+      ],
+      "safetyTags": ["chat", "narrative"],
+      "rateLimit": {
+        "burst": 5,
+        "perSeconds": 10,
+        "scope": "actor"
+      },
+      "narrative": {
+        "escalation": "auto"
+      }
+    },
+    {
+      "verbId": "verb.offerTrade",
+      "label": "Offer Trade",
+      "category": "economy",
+      "description": "Offer a trade to another participant in the room.",
+      "parameters": [
+        {
+          "name": "target",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "item",
+          "type": "string",
+          "required": true,
+          "maxLength": 140
+        }
+      ],
+      "safetyTags": ["economy", "consent"],
+      "rateLimit": {
+        "burst": 3,
+        "perSeconds": 30,
+        "scope": "actor"
+      },
+      "narrative": {
+        "escalation": "conditional",
+        "narrationTemplate": "trade.offer"
+      }
+    },
+    {
+      "verbId": "verb.invokeRelic",
+      "label": "Invoke Relic",
+      "category": "ritual",
+      "description": "Channel a relic's latent power within the hub. Restricted by capability gates.",
+      "parameters": [
+        {
+          "name": "relicId",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "capabilities": [
+        {
+          "capabilityId": "capability.spectrumless-manifest"
+        }
+      ],
+      "safetyTags": ["moderation", "ritual"],
+      "rateLimit": {
+        "burst": 1,
+        "perSeconds": 120,
+        "scope": "room",
+        "shared": true,
+        "errorCode": "hub_ritual_cooldown"
+      },
+      "narrative": {
+        "escalation": "always",
+        "checkTemplate": "ritual.stability"
+      },
+      "momentum": {
+        "cost": 2,
+        "rewardOnSuccess": 4
+      }
+    }
+  ]
+}
