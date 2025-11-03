@@ -3,6 +3,32 @@ import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
 import { CheckOverlay } from "./CheckOverlay.jsx";
 import { AdminVerbCatalogPanel } from "./AdminVerbCatalogPanel.jsx";
 
+function formatIso(isoString) {
+  if (!isoString) {
+    return null;
+  }
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
+  }
+  return date.toLocaleString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function describeCadence(cadence) {
+  if (!cadence) {
+    return "Publishing cadence pending.";
+  }
+  const digest = cadence.nextDigestAt ? `Digest @ ${formatIso(cadence.nextDigestAt)}` : null;
+  const batch = cadence.nextBatchAt ? `Batch @ ${formatIso(cadence.nextBatchAt)}` : null;
+  const parts = [batch, digest].filter(Boolean);
+  return parts.length > 0 ? parts.join(" • ") : "Publishing cadence pending.";
+}
+
 const FALLBACK_CHARACTER = {
   name: "Avery Glass",
   pronouns: "they/them",
@@ -24,7 +50,16 @@ const FALLBACK_INVENTORY = [
 ];
 
 export function OverlayDock() {
-  const { overlay, connectionState, isOffline, queuedIntents } = useSessionContext();
+  const {
+    overlay,
+    connectionState,
+    isOffline,
+    queuedIntents,
+    sessionStatus,
+    sessionClosedAt,
+    sessionPendingOffline,
+    sessionCadence
+  } = useSessionContext();
 
   const character = overlay?.character || FALLBACK_CHARACTER;
   const inventory = Array.isArray(overlay?.inventory) && overlay.inventory.length > 0
@@ -33,18 +68,30 @@ export function OverlayDock() {
   const momentumValue =
     typeof overlay?.momentum?.current === "number" ? overlay.momentum.current : 0;
   const stats = character.stats || {};
+  const sessionClosed = sessionStatus === "closed";
   const queuedCount = Array.isArray(queuedIntents) ? queuedIntents.length : 0;
   const queueLabel = queuedCount === 1 ? "intent" : "intents";
   const offlineActive =
+    sessionPendingOffline ||
     isOffline ||
     connectionState === SessionConnectionStates.FALLBACK ||
     connectionState === SessionConnectionStates.OFFLINE ||
     queuedCount > 0;
-  const statusLabel = offlineActive
+  const statusLabel = sessionClosed
+    ? "Closed"
+    : offlineActive
     ? queuedCount > 0
       ? `Offline queue (${queuedCount})`
       : "Offline mode"
     : "Live";
+  const cadenceLabel = sessionCadence ? describeCadence(sessionCadence) : null;
+  const statusClassName = [
+    "overlay-status",
+    sessionClosed ? "overlay-status-closed" : "",
+    !sessionClosed && offlineActive ? "overlay-status-offline" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <aside className="overlay-dock" aria-label="Session overlays" data-testid="overlay-dock">
@@ -59,9 +106,14 @@ export function OverlayDock() {
             <p className="overlay-subheading" aria-live="polite">
               {character.background}
             </p>
+            {cadenceLabel ? (
+              <p className="overlay-cadence" aria-live="polite">
+                {cadenceLabel}
+              </p>
+            ) : null}
           </div>
           <span
-            className={`overlay-status${offlineActive ? " overlay-status-offline" : ""}`}
+            className={statusClassName}
             aria-live="polite"
             data-testid="overlay-status"
           >
@@ -94,10 +146,21 @@ export function OverlayDock() {
             </span>
           ))}
         </div>
-        {overlay?.pendingOfflineReconcile ? (
+        {sessionClosed ? (
+          <p className="overlay-alert" role="status" data-testid="overlay-closed-status">
+            Session closed
+            {sessionClosedAt ? ` @ ${formatIso(sessionClosedAt)}` : ""}.{" "}
+            {sessionPendingOffline
+              ? `Offline reconciliation pending.${
+                  cadenceLabel ? ` ${cadenceLabel}.` : ""
+                }`
+              : "Offline reconciliation complete."}
+          </p>
+        ) : overlay?.pendingOfflineReconcile || sessionPendingOffline ? (
           <p className="overlay-alert" role="status">
             Offline changes pending sync
-            {queuedCount > 0 ? ` (${queuedCount} ${queueLabel} queued).` : "."}
+            {queuedCount > 0 ? ` (${queuedCount} ${queueLabel} queued)` : ""}
+            {cadenceLabel ? ` • ${cadenceLabel}.` : "."}
           </p>
         ) : offlineActive ? (
           <p className="overlay-alert" role="status">

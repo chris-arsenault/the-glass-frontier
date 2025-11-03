@@ -38,7 +38,12 @@ jest.mock("../../client/src/hooks/useSessionConnection.js", () => {
       setHubCatalog: jest.fn(),
       isAdmin: false,
       adminHubId: "global",
-      adminUser: "admin@example.com"
+      adminUser: "admin@example.com",
+      sessionStatus: "active",
+      sessionClosedAt: null,
+      sessionPendingOffline: false,
+      sessionCadence: null,
+      sessionAuditRef: null
     }))
   };
 });
@@ -82,6 +87,7 @@ describe("Account and session flows", () => {
     const resumeSession = jest.fn().mockResolvedValue({ ok: true });
     const approveSession = jest.fn().mockResolvedValue({ ok: true });
     const createSession = jest.fn().mockResolvedValue({ ok: true });
+    const closeSession = jest.fn().mockResolvedValue({ ok: true });
     renderWithAccountContext(
       {
         sessions: [
@@ -90,6 +96,7 @@ describe("Account and session flows", () => {
             title: "Glass Frontier Chronicle",
             status: "paused",
             lastActiveAt: "2025-11-05T12:00:00Z",
+            updatedAt: "2025-11-05T12:15:00Z",
             momentum: { current: 1 },
             cadence: { nextDigestAt: "2025-11-06T02:00:00Z", nextBatchAt: null },
             offlinePending: false,
@@ -100,6 +107,7 @@ describe("Account and session flows", () => {
         resumeSession,
         approveSession,
         createSession,
+        closeSession,
         refreshSessions: jest.fn(),
         isAdmin: true,
         selectedSessionId: null,
@@ -117,6 +125,27 @@ describe("Account and session flows", () => {
       fireEvent.click(screen.getByTestId("approve-demo-session"));
     });
     expect(approveSession).toHaveBeenCalledWith("demo-session");
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("close-demo-session"));
+    });
+
+    const confirm = screen.getByTestId("close-confirm-demo-session");
+    expect(confirm).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/closure note/i), {
+        target: { value: "Wrap for publish" }
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/confirm closure/i));
+    });
+
+    expect(closeSession).toHaveBeenCalledWith("demo-session", {
+      reason: "Wrap for publish"
+    });
   });
 
   test("SessionWorkspace hides admin navigation for non-admin accounts", () => {

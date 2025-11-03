@@ -76,7 +76,12 @@ function isNetworkError(error) {
   return message.includes("NetworkError") || message.includes("Failed to fetch");
 }
 
-export function useSessionConnection({ sessionId: override, account = null, authToken = null } = {}) {
+export function useSessionConnection({
+  sessionId: override,
+  account = null,
+  authToken = null,
+  sessionSummary = null
+} = {}) {
   const sessionId = readSessionId(override);
   const [connectionState, setConnectionState] = useState(CONNECTION_STATES.CONNECTING);
   const [messages, setMessages] = useState([]);
@@ -94,6 +99,14 @@ export function useSessionConnection({ sessionId: override, account = null, auth
   const [pendingControl, setPendingControl] = useState(false);
   const [controlError, setControlError] = useState(null);
   const [hubCatalog, setHubCatalog] = useState(null);
+  const [sessionMeta, setSessionMeta] = useState(() => ({
+    status: sessionSummary?.status || "active",
+    closedAt:
+      sessionSummary?.status === "closed" ? sessionSummary?.updatedAt || null : null,
+    pendingOffline: Boolean(sessionSummary?.offlinePending),
+    cadence: sessionSummary?.cadence || null,
+    auditRef: null
+  }));
   const wsRef = useRef(null);
   const sseRef = useRef(null);
   const sequenceRef = useRef({ turnSequence: -1, subSequence: -1 });
@@ -213,6 +226,39 @@ export function useSessionConnection({ sessionId: override, account = null, auth
   useEffect(() => {
     authTokenRef.current = authToken || null;
   }, [authToken]);
+
+  useEffect(() => {
+    if (!sessionSummary) {
+      return;
+    }
+    setSessionMeta((current) => {
+      const nextStatus = sessionSummary.status || current.status;
+      const nextClosedAt =
+        sessionSummary.status === "closed"
+          ? sessionSummary.updatedAt || current.closedAt
+          : current.closedAt;
+      const nextPendingOffline =
+        typeof sessionSummary.offlinePending === "boolean"
+          ? sessionSummary.offlinePending
+          : current.pendingOffline;
+      const nextCadence = sessionSummary.cadence || current.cadence;
+      if (
+        nextStatus === current.status &&
+        nextClosedAt === current.closedAt &&
+        nextPendingOffline === current.pendingOffline &&
+        nextCadence === current.cadence
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        status: nextStatus,
+        closedAt: nextClosedAt,
+        pendingOffline: nextPendingOffline,
+        cadence: nextCadence
+      };
+    });
+  }, [sessionSummary]);
 
   useEffect(() => {
     isOfflineRef.current = isOffline;
@@ -388,7 +434,81 @@ export function useSessionConnection({ sessionId: override, account = null, auth
         updateMarkers(payload.markers);
       }
 
+      const applySessionStatus = (statusPayload, markClosed = false) => {
+        if (!statusPayload) {
+          return;
+        }
+        const remotePending =
+          typeof statusPayload.pendingOffline === "boolean"
+            ? statusPayload.pendingOffline
+            : typeof statusPayload.pendingOfflineReconcile === "boolean"
+            ? statusPayload.pendingOfflineReconcile
+            : null;
+
+        setSessionMeta((current) => {
+          const nextStatus = statusPayload.status || (markClosed ? "closed" : current.status);
+          const nextClosedAt =
+            statusPayload.closedAt ||
+            (markClosed || nextStatus === "closed"
+              ? statusPayload.closedAt || current.closedAt || new Date().toISOString()
+              : current.closedAt);
+          const nextPendingOffline =
+            remotePending !== null ? remotePending : current.pendingOffline;
+          const nextCadence = statusPayload.cadence || current.cadence;
+          const nextAuditRef = statusPayload.auditRef || current.auditRef;
+          if (
+            nextStatus === current.status &&
+            nextClosedAt === current.closedAt &&
+            nextPendingOffline === current.pendingOffline &&
+            nextCadence === current.cadence &&
+            nextAuditRef === current.auditRef
+          ) {
+            return current;
+          }
+          return {
+            status: nextStatus,
+            closedAt: nextClosedAt,
+            pendingOffline: nextPendingOffline,
+            cadence: nextCadence,
+            auditRef: nextAuditRef
+          };
+        });
+
+        if (markClosed || statusPayload.status === "closed") {
+          setConnectionState((state) =>
+            state === CONNECTION_STATES.CLOSED ? state : CONNECTION_STATES.CLOSED
+          );
+        }
+
+        setOverlay((currentOverlay) => {
+          if (!currentOverlay) {
+            return currentOverlay;
+          }
+          const localPending = isOfflineRef.current || queuedIntentsRef.current.length > 0;
+          const nextPending =
+            remotePending === null
+              ? localPending || currentOverlay.pendingOfflineReconcile
+              : remotePending || localPending;
+          if (currentOverlay.pendingOfflineReconcile === nextPending) {
+            return currentOverlay;
+          }
+          const updated = {
+            ...currentOverlay,
+            pendingOfflineReconcile: nextPending,
+            lastSyncedAt: new Date().toISOString()
+          };
+          persistSessionState(sessionId, { overlay: updated }).catch(() => {});
+          return updated;
+        });
+      };
+
       switch (envelope.type) {
+        case "session.statusChanged":
+          applySessionStatus(payload, false);
+          break;
+        case "session.closed":
+          applySessionStatus(payload, true);
+          break;
         case "session.message":
         case "narrative.event": {
           setMessages((prev) => {
@@ -586,6 +706,16 @@ export function useSessionConnection({ sessionId: override, account = null, auth
           };
           setOverlay(overlaySnapshot);
           persistSessionState(sessionId, { overlay: overlaySnapshot }).catch(() => {});
+          setSessionMeta((current) => {
+            const remotePending = Boolean(data.overlay.pendingOfflineReconcile);
+            if (remotePending === current.pendingOffline) {
+              return current;
+            }
+            return {
+              ...current,
+              pendingOffline: remotePending
+            };
+          });
         }
 
         if (Array.isArray(data.pendingChecks) && data.pendingChecks.length > 0) {
@@ -895,7 +1025,12 @@ export function useSessionConnection({ sessionId: override, account = null, auth
       setHubCatalog,
       isAdmin: adminConfig.isAdmin,
       adminHubId: adminConfig.adminHubId,
-      adminUser: adminConfig.adminUser
+      adminUser: adminConfig.adminUser,
+      sessionStatus: sessionMeta.status,
+      sessionClosedAt: sessionMeta.closedAt,
+      sessionPendingOffline: sessionMeta.pendingOffline,
+      sessionCadence: sessionMeta.cadence,
+      sessionAuditRef: sessionMeta.auditRef
     }),
     [
       activeCheck,
@@ -916,7 +1051,8 @@ export function useSessionConnection({ sessionId: override, account = null, auth
       sendPlayerMessage,
       sessionId,
       transportError,
-      hubCatalog
+      hubCatalog,
+      sessionMeta
     ]
   );
 

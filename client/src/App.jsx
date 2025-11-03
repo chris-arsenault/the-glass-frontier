@@ -46,7 +46,8 @@ export function SessionWorkspace() {
     isAdmin,
     logout,
     flashMessage,
-    clearFlashMessage
+    clearFlashMessage,
+    sessions
   } = useAccountContext();
 
   useEffect(() => {
@@ -59,7 +60,15 @@ export function SessionWorkspace() {
     return <SessionDashboard />;
   }
 
-  const session = useSessionConnection({ sessionId: selectedSessionId, account, authToken: token });
+  const sessionSummary = Array.isArray(sessions)
+    ? sessions.find((entry) => entry.sessionId === selectedSessionId)
+    : null;
+  const session = useSessionConnection({
+    sessionId: selectedSessionId,
+    account,
+    authToken: token,
+    sessionSummary
+  });
 
   return (
     <SessionProvider value={session}>

@@ -217,6 +217,35 @@ export function AccountProvider({ children }) {
     [fetchWithAuth, loadSessions]
   );
 
+  const closeSession = useCallback(
+    async (sessionId, { reason } = {}) => {
+      if (!sessionId) {
+        return { ok: false, error: "session_id_required" };
+      }
+      try {
+        const response = await fetchWithAuth(
+          `/sessions/${encodeURIComponent(sessionId)}/close`,
+          {
+            method: "POST",
+            body: JSON.stringify(reason ? { reason } : {})
+          }
+        );
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || `Failed to close session (${response.status})`);
+        }
+        const payload = await response.json();
+        await loadSessions();
+        setFlashMessage("Session closure queued. Offline reconciliation will process shortly.");
+        return { ok: true, session: payload.session, closureJob: payload.closureJob };
+      } catch (error) {
+        setFlashMessage(error.message);
+        return { ok: false, error: error.message };
+      }
+    },
+    [fetchWithAuth, loadSessions]
+  );
+
   const handleAuthSuccess = useCallback(
     async (result) => {
       persistAuth(result.token, result.account);
@@ -352,6 +381,7 @@ export function AccountProvider({ children }) {
       resumeSession,
       approveSession,
       createSession,
+      closeSession,
       refreshSessions: loadSessions,
       login,
       register,
@@ -371,6 +401,7 @@ export function AccountProvider({ children }) {
       approveSession,
       authError,
       authLoading,
+      closeSession,
       createSession,
       flashMessage,
       isAdmin,

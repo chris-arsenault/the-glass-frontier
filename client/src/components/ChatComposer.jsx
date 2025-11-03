@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { useSessionContext } from "../context/SessionContext.jsx";
+import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
 
 export function ChatComposer() {
-  const { sendPlayerMessage, isSending, isOffline, queuedIntents } = useSessionContext();
+  const {
+    sendPlayerMessage,
+    isSending,
+    isOffline,
+    queuedIntents,
+    connectionState,
+    sessionStatus
+  } = useSessionContext();
   const [draft, setDraft] = useState("");
+
+  const sessionIsClosed =
+    sessionStatus === "closed" || connectionState === SessionConnectionStates.CLOSED;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const trimmed = draft.trim();
-    if (trimmed.length === 0) {
+    if (trimmed.length === 0 || sessionIsClosed) {
       return;
     }
 
@@ -21,7 +32,9 @@ export function ChatComposer() {
     : Number.isFinite(queuedIntents)
     ? Number(queuedIntents)
     : 0;
-  const buttonLabel = isOffline
+  const buttonLabel = sessionIsClosed
+    ? "Session closed"
+    : isOffline
     ? queuedCount > 0
       ? "Queue Intent"
       : "Queue Intent"
@@ -46,6 +59,15 @@ export function ChatComposer() {
           Connection degraded — intents will queue and send once online.
           {queuedCount > 0 ? ` ${queuedCount} pending.` : ""}
         </p>
+      ) : sessionIsClosed ? (
+        <p
+          className="chat-closed-banner"
+          role="status"
+          aria-live="assertive"
+          data-testid="chat-closed-banner"
+        >
+          Session closed. Offline reconciliation in progress. Messaging disabled.
+        </p>
       ) : null}
       <label htmlFor="chat-input" className="visually-hidden">
         Describe your intent for the GM
@@ -66,7 +88,7 @@ export function ChatComposer() {
         <button
           type="submit"
           className="chat-send-button"
-          disabled={isSending}
+          disabled={isSending || sessionIsClosed}
           data-testid="chat-submit"
         >
           {buttonLabel}
