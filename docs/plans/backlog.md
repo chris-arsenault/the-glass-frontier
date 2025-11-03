@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Updated for Session 53 autonomous cycle.
+Updated for Session 57 autonomous cycle.
 
 ## Active Implementation Backlog
 
@@ -14,7 +14,7 @@ Updated for Session 53 autonomous cycle.
 | IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-01: Story Consolidation Workflow MVP** | done | P1 | phase:implementation, pillar:pipeline | `StoryConsolidationWorkflow` orchestrator, summary composer, and telemetry landed – see `docs/implementation/IMP-OFFLINE-01-story-consolidation-workflow.md`. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-02: Entity Extraction & Delta Queue | done | P1 | phase:implementation, pillar:pipeline | Entity extractor + world delta queue shipped; see `docs/implementation/IMP-OFFLINE-02-entity-extraction-delta-queue.md`. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-03: Publishing Cadence & Search Sync** | done | P1 | phase:implementation, pillar:pipeline | Cadence scheduler, bundler, search sync landed – see `docs/implementation/IMP-OFFLINE-03-publishing-cadence.md`. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-04: Closure Triggered Workflow Orchestration** | in-review | P1 | phase:implementation, pillar:pipeline | Closure jobs now drive story consolidation → entity extraction → publishing prep with telemetry and admin alerts (`docs/implementation/IMP-OFFLINE-04-closure-workflow-orchestration.md`). |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-04: Closure Triggered Workflow Orchestration** | done | P1 | phase:implementation, pillar:pipeline | Closure jobs now drive story consolidation → entity extraction → publishing prep with telemetry and admin alerts; Session 57 verified via `npm test` with refreshed notes (`docs/implementation/IMP-OFFLINE-04-closure-workflow-orchestration.md`). |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-01: Hub Gateway & Command Parser Skeleton | done | P1 | phase:implementation, pillar:multiplayer | Hub gateway, verb DSL, SSE fallback, telemetry scaffolding – see `docs/implementation/IMP-HUB-01-hub-gateway-parser.md`. |
 | IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-02: Hub Orchestrator & Temporal Hooks** | done | P1 | phase:implementation, pillar:multiplayer | HubOrchestrator worker, room state caches, Temporal workflow hooks shipped (docs/implementation/IMP-HUB-02-hub-orchestrator.md). |
 | IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-03: Hub Narrative Bridge & Safety Telemetry** | done | P1 | phase:implementation, pillar:multiplayer | Hub narration bridge, capability enforcement, moderation telemetry. |
