@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    participant Player
+    participant WebClient as Web Client
+    participant Narrative as Narrative Engine (LangGraph)
+    participant CheckRunner as Temporal Check Runner
+    participant Moderator as Moderation Dashboard
+    participant Admin as Admin Console
+    participant Temporal as Temporal Pipelines
+    participant Publishing as Publishing Cadence
+
+    Player->>WebClient: Freeform intent
+    WebClient->>Narrative: intent.checkRequest + session context
+    Narrative->>CheckRunner: dispatch check (dice + safety tags)
+    CheckRunner-->>Narrative: result + safetyFlags + auditRef
+    Narrative-->>WebClient: rule outcome + annotations
+    CheckRunner-->>Moderator: admin.alert (eventId, urgency, suggestedAction)
+
+    Moderator->>Moderator: Review alert (transcript, momentum, hub data)
+    alt Moderator amends outcome
+        Moderator->>Narrative: moderation.override (decision, replacement narration)
+        Narrative-->>WebClient: update transcript + override badge
+    else Moderator approves outcome
+        Moderator->>Temporal: moderation.decision (approved)
+    end
+    Moderator-->>Temporal: moderation.decision (auditRef, notes)
+    Temporal-->>Moderator: acknowledgement + SLA timer update
+
+    Note over Narrative,Temporal: All events persisted to CouchDB event log (`auditRef`)
+
+    Narrative-->>Temporal: session.closed (with outstanding alerts)
+    Temporal->>Temporal: moderationQueueWorkflow enqueue unresolved items
+    Temporal-->>Admin: moderation.task (delta proposals, retcon requests)
+
+    Admin->>Admin: Review queued deltas & escalations
+    alt Approve/publish
+        Admin->>Temporal: moderation.decision (publish)
+    else Retcon or defer
+        Admin->>Temporal: retcon.append / needs-review
+    end
+    Temporal-->>Publishing: publishBatch/updateDigest (respecting DES-16 cadence)
+    Publishing-->>WebClient: lore/news updates + transparency notice
