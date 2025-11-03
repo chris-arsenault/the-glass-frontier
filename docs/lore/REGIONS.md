@@ -46,14 +46,48 @@
 - **Story Hooks:** Eco-faction tribunals arbitrating magitech usage quotas; barter festivals exchanging resonance scrip for botanical insights; clandestine cooling rituals protecting the groves from industrial overdraw.
 - **Story Consolidation Tags:** `sc.anchor-region.lumenshard-green`, `ner.region.lumenshard-green`, `mod.review.anchor.rooted-grove.lumenshard-green`
 
+## Secondary Corridors & Biomes (Status: Canon)
+| Corridor/Biome | Entity ID | Connects | Geography Snapshot | Anchor Touchpoints | Story Hooks |
+| --- | --- | --- | --- | --- | --- |
+| **Lattice Relay Traverse** | `lane.lattice-relay.traverse` | `region.kyther-range` ↔ `region.obilith-verge` | Suspended ice bridges stabilized by residual orbital tether fields, guiding caravans across the high strata. | `anchor.lattice-gate.vigil-breach`, `anchor.lattice-gate.obolith`, `anchor.verge-conduit.hoarfrost-line` | Custodian-escorted convoys inspecting tether pylons; evacuation drills when Verge storms shear the traverse; double-agent hunts amid relay maintenance crews. |
+| **Echo Lowland Drift** | `biome.echo-lowland.drift` | `region.auric-steppe` ↔ `region.sable-crescent` | Mist-laden floodplains where Echo Rivers braid through glass sedge and mnemonic marshlands. | `anchor.echo-well.morrow-hollow`, `anchor.echo-well.sable-crescent`, `anchor.rooted-grove.glassreed-mire` | Memory caravan vigils retrieving contested records; conservation actions against resonance silt blooms; downtime rites harmonizing rival archive guilds. |
+| **Lumenshard Switchline** | `lane.lumenshard.switchline` | `region.lumenshard-green` ↔ `region.auric-steppe` | Elevated tramways threading bioluminescent canopies with Prismwell uplifts and Verge depots. | `anchor.verge-conduit.sirocco-yard`, `anchor.prism-spire.auric-step`, `anchor.rooted-grove.lumenshard-green` | Flux ration negotiations between eco-factions and kite-sail collectives; aerial rescue sequences when tram talons misalign; celebratory trade parades marking safe attunement renewals. |
+| **Glassreef Hinterland** | `biome.glassreef.hinterland` | `region.sable-crescent` ↔ `region.obilith-verge` | Submerged ridgeways armored in coralized glass that gate Verge storm shelters and contraband caches. | `anchor.verge-conduit.hoarfrost-line`, `anchor.echo-well.sable-crescent` | Refugee flotillas staging coolant swaps; clandestine smugglers bartering Verge slipsail routes; storm-season pilgrimages seeking Echo Well absolutions. |
+
+### Lattice Relay Traverse (`lane.lattice-relay.traverse`)
+- **Connects:** `region.kyther-range` ↔ `region.obilith-verge`
+- **Traversal Hazards:** Shearing tether currents, altitude fatigue, and Verge storm static that can scramble Lattice gate credentials without moderator oversight.
+- **Commerce & Story Hooks:** Custodian convoys escorting relic shipments from Vigil Breach vaults; shadow brokers tapping Obolith telemetry; envoy dramas as tether guilds renegotiate relay tariffs after storm damage.
+- **Story Consolidation Tags:** `sc.trade-lane.lattice-relay`, `ner.lane.lattice-relay`, `mod.review.anchor.lattice-gate.vigil-breach`, `mod.review.anchor.lattice-gate.obolith`
+
+### Echo Lowland Drift (`biome.echo-lowland.drift`)
+- **Connects:** `region.auric-steppe` ↔ `region.sable-crescent`
+- **Traversal Hazards:** Mnemonic fogs that replay traumatic memories, seasonal flooding that reroutes caravans, and Echo River undertows that demand synchronized attunement chants.
+- **Commerce & Story Hooks:** Memory guild conclaves arbitrating custody of recovered histories; pastoral downtime scenes cataloging resonance flora; contested salvage of pre-collapse archive barges emerging from sediment.
+- **Story Consolidation Tags:** `sc.biome.echo-lowland`, `ner.biome.echo-lowland`, `mod.review.anchor.echo-well.morrow-hollow`, `mod.review.anchor.echo-well.sable-crescent`
+
+### Lumenshard Switchline (`lane.lumenshard.switchline`)
+- **Connects:** `region.lumenshard-green` ↔ `region.auric-steppe`
+- **Traversal Hazards:** Prismwell crosswinds that can derail tram talons, resonance fauna drawn to flux surges, and charter audits enforcing eco-quota compliance.
+- **Commerce & Story Hooks:** Flux ration tribunals between Lumenshard horticulturists and Auric kite-sail captains; celebratory lantern parades marking successful attunement resets; emergency rerouting sequences when Rooted Groves demand restorative downtime.
+- **Story Consolidation Tags:** `sc.trade-lane.lumenshard-switchline`, `ner.lane.lumenshard-switchline`, `mod.review.anchor.verge-conduit.sirocco-yard`, `mod.review.anchor.prism-spire.auric-step`
+
+### Glassreef Hinterland (`biome.glassreef.hinterland`)
+- **Connects:** `region.sable-crescent` ↔ `region.obilith-verge`
+- **Traversal Hazards:** Pressure-shifted tunnels that collapse under Verge squalls, crystal reefs that refract navigation signals, and rogue slipsail crews attempting to pirate custodian coolant reserves.
+- **Commerce & Story Hooks:** Refugee flotillas bartering coolant allotments for passage; contraband brokers funneling prism dust toward Obolith refineries; ritual pilgrimages where coastal communities petition Echo Wells for storm reprieves.
+- **Story Consolidation Tags:** `sc.biome.glassreef-hinterland`, `ner.biome.glassreef-hinterland`, `mod.review.anchor.verge-conduit.hoarfrost-line`, `mod.review.anchor.echo-well.sable-crescent`
+
 ## Legends & Fringe Paths (Status: Legend)
 | Legend | Contradictions | Guidance |
 | --- | --- | --- |
 | **Auric Flight Ascendancy** | Claims a caravan mastered continuous Prismwell flight across the Auric Steppe without charter approval. No custodian logs confirm sustained airborne residency. | Treat as aspirational folklore motivating aerial clans; require moderator sign-off before granting mechanical benefits. |
 | **Obolith Whisper Vault** | Rumored hidden vault beneath the Obolith shard supposedly granting direct custodian communion. Conflicts with Lattice access protocols recorded in RESONANCE_ANCHORS.md. | Use as suspenseful rumor in smuggler arcs; never canonize without a logged Story Consolidation decision. |
+| **Switchline Midnight Exchange** | Whispers describe illicit lumenshard swaps conducted mid-transit on the Lumenshard Switchline without charter permits; tram telemetry contradicts unscheduled stops. | Deploy as tension-building rumor for commerce arcs; demand moderator clearance before granting material benefits from the exchange. |
 
 ## Story Consolidation Hooks
 - Record session transcripts with combined tags (`region.*`, `anchor.*`, `sc.anchor-region.*`) to accelerate entity linking in post-session pipelines.
+- Tag corridor and biome scenes with `sc.trade-lane.*` / `sc.biome.*` plus corresponding `ner.lane.*` / `ner.biome.*` identifiers so the post-session pipeline maps commerce and environmental arcs without manual triage.
 - Align downtime scenes with attunement rites (`ritual.attunement.*`) already cataloged in RESONANCE_ANCHORS.md so cooldown schedules remain auditable.
 - Surface moderator alerts via `mod.review.anchor.[site]` whenever regional actions risk Prohibited Capabilities drift, ensuring DES-MOD-01 dependencies inherit the telemetry.
 

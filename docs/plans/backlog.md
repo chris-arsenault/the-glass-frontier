@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 23 (regional anchor cartography).
+Last updated for Session 24 (secondary corridors & trade lanes cartography).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -35,3 +35,4 @@ Last updated for Session 23 (regional anchor cartography).
 | NAR-CORE: Worldbuilding Foundations | NAR-21: Cosmology & Historical Timeline Foundations | done | P0 | phase:narrative, cycle:6, discipline:lore, session:21 | `docs/lore/COSMOLOGY.md`, `docs/lore/CHRONOLOGY.md`; MCP narrative element `54476f33-9ec3-40f9-8b8b-08bfe1e1d20c`, lore entry `6ef78c8c-125e-46c2-9de1-302fd344e62e`; consistency check returned no direct matches—document follow-up architecture alignment. |
 | NAR-CORE: Worldbuilding Foundations | NAR-22: Resonance Anchors & Attunement Corpus | done | P0 | phase:narrative, cycle:6, discipline:lore, session:22 | `docs/lore/RESONANCE_ANCHORS.md`; MCP narrative element `72afd9a8-bf5c-4a30-9dce-4d9984d91a97`, lore entry `ff63e3b0-3386-4096-883f-fc5696b72dc7`; consistency check aligned with `temporal-lore-publishing-cadence` pattern—no conflicts detected. |
 | NAR-CORE: Worldbuilding Foundations | NAR-23: Regional Resonance Anchor Cartography | done | P0 | phase:narrative, cycle:6, discipline:lore, session:23 | `docs/lore/REGIONS.md`; MCP narrative element `2e0334d7-2ec0-4107-8552-5552d7eaa3d4`, lore entry `734fc89a-dbb4-4eab-a504-5d7647ea497b`; consistency check aligned with `temporal-lore-publishing-cadence` pattern—region IDs synced with RESONANCE_ANCHORS.md for NAR-24 follow-through. |
+| NAR-CORE: Worldbuilding Foundations | NAR-24: Secondary Biomes & Trade Lane Cartography | done | P0 | phase:narrative, cycle:6, discipline:lore, session:24 | `docs/lore/REGIONS.md`; MCP narrative element `e1cb2e96-4f8a-4e44-8935-44062dae880d`, lore entry `ef804ed8-55cb-49dc-8859-7b16166f7e43`; consistency check (2025-11-04) surfaced no conflicts and referenced self-hosted narrative stack topology for monitoring alignment. |
