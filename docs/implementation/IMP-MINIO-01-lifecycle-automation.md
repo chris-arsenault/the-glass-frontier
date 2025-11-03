@@ -35,6 +35,7 @@ All buckets retain object versions; delete markers are preserved until manual cl
    - Lifecycle manager logs total size (bytes), object count, oldest object age, and time since last run under:
      - `telemetry.storage.bucket.usage`
      - `telemetry.storage.bucket.lifecycle_drift`
+   - When `STORAGE_METRICS_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_ENDPOINT`) is defined, the lifecycle run exports counters, gauges, and histograms via OTLP to VictoriaMetrics with labels scoped by `STORAGE_METRICS_SERVICE_NAME` (default `storage-lifecycle`).
 
 ## Observability & Alerting
 - VictoriaMetrics dashboards ingest `telemetry.storage.bucket.*` series, enabling:
@@ -42,6 +43,7 @@ All buckets retain object versions; delete markers are preserved until manual cl
   - Critical alert if lifecycle drift > 6 hours (cron or workflow failures).
 - Remote tier rehearsal outcomes surface under `telemetry.storage.remote_tier.rehearsal` with status, storage class, and timing fields to drive B2 availability alerts.
 - Alerting templates live beside existing observability stack outputs (`infra/terraform/modules/observability-stack/templates`).
+- Alerting rules now raise `StorageRemoteTierFailures` (critical) and `StorageRemoteTierCredentialsMissing` (warning) whenever OTLP metrics indicate rehearsal errors or missing Backblaze credentials; dashboards include dedicated remote tier outcome + latency panels.
 
 ## Deployment Integration
 - `infra/terraform/modules/nomad-core/templates/minio-lifecycle.nomad.hcl` defines a periodic Nomad batch job that invokes the lifecycle manager from a `platform-tasks` container image.

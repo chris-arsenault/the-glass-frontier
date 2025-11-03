@@ -1,5 +1,15 @@
 "use strict";
 
+jest.mock("../../../src/telemetry/storageMetricsOtel", () => ({
+  recordPolicyApplied: jest.fn(),
+  recordBucketUsage: jest.fn(),
+  recordLifecycleDrift: jest.fn(),
+  recordRemoteTierStatus: jest.fn(),
+  flush: jest.fn(() => Promise.resolve()),
+  shutdown: jest.fn(() => Promise.resolve())
+}));
+
+const otel = require("../../../src/telemetry/storageMetricsOtel");
 const { StorageMetrics } = require("../../../src/telemetry/storageMetrics");
 
 describe("StorageMetrics sanitization", () => {
@@ -16,7 +26,7 @@ describe("StorageMetrics sanitization", () => {
     process.env = ORIGINAL_ENV;
   });
 
-  test("recordRemoteTierStatus omits unexpected fields", () => {
+  test("recordRemoteTierStatus omits unexpected fields and forwards to OTEL exporter", () => {
     const metrics = new StorageMetrics();
 
     metrics.recordRemoteTierStatus({
@@ -39,5 +49,19 @@ describe("StorageMetrics sanitization", () => {
       fetchDurationMs: 42
     });
     expect(payload.unexpected).toBeUndefined();
+    expect(otel.recordRemoteTierStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket: "gf-digests",
+        storageClass: "b2-archive",
+        status: "success",
+        bytes: 123
+      })
+    );
+  });
+
+  test("flush resolves even when exporter is disabled", async () => {
+    const metrics = new StorageMetrics();
+    await expect(metrics.flush()).resolves.toBeUndefined();
+    expect(otel.flush).toHaveBeenCalledTimes(1);
   });
 });

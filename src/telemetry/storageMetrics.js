@@ -1,51 +1,72 @@
 "use strict";
 
 const { log } = require("../utils/logger");
+const otel = require("./storageMetricsOtel");
 
 class StorageMetrics {
+  async flush() {
+    if (otel && typeof otel.flush === "function") {
+      await otel.flush();
+    }
+  }
+
+  async shutdown() {
+    if (otel && typeof otel.shutdown === "function") {
+      await otel.shutdown();
+    }
+  }
+
   recordPolicyApplied(payload) {
-    log("info", "telemetry.storage.policy.applied", sanitize(payload, ["bucket", "changed", "ruleCount"]));
+    const sanitized = sanitize(payload, ["bucket", "changed", "ruleCount"]);
+    log("info", "telemetry.storage.policy.applied", sanitized);
+    if (otel && typeof otel.recordPolicyApplied === "function") {
+      otel.recordPolicyApplied(sanitized);
+    }
   }
 
   recordBucketUsage(payload) {
-    log(
-      "info",
-      "telemetry.storage.bucket.usage",
-      sanitize(payload, [
-        "bucket",
-        "bytes",
-        "objectCount",
-        "oldestObjectAgeDays",
-        "scanDurationMs",
-        "capacityBytes",
-        "capacityPercent"
-      ])
-    );
+    const sanitized = sanitize(payload, [
+      "bucket",
+      "bytes",
+      "objectCount",
+      "oldestObjectAgeDays",
+      "scanDurationMs",
+      "capacityBytes",
+      "capacityPercent"
+    ]);
+    log("info", "telemetry.storage.bucket.usage", sanitized);
+    if (otel && typeof otel.recordBucketUsage === "function") {
+      otel.recordBucketUsage(sanitized);
+    }
   }
 
   recordLifecycleDrift(payload) {
-    log(
-      "warn",
-      "telemetry.storage.bucket.lifecycle_drift",
-      sanitize(payload, ["bucket", "expectedArchiveDays", "observedAgeDays", "driftDays", "status"])
-    );
+    const sanitized = sanitize(payload, ["bucket", "expectedArchiveDays", "observedAgeDays", "driftDays", "status"]);
+    log("warn", "telemetry.storage.bucket.lifecycle_drift", sanitized);
+    if (otel && typeof otel.recordLifecycleDrift === "function") {
+      otel.recordLifecycleDrift({
+        bucket: sanitized.bucket,
+        driftDays: sanitized.driftDays,
+        status: sanitized.status
+      });
+    }
   }
 
   recordRemoteTierStatus(payload) {
-    log(
-      "info",
-      "telemetry.storage.remote_tier.rehearsal",
-      sanitize(payload, [
-        "bucket",
-        "objectKey",
-        "storageClass",
-        "status",
-        "bytes",
-        "writeDurationMs",
-        "fetchDurationMs",
-        "error"
-      ])
-    );
+    const sanitized = sanitize(payload, [
+      "bucket",
+      "objectKey",
+      "storageClass",
+      "status",
+      "bytes",
+      "writeDurationMs",
+      "fetchDurationMs",
+      "error"
+    ]);
+    log("info", "telemetry.storage.remote_tier.rehearsal", sanitized);
+    if (otel && typeof otel.recordRemoteTierStatus === "function") {
+      otel.recordRemoteTierStatus(sanitized);
+    }
   }
 }
 

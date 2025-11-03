@@ -11,64 +11,73 @@ async function main() {
     process.env.MINIO_LIFECYCLE_CONFIG ||
     path.resolve(__dirname, "../../infra/minio/lifecycle-policies.json");
   const config = await loadConfig(configPath);
-
-  const remoteTierConfig = config.remoteTier || null;
-  const client = createClient(config);
   const metrics = new StorageMetrics();
 
-  const remoteTierName = resolveRemoteTierName(remoteTierConfig, config.defaults);
-  const warmClass = resolveStorageClass("MINIO_WARM_STORAGE_CLASS", config.defaults?.warmStorageClass, "STANDARD_IA");
-  const archiveClass = resolveStorageClass(
-    "MINIO_ARCHIVE_STORAGE_CLASS",
-    remoteTierName ?? config.defaults?.archiveStorageClass,
-    remoteTierName ?? "GLACIER"
-  );
-  const driftAllowance = resolveNumber(
-    process.env.MINIO_LIFECYCLE_DRIFT_ALLOWANCE,
-    config.defaults?.allowedDriftDays,
-    2
-  );
+  try {
+    const remoteTierConfig = config.remoteTier || null;
+    const client = createClient(config);
 
-  let processed = 0;
+    const remoteTierName = resolveRemoteTierName(remoteTierConfig, config.defaults);
+    const warmClass = resolveStorageClass(
+      "MINIO_WARM_STORAGE_CLASS",
+      config.defaults?.warmStorageClass,
+      "STANDARD_IA"
+    );
+    const archiveClass = resolveStorageClass(
+      "MINIO_ARCHIVE_STORAGE_CLASS",
+      remoteTierName ?? config.defaults?.archiveStorageClass,
+      remoteTierName ?? "GLACIER"
+    );
+    const driftAllowance = resolveNumber(
+      process.env.MINIO_LIFECYCLE_DRIFT_ALLOWANCE,
+      config.defaults?.allowedDriftDays,
+      2
+    );
 
-  for (const bucketConfig of config.buckets || []) {
-    processed += 1;
-    await ensureBucket(client, bucketConfig, config.defaults);
-    const policyChanged = await applyLifecycle(client, bucketConfig, warmClass, archiveClass);
-    metrics.recordPolicyApplied({
-      bucket: bucketConfig.name,
-      changed: policyChanged,
-      ruleCount: Array.isArray(bucketConfig.lifecycle?.Rules) ? bucketConfig.lifecycle.Rules.length : 0
+    let processed = 0;
+
+    for (const bucketConfig of config.buckets || []) {
+      processed += 1;
+      await ensureBucket(client, bucketConfig, config.defaults);
+      const policyChanged = await applyLifecycle(client, bucketConfig, warmClass, archiveClass);
+      metrics.recordPolicyApplied({
+        bucket: bucketConfig.name,
+        changed: policyChanged,
+        ruleCount: Array.isArray(bucketConfig.lifecycle?.Rules) ? bucketConfig.lifecycle.Rules.length : 0
+      });
+
+      const usage = await collectUsage(client, bucketConfig);
+      const capacityBytes = resolveNumber(bucketConfig.capacityBytes);
+      const capacityPercent =
+        typeof capacityBytes === "number" && capacityBytes > 0
+          ? Number(((usage.bytes / capacityBytes) * 100).toFixed(2))
+          : null;
+
+      metrics.recordBucketUsage({
+        bucket: bucketConfig.name,
+        bytes: usage.bytes,
+        objectCount: usage.objectCount,
+        oldestObjectAgeDays: usage.oldestObjectAgeDays,
+        scanDurationMs: usage.scanDurationMs,
+        capacityBytes: capacityBytes ?? null,
+        capacityPercent
+      });
+
+      evaluateLifecycleDrift(metrics, bucketConfig, usage, driftAllowance);
+    }
+
+    await runRemoteTierRehearsal(client, remoteTierConfig, config.buckets || [], metrics, remoteTierName);
+
+    log("info", "minio.lifecycle.completed", {
+      bucketCount: processed,
+      warmStorageClass: warmClass,
+      archiveStorageClass: archiveClass,
+      remoteTierStorageClass: remoteTierName ?? null
     });
-
-    const usage = await collectUsage(client, bucketConfig);
-    const capacityBytes = resolveNumber(bucketConfig.capacityBytes);
-    const capacityPercent =
-      typeof capacityBytes === "number" && capacityBytes > 0
-        ? Number(((usage.bytes / capacityBytes) * 100).toFixed(2))
-        : null;
-
-    metrics.recordBucketUsage({
-      bucket: bucketConfig.name,
-      bytes: usage.bytes,
-      objectCount: usage.objectCount,
-      oldestObjectAgeDays: usage.oldestObjectAgeDays,
-      scanDurationMs: usage.scanDurationMs,
-      capacityBytes: capacityBytes ?? null,
-      capacityPercent
-    });
-
-    evaluateLifecycleDrift(metrics, bucketConfig, usage, driftAllowance);
+  } finally {
+    await metrics.flush();
+    await metrics.shutdown();
   }
-
-  await runRemoteTierRehearsal(client, remoteTierConfig, config.buckets || [], metrics, remoteTierName);
-
-  log("info", "minio.lifecycle.completed", {
-    bucketCount: processed,
-    warmStorageClass: warmClass,
-    archiveStorageClass: archiveClass,
-    remoteTierStorageClass: remoteTierName ?? null
-  });
 }
 
 async function loadConfig(configPath) {
