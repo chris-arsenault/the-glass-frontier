@@ -56,15 +56,15 @@ export function SessionWorkspace() {
     }
   }, [activeView, isAdmin, setActiveView]);
 
-  if (!selectedSessionId) {
-    return <SessionDashboard />;
-  }
+  const showDashboard = !selectedSessionId || activeView === "dashboard";
+  const showAdminPanel = activeView === "admin" && isAdmin && !showDashboard;
 
-  const sessionSummary = Array.isArray(sessions)
-    ? sessions.find((entry) => entry.sessionId === selectedSessionId)
-    : null;
+  const sessionSummary =
+    selectedSessionId && Array.isArray(sessions)
+      ? sessions.find((entry) => entry.sessionId === selectedSessionId)
+      : null;
   const session = useSessionConnection({
-    sessionId: selectedSessionId,
+    sessionId: selectedSessionId || undefined,
     account,
     authToken: token,
     sessionSummary
@@ -77,7 +77,8 @@ export function SessionWorkspace() {
           <div>
             <p className="app-title">The Glass Frontier</p>
             <p className="app-session-id" aria-live="polite">
-              Session: <strong>{session.sessionId}</strong>
+              Session:{" "}
+              <strong>{selectedSessionId ? session.sessionId : "Select a session"}</strong>
             </p>
           </div>
           <div className="app-account">
@@ -99,8 +100,21 @@ export function SessionWorkspace() {
         <nav className="app-nav" aria-label="Primary navigation">
           <button
             type="button"
-            className={`app-nav-item${activeView === "session" ? " app-nav-item-active" : ""}`}
+            className={`app-nav-item${
+              activeView === "dashboard" || !selectedSessionId ? " app-nav-item-active" : ""
+            }`}
+            onClick={() => setActiveView("dashboard")}
+            data-testid="nav-dashboard"
+          >
+            Session Dashboard
+          </button>
+          <button
+            type="button"
+            className={`app-nav-item${
+              activeView === "session" && selectedSessionId ? " app-nav-item-active" : ""
+            }`}
             onClick={() => setActiveView("session")}
+            data-testid="nav-session"
           >
             Live Session
           </button>
@@ -109,6 +123,7 @@ export function SessionWorkspace() {
               type="button"
               className={`app-nav-item${activeView === "admin" ? " app-nav-item-active" : ""}`}
               onClick={() => setActiveView("admin")}
+              data-testid="nav-admin"
             >
               Admin Tools
             </button>
@@ -122,9 +137,13 @@ export function SessionWorkspace() {
             </button>
           </div>
         ) : null}
-        {activeView === "admin" && isAdmin ? (
+        {showAdminPanel ? (
           <section className="app-admin-panel" aria-label="Admin tools">
             <AdminVerbCatalogPanel />
+          </section>
+        ) : showDashboard ? (
+          <section className="app-dashboard-panel" aria-label="Session management">
+            <SessionDashboard />
           </section>
         ) : (
           <div className="app-body">
@@ -135,7 +154,7 @@ export function SessionWorkspace() {
             <OverlayDock />
           </div>
         )}
-        <SessionMarkerRibbon />
+        {showDashboard ? null : <SessionMarkerRibbon />}
       </div>
     </SessionProvider>
   );

@@ -1,12 +1,21 @@
 import { test, expect } from "@playwright/test";
-
-const SESSION_QUERY = "?sessionId=playwright-offline";
+import { createSession, loginAsAdminViaUi } from "../helpers/auth.js";
 
 test.describe("offline continuity", () => {
   test("queues and flushes intents across offline transitions", async ({ page, context }) => {
-    await page.goto(`/${SESSION_QUERY}`);
-    await page.waitForLoadState("networkidle");
+    const sessionId = `playwright-offline-${Date.now()}`;
+    const { token } = await loginAsAdminViaUi(page);
+    await createSession(page, token, {
+      sessionId,
+      title: "Playwright Offline Continuity"
+    });
 
+    await page.getByTestId("nav-dashboard").click();
+    await expect(page.getByTestId("session-dashboard")).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Refresh" }).click();
+    const resumeButton = page.getByTestId(`resume-${sessionId}`);
+    await resumeButton.waitFor({ state: "visible", timeout: 10000 });
+    await resumeButton.click();
     await expect(page.getByTestId("chat-composer")).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId("chat-status")).toHaveText(/Live session|Connecting/);
 

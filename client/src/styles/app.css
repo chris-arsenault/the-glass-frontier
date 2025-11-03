@@ -724,6 +724,12 @@ body {
   padding: 1rem;
 }
 
+.app-dashboard-panel {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
 .account-loading {
   display: flex;
   align-items: center;
@@ -839,9 +845,25 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.session-dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .session-dashboard-refresh {
   border: 1px solid rgba(148, 197, 255, 0.55);
   background: rgba(59, 130, 246, 0.25);
+  color: #bfdbfe;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.session-dashboard-return {
+  border: 1px solid rgba(148, 197, 255, 0.35);
+  background: rgba(30, 58, 138, 0.35);
   color: #bfdbfe;
   border-radius: 0.75rem;
   padding: 0.5rem 0.9rem;

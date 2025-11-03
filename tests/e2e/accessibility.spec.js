@@ -3,8 +3,8 @@ import { AxeBuilder } from "@axe-core/playwright";
 import fs from "fs/promises";
 import path from "path";
 import { createHtmlReport } from "axe-html-reporter";
+import { createSession, loginAsAdminViaUi } from "../helpers/auth.js";
 
-const SESSION_QUERY = "?sessionId=axe-accessibility";
 const REPORT_ROOT = path.join(process.cwd(), "artifacts", "accessibility");
 
 function slugify(name) {
@@ -63,8 +63,18 @@ test.describe("accessibility regression", () => {
   test.describe.configure({ mode: "serial" });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/${SESSION_QUERY}`);
-    await page.waitForLoadState("networkidle");
+    const sessionId = `playwright-accessibility-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const { token } = await loginAsAdminViaUi(page);
+    await createSession(page, token, {
+      sessionId,
+      title: "Playwright Accessibility Audit"
+    });
+    await page.getByTestId("nav-dashboard").click();
+    await expect(page.getByTestId("session-dashboard")).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Refresh" }).click();
+    const resumeButton = page.getByTestId(`resume-${sessionId}`);
+    await resumeButton.waitFor({ state: "visible", timeout: 10000 });
+    await resumeButton.click();
     await expect(page.getByTestId("chat-composer")).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId("overlay-dock")).toBeVisible();
   });

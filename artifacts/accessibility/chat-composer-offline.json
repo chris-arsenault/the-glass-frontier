@@ -13,8 +13,8 @@
     "orientationAngle": 0,
     "orientationType": "landscape-primary"
   },
-  "timestamp": "2025-11-03T07:17:33.705Z",
-  "url": "http://localhost:3000/?sessionId=axe-accessibility",
+  "timestamp": "2025-11-03T20:53:48.986Z",
+  "url": "http://localhost:3000/",
   "toolOptions": {
     "runOnly": {
       "type": "tag",
@@ -930,7 +930,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1018,7 +1018,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1126,7 +1126,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1298,7 +1298,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1398,7 +1398,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1545,7 +1545,7 @@
                 {
                   "html": "<label for=\"chat-input\" class=\"visually-hidden\">Describe your intent for the GM</label>",
                   "target": [
-                    "label"
+                    ".visually-hidden"
                   ]
                 }
               ],
@@ -1591,7 +1591,7 @@
                 {
                   "html": "<label for=\"chat-input\" class=\"visually-hidden\">Describe your intent for the GM</label>",
                   "target": [
-                    "label"
+                    ".visually-hidden"
                   ]
                 }
               ],

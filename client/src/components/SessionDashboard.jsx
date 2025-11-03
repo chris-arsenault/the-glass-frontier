@@ -139,7 +139,11 @@ export function SessionDashboard() {
   );
 
   return (
-    <section className="session-dashboard" aria-labelledby="session-dashboard-heading">
+    <section
+      className="session-dashboard"
+      aria-labelledby="session-dashboard-heading"
+      data-testid="session-dashboard"
+    >
       <header className="session-dashboard-header">
         <div>
           <h1 id="session-dashboard-heading">Session Management</h1>
@@ -148,9 +152,25 @@ export function SessionDashboard() {
             refresh automatically when cadence timelines shift.
           </p>
         </div>
-        <button className="session-dashboard-refresh" type="button" onClick={() => refreshSessions()}>
-          Refresh
-        </button>
+        <div className="session-dashboard-actions">
+          <button
+            className="session-dashboard-refresh"
+            type="button"
+            onClick={() => refreshSessions()}
+          >
+            Refresh
+          </button>
+          {typeof setActiveView === "function" ? (
+            <button
+              type="button"
+              className="session-dashboard-return"
+              onClick={() => setActiveView("session")}
+              data-testid="dashboard-return"
+            >
+              Back to live session
+            </button>
+          ) : null}
+        </div>
       </header>
       <div className="session-dashboard-grid" role="list">
         {sortedSessions.length === 0 ? (

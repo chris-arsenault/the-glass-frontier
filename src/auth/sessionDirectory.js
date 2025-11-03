@@ -145,7 +145,7 @@ class SessionDirectory {
       return [];
     }
 
-    return sessionIds
+    return Array.from(sessionIds)
       .map((sessionId) => this.sessions.get(sessionId))
       .filter(Boolean)
       .map((record) => this.buildSummary(record))

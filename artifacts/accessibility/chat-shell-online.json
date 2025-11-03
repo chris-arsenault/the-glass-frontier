@@ -13,8 +13,8 @@
     "orientationAngle": 0,
     "orientationType": "landscape-primary"
   },
-  "timestamp": "2025-11-03T07:17:32.712Z",
-  "url": "http://localhost:3000/?sessionId=axe-accessibility",
+  "timestamp": "2025-11-03T20:53:47.114Z",
+  "url": "http://localhost:3000/",
   "toolOptions": {
     "runOnly": {
       "type": "tag",
@@ -635,28 +635,6 @@
       "nodes": []
     },
     {
-      "id": "select-name",
-      "impact": null,
-      "tags": [
-        "cat.forms",
-        "wcag2a",
-        "wcag412",
-        "section508",
-        "section508.22.n",
-        "TTv5",
-        "TT5.c",
-        "EN-301-549",
-        "EN-9.4.1.2",
-        "ACT",
-        "RGAAv4",
-        "RGAA-11.1.1"
-      ],
-      "description": "Ensure select element has an accessible name",
-      "help": "Select element must have an accessible name",
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/select-name?application=playwright",
-      "nodes": []
-    },
-    {
       "id": "server-side-image-map",
       "impact": null,
       "tags": [
@@ -860,9 +838,35 @@
             }
           ],
           "impact": null,
-          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>axe-accessibility</strong></p>",
+          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>playwright-accessibility-1762203226344-883</strong></p>",
           "target": [
             ".app-session-id"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-allowed-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attributes are used correctly for the defined role"
+            }
+          ],
+          "none": [
+            {
+              "id": "aria-unsupported-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute is supported"
+            }
+          ],
+          "impact": null,
+          "html": "<nav class=\"app-nav\" aria-label=\"Primary navigation\">",
+          "target": [
+            "nav"
           ]
         },
         {
@@ -966,7 +970,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1172,9 +1176,35 @@
             }
           ],
           "impact": null,
-          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Former archivist tracking lost frontier tech.</p>",
+          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.</p>",
           "target": [
-            ".overlay-subheading"
+            ".overlay-subheading[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-allowed-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attributes are used correctly for the defined role"
+            }
+          ],
+          "none": [
+            {
+              "id": "aria-unsupported-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute is supported"
+            }
+          ],
+          "impact": null,
+          "html": "<p class=\"overlay-cadence\" aria-live=\"polite\">Batch @ Nov 3, 02:48 PM • Digest @ Nov 3, 07:00 PM</p>",
+          "target": [
+            ".overlay-cadence"
           ]
         },
         {
@@ -1253,6 +1283,32 @@
           "html": "<span class=\"overlay-meta\" aria-live=\"polite\">Revision 1</span>",
           "target": [
             ".overlay-inventory > .overlay-card-header > .overlay-meta[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-allowed-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attributes are used correctly for the defined role"
+            }
+          ],
+          "none": [
+            {
+              "id": "aria-unsupported-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute is supported"
+            }
+          ],
+          "impact": null,
+          "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+          "target": [
+            ".overlay-admin"
           ]
         },
         {
@@ -1364,9 +1420,27 @@
           ],
           "none": [],
           "impact": null,
-          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>axe-accessibility</strong></p>",
+          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>playwright-accessibility-1762203226344-883</strong></p>",
           "target": [
             ".app-session-id"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-conditional-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "ARIA attribute is allowed"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<nav class=\"app-nav\" aria-label=\"Primary navigation\">",
+          "target": [
+            "nav"
           ]
         },
         {
@@ -1438,7 +1512,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -1580,9 +1654,27 @@
           ],
           "none": [],
           "impact": null,
-          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Former archivist tracking lost frontier tech.</p>",
+          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.</p>",
           "target": [
-            ".overlay-subheading"
+            ".overlay-subheading[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-conditional-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "ARIA attribute is allowed"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<p class=\"overlay-cadence\" aria-live=\"polite\">Batch @ Nov 3, 02:48 PM • Digest @ Nov 3, 07:00 PM</p>",
+          "target": [
+            ".overlay-cadence"
           ]
         },
         {
@@ -1637,6 +1729,24 @@
           "html": "<span class=\"overlay-meta\" aria-live=\"polite\">Revision 1</span>",
           "target": [
             ".overlay-inventory > .overlay-card-header > .overlay-meta[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-conditional-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "ARIA attribute is allowed"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+          "target": [
+            ".overlay-admin"
           ]
         },
         {
@@ -1778,6 +1888,24 @@
             }
           ],
           "impact": null,
+          "html": "<p class=\"overlay-alert\" role=\"alert\">Unexpected token '&lt;', \"&lt;!DOCTYPE \"... is not valid JSON</p>",
+          "target": [
+            ".overlay-alert"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "deprecatedrole",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "minor",
+              "message": "ARIA role is not deprecated"
+            }
+          ],
+          "impact": null,
           "html": "<div class=\"session-wrap-controls\" role=\"group\" aria-label=\"Session wrap controls\">",
           "target": [
             ".session-wrap-controls"
@@ -1814,9 +1942,27 @@
             }
           ],
           "impact": null,
-          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>axe-accessibility</strong></p>",
+          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>playwright-accessibility-1762203226344-883</strong></p>",
           "target": [
             ".app-session-id"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "aria-prohibited-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "ARIA attribute is allowed"
+            }
+          ],
+          "impact": null,
+          "html": "<nav class=\"app-nav\" aria-label=\"Primary navigation\">",
+          "target": [
+            "nav"
           ]
         },
         {
@@ -1888,7 +2034,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -2030,9 +2176,27 @@
             }
           ],
           "impact": null,
-          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Former archivist tracking lost frontier tech.</p>",
+          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.</p>",
           "target": [
-            ".overlay-subheading"
+            ".overlay-subheading[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "aria-prohibited-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "ARIA attribute is allowed"
+            }
+          ],
+          "impact": null,
+          "html": "<p class=\"overlay-cadence\" aria-live=\"polite\">Batch @ Nov 3, 02:48 PM • Digest @ Nov 3, 07:00 PM</p>",
+          "target": [
+            ".overlay-cadence"
           ]
         },
         {
@@ -2087,6 +2251,24 @@
           "html": "<span class=\"overlay-meta\" aria-live=\"polite\">Revision 1</span>",
           "target": [
             ".overlay-inventory > .overlay-card-header > .overlay-meta[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "aria-prohibited-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "ARIA attribute is allowed"
+            }
+          ],
+          "impact": null,
+          "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+          "target": [
+            ".overlay-admin"
           ]
         },
         {
@@ -2213,6 +2395,24 @@
           "html": "<div class=\"overlay-check-section\" role=\"status\" aria-live=\"assertive\"><h3 class=\"overlay-check-subheading\">Latest result</h3><p class=\"overlay-empty\" data-testid=\"overlay-no-result\">No check results have been recorded yet.</p></div>",
           "target": [
             "div[aria-live=\"assertive\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "aria-required-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "All required ARIA attributes are present"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<p class=\"overlay-alert\" role=\"alert\">Unexpected token '&lt;', \"&lt;!DOCTYPE \"... is not valid JSON</p>",
+          "target": [
+            ".overlay-alert"
           ]
         },
         {
@@ -2374,6 +2574,38 @@
             }
           ],
           "impact": null,
+          "html": "<p class=\"overlay-alert\" role=\"alert\">Unexpected token '&lt;', \"&lt;!DOCTYPE \"... is not valid JSON</p>",
+          "target": [
+            ".overlay-alert"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "invalidrole",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA role is valid"
+            },
+            {
+              "id": "abstractrole",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Abstract roles are not used"
+            },
+            {
+              "id": "unsupportedrole",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA role is supported"
+            }
+          ],
+          "impact": null,
           "html": "<div class=\"session-wrap-controls\" role=\"group\" aria-label=\"Session wrap controls\">",
           "target": [
             ".session-wrap-controls"
@@ -2424,9 +2656,41 @@
           ],
           "none": [],
           "impact": null,
-          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>axe-accessibility</strong></p>",
+          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>playwright-accessibility-1762203226344-883</strong></p>",
           "target": [
             ".app-session-id"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-valid-attr-value",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute values are valid"
+            },
+            {
+              "id": "aria-errormessage",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-errormessage exists and references elements visible to screen readers that use a supported aria-errormessage technique"
+            },
+            {
+              "id": "aria-level",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-level values are valid"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<nav class=\"app-nav\" aria-label=\"Primary navigation\">",
+          "target": [
+            "nav"
           ]
         },
         {
@@ -2554,7 +2818,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -2808,9 +3072,41 @@
           ],
           "none": [],
           "impact": null,
-          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Former archivist tracking lost frontier tech.</p>",
+          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.</p>",
           "target": [
-            ".overlay-subheading"
+            ".overlay-subheading[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-valid-attr-value",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute values are valid"
+            },
+            {
+              "id": "aria-errormessage",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-errormessage exists and references elements visible to screen readers that use a supported aria-errormessage technique"
+            },
+            {
+              "id": "aria-level",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-level values are valid"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<p class=\"overlay-cadence\" aria-live=\"polite\">Batch @ Nov 3, 02:48 PM • Digest @ Nov 3, 07:00 PM</p>",
+          "target": [
+            ".overlay-cadence"
           ]
         },
         {
@@ -2907,6 +3203,38 @@
           "html": "<span class=\"overlay-meta\" aria-live=\"polite\">Revision 1</span>",
           "target": [
             ".overlay-inventory > .overlay-card-header > .overlay-meta[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [
+            {
+              "id": "aria-valid-attr-value",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute values are valid"
+            },
+            {
+              "id": "aria-errormessage",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-errormessage exists and references elements visible to screen readers that use a supported aria-errormessage technique"
+            },
+            {
+              "id": "aria-level",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "aria-level values are valid"
+            }
+          ],
+          "none": [],
+          "impact": null,
+          "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+          "target": [
+            ".overlay-admin"
           ]
         },
         {
@@ -3036,9 +3364,27 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>axe-accessibility</strong></p>",
+          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>playwright-accessibility-1762203226344-883</strong></p>",
           "target": [
             ".app-session-id"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "aria-valid-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute name is valid"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<nav class=\"app-nav\" aria-label=\"Primary navigation\">",
+          "target": [
+            "nav"
           ]
         },
         {
@@ -3110,7 +3456,7 @@
           "impact": null,
           "html": "<form class=\"chat-composer\" aria-label=\"Send a narrative intent\" data-testid=\"chat-composer\">",
           "target": [
-            "form"
+            ".chat-composer"
           ]
         },
         {
@@ -3252,9 +3598,27 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Former archivist tracking lost frontier tech.</p>",
+          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.</p>",
           "target": [
-            ".overlay-subheading"
+            ".overlay-subheading[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "aria-valid-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute name is valid"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<p class=\"overlay-cadence\" aria-live=\"polite\">Batch @ Nov 3, 02:48 PM • Digest @ Nov 3, 07:00 PM</p>",
+          "target": [
+            ".overlay-cadence"
           ]
         },
         {
@@ -3309,6 +3673,24 @@
           "html": "<span class=\"overlay-meta\" aria-live=\"polite\">Revision 1</span>",
           "target": [
             ".overlay-inventory > .overlay-card-header > .overlay-meta[aria-live=\"polite\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "aria-valid-attr",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "ARIA attribute name is valid"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+          "target": [
+            ".overlay-admin"
           ]
         },
         {
@@ -3401,9 +3783,135 @@
           "all": [],
           "none": [],
           "impact": null,
+          "html": "<button type=\"button\" class=\"app-logout-button\">Sign out</button>",
+          "target": [
+            ".app-logout-button"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-dashboard\">Session Dashboard</button>",
+          "target": [
+            "button[data-testid=\"nav-dashboard\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"app-nav-item app-nav-item-active\" data-testid=\"nav-session\">Live Session</button>",
+          "target": [
+            ".app-nav-item-active"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-admin\">Admin Tools</button>",
+          "target": [
+            "button[data-testid=\"nav-admin\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
           "html": "<button type=\"submit\" class=\"chat-send-button\" data-testid=\"chat-submit\">Send to GM</button>",
           "target": [
             ".chat-send-button"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"overlay-button\">Refresh</button>",
+          "target": [
+            ".overlay-button"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"submit\">Create Verb</button>",
+          "target": [
+            ".overlay-form-actions > button[type=\"submit\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "button-has-visible-text",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has inner text that is visible to screen readers"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\">Reset</button>",
+          "target": [
+            ".overlay-form-actions > button[type=\"button\"]"
           ]
         },
         {
@@ -3498,7 +4006,7 @@
             }
           ],
           "impact": null,
-          "html": "<dl class=\"overlay-character-details\"><div><dt>Name</dt><dd>Avery Glass</dd></div><div><dt>Pronouns</dt><dd>they/them</dd></div><div><dt>Archetype</dt><dd>Wayfarer</dd></div><div><dt>Momentum</dt><dd data-testid=\"overlay-momentum\">0</dd></div></dl>",
+          "html": "<dl class=\"overlay-character-details\"><div><dt>Name</dt><dd>Avery Glass</dd></div><div><dt>Pronouns</dt><dd>they/them</dd></div><div><dt>Archetype</dt><dd>Wayfarer Archivist</dd></div><div><dt>Momentum</dt><dd data-testid=\"overlay-momentum\">0</dd></div></dl>",
           "target": [
             "dl"
           ]
@@ -3624,7 +4132,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<dd>Wayfarer</dd>",
+          "html": "<dd>Wayfarer Archivist</dd>",
           "target": [
             "div:nth-child(3) > dd"
           ]
@@ -3754,6 +4262,24 @@
           "target": [
             "#overlay-inventory-heading"
           ]
+        },
+        {
+          "any": [
+            {
+              "id": "duplicate-id-aria",
+              "data": "admin-verb-catalog-heading",
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Document has no elements referenced with ARIA or labels that share the same id attribute"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<h2 id=\"admin-verb-catalog-heading\">Hub Verb Catalog</h2>",
+          "target": [
+            "#admin-verb-catalog-heading"
+          ]
         }
       ]
     },
@@ -3786,7 +4312,7 @@
                 {
                   "html": "<label for=\"chat-input\" class=\"visually-hidden\">Describe your intent for the GM</label>",
                   "target": [
-                    "label"
+                    ".visually-hidden"
                   ]
                 }
               ],
@@ -3798,6 +4324,106 @@
           "html": "<textarea id=\"chat-input\" name=\"chat-input\" class=\"chat-input\" placeholder=\"Describe your next move…\" rows=\"3\" required=\"\" aria-required=\"true\" data-testid=\"chat-input\"></textarea>",
           "target": [
             "#chat-input"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "multiple-label",
+              "data": null,
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">Verb ID<input type=\"text\" required=\"\" value=\"verb.custom\"></label>",
+                  "target": [
+                    ".overlay-form-label:nth-child(2)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "Form field does not have multiple label elements"
+            }
+          ],
+          "impact": null,
+          "html": "<input type=\"text\" required=\"\" value=\"verb.custom\">",
+          "target": [
+            "input[value=\"verb.custom\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "multiple-label",
+              "data": null,
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">Status<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select></label>",
+                  "target": [
+                    ".overlay-form-label:nth-child(3)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "Form field does not have multiple label elements"
+            }
+          ],
+          "impact": null,
+          "html": "<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select>",
+          "target": [
+            "select"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "multiple-label",
+              "data": null,
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">Audit Reference<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\"></label>",
+                  "target": [
+                    ".overlay-form-label:nth-child(4)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "Form field does not have multiple label elements"
+            }
+          ],
+          "impact": null,
+          "html": "<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\">",
+          "target": [
+            "input[placeholder=\"Change ticket or ADR reference\"]"
+          ]
+        },
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "multiple-label",
+              "data": null,
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">",
+                  "target": [
+                    ".overlay-form-label:nth-child(5)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "Form field does not have multiple label elements"
+            }
+          ],
+          "impact": null,
+          "html": "<textarea rows=\"10\" spellcheck=\"false\">",
+          "target": [
+            "textarea[rows=\"10\"]"
           ]
         }
       ]
@@ -3832,7 +4458,7 @@
                 {
                   "html": "<label for=\"chat-input\" class=\"visually-hidden\">Describe your intent for the GM</label>",
                   "target": [
-                    "label"
+                    ".visually-hidden"
                   ]
                 }
               ],
@@ -3861,6 +4487,118 @@
           "html": "<textarea id=\"chat-input\" name=\"chat-input\" class=\"chat-input\" placeholder=\"Describe your next move…\" rows=\"3\" required=\"\" aria-required=\"true\" data-testid=\"chat-input\"></textarea>",
           "target": [
             "#chat-input"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "implicit-label",
+              "data": {
+                "implicitLabel": "Verb ID"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">Verb ID<input type=\"text\" required=\"\" value=\"verb.custom\"></label>",
+                  "target": [
+                    ".overlay-form-label:nth-child(2)"
+                  ]
+                }
+              ],
+              "impact": "critical",
+              "message": "Element has an implicit (wrapped) <label>"
+            }
+          ],
+          "all": [],
+          "none": [
+            {
+              "id": "hidden-explicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Form element has a visible explicit <label>"
+            }
+          ],
+          "impact": null,
+          "html": "<input type=\"text\" required=\"\" value=\"verb.custom\">",
+          "target": [
+            "input[value=\"verb.custom\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "implicit-label",
+              "data": {
+                "implicitLabel": "Audit Reference Change ticket or ADR reference"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">Audit Reference<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\"></label>",
+                  "target": [
+                    ".overlay-form-label:nth-child(4)"
+                  ]
+                }
+              ],
+              "impact": "critical",
+              "message": "Element has an implicit (wrapped) <label>"
+            },
+            {
+              "id": "non-empty-placeholder",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Element has a placeholder attribute"
+            }
+          ],
+          "all": [],
+          "none": [
+            {
+              "id": "hidden-explicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Form element has a visible explicit <label>"
+            }
+          ],
+          "impact": null,
+          "html": "<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\">",
+          "target": [
+            "input[placeholder=\"Change ticket or ADR reference\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "implicit-label",
+              "data": {
+                "implicitLabel": "Definition (JSON)"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">",
+                  "target": [
+                    ".overlay-form-label:nth-child(5)"
+                  ]
+                }
+              ],
+              "impact": "critical",
+              "message": "Element has an implicit (wrapped) <label>"
+            }
+          ],
+          "all": [],
+          "none": [
+            {
+              "id": "hidden-explicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Form element has a visible explicit <label>"
+            }
+          ],
+          "impact": null,
+          "html": "<textarea rows=\"10\" spellcheck=\"false\">",
+          "target": [
+            "textarea[rows=\"10\"]"
           ]
         }
       ]
@@ -3894,7 +4632,7 @@
             }
           ],
           "impact": null,
-          "html": "<ul class=\"overlay-inventory-list\"><li><span class=\"overlay-item-name\">Glass Frontier Compass</span><span class=\"overlay-item-tags\">narrative-anchor</span></li></ul>",
+          "html": "<ul class=\"overlay-inventory-list\">",
           "target": [
             "ul"
           ]
@@ -3930,9 +4668,27 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<li><span class=\"overlay-item-name\">Glass Frontier Compass</span><span class=\"overlay-item-tags\">narrative-anchor</span></li>",
+          "html": "<li><span class=\"overlay-item-name\">Glass Frontier Compass</span><span class=\"overlay-item-tags\">narrative-anchor, tech.tier.resonance</span></li>",
           "target": [
-            "li"
+            "li:nth-child(1)"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "listitem",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "List item has a <ul>, <ol> or role=\"list\" parent element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<li><span class=\"overlay-item-name\">Echo Ledger Fragment</span><span class=\"overlay-item-tags\">lore-hook, faction.echo-ledger-conclave</span></li>",
+          "target": [
+            "li:nth-child(2)"
           ]
         }
       ]
@@ -3968,9 +4724,171 @@
           "all": [],
           "none": [],
           "impact": null,
+          "html": "<button type=\"button\" class=\"app-logout-button\">Sign out</button>",
+          "target": [
+            ".app-logout-button"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-dashboard\">Session Dashboard</button>",
+          "target": [
+            "button[data-testid=\"nav-dashboard\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"app-nav-item app-nav-item-active\" data-testid=\"nav-session\">Live Session</button>",
+          "target": [
+            ".app-nav-item-active"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-admin\">Admin Tools</button>",
+          "target": [
+            "button[data-testid=\"nav-admin\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
           "html": "<button type=\"submit\" class=\"chat-send-button\" data-testid=\"chat-submit\">Send to GM</button>",
           "target": [
             ".chat-send-button"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\" class=\"overlay-button\">Refresh</button>",
+          "target": [
+            ".overlay-button"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<option value=\"draft\">Draft</option>",
+          "target": [
+            "option[value=\"draft\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<option value=\"active\">Active</option>",
+          "target": [
+            "option[value=\"active\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"submit\">Create Verb</button>",
+          "target": [
+            ".overlay-form-actions > button[type=\"submit\"]"
+          ]
+        },
+        {
+          "any": [
+            {
+              "id": "no-focusable-content",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Element does not have focusable descendants"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": null,
+          "html": "<button type=\"button\">Reset</button>",
+          "target": [
+            ".overlay-form-actions > button[type=\"button\"]"
           ]
         },
         {
@@ -4025,6 +4943,64 @@
           "html": "<button type=\"button\" class=\"wrap-control-button\" data-testid=\"wrap-control-3\">Wrap after 3 turns</button>",
           "target": [
             "button[data-testid=\"wrap-control-3\"]"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "select-name",
+      "impact": null,
+      "tags": [
+        "cat.forms",
+        "wcag2a",
+        "wcag412",
+        "section508",
+        "section508.22.n",
+        "TTv5",
+        "TT5.c",
+        "EN-301-549",
+        "EN-9.4.1.2",
+        "ACT",
+        "RGAAv4",
+        "RGAA-11.1.1"
+      ],
+      "description": "Ensure select element has an accessible name",
+      "help": "Select element must have an accessible name",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/select-name?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "implicit-label",
+              "data": {
+                "implicitLabel": "Status"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<label class=\"overlay-form-label\">Status<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select></label>",
+                  "target": [
+                    ".overlay-form-label:nth-child(3)"
+                  ]
+                }
+              ],
+              "impact": "critical",
+              "message": "Element has an implicit (wrapped) <label>"
+            }
+          ],
+          "all": [],
+          "none": [
+            {
+              "id": "hidden-explicit-label",
+              "data": null,
+              "relatedNodes": [],
+              "impact": "critical",
+              "message": "Form element has a visible explicit <label>"
+            }
+          ],
+          "impact": null,
+          "html": "<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select>",
+          "target": [
+            "select"
           ]
         }
       ]
@@ -4108,7 +5084,7 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>axe-accessibility</strong></p>",
+          "html": "<p class=\"app-session-id\" aria-live=\"polite\">Session: <strong>playwright-accessibility-1762203226344-883</strong></p>",
           "target": [
             ".app-session-id"
           ],
@@ -4140,9 +5116,307 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<strong>axe-accessibility</strong>",
+          "html": "<strong>playwright-accessibility-1762203226344-883</strong>",
           "target": [
             "strong"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"app-account-name\">Glass Frontier Admin</p>",
+          "target": [
+            ".app-account-name"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<span class=\"app-role-pill\">player</span>",
+                  "target": [
+                    ".app-role-pill:nth-child(1)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"app-role-pill\">player</span>",
+          "target": [
+            ".app-role-pill:nth-child(1)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<span class=\"app-role-pill\">admin</span>",
+                  "target": [
+                    ".app-role-pill:nth-child(2)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"app-role-pill\">admin</span>",
+          "target": [
+            ".app-role-pill:nth-child(2)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<span class=\"app-role-pill\">moderator</span>",
+                  "target": [
+                    ".app-role-pill:nth-child(3)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"app-role-pill\">moderator</span>",
+          "target": [
+            ".app-role-pill:nth-child(3)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"button\" class=\"app-logout-button\">Sign out</button>",
+                  "target": [
+                    ".app-logout-button"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"button\" class=\"app-logout-button\">Sign out</button>",
+          "target": [
+            ".app-logout-button"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-dashboard\">Session Dashboard</button>",
+                  "target": [
+                    "button[data-testid=\"nav-dashboard\"]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-dashboard\">Session Dashboard</button>",
+          "target": [
+            "button[data-testid=\"nav-dashboard\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"button\" class=\"app-nav-item app-nav-item-active\" data-testid=\"nav-session\">Live Session</button>",
+                  "target": [
+                    ".app-nav-item-active"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"button\" class=\"app-nav-item app-nav-item-active\" data-testid=\"nav-session\">Live Session</button>",
+          "target": [
+            ".app-nav-item-active"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-admin\">Admin Tools</button>",
+                  "target": [
+                    "button[data-testid=\"nav-admin\"]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"button\" class=\"app-nav-item\" data-testid=\"nav-admin\">Admin Tools</button>",
+          "target": [
+            "button[data-testid=\"nav-admin\"]"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
         },
@@ -4584,9 +5858,47 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Former archivist tracking lost frontier tech.</p>",
+          "html": "<p class=\"overlay-subheading\" aria-live=\"polite\">Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.</p>",
           "target": [
-            ".overlay-subheading"
+            ".overlay-subheading[aria-live=\"polite\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-character\" aria-labelledby=\"overlay-character-heading\">",
+                  "target": [
+                    ".overlay-character"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"overlay-cadence\" aria-live=\"polite\">Batch @ Nov 3, 02:48 PM • Digest @ Nov 3, 07:00 PM</p>",
+          "target": [
+            ".overlay-cadence"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
         },
@@ -4856,7 +6168,7 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<dd>Wayfarer</dd>",
+          "html": "<dd>Wayfarer Archivist</dd>",
           "target": [
             "div:nth-child(3) > dd"
           ],
@@ -5576,7 +6888,7 @@
           "impact": "serious",
           "html": "<span class=\"overlay-item-name\">Glass Frontier Compass</span>",
           "target": [
-            ".overlay-item-name"
+            "li:nth-child(1) > .overlay-item-name"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
         },
@@ -5612,9 +6924,761 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<span class=\"overlay-item-tags\">narrative-anchor</span>",
+          "html": "<span class=\"overlay-item-tags\">narrative-anchor, tech.tier.resonance</span>",
           "target": [
-            ".overlay-item-tags"
+            "li:nth-child(1) > .overlay-item-tags"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "11.4pt (15.2px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-inventory\" aria-labelledby=\"overlay-inventory-heading\">",
+                  "target": [
+                    ".overlay-inventory"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"overlay-item-name\">Echo Ledger Fragment</span>",
+          "target": [
+            "li:nth-child(2) > .overlay-item-name"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.6pt (12.8px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-inventory\" aria-labelledby=\"overlay-inventory-heading\">",
+                  "target": [
+                    ".overlay-inventory"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"overlay-item-tags\">lore-hook, faction.echo-ledger-conclave</span>",
+          "target": [
+            "li:nth-child(2) > .overlay-item-tags"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "13.2pt (17.6px)",
+                "fontWeight": "bold",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<h2 id=\"admin-verb-catalog-heading\">Hub Verb Catalog</h2>",
+          "target": [
+            "#admin-verb-catalog-heading"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.2pt (13.6px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"overlay-subheading\">Hub: global</p>",
+          "target": [
+            ".overlay-admin > .overlay-card-header > div:nth-child(1) > .overlay-subheading"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"overlay-meta\">Version n/a</span>",
+          "target": [
+            ".overlay-meta-group > .overlay-meta"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "9.8pt (13.12px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"button\" class=\"overlay-button\">Refresh</button>",
+                  "target": [
+                    ".overlay-button"
+                  ]
+                },
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"button\" class=\"overlay-button\">Refresh</button>",
+          "target": [
+            ".overlay-button"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.2pt (13.6px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"overlay-alert\" role=\"alert\">Unexpected token '&lt;', \"&lt;!DOCTYPE \"... is not valid JSON</p>",
+          "target": [
+            ".overlay-alert"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"overlay-muted\">No verbs registered for this hub.</p>",
+          "target": [
+            ".overlay-muted"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.8pt (14.4px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<legend>Create Verb</legend>",
+          "target": [
+            "legend"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.1pt (13.44px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<label class=\"overlay-form-label\">Verb ID<input type=\"text\" required=\"\" value=\"verb.custom\"></label>",
+          "target": [
+            ".overlay-form-label:nth-child(2)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<input type=\"text\" required=\"\" value=\"verb.custom\">",
+                  "target": [
+                    "input[value=\"verb.custom\"]"
+                  ]
+                },
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<input type=\"text\" required=\"\" value=\"verb.custom\">",
+          "target": [
+            "input[value=\"verb.custom\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.1pt (13.44px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<label class=\"overlay-form-label\">Status<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select></label>",
+          "target": [
+            ".overlay-form-label:nth-child(3)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select>",
+                  "target": [
+                    "select"
+                  ]
+                },
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<select><option value=\"draft\">Draft</option><option value=\"active\">Active</option></select>",
+          "target": [
+            "select"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.1pt (13.44px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<label class=\"overlay-form-label\">Audit Reference<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\"></label>",
+          "target": [
+            ".overlay-form-label:nth-child(4)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\">",
+                  "target": [
+                    "input[placeholder=\"Change ticket or ADR reference\"]"
+                  ]
+                },
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<input type=\"text\" placeholder=\"Change ticket or ADR reference\" value=\"\">",
+          "target": [
+            "input[placeholder=\"Change ticket or ADR reference\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.1pt (13.44px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<label class=\"overlay-form-label\">",
+          "target": [
+            ".overlay-form-label:nth-child(5)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.2pt (13.6px)",
+                "fontWeight": "normal",
+                "messageKey": "elmPartiallyObscured",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<textarea rows=\"10\" spellcheck=\"false\">",
+                  "target": [
+                    "textarea[rows=\"10\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined because it's partially obscured by another element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<textarea rows=\"10\" spellcheck=\"false\">",
+          "target": [
+            "textarea[rows=\"10\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"submit\">Create Verb</button>",
+                  "target": [
+                    ".overlay-form-actions > button[type=\"submit\"]"
+                  ]
+                },
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"submit\">Create Verb</button>",
+          "target": [
+            ".overlay-form-actions > button[type=\"submit\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "contrastRatio": 0,
+                "fontSize": "10.0pt (13.3333px)",
+                "fontWeight": "normal",
+                "messageKey": "bgGradient",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button type=\"button\">Reset</button>",
+                  "target": [
+                    ".overlay-form-actions > button[type=\"button\"]"
+                  ]
+                },
+                {
+                  "html": "<section class=\"overlay-card overlay-admin\" aria-labelledby=\"admin-verb-catalog-heading\">",
+                  "target": [
+                    ".overlay-admin"
+                  ]
+                },
+                {
+                  "html": "<div class=\"app-shell\">",
+                  "target": [
+                    ".app-shell"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a background gradient"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button type=\"button\">Reset</button>",
+          "target": [
+            ".overlay-form-actions > button[type=\"button\"]"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
         },
