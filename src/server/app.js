@@ -5,13 +5,55 @@ const path = require("path");
 const express = require("express");
 const { log } = require("../utils/logger");
 const { createAdminHubVerbRouter } = require("./routes/adminHubVerbs");
+const { AccountService } = require("../auth/accountService");
+const { SessionDirectory } = require("../auth/sessionDirectory");
+const { PublishingCadence } = require("../offline/publishing/publishingCadence");
+const { createAuthRouter } = require("./routes/auth");
+const { createAccountsRouter } = require("./routes/accounts");
 
-function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory, hubVerbService = null }) {
+function createApp({
+  narrativeEngine,
+  checkBus,
+  broadcaster,
+  sessionMemory,
+  hubVerbService = null,
+  accountService = null,
+  sessionDirectory = null,
+  publishingCadence = null,
+  clock = () => new Date(),
+  seedAccounts = true
+}) {
   if (!sessionMemory) {
     throw new Error("sessionMemory is required");
   }
 
+  const cadence =
+    publishingCadence ||
+    new PublishingCadence({
+      clock
+    });
+
+  const directory =
+    sessionDirectory ||
+    new SessionDirectory({
+      sessionMemory,
+      publishingCadence: cadence,
+      clock
+    });
+
+  const accounts =
+    accountService ||
+    new AccountService({
+      sessionDirectory: directory,
+      sessionMemory,
+      publishingCadence: cadence,
+      clock,
+      seed: seedAccounts
+    });
+
   const app = express();
+  app.locals.accountService = accounts;
+  app.locals.sessionDirectory = directory;
   app.use(express.json());
 
   function handleMemoryError(error, res, next) {
@@ -314,6 +356,9 @@ function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory, hubV
   if (hubVerbService) {
     app.use("/admin/hubs", createAdminHubVerbRouter({ hubVerbService }));
   }
+
+  app.use("/auth", createAuthRouter({ accountService: accounts }));
+  app.use("/accounts", createAccountsRouter({ accountService: accounts }));
 
   const staticDir = path.resolve(__dirname, "../../dist");
   if (fs.existsSync(staticDir)) {

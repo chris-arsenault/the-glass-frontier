@@ -76,7 +76,7 @@ function isNetworkError(error) {
   return message.includes("NetworkError") || message.includes("Failed to fetch");
 }
 
-export function useSessionConnection({ sessionId: override } = {}) {
+export function useSessionConnection({ sessionId: override, account = null, authToken = null } = {}) {
   const sessionId = readSessionId(override);
   const [connectionState, setConnectionState] = useState(CONNECTION_STATES.CONNECTING);
   const [messages, setMessages] = useState([]);
@@ -100,7 +100,17 @@ export function useSessionConnection({ sessionId: override } = {}) {
   const queuedIntentsRef = useRef([]);
   const isOfflineRef = useRef(isOffline);
   const flushInProgressRef = useRef(false);
+  const authTokenRef = useRef(authToken || null);
   const adminConfig = useMemo(() => {
+    if (account && Array.isArray(account.roles)) {
+      const isAdminRole = account.roles.includes("admin") || account.roles.includes("moderator");
+      return {
+        isAdmin: isAdminRole,
+        adminHubId: account.adminHubId || "global",
+        adminUser: account.email || account.displayName || "admin@glassfrontier"
+      };
+    }
+
     if (typeof window === "undefined") {
       return {
         isAdmin: false,
@@ -108,13 +118,14 @@ export function useSessionConnection({ sessionId: override } = {}) {
         adminUser: "admin@glassfrontier"
       };
     }
+
     const params = new URLSearchParams(window.location.search);
     return {
       isAdmin: params.get("admin") === "1",
       adminHubId: params.get("adminHubId") || "global",
       adminUser: params.get("adminUser") || "admin@glassfrontier"
     };
-  }, []);
+  }, [account]);
 
   const ensureOverlayPendingFlag = useCallback(
     (pending) => {
@@ -200,6 +211,10 @@ export function useSessionConnection({ sessionId: override } = {}) {
   }, [queuedIntents, sessionId]);
 
   useEffect(() => {
+    authTokenRef.current = authToken || null;
+  }, [authToken]);
+
+  useEffect(() => {
     isOfflineRef.current = isOffline;
   }, [isOffline]);
 
@@ -235,11 +250,16 @@ export function useSessionConnection({ sessionId: override } = {}) {
 
   const postPlayerMessage = useCallback(
     async (payload) => {
+      const headers = {
+        "Content-Type": "application/json"
+      };
+      if (authTokenRef.current) {
+        headers.Authorization = `Bearer ${authTokenRef.current}`;
+      }
+
       const response = await fetch(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 
@@ -530,15 +550,16 @@ export function useSessionConnection({ sessionId: override } = {}) {
 
     const loadState = async () => {
       try {
-        const response = await fetch(
-          `/sessions/${encodeURIComponent(sessionId)}/state`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json"
-            }
-          }
-        );
+        const headers = new Headers({
+          Accept: "application/json"
+        });
+        if (authTokenRef.current) {
+          headers.set("Authorization", `Bearer ${authTokenRef.current}`);
+        }
+        const response = await fetch(`/sessions/${encodeURIComponent(sessionId)}/state`, {
+          method: "GET",
+          headers
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to load session state (${response.status})`);
@@ -617,9 +638,10 @@ export function useSessionConnection({ sessionId: override } = {}) {
     }
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const tokenQuery = authTokenRef.current ? `&token=${encodeURIComponent(authTokenRef.current)}` : "";
     const baseUrl = `${protocol}://${window.location.host}/ws?sessionId=${encodeURIComponent(
       sessionId
-    )}`;
+    )}${tokenQuery}`;
 
     let shouldFallback = false;
     let reconnectTimer;
@@ -676,7 +698,11 @@ export function useSessionConnection({ sessionId: override } = {}) {
         return;
       }
 
-      const url = `/sessions/${encodeURIComponent(sessionId)}/events`;
+      const url = authTokenRef.current
+        ? `/sessions/${encodeURIComponent(sessionId)}/events?token=${encodeURIComponent(
+            authTokenRef.current
+          )}`
+        : `/sessions/${encodeURIComponent(sessionId)}/events`;
       const source = new EventSource(url);
       sseRef.current = source;
       setConnectionState(CONNECTION_STATES.FALLBACK);
@@ -813,11 +839,16 @@ export function useSessionConnection({ sessionId: override } = {}) {
       setControlError(null);
 
       try {
+        const headers = {
+          "Content-Type": "application/json"
+        };
+        if (authTokenRef.current) {
+          headers.Authorization = `Bearer ${authTokenRef.current}`;
+        }
+
         const response = await fetch(`/sessions/${encodeURIComponent(sessionId)}/control`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers,
           body: JSON.stringify({ type, turns, metadata })
         });
 

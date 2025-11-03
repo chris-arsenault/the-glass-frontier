@@ -21,7 +21,7 @@ Updated for Session 41 grooming.
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-02: Overlay System & Pacing Ribbon | done | P1 | phase:implementation, pillar:client | Overlay sync, check disclosures, pacing ribbon controls. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-03: Service Worker & Offline Continuity | done | P1 | phase:implementation, pillar:client | Service worker, IndexedDB caching, offline intent queue. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-AXE-01: Accessibility Automation Pipeline | done | P1 | phase:implementation, discipline:qa | `npm run test:accessibility` publishes axe-core JSON/HTML reports. |
-| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-04: Account & Session Management UI** | todo | P1 | phase:implementation, pillar:client | Authentication flows, session resume dashboard, RBAC-aware navigation. |
+| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-04: Account & Session Management UI** | done | P1 | phase:implementation, pillar:client | Authentication flows, session resume dashboard, RBAC-aware navigation. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-01: Moderation Dashboard & Live Overrides** | todo | P2 | phase:implementation, pillar:moderation | Admin console for alert triage, overrides, and audit logging. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-02: Prohibited Capability Registry & Policy Editor** | todo | P2 | phase:implementation, pillar:moderation | Capability registry CRUD, role assignments, sync events. |
 | IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-03: Moderation Queue & Publishing Sync** | todo | P2 | phase:implementation, pillar:moderation | Moderation SLA timers connected to publishing cadence controls. |
