@@ -30,7 +30,7 @@ describe("Narrative Engine HTTP API", () => {
     });
     checkRunner.start();
     broadcaster = { publish: jest.fn() };
-    app = createApp({ narrativeEngine, checkBus, broadcaster });
+    app = createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory });
   });
 
   test("returns narrative event for player message and triggers broadcast", async () => {

@@ -6,8 +6,41 @@ const express = require("express");
 const { log } = require("../utils/logger");
 
 function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory }) {
+  if (!sessionMemory) {
+    throw new Error("sessionMemory is required");
+  }
+
   const app = express();
   app.use(express.json());
+
+  function handleMemoryError(error, res, next) {
+    switch (error?.code) {
+      case "unknown_memory_shard":
+      case "memory_shard_unavailable":
+        res.status(404).json({ error: error.code, shard: error.shard });
+        return true;
+      case "revision_mismatch":
+        res
+          .status(409)
+          .json({ error: error.code, currentRevision: error.currentRevision, expectedRevision: error.expectedRevision });
+        return true;
+      case "invalid_capability_reference":
+      case "unknown_capability_reference":
+      case "capability_severity_mismatch":
+        res.status(400).json({
+          error: error.code,
+          capabilityId: error.capabilityId,
+          expectedSeverity: error.expectedSeverity,
+          providedSeverity: error.providedSeverity
+        });
+        return true;
+      case "canonical_write_not_allowed":
+        res.status(403).json({ error: error.code });
+        return true;
+      default:
+        return next ? false : false;
+    }
+  }
 
   app.get("/sessions/:sessionId/events", (req, res) => {
     const { sessionId } = req.params;
@@ -77,6 +110,137 @@ function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory }) {
       });
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.get("/sessions/:sessionId/memory", (req, res, next) => {
+    const { sessionId } = req.params;
+
+    try {
+      const session = sessionMemory.getSessionState(sessionId);
+      const shards = sessionMemory.getAllShards(sessionId);
+
+      res.json({
+        sessionId,
+        shards,
+        changeCursor: session.changeCursor,
+        lastAckCursor: session.lastAckCursor,
+        pendingOfflineReconcile: session.pendingOfflineReconcile,
+        capabilityReferences: sessionMemory.getCapabilityReferences(sessionId)
+      });
+    } catch (error) {
+      if (!handleMemoryError(error, res, next)) {
+        next(error);
+      }
+    }
+  });
+
+  app.get("/sessions/:sessionId/memory/changes", (req, res, next) => {
+    const { sessionId } = req.params;
+    const { since, limit } = req.query;
+
+    try {
+      const changes = sessionMemory.listChanges(sessionId, since, limit);
+      res.json(changes);
+    } catch (error) {
+      if (!handleMemoryError(error, res, next)) {
+        next(error);
+      }
+    }
+  });
+
+  app.post("/sessions/:sessionId/memory/ack", (req, res, next) => {
+    const { sessionId } = req.params;
+    const { cursor } = req.body || {};
+
+    if (cursor === undefined || cursor === null) {
+      res.status(400).json({ error: "cursor_required" });
+      return;
+    }
+
+    try {
+      const acknowledgement = sessionMemory.acknowledgeChanges(sessionId, cursor);
+      res.json(acknowledgement);
+    } catch (error) {
+      if (!handleMemoryError(error, res, next)) {
+        next(error);
+      }
+    }
+  });
+
+  app.get("/sessions/:sessionId/memory/capabilities", (req, res, next) => {
+    const { sessionId } = req.params;
+
+    try {
+      const capabilities = sessionMemory.getCapabilityReferences(sessionId);
+      res.json({ sessionId, capabilities });
+    } catch (error) {
+      if (!handleMemoryError(error, res, next)) {
+        next(error);
+      }
+    }
+  });
+
+  app.get("/sessions/:sessionId/memory/:shard", (req, res, next) => {
+    const { sessionId, shard } = req.params;
+
+    try {
+      const result = sessionMemory.getShard(sessionId, shard);
+      res.json(result);
+    } catch (error) {
+      if (!handleMemoryError(error, res, next)) {
+        next(error);
+      }
+    }
+  });
+
+  app.put("/sessions/:sessionId/memory/:shard", (req, res, next) => {
+    const { sessionId, shard } = req.params;
+    const {
+      data,
+      expectedRevision,
+      capabilityRefs,
+      safetyFlags,
+      reason,
+      metadata,
+      actor,
+      scope,
+      timestamp
+    } = req.body || {};
+
+    if (data === undefined) {
+      res.status(400).json({ error: "data_required" });
+      return;
+    }
+
+    if (typeof expectedRevision !== "number") {
+      res.status(400).json({ error: "expected_revision_required" });
+      return;
+    }
+
+    try {
+      const result = sessionMemory.replaceShard(
+        sessionId,
+        shard,
+        {
+          data,
+          expectedRevision,
+          capabilityRefs,
+          safetyFlags,
+          reason,
+          metadata,
+          actor,
+          scope,
+          timestamp
+        },
+        {}
+      );
+
+      res.json(result);
+    } catch (error) {
+      if (!handleMemoryError(error, res, next)) {
+        next(error);
+      }
     }
   });
 

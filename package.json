@@ -61,6 +61,9 @@
     "setupFilesAfterEnv": [
       "@testing-library/jest-dom"
     ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/tests/e2e/"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
       "src/**/*.jsx",
