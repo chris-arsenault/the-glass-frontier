@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 25 (faction influence matrices & governance atlas).
+Last updated for Session 26 (alliance drift & conflict escalation ledger).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -37,3 +37,4 @@ Last updated for Session 25 (faction influence matrices & governance atlas).
 | NAR-CORE: Worldbuilding Foundations | NAR-23: Regional Resonance Anchor Cartography | done | P0 | phase:narrative, cycle:6, discipline:lore, session:23 | `docs/lore/REGIONS.md`; MCP narrative element `2e0334d7-2ec0-4107-8552-5552d7eaa3d4`, lore entry `734fc89a-dbb4-4eab-a504-5d7647ea497b`; consistency check aligned with `temporal-lore-publishing-cadence` pattern—region IDs synced with RESONANCE_ANCHORS.md for NAR-24 follow-through. |
 | NAR-CORE: Worldbuilding Foundations | NAR-24: Secondary Biomes & Trade Lane Cartography | done | P0 | phase:narrative, cycle:6, discipline:lore, session:24 | `docs/lore/REGIONS.md`; MCP narrative element `e1cb2e96-4f8a-4e44-8935-44062dae880d`, lore entry `ef804ed8-55cb-49dc-8859-7b16166f7e43`; consistency check (2025-11-04) surfaced no conflicts and referenced self-hosted narrative stack topology for monitoring alignment. |
 | NAR-CORE: Worldbuilding Foundations | NAR-25: Faction Influence Matrices & Governance Atlas | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:25 | `docs/lore/FACTIONS.md`; MCP narrative element `63c6b951-9aae-456b-ae18-74176af46d73`, lore entry `12899b27-3b85-44ae-950e-80ef19c8da14`, dialogue scene `eb21b0b4-c51e-4a31-9dd2-c6930d783843`; consistency check (2025-11-04) aligned with modular systems map and Temporal lore cadence architecture guidance—no conflicts detected. |
+| NAR-CORE: Worldbuilding Foundations | NAR-26: Alliance Drift & Conflict Escalation Ledger | done | P0 | phase:narrative, cycle:6, discipline:lore, discipline:narrative, session:26 | `docs/lore/FACTION_CONFLICTS.md`; MCP narrative element `5c158f7e-38f9-4658-a2bf-ce0aa0b0f732`, lore entry `06f331bb-0dce-4281-8d2c-39190588dc99`; consistency check (2025-11-04) returned no architectural matches—record follow-up alignment once DES-MOD-01 automation mapping lands. |

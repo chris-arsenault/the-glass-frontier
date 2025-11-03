@@ -77,6 +77,6 @@
 
 ## Integration Notes
 - Coordinate with DES-MOD-01 to translate faction telemetry expectations into moderator alert thresholds for `lane.lattice-relay.traverse` and `lane.lumenshard.switchline`.
-- Feed `faction.*` identifiers into upcoming Session 26 alliance matrices and tech influence write-ups, ensuring continuity with faction conflicts and governance arcs.
-- Update Story Consolidation templates to include faction, corridor, and anchor identifiers, fulfilling the outstanding action from `NAR-24`.
-- Future anomaly sessions (NAR-29) should reference these factions when establishing myth origins or contested artefact custody, preserving canon vs legend clarity.
+- Consult `docs/lore/FACTION_CONFLICTS.md` for the Session 26 alliance drift ledger and conflict flashpoints that expand these faction profiles into dynamic relationship states.
+- Story Consolidation templates should ingest `faction.*`, `alliance.*`, `clash.*`, and corridor identifiers together so post-session pipelines can diff faction drift without manual cross-referencing.
+- Future anomaly sessions (NAR-29) should reference these factions when establishing myth origins or contested artefact custody, preserving canon vs legend clarity and enforcing Prohibited Capabilities safeguards.
