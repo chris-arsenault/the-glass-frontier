@@ -7,6 +7,7 @@ const { ChatCanvas } = require("../../client/src/components/ChatCanvas.jsx");
 const { ChatComposer } = require("../../client/src/components/ChatComposer.jsx");
 const { SessionMarkerRibbon } = require("../../client/src/components/SessionMarkerRibbon.jsx");
 const { OverlayDock } = require("../../client/src/components/OverlayDock.jsx");
+const { CheckOverlay } = require("../../client/src/components/CheckOverlay.jsx");
 const {
   SessionConnectionStates
 } = require("../../client/src/hooks/useSessionConnection.js");
@@ -16,6 +17,36 @@ function renderWithSession(value, node) {
 }
 
 function buildSessionValue(overrides = {}) {
+  const defaultOverlay = {
+    revision: 1,
+    character: {
+      name: "Avery Glass",
+      pronouns: "they/them",
+      archetype: "Wayfarer",
+      background: "Former archivist tracking lost frontier tech.",
+      stats: {
+        ingenuity: 1,
+        resolve: 1,
+        finesse: 2,
+        presence: 1,
+        weird: 0,
+        grit: 1
+      }
+    },
+    inventory: [
+      { id: "compass", name: "Glass Frontier Compass", tags: ["narrative-anchor"] }
+    ],
+    momentum: {
+      current: 0,
+      baseline: 0,
+      floor: -2,
+      ceiling: 3,
+      history: []
+    },
+    pendingOfflineReconcile: false,
+    lastSyncedAt: new Date().toISOString()
+  };
+
   return {
     sessionId: "test-session",
     connectionState: SessionConnectionStates.CONNECTING,
@@ -24,6 +55,13 @@ function buildSessionValue(overrides = {}) {
     transportError: null,
     sendPlayerMessage: jest.fn().mockResolvedValue(undefined),
     isSending: false,
+     overlay: defaultOverlay,
+     activeCheck: null,
+     recentChecks: [],
+     lastPlayerControl: null,
+     sendPlayerControl: jest.fn().mockResolvedValue(undefined),
+     isSendingControl: false,
+     controlError: null,
     ...overrides
   };
 }
@@ -94,7 +132,26 @@ describe("Client shell components", () => {
   test("OverlayDock reflects fallback status and momentum markers", () => {
     const session = buildSessionValue({
       connectionState: SessionConnectionStates.FALLBACK,
-      markers: [{ id: "m2", marker: "momentum-state", value: 1 }]
+      overlay: {
+        revision: 2,
+        character: {
+          name: "Avery Glass",
+          pronouns: "they/them",
+          archetype: "Wayfarer",
+          background: "Former archivist tracking lost frontier tech.",
+          stats: { grit: 2 }
+        },
+        inventory: [{ id: "relay-kit", name: "Relay Stabilisation Kit", tags: ["utility"] }],
+        momentum: {
+          current: 1,
+          baseline: 0,
+          floor: -2,
+          ceiling: 3,
+          history: []
+        },
+        pendingOfflineReconcile: true,
+        lastSyncedAt: new Date().toISOString()
+      }
     });
 
     renderWithSession(session, React.createElement(OverlayDock));
@@ -102,6 +159,67 @@ describe("Client shell components", () => {
     expect(screen.getByTestId("overlay-dock")).toBeInTheDocument();
     expect(screen.getByText("Character Sheet")).toBeInTheDocument();
     expect(screen.getByTestId("overlay-momentum")).toHaveTextContent("1");
+    expect(screen.getByText("Offline mode")).toBeInTheDocument();
+    expect(screen.getByText("Offline changes pending sync.")).toBeInTheDocument();
+  });
+
+  test("CheckOverlay surfaces pending and resolved check details", () => {
+    const session = buildSessionValue({
+      activeCheck: {
+        id: "check-123",
+        auditRef: "audit-1",
+        data: {
+          move: "analysis",
+          ability: "ingenuity",
+          difficulty: "controlled",
+          difficultyValue: 7,
+          rationale: "Player studies the data",
+          flags: ["disclosure:analysis"],
+          safetyFlags: []
+        }
+      },
+      recentChecks: [
+        {
+          id: "check-123",
+          tier: "strong-hit",
+          move: "analysis",
+          difficulty: { label: "controlled", target: 7 },
+          dice: { kept: [5, 6], discarded: [1], total: 14 },
+          complication: "New insight discovered",
+          auditRef: "audit-1",
+          rationale: "Roll succeeds with style.",
+          momentumDelta: 1
+        }
+      ]
+    });
+
+    renderWithSession(session, React.createElement(CheckOverlay));
+
+    expect(screen.getByTestId("overlay-check")).toBeInTheDocument();
+    expect(screen.getByTestId("overlay-check-pending")).toHaveTextContent("analysis");
+    expect(screen.getByTestId("overlay-check-result")).toHaveTextContent(/strong hit/i);
+    expect(screen.getByText(/Momentum shift/)).toBeInTheDocument();
+  });
+
+  test("SessionMarkerRibbon wrap controls dispatch player control intents", async () => {
+    const sendPlayerControl = jest.fn().mockResolvedValue({
+      id: "control-1",
+      type: "wrap",
+      turns: 2
+    });
+
+    const session = buildSessionValue({
+      markers: [
+        { id: "m1", marker: "wrap-soon", reason: "GM suggests wrap" },
+        { id: "m2", marker: "momentum-state", value: 1 }
+      ],
+      sendPlayerControl
+    });
+
+    renderWithSession(session, React.createElement(SessionMarkerRibbon));
+
+    fireEvent.click(screen.getByTestId("wrap-control-2"));
+
+    await waitFor(() => expect(sendPlayerControl).toHaveBeenCalledWith({ type: "wrap", turns: 2 }));
   });
 });
-

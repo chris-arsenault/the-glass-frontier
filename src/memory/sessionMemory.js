@@ -48,6 +48,7 @@ class SessionMemoryFacade {
         relationships: [
           { id: "cinder-scouts", name: "Cinder Scout Collective", status: "guarded" }
         ],
+        controls: [],
         transcript: [],
         pendingChecks: new Map(),
         resolvedChecks: [],
@@ -60,7 +61,8 @@ class SessionMemoryFacade {
           baseline: 0,
           history: []
         },
-        turnSequence: 0
+        turnSequence: 0,
+        characterRevision: 1
       });
     }
 
@@ -107,6 +109,8 @@ class SessionMemoryFacade {
       ...pending,
       ...envelope
     });
+
+    session.characterRevision += 1;
 
     return session;
   }
@@ -169,6 +173,8 @@ class SessionMemoryFacade {
       at: new Date().toISOString(),
       checkId: envelope.id
     });
+
+    session.characterRevision += 1;
   }
 
   applyStatAdjustments(session, envelope) {
@@ -193,6 +199,64 @@ class SessionMemoryFacade {
         checkId: envelope.id
       });
     });
+
+    session.characterRevision += 1;
+  }
+
+  recordPlayerControl(sessionId, control) {
+    const session = this.ensureSession(sessionId);
+    const intent = {
+      id: control?.id || `control-${Date.now()}`,
+      sessionId,
+      type: control?.type || "wrap",
+      turns: typeof control?.turns === "number" ? control.turns : null,
+      metadata: control?.metadata || {},
+      submittedAt: new Date().toISOString()
+    };
+
+    session.controls.push(intent);
+    return intent;
+  }
+
+  listPendingChecks(sessionId) {
+    const session = this.ensureSession(sessionId);
+    return Array.from(session.pendingChecks.values()).map((check) => ({
+      ...check,
+      data: { ...(check.data || {}) }
+    }));
+  }
+
+  listRecentResolvedChecks(sessionId, limit = 5) {
+    const session = this.ensureSession(sessionId);
+    return session.resolvedChecks.slice(-Math.abs(limit)).map((check) => ({
+      ...check,
+      data: { ...(check.data || {}) }
+    }));
+  }
+
+  getOverlaySnapshot(sessionId) {
+    const session = this.ensureSession(sessionId);
+
+    const cloneStats = (stats = {}) =>
+      Object.entries(stats).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
+
+    return {
+      revision: session.characterRevision,
+      character: {
+        ...session.character,
+        stats: cloneStats(session.character.stats)
+      },
+      inventory: session.inventory.map((item) => ({ ...item })),
+      momentum: {
+        ...session.momentum,
+        history: session.momentum.history.slice(-20).map((entry) => ({ ...entry }))
+      },
+      pendingOfflineReconcile: false,
+      lastSyncedAt: new Date().toISOString()
+    };
   }
 }
 

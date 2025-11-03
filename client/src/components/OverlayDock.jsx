@@ -1,45 +1,52 @@
-import { useMemo } from "react";
 import { useSessionContext } from "../context/SessionContext.jsx";
 import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
+import { CheckOverlay } from "./CheckOverlay.jsx";
 
-const placeholderCharacter = {
+const FALLBACK_CHARACTER = {
   name: "Avery Glass",
   pronouns: "they/them",
   archetype: "Wayfarer",
-  momentum: 0
+  background: "Former archivist tracking lost frontier tech.",
+  stats: {
+    ingenuity: 1,
+    resolve: 1,
+    finesse: 2,
+    presence: 1,
+    weird: 0,
+    grit: 1
+  }
 };
 
-const placeholderInventory = [
+const FALLBACK_INVENTORY = [
   { id: "compass", name: "Glass Frontier Compass", tags: ["narrative-anchor"] },
   { id: "relay-kit", name: "Relay Stabilisation Kit", tags: ["utility"] }
 ];
 
-function selectLatestMomentum(markers) {
-  for (let index = markers.length - 1; index >= 0; index -= 1) {
-    const marker = markers[index];
-    if (marker.marker === "momentum-state") {
-      return marker;
-    }
-  }
-  return null;
-}
-
 export function OverlayDock() {
-  const { markers, connectionState } = useSessionContext();
+  const { overlay, connectionState } = useSessionContext();
 
-  const momentumMarker = useMemo(() => selectLatestMomentum(markers), [markers]);
-
+  const character = overlay?.character || FALLBACK_CHARACTER;
+  const inventory = Array.isArray(overlay?.inventory) && overlay.inventory.length > 0
+    ? overlay.inventory
+    : FALLBACK_INVENTORY;
   const momentumValue =
-    typeof momentumMarker?.value === "number" ? momentumMarker.value : placeholderCharacter.momentum;
+    typeof overlay?.momentum?.current === "number" ? overlay.momentum.current : 0;
+  const stats = character.stats || {};
 
   return (
     <aside className="overlay-dock" aria-label="Session overlays" data-testid="overlay-dock">
+      <CheckOverlay />
       <section
         className="overlay-card overlay-character"
         aria-labelledby="overlay-character-heading"
       >
         <header className="overlay-card-header">
-          <h2 id="overlay-character-heading">Character Sheet</h2>
+          <div>
+            <h2 id="overlay-character-heading">Character Sheet</h2>
+            <p className="overlay-subheading" aria-live="polite">
+              {character.background}
+            </p>
+          </div>
           <span className="overlay-status" aria-live="polite">
             {connectionState === SessionConnectionStates.FALLBACK ? "Offline mode" : "Live"}
           </span>
@@ -47,21 +54,34 @@ export function OverlayDock() {
         <dl className="overlay-character-details">
           <div>
             <dt>Name</dt>
-            <dd>{placeholderCharacter.name}</dd>
+            <dd>{character.name}</dd>
           </div>
           <div>
             <dt>Pronouns</dt>
-            <dd>{placeholderCharacter.pronouns}</dd>
+            <dd>{character.pronouns}</dd>
           </div>
           <div>
             <dt>Archetype</dt>
-            <dd>{placeholderCharacter.archetype}</dd>
+            <dd>{character.archetype}</dd>
           </div>
           <div>
             <dt>Momentum</dt>
             <dd data-testid="overlay-momentum">{momentumValue}</dd>
           </div>
         </dl>
+        <div className="overlay-stat-grid">
+          {Object.entries(stats).map(([stat, value]) => (
+            <span key={stat} className="overlay-stat-chip">
+              <span className="overlay-stat-label">{stat}</span>
+              <span className="overlay-stat-value">{value}</span>
+            </span>
+          ))}
+        </div>
+        {overlay?.pendingOfflineReconcile ? (
+          <p className="overlay-alert" role="status">
+            Offline changes pending sync.
+          </p>
+        ) : null}
       </section>
       <section
         className="overlay-card overlay-inventory"
@@ -69,12 +89,15 @@ export function OverlayDock() {
       >
         <header className="overlay-card-header">
           <h2 id="overlay-inventory-heading">Inventory</h2>
+          <span className="overlay-meta" aria-live="polite">
+            Revision {overlay?.revision ?? 0}
+          </span>
         </header>
         <ul className="overlay-inventory-list">
-          {placeholderInventory.map((item) => (
+          {inventory.map((item) => (
             <li key={item.id}>
               <span className="overlay-item-name">{item.name}</span>
-              <span className="overlay-item-tags">{item.tags.join(", ")}</span>
+              <span className="overlay-item-tags">{Array.isArray(item.tags) ? item.tags.join(", ") : ""}</span>
             </li>
           ))}
         </ul>

@@ -11,14 +11,45 @@ function markerLabel(marker) {
       return `Momentum snapshot: ${marker.value}`;
     case "momentum-state":
       return `Momentum state: ${marker.value}`;
+    case "wrap-soon":
+      return marker.reason ? `Wrap suggested: ${marker.reason}` : "Wrap suggested";
+    case "pause":
+      return marker.reason ? `Pause: ${marker.reason}` : "Pause issued";
     default:
       return marker.marker || "Session marker";
   }
 }
 
 export function SessionMarkerRibbon() {
-  const { markers } = useSessionContext();
+  const {
+    markers,
+    sendPlayerControl,
+    isSendingControl,
+    controlError,
+    lastPlayerControl
+  } = useSessionContext();
   const recentMarkers = useMemo(() => markers.slice(-6), [markers]);
+  const controlFeedback = useMemo(() => {
+    if (controlError) {
+      return `Wrap request failed: ${controlError.message}`;
+    }
+    if (lastPlayerControl && lastPlayerControl.type === "wrap") {
+      const turns = typeof lastPlayerControl.turns === "number" ? lastPlayerControl.turns : null;
+      const turnCopy = turns ? `${turns} ${turns === 1 ? "turn" : "turns"}` : "your chosen window";
+      return `Wrap request submitted: ${turnCopy}.`;
+    }
+    return "";
+  }, [controlError, lastPlayerControl]);
+
+  const handleWrap = (turns) => {
+    if (typeof sendPlayerControl !== "function") {
+      return () => {};
+    }
+
+    return () => {
+      sendPlayerControl({ type: "wrap", turns }).catch(() => {});
+    };
+  };
 
   return (
     <aside
@@ -41,7 +72,38 @@ export function SessionMarkerRibbon() {
           ))}
         </ol>
       )}
+      <div className="session-wrap-controls" role="group" aria-label="Session wrap controls">
+        <button
+          type="button"
+          className="wrap-control-button"
+          onClick={handleWrap(1)}
+          disabled={isSendingControl}
+          data-testid="wrap-control-1"
+        >
+          Wrap after 1 turn
+        </button>
+        <button
+          type="button"
+          className="wrap-control-button"
+          onClick={handleWrap(2)}
+          disabled={isSendingControl}
+          data-testid="wrap-control-2"
+        >
+          Wrap after 2 turns
+        </button>
+        <button
+          type="button"
+          className="wrap-control-button"
+          onClick={handleWrap(3)}
+          disabled={isSendingControl}
+          data-testid="wrap-control-3"
+        >
+          Wrap after 3 turns
+        </button>
+      </div>
+      <p className="session-wrap-feedback" aria-live="polite" data-testid="wrap-feedback">
+        {controlFeedback || ""}
+      </p>
     </aside>
   );
 }
-

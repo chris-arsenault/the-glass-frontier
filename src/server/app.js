@@ -5,7 +5,7 @@ const path = require("path");
 const express = require("express");
 const { log } = require("../utils/logger");
 
-function createApp({ narrativeEngine, checkBus, broadcaster }) {
+function createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory }) {
   const app = express();
   app.use(express.json());
 
@@ -56,6 +56,57 @@ function createApp({ narrativeEngine, checkBus, broadcaster }) {
         narrativeEvent: result.narrativeEvent,
         checkRequest: result.checkRequest
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/sessions/:sessionId/state", (req, res, next) => {
+    const { sessionId } = req.params;
+
+    try {
+      const overlay = sessionMemory.getOverlaySnapshot(sessionId);
+      const pendingChecks = sessionMemory.listPendingChecks(sessionId);
+      const resolvedChecks = sessionMemory.listRecentResolvedChecks(sessionId, 5);
+
+      res.json({
+        sessionId,
+        overlay,
+        pendingChecks,
+        resolvedChecks
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/sessions/:sessionId/control", (req, res, next) => {
+    const { sessionId } = req.params;
+    const { type, turns, metadata } = req.body || {};
+
+    if (type !== "wrap") {
+      res.status(400).json({ error: "unsupported_control_type" });
+      return;
+    }
+
+    if (typeof turns !== "number" || turns <= 0) {
+      res.status(400).json({ error: "invalid_turns" });
+      return;
+    }
+
+    try {
+      const control = sessionMemory.recordPlayerControl(sessionId, {
+        type,
+        turns,
+        metadata
+      });
+
+      broadcaster.publish(sessionId, {
+        type: "player.control",
+        payload: control
+      });
+
+      res.status(202).json({ status: "accepted", control });
     } catch (error) {
       next(error);
     }

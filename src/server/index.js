@@ -30,7 +30,7 @@ const checkRunner = new CheckRunner({
 
 checkRunner.start();
 
-const app = createApp({ narrativeEngine, checkBus, broadcaster });
+const app = createApp({ narrativeEngine, checkBus, broadcaster, sessionMemory });
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -45,11 +45,26 @@ wss.on("connection", (ws, request) => {
 
   broadcaster.register(sessionId, ws);
   ws.send(JSON.stringify({ type: "session.connected", sessionId }));
+
+  publishOverlaySnapshot(sessionId);
 });
+
+function publishOverlaySnapshot(sessionId) {
+  const snapshot = sessionMemory.getOverlaySnapshot(sessionId);
+  broadcaster.publish(sessionId, {
+    type: "overlay.characterSync",
+    payload: snapshot
+  });
+}
 
 checkBus.onCheckRequest((envelope) => {
   broadcaster.publish(envelope.sessionId, {
     type: CHECK_REQUEST_TOPIC,
+    payload: envelope
+  });
+
+  broadcaster.publish(envelope.sessionId, {
+    type: "check.prompt",
     payload: envelope
   });
 });
@@ -59,6 +74,13 @@ checkBus.onCheckResolved((envelope) => {
     type: CHECK_RESOLVED_TOPIC,
     payload: envelope
   });
+
+  broadcaster.publish(envelope.sessionId, {
+    type: "check.result",
+    payload: envelope
+  });
+
+  publishOverlaySnapshot(envelope.sessionId);
 });
 
 checkBus.onCheckVetoed((envelope) => {
