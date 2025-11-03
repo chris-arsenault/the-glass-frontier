@@ -11,10 +11,10 @@ The initial LangGraph-inspired narrative engine skeleton now lives under `src/`.
 5. Attach a WebSocket client to `ws://localhost:3000/ws?sessionId={sessionId}` to receive `session.message`, `intent.checkRequest`, and `event.checkResolved` payloads.
 
 ## Module Layout
-- `src/narrative/narrativeEngine.js` orchestrates nodes.
-- `src/narrative/nodes/intentParserNode.js` infers tone + check needs.
-- `src/narrative/nodes/rulesRouterNode.js` shapes check envelopes per DES-13.
-- `src/narrative/nodes/narrativeWeaverNode.js` produces GM narration and markers aligned with DES-12 interface schemas.
+- `src/narrative/narrativeEngine.js` orchestrates LangGraph nodes (see `IMP-GM-04` for the production harness).
+- `src/narrative/langGraph/orchestrator.js` sequences node execution with telemetry.
+- `src/narrative/langGraph/nodes/` contains the scene framing, intent intake, safety gate, check planner, and narrative weaver nodes.
+- `src/narrative/langGraph/toolHarness.js` + `telemetry.js` provide shared adapters and instrumentation.
 - `src/events/checkBus.js` standardizes `intent.checkRequest` / `event.checkResolved`.
 - `src/memory/sessionMemory.js` exposes the session memory facade referenced in SYSTEM_DESIGN_SPEC §3.2.
 - `src/server/app.js` and `src/server/index.js` expose REST + WebSocket surfaces for the web client (IMP-CLIENT feature).

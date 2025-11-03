@@ -1,18 +1,43 @@
 "use strict";
 
-const { intentParserNode } = require("./nodes/intentParserNode");
-const { rulesRouterNode } = require("./nodes/rulesRouterNode");
-const { narrativeWeaverNode } = require("./nodes/narrativeWeaverNode");
+const { LangGraphOrchestrator } = require("./langGraph/orchestrator");
+const { createToolHarness } = require("./langGraph/toolHarness");
+const { SessionTelemetry } = require("./langGraph/telemetry");
+const { sceneFrameNode } = require("./langGraph/nodes/sceneFrameNode");
+const { intentIntakeNode } = require("./langGraph/nodes/intentIntakeNode");
+const { safetyGateNode } = require("./langGraph/nodes/safetyGateNode");
+const { checkPlannerNode } = require("./langGraph/nodes/checkPlannerNode");
+const { narrativeWeaverNode } = require("./langGraph/nodes/narrativeWeaverNode");
 const { log } = require("../utils/logger");
 
 class NarrativeEngine {
-  constructor({ sessionMemory, checkBus }) {
+  constructor({ sessionMemory, checkBus, telemetry } = {}) {
+    if (!sessionMemory) {
+      throw new Error("NarrativeEngine requires sessionMemory");
+    }
+    if (!checkBus) {
+      throw new Error("NarrativeEngine requires checkBus");
+    }
+
     this.sessionMemory = sessionMemory;
     this.checkBus = checkBus;
-    if (this.checkBus && typeof this.checkBus.onCheckResolved === "function") {
+    this.telemetry = telemetry || new SessionTelemetry();
+    this.tools = createToolHarness({
+      sessionMemory: this.sessionMemory,
+      checkBus: this.checkBus,
+      telemetry: this.telemetry
+    });
+
+    this.graph = new LangGraphOrchestrator({
+      telemetry: this.telemetry,
+      nodes: [sceneFrameNode, intentIntakeNode, safetyGateNode, checkPlannerNode, narrativeWeaverNode]
+    });
+
+    if (typeof this.checkBus.onCheckResolved === "function") {
       this.checkBus.onCheckResolved((envelope) => this.handleCheckResolved(envelope));
     }
-    if (this.checkBus && typeof this.checkBus.onCheckVetoed === "function") {
+
+    if (typeof this.checkBus.onCheckVetoed === "function") {
       this.checkBus.onCheckVetoed((envelope) => this.handleCheckVetoed(envelope));
     }
   }
@@ -22,47 +47,71 @@ class NarrativeEngine {
       throw new Error("sessionId is required");
     }
 
-    const session = this.sessionMemory.getSessionState(sessionId);
+    const trimmedContent = (content || "").trim();
 
-    this.sessionMemory.appendTranscript(sessionId, {
-      role: "player",
+    await this.tools.appendPlayerMessage(sessionId, {
       playerId,
-      content,
+      content: trimmedContent,
       metadata
     });
 
-    const context = {
-      session,
-      message: {
+    const session = this.tools.loadSession(sessionId);
+    const turnSequence = session.turnSequence + 1;
+
+    let graphContext;
+    try {
+      graphContext = await this.graph.run({
+        sessionId,
         playerId,
-        content,
-        metadata
-      }
-    };
-
-    const withIntent = intentParserNode(context);
-    const withRules = rulesRouterNode(withIntent);
-    const result = narrativeWeaverNode(withRules);
-
-    if (result.checkRequest) {
-      this.sessionMemory.recordCheckRequest(sessionId, result.checkRequest);
-      this.checkBus.emitCheckRequest(sessionId, result.checkRequest);
+        turnSequence,
+        message: { playerId, content: trimmedContent, metadata },
+        session,
+        tools: this.tools,
+        promptPackets: [],
+        auditTrail: []
+      });
+    } catch (error) {
+      log("error", "Narrative engine failed during graph execution", {
+        sessionId,
+        message: error.message
+      });
+      throw error;
     }
 
-    this.sessionMemory.appendTranscript(sessionId, {
-      role: "gm",
-      content: result.narrativeEvent.content,
-      markers: result.narrativeEvent.markers
+    if (graphContext.checkRequest) {
+      await this.tools.dispatchCheckRequest(sessionId, graphContext.checkRequest);
+    }
+
+    await this.tools.appendGmMessage(sessionId, {
+      content: graphContext.narrativeEvent.content,
+      markers: graphContext.narrativeEvent.markers,
+      metadata: {
+        promptPackets: graphContext.promptPackets,
+        auditTrail: graphContext.auditTrail
+      }
     });
+
+    if (graphContext.safety?.escalate) {
+      await this.tools.escalateModeration(sessionId, {
+        auditRef: graphContext.safety.auditRef,
+        severity: graphContext.safety.severity || "high",
+        flags: graphContext.safety.flags || [],
+        reason: graphContext.safety.reason || "safety_gate_triggered"
+      });
+    }
 
     log("info", "Narrative engine resolved turn", {
       sessionId,
-      requiresCheck: Boolean(result.checkRequest)
+      checkIssued: Boolean(graphContext.checkRequest),
+      safetyEscalated: Boolean(graphContext.safety?.escalate)
     });
 
     return {
-      narrativeEvent: result.narrativeEvent,
-      checkRequest: result.checkRequest,
+      narrativeEvent: graphContext.narrativeEvent,
+      checkRequest: graphContext.checkRequest,
+      safety: graphContext.safety,
+      promptPackets: graphContext.promptPackets,
+      auditTrail: graphContext.auditTrail,
       sessionState: this.sessionMemory.getSessionState(sessionId)
     };
   }
@@ -73,6 +122,12 @@ class NarrativeEngine {
     }
 
     this.sessionMemory.recordCheckResolution(envelope.sessionId, envelope);
+    this.telemetry?.recordCheckResolution({
+      sessionId: envelope.sessionId,
+      auditRef: envelope.auditRef,
+      checkId: envelope.id,
+      result: envelope.result
+    });
     log("info", "Narrative engine recorded check resolution", {
       sessionId: envelope.sessionId,
       result: envelope.result
@@ -85,6 +140,13 @@ class NarrativeEngine {
     }
 
     this.sessionMemory.recordCheckVeto(envelope.sessionId, envelope);
+    this.telemetry?.recordSafetyEvent({
+      sessionId: envelope.sessionId,
+      auditRef: envelope.auditRef,
+      severity: "high",
+      flags: envelope.safetyFlags || [],
+      reason: envelope.reason || "check_vetoed"
+    });
     log("warn", "Narrative engine recorded check veto", {
       sessionId: envelope.sessionId,
       reason: envelope.reason

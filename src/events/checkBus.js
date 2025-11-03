@@ -21,8 +21,16 @@ class CheckBus extends EventEmitter {
       topic: CHECK_REQUEST_TOPIC,
       createdAt: new Date().toISOString(),
       auditRef: payload.auditRef || uuid(),
-      data: payload.data || {}
+      ...payload
     };
+
+    if (!envelope.data) {
+      envelope.data = {
+        trigger: payload.trigger || null,
+        mechanics: payload.mechanics || null,
+        metadata: payload.metadata || null
+      };
+    }
 
     this.emit(CHECK_REQUEST_TOPIC, envelope);
     log("info", "intent.checkRequest dispatched", { envelope });
