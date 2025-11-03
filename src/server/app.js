@@ -1,11 +1,38 @@
 "use strict";
 
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const { log } = require("../utils/logger");
 
 function createApp({ narrativeEngine, checkBus, broadcaster }) {
   const app = express();
   app.use(express.json());
+
+  app.get("/sessions/:sessionId/events", (req, res) => {
+    const { sessionId } = req.params;
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    if (typeof res.flushHeaders === "function") {
+      res.flushHeaders();
+    } else {
+      res.writeHead(200);
+    }
+
+    const cleanup = broadcaster.registerStream(sessionId, res);
+    const heartbeat = setInterval(() => {
+      res.write(":heartbeat\n\n");
+    }, 25000);
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      if (typeof cleanup === "function") {
+        cleanup();
+      }
+      res.end();
+    });
+  });
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
@@ -67,6 +94,23 @@ function createApp({ narrativeEngine, checkBus, broadcaster }) {
       next(error);
     }
   });
+
+  const staticDir = path.resolve(__dirname, "../../dist");
+  if (fs.existsSync(staticDir)) {
+    app.use(express.static(staticDir));
+    app.get("*", (req, res, next) => {
+      if (
+        req.method !== "GET" ||
+        req.path.startsWith("/sessions") ||
+        req.path.startsWith("/health") ||
+        !req.accepts("html")
+      ) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(staticDir, "index.html"));
+    });
+  }
 
   app.use((err, _req, res, _next) => {
     log("error", "Unhandled server error", { message: err.message, stack: err.stack });
