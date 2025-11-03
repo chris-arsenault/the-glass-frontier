@@ -30,6 +30,23 @@ class StorageMetrics {
       sanitize(payload, ["bucket", "expectedArchiveDays", "observedAgeDays", "driftDays", "status"])
     );
   }
+
+  recordRemoteTierStatus(payload) {
+    log(
+      "info",
+      "telemetry.storage.remote_tier.rehearsal",
+      sanitize(payload, [
+        "bucket",
+        "objectKey",
+        "storageClass",
+        "status",
+        "bytes",
+        "writeDurationMs",
+        "fetchDurationMs",
+        "error"
+      ])
+    );
+  }
 }
 
 function sanitize(source, allowedKeys) {

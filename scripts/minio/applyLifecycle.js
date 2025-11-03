@@ -12,14 +12,16 @@ async function main() {
     path.resolve(__dirname, "../../infra/minio/lifecycle-policies.json");
   const config = await loadConfig(configPath);
 
+  const remoteTierConfig = config.remoteTier || null;
   const client = createClient(config);
   const metrics = new StorageMetrics();
 
+  const remoteTierName = resolveRemoteTierName(remoteTierConfig, config.defaults);
   const warmClass = resolveStorageClass("MINIO_WARM_STORAGE_CLASS", config.defaults?.warmStorageClass, "STANDARD_IA");
   const archiveClass = resolveStorageClass(
     "MINIO_ARCHIVE_STORAGE_CLASS",
-    config.defaults?.archiveStorageClass,
-    "GLACIER"
+    remoteTierName ?? config.defaults?.archiveStorageClass,
+    remoteTierName ?? "GLACIER"
   );
   const driftAllowance = resolveNumber(
     process.env.MINIO_LIFECYCLE_DRIFT_ALLOWANCE,
@@ -59,10 +61,13 @@ async function main() {
     evaluateLifecycleDrift(metrics, bucketConfig, usage, driftAllowance);
   }
 
+  await runRemoteTierRehearsal(client, remoteTierConfig, config.buckets || [], metrics, remoteTierName);
+
   log("info", "minio.lifecycle.completed", {
     bucketCount: processed,
     warmStorageClass: warmClass,
-    archiveStorageClass: archiveClass
+    archiveStorageClass: archiveClass,
+    remoteTierStorageClass: remoteTierName ?? null
   });
 }
 
@@ -318,6 +323,242 @@ function resolveNumber(...candidates) {
     const parsed = Number(candidate);
     if (!Number.isNaN(parsed)) {
       return parsed;
+    }
+  }
+  return null;
+}
+
+async function runRemoteTierRehearsal(client, remoteTierConfig, buckets, metrics, providedTierName) {
+  if (!remoteTierConfig) {
+    return;
+  }
+
+  const enabled = resolveBoolean(process.env.MINIO_REMOTE_TIER_ENABLED, remoteTierConfig.enabled, true);
+  if (enabled === false) {
+    return;
+  }
+
+  const tierName = providedTierName || resolveRemoteTierName(remoteTierConfig);
+  if (!tierName) {
+    log("warn", "minio.remote_tier.missing_name", {});
+    return;
+  }
+
+  const credentialsOptional = resolveBoolean(
+    process.env.MINIO_REMOTE_TIER_OPTIONAL,
+    remoteTierConfig.optional,
+    false
+  );
+  const credentialsPresent = hasRemoteTierCredentials();
+
+  if (!credentialsPresent) {
+    metrics.recordRemoteTierStatus({
+      storageClass: tierName,
+      status: "credentials_missing"
+    });
+    log("warn", "minio.remote_tier.credentials_missing", { storageClass: tierName });
+    if (resolveBoolean(remoteTierConfig.requireCredentials, true) === true && credentialsOptional !== true) {
+      throw new Error("remote_tier_credentials_missing");
+    }
+    return;
+  }
+
+  const rehearsal = remoteTierConfig.rehearsal || {};
+  if (resolveBoolean(rehearsal.enabled, true) === false) {
+    return;
+  }
+
+  const bucketNames = buildRehearsalBucketList(rehearsal, buckets);
+  if (!Array.isArray(bucketNames) || bucketNames.length === 0) {
+    log("warn", "minio.remote_tier.no_buckets_for_rehearsal", {});
+    return;
+  }
+
+  const limit = resolveNumber(rehearsal.limit, bucketNames.length);
+  const normalizedLimit = limit && limit > 0 ? Math.min(limit, bucketNames.length) : bucketNames.length;
+  const prefix = rehearsal.objectPrefix || ".remote-tier-rehearsal";
+  const payloadBase = rehearsal.payload || "remote tier rehearsal";
+  const cleanupBypass = resolveBoolean(rehearsal.cleanupGovernanceBypass, false) === true;
+
+  let processed = 0;
+
+  for (const bucketName of bucketNames) {
+    if (!bucketName) {
+      continue;
+    }
+
+    if (processed >= normalizedLimit) {
+      break;
+    }
+    processed += 1;
+
+    const objectKey = `${prefix.replace(/\/+$/, "")}/${bucketName}-rehearsal-${Date.now()}.txt`;
+    const payload = Buffer.from(`${payloadBase} ${new Date().toISOString()}`, "utf8");
+
+    const writeStartedAt = Date.now();
+    let storageClass = tierName;
+
+    try {
+      await client.putObject(bucketName, objectKey, payload, {
+        "x-amz-storage-class": tierName
+      });
+      const writeDurationMs = Date.now() - writeStartedAt;
+
+      const stat = await client.statObject(bucketName, objectKey);
+      storageClass = extractStorageClass(stat.metaData) || tierName;
+
+      let fetchDurationMs = null;
+      let bytesFetched = null;
+      try {
+        const stream = await client.getObject(bucketName, objectKey);
+        const buffer = await streamToBuffer(stream);
+        fetchDurationMs = Date.now() - writeStartedAt;
+        bytesFetched = buffer.length;
+      } catch (fetchError) {
+        metrics.recordRemoteTierStatus({
+          bucket: bucketName,
+          objectKey,
+          storageClass,
+          status: "restore_failed",
+          error: sanitizeError(fetchError),
+          writeDurationMs
+        });
+        throw fetchError;
+      }
+
+      metrics.recordRemoteTierStatus({
+        bucket: bucketName,
+        objectKey,
+        storageClass,
+        status: "success",
+        bytes: bytesFetched,
+        writeDurationMs,
+        fetchDurationMs
+      });
+    } catch (error) {
+      metrics.recordRemoteTierStatus({
+        bucket: bucketName,
+        objectKey,
+        storageClass,
+        status: "error",
+        error: sanitizeError(error)
+      });
+      log("error", "minio.remote_tier.rehearsal_error", {
+        bucket: bucketName,
+        objectKey,
+        message: error.message
+      });
+    } finally {
+      try {
+        await client.removeObject(
+          bucketName,
+          objectKey,
+          cleanupBypass ? { governanceBypass: true } : undefined
+        );
+      } catch (cleanupError) {
+        log("warn", "minio.remote_tier.cleanup_failed", {
+          bucket: bucketName,
+          objectKey,
+          message: cleanupError.message
+        });
+      }
+    }
+  }
+}
+
+function resolveRemoteTierName(remoteTierConfig, defaults = {}) {
+  const fromEnv = process.env.MINIO_REMOTE_TIER;
+  if (fromEnv && fromEnv.trim()) {
+    return fromEnv.trim();
+  }
+  if (remoteTierConfig && typeof remoteTierConfig.name === "string" && remoteTierConfig.name.trim()) {
+    return remoteTierConfig.name.trim();
+  }
+  if (defaults && typeof defaults.archiveStorageClass === "string" && defaults.archiveStorageClass.trim()) {
+    return defaults.archiveStorageClass.trim();
+  }
+  return null;
+}
+
+function hasRemoteTierCredentials() {
+  const keyId = process.env.BACKBLAZE_B2_KEY_ID;
+  const applicationKey = process.env.BACKBLAZE_B2_APPLICATION_KEY;
+  return Boolean(keyId && keyId.trim() && applicationKey && applicationKey.trim());
+}
+
+function buildRehearsalBucketList(rehearsal, buckets) {
+  if (rehearsal && Array.isArray(rehearsal.buckets) && rehearsal.buckets.length > 0) {
+    return rehearsal.buckets.filter(Boolean);
+  }
+  return (buckets || [])
+    .map((entry) => entry && entry.name)
+    .filter(Boolean);
+}
+
+function extractStorageClass(metaData) {
+  if (!metaData || typeof metaData !== "object") {
+    return null;
+  }
+  for (const key of Object.keys(metaData)) {
+    if (typeof key === "string" && key.toLowerCase() === "x-amz-storage-class") {
+      const value = metaData[key];
+      if (typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
+    }
+  }
+  return null;
+}
+
+async function streamToBuffer(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+function sanitizeError(error) {
+  if (!error) {
+    return null;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch (serializationError) {
+    return String(error);
+  }
+}
+
+function resolveBoolean(...candidates) {
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null || candidate === "") {
+      continue;
+    }
+    if (typeof candidate === "boolean") {
+      return candidate;
+    }
+    if (typeof candidate === "number") {
+      if (!Number.isNaN(candidate)) {
+        return candidate !== 0;
+      }
+    }
+    if (typeof candidate === "string") {
+      const normalized = candidate.trim().toLowerCase();
+      if (!normalized) {
+        continue;
+      }
+      if (["1", "true", "yes", "y", "on"].includes(normalized)) {
+        return true;
+      }
+      if (["0", "false", "no", "n", "off"].includes(normalized)) {
+        return false;
+      }
     }
   }
   return null;

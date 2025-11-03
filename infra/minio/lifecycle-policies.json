@@ -5,6 +5,20 @@
     "archiveStorageClass": "GLACIER",
     "allowedDriftDays": 2
   },
+  "remoteTier": {
+    "name": "b2-archive",
+    "enabled": true,
+    "requireCredentials": true,
+    "rehearsal": {
+      "enabled": true,
+      "buckets": [
+        "gf-digests"
+      ],
+      "objectPrefix": ".remote-tier-rehearsal",
+      "limit": 1,
+      "payload": "remote tier rehearsal probe"
+    }
+  },
   "buckets": [
     {
       "name": "gf-digests",
