@@ -10,7 +10,8 @@
     "client:build": "vite build",
     "client:preview": "vite preview",
     "test:client": "jest --runInBand __tests__/client",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "glass-frontier",
@@ -31,6 +32,7 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.4",
     "@babel/preset-react": "^7.24.7",
+    "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.4.5",
     "@testing-library/react": "^14.2.1",
     "@testing-library/user-event": "^14.5.2",
@@ -38,6 +40,7 @@
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "source-map": "^0.7.6",
     "supertest": "^6.3.4",
     "vite": "^5.2.0"
   },

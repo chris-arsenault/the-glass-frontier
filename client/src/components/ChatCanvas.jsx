@@ -10,6 +10,8 @@ function describeConnection(state) {
       return "Live session connection established.";
     case SessionConnectionStates.FALLBACK:
       return "Live updates using fallback channel.";
+    case SessionConnectionStates.OFFLINE:
+      return "Offline mode — intents queue locally.";
     case SessionConnectionStates.ERROR:
       return "Connection issues detected.";
     case SessionConnectionStates.CLOSED:
@@ -85,4 +87,3 @@ export function ChatCanvas() {
     </section>
   );
 }
-

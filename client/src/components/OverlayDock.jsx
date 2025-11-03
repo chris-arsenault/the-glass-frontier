@@ -23,7 +23,7 @@ const FALLBACK_INVENTORY = [
 ];
 
 export function OverlayDock() {
-  const { overlay, connectionState } = useSessionContext();
+  const { overlay, connectionState, isOffline, queuedIntents } = useSessionContext();
 
   const character = overlay?.character || FALLBACK_CHARACTER;
   const inventory = Array.isArray(overlay?.inventory) && overlay.inventory.length > 0
@@ -32,6 +32,18 @@ export function OverlayDock() {
   const momentumValue =
     typeof overlay?.momentum?.current === "number" ? overlay.momentum.current : 0;
   const stats = character.stats || {};
+  const queuedCount = Array.isArray(queuedIntents) ? queuedIntents.length : 0;
+  const queueLabel = queuedCount === 1 ? "intent" : "intents";
+  const offlineActive =
+    isOffline ||
+    connectionState === SessionConnectionStates.FALLBACK ||
+    connectionState === SessionConnectionStates.OFFLINE ||
+    queuedCount > 0;
+  const statusLabel = offlineActive
+    ? queuedCount > 0
+      ? `Offline queue (${queuedCount})`
+      : "Offline mode"
+    : "Live";
 
   return (
     <aside className="overlay-dock" aria-label="Session overlays" data-testid="overlay-dock">
@@ -47,8 +59,12 @@ export function OverlayDock() {
               {character.background}
             </p>
           </div>
-          <span className="overlay-status" aria-live="polite">
-            {connectionState === SessionConnectionStates.FALLBACK ? "Offline mode" : "Live"}
+          <span
+            className={`overlay-status${offlineActive ? " overlay-status-offline" : ""}`}
+            aria-live="polite"
+            data-testid="overlay-status"
+          >
+            {statusLabel}
           </span>
         </header>
         <dl className="overlay-character-details">
@@ -79,7 +95,12 @@ export function OverlayDock() {
         </div>
         {overlay?.pendingOfflineReconcile ? (
           <p className="overlay-alert" role="status">
-            Offline changes pending sync.
+            Offline changes pending sync
+            {queuedCount > 0 ? ` (${queuedCount} ${queueLabel} queued).` : "."}
+          </p>
+        ) : offlineActive ? (
+          <p className="overlay-alert" role="status">
+            Connection degraded — updates will sync automatically once online.
           </p>
         ) : null}
       </section>

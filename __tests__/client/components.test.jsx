@@ -62,6 +62,9 @@ function buildSessionValue(overrides = {}) {
      sendPlayerControl: jest.fn().mockResolvedValue(undefined),
      isSendingControl: false,
      controlError: null,
+     queuedIntents: [],
+     isOffline: false,
+     flushQueuedIntents: jest.fn().mockResolvedValue(undefined),
     ...overrides
   };
 }
@@ -113,6 +116,18 @@ describe("Client shell components", () => {
     expect(textarea).toHaveValue("");
   });
 
+  test("ChatComposer surfaces offline queue indicators", () => {
+    const session = buildSessionValue({
+      isOffline: true,
+      queuedIntents: [{ id: 1, payload: { content: "Scout ahead" }, createdAt: Date.now() }]
+    });
+
+    renderWithSession(session, React.createElement(ChatComposer));
+
+    expect(screen.getByTestId("chat-offline-banner")).toHaveTextContent("Connection degraded");
+    expect(screen.getByTestId("chat-submit")).toHaveTextContent(/Queue Intent/i);
+  });
+
   test("SessionMarkerRibbon lists recent markers for pacing transparency", () => {
     const session = buildSessionValue({
       markers: [
@@ -161,6 +176,41 @@ describe("Client shell components", () => {
     expect(screen.getByTestId("overlay-momentum")).toHaveTextContent("1");
     expect(screen.getByText("Offline mode")).toBeInTheDocument();
     expect(screen.getByText("Offline changes pending sync.")).toBeInTheDocument();
+  });
+
+  test("OverlayDock indicates queued intents during offline mode", () => {
+    const session = buildSessionValue({
+      connectionState: SessionConnectionStates.READY,
+      queuedIntents: [
+        { id: 1, payload: { content: "Hold position" }, createdAt: Date.now() }
+      ],
+      isOffline: false,
+      overlay: {
+        revision: 3,
+        character: {
+          name: "Avery Glass",
+          pronouns: "they/them",
+          archetype: "Wayfarer",
+          background: "Former archivist tracking lost frontier tech.",
+          stats: { grit: 2 }
+        },
+        inventory: [{ id: "relay-kit", name: "Relay Stabilisation Kit", tags: ["utility"] }],
+        momentum: {
+          current: 1,
+          baseline: 0,
+          floor: -2,
+          ceiling: 3,
+          history: []
+        },
+        pendingOfflineReconcile: true,
+        lastSyncedAt: new Date().toISOString()
+      }
+    });
+
+    renderWithSession(session, React.createElement(OverlayDock));
+
+    expect(screen.getByText(/Offline queue \(1\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Offline changes pending sync \(1 intent queued\)/i)).toBeInTheDocument();
   });
 
   test("CheckOverlay surfaces pending and resolved check details", () => {
@@ -221,5 +271,20 @@ describe("Client shell components", () => {
     fireEvent.click(screen.getByTestId("wrap-control-2"));
 
     await waitFor(() => expect(sendPlayerControl).toHaveBeenCalledWith({ type: "wrap", turns: 2 }));
+  });
+
+  test("SessionMarkerRibbon disables wrap controls when offline", () => {
+    const session = buildSessionValue({
+      markers: [
+        { id: "m1", marker: "wrap-soon", reason: "GM suggests wrap" },
+        { id: "m2", marker: "momentum-state", value: 1 }
+      ],
+      isOffline: true
+    });
+
+    renderWithSession(session, React.createElement(SessionMarkerRibbon));
+
+    expect(screen.getByTestId("wrap-control-1")).toBeDisabled();
+    expect(screen.getByTestId("wrap-feedback")).toHaveTextContent(/Offline mode/i);
   });
 });

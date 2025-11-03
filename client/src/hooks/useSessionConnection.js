@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  enqueueIntent,
+  loadSessionSnapshot,
+  persistSessionState,
+  removeQueuedIntent
+} from "../offline/storage.js";
 
 const CONNECTION_STATES = {
   CONNECTING: "connecting",
   READY: "ready",
   FALLBACK: "fallback",
   CLOSED: "closed",
-  ERROR: "error"
+  ERROR: "error",
+  OFFLINE: "offline"
 };
 
 const EMPTY_OVERLAY = () => ({
@@ -58,6 +65,17 @@ function ensureSubSequence(value) {
   return 0;
 }
 
+function isNetworkError(error) {
+  if (!error) {
+    return false;
+  }
+  if (error.name === "TypeError") {
+    return true;
+  }
+  const message = typeof error.message === "string" ? error.message : "";
+  return message.includes("NetworkError") || message.includes("Failed to fetch");
+}
+
 export function useSessionConnection({ sessionId: override } = {}) {
   const sessionId = readSessionId(override);
   const [connectionState, setConnectionState] = useState(CONNECTION_STATES.CONNECTING);
@@ -68,36 +86,237 @@ export function useSessionConnection({ sessionId: override } = {}) {
   const [overlay, setOverlay] = useState(() => EMPTY_OVERLAY());
   const [activeCheck, setActiveCheck] = useState(null);
   const [recentChecks, setRecentChecks] = useState([]);
+  const [queuedIntents, setQueuedIntents] = useState([]);
+  const [isOffline, setIsOffline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine === false : false
+  );
   const [lastPlayerControl, setLastPlayerControl] = useState(null);
   const [pendingControl, setPendingControl] = useState(false);
   const [controlError, setControlError] = useState(null);
   const wsRef = useRef(null);
   const sseRef = useRef(null);
   const sequenceRef = useRef({ turnSequence: -1, subSequence: -1 });
+  const queuedIntentsRef = useRef([]);
+  const isOfflineRef = useRef(isOffline);
+  const flushInProgressRef = useRef(false);
 
-  const updateMarkers = useCallback((incoming) => {
-    if (!incoming || incoming.length === 0) {
+  const ensureOverlayPendingFlag = useCallback(
+    (pending) => {
+      setOverlay((current) => {
+        if (!current) {
+          return current;
+        }
+        if (Boolean(current.pendingOfflineReconcile) === Boolean(pending)) {
+          return current;
+        }
+
+        const updated = {
+          ...current,
+          pendingOfflineReconcile: Boolean(pending)
+        };
+        persistSessionState(sessionId, { overlay: updated }).catch(() => {});
+        return updated;
+      });
+    },
+    [sessionId]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadSessionSnapshot(sessionId)
+      .then(({ state, queuedIntents: cachedIntents }) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (state) {
+          if (Array.isArray(state.messages) && state.messages.length > 0) {
+            setMessages(state.messages);
+          }
+
+          if (Array.isArray(state.markers) && state.markers.length > 0) {
+            setMarkers(state.markers);
+          }
+
+          if (Array.isArray(state.recentChecks)) {
+            setRecentChecks(state.recentChecks);
+          }
+
+          if (state.activeCheck) {
+            setActiveCheck(state.activeCheck);
+          }
+
+          if (state.overlay) {
+            const fallback = EMPTY_OVERLAY();
+            const overlaySnapshot = {
+              ...fallback,
+              ...state.overlay,
+              character: {
+                ...fallback.character,
+                ...(state.overlay.character || {})
+              },
+              inventory: Array.isArray(state.overlay.inventory)
+                ? state.overlay.inventory
+                : fallback.inventory,
+              momentum: state.overlay.momentum || fallback.momentum,
+              pendingOfflineReconcile: Boolean(state.overlay.pendingOfflineReconcile)
+            };
+            setOverlay(overlaySnapshot);
+          }
+        }
+
+        if (Array.isArray(cachedIntents) && cachedIntents.length > 0) {
+          const sorted = cachedIntents.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+          setQueuedIntents(sorted);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    queuedIntentsRef.current = queuedIntents;
+    persistSessionState(sessionId, { queuedIntentCount: queuedIntents.length }).catch(() => {});
+  }, [queuedIntents, sessionId]);
+
+  useEffect(() => {
+    isOfflineRef.current = isOffline;
+  }, [isOffline]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      setConnectionState((current) =>
+        current === CONNECTION_STATES.OFFLINE ? CONNECTION_STATES.CONNECTING : current
+      );
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      setConnectionState(CONNECTION_STATES.OFFLINE);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    ensureOverlayPendingFlag(isOffline || queuedIntents.length > 0);
+  }, [ensureOverlayPendingFlag, isOffline, queuedIntents.length]);
+
+  const postPlayerMessage = useCallback(
+    async (payload) => {
+      const response = await fetch(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send message (${response.status})`);
+      }
+
+      return response;
+    },
+    [sessionId]
+  );
+
+  const flushQueuedIntents = useCallback(async () => {
+    if (flushInProgressRef.current || queuedIntentsRef.current.length === 0) {
+      ensureOverlayPendingFlag(isOfflineRef.current || queuedIntentsRef.current.length > 0);
       return;
     }
 
-    setMarkers((previous) => {
-      const seen = new Set(previous.map((marker) => marker.id || marker.timestamp));
-      const next = [...previous];
+    flushInProgressRef.current = true;
+    try {
+      const intents = queuedIntentsRef.current.slice();
 
-      incoming.forEach((marker) => {
-        const markerId = marker.id || marker.timestamp || `${marker.marker}-${Date.now()}`;
-        if (!seen.has(markerId)) {
-          next.push({
-            ...marker,
-            id: markerId,
-            receivedAt: new Date().toISOString()
-          });
+      for (const intent of intents) {
+        try {
+          const payload = intent.payload
+            ? {
+                ...intent.payload,
+                metadata: {
+                  ...(intent.payload.metadata || {}),
+                  replayedAt: new Date().toISOString()
+                }
+              }
+            : null;
+
+          if (!payload) {
+            await removeQueuedIntent(intent.id);
+            setQueuedIntents((prev) => prev.filter((entry) => entry.id !== intent.id));
+            continue;
+          }
+
+          await postPlayerMessage(payload);
+          await removeQueuedIntent(intent.id);
+          setQueuedIntents((prev) => prev.filter((entry) => entry.id !== intent.id));
+        } catch (error) {
+          if (isNetworkError(error)) {
+            setTransportError(error);
+            setIsOffline(true);
+            setConnectionState(CONNECTION_STATES.OFFLINE);
+            break;
+          } else {
+            throw error;
+          }
         }
-      });
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.error("Failed to flush queued intents", error);
+      }
+    } finally {
+      flushInProgressRef.current = false;
+      ensureOverlayPendingFlag(isOfflineRef.current || queuedIntentsRef.current.length > 0);
+    }
+  }, [ensureOverlayPendingFlag, postPlayerMessage, setQueuedIntents]);
 
-      return next.slice(-20);
-    });
-  }, []);
+  const updateMarkers = useCallback(
+    (incoming) => {
+      if (!incoming || incoming.length === 0) {
+        return;
+      }
+
+      setMarkers((previous) => {
+        const seen = new Set(previous.map((marker) => marker.id || marker.timestamp));
+        const next = [...previous];
+
+        incoming.forEach((marker) => {
+          const markerId = marker.id || marker.timestamp || `${marker.marker}-${Date.now()}`;
+          if (!seen.has(markerId)) {
+            next.push({
+              ...marker,
+              id: markerId,
+              receivedAt: new Date().toISOString()
+            });
+          }
+        });
+
+        const sliced = next.slice(-20);
+        persistSessionState(sessionId, { markers: sliced }).catch(() => {});
+        return sliced;
+      });
+    },
+    [sessionId]
+  );
 
   const handleEnvelope = useCallback(
     (envelope) => {
@@ -135,26 +354,30 @@ export function useSessionConnection({ sessionId: override } = {}) {
 
       switch (envelope.type) {
         case "session.message":
-        case "narrative.event":
+        case "narrative.event": {
           setMessages((prev) => {
-            const next = prev.concat({
-              id: envelope.id || `${Date.now()}-${prev.length}`,
-              role: envelope.role || envelope.speaker || "gm",
-              content: envelope.content || envelope.text || "",
-              turnSequence,
-              metadata: envelope.metadata || {},
-              markers: envelope.markers || []
-            });
-            return next.slice(-200);
+            const next = prev
+              .concat({
+                id: envelope.id || `${Date.now()}-${prev.length}`,
+                role: envelope.role || envelope.speaker || "gm",
+                content: envelope.content || envelope.text || "",
+                turnSequence,
+                metadata: envelope.metadata || {},
+                markers: envelope.markers || []
+              })
+              .slice(-200);
+            persistSessionState(sessionId, { messages: next }).catch(() => {});
+            return next;
           });
           break;
+        }
         case "session.marker":
           updateMarkers([envelope]);
           break;
         case "intent.checkRequest":
         case "check.prompt":
           if (payload) {
-            setActiveCheck({
+            const nextActive = {
               id: payload.id,
               auditRef: payload.auditRef,
               data: {
@@ -167,7 +390,9 @@ export function useSessionConnection({ sessionId: override } = {}) {
                 safetyFlags: payload.data?.safetyFlags || [],
                 momentum: payload.data?.momentum
               }
-            });
+            };
+            setActiveCheck(nextActive);
+            persistSessionState(sessionId, { activeCheck: nextActive }).catch(() => {});
           }
           break;
         case "event.checkResolved":
@@ -175,37 +400,55 @@ export function useSessionConnection({ sessionId: override } = {}) {
           if (payload) {
             setRecentChecks((previous) => {
               const filtered = previous.filter((entry) => entry.id !== payload.id);
-              const next = filtered.concat(payload);
-              return next.slice(-5);
+              const updated = filtered.concat(payload).slice(-5);
+              persistSessionState(sessionId, { recentChecks: updated }).catch(() => {});
+              return updated;
             });
-            setActiveCheck((current) => (current && current.id === payload.id ? null : current));
 
+            let clearedActive = false;
+            setActiveCheck((current) => {
+              if (current && current.id === payload.id) {
+                clearedActive = true;
+                return null;
+              }
+              return current;
+            });
+            if (clearedActive) {
+              persistSessionState(sessionId, { activeCheck: null }).catch(() => {});
+            }
+
+            const offlinePending = isOfflineRef.current || queuedIntentsRef.current.length > 0;
             if (payload.momentum && typeof payload.momentum === "object") {
-              setOverlay((current) => ({
-                ...current,
-                revision: (current.revision || 0) + 1,
-                momentum: {
-                  ...current.momentum,
-                  ...payload.momentum,
-                  current:
-                    typeof payload.momentum.after === "number"
-                      ? payload.momentum.after
-                      : typeof payload.momentum.current === "number"
-                      ? payload.momentum.current
-                      : current.momentum.current,
-                  delta:
-                    typeof payload.momentum.delta === "number"
-                      ? payload.momentum.delta
-                      : current.momentum.delta
-                },
-                lastSyncedAt: new Date().toISOString()
-              }));
+              setOverlay((current) => {
+                const nextOverlay = {
+                  ...current,
+                  revision: (current.revision || 0) + 1,
+                  momentum: {
+                    ...current.momentum,
+                    ...payload.momentum,
+                    current:
+                      typeof payload.momentum.after === "number"
+                        ? payload.momentum.after
+                        : typeof payload.momentum.current === "number"
+                        ? payload.momentum.current
+                        : current.momentum.current,
+                    delta:
+                      typeof payload.momentum.delta === "number"
+                        ? payload.momentum.delta
+                        : current.momentum.delta
+                  },
+                  pendingOfflineReconcile: offlinePending ? true : current.pendingOfflineReconcile,
+                  lastSyncedAt: new Date().toISOString()
+                };
+                persistSessionState(sessionId, { overlay: nextOverlay }).catch(() => {});
+                return nextOverlay;
+              });
             } else if (typeof payload.momentumDelta === "number") {
               setOverlay((current) => {
                 const currentValue =
                   typeof current.momentum?.current === "number" ? current.momentum.current : 0;
                 const nextValue = currentValue + payload.momentumDelta;
-                return {
+                const nextOverlay = {
                   ...current,
                   revision: (current.revision || 0) + 1,
                   momentum: {
@@ -213,47 +456,57 @@ export function useSessionConnection({ sessionId: override } = {}) {
                     current: nextValue,
                     delta: payload.momentumDelta
                   },
+                  pendingOfflineReconcile: offlinePending ? true : current.pendingOfflineReconcile,
                   lastSyncedAt: new Date().toISOString()
                 };
+                persistSessionState(sessionId, { overlay: nextOverlay }).catch(() => {});
+                return nextOverlay;
               });
             }
           }
           break;
         case "overlay.characterSync":
           if (payload) {
-            setOverlay((current) => ({
-              revision: payload.revision ?? (current.revision || 0) + 1,
-              character: payload.character
-                ? {
-                    ...payload.character,
-                    stats: { ...(payload.character.stats || {}) }
-                  }
-                : current.character,
-              inventory: Array.isArray(payload.inventory)
-                ? payload.inventory.map((item) => ({ ...item }))
-                : current.inventory,
-              momentum: payload.momentum
-                ? { ...current.momentum, ...payload.momentum }
-                : current.momentum,
-              pendingOfflineReconcile: Boolean(payload.pendingOfflineReconcile),
-              lastSyncedAt: payload.lastSyncedAt || new Date().toISOString()
-            }));
+            const offlinePending = isOfflineRef.current || queuedIntentsRef.current.length > 0;
+            setOverlay((current) => {
+              const nextOverlay = {
+                revision: payload.revision ?? (current.revision || 0) + 1,
+                character: payload.character
+                  ? {
+                      ...payload.character,
+                      stats: { ...(payload.character.stats || {}) }
+                    }
+                  : current.character,
+                inventory: Array.isArray(payload.inventory)
+                  ? payload.inventory.map((item) => ({ ...item }))
+                  : current.inventory,
+                momentum: payload.momentum
+                  ? { ...current.momentum, ...payload.momentum }
+                  : current.momentum,
+                pendingOfflineReconcile: offlinePending
+                  ? true
+                  : Boolean(payload.pendingOfflineReconcile),
+                lastSyncedAt: payload.lastSyncedAt || new Date().toISOString()
+              };
+              persistSessionState(sessionId, { overlay: nextOverlay }).catch(() => {});
+              return nextOverlay;
+            });
           }
           break;
         case "player.control":
           if (payload) {
             setLastPlayerControl(payload);
+            persistSessionState(sessionId, { lastPlayerControl: payload }).catch(() => {});
           }
           break;
         default:
-          // Non-chat events are ignored for shell scaffolding but logged for debugging.
           if (process.env.NODE_ENV !== "production") {
             // eslint-disable-next-line no-console
             console.debug("Unhandled session envelope", envelope);
           }
       }
     },
-    [updateMarkers]
+    [sessionId, updateMarkers]
   );
 
   useEffect(() => {
@@ -281,21 +534,26 @@ export function useSessionConnection({ sessionId: override } = {}) {
         }
 
         if (data.overlay) {
-          setOverlay({
-            revision: data.overlay.revision ?? 0,
-            character: data.overlay.character || EMPTY_OVERLAY().character,
+          const fallback = EMPTY_OVERLAY();
+          const offlinePending = isOfflineRef.current || queuedIntentsRef.current.length > 0;
+          const overlaySnapshot = {
+            ...fallback,
+            ...data.overlay,
+            character: data.overlay.character || fallback.character,
             inventory: Array.isArray(data.overlay.inventory)
               ? data.overlay.inventory
-              : EMPTY_OVERLAY().inventory,
-            momentum: data.overlay.momentum || EMPTY_OVERLAY().momentum,
-            pendingOfflineReconcile: Boolean(data.overlay.pendingOfflineReconcile),
+              : fallback.inventory,
+            momentum: data.overlay.momentum || fallback.momentum,
+            pendingOfflineReconcile: offlinePending ? true : Boolean(data.overlay.pendingOfflineReconcile),
             lastSyncedAt: data.overlay.lastSyncedAt || new Date().toISOString()
-          });
+          };
+          setOverlay(overlaySnapshot);
+          persistSessionState(sessionId, { overlay: overlaySnapshot }).catch(() => {});
         }
 
         if (Array.isArray(data.pendingChecks) && data.pendingChecks.length > 0) {
           const pending = data.pendingChecks[data.pendingChecks.length - 1];
-          setActiveCheck({
+          const pendingCheck = {
             id: pending.id,
             auditRef: pending.auditRef,
             data: {
@@ -308,13 +566,21 @@ export function useSessionConnection({ sessionId: override } = {}) {
               safetyFlags: pending.data?.safetyFlags || [],
               momentum: pending.data?.momentum
             }
-          });
+          };
+          setActiveCheck(pendingCheck);
+          persistSessionState(sessionId, { activeCheck: pendingCheck }).catch(() => {});
         }
 
         if (Array.isArray(data.resolvedChecks)) {
-          setRecentChecks(data.resolvedChecks.slice(-5));
+          const resolved = data.resolvedChecks.slice(-5);
+          setRecentChecks(resolved);
+          persistSessionState(sessionId, { recentChecks: resolved }).catch(() => {});
         }
       } catch (error) {
+        if (isNetworkError(error)) {
+          setIsOffline(true);
+          setConnectionState(CONNECTION_STATES.OFFLINE);
+        }
         if (process.env.NODE_ENV !== "production") {
           // eslint-disable-next-line no-console
           console.error("Failed to load session state", error);
@@ -343,12 +609,21 @@ export function useSessionConnection({ sessionId: override } = {}) {
     let reconnectTimer;
 
     const connectWebSocket = () => {
+      shouldFallback = false;
+      if (isOfflineRef.current && typeof navigator !== "undefined" && navigator.onLine === false) {
+        setConnectionState(CONNECTION_STATES.OFFLINE);
+        reconnectTimer = setTimeout(connectWebSocket, 2000);
+        return;
+      }
+
       setConnectionState(CONNECTION_STATES.CONNECTING);
       const socket = new WebSocket(baseUrl);
       wsRef.current = socket;
 
       socket.onopen = () => {
         setConnectionState(CONNECTION_STATES.READY);
+        setIsOffline(false);
+        flushQueuedIntents();
       };
 
       socket.onmessage = (event) => {
@@ -360,8 +635,13 @@ export function useSessionConnection({ sessionId: override } = {}) {
         }
       };
 
-      socket.onerror = (error) => {
+      socket.onerror = (event) => {
+        const error = event instanceof Error ? event : new Error("WebSocket transport error");
         setTransportError(error);
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          setIsOffline(true);
+          setConnectionState(CONNECTION_STATES.OFFLINE);
+        }
         shouldFallback = true;
       };
 
@@ -385,6 +665,11 @@ export function useSessionConnection({ sessionId: override } = {}) {
       sseRef.current = source;
       setConnectionState(CONNECTION_STATES.FALLBACK);
 
+      source.onopen = () => {
+        setIsOffline(false);
+        flushQueuedIntents();
+      };
+
       source.onmessage = (event) => {
         try {
           const envelope = JSON.parse(event.data);
@@ -394,8 +679,13 @@ export function useSessionConnection({ sessionId: override } = {}) {
         }
       };
 
-      source.onerror = (error) => {
+      source.onerror = (event) => {
+        const error = event instanceof Error ? event : new Error("EventSource transport error");
         setTransportError(error);
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          setIsOffline(true);
+          setConnectionState(CONNECTION_STATES.OFFLINE);
+        }
         source.close();
         reconnectTimer = setTimeout(connectWebSocket, 2000);
       };
@@ -413,11 +703,38 @@ export function useSessionConnection({ sessionId: override } = {}) {
         sseRef.current.close();
       }
     };
-  }, [handleEnvelope, sessionId]);
+  }, [flushQueuedIntents, handleEnvelope, sessionId]);
 
   const sendPlayerMessage = useCallback(
     async ({ content, metadata }) => {
-      if (!content || pendingRequest) {
+      const trimmed = typeof content === "string" ? content.trim() : "";
+      if (trimmed.length === 0 || pendingRequest) {
+        return;
+      }
+
+      const payload = {
+        playerId: `player-${sessionId}`,
+        content: trimmed,
+        metadata: {
+          ...metadata,
+          submittedAt: new Date().toISOString(),
+          source: "client-shell"
+        }
+      };
+
+      const enqueueLocal = async () => {
+        const queued = await enqueueIntent(sessionId, payload);
+        if (queued) {
+          setQueuedIntents((prev) => {
+            const next = prev.concat(queued).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            return next;
+          });
+        }
+        ensureOverlayPendingFlag(true);
+      };
+
+      if (isOfflineRef.current || isOffline) {
+        await enqueueLocal();
         return;
       }
 
@@ -425,38 +742,51 @@ export function useSessionConnection({ sessionId: override } = {}) {
       setTransportError(null);
 
       try {
-        const response = await fetch(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            playerId: `player-${sessionId}`,
-            content,
-            metadata: {
-              ...metadata,
-              submittedAt: new Date().toISOString(),
-              source: "client-shell"
-            }
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to send message (${response.status})`);
+        await postPlayerMessage(payload);
+        persistSessionState(sessionId, { lastSentAt: Date.now() }).catch(() => {});
+        if (queuedIntentsRef.current.length > 0) {
+          flushQueuedIntents();
         }
       } catch (error) {
-        setTransportError(error);
+        if (isNetworkError(error)) {
+          setTransportError(error);
+          await enqueueLocal();
+          setIsOffline(true);
+          setConnectionState(CONNECTION_STATES.OFFLINE);
+        } else {
+          setTransportError(error);
+          throw error;
+        }
       } finally {
         setPendingRequest(false);
       }
     },
-    [pendingRequest, sessionId]
+    [
+      ensureOverlayPendingFlag,
+      flushQueuedIntents,
+      isOffline,
+      pendingRequest,
+      postPlayerMessage,
+      sessionId
+    ]
   );
+
+  useEffect(() => {
+    if (!isOffline) {
+      flushQueuedIntents();
+    }
+  }, [flushQueuedIntents, isOffline]);
 
   const sendPlayerControl = useCallback(
     async ({ type = "wrap", turns, metadata } = {}) => {
       if (pendingControl) {
         return;
+      }
+
+      if (isOfflineRef.current || isOffline) {
+        const error = new Error("offline_control_restricted");
+        setControlError(error);
+        throw error;
       }
 
       if (typeof turns !== "number" || turns <= 0) {
@@ -492,7 +822,7 @@ export function useSessionConnection({ sessionId: override } = {}) {
         setPendingControl(false);
       }
     },
-    [pendingControl, sessionId]
+    [isOffline, pendingControl, sessionId]
   );
 
   const value = useMemo(
@@ -504,6 +834,9 @@ export function useSessionConnection({ sessionId: override } = {}) {
       transportError,
       sendPlayerMessage,
       isSending: pendingRequest,
+      queuedIntents,
+      isOffline,
+      flushQueuedIntents,
       overlay,
       activeCheck,
       recentChecks,
@@ -516,12 +849,15 @@ export function useSessionConnection({ sessionId: override } = {}) {
       activeCheck,
       connectionState,
       controlError,
+      flushQueuedIntents,
+      isOffline,
       lastPlayerControl,
       markers,
       messages,
       overlay,
       pendingControl,
       pendingRequest,
+      queuedIntents,
       recentChecks,
       sendPlayerControl,
       sendPlayerMessage,

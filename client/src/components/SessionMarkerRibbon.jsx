@@ -26,10 +26,14 @@ export function SessionMarkerRibbon() {
     sendPlayerControl,
     isSendingControl,
     controlError,
-    lastPlayerControl
+    lastPlayerControl,
+    isOffline
   } = useSessionContext();
   const recentMarkers = useMemo(() => markers.slice(-6), [markers]);
   const controlFeedback = useMemo(() => {
+    if (isOffline) {
+      return "Offline mode: wrap controls disabled.";
+    }
     if (controlError) {
       return `Wrap request failed: ${controlError.message}`;
     }
@@ -39,7 +43,7 @@ export function SessionMarkerRibbon() {
       return `Wrap request submitted: ${turnCopy}.`;
     }
     return "";
-  }, [controlError, lastPlayerControl]);
+  }, [controlError, isOffline, lastPlayerControl]);
 
   const handleWrap = (turns) => {
     if (typeof sendPlayerControl !== "function") {
@@ -47,6 +51,9 @@ export function SessionMarkerRibbon() {
     }
 
     return () => {
+      if (isOffline) {
+        return;
+      }
       sendPlayerControl({ type: "wrap", turns }).catch(() => {});
     };
   };
@@ -77,7 +84,7 @@ export function SessionMarkerRibbon() {
           type="button"
           className="wrap-control-button"
           onClick={handleWrap(1)}
-          disabled={isSendingControl}
+          disabled={isSendingControl || isOffline}
           data-testid="wrap-control-1"
         >
           Wrap after 1 turn
@@ -86,7 +93,7 @@ export function SessionMarkerRibbon() {
           type="button"
           className="wrap-control-button"
           onClick={handleWrap(2)}
-          disabled={isSendingControl}
+          disabled={isSendingControl || isOffline}
           data-testid="wrap-control-2"
         >
           Wrap after 2 turns
@@ -95,7 +102,7 @@ export function SessionMarkerRibbon() {
           type="button"
           className="wrap-control-button"
           onClick={handleWrap(3)}
-          disabled={isSendingControl}
+          disabled={isSendingControl || isOffline}
           data-testid="wrap-control-3"
         >
           Wrap after 3 turns

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSessionContext } from "../context/SessionContext.jsx";
 
 export function ChatComposer() {
-  const { sendPlayerMessage, isSending } = useSessionContext();
+  const { sendPlayerMessage, isSending, isOffline, queuedIntents } = useSessionContext();
   const [draft, setDraft] = useState("");
 
   const handleSubmit = async (event) => {
@@ -16,6 +16,19 @@ export function ChatComposer() {
     setDraft("");
   };
 
+  const queuedCount = Array.isArray(queuedIntents)
+    ? queuedIntents.length
+    : Number.isFinite(queuedIntents)
+    ? Number(queuedIntents)
+    : 0;
+  const buttonLabel = isOffline
+    ? queuedCount > 0
+      ? "Queue Intent"
+      : "Queue Intent"
+    : isSending
+    ? "Sending…"
+    : "Send to GM";
+
   return (
     <form
       className="chat-composer"
@@ -23,6 +36,17 @@ export function ChatComposer() {
       aria-label="Send a narrative intent"
       data-testid="chat-composer"
     >
+      {isOffline ? (
+        <p
+          className="chat-offline-banner"
+          role="status"
+          aria-live="assertive"
+          data-testid="chat-offline-banner"
+        >
+          Connection degraded — intents will queue and send once online.
+          {queuedCount > 0 ? ` ${queuedCount} pending.` : ""}
+        </p>
+      ) : null}
       <label htmlFor="chat-input" className="visually-hidden">
         Describe your intent for the GM
       </label>
@@ -45,10 +69,9 @@ export function ChatComposer() {
           disabled={isSending}
           data-testid="chat-submit"
         >
-          {isSending ? "Sending…" : "Send to GM"}
+          {buttonLabel}
         </button>
       </div>
     </form>
   );
 }
-
