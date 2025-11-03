@@ -176,6 +176,17 @@ class SessionDirectory {
     const momentum = sessionState?.shards?.momentum?.data || {};
     const character = sessionState?.shards?.character?.data || {};
     const offlinePending = Boolean(sessionState?.pendingOfflineReconcile);
+    const offlineLastRun = sessionState?.lastOfflineWorkflowRun
+      ? {
+          status: sessionState.lastOfflineWorkflowRun.status || "unknown",
+          completedAt: sessionState.lastOfflineWorkflowRun.completedAt || null,
+          durationMs: sessionState.lastOfflineWorkflowRun.durationMs || null,
+          summaryVersion:
+            sessionState.lastOfflineWorkflowRun.summaryVersion !== undefined
+              ? sessionState.lastOfflineWorkflowRun.summaryVersion
+              : null
+        }
+      : null;
     const cadenceSummary = formatCadenceReminder(record.cadence);
 
     return {
@@ -195,6 +206,8 @@ class SessionDirectory {
       },
       characterName: character.name || "Frontier Runner",
       offlinePending,
+      offlineReconciledAt: sessionState?.offlineReconciledAt || null,
+      offlineLastRun,
       pendingWrapTurns:
         sessionState?.controls?.length > 0
           ? sessionState.controls[sessionState.controls.length - 1]

@@ -5,6 +5,8 @@ const { extractEntities } = require("./entityExtraction/entityExtractor");
 const { getDefaultLexicon } = require("./entityExtraction/lexicon");
 const publishing = require("./publishing");
 const storyConsolidation = require("./storyConsolidation");
+const { SessionClosureCoordinator } = require("./sessionClosureCoordinator");
+const { ClosureWorkflowOrchestrator } = require("./closureWorkflowOrchestrator");
 
 module.exports = {
   delta,
@@ -13,5 +15,9 @@ module.exports = {
     getDefaultLexicon
   },
   publishing,
-  storyConsolidation
+  storyConsolidation,
+  closure: {
+    SessionClosureCoordinator,
+    ClosureWorkflowOrchestrator
+  }
 };

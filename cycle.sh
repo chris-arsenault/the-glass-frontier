@@ -14,7 +14,7 @@ while true; do
   # Run Codex autonomous development
   COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and use result to plan and execute an autonomous development cycle"
   if (( sessionNum % 10 == 1 )); then
-    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are just starting the implementation phase of this project. Analyze GROOMING.md and follow the instructions in it in addition to AGENTS.md"
+    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. Do not complete any development work, only do backlog grooming. Analyze GROOMING.md and follow the instructions in it in addition to AGENTS.md"
   fi
   if (( sessionNum < 32 )); then
     COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. You are just starting the implementation phase of this project. Analyze GROOMING.md and follow the instructions in it in addition to AGENTS.md. This is the first grooming after the initial phase 0 research and design, so focus on creation of features and PBIs based on output of DESIGN/RESEARCH/NARRATIVE phases."

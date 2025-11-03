@@ -25,6 +25,7 @@ const {
   VerbCatalog
 } = require("../hub");
 const { SessionClosureCoordinator } = require("../offline/sessionClosureCoordinator");
+const { ClosureWorkflowOrchestrator } = require("../offline/closureWorkflowOrchestrator");
 
 const sessionMemory = new SessionMemoryFacade();
 const checkBus = new CheckBus();
@@ -70,13 +71,21 @@ if (process.env.HUB_VERB_DATABASE_URL) {
   }
 }
 
+const sessionClosureCoordinator = new SessionClosureCoordinator();
+const closureWorkflowOrchestrator = new ClosureWorkflowOrchestrator({
+  coordinator: sessionClosureCoordinator,
+  sessionMemory,
+  checkBus
+});
+closureWorkflowOrchestrator.start();
+
 const app = createApp({
   narrativeEngine,
   checkBus,
   broadcaster,
   sessionMemory,
   hubVerbService,
-  offlineCoordinator: new SessionClosureCoordinator()
+  offlineCoordinator: sessionClosureCoordinator
 });
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
@@ -151,6 +160,7 @@ server.listen(port, () => {
 
 function shutdown() {
   log("info", "Shutting down narrative engine server");
+  closureWorkflowOrchestrator.stop();
   if (hubVerbPool) {
     hubVerbPool.end().catch((error) => {
       log("warn", "Failed to close hub verb pool", { error: error.message });

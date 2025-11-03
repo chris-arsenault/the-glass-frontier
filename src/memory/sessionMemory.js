@@ -79,6 +79,23 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function toIsoTimestamp(value) {
+  if (!value) {
+    return new Date().toISOString();
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+
+  return new Date().toISOString();
+}
+
 function normalizeSafetyFlags(flags) {
   if (!Array.isArray(flags) || flags.length === 0) {
     return [];
@@ -147,6 +164,10 @@ class SessionMemoryFacade {
         lastAckCursor: 0,
         capabilityReferences: [],
         pendingOfflineReconcile: false,
+        offlineWorkflowHistory: [],
+        lastOfflineWorkflowRun: null,
+        offlineReconciledAt: null,
+        offlineReconcileAuditRef: null,
         turnSequence: 0,
         characterRevision: characterShard.revision
       };
@@ -542,6 +563,82 @@ class SessionMemoryFacade {
       sessionId,
       acknowledgedThrough: session.lastAckCursor,
       pending: session.pendingOfflineReconcile
+    };
+  }
+
+  recordOfflineWorkflowRun(sessionId, run = {}) {
+    const session = this.ensureSession(sessionId);
+    if (!Array.isArray(session.offlineWorkflowHistory)) {
+      session.offlineWorkflowHistory = [];
+    }
+
+    const entry = {
+      jobId: run.jobId || null,
+      auditRef: run.auditRef || null,
+      status: run.status || "completed",
+      startedAt: run.startedAt ? toIsoTimestamp(run.startedAt) : null,
+      completedAt: run.completedAt ? toIsoTimestamp(run.completedAt) : null,
+      durationMs:
+        typeof run.durationMs === "number" && run.durationMs >= 0 ? run.durationMs : null,
+      summaryVersion:
+        run.summaryVersion !== undefined ? run.summaryVersion : null,
+      mentionCount:
+        typeof run.mentionCount === "number" ? run.mentionCount : null,
+      deltaCount: typeof run.deltaCount === "number" ? run.deltaCount : null,
+      publishingBatchId: run.publishingBatchId || null,
+      error: run.error || null
+    };
+
+    session.offlineWorkflowHistory.push(entry);
+    if (session.offlineWorkflowHistory.length > 50) {
+      session.offlineWorkflowHistory.shift();
+    }
+
+    session.lastOfflineWorkflowRun = entry;
+    return entry;
+  }
+
+  markOfflineReconciled(sessionId, options = {}) {
+    const session = this.ensureSession(sessionId);
+    const reconciledAt = toIsoTimestamp(options.reconciledAt);
+    session.lastAckCursor = session.changeCursor;
+    session.pendingOfflineReconcile = false;
+    session.offlineReconciledAt = reconciledAt;
+    session.offlineReconcileAuditRef = options.auditRef || session.lastClosureAuditRef || null;
+
+    if (session.lastOfflineWorkflowRun) {
+      session.lastOfflineWorkflowRun.status = options.status || session.lastOfflineWorkflowRun.status || "completed";
+      session.lastOfflineWorkflowRun.completedAt =
+        session.lastOfflineWorkflowRun.completedAt || reconciledAt;
+      if (options.summaryVersion !== undefined) {
+        session.lastOfflineWorkflowRun.summaryVersion =
+          session.lastOfflineWorkflowRun.summaryVersion ?? options.summaryVersion;
+      }
+      session.lastOfflineWorkflowRun.durationMs =
+        typeof options.durationMs === "number"
+          ? options.durationMs
+          : session.lastOfflineWorkflowRun.durationMs;
+      session.lastOfflineWorkflowRun.reconciledAt = reconciledAt;
+    }
+
+    if (Array.isArray(session.offlineWorkflowHistory) && session.offlineWorkflowHistory.length > 0) {
+      const lastIndex = session.offlineWorkflowHistory.length - 1;
+      const last = session.offlineWorkflowHistory[lastIndex];
+      if (last === session.lastOfflineWorkflowRun) {
+        last.status = session.lastOfflineWorkflowRun.status;
+        last.completedAt = session.lastOfflineWorkflowRun.completedAt;
+        last.durationMs = session.lastOfflineWorkflowRun.durationMs;
+        last.reconciledAt = reconciledAt;
+        if (options.summaryVersion !== undefined) {
+          last.summaryVersion = last.summaryVersion ?? options.summaryVersion;
+        }
+      }
+    }
+
+    return {
+      sessionId,
+      reconciledAt,
+      pendingOfflineReconcile: session.pendingOfflineReconcile
     };
   }
 
