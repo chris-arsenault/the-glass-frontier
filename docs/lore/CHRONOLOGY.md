@@ -29,6 +29,7 @@
 - Each event includes a suggested `EntityID` string (e.g., `event.glassfall.detonation`, `era.tempered-accord`) for downstream pipelines; ensure MCP narrative entries reuse these IDs.
 - Attunement rites and Cooling Interludes should emit structured log markers so Temporal workflows can reconcile narrative downtime with mechanical resets.
 - Highlight Echo River discoveries as `lore.echo-river.*` entities to pre-populate NER models with historical references.
+- When timeline beats establish or retire resonance anchors, align identifiers with `RESONANCE_ANCHORS.md` to maintain canonical parity.
 
 ## References
 - Aligns with `REQUIREMENTS.md` prohibitions on unrestricted superpowers by embedding resonance charters in every era.

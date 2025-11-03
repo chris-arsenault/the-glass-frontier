@@ -41,3 +41,4 @@
 - Cross-reference `SYSTEM_DESIGN_SPEC.md` sections on Temporal check runners and moderation to keep resonance audits transparent.
 - Ensure any narrative invoking the Lattice links back to design artefacts advocating self-hosted search (Typesense/Meilisearch) so lore remains consistent with technology choices.
 - Document attunement rituals in backlog notes whenever scenes enable new magitech tiers, preserving audit trails for admins reviewing power-creep risks.
+- Pair every scene that introduces an anchor with identifiers from `RESONANCE_ANCHORS.md` so geography sessions can inherit consistent resonance scaffolding.

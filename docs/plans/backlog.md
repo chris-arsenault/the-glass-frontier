@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Last updated for Session 21 (narrative kickoff).
+Last updated for Session 22 (resonance anchor corpus).
 
 | Feature | Item | Status | Priority | Tags | Notes |
 |---------|------|--------|----------|------|-------|
@@ -33,3 +33,4 @@ Last updated for Session 21 (narrative kickoff).
 | IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | phase:implementation, cycle:6, discipline:platform, discipline:search | Implement incremental indexing, drift telemetry, and rebuild tooling for self-hosted lore/news search; references DES-16 risks. |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-01: Hub Gateway & Command Parser Skeleton | todo | P1 | phase:implementation, cycle:6, discipline:multiplayer, discipline:systems | Build uWebSockets gateway, declarative verb parser, and Redis/CouchDB logging to bootstrap hub interactions; coordinates with DES-PVP-01 and DES-BENCH-01 benchmarks. |
 | NAR-CORE: Worldbuilding Foundations | NAR-21: Cosmology & Historical Timeline Foundations | done | P0 | phase:narrative, cycle:6, discipline:lore, session:21 | `docs/lore/COSMOLOGY.md`, `docs/lore/CHRONOLOGY.md`; MCP narrative element `54476f33-9ec3-40f9-8b8b-08bfe1e1d20c`, lore entry `6ef78c8c-125e-46c2-9de1-302fd344e62e`; consistency check returned no direct matches—document follow-up architecture alignment. |
+| NAR-CORE: Worldbuilding Foundations | NAR-22: Resonance Anchors & Attunement Corpus | done | P0 | phase:narrative, cycle:6, discipline:lore, session:22 | `docs/lore/RESONANCE_ANCHORS.md`; MCP narrative element `72afd9a8-bf5c-4a30-9dce-4d9984d91a97`, lore entry `ff63e3b0-3386-4096-883f-fc5696b72dc7`; consistency check aligned with `temporal-lore-publishing-cadence` pattern—no conflicts detected. |
