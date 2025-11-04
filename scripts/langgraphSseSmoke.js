@@ -1,5 +1,7 @@
 "use strict";
 
+const fs = require("fs");
+const path = require("path");
 const { randomUUID } = require("crypto");
 
 function parseArgs(argv) {
@@ -11,7 +13,8 @@ function parseArgs(argv) {
       process.env.LANGGRAPH_SMOKE_SESSION_TITLE || "LangGraph SSE Smoke Validation",
     sessionId: process.env.LANGGRAPH_SMOKE_SESSION_ID || `langgraph-sse-${Date.now()}`,
     timeoutMs: Number.parseInt(process.env.LANGGRAPH_SMOKE_TIMEOUT_MS || "", 10) || 10000,
-    skipAdminAlert: process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT === "true"
+    skipAdminAlert: process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT === "true",
+    reportPath: process.env.LANGGRAPH_SMOKE_REPORT_PATH || ""
   };
 
   const config = { ...defaults };
@@ -39,6 +42,9 @@ function parseArgs(argv) {
         break;
       case "--skip-admin-alert":
         config.skipAdminAlert = true;
+        break;
+      case "--report":
+        config.reportPath = argv[++index] || config.reportPath;
         break;
       default:
         if (arg && arg.startsWith("--")) {
@@ -270,15 +276,51 @@ function logStep(message) {
   console.log(`[sse-smoke] ${message}`);
 }
 
-async function run() {
+function writeReport(reportPath, summary) {
+  if (!reportPath) {
+    return;
+  }
+
+  try {
+    const directory = path.dirname(reportPath);
+    if (directory && directory !== ".") {
+      fs.mkdirSync(directory, { recursive: true });
+    }
+    fs.writeFileSync(reportPath, JSON.stringify(summary, null, 2));
+    logStep(`Report written to ${reportPath}`);
+  } catch (error) {
+    console.warn(`[sse-smoke] Failed to write report: ${error.message}`);
+  }
+}
+
+async function run(argv = process.argv) {
   if (typeof fetch !== "function") {
     throw new Error("Global fetch is unavailable. Run this script with Node.js 18 or newer.");
   }
 
-  const config = parseArgs(process.argv);
+  const config = parseArgs(argv);
+  const startTime = Date.now();
+  const summary = {
+    runId: randomUUID(),
+    startedAt: new Date(startTime).toISOString(),
+    baseUrl: config.baseUrl,
+    config: {
+      timeoutMs: config.timeoutMs,
+      skipAdminAlert: config.skipAdminAlert,
+      reportPath: config.reportPath || null
+    },
+    metrics: {},
+    eventCounts: {}
+  };
+
   logStep(`Starting SSE smoke against ${config.baseUrl}`);
 
   const auth = await login(config.baseUrl, config.adminEmail, config.adminPassword);
+  summary.account = {
+    id: auth?.account?.id || null,
+    email: auth?.account?.email || config.adminEmail || null,
+    role: auth?.account?.role || null
+  };
   logStep(`Authenticated as ${auth?.account?.email || config.adminEmail}`);
 
   const session = await createSession(
@@ -287,12 +329,21 @@ async function run() {
     config.sessionId,
     config.sessionTitle
   );
+  summary.session = {
+    id: session.sessionId,
+    title: session.title || config.sessionTitle,
+    createdAt: session.createdAt || null
+  };
   logStep(`Created session ${session.sessionId}`);
 
-  const stream = await openSseStream(config.baseUrl, session.sessionId, auth.token);
-  logStep("SSE stream connected");
-
+  let stream;
   try {
+    stream = await openSseStream(config.baseUrl, session.sessionId, auth.token);
+    summary.stream = {
+      connectedAt: new Date().toISOString()
+    };
+    logStep("SSE stream connected");
+
     const checkStart = Date.now();
     const checkResponse = await triggerDebugCheck(config.baseUrl, auth.token, session.sessionId, {
       move: "langgraph-smoke-probe",
@@ -300,6 +351,11 @@ async function run() {
       statValue: 2
     });
     const checkId = checkResponse?.check?.id;
+    summary.metrics.checkDispatch = {
+      id: checkId || null,
+      requestedAt: new Date(checkStart).toISOString(),
+      move: checkResponse?.check?.move || "unknown"
+    };
     logStep(`Dispatched debug check ${checkId}`);
 
     const resolvedEvent = await stream.waitFor(
@@ -307,14 +363,33 @@ async function run() {
       config.timeoutMs
     );
     const resolvedLatency = (resolvedEvent.__receivedAt || Date.now()) - checkStart;
+    summary.metrics.checkResolution = {
+      id: checkId || null,
+      tier: resolvedEvent.payload?.tier || null,
+      latencyMs: resolvedLatency
+    };
     logStep(
       `Received check resolution (${resolvedEvent.payload?.tier}) in ${resolvedLatency}ms`
     );
 
-    await stream
-      .waitFor((event) => event.type === "overlay.characterSync", config.timeoutMs)
-      .then(() => logStep("Overlay snapshot sync received"))
-      .catch(() => logStep("Overlay snapshot not observed within timeout"));
+    try {
+      const overlayEvent = await stream.waitFor(
+        (event) => event.type === "overlay.characterSync",
+        config.timeoutMs
+      );
+      const overlayLatency =
+        (overlayEvent.__receivedAt || Date.now()) - checkStart;
+      summary.metrics.overlaySync = {
+        observed: true,
+        latencyMs: overlayLatency
+      };
+      logStep("Overlay snapshot sync received");
+    } catch {
+      summary.metrics.overlaySync = {
+        observed: false
+      };
+      logStep("Overlay snapshot not observed within timeout");
+    }
 
     if (!config.skipAdminAlert) {
       const safetyStart = Date.now();
@@ -330,25 +405,49 @@ async function run() {
         }
       );
       const safetyCheckId = safetyCheck?.check?.id;
+      summary.metrics.safetyCheck = {
+        id: safetyCheckId || null,
+        requestedAt: new Date(safetyStart).toISOString(),
+        move: safetyCheck?.check?.move || "unknown"
+      };
       logStep(`Dispatched safety-flagged debug check ${safetyCheckId}`);
 
-      await stream
-        .waitFor(
+      try {
+        const vetoEvent = await stream.waitFor(
           (event) => event.type === "event.checkVetoed" && event.payload?.id === safetyCheckId,
           config.timeoutMs
-        )
-        .then(() => logStep("Check veto event received"))
-        .catch(() => logStep("Check veto event not observed within timeout"));
+        );
+        summary.metrics.safetyVeto = {
+          observed: true,
+          latencyMs: (vetoEvent.__receivedAt || Date.now()) - safetyStart
+        };
+        logStep("Check veto event received");
+      } catch {
+        summary.metrics.safetyVeto = {
+          observed: false
+        };
+        logStep("Check veto event not observed within timeout");
+      }
 
       const alertEvent = await stream.waitFor(
         (event) => event.type === "admin.alert" && event.payload?.data?.checkId === safetyCheckId,
         config.timeoutMs
       );
       const alertLatency = (alertEvent.__receivedAt || Date.now()) - safetyStart;
+      summary.metrics.adminAlert = {
+        observed: true,
+        latencyMs: alertLatency,
+        severity: alertEvent.payload?.severity || null,
+        reason: alertEvent.payload?.reason || null
+      };
       logStep(
         `Admin alert ${alertEvent.payload?.reason} received in ${alertLatency}ms (severity ${alertEvent.payload?.severity})`
       );
     } else {
+      summary.metrics.adminAlert = {
+        observed: false,
+        skipped: true
+      };
       logStep("Skipping admin alert validation");
     }
 
@@ -361,28 +460,78 @@ async function run() {
       config.timeoutMs
     );
     const closureLatency = (closedEvent.__receivedAt || Date.now()) - closureStart;
+    summary.metrics.sessionClosure = {
+      latencyMs: closureLatency
+    };
     logStep(`Session closed event received in ${closureLatency}ms`);
 
-    await stream
-      .waitFor(
+    try {
+      const queueEvent = await stream.waitFor(
         (event) => event.type === "offline.sessionClosure.queued",
         config.timeoutMs
-      )
-      .then((event) => {
-        const queuedLatency = (event.__receivedAt || Date.now()) - closureStart;
-        logStep(
-          `Offline workflow queued (job ${event.payload?.jobId || "unknown"}) in ${queuedLatency}ms`
-        );
-      })
-      .catch(() => logStep("Offline queue event not observed within timeout"));
-  } finally {
-    stream.close();
-  }
+      );
+      const queuedLatency = (queueEvent.__receivedAt || Date.now()) - closureStart;
+      summary.metrics.offlineQueue = {
+        observed: true,
+        latencyMs: queuedLatency,
+        jobId: queueEvent.payload?.jobId || null
+      };
+      logStep(
+        `Offline workflow queued (job ${queueEvent.payload?.jobId || "unknown"}) in ${queuedLatency}ms`
+      );
+    } catch {
+      summary.metrics.offlineQueue = {
+        observed: false
+      };
+      logStep("Offline queue event not observed within timeout");
+    }
 
-  logStep("SSE smoke completed successfully");
+    summary.success = true;
+    logStep("SSE smoke completed successfully");
+    return summary;
+  } catch (error) {
+    summary.success = false;
+    summary.error = { message: error.message };
+    throw Object.assign(error, { summary });
+  } finally {
+    if (stream) {
+      summary.eventCounts = stream.history.reduce((accumulator, event) => {
+        const type = event?.type || "unknown";
+        accumulator[type] = (accumulator[type] || 0) + 1;
+        return accumulator;
+      }, {});
+      stream.close();
+    } else {
+      summary.eventCounts = {};
+    }
+    summary.completedAt = new Date().toISOString();
+    summary.durationMs = Date.now() - startTime;
+  }
 }
 
-run().catch((error) => {
-  console.error(`[sse-smoke] Error: ${error.message}`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  run()
+    .then((summary) => {
+      writeReport(summary.config.reportPath, summary);
+    })
+    .catch((error) => {
+      const summary = error.summary;
+      if (summary) {
+        writeReport(summary.config?.reportPath, summary);
+      }
+      console.error(`[sse-smoke] Error: ${error.message}`);
+      process.exitCode = 1;
+    });
+}
+
+module.exports = {
+  parseArgs,
+  createUrl,
+  login,
+  createSession,
+  openSseStream,
+  triggerDebugCheck,
+  closeSession,
+  run,
+  writeReport
+};
