@@ -1,10 +1,10 @@
 {
-  "observedAt": "2025-11-04T06:18:31.996Z",
+  "observedAt": "2025-11-04T06:37:13.142Z",
   "latencyMs": 2,
   "reason": "prohibited-capability",
   "severity": "high",
   "seeded": false,
-  "runId": "ee3a8b5e-944f-4969-af16-17a24fbc0162",
-  "sessionId": "langgraph-sse-1762237111895",
-  "recordedAt": "2025-11-04T06:18:32.000Z"
+  "runId": "227f0696-fc31-45c7-8082-06d3c479e826",
+  "sessionId": "langgraph-sse-1762238233041",
+  "recordedAt": "2025-11-04T06:37:13.146Z"
 }

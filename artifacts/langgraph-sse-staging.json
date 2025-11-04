@@ -1,32 +1,32 @@
 {
-  "runId": "ee3a8b5e-944f-4969-af16-17a24fbc0162",
-  "startedAt": "2025-11-04T06:18:31.895Z",
+  "runId": "227f0696-fc31-45c7-8082-06d3c479e826",
+  "startedAt": "2025-11-04T06:37:13.041Z",
   "baseUrl": "https://stage.glass-frontier.local/api",
   "config": {
     "timeoutMs": 10000,
     "skipAdminAlert": false,
-    "seedAdminAlert": true,
+    "seedAdminAlert": false,
     "reportPath": "artifacts/langgraph-sse-staging.json",
     "skipSse": false,
     "autoAdminAlert": true,
     "adminAlertObservationPath": "/home/tsonu/src/the-glass-frontier/artifacts/admin-alert-observations.json",
     "adminAlertObservationWindowMs": 21600000,
     "adminAlertAutoDecision": {
-      "lastObservedAt": null,
-      "lastSeeded": null,
-      "withinWindow": false,
+      "lastObservedAt": "2025-11-04T06:18:31.996Z",
+      "lastSeeded": false,
+      "withinWindow": true,
       "observationPath": "/home/tsonu/src/the-glass-frontier/artifacts/admin-alert-observations.json"
     }
   },
   "metrics": {
     "checkDispatch": {
-      "id": "a250ff0b-d500-47da-8434-7a3644768bf2",
-      "requestedAt": "2025-11-04T06:18:31.989Z",
+      "id": "7625fd0f-ee28-4d8c-b77a-aefab896ef54",
+      "requestedAt": "2025-11-04T06:37:13.135Z",
       "move": "langgraph-smoke-probe"
     },
     "checkResolution": {
-      "id": "a250ff0b-d500-47da-8434-7a3644768bf2",
-      "tier": "full-success",
+      "id": "7625fd0f-ee28-4d8c-b77a-aefab896ef54",
+      "tier": "partial-success",
       "latencyMs": 4
     },
     "overlaySync": {
@@ -34,8 +34,8 @@
       "latencyMs": 5
     },
     "safetyCheck": {
-      "id": "1cb73d30-78ba-4049-9371-d4f4e4d49562",
-      "requestedAt": "2025-11-04T06:18:31.994Z",
+      "id": "3692ca6d-1b5a-4e50-b90f-e18ebe02fdca",
+      "requestedAt": "2025-11-04T06:37:13.140Z",
       "move": "langgraph-smoke-safety"
     },
     "safetyVeto": {
@@ -48,8 +48,8 @@
       "severity": "high",
       "reason": "prohibited-capability",
       "seeded": false,
-      "checkId": "1cb73d30-78ba-4049-9371-d4f4e4d49562",
-      "observedAt": "2025-11-04T06:18:31.996Z"
+      "checkId": "3692ca6d-1b5a-4e50-b90f-e18ebe02fdca",
+      "observedAt": "2025-11-04T06:37:13.142Z"
     },
     "sessionClosure": {
       "latencyMs": 3
@@ -57,7 +57,7 @@
     "offlineQueue": {
       "observed": true,
       "latencyMs": 3,
-      "jobId": "21924023-9153-4766-8798-fe84e05b46d1"
+      "jobId": "34c0c384-ee2f-4b71-b9e7-5c4c3af94a55"
     }
   },
   "eventCounts": {
@@ -73,19 +73,19 @@
     "session.closed": 1
   },
   "account": {
-    "id": "704c0dde-6562-4d52-89b2-427dbff29f67",
+    "id": "548c0ba1-0efd-442a-ace6-c343ece12d5f",
     "email": "admin@glassfrontier",
     "role": null
   },
   "session": {
-    "id": "langgraph-sse-1762237111895",
+    "id": "langgraph-sse-1762238233041",
     "title": "LangGraph SSE Smoke Validation",
-    "createdAt": "2025-11-04T06:18:31.982Z"
+    "createdAt": "2025-11-04T06:37:13.128Z"
   },
   "stream": {
-    "connectedAt": "2025-11-04T06:18:31.989Z"
+    "connectedAt": "2025-11-04T06:37:13.135Z"
   },
   "success": true,
-  "completedAt": "2025-11-04T06:18:32.000Z",
+  "completedAt": "2025-11-04T06:37:13.146Z",
   "durationMs": 105
 }

@@ -14,15 +14,15 @@ LangGraph stage parity is restored for success check streaming. `npm run stage:s
 
 **Artefact:** `artifacts/langgraph-sse-staging.json` (run `cat artifacts/langgraph-sse-staging.json` for raw capture, run `npm run stage:smoke` to regenerate).
 
-## Admin Alert Observation Snapshot — 2025-11-04T06:18Z
-Latest `npm run stage:alerts` output (2025-11-04T06:19:12Z UTC) confirms that staging has emitted a live admin alert. The CLI recommends disabling fallback seeding now that telemetry is within the six-hour freshness window.
+## Admin Alert Observation Snapshot — 2025-11-04T06:37Z
+Latest `npm run stage:alerts` output (2025-11-04T06:37:48Z UTC) confirms that staging has emitted a live admin alert. The CLI recommends disabling fallback seeding now that telemetry is within the six-hour freshness window.
 
 ```
 Admin Alert Observation Summary
 --------------------------------
 Source: /home/tsonu/src/the-glass-frontier/artifacts/admin-alert-observations.json
-Observed at: 2025-11-04T06:18:31.996Z
-Age: 40s
+Observed at: 2025-11-04T06:37:13.142Z
+Age: 30s
 Latency: 2ms
 Seeded fallback: no
 Within window (6h 0m): yes
@@ -52,3 +52,4 @@ Status: ready
 - Disable the fallback seeding flag in subsequent smoke announcements so stakeholders see live admin alert telemetry while it remains within the six-hour freshness window.
 - `npm run stage:smoke` records the latest admin alert observation in `artifacts/admin-alert-observations.json` and flips the seeding recommendation automatically; reference the artefact before future runs.
 - Run `npm run stage:alerts` after each smoke pass to publish the current admin alert status (live vs seeded, latency, window freshness) directly in stakeholder updates.
+- Ran `npm run offline:qa -- --input artifacts/vertical-slice/qa-batch-gamma.json --simulate-search-drift` on 2025-11-04T06:37Z to capture retry queue summaries for DES-16 coverage.

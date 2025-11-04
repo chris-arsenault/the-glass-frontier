@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-gamma",
-  "generatedAt": "2025-11-04T06:30:11.546Z",
+  "generatedAt": "2025-11-04T06:37:47.973Z",
   "summary": {
     "sessionId": "qa-batch-gamma",
     "version": 1,
@@ -152,7 +152,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T06:30:11.541Z",
+    "generatedAt": "2025-11-04T06:37:47.968Z",
     "statistics": {
       "turnCount": 6,
       "sceneCount": 6,
@@ -167,7 +167,7 @@
     "mentionCount": 8,
     "mentions": [
       {
-        "mentionId": "f6fabe97-1143-4ba1-b81e-97fd0b8cbabb",
+        "mentionId": "ff8d81b5-739d-4868-aca9-7dffb5a5be30",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -199,7 +199,7 @@
         }
       },
       {
-        "mentionId": "f8eeb47e-1d19-4d4d-9665-282430b2eb1e",
+        "mentionId": "abd3367f-2654-4b4d-8c77-9596f859831c",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -231,7 +231,7 @@
         }
       },
       {
-        "mentionId": "5f97f636-f8ba-41a3-9319-2462c9b1b650",
+        "mentionId": "2d07de24-e530-4e70-b017-6eb9fe6f3977",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -263,7 +263,7 @@
         }
       },
       {
-        "mentionId": "264a1f21-bbc2-4301-8718-f1e6e4ff499d",
+        "mentionId": "e51ab859-eb24-4d84-ac4c-8525899e79e6",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -295,7 +295,7 @@
         }
       },
       {
-        "mentionId": "5072386f-263f-4d94-832d-b99dc8752662",
+        "mentionId": "3baf7a68-9939-4e31-a946-0aa29442f183",
         "entityId": "region.kyther-range",
         "entityType": "region",
         "canonicalName": "Kyther Range Vault",
@@ -322,7 +322,7 @@
         }
       },
       {
-        "mentionId": "53bb1387-917c-4a08-953b-ec7c194bac91",
+        "mentionId": "d70b8fb0-340f-4136-a754-479bbb1a7fa1",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -352,7 +352,7 @@
         }
       },
       {
-        "mentionId": "13c53dc6-d400-4126-9b66-646260de4f97",
+        "mentionId": "93458690-69be-4677-942f-b27f78058971",
         "entityId": "region.auric-steppe",
         "entityType": "region",
         "canonicalName": "Auric Steppe Corridor",
@@ -382,7 +382,7 @@
         }
       },
       {
-        "mentionId": "3bf3d9ba-095b-4031-abfa-5f55b23b3d89",
+        "mentionId": "220c5ddf-acc6-4237-8345-7975f9be420d",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -417,7 +417,7 @@
     "deltaCount": 8,
     "deltas": [
       {
-        "deltaId": "70bbc33b-f3df-4f72-ad66-fbc0c62a7ab9",
+        "deltaId": "8306abbe-34ab-4dad-accc-f466a9393e26",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -452,10 +452,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "a9f6d1cd-fae5-4a84-8519-a82c652bc090",
+        "deltaId": "9deb28ed-d0c3-4cef-a47b-cdeefb3173d4",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -488,10 +488,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "5ed108ad-846a-4161-8e97-6f1db5ba9328",
+        "deltaId": "7a0bfd2e-5b8c-4a01-857c-a31d3795c722",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -524,10 +524,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "30d87b18-d567-4296-b6b0-288548b0c135",
+        "deltaId": "bf90e134-eb72-49e5-b912-a7ab65cfab9c",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -562,10 +562,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "f80bab5c-43c3-4ee1-8e9c-375cc9da2cd2",
+        "deltaId": "b5bbfc58-2088-449d-8795-c9e9dd4a214a",
         "entityId": "region.kyther-range",
         "entityType": "region",
         "canonicalName": "Kyther Range Vault",
@@ -593,10 +593,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "5ff14d4c-d2e1-4aef-b993-414fc0350f79",
+        "deltaId": "736360cf-5253-4c4b-aa0c-f82a3e744f5f",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -638,10 +638,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "ac2d27e9-793d-4610-ae18-c3f1a3ee4864",
+        "deltaId": "254c9f96-b2dd-46fc-ac3c-5fb2fa493d7a",
         "entityId": "region.auric-steppe",
         "entityType": "region",
         "canonicalName": "Auric Steppe Corridor",
@@ -683,10 +683,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       },
       {
-        "deltaId": "be00b6f4-639f-4343-b08e-ae24a86215f3",
+        "deltaId": "0f3a81f1-3708-424b-8c00-7280aed55aad",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -728,7 +728,7 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:30:11.545Z"
+        "createdAt": "2025-11-04T06:37:47.972Z"
       }
     ]
   },
@@ -761,13 +761,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-gamma",
-      "stateId": "7abf5413-7f4e-4a2c-b251-4bd596957d86",
-      "createdAt": "2025-11-04T06:30:11.546Z",
-      "updatedAt": "2025-11-04T06:30:11.546Z",
+      "stateId": "a33d5b90-ee1f-49a9-9577-d45c78b62e31",
+      "createdAt": "2025-11-04T06:37:47.972Z",
+      "updatedAt": "2025-11-04T06:37:47.973Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T06:30:11.546Z",
+          "occurredAt": "2025-11-04T06:37:47.972Z",
           "payload": {
             "sessionClosedAt": "2025-11-05T06:15:00.000Z",
             "moderationStartAt": "2025-11-05T06:30:00.000Z",
@@ -777,7 +777,7 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T06:30:11.546Z",
+          "occurredAt": "2025-11-04T06:37:47.973Z",
           "payload": {
             "batchId": "qa-batch-gamma-batch-0",
             "status": "awaiting_moderation",
