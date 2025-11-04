@@ -104,6 +104,15 @@ function detectControlChanges(mentionEntry, sentence, lexicon) {
   const loweredSentence = sentence.toLowerCase();
   const addTargets = new Set();
   const removeTargets = new Set();
+  const mentionAliases = [
+    mentionEntry.canonicalName,
+    ...(Array.isArray(mentionEntry.aliases) ? mentionEntry.aliases : [])
+  ]
+    .filter(Boolean)
+    .map((alias) => alias.trim());
+  const mentionSeizurePatterns = mentionAliases.map(
+    (alias) => new RegExp(`\\bfrom\\s+(?:the\\s+)?${escapeRegExp(alias)}\\b`, "i")
+  );
 
   lexicon.forEach((candidate) => {
     if (candidate.entityType !== "region") {
@@ -126,6 +135,11 @@ function detectControlChanges(mentionEntry, sentence, lexicon) {
       );
 
       if (gainKeyword && !lossKeyword) {
+        const isSeizureTarget = mentionSeizurePatterns.some((pattern) => pattern.test(sentence));
+        if (isSeizureTarget) {
+          removeTargets.add(candidate.entityId);
+          return;
+        }
         addTargets.add(candidate.entityId);
       } else if (lossKeyword && !gainKeyword) {
         removeTargets.add(candidate.entityId);

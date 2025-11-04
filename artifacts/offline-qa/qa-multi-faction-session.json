@@ -1,0 +1,81 @@
+{
+  "sessionId": "qa-multi-faction-smoke",
+  "closureJob": {
+    "auditRef": "qa-multi-faction-smoke:closure",
+    "reason": "qa.multi-faction",
+    "closedAt": "2025-11-04T05:00:00.000Z",
+    "trigger": "qa_script",
+    "pendingChecks": 0
+  },
+  "sessionState": {
+    "sessionId": "qa-multi-faction-smoke",
+    "closedAt": "2025-11-04T05:00:00.000Z",
+    "closureReason": "qa.multi-faction",
+    "lastClosureAuditRef": "qa-multi-faction-smoke:closure",
+    "character": {
+      "name": "Avery Glass",
+      "pronouns": "they/them",
+      "archetype": "Wayfarer Archivist",
+      "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+      "tags": [
+        "region.auric-steppe",
+        "faction.prismwell-kite-guild",
+        "anchor.prism-spire.auric-step"
+      ]
+    },
+    "location": {
+      "region": "Auric Steppe Corridor",
+      "anchorId": "anchor.prism-spire.auric-step",
+      "locale": "Eclipse Relay Hub",
+      "atmosphere": "Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays."
+    },
+    "momentum": {
+      "current": 1,
+      "floor": -2,
+      "ceiling": 3,
+      "baseline": 0,
+      "history": []
+    },
+    "changeFeed": [
+      {
+        "id": "change-qa-1",
+        "timestamp": "2025-11-04T05:00:05.000Z",
+        "shard": "transcript",
+        "safetyFlags": [
+          "prohibited-capability"
+        ],
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrum-bloom-array",
+            "severity": "critical"
+          }
+        ],
+        "reason": "Echo Ledger Conclave engaged Spectrum Bloom Flux Array.",
+        "metadata": {}
+      }
+    ],
+    "pendingOfflineReconcile": false
+  },
+  "transcript": [
+    {
+      "turnId": "turn-1",
+      "speaker": "gm",
+      "text": "Tempered Accord Custodial Council seized the Auric Steppe Corridor from the Prismwell Kite Guild amid a sudden tactical surge."
+    },
+    {
+      "turnId": "turn-2",
+      "speaker": "gm",
+      "text": "Prismwell Kite Guild lost their hold on the Auric Steppe, retreating toward the Sable Crescent Basin."
+    },
+    {
+      "turnId": "turn-3",
+      "speaker": "gm",
+      "text": "Echo Ledger Conclave activates the Spectrum Bloom Flux Array, a critical prohibited capability that threatens the Kyther Range."
+    },
+    {
+      "turnId": "turn-4",
+      "speaker": "gm",
+      "text": "Sable Crescent Basin is under serious threat while the Custodial Council stabilised the Kyther Range Vault."
+    }
+  ]
+}
