@@ -449,6 +449,37 @@ describe("Client shell components", () => {
             { actorId: "actor-alpha", role: "challenger" },
             { actorId: "actor-beta", role: "defender" }
           ]
+        },
+        {
+          contestId: "contest-43",
+          contestKey: "verb.sparringMatch:actor-alpha::actor-beta",
+          status: "resolved",
+          label: "Sparring Match",
+          outcome: { tier: "success", summary: "Alpha edges out Beta." },
+          sharedComplications: [
+            { tag: "crowd-panics", summary: "Spectators gasp and shuffle back." }
+          ],
+          participants: [
+            {
+              actorId: "actor-alpha",
+              role: "challenger",
+              result: {
+                tier: "success",
+                summary: "Claims the initiative.",
+                momentumDelta: 1
+              }
+            },
+            {
+              actorId: "actor-beta",
+              role: "defender",
+              result: {
+                tier: "miss",
+                summary: "Stumbles and yields ground.",
+                momentumDelta: -1,
+                complications: [{ tag: "bruised", summary: "Bruised pride." }]
+              }
+            }
+          ]
         }
       ]
     });
@@ -476,6 +507,13 @@ describe("Client shell components", () => {
     expect(
       screen.getByText((content) => content.includes("actor-alpha") && content.includes("actor-beta"))
     ).toBeInTheDocument();
+    expect(screen.getByText(/Outcome: Success — Alpha edges out Beta\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Success — Claims the initiative\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Miss — Stumbles and yields ground\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Momentum shift: \+1/)).toBeInTheDocument();
+    expect(screen.getByText(/Momentum shift: -1/)).toBeInTheDocument();
+    expect(screen.getByText(/#crowd-panics Spectators gasp and shuffle back\./i)).toBeInTheDocument();
+    expect(screen.getByText(/#bruised Bruised pride\./i)).toBeInTheDocument();
   });
 
   test("SessionMarkerRibbon wrap controls dispatch player control intents", async () => {

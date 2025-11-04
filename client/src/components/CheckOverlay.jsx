@@ -60,6 +60,70 @@ function formatContestParticipants(participants = []) {
     .join(" vs ");
 }
 
+function describeContestOutcome(outcome) {
+  if (!outcome) {
+    return "Outcome pending";
+  }
+  if (typeof outcome === "string") {
+    return outcome;
+  }
+  const tier = outcome.tier ? formatContestStatus(outcome.tier) : null;
+  const summary = outcome.summary || outcome.description || outcome.detail || null;
+  if (tier && summary) {
+    return `${tier} — ${summary}`;
+  }
+  if (tier) {
+    return tier;
+  }
+  return summary || "Outcome pending";
+}
+
+function describeContestComplication(complication) {
+  if (!complication) {
+    return null;
+  }
+  if (typeof complication === "string") {
+    return complication;
+  }
+  const parts = [];
+  if (complication.tag) {
+    parts.push(`#${complication.tag}`);
+  }
+  if (complication.summary || complication.description) {
+    parts.push(complication.summary || complication.description);
+  }
+  if (complication.severity) {
+    parts.push(`(${formatContestStatus(complication.severity)})`);
+  }
+  return parts.join(" ");
+}
+
+function describeParticipantResult(result) {
+  if (!result) {
+    return null;
+  }
+  if (typeof result === "string") {
+    return result;
+  }
+  const tier = result.tier ? formatContestStatus(result.tier) : null;
+  const summary = result.summary || result.description || null;
+  if (tier && summary) {
+    return `${tier} — ${summary}`;
+  }
+  if (tier) {
+    return tier;
+  }
+  return summary;
+}
+
+function formatMomentumDelta(delta) {
+  if (typeof delta !== "number") {
+    return null;
+  }
+  const prefix = delta >= 0 ? "+" : "";
+  return `${prefix}${delta}`;
+}
+
 export function CheckOverlay() {
   const { activeCheck, recentChecks, hubContests = [] } = useSessionContext();
   const latestResult = useMemo(() => recentChecks.slice(-1)[0] || null, [recentChecks]);
@@ -224,29 +288,112 @@ export function CheckOverlay() {
         <h3 className="overlay-check-subheading">Contested encounters</h3>
         {contestEntries.length > 0 ? (
           <ul className="overlay-contest-list" data-testid="overlay-contest-list">
-            {contestEntries.map((contest, index) => (
-              <li
-                key={
-                  contest.contestId ||
-                  contest.contestKey ||
-                  `${contest.label || "contest"}-${index}`
-                }
-                className="overlay-contest-item"
-              >
-                <p className="overlay-contest-title">
-                  {contest.label || "Contested Move"} · {formatContestStatus(contest.status)}
-                </p>
-                <p className="overlay-contest-participants">
-                  {formatContestParticipants(contest.participants)}
-                </p>
-                {contest.status === "arming" ? (
-                  <p className="overlay-contest-meta">Awaiting counter action…</p>
-                ) : null}
-                {contest.status === "resolving" && contest.contestId ? (
-                  <p className="overlay-contest-meta">Contest ID: {contest.contestId}</p>
-                ) : null}
-              </li>
-            ))}
+            {contestEntries.map((contest, index) => {
+              const resolved = contest.status === "resolved";
+              const complications = Array.isArray(contest.sharedComplications)
+                ? contest.sharedComplications
+                : [];
+              const participants = Array.isArray(contest.participants)
+                ? contest.participants
+                : [];
+              return (
+                <li
+                  key={
+                    contest.contestId ||
+                    contest.contestKey ||
+                    `${contest.label || "contest"}-${index}`
+                  }
+                  className="overlay-contest-item"
+                >
+                  <p className="overlay-contest-title">
+                    {contest.label || "Contested Move"} · {formatContestStatus(contest.status)}
+                  </p>
+                  <p className="overlay-contest-participants">
+                    {formatContestParticipants(participants)}
+                  </p>
+                  {contest.status === "arming" ? (
+                    <p className="overlay-contest-meta">Awaiting counter action…</p>
+                  ) : null}
+                  {contest.status === "resolving" && contest.contestId ? (
+                    <p className="overlay-contest-meta">Contest ID: {contest.contestId}</p>
+                  ) : null}
+                  {resolved ? (
+                    <div className="overlay-contest-resolution">
+                      <p className="overlay-contest-meta overlay-contest-outcome">
+                        Outcome: {describeContestOutcome(contest.outcome)}
+                      </p>
+                      {complications.length > 0 ? (
+                        <ul className="overlay-contest-complications">
+                          {complications.map((entry, complicationIndex) => {
+                            const text = describeContestComplication(entry);
+                            if (!text) {
+                              return null;
+                            }
+                            return (
+                              <li
+                                key={`complication-${contest.contestId || index}-${complicationIndex}`}
+                                className="overlay-contest-complication"
+                              >
+                                {text}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+                      {participants.map((participant, participantIndex) => {
+                        const description = describeParticipantResult(participant.result);
+                        const momentumShift = formatMomentumDelta(
+                          participant.result?.momentumDelta
+                        );
+                        const participantComplications = Array.isArray(
+                          participant.result?.complications
+                        )
+                          ? participant.result.complications
+                          : [];
+                        return (
+                          <div
+                            key={`${contest.contestId || contest.contestKey || "contest"}:${
+                              participant.actorId || "unknown"
+                            }`}
+                            className="overlay-contest-participant-result"
+                          >
+                            <p className="overlay-contest-participant-name">
+                              {participant.actorId || "Unknown"}{" "}
+                              {participant.role ? `(${participant.role})` : ""}
+                            </p>
+                            {description ? (
+                              <p className="overlay-contest-participant-summary">{description}</p>
+                            ) : null}
+                            {momentumShift ? (
+                              <p className="overlay-contest-participant-momentum">
+                                Momentum shift: {momentumShift}
+                              </p>
+                            ) : null}
+                            {participantComplications.length > 0 ? (
+                              <ul className="overlay-contest-participant-complications">
+                                {participantComplications.map((entry, complicationIndex) => {
+                                  const text = describeContestComplication(entry);
+                                  if (!text) {
+                                    return null;
+                                  }
+                                  return (
+                                    <li
+                                      key={`participant-${participant.actorId || participantIndex}-${complicationIndex}`}
+                                    >
+                                      {text}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="overlay-empty" data-testid="overlay-no-contests">

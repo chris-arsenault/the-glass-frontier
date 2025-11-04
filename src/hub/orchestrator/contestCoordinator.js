@@ -119,9 +119,9 @@ class ContestCoordinator {
       ...record,
       status: "resolved",
       resolvedAt,
-      outcome: resolution.outcome || null,
+      outcome: clone(resolution.outcome) || null,
       sharedComplications: Array.isArray(resolution.sharedComplications)
-        ? resolution.sharedComplications.map((entry) => ({ ...entry }))
+        ? resolution.sharedComplications.map((entry) => clone(entry))
         : [],
       participants: record.participants.map((participant) => {
         const participantResolution = Array.isArray(resolution.participants)
@@ -129,7 +129,7 @@ class ContestCoordinator {
           : null;
         return {
           ...participant,
-          result: participantResolution ? { ...participantResolution } : null
+          result: participantResolution ? clone(participantResolution) : null
         };
       })
     };
@@ -249,8 +249,17 @@ class ContestCoordinator {
       label: pending.label,
       move: pending.move,
       type: pending.type,
+      checkTemplate: pending.checkTemplate || null,
+      hubId: pending.hubId || null,
+      roomId: pending.roomId || null,
       expiresAt: pending.expiresAt,
       createdAt: pending.createdAt,
+      moderationTags: Array.isArray(pending.moderationTags)
+        ? [...pending.moderationTags]
+        : [],
+      sharedComplicationTags: Array.isArray(pending.sharedComplicationTags)
+        ? [...pending.sharedComplicationTags]
+        : [],
       participants: pending.participants.map((participant) => ({
         actorId: participant.actorId,
         role: participant.role,
@@ -269,7 +278,16 @@ class ContestCoordinator {
       label: activeRecord.label,
       move: activeRecord.move,
       type: activeRecord.type,
+      checkTemplate: activeRecord.checkTemplate || null,
+      hubId: activeRecord.hubId || null,
+      roomId: activeRecord.roomId || null,
       startedAt: activeRecord.startedAt,
+      moderationTags: Array.isArray(activeRecord.moderationTags)
+        ? [...activeRecord.moderationTags]
+        : [],
+      sharedComplicationTags: Array.isArray(activeRecord.sharedComplicationTags)
+        ? [...activeRecord.sharedComplicationTags]
+        : [],
       participants: activeRecord.participants.map((participant) => ({
         actorId: participant.actorId,
         role: participant.role,
@@ -288,11 +306,20 @@ class ContestCoordinator {
       label: resolvedRecord.label,
       move: resolvedRecord.move,
       type: resolvedRecord.type,
+      checkTemplate: resolvedRecord.checkTemplate || null,
+      hubId: resolvedRecord.hubId || null,
+      roomId: resolvedRecord.roomId || null,
       startedAt: resolvedRecord.startedAt,
       resolvedAt: resolvedRecord.resolvedAt,
       outcome: resolvedRecord.outcome || null,
       sharedComplications: Array.isArray(resolvedRecord.sharedComplications)
-        ? resolvedRecord.sharedComplications.map((entry) => ({ ...entry }))
+        ? resolvedRecord.sharedComplications.map((entry) => clone(entry))
+        : [],
+      moderationTags: Array.isArray(resolvedRecord.moderationTags)
+        ? [...resolvedRecord.moderationTags]
+        : [],
+      sharedComplicationTags: Array.isArray(resolvedRecord.sharedComplicationTags)
+        ? [...resolvedRecord.sharedComplicationTags]
         : [],
       participants: resolvedRecord.participants.map((participant) => ({
         actorId: participant.actorId,

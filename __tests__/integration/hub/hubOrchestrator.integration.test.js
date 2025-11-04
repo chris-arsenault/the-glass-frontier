@@ -303,7 +303,7 @@ describe("HubOrchestrator integration", () => {
     await orchestrator.stop();
   });
 
-  test("coordinates contested duel commands and launches contest workflow", async () => {
+  test("coordinates contested duel commands and resolves contest workflow", async () => {
     const temporalClient = {
       startHubActionWorkflow: jest.fn(),
       startHubContestWorkflow: jest.fn().mockResolvedValue({
@@ -321,6 +321,7 @@ describe("HubOrchestrator integration", () => {
       clock: { now: () => Date.now() },
       maxContestHistory: 5
     });
+    const telemetrySpy = jest.spyOn(app.telemetry, "recordContestResolved");
     orchestrator.start();
 
     const challengerTransport = new MockTransport();
@@ -435,6 +436,93 @@ describe("HubOrchestrator integration", () => {
       ])
     );
 
+    const resolutionPayload = {
+      outcome: { tier: "major-success", summary: "Alpha seizes the initiative." },
+      sharedComplications: [
+        { tag: "crowd-panics", summary: "Spectators scatter amidst the clash." }
+      ],
+      participants: [
+        {
+          actorId: "actor-alpha",
+          tier: "major-success",
+          summary: "Alpha disarms Beta with a flourish.",
+          momentumDelta: 1,
+          complications: []
+        },
+        {
+          actorId: "actor-beta",
+          tier: "miss",
+          summary: "Beta tumbles back, weapon skidding across the floor.",
+          momentumDelta: -1,
+          complications: [{ tag: "injured", summary: "Suffers a bruised shoulder." }]
+        }
+      ]
+    };
+
+    const resolutionResult = await orchestrator.resolveContest(
+      contestPayload.contestId,
+      resolutionPayload
+    );
+
+    expect(resolutionResult.contest).toMatchObject({
+      contestId: contestPayload.contestId,
+      status: "resolved",
+      outcome: resolutionPayload.outcome,
+      sharedComplications: resolutionPayload.sharedComplications
+    });
+
+    const challengerFinal = challengerTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .pop();
+    const defenderFinal = defenderTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .pop();
+
+    expect(defenderFinal?.payload?.meta?.contestEvent).toMatchObject({
+      status: "resolved",
+      contestId: contestPayload.contestId
+    });
+    expect(defenderFinal.payload.meta.contestEvent.outcome).toMatchObject(
+      resolutionPayload.outcome
+    );
+    expect(defenderFinal.payload.state.contests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          contestId: contestPayload.contestId,
+          status: "resolved",
+          outcome: expect.objectContaining({
+            tier: "major-success"
+          }),
+          participants: expect.arrayContaining([
+            expect.objectContaining({
+              actorId: "actor-alpha",
+              result: expect.objectContaining({
+                tier: "major-success",
+                momentumDelta: 1
+              })
+            }),
+            expect.objectContaining({
+              actorId: "actor-beta",
+              result: expect.objectContaining({
+                tier: "miss",
+                momentumDelta: -1
+              })
+            })
+          ])
+        })
+      ])
+    );
+    expect(challengerFinal?.payload?.meta?.contestEvent?.status).toBe("resolved");
+
+    expect(telemetrySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contestId: contestPayload.contestId,
+        hubId: "hub-contest",
+        roomId: "room-duel"
+      })
+    );
+
     await orchestrator.stop();
+    telemetrySpy.mockRestore();
   });
 });

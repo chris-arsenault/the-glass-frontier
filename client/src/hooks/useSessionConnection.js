@@ -888,8 +888,27 @@ export function useSessionConnection({
               const contests = Array.isArray(nextState.contests)
                 ? nextState.contests.map((contest) => ({
                     ...contest,
-                    participants: Array.isArray(contest.participants)
-                      ? contest.participants.map((participant) => ({ ...participant }))
+                    outcome:
+                      contest && typeof contest.outcome === "object" && contest.outcome !== null
+                        ? { ...contest.outcome }
+                        : contest?.outcome ?? null,
+                    sharedComplications: Array.isArray(contest?.sharedComplications)
+                      ? contest.sharedComplications.map((entry) => ({ ...entry }))
+                      : [],
+                    participants: Array.isArray(contest?.participants)
+                      ? contest.participants.map((participant) => ({
+                          ...participant,
+                          result:
+                            participant && typeof participant.result === "object"
+                              ? { ...participant.result }
+                              : participant?.result ?? null
+                        }))
+                      : [],
+                    moderationTags: Array.isArray(contest?.moderationTags)
+                      ? [...contest.moderationTags]
+                      : [],
+                    sharedComplicationTags: Array.isArray(contest?.sharedComplicationTags)
+                      ? [...contest.sharedComplicationTags]
                       : []
                   }))
                 : [];

@@ -468,6 +468,139 @@ class HubOrchestrator extends EventEmitter {
     }
   }
 
+  async resolveContest(contestId, resolution = {}) {
+    if (!contestId || !this.contestCoordinator) {
+      return null;
+    }
+
+    const contestState = this.contestCoordinator.resolve(contestId, resolution);
+    if (!contestState) {
+      return null;
+    }
+
+    const hubId = contestState.hubId || resolution.hubId || null;
+    const roomId = contestState.roomId || resolution.roomId || null;
+    if (!roomId) {
+      throw new Error("resolveContest requires a roomId");
+    }
+
+    const stateResult = await this._updateContestState({ hubId, roomId, contestState });
+    const contestMeta = this._buildContestMeta(contestState);
+
+    this._broadcastContestResolution({ hubId, roomId, stateResult, contestMeta });
+    this._recordContestResolvedTelemetry({ hubId, roomId, contestState });
+
+    return this._emitContestResolutionEvents(
+      { hubId, roomId, contestState },
+      stateResult,
+      contestMeta
+    );
+  }
+
+  async _updateContestState({ hubId, roomId, contestState }) {
+    return this.stateStore.updateRoomState({
+      hubId,
+      roomId,
+      apply: (current) => {
+        const base = current || {};
+        const next = {
+          ...base
+        };
+        next.contests = this._mergeContestState(
+          Array.isArray(base.contests) ? base.contests : [],
+          contestState
+        );
+        return next;
+      }
+    });
+  }
+
+  _buildContestMeta(contestState) {
+    return {
+      status: contestState.status,
+      contestId: contestState.contestId || null,
+      contestKey: contestState.contestKey || null,
+      label: contestState.label || null,
+      outcome: clone(contestState.outcome) || null,
+      sharedComplications: Array.isArray(contestState.sharedComplications)
+        ? contestState.sharedComplications.map((entry) => clone(entry))
+        : [],
+      resolvedAt: contestState.resolvedAt || null,
+      participants: Array.isArray(contestState.participants)
+        ? contestState.participants.map((entry) => ({
+            ...entry,
+            result: clone(entry.result)
+          }))
+        : []
+    };
+  }
+
+  _broadcastContestResolution({ hubId, roomId, stateResult, contestMeta }) {
+    this._broadcastState({
+      hubId,
+      roomId,
+      state: stateResult.state,
+      version: stateResult.version,
+      meta: {
+        contestEvent: contestMeta
+      }
+    });
+  }
+
+  _recordContestResolvedTelemetry({ hubId, roomId, contestState }) {
+    if (!this.telemetry || typeof this.telemetry.recordContestResolved !== "function") {
+      return;
+    }
+    try {
+      this.telemetry.recordContestResolved({
+        hubId,
+        roomId,
+        contestId: contestState.contestId,
+        outcome: contestState.outcome || null
+      });
+    } catch (error) {
+      this.emit("processingError", {
+        stage: "contestResolvedTelemetry",
+        error,
+        context: {
+          contestId: contestState.contestId,
+          roomId,
+          hubId
+        }
+      });
+    }
+  }
+
+  _emitContestResolutionEvents({ hubId, roomId, contestState }, stateResult, contestMeta) {
+    const contestEvent = {
+      status: contestState.status,
+      state: contestState
+    };
+
+    this.emit("stateUpdated", {
+      entry: null,
+      state: stateResult.state,
+      version: stateResult.version,
+      workflow: null,
+      contestEvent
+    });
+
+    this.emit("contestResolved", {
+      contestId: contestState.contestId,
+      hubId,
+      roomId,
+      state: contestState,
+      version: stateResult.version
+    });
+
+    return {
+      contest: contestState,
+      state: stateResult.state,
+      version: stateResult.version,
+      meta: contestMeta
+    };
+  }
+
   async _handleConnectionOpened(connection) {
     if (!connection) {
       return;
