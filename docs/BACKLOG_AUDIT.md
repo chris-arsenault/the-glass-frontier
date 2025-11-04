@@ -1,4 +1,4 @@
-# Backlog Audit – Session 61 Grooming
+# Backlog Audit – Session 71 Grooming
 
 Generated: 2025-11-04
 
@@ -10,20 +10,22 @@ Generated: 2025-11-04
 | IMP-OFFLINE: Post-Session Publishing Pipeline | 4 | in-progress | codex | 1 |
 | IMP-HUBS: Hub Implementation & Load Readiness | 5 | in-progress | codex | 1 |
 | IMP-CLIENT: Unified Web Client Shell | 6 | in-progress | codex | 1 |
-| IMP-PLATFORM: Platform Implementation Foundations | 7 | in-progress | codex | 3 |
+| IMP-PLATFORM: Platform Implementation Foundations | 7 | in-progress | codex | 4 |
 | IMP-MOD: Moderation & Admin Surfaces | 8 | in-progress | codex | 3 |
 | RES-CORE: Foundational Research | 1 | delivered | — | 0 |
 | DES-CORE: Foundational Design | 2 | delivered | — | 0 |
 | NAR-CORE: Worldbuilding Foundations | 9 | delivered | codex | 0 |
 
+- WIP (in-progress + blocked): 3 / 10 limit.
+
 ## Backlog Detail
 
 ### IMP-GM: Narrative Engine & Check Runner
-- `IMP-GM-06: Live Session Vertical Slice & Transcript Export` — `todo`, `P1` — Build an end-to-end solo session that drives transcripts and check disclosures into the offline pipeline feed.
+- `IMP-GM-06: Live Session Vertical Slice & Transcript Export` — `in-progress`, `P1` — Continue vertical slice validation against live LangGraph and expand narrative QA coverage.
 - Closed prior to this audit: `IMP-GM-01` through `IMP-GM-05` (`done`).
 
 ### IMP-OFFLINE: Post-Session Publishing Pipeline
-- `IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync` — `todo`, `P1` — Validate story consolidation → entity extraction → publishing in staging with rollback notes.
+- `IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync` — `todo`, `P1` — Stage QA of Story Consolidation → Entity Extraction → Publishing with rollback documentation and moderation gate checks.
 - Closed prior to this audit: `IMP-OFFLINE-01` through `IMP-OFFLINE-04` (`done`).
 
 ### IMP-HUBS: Hub Implementation & Load Readiness
@@ -31,10 +33,11 @@ Generated: 2025-11-04
 - Closed prior to this audit: `IMP-HUB-01` through `IMP-HUB-04` (`done`).
 
 ### IMP-CLIENT: Unified Web Client Shell
-- `IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration` — `todo`, `P1` — Surface check disclosures, session memory, and offline cadence status in the web client.
+- `IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration` — `blocked`, `P1` — Surface check disclosures, session memory, and offline cadence status; currently blocked on stage DNS (`IMP-PLATFORM-02` dependency).
 - Closed prior to this audit: `IMP-CLIENT-01` through `IMP-CLIENT-05`, `IMP-AXE-01` (`done`).
 
 ### IMP-PLATFORM: Platform Implementation Foundations
+- `IMP-PLATFORM-02: LangGraph Staging DNS & Connectivity` — `todo`, `P1` — Restore stage DNS/TLS for LangGraph endpoints and rerun SSE smoke for unblock.
 - `IMP-MINIO-01: MinIO Lifecycle Automation` — `in-progress`, `P2` — Awaiting stage validation of remote tier rehearsals and dashboards.
 - `IMP-SEARCH-01: Lore Search Differential Indexing` — `todo`, `P2` — Differential indexing pipeline and failover strategy.
 - `IMP-OBS-01: Observability & Incident Dashboards` — `todo`, `P3` — OTEL stack deployment and alert coverage.
@@ -46,5 +49,3 @@ Generated: 2025-11-04
 
 ### Delivered Phases
 - Research (`RES-CORE`), Design (`DES-CORE`), and Narrative (`NAR-CORE`) feature backlogs remain closed; no orphaned items.
-- Legacy design tasks `DES-PVP-01` and `DES-MOD-01` were closed or superseded during this grooming pass to remove duplicates.
-
