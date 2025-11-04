@@ -4,6 +4,7 @@ const { StoryConsolidationWorkflow } = require("./storyConsolidation/storyConsol
 const { extractEntities } = require("./entityExtraction/entityExtractor");
 const { WorldDeltaQueue } = require("./delta/worldDeltaQueue");
 const { PublishingCoordinator } = require("./publishing/publishingCoordinator");
+const { buildModerationQueueState } = require("./moderation/moderationQueue");
 const { OfflineWorkflowMetrics } = require("../telemetry/offlineMetrics");
 const { log } = require("../utils/logger");
 
@@ -208,6 +209,14 @@ class ClosureWorkflowOrchestrator {
           ? publishingPlan.schedule.batches[0]
           : null) || {};
       const moderationSummary = publishingPlan.moderation || null;
+      const moderationQueue = buildModerationQueueState({
+        sessionId: job.sessionId,
+        deltas,
+        schedule: publishingPlan.schedule,
+        clock: this.clock
+      });
+
+      this.sessionMemory.recordModerationQueue(job.sessionId, moderationQueue);
 
       const completedJob = this.coordinator.completeJob(job.jobId, {
         summaryVersion: summaryRecord.version,
@@ -244,7 +253,8 @@ class ClosureWorkflowOrchestrator {
           : [],
         moderationCapabilityViolations: moderationSummary?.capabilityViolations || 0,
         moderationConflictDetections: moderationSummary?.conflictDetections || 0,
-        moderationLowConfidence: moderationSummary?.lowConfidenceFindings || 0
+        moderationLowConfidence: moderationSummary?.lowConfidenceFindings || 0,
+        moderationPendingCount: moderationQueue.pendingCount
       });
 
       this.sessionMemory.markOfflineReconciled(job.sessionId, {

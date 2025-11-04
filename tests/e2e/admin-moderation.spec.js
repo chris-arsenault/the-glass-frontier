@@ -38,6 +38,10 @@ test.describe("admin moderation dashboard", () => {
     const dashboard = page.getByTestId("moderation-dashboard");
     await expect(dashboard).toBeVisible({ timeout: 10000 });
 
+    const cadenceStrip = page.getByTestId("moderation-cadence");
+    await expect(cadenceStrip).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("No sessions pending moderation.")).toBeVisible({ timeout: 10000 });
+
     await expect(page.getByTestId("moderation-count-live")).toHaveText(/Live:\s*1/, {
       timeout: 10000
     });

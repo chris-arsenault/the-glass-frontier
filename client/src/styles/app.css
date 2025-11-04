@@ -1776,9 +1776,131 @@ body {
     min-width: 260px;
   }
 
-  .session-dashboard {
-    padding: 1.5rem;
-  }
+.session-dashboard {
+  padding: 1.5rem;
+}
+}
+
+.moderation-cadence {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.moderation-cadence__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.moderation-cadence__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.moderation-cadence__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.moderation-cadence__item {
+  padding: 1rem;
+  border-radius: 6px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.moderation-cadence__item--blocking {
+  border-color: var(--danger-border);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.moderation-cadence__item-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.moderation-cadence__item-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.moderation-cadence__item-header h3 small {
+  font-weight: normal;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.moderation-cadence__countdown {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.moderation-cadence__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.moderation-cadence__meta dt {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.moderation-cadence__meta dd {
+  margin: 0.1rem 0 0 0;
+  font-size: 0.95rem;
+}
+
+.moderation-cadence__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.moderation-cadence__status {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.moderation-cadence__action-button {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  background: rgba(37, 99, 235, 0.55);
+  color: #e0f2fe;
+  cursor: pointer;
+}
+
+.moderation-cadence__action-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.moderation-cadence__error {
+  color: var(--danger-text);
+  margin-bottom: 0.5rem;
+}
+
+.moderation-cadence__empty {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {

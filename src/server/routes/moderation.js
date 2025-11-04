@@ -130,6 +130,11 @@ function createModerationRouter({ moderationService, sessionMemory } = {}) {
     }
   });
 
+  router.get("/cadence", (_req, res) => {
+    const overview = moderationService.listCadenceOverview();
+    res.json({ sessions: overview });
+  });
+
   router.get("/contest/artefacts", (_req, res) => {
     const artefacts = moderationService.listContestArtefacts();
     res.json({ artefacts });

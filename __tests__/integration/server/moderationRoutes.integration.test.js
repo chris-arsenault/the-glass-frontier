@@ -11,9 +11,10 @@ describe("moderation routes", () => {
   let app;
   let token;
   let checkBus;
+  let sessionMemory;
 
   beforeEach(async () => {
-    const sessionMemory = new SessionMemoryFacade();
+    sessionMemory = new SessionMemoryFacade();
     checkBus = new CheckBus();
     const broadcaster = new Broadcaster();
     const narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
@@ -59,5 +60,51 @@ describe("moderation routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.alert).toBeDefined();
     expect(response.body.alert.status).toBe("resolved");
+  });
+
+  test("returns moderation cadence overview", async () => {
+    sessionMemory.recordModerationQueue("session-cadence", {
+      generatedAt: "2025-11-04T09:00:00.000Z",
+      pendingCount: 1,
+      items: [
+        {
+          deltaId: "delta-cadence-1",
+          sessionId: "session-cadence",
+          status: "needs-review",
+          blocking: true,
+          reasons: ["capability_violation"],
+          deadlineAt: "2025-11-04T09:45:00.000Z",
+          countdownMs: 2700000
+        }
+      ],
+      window: {
+        status: "awaiting_review",
+        startAt: "2025-11-04T09:15:00.000Z",
+        endAt: "2025-11-04T09:45:00.000Z",
+        escalations: []
+      },
+      cadence: {
+        nextBatchAt: "2025-11-04T10:00:00.000Z",
+        nextDigestAt: "2025-11-05T02:00:00.000Z",
+        batches: [],
+        digest: null
+      }
+    });
+
+    const response = await request(app)
+      .get("/admin/moderation/cadence")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.sessions)).toBe(true);
+    const sessionSummary = response.body.sessions.find(
+      (entry) => entry.sessionId === "session-cadence"
+    );
+    expect(sessionSummary).toBeDefined();
+    expect(sessionSummary.queue).toEqual(
+      expect.objectContaining({
+        pendingCount: 1
+      })
+    );
   });
 });

@@ -125,6 +125,40 @@ function createShard(initialData, actor = "seed", timestamp = new Date().toISOSt
   };
 }
 
+function createInitialModerationState() {
+  return {
+    alerts: [],
+    decisions: [],
+    queue: {
+      generatedAt: null,
+      updatedAt: null,
+      pendingCount: 0,
+      items: [],
+      window: null,
+      cadence: null
+    }
+  };
+}
+
+function ensureModerationState(session) {
+  if (!session.moderation) {
+    session.moderation = createInitialModerationState();
+    return session.moderation;
+  }
+
+  if (!Array.isArray(session.moderation.alerts)) {
+    session.moderation.alerts = [];
+  }
+  if (!Array.isArray(session.moderation.decisions)) {
+    session.moderation.decisions = [];
+  }
+  if (!session.moderation.queue) {
+    session.moderation.queue = createInitialModerationState().queue;
+  }
+
+  return session.moderation;
+}
+
 class SessionMemoryFacade {
   constructor() {
     this.sessions = new Map();
@@ -170,10 +204,7 @@ class SessionMemoryFacade {
         offlineReconcileAuditRef: null,
         turnSequence: 0,
         characterRevision: characterShard.revision,
-        moderation: {
-          alerts: [],
-          decisions: []
-        }
+        moderation: createInitialModerationState()
       };
 
       this.sessions.set(sessionId, session);
@@ -259,16 +290,14 @@ class SessionMemoryFacade {
 
   recordModerationAlert(sessionId, alert) {
     const session = this.ensureSession(sessionId);
-    if (!session.moderation) {
-      session.moderation = { alerts: [], decisions: [] };
-    }
+    const moderationState = ensureModerationState(session);
 
     const record = clone(alert);
-    const index = session.moderation.alerts.findIndex((existing) => existing.id === record.id);
+    const index = moderationState.alerts.findIndex((existing) => existing.id === record.id);
     if (index >= 0) {
-      session.moderation.alerts[index] = record;
+      moderationState.alerts[index] = record;
     } else {
-      session.moderation.alerts.push(record);
+      moderationState.alerts.push(record);
     }
 
     session.updatedAt = record.updatedAt || record.createdAt || new Date().toISOString();
@@ -277,16 +306,18 @@ class SessionMemoryFacade {
 
   updateModerationAlert(sessionId, alertId, updates = {}) {
     const session = this.ensureSession(sessionId);
-    if (!session.moderation) {
+    const moderationState = ensureModerationState(session);
+
+    if (!moderationState) {
       return null;
     }
 
-    const index = session.moderation.alerts.findIndex((entry) => entry.id === alertId);
+    const index = moderationState.alerts.findIndex((entry) => entry.id === alertId);
     if (index === -1) {
       return null;
     }
 
-    const existing = session.moderation.alerts[index];
+    const existing = moderationState.alerts[index];
     const merged = {
       ...existing,
       ...clone(updates)
@@ -304,21 +335,153 @@ class SessionMemoryFacade {
         : [];
     }
 
-    session.moderation.alerts[index] = merged;
+    moderationState.alerts[index] = merged;
     session.updatedAt = merged.updatedAt || new Date().toISOString();
     return clone(merged);
   }
 
   recordModerationDecision(sessionId, decision) {
     const session = this.ensureSession(sessionId);
-    if (!session.moderation) {
-      session.moderation = { alerts: [], decisions: [] };
-    }
+    const moderationState = ensureModerationState(session);
 
     const record = clone(decision);
-    session.moderation.decisions.push(record);
+    moderationState.decisions.push(record);
     session.updatedAt = record.createdAt || new Date().toISOString();
     return clone(record);
+  }
+
+  recordModerationQueue(sessionId, queueState = {}) {
+    const session = this.ensureSession(sessionId);
+    const moderationState = ensureModerationState(session);
+    const previousQueue = moderationState.queue || createInitialModerationState().queue;
+
+    const generatedAt = queueState.generatedAt || new Date().toISOString();
+    const rawItems = Array.isArray(queueState.items) ? queueState.items : [];
+    const previousIndex = new Map(
+      Array.isArray(previousQueue.items)
+        ? previousQueue.items.map((item) => [item.deltaId, item])
+        : []
+    );
+
+    const mergedItems = rawItems.map((item) => {
+      const clonedItem = clone(item);
+      const existing = previousIndex.get(clonedItem.deltaId);
+      if (existing) {
+        clonedItem.status = existing.status || clonedItem.status;
+        clonedItem.blocking =
+          existing.blocking !== undefined ? existing.blocking : clonedItem.blocking;
+        clonedItem.moderationDecisionId =
+          existing.moderationDecisionId !== undefined
+            ? existing.moderationDecisionId
+            : clonedItem.moderationDecisionId || null;
+        clonedItem.resolvedAt = existing.resolvedAt || clonedItem.resolvedAt || null;
+        clonedItem.decisionActor = existing.decisionActor || clonedItem.decisionActor || null;
+        clonedItem.notes = existing.notes || clonedItem.notes || null;
+        clonedItem.updatedAt = existing.updatedAt || clonedItem.updatedAt || generatedAt;
+      } else {
+        clonedItem.updatedAt = clonedItem.updatedAt || generatedAt;
+      }
+      if (clonedItem.blocking === undefined) {
+        clonedItem.blocking = clonedItem.status !== "resolved";
+      }
+      return clonedItem;
+    });
+
+    const pendingCount = mergedItems.filter((item) => item.blocking !== false).length;
+
+    moderationState.queue = {
+      generatedAt,
+      updatedAt: generatedAt,
+      pendingCount,
+      items: mergedItems,
+      window: queueState.window ? clone(queueState.window) : null,
+      cadence: queueState.cadence ? clone(queueState.cadence) : null
+    };
+
+    session.updatedAt = generatedAt;
+    return clone(moderationState.queue);
+  }
+
+  updateModerationQueueEntry(sessionId, deltaId, updates = {}) {
+    const session = this.ensureSession(sessionId);
+    const moderationState = ensureModerationState(session);
+    const queue = moderationState.queue;
+    if (!queue || !Array.isArray(queue.items)) {
+      return null;
+    }
+
+    const index = queue.items.findIndex((item) => item.deltaId === deltaId);
+    if (index === -1) {
+      return null;
+    }
+
+    const existing = queue.items[index];
+    const updatedAt = updates.updatedAt || new Date().toISOString();
+
+    const next = {
+      ...existing,
+      status: updates.status || existing.status,
+      blocking:
+        updates.blocking !== undefined ? updates.blocking : existing.blocking !== false,
+      moderationDecisionId:
+        updates.moderationDecisionId !== undefined
+          ? updates.moderationDecisionId
+          : existing.moderationDecisionId || null,
+      resolvedAt:
+        updates.resolvedAt !== undefined ? updates.resolvedAt : existing.resolvedAt || null,
+      decisionActor:
+        updates.decisionActor !== undefined ? updates.decisionActor : existing.decisionActor || null,
+      notes: updates.notes !== undefined ? updates.notes : existing.notes || null,
+      updatedAt
+    };
+
+    queue.items[index] = next;
+    queue.pendingCount = queue.items.filter((item) => item.blocking !== false).length;
+    queue.updatedAt = updatedAt;
+    session.updatedAt = updatedAt;
+
+    return clone(next);
+  }
+
+  listModerationQueues() {
+    return Array.from(this.sessions.values()).map((session) => {
+      const moderationState = ensureModerationState(session);
+      const stats = {
+        totalAlerts: moderationState.alerts.length,
+        live: 0,
+        queued: 0,
+        escalated: 0,
+        resolved: 0
+      };
+
+      moderationState.alerts.forEach((alert) => {
+        switch (alert.status) {
+          case "live":
+            stats.live += 1;
+            break;
+          case "queued":
+            stats.queued += 1;
+            break;
+          case "escalated":
+            stats.escalated += 1;
+            break;
+          case "resolved":
+            stats.resolved += 1;
+            break;
+          default:
+            break;
+        }
+      });
+
+      return {
+        sessionId: session.sessionId,
+        player: clone(session.player),
+        closedAt: session.closedAt || null,
+        queue: clone(moderationState.queue),
+        stats,
+        lastOfflineWorkflowRun: clone(session.lastOfflineWorkflowRun || null)
+      };
+    });
   }
 
   getModerationState(sessionId) {
@@ -353,11 +516,32 @@ class SessionMemoryFacade {
       }
     });
 
+    const queueState = moderation.queue
+      ? {
+          generatedAt: moderation.queue.generatedAt || null,
+          updatedAt: moderation.queue.updatedAt || null,
+          pendingCount: moderation.queue.pendingCount || 0,
+          items: Array.isArray(moderation.queue.items)
+            ? moderation.queue.items.map((item) => clone(item))
+            : [],
+          window: moderation.queue.window ? clone(moderation.queue.window) : null,
+          cadence: moderation.queue.cadence ? clone(moderation.queue.cadence) : null
+        }
+      : {
+          generatedAt: null,
+          updatedAt: null,
+          pendingCount: 0,
+          items: [],
+          window: null,
+          cadence: null
+        };
+
     return {
       sessionId,
       alerts,
       decisions,
-      stats
+      stats,
+      queue: queueState
     };
   }
 
@@ -812,6 +996,8 @@ class SessionMemoryFacade {
           : 0,
       moderationLowConfidence:
         typeof run.moderationLowConfidence === "number" ? run.moderationLowConfidence : 0,
+      moderationPendingCount:
+        typeof run.moderationPendingCount === "number" ? run.moderationPendingCount : 0,
       error: run.error || null
     };
 

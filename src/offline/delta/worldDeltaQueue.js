@@ -87,6 +87,7 @@ class WorldDeltaQueue {
     const normalizedCapabilities = normalizeCapabilityRefsSafe(mention.capabilityRefs || []);
     const safety = this.evaluateSafety(mention, before, after, normalizedCapabilities);
 
+    const requiresModeration = Boolean(safety.requiresModeration);
     const delta = {
       deltaId: uuid(),
       entityId: mention.entityId,
@@ -100,7 +101,7 @@ class WorldDeltaQueue {
       before,
       after,
       safety,
-      status: "pending",
+      status: requiresModeration ? "needs-review" : "pending",
       createdAt: new Date().toISOString()
     };
 
@@ -132,7 +133,7 @@ class WorldDeltaQueue {
         capabilityViolations: normalizedCapabilities,
         confidence: confidenceTier(mention.confidence)
       },
-      status: "pending",
+      status: "needs-review",
       createdAt: new Date().toISOString()
     };
   }

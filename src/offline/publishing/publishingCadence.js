@@ -61,6 +61,7 @@ class PublishingCadence {
     }
 
     const effectiveConfig = Object.assign({}, this.config, config || {});
+    const generatedAt = toIso(this.clock());
     const closedAt = resolveDate(sessionClosedAt, this.clock());
     const moderationStart = new Date(
       closedAt.getTime() + minutesToMs(effectiveConfig.moderationDelayMinutes)
@@ -84,7 +85,12 @@ class PublishingCadence {
             new Date(moderationStart.getTime() + minutesToMs(Number(offsetMinutes || 0)))
           );
         }),
-        status: "scheduled"
+        status: "scheduled",
+        pendingCount: 0,
+        reasons: [],
+        deltaCount: 0,
+        notes: null,
+        updatedAt: generatedAt
       },
       batches: [
         {
@@ -244,6 +250,57 @@ class PublishingCadence {
 
     return this.stateStore.getSession(sessionId);
   }
+
+  updateModerationStatus(sessionId, status, metadata = {}) {
+    if (!sessionId) {
+      throw new Error("publishing_moderation_status_requires_session");
+    }
+    if (!status) {
+      throw new Error("publishing_moderation_status_requires_value");
+    }
+
+    const normalizedMeta = normalizeModerationMetadata(metadata, this.clock);
+
+    this.stateStore.updateSession(sessionId, (state) => {
+      if (!state.moderation) {
+        throw new Error("publishing_moderation_schedule_missing");
+      }
+
+      state.moderation.status = status;
+      if (normalizedMeta.pendingCount !== undefined) {
+        state.moderation.pendingCount = normalizedMeta.pendingCount;
+      }
+      if (normalizedMeta.reasons) {
+        state.moderation.reasons = normalizedMeta.reasons;
+      }
+      if (normalizedMeta.deltaCount !== undefined) {
+        state.moderation.deltaCount = normalizedMeta.deltaCount;
+      }
+      if (normalizedMeta.moderationDecisionId !== undefined) {
+        state.moderation.moderationDecisionId = normalizedMeta.moderationDecisionId;
+      }
+      if (normalizedMeta.notes !== undefined) {
+        state.moderation.notes = normalizedMeta.notes;
+      }
+      state.moderation.updatedAt = normalizedMeta.updatedAt;
+      return state;
+    });
+
+    this.stateStore.appendHistory(sessionId, {
+      type: "cadence.moderation.status",
+      payload: {
+        status,
+        pendingCount: normalizedMeta.pendingCount,
+        reasons: normalizedMeta.reasons,
+        deltaCount: normalizedMeta.deltaCount,
+        moderationDecisionId: normalizedMeta.moderationDecisionId,
+        notes: normalizedMeta.notes,
+        updatedAt: normalizedMeta.updatedAt
+      }
+    });
+
+    return this.stateStore.getSession(sessionId);
+  }
 }
 
 function normalizeBatchMetadata(metadata) {
@@ -267,6 +324,37 @@ function normalizeBatchMetadata(metadata) {
   if (metadata.notes) {
     normalized.notes = metadata.notes;
   }
+
+  return normalized;
+}
+
+function normalizeModerationMetadata(metadata, clock) {
+  const normalized = {};
+  if (typeof metadata.pendingCount === "number") {
+    normalized.pendingCount = metadata.pendingCount;
+  }
+  if (Array.isArray(metadata.reasons)) {
+    const reasonSet = new Set();
+    metadata.reasons.forEach((reason) => {
+      if (reason !== undefined && reason !== null) {
+        reasonSet.add(String(reason));
+      }
+    });
+    normalized.reasons = Array.from(reasonSet);
+  }
+  if (typeof metadata.deltaCount === "number") {
+    normalized.deltaCount = metadata.deltaCount;
+  }
+  if (metadata.moderationDecisionId !== undefined) {
+    normalized.moderationDecisionId = metadata.moderationDecisionId;
+  }
+  if (metadata.notes !== undefined) {
+    normalized.notes = metadata.notes;
+  }
+
+  const now = clock ? clock() : new Date();
+  const timestamp = now instanceof Date ? now : new Date(now);
+  normalized.updatedAt = timestamp.toISOString();
 
   return normalized;
 }

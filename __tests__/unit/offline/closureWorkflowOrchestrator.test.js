@@ -90,7 +90,14 @@ describe("ClosureWorkflowOrchestrator", () => {
         status: "completed",
         durationMs: expect.any(Number),
         deltaCount: expect.any(Number),
-        mentionCount: expect.any(Number)
+        mentionCount: expect.any(Number),
+        moderationPendingCount: expect.any(Number)
+      })
+    );
+    expect(sessionState.moderation.queue).toEqual(
+      expect.objectContaining({
+        pendingCount: expect.any(Number),
+        generatedAt: expect.any(String)
       })
     );
     expect(sessionState.offlineReconciledAt).toBeDefined();

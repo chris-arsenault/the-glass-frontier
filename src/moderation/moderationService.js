@@ -25,6 +25,17 @@ const ACTION_STATUS_MAP = {
   acknowledge: ALERT_STATUS_LIVE
 };
 
+const QUEUE_STATUS_BY_ACTION = {
+  approve: "resolved",
+  amend: "resolved",
+  resolve: "resolved",
+  escalate: "escalated",
+  pause: "queued",
+  defer: "queued",
+  queue: "queued",
+  acknowledge: "needs-review"
+};
+
 function clone(value) {
   if (value === undefined || value === null) {
     return value;
@@ -263,6 +274,21 @@ class ModerationService {
     });
     this.sessionMemory.recordModerationDecision(alert.sessionId, clone(decision));
 
+    const deltaId = alert.data?.deltaId || null;
+    if (deltaId) {
+      const queueStatus = QUEUE_STATUS_BY_ACTION[action] || "needs-review";
+      const blocking = queueStatus !== "resolved";
+      this.sessionMemory.updateModerationQueueEntry(alert.sessionId, deltaId, {
+        status: queueStatus,
+        blocking,
+        moderationDecisionId: decisionId,
+        resolvedAt: blocking ? null : createdAt,
+        decisionActor: decision.actor,
+        notes: decision.notes || null,
+        updatedAt: createdAt
+      });
+    }
+
     this.checkBus.emitModerationDecision({
       id: decision.id,
       sessionId: decision.sessionId,
@@ -353,10 +379,10 @@ class ModerationService {
 
     const rawContent = fs.readFileSync(artefactPath, "utf8");
     const events = parseContestEvents(rawContent);
-    const summary = buildSummary(events, {
-      armingP95: thresholds.armingP95 || DEFAULT_THRESHOLDS.armingP95,
-      resolutionP95: thresholds.resolutionP95 || DEFAULT_THRESHOLDS.resolutionP95
-    });
+      const summary = buildSummary(events, {
+        armingP95: thresholds.armingP95 || DEFAULT_THRESHOLDS.armingP95,
+        resolutionP95: thresholds.resolutionP95 || DEFAULT_THRESHOLDS.resolutionP95
+      });
 
     const result = {
       source: artefactPath,
@@ -370,6 +396,48 @@ class ModerationService {
 
   getModerationState(sessionId) {
     return this.sessionMemory.getModerationState(sessionId);
+  }
+
+  listCadenceOverview() {
+    const queues = this.sessionMemory.listModerationQueues();
+    return queues.map((entry) => {
+      const queue = entry.queue || {};
+      const items = Array.isArray(queue.items) ? queue.items : [];
+      return {
+        sessionId: entry.sessionId,
+        player: entry.player || null,
+        closedAt: entry.closedAt || null,
+        queue: {
+          generatedAt: queue.generatedAt || null,
+          updatedAt: queue.updatedAt || null,
+          pendingCount: queue.pendingCount || 0,
+          window: queue.window || null,
+          cadence: queue.cadence || null,
+          items: items.map((item) => ({
+            deltaId: item.deltaId,
+            status: item.status || "needs-review",
+            blocking: item.blocking !== false,
+            entityId: item.entityId || null,
+            entityType: item.entityType || null,
+            canonicalName: item.canonicalName || null,
+            reasons: Array.isArray(item.reasons) ? item.reasons.slice() : [],
+            capabilityViolations: Array.isArray(item.capabilityViolations)
+              ? item.capabilityViolations.slice()
+              : [],
+            confidenceTier: item.confidenceTier || null,
+            countdownMs: item.countdownMs ?? null,
+            deadlineAt: item.deadlineAt || null,
+            escalationsAt: Array.isArray(item.escalationsAt) ? item.escalationsAt.slice() : [],
+            moderationDecisionId: item.moderationDecisionId || null,
+            resolvedAt: item.resolvedAt || null,
+            decisionActor: item.decisionActor || null,
+            notes: item.notes || null
+          }))
+        },
+        stats: entry.stats || {},
+        lastOfflineWorkflowRun: entry.lastOfflineWorkflowRun || null
+      };
+    });
   }
 
   serializeAlert(alert) {

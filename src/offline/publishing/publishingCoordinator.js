@@ -49,12 +49,20 @@ class PublishingCoordinator {
     const schedule = this.ensureSession({ sessionId, sessionClosedAt });
     const targetBatch = selectBatch(schedule, batchId);
     const moderation = summarizeModeration(deltas);
+    const pendingModeration = deltas.filter((delta) => delta?.safety?.requiresModeration);
     const awaitingModeration = moderation.requiresModeration && !moderationDecisionId;
+    const pendingReviewCount = awaitingModeration ? pendingModeration.length : 0;
 
     if (awaitingModeration) {
       this.cadence.updateBatchStatus(sessionId, targetBatch.batchId, "awaiting_moderation", {
         deltaCount: deltas.length,
         notes: "moderation_gate_pending"
+      });
+      this.cadence.updateModerationStatus(sessionId, "awaiting_review", {
+        pendingCount: pendingReviewCount,
+        reasons: moderation.reasons,
+        deltaCount: deltas.length,
+        moderationDecisionId: null
       });
 
       return {
@@ -62,7 +70,12 @@ class PublishingCoordinator {
         schedule: this.cadence.getSchedule(sessionId),
         publishing: null,
         searchPlan: { jobs: [], status: "blocked" },
-        moderation
+        moderation,
+        moderationQueue: {
+          status: "awaiting_moderation",
+          pendingCount: pendingReviewCount,
+          reasons: moderation.reasons
+        }
       };
     }
 
@@ -79,6 +92,12 @@ class PublishingCoordinator {
       preparedAt: publishing.preparedAt,
       deltaCount: publishing.loreBundles.length
     });
+    this.cadence.updateModerationStatus(sessionId, "clear", {
+      pendingCount: 0,
+      reasons: moderation.reasons,
+      deltaCount: deltas.length,
+      moderationDecisionId
+    });
 
     const searchPlan = this.searchPlanner.plan(publishing, {
       sessionId,
@@ -91,7 +110,12 @@ class PublishingCoordinator {
       schedule: this.cadence.getSchedule(sessionId),
       publishing,
       searchPlan,
-      moderation
+      moderation,
+      moderationQueue: {
+        status: "clear",
+        pendingCount: 0,
+        reasons: moderation.reasons
+      }
     };
   }
 

@@ -57,10 +57,17 @@ describe("PublishingCoordinator", () => {
     const batchId = schedule.batches[0].batchId;
 
     expect(schedule.batches[0].status).toBe("ready");
+    expect(schedule.moderation.status).toBe("clear");
     expect(preparation.status).toBe("ready");
     expect(preparation.moderation.requiresModeration).toBe(false);
     expect(preparation.publishing.loreBundles).toHaveLength(1);
     expect(preparation.searchPlan.jobs).toHaveLength(2);
+    expect(preparation.moderationQueue).toEqual(
+      expect.objectContaining({
+        status: "clear",
+        pendingCount: 0
+      })
+    );
     expect(metrics.recordBatchPrepared).toHaveBeenCalled();
     expect(metrics.recordSearchSyncPlanned).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -125,10 +132,17 @@ describe("PublishingCoordinator", () => {
 
     expect(gated.status).toBe("awaiting_moderation");
     expect(gated.schedule.batches[0].status).toBe("awaiting_moderation");
+    expect(gated.schedule.moderation.status).toBe("awaiting_review");
     expect(gated.publishing).toBeNull();
     expect(gated.searchPlan.jobs).toHaveLength(0);
     expect(gated.moderation.requiresModeration).toBe(true);
     expect(gated.moderation.reasons).toContain("capability_violation");
+    expect(gated.moderationQueue).toEqual(
+      expect.objectContaining({
+        status: "awaiting_moderation",
+        pendingCount: 1
+      })
+    );
     expect(metrics.recordBatchPrepared).not.toHaveBeenCalled();
     expect(metrics.recordSearchSyncPlanned).not.toHaveBeenCalled();
 
@@ -143,6 +157,13 @@ describe("PublishingCoordinator", () => {
     expect(approved.status).toBe("ready");
     expect(approved.publishing.loreBundles).toHaveLength(1);
     expect(approved.schedule.batches[0].status).toBe("ready");
+    expect(approved.schedule.moderation.status).toBe("clear");
+    expect(approved.moderationQueue).toEqual(
+      expect.objectContaining({
+        status: "clear",
+        pendingCount: 0
+      })
+    );
     expect(metrics.recordBatchPrepared).toHaveBeenCalledTimes(1);
     expect(metrics.recordSearchSyncPlanned).toHaveBeenCalledTimes(1);
   });

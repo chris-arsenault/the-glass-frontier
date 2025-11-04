@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccountContext } from "../context/AccountContext.jsx";
+import { ModerationCadenceStrip } from "./ModerationCadenceStrip.jsx";
 
 const STATUS_ORDER = ["live", "queued", "escalated", "resolved"];
 const STATUS_LABELS = {
@@ -52,6 +53,9 @@ export function ModerationDashboard() {
   const [overrideOutcome, setOverrideOutcome] = useState("");
   const [contestArtefacts, setContestArtefacts] = useState([]);
   const [latestContestSummary, setLatestContestSummary] = useState(null);
+  const [cadenceSessions, setCadenceSessions] = useState([]);
+  const [cadenceLoading, setCadenceLoading] = useState(false);
+  const [cadenceError, setCadenceError] = useState(null);
 
   const grouped = useMemo(() => groupAlertsByStatus(alerts), [alerts]);
 
@@ -80,6 +84,25 @@ export function ModerationDashboard() {
       setError(loadError.message);
     } finally {
       setLoading(false);
+    }
+  }, [fetchWithAuth]);
+
+  const loadCadence = useCallback(async () => {
+    setCadenceLoading(true);
+    setCadenceError(null);
+    try {
+      const response = await fetchWithAuth("/admin/moderation/cadence", { method: "GET" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || `Failed to load moderation cadence (${response.status})`);
+      }
+      const payload = await response.json();
+      const sessions = Array.isArray(payload.sessions) ? payload.sessions : [];
+      setCadenceSessions(sessions);
+    } catch (cadenceLoadError) {
+      setCadenceError(cadenceLoadError.message);
+    } finally {
+      setCadenceLoading(false);
     }
   }, [fetchWithAuth]);
 
@@ -140,14 +163,31 @@ export function ModerationDashboard() {
 
   useEffect(() => {
     loadAlerts();
+    loadCadence();
     loadContestArtefacts();
-  }, [loadAlerts, loadContestArtefacts]);
+  }, [loadAlerts, loadCadence, loadContestArtefacts]);
 
   useEffect(() => {
     if (selectedAlertId) {
       loadAlertDetail(selectedAlertId);
     }
   }, [selectedAlertId, loadAlertDetail]);
+
+  const handleSelectCadenceSession = useCallback(
+    (sessionId) => {
+      if (!sessionId) {
+        return;
+      }
+      const match =
+        alerts.find((alert) => alert.sessionId === sessionId && alert.status !== "resolved") ||
+        alerts.find((alert) => alert.sessionId === sessionId);
+      if (match) {
+        setSelectedAlertId(match.id);
+        loadAlertDetail(match.id);
+      }
+    },
+    [alerts, loadAlertDetail]
+  );
 
   const applyDecision = useCallback(
     async (action) => {
@@ -189,13 +229,14 @@ export function ModerationDashboard() {
         setFlashMessage?.("Moderation decision recorded.");
         await loadAlerts();
         await loadAlertDetail(selectedAlertId);
+        await loadCadence();
       } catch (decisionError) {
         setError(decisionError.message);
       } finally {
         setDetailLoading(false);
       }
     },
-    [decisionNotes, fetchWithAuth, loadAlertDetail, loadAlerts, overrideOutcome, selectedAlertId, setFlashMessage]
+    [decisionNotes, fetchWithAuth, loadAlertDetail, loadAlerts, loadCadence, overrideOutcome, selectedAlertId, setFlashMessage]
   );
 
   const selectedAlert = useMemo(() => {
@@ -204,6 +245,11 @@ export function ModerationDashboard() {
     }
     return alerts.find((alert) => alert.id === selectedAlertId) || null;
   }, [alerts, selectedAlertId]);
+
+  const handleRefresh = useCallback(() => {
+    loadAlerts();
+    loadCadence();
+  }, [loadAlerts, loadCadence]);
 
   return (
     <div className="moderation-dashboard" data-testid="moderation-dashboard">
@@ -226,7 +272,7 @@ export function ModerationDashboard() {
             Resolved: {stats.resolved}
           </span>
         </div>
-        <button type="button" onClick={loadAlerts} className="moderation-refresh-button">
+        <button type="button" onClick={handleRefresh} className="moderation-refresh-button">
           Refresh
         </button>
       </header>
@@ -235,6 +281,13 @@ export function ModerationDashboard() {
           {error}
         </div>
       ) : null}
+      <ModerationCadenceStrip
+        sessions={cadenceSessions}
+        loading={cadenceLoading}
+        error={cadenceError}
+        onRefresh={loadCadence}
+        onSelectSession={handleSelectCadenceSession}
+      />
       <div className="moderation-layout">
         <section className="moderation-columns" aria-label="Moderation alert columns">
           {STATUS_ORDER.map((status) => (
