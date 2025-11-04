@@ -26,6 +26,7 @@
 - Contest telemetry now emits structured JSON log lines (`telemetry.contest.armed|launched|resolved`) carrying arming/resolve durations, participant counts, and moderation context.
 - Run `npm run monitor:contests -- --input <telemetry-log.ndjson|timeline.json|summary.json>` to summarise p50/p95 arming and resolution latency against the DES-BENCH-01 targets (arming ≤8,000 ms p95, resolution ≤800 ms p95) and to track multi-actor demand via participant counts. The CLI now accepts the sparring artefact (`artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json`) and its generated summary (`artifacts/hub/contest-moderation-summary-2025-11-04T08-30-00Z.json`).
 - Latest load telemetry captured on 2025-11-04 (`artifacts/hub/contest-moderation-load-2025-11-04T11-15-00.000Z.ndjson`) now lands within budget (arming p95 7,100 ms, resolution p95 780 ms) per the generated summary (`artifacts/hub/contest-moderation-summary-2025-11-04T11-15-00.000Z.json`). Multi-actor demand (3 participants, capacity 4) remains covered for DES-BENCH-01 review.
+- Revalidated the tuned-window telemetry on 2025-11-04T09:57Z using the same load artefact; `artifacts/hub/contest-monitor-summary-2025-11-04T09-57-43.656Z.json` captures the unchanged p95 metrics (arming 7,100 ms, resolution 780 ms) and current participant distribution (avg 2.25, max 3).
 - Generated summaries should accompany moderation dashboard runs so `IMP-MOD-01` can ingest both lifecycle artefacts and latency health checks without additional transformation.
 
 ## Testing
@@ -36,6 +37,7 @@
 
 ## Next Steps & Risks
 - Execute `npm run monitor:contests` during hub load exercises (staging + production rehearsal) to confirm the tuned windows continue to meet DES-BENCH-01 budgets under real workflows.
+- Stage validation remains pending because the staging workflow environment is currently inaccessible; rerun the hub load exercise as soon as staging connectivity returns and append the resulting artefact here.
 - Share refreshed CLI summaries with `IMP-MOD-01` SMEs and fold dashboard feedback into moderation UX/polish workstreams.
 - Evaluate demand for multi-actor skirmishes; if required, extend contest key generation to support >2 participants without fragmenting registration windows.
 - Coordinate with Temporal workflow owners to guarantee `resolution.timings` payloads remain populated so telemetry stays aligned with real workflow runtimes.
