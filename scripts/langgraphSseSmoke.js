@@ -8,6 +8,10 @@ const { Agent, setGlobalDispatcher } = require("undici");
 const EventSource = require("eventsource");
 
 let customCaBuffer = null;
+const DEFAULT_ADMIN_ALERT_OBSERVATION_PATH = path.join(
+  "artifacts",
+  "admin-alert-observations.json"
+);
 
 function configureCustomCa() {
   const candidates = [];
@@ -144,7 +148,14 @@ function parseArgs(argv) {
     skipAdminAlert: process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT === "true",
     seedAdminAlert: process.env.LANGGRAPH_SMOKE_SEED_ADMIN_ALERT === "true",
     reportPath: process.env.LANGGRAPH_SMOKE_REPORT_PATH || "",
-    skipSse: process.env.LANGGRAPH_SMOKE_SKIP_SSE === "true"
+    skipSse: process.env.LANGGRAPH_SMOKE_SKIP_SSE === "true",
+    autoAdminAlert: process.env.LANGGRAPH_SMOKE_AUTO_ADMIN_ALERT === "true",
+    adminAlertObservationPath:
+      process.env.LANGGRAPH_SMOKE_ALERT_OBSERVATION_PATH ||
+      DEFAULT_ADMIN_ALERT_OBSERVATION_PATH,
+    adminAlertObservationWindowMs:
+      Number.parseInt(process.env.LANGGRAPH_SMOKE_ALERT_OBSERVATION_WINDOW_MS || "", 10) ||
+      1000 * 60 * 60 * 6
   };
 
   const config = { ...defaults };
@@ -181,6 +192,20 @@ function parseArgs(argv) {
         break;
       case "--report":
         config.reportPath = argv[++index] || config.reportPath;
+        break;
+      case "--auto-admin-alert":
+        config.autoAdminAlert = true;
+        break;
+      case "--no-auto-admin-alert":
+        config.autoAdminAlert = false;
+        break;
+      case "--admin-alert-observation-path":
+        config.adminAlertObservationPath =
+          argv[++index] || config.adminAlertObservationPath;
+        break;
+      case "--admin-alert-window":
+        config.adminAlertObservationWindowMs =
+          Number.parseInt(argv[++index] || "", 10) || config.adminAlertObservationWindowMs;
         break;
       default:
         if (arg && arg.startsWith("--")) {
@@ -456,6 +481,50 @@ function logStep(message) {
   console.log(`[sse-smoke] ${message}`);
 }
 
+function resolveObservationPath(observationPath) {
+  if (!observationPath) {
+    return null;
+  }
+  if (path.isAbsolute(observationPath)) {
+    return observationPath;
+  }
+  return path.join(process.cwd(), observationPath);
+}
+
+function loadObservation(filePath) {
+  if (!filePath) {
+    return null;
+  }
+  try {
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    const content = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(content);
+  } catch (error) {
+    console.warn(`[sse-smoke] Failed to load admin alert observation: ${error.message}`);
+    return null;
+  }
+}
+
+function persistObservation(filePath, observation) {
+  if (!filePath || !observation) {
+    return;
+  }
+  try {
+    const directory = path.dirname(filePath);
+    if (directory && directory !== ".") {
+      fs.mkdirSync(directory, { recursive: true });
+    }
+    fs.writeFileSync(filePath, JSON.stringify(observation, null, 2));
+    logStep(
+      `Recorded admin alert observation (${observation.observedAt || "unknown"}) to ${filePath}`
+    );
+  } catch (error) {
+    console.warn(`[sse-smoke] Failed to persist admin alert observation: ${error.message}`);
+  }
+}
+
 function writeReport(reportPath, summary) {
   if (!reportPath) {
     return;
@@ -480,6 +549,47 @@ async function run(argv = process.argv) {
 
   const config = parseArgs(argv);
   const startTime = Date.now();
+  let resolvedObservationPath = null;
+  let adminAlertObservation = null;
+
+  if (config.autoAdminAlert) {
+    resolvedObservationPath = resolveObservationPath(config.adminAlertObservationPath);
+    adminAlertObservation = loadObservation(resolvedObservationPath);
+    const windowMs = config.adminAlertObservationWindowMs;
+    const observedAt = adminAlertObservation?.observedAt
+      ? Date.parse(adminAlertObservation.observedAt)
+      : Number.NaN;
+    const now = Date.now();
+    const withinWindow =
+      Number.isFinite(observedAt) && typeof windowMs === "number" && windowMs > 0
+        ? now - observedAt <= windowMs
+        : false;
+
+    config.adminAlertAutoDecision = {
+      lastObservedAt: adminAlertObservation?.observedAt || null,
+      lastSeeded: adminAlertObservation?.seeded ?? null,
+      withinWindow,
+      observationPath: resolvedObservationPath
+    };
+
+    if (withinWindow && adminAlertObservation?.seeded === false) {
+      if (config.seedAdminAlert) {
+        logStep(
+          `Recent admin alert observed (${adminAlertObservation.observedAt}); skipping fallback seeding`
+        );
+      }
+      config.seedAdminAlert = false;
+    } else if (!withinWindow && adminAlertObservation?.observedAt) {
+      logStep(
+        `Admin alert observation at ${adminAlertObservation.observedAt} is outside window; retaining fallback seeding`
+      );
+    } else if (adminAlertObservation?.seeded === true && withinWindow) {
+      logStep("Most recent admin alert observation was seeded; retaining fallback seeding");
+    } else if (!adminAlertObservation) {
+      logStep("No admin alert observations recorded yet; retaining fallback seeding");
+    }
+  }
+
   try {
     const baseHostname = new URL(config.baseUrl).hostname;
     installHostOverride(
@@ -499,7 +609,11 @@ async function run(argv = process.argv) {
       skipAdminAlert: config.skipAdminAlert,
       seedAdminAlert: config.seedAdminAlert,
       reportPath: config.reportPath || null,
-      skipSse: config.skipSse
+      skipSse: config.skipSse,
+      autoAdminAlert: config.autoAdminAlert,
+      adminAlertObservationPath: resolvedObservationPath,
+      adminAlertObservationWindowMs: config.adminAlertObservationWindowMs || null,
+      adminAlertAutoDecision: config.adminAlertAutoDecision || null
     },
     metrics: {},
     eventCounts: {}
@@ -713,7 +827,10 @@ async function run(argv = process.argv) {
           severity: adminAlertEvent.payload?.severity || null,
           reason: adminAlertEvent.payload?.reason || null,
           seeded: seededAdminAlert,
-          checkId: safetyCheckId || null
+          checkId: safetyCheckId || null,
+          observedAt: adminAlertEvent.__receivedAt
+            ? new Date(adminAlertEvent.__receivedAt).toISOString()
+            : new Date().toISOString()
         };
 
         if (seededAdminAlert) {
@@ -789,6 +906,46 @@ async function run(argv = process.argv) {
     }
     summary.completedAt = new Date().toISOString();
     summary.durationMs = Date.now() - startTime;
+    if (config.autoAdminAlert) {
+      const observationTarget = resolvedObservationPath;
+      if (observationTarget) {
+        const adminAlertMetrics = summary.metrics?.adminAlert;
+        if (adminAlertMetrics?.observed && adminAlertMetrics.seeded === false) {
+          persistObservation(observationTarget, {
+            observedAt: adminAlertMetrics.observedAt || new Date().toISOString(),
+            latencyMs: adminAlertMetrics.latencyMs || null,
+            reason: adminAlertMetrics.reason || null,
+            severity: adminAlertMetrics.severity || null,
+            seeded: false,
+            runId: summary.runId,
+            sessionId: summary.session?.id || null,
+            recordedAt: new Date().toISOString()
+          });
+        } else if (adminAlertMetrics?.seeded === true) {
+          persistObservation(observationTarget, {
+            observedAt: adminAlertMetrics.observedAt || new Date().toISOString(),
+            latencyMs: adminAlertMetrics.latencyMs || null,
+            reason: adminAlertMetrics.reason || null,
+            severity: adminAlertMetrics.severity || null,
+            seeded: true,
+            runId: summary.runId,
+            sessionId: summary.session?.id || null,
+            recordedAt: new Date().toISOString()
+          });
+        } else if (!adminAlertMetrics?.observed) {
+          persistObservation(observationTarget, {
+            observedAt: null,
+            latencyMs: null,
+            reason: null,
+            severity: null,
+            seeded: false,
+            runId: summary.runId,
+            sessionId: summary.session?.id || null,
+            recordedAt: new Date().toISOString()
+          });
+        }
+      }
+    }
   }
 }
 

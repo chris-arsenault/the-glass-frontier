@@ -17,7 +17,10 @@ describe("langgraph SSE smoke tooling", () => {
     "LANGGRAPH_SMOKE_TIMEOUT_MS",
     "LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT",
     "LANGGRAPH_SMOKE_SEED_ADMIN_ALERT",
-    "LANGGRAPH_SMOKE_REPORT_PATH"
+    "LANGGRAPH_SMOKE_REPORT_PATH",
+    "LANGGRAPH_SMOKE_AUTO_ADMIN_ALERT",
+    "LANGGRAPH_SMOKE_ALERT_OBSERVATION_PATH",
+    "LANGGRAPH_SMOKE_ALERT_OBSERVATION_WINDOW_MS"
   ];
 
   beforeEach(() => {
@@ -39,6 +42,9 @@ describe("langgraph SSE smoke tooling", () => {
     process.env.LANGGRAPH_SMOKE_TIMEOUT_MS = "15000";
     process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT = "true";
     process.env.LANGGRAPH_SMOKE_SEED_ADMIN_ALERT = "true";
+    process.env.LANGGRAPH_SMOKE_AUTO_ADMIN_ALERT = "true";
+    process.env.LANGGRAPH_SMOKE_ALERT_OBSERVATION_PATH = "/tmp/alerts.json";
+    process.env.LANGGRAPH_SMOKE_ALERT_OBSERVATION_WINDOW_MS = "900000";
 
     const config = parseArgs(["node", "script", "--report", "/tmp/report.json"]);
 
@@ -47,6 +53,9 @@ describe("langgraph SSE smoke tooling", () => {
     expect(config.skipAdminAlert).toBe(true);
     expect(config.seedAdminAlert).toBe(true);
     expect(config.reportPath).toBe("/tmp/report.json");
+    expect(config.autoAdminAlert).toBe(true);
+    expect(config.adminAlertObservationPath).toBe("/tmp/alerts.json");
+    expect(config.adminAlertObservationWindowMs).toBe(900000);
   });
 
   test("parseArgs allows CLI toggling of seed admin alert", () => {
@@ -61,6 +70,23 @@ describe("langgraph SSE smoke tooling", () => {
 
     const configWithFlag = parseArgs(["node", "script", "--seed-admin-alert"]);
     expect(configWithFlag.seedAdminAlert).toBe(true);
+  });
+
+  test("parseArgs exposes CLI controls for auto admin alert monitoring", () => {
+    const config = parseArgs([
+      "node",
+      "script",
+      "--auto-admin-alert",
+      "--admin-alert-observation-path",
+      "./observations.json",
+      "--admin-alert-window",
+      "120000",
+      "--no-auto-admin-alert"
+    ]);
+
+    expect(config.autoAdminAlert).toBe(false);
+    expect(config.adminAlertObservationPath).toBe("./observations.json");
+    expect(config.adminAlertObservationWindowMs).toBe(120000);
   });
 
   test("writeReport persists structured summaries when a path is provided", () => {

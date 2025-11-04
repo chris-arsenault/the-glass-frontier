@@ -31,3 +31,4 @@ LangGraph stage parity is restored for success check streaming. `npm run stage:s
 ## Follow-ups
 - Track validation responses in the table above; once both stakeholders respond, update `IMP-CLIENT-06` and handoff notes.
 - Stage harness now re-enables admin alert assertions via seeded fallback; coordinate with platform telemetry to source live alert traffic and retire the debug seed once available.
+- New automation: `npm run stage:smoke` records the latest admin alert observation in `artifacts/admin-alert-observations.json` and disables fallback seeding once a real alert lands within a six-hour window. Check the artefact before toggling `LANGGRAPH_SMOKE_SEED_ADMIN_ALERT`.
