@@ -1,8 +1,8 @@
 {
-  "sessionId": "imp-gm-06-smoke",
-  "generatedAt": "2025-11-04T05:26:45.466Z",
+  "sessionId": "qa-batch-beta",
+  "generatedAt": "2025-11-04T05:26:45.470Z",
   "summary": {
-    "sessionId": "imp-gm-06-smoke",
+    "sessionId": "qa-batch-beta",
     "version": 1,
     "sceneBreakdown": [
       {
@@ -19,8 +19,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.542Z",
-          "end": "2025-11-04T04:50:34.542Z"
+          "start": "2025-11-04T05:26:28.947Z",
+          "end": "2025-11-04T05:26:28.947Z"
         }
       },
       {
@@ -37,15 +37,15 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.545Z",
-          "end": "2025-11-04T04:50:34.545Z"
+          "start": "2025-11-04T05:26:28.950Z",
+          "end": "2025-11-04T05:26:28.950Z"
         }
       },
       {
         "sceneId": "act:default:scene:3",
         "title": "Scene 3",
         "actId": "act:default",
-        "summary": "Check delve-the-ruins resolved as critical-success. Difficulty risky (9). Dice 13 + stat 2. Momentum 0 → 2.",
+        "summary": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
         "tension": {
           "level": "steady",
           "spikes": []
@@ -55,8 +55,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.546Z",
-          "end": "2025-11-04T04:50:34.546Z"
+          "start": "2025-11-04T05:26:28.951Z",
+          "end": "2025-11-04T05:26:28.951Z"
         }
       },
       {
@@ -73,8 +73,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.555Z",
-          "end": "2025-11-04T04:50:34.555Z"
+          "start": "2025-11-04T05:26:28.960Z",
+          "end": "2025-11-04T05:26:28.960Z"
         }
       },
       {
@@ -91,8 +91,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.556Z",
-          "end": "2025-11-04T04:50:34.556Z"
+          "start": "2025-11-04T05:26:28.961Z",
+          "end": "2025-11-04T05:26:28.961Z"
         }
       },
       {
@@ -109,8 +109,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.556Z",
-          "end": "2025-11-04T04:50:34.556Z"
+          "start": "2025-11-04T05:26:28.961Z",
+          "end": "2025-11-04T05:26:28.961Z"
         }
       },
       {
@@ -127,15 +127,15 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.556Z",
-          "end": "2025-11-04T04:50:34.556Z"
+          "start": "2025-11-04T05:26:28.961Z",
+          "end": "2025-11-04T05:26:28.961Z"
         }
       },
       {
         "sceneId": "act:default:scene:8",
         "title": "Scene 8",
         "actId": "act:default",
-        "summary": "Check hack-the-signal resolved as fail-forward. Difficulty controlled (7). Dice 4 + stat 1. Momentum 2 → 1.",
+        "summary": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
         "tension": {
           "level": "steady",
           "spikes": []
@@ -145,8 +145,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.557Z",
-          "end": "2025-11-04T04:50:34.557Z"
+          "start": "2025-11-04T05:26:28.962Z",
+          "end": "2025-11-04T05:26:28.962Z"
         }
       },
       {
@@ -163,8 +163,8 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.566Z",
-          "end": "2025-11-04T04:50:34.566Z"
+          "start": "2025-11-04T05:26:28.971Z",
+          "end": "2025-11-04T05:26:28.971Z"
         }
       },
       {
@@ -181,15 +181,15 @@
         "safetyFlags": [],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.566Z",
-          "end": "2025-11-04T04:50:34.566Z"
+          "start": "2025-11-04T05:26:28.971Z",
+          "end": "2025-11-04T05:26:28.971Z"
         }
       },
       {
         "sceneId": "act:default:scene:11",
         "title": "Scene 11",
         "actId": "act:default",
-        "summary": "Check safety-imp-gm-06-smoke-4 vetoed (prohibited-capability).",
+        "summary": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
         "tension": {
           "level": "steady",
           "spikes": []
@@ -206,8 +206,8 @@
         ],
         "tags": [],
         "timeRange": {
-          "start": "2025-11-04T04:50:34.567Z",
-          "end": "2025-11-04T04:50:34.567Z"
+          "start": "2025-11-04T05:26:28.972Z",
+          "end": "2025-11-04T05:26:28.972Z"
         }
       }
     ],
@@ -215,7 +215,7 @@
       {
         "actId": "act:default",
         "title": "Act 1",
-        "summary": "I sneak across the relay scaffolds and risk a roll to outflank the sentries. The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches. Check delve-the-ruins resolved as critical-success. Difficulty risky (9). Dice 13 + stat 2. Momentum 0 → 2. I broadcast our momentum to rally the Prismwell guild before the next move. The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended r…",
+        "summary": "I sneak across the relay scaffolds and risk a roll to outflank the sentries. The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches. Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0. I broadcast our momentum to rally the Prismwell guild before the next move. The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pyl…",
         "scenes": [
           "act:default:scene:1",
           "act:default:scene:2",
@@ -253,7 +253,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T05:26:45.463Z",
+    "generatedAt": "2025-11-04T05:26:45.469Z",
     "statistics": {
       "turnCount": 11,
       "sceneCount": 11,
@@ -274,23 +274,23 @@
   },
   "publishing": {
     "schedule": {
-      "sessionClosedAt": "2025-11-04T04:50:34.577Z",
+      "sessionClosedAt": "2025-11-04T05:26:28.981Z",
       "moderation": {
-        "startAt": "2025-11-04T05:05:34.577Z",
-        "endAt": "2025-11-04T05:50:34.577Z",
+        "startAt": "2025-11-04T05:41:28.981Z",
+        "endAt": "2025-11-04T06:26:28.981Z",
         "escalations": [
-          "2025-11-04T05:35:34.577Z",
-          "2025-11-04T05:45:34.577Z"
+          "2025-11-04T06:11:28.981Z",
+          "2025-11-04T06:21:28.981Z"
         ],
         "status": "scheduled"
       },
       "batches": [
         {
-          "batchId": "imp-gm-06-smoke-batch-0",
+          "batchId": "qa-batch-beta-batch-0",
           "type": "hourly",
-          "runAt": "2025-11-04T05:50:34.577Z",
+          "runAt": "2025-11-04T06:26:28.981Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T05:26:45.466Z",
+          "preparedAt": "2025-11-04T05:26:45.470Z",
           "deltaCount": 0
         }
       ],
@@ -299,29 +299,29 @@
         "status": "scheduled"
       },
       "overrides": [],
-      "sessionId": "imp-gm-06-smoke",
-      "stateId": "25edb34e-98eb-4a3f-bf51-427b3caba658",
-      "createdAt": "2025-11-04T05:26:45.466Z",
-      "updatedAt": "2025-11-04T05:26:45.466Z",
+      "sessionId": "qa-batch-beta",
+      "stateId": "b38ad5ff-d9ee-4d63-b9bb-b844ca463a78",
+      "createdAt": "2025-11-04T05:26:45.470Z",
+      "updatedAt": "2025-11-04T05:26:45.470Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T05:26:45.466Z",
+          "occurredAt": "2025-11-04T05:26:45.470Z",
           "payload": {
-            "sessionClosedAt": "2025-11-04T04:50:34.577Z",
-            "moderationStartAt": "2025-11-04T05:05:34.577Z",
-            "loreBatchRunAt": "2025-11-04T05:50:34.577Z",
+            "sessionClosedAt": "2025-11-04T05:26:28.981Z",
+            "moderationStartAt": "2025-11-04T05:41:28.981Z",
+            "loreBatchRunAt": "2025-11-04T06:26:28.981Z",
             "digestRunAt": "2025-11-05T02:00:00.000Z"
           }
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T05:26:45.466Z",
+          "occurredAt": "2025-11-04T05:26:45.470Z",
           "payload": {
-            "batchId": "imp-gm-06-smoke-batch-0",
+            "batchId": "qa-batch-beta-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T05:26:45.466Z",
+              "preparedAt": "2025-11-04T05:26:45.470Z",
               "deltaCount": 0
             }
           }
@@ -329,7 +329,7 @@
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T05:26:45.466Z",
+      "preparedAt": "2025-11-04T05:26:45.470Z",
       "loreBundles": [],
       "newsCards": [],
       "overlayPayloads": []

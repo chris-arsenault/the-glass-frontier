@@ -13,6 +13,14 @@
    - Multi-faction transcript yielded 9 mentions/deltas with Spectrum Bloom capability violations and region control shifts.
    - Delta queue emitted moderation alerts (capability violation + conflict detection) and the search sync plan queued 15 jobs.
    - Added seizure-language handling so `CONTROL_GAIN_KEYWORDS` paired with “from <faction>” register as control loss for the targeted faction.
+3. `npm run offline:qa -- --input artifacts/vertical-slice --output artifacts/offline-qa`
+   - Directory mode replayed `imp-gm-06-smoke`, `qa-batch-alpha`, and `qa-batch-beta` vertical slice transcripts in sequence using the new batch helper.
+   - All three sessions produced zero actionable mentions/deltas, confirming baseline stability for critical-path GM scenarios.
+   - Batch rollup written to `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-26-45-470Z.json` for moderation dashboard ingestion.
+
+## Tooling Updates
+- `scripts/runOfflinePublishingQa.js` now accepts a directory input, filters session artifacts, and emits batch rollups that flag moderation hotspots.
+- Added Jest coverage for helper utilities (`resolveInputTargets`, `composeBatchRollup`, `summarizeModeration`) to keep QA harness behavior deterministic.
 
 ## Key Observations
 - Story consolidation summaries retained collaborative GM voice and surfaced the prohibited capability safety note for moderation review.

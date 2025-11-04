@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-multi-faction-smoke",
-  "generatedAt": "2025-11-04T05:17:46.744Z",
+  "generatedAt": "2025-11-04T05:27:39.863Z",
   "summary": {
     "sessionId": "qa-multi-faction-smoke",
     "version": 1,
@@ -114,7 +114,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T05:17:46.740Z",
+    "generatedAt": "2025-11-04T05:27:39.857Z",
     "statistics": {
       "turnCount": 4,
       "sceneCount": 4,
@@ -129,7 +129,7 @@
     "mentionCount": 9,
     "mentions": [
       {
-        "mentionId": "76c59ee9-9a91-44e7-9e80-4472927d6ca5",
+        "mentionId": "a94233d8-0818-4565-964a-fc443ad1f644",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -161,7 +161,7 @@
         }
       },
       {
-        "mentionId": "121eb7a5-fc6c-4ad3-83e8-f0f761af365e",
+        "mentionId": "ad060556-e4d5-4d98-9491-01b3c569b735",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -193,7 +193,7 @@
         }
       },
       {
-        "mentionId": "137b7dee-cc1c-41a9-8cd7-c9496059beb5",
+        "mentionId": "98e33c7b-90b9-415d-95d7-4594c0b8a0d2",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -226,7 +226,7 @@
         }
       },
       {
-        "mentionId": "3277776f-dee6-42ee-81d0-71cbb45a730a",
+        "mentionId": "2d05bf1c-d983-4ae4-b976-daad0c2ab880",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -256,7 +256,7 @@
         }
       },
       {
-        "mentionId": "d0df88f5-2933-417f-aeb9-0ffe3cd5c12d",
+        "mentionId": "3838ef72-e1f6-4768-9b96-c9b9f2b045fc",
         "entityId": "region.kyther-range",
         "entityType": "region",
         "canonicalName": "Kyther Range Vault",
@@ -286,7 +286,7 @@
         }
       },
       {
-        "mentionId": "db9ef00b-44cf-4000-a644-bd1035d64ea3",
+        "mentionId": "669d93be-9ef5-4a3d-967c-17e8f737cb33",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -316,7 +316,7 @@
         }
       },
       {
-        "mentionId": "a23d7345-f799-4403-8572-383995b37c4d",
+        "mentionId": "805c30b6-30e0-44c0-8ea6-0c86f8df4529",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -349,7 +349,7 @@
         }
       },
       {
-        "mentionId": "f2904b07-cc36-4512-9c50-d9f1a8a314d2",
+        "mentionId": "f6282f81-190b-4ddc-b3dc-640a8ed7fc9b",
         "entityId": "region.kyther-range",
         "entityType": "region",
         "canonicalName": "Kyther Range Vault",
@@ -376,7 +376,7 @@
         }
       },
       {
-        "mentionId": "9275b693-68e9-4747-9a66-873df9f15520",
+        "mentionId": "285de390-d87f-4565-b3d5-886bdd7a83db",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -408,7 +408,7 @@
     "deltaCount": 9,
     "deltas": [
       {
-        "deltaId": "68017b96-2ae4-4f65-b115-87f12f526b94",
+        "deltaId": "d7288310-9f62-45cb-907b-b1adf94c9542",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -443,10 +443,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.861Z"
       },
       {
-        "deltaId": "f1e01589-df02-4a21-9fec-18cf695aaea6",
+        "deltaId": "884c3825-49f8-4143-8acd-53bf69e913b8",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -479,10 +479,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.861Z"
       },
       {
-        "deltaId": "b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+        "deltaId": "c5b52a2c-3e4c-4dba-8e39-8818ee399530",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -516,10 +516,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.861Z"
       },
       {
-        "deltaId": "c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+        "deltaId": "1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -561,10 +561,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.861Z"
       },
       {
-        "deltaId": "d9556854-425a-4786-b230-562f14aefa51",
+        "deltaId": "e9c55b3f-793f-445d-9695-ef01a07b8d6d",
         "entityId": "region.kyther-range",
         "entityType": "region",
         "canonicalName": "Kyther Range Vault",
@@ -606,10 +606,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.862Z"
       },
       {
-        "deltaId": "c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+        "deltaId": "8744ee66-802d-415a-abdf-b0b5bc157f77",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -651,10 +651,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.862Z"
       },
       {
-        "deltaId": "5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+        "deltaId": "0ffd58cc-b285-4b7a-b057-60d7222af452",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -695,20 +695,20 @@
             {
               "type": "pending_delta_conflict",
               "target": "region.kyther-range",
-              "conflictingDeltaId": "68017b96-2ae4-4f65-b115-87f12f526b94"
+              "conflictingDeltaId": "d7288310-9f62-45cb-907b-b1adf94c9542"
             },
             {
               "type": "pending_delta_conflict",
               "target": "region.sable-crescent",
-              "conflictingDeltaId": "68017b96-2ae4-4f65-b115-87f12f526b94"
+              "conflictingDeltaId": "d7288310-9f62-45cb-907b-b1adf94c9542"
             }
           ]
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.862Z"
       },
       {
-        "deltaId": "1f45f796-3fa1-4393-914c-05466f2dccf7",
+        "deltaId": "92113aed-7a76-4d69-b2b5-47a737644118",
         "entityId": "region.kyther-range",
         "entityType": "region",
         "canonicalName": "Kyther Range Vault",
@@ -736,10 +736,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.862Z"
       },
       {
-        "deltaId": "1da21224-2e0e-4de4-a683-17546cd7b4a8",
+        "deltaId": "75892ba6-f1d7-44d6-914f-f94ac5f361cd",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -767,7 +767,7 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:17:46.743Z"
+        "createdAt": "2025-11-04T05:27:39.862Z"
       }
     ]
   },
@@ -789,7 +789,7 @@
           "type": "hourly",
           "runAt": "2025-11-04T06:00:00.000Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "deltaCount": 6
         }
       ],
@@ -799,13 +799,13 @@
       },
       "overrides": [],
       "sessionId": "qa-multi-faction-smoke",
-      "stateId": "5a8cb2b8-09a0-458d-b855-20b803309588",
-      "createdAt": "2025-11-04T05:17:46.743Z",
-      "updatedAt": "2025-11-04T05:17:46.744Z",
+      "stateId": "28b14e2d-1a4f-439f-a778-50ec0d30fb01",
+      "createdAt": "2025-11-04T05:27:39.862Z",
+      "updatedAt": "2025-11-04T05:27:39.863Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T05:17:46.743Z",
+          "occurredAt": "2025-11-04T05:27:39.862Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T05:00:00.000Z",
             "moderationStartAt": "2025-11-04T05:15:00.000Z",
@@ -815,12 +815,12 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T05:17:46.744Z",
+          "occurredAt": "2025-11-04T05:27:39.863Z",
           "payload": {
             "batchId": "qa-multi-faction-smoke-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T05:17:46.743Z",
+              "preparedAt": "2025-11-04T05:27:39.862Z",
               "deltaCount": 6
             }
           }
@@ -828,10 +828,10 @@
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T05:17:46.743Z",
+      "preparedAt": "2025-11-04T05:27:39.862Z",
       "loreBundles": [
         {
-          "bundleId": "bundle-faction.tempered-accord-b6da3317",
+          "bundleId": "bundle-faction.tempered-accord-c1efe738",
           "entityId": "faction.tempered-accord",
           "entityType": "faction",
           "canonicalName": "Tempered Accord Custodial Council",
@@ -843,27 +843,27 @@
           ],
           "summaryMarkdown": "### Tempered Accord Custodial Council\n- gains control of region.auric-steppe\n- gains control of region.kyther-range, region.sable-crescent",
           "publishAt": "2025-11-04T06:00:00.000Z",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "revisions": [
             {
               "version": 1,
-              "deltaId": "68017b96-2ae4-4f65-b115-87f12f526b94",
+              "deltaId": "d7288310-9f62-45cb-907b-b1adf94c9542",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             },
             {
               "version": 2,
-              "deltaId": "5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+              "deltaId": "0ffd58cc-b285-4b7a-b057-60d7222af452",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             }
           ],
           "provenance": {
             "sessionId": "qa-multi-faction-smoke",
             "moderationDecisionId": null,
             "deltaIds": [
-              "68017b96-2ae4-4f65-b115-87f12f526b94",
-              "5b37cb24-6d74-46bd-a1e4-78086cbfe6de"
+              "d7288310-9f62-45cb-907b-b1adf94c9542",
+              "0ffd58cc-b285-4b7a-b057-60d7222af452"
             ]
           },
           "safetyTags": [
@@ -873,7 +873,7 @@
           "status": "ready"
         },
         {
-          "bundleId": "bundle-faction.prismwell-kite-guild-8c897835",
+          "bundleId": "bundle-faction.prismwell-kite-guild-ff59aca2",
           "entityId": "faction.prismwell-kite-guild",
           "entityType": "faction",
           "canonicalName": "Prismwell Kite Guild",
@@ -884,34 +884,34 @@
           ],
           "summaryMarkdown": "### Prismwell Kite Guild\n- relinquishes region.auric-steppe\n- relinquishes region.auric-steppe, region.sable-crescent",
           "publishAt": "2025-11-04T06:00:00.000Z",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "revisions": [
             {
               "version": 1,
-              "deltaId": "f1e01589-df02-4a21-9fec-18cf695aaea6",
+              "deltaId": "884c3825-49f8-4143-8acd-53bf69e913b8",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             },
             {
               "version": 2,
-              "deltaId": "b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+              "deltaId": "c5b52a2c-3e4c-4dba-8e39-8818ee399530",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             }
           ],
           "provenance": {
             "sessionId": "qa-multi-faction-smoke",
             "moderationDecisionId": null,
             "deltaIds": [
-              "f1e01589-df02-4a21-9fec-18cf695aaea6",
-              "b8e60d56-7be9-4d4d-a685-dcdfa92e93f6"
+              "884c3825-49f8-4143-8acd-53bf69e913b8",
+              "c5b52a2c-3e4c-4dba-8e39-8818ee399530"
             ]
           },
           "safetyTags": [],
           "status": "ready"
         },
         {
-          "bundleId": "bundle-faction.echo-ledger-conclave-d295d73d",
+          "bundleId": "bundle-faction.echo-ledger-conclave-c156d8ab",
           "entityId": "faction.echo-ledger-conclave",
           "entityType": "faction",
           "canonicalName": "Echo Ledger Conclave",
@@ -920,20 +920,20 @@
           ],
           "summaryMarkdown": "### Echo Ledger Conclave\n- lore bundle updated",
           "publishAt": "2025-11-04T06:00:00.000Z",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "revisions": [
             {
               "version": 1,
-              "deltaId": "c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+              "deltaId": "1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             }
           ],
           "provenance": {
             "sessionId": "qa-multi-faction-smoke",
             "moderationDecisionId": null,
             "deltaIds": [
-              "c1813f0e-ab5f-4fc4-a350-1aee70facbee"
+              "1e39e9da-6a32-4403-9b0c-d50b1cd504d9"
             ]
           },
           "safetyTags": [
@@ -943,7 +943,7 @@
           "status": "ready"
         },
         {
-          "bundleId": "bundle-region.kyther-range-f8b2806d",
+          "bundleId": "bundle-region.kyther-range-fa740b13",
           "entityId": "region.kyther-range",
           "entityType": "region",
           "canonicalName": "Kyther Range Vault",
@@ -952,27 +952,27 @@
           ],
           "summaryMarkdown": "### Kyther Range Vault\n- lore bundle updated\n- status shifts to threatened",
           "publishAt": "2025-11-04T06:00:00.000Z",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "revisions": [
             {
               "version": 1,
-              "deltaId": "d9556854-425a-4786-b230-562f14aefa51",
+              "deltaId": "e9c55b3f-793f-445d-9695-ef01a07b8d6d",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             },
             {
               "version": 2,
-              "deltaId": "1f45f796-3fa1-4393-914c-05466f2dccf7",
+              "deltaId": "92113aed-7a76-4d69-b2b5-47a737644118",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             }
           ],
           "provenance": {
             "sessionId": "qa-multi-faction-smoke",
             "moderationDecisionId": null,
             "deltaIds": [
-              "d9556854-425a-4786-b230-562f14aefa51",
-              "1f45f796-3fa1-4393-914c-05466f2dccf7"
+              "e9c55b3f-793f-445d-9695-ef01a07b8d6d",
+              "92113aed-7a76-4d69-b2b5-47a737644118"
             ]
           },
           "safetyTags": [
@@ -982,7 +982,7 @@
           "status": "ready"
         },
         {
-          "bundleId": "bundle-artifact.spectrum-bloom-array-e909904a",
+          "bundleId": "bundle-artifact.spectrum-bloom-array-35b63344",
           "entityId": "artifact.spectrum-bloom-array",
           "entityType": "artifact",
           "canonicalName": "Spectrum Bloom Flux Array",
@@ -991,20 +991,20 @@
           ],
           "summaryMarkdown": "### Spectrum Bloom Flux Array\n- lore bundle updated",
           "publishAt": "2025-11-04T06:00:00.000Z",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "revisions": [
             {
               "version": 1,
-              "deltaId": "c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+              "deltaId": "8744ee66-802d-415a-abdf-b0b5bc157f77",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             }
           ],
           "provenance": {
             "sessionId": "qa-multi-faction-smoke",
             "moderationDecisionId": null,
             "deltaIds": [
-              "c8dd2a39-65b0-4112-a64f-7a9bdb215a09"
+              "8744ee66-802d-415a-abdf-b0b5bc157f77"
             ]
           },
           "safetyTags": [
@@ -1014,7 +1014,7 @@
           "status": "ready"
         },
         {
-          "bundleId": "bundle-region.sable-crescent-f39e8a03",
+          "bundleId": "bundle-region.sable-crescent-97ebf68c",
           "entityId": "region.sable-crescent",
           "entityType": "region",
           "canonicalName": "Sable Crescent Basin",
@@ -1023,20 +1023,20 @@
           ],
           "summaryMarkdown": "### Sable Crescent Basin\n- status shifts to threatened",
           "publishAt": "2025-11-04T06:00:00.000Z",
-          "preparedAt": "2025-11-04T05:17:46.743Z",
+          "preparedAt": "2025-11-04T05:27:39.862Z",
           "revisions": [
             {
               "version": 1,
-              "deltaId": "1da21224-2e0e-4de4-a683-17546cd7b4a8",
+              "deltaId": "75892ba6-f1d7-44d6-914f-f94ac5f361cd",
               "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:17:46.743Z"
+              "appliedAt": "2025-11-04T05:27:39.862Z"
             }
           ],
           "provenance": {
             "sessionId": "qa-multi-faction-smoke",
             "moderationDecisionId": null,
             "deltaIds": [
-              "1da21224-2e0e-4de4-a683-17546cd7b4a8"
+              "75892ba6-f1d7-44d6-914f-f94ac5f361cd"
             ]
           },
           "safetyTags": [],
@@ -1045,7 +1045,7 @@
       ],
       "newsCards": [
         {
-          "cardId": "news-68017b96-2ae4-4f65-b115-87f12f526b94",
+          "cardId": "news-d7288310-9f62-45cb-907b-b1adf94c9542",
           "headline": "Tempered Accord Custodial Council update",
           "lead": "gains control of region.auric-steppe",
           "factionTags": [
@@ -1057,13 +1057,13 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "68017b96-2ae4-4f65-b115-87f12f526b94"
+            "d7288310-9f62-45cb-907b-b1adf94c9542"
           ],
           "safetyTags": [],
           "ariaSummary": "Tempered Accord Custodial Council update: gains control of region.auric-steppe"
         },
         {
-          "cardId": "news-f1e01589-df02-4a21-9fec-18cf695aaea6",
+          "cardId": "news-884c3825-49f8-4143-8acd-53bf69e913b8",
           "headline": "Prismwell Kite Guild update",
           "lead": "relinquishes region.auric-steppe",
           "factionTags": [
@@ -1075,13 +1075,13 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "f1e01589-df02-4a21-9fec-18cf695aaea6"
+            "884c3825-49f8-4143-8acd-53bf69e913b8"
           ],
           "safetyTags": [],
           "ariaSummary": "Prismwell Kite Guild update: relinquishes region.auric-steppe"
         },
         {
-          "cardId": "news-b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+          "cardId": "news-c5b52a2c-3e4c-4dba-8e39-8818ee399530",
           "headline": "Prismwell Kite Guild update",
           "lead": "relinquishes region.auric-steppe, region.sable-crescent",
           "factionTags": [
@@ -1093,13 +1093,13 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "b8e60d56-7be9-4d4d-a685-dcdfa92e93f6"
+            "c5b52a2c-3e4c-4dba-8e39-8818ee399530"
           ],
           "safetyTags": [],
           "ariaSummary": "Prismwell Kite Guild update: relinquishes region.auric-steppe, region.sable-crescent"
         },
         {
-          "cardId": "news-c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+          "cardId": "news-1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
           "headline": "Echo Ledger Conclave update",
           "lead": "lore bundle updated",
           "factionTags": [
@@ -1111,7 +1111,7 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "c1813f0e-ab5f-4fc4-a350-1aee70facbee"
+            "1e39e9da-6a32-4403-9b0c-d50b1cd504d9"
           ],
           "safetyTags": [
             "capability_violation",
@@ -1120,7 +1120,7 @@
           "ariaSummary": "Echo Ledger Conclave update: lore bundle updated"
         },
         {
-          "cardId": "news-d9556854-425a-4786-b230-562f14aefa51",
+          "cardId": "news-e9c55b3f-793f-445d-9695-ef01a07b8d6d",
           "headline": "Kyther Range Vault update",
           "lead": "lore bundle updated",
           "factionTags": [],
@@ -1130,7 +1130,7 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "d9556854-425a-4786-b230-562f14aefa51"
+            "e9c55b3f-793f-445d-9695-ef01a07b8d6d"
           ],
           "safetyTags": [
             "capability_violation",
@@ -1139,7 +1139,7 @@
           "ariaSummary": "Kyther Range Vault update: lore bundle updated"
         },
         {
-          "cardId": "news-c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+          "cardId": "news-8744ee66-802d-415a-abdf-b0b5bc157f77",
           "headline": "Spectrum Bloom Flux Array update",
           "lead": "lore bundle updated",
           "factionTags": [],
@@ -1149,7 +1149,7 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "c8dd2a39-65b0-4112-a64f-7a9bdb215a09"
+            "8744ee66-802d-415a-abdf-b0b5bc157f77"
           ],
           "safetyTags": [
             "capability_violation",
@@ -1158,7 +1158,7 @@
           "ariaSummary": "Spectrum Bloom Flux Array update: lore bundle updated"
         },
         {
-          "cardId": "news-5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+          "cardId": "news-0ffd58cc-b285-4b7a-b057-60d7222af452",
           "headline": "Tempered Accord Custodial Council update",
           "lead": "gains control of region.kyther-range, region.sable-crescent",
           "factionTags": [
@@ -1170,7 +1170,7 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "5b37cb24-6d74-46bd-a1e4-78086cbfe6de"
+            "0ffd58cc-b285-4b7a-b057-60d7222af452"
           ],
           "safetyTags": [
             "conflict_detected",
@@ -1179,7 +1179,7 @@
           "ariaSummary": "Tempered Accord Custodial Council update: gains control of region.kyther-range, region.sable-crescent"
         },
         {
-          "cardId": "news-1f45f796-3fa1-4393-914c-05466f2dccf7",
+          "cardId": "news-92113aed-7a76-4d69-b2b5-47a737644118",
           "headline": "Kyther Range Vault update",
           "lead": "status shifts to threatened",
           "factionTags": [],
@@ -1189,13 +1189,13 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "1f45f796-3fa1-4393-914c-05466f2dccf7"
+            "92113aed-7a76-4d69-b2b5-47a737644118"
           ],
           "safetyTags": [],
           "ariaSummary": "Kyther Range Vault update: status shifts to threatened"
         },
         {
-          "cardId": "news-1da21224-2e0e-4de4-a683-17546cd7b4a8",
+          "cardId": "news-75892ba6-f1d7-44d6-914f-f94ac5f361cd",
           "headline": "Sable Crescent Basin update",
           "lead": "status shifts to threatened",
           "factionTags": [],
@@ -1205,7 +1205,7 @@
           "cardType": "flash",
           "provenanceRefs": [
             "qa-multi-faction-smoke",
-            "1da21224-2e0e-4de4-a683-17546cd7b4a8"
+            "75892ba6-f1d7-44d6-914f-f94ac5f361cd"
           ],
           "safetyTags": [],
           "ariaSummary": "Sable Crescent Basin update: status shifts to threatened"
@@ -1217,7 +1217,7 @@
           "headline": "Tempered Accord Custodial Council update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "routine",
-          "newsCardRef": "news-68017b96-2ae4-4f65-b115-87f12f526b94",
+          "newsCardRef": "news-d7288310-9f62-45cb-907b-b1adf94c9542",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1229,7 +1229,7 @@
           "headline": "Prismwell Kite Guild update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "routine",
-          "newsCardRef": "news-f1e01589-df02-4a21-9fec-18cf695aaea6",
+          "newsCardRef": "news-884c3825-49f8-4143-8acd-53bf69e913b8",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1241,7 +1241,7 @@
           "headline": "Prismwell Kite Guild update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "routine",
-          "newsCardRef": "news-b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+          "newsCardRef": "news-c5b52a2c-3e4c-4dba-8e39-8818ee399530",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1253,7 +1253,7 @@
           "headline": "Echo Ledger Conclave update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "high",
-          "newsCardRef": "news-c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+          "newsCardRef": "news-1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1265,7 +1265,7 @@
           "headline": "Kyther Range Vault update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "high",
-          "newsCardRef": "news-d9556854-425a-4786-b230-562f14aefa51",
+          "newsCardRef": "news-e9c55b3f-793f-445d-9695-ef01a07b8d6d",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1277,7 +1277,7 @@
           "headline": "Spectrum Bloom Flux Array update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "high",
-          "newsCardRef": "news-c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+          "newsCardRef": "news-8744ee66-802d-415a-abdf-b0b5bc157f77",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1289,7 +1289,7 @@
           "headline": "Tempered Accord Custodial Council update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "high",
-          "newsCardRef": "news-5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+          "newsCardRef": "news-0ffd58cc-b285-4b7a-b057-60d7222af452",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1301,7 +1301,7 @@
           "headline": "Kyther Range Vault update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "routine",
-          "newsCardRef": "news-1f45f796-3fa1-4393-914c-05466f2dccf7",
+          "newsCardRef": "news-92113aed-7a76-4d69-b2b5-47a737644118",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1313,7 +1313,7 @@
           "headline": "Sable Crescent Basin update",
           "publishAt": "2025-11-04T06:00:00.000Z",
           "urgency": "routine",
-          "newsCardRef": "news-1da21224-2e0e-4de4-a683-17546cd7b4a8",
+          "newsCardRef": "news-75892ba6-f1d7-44d6-914f-f94ac5f361cd",
           "provenanceBadge": {
             "label": "Lore Drop",
             "context": "flash",
@@ -1325,12 +1325,12 @@
     "searchPlan": {
       "jobs": [
         {
-          "jobId": "index-lore-bundle-faction.tempered-accord-b6da3317",
+          "jobId": "index-lore-bundle-faction.tempered-accord-c1efe738",
           "index": "lore_bundles",
-          "documentId": "bundle-faction.tempered-accord-b6da3317",
+          "documentId": "bundle-faction.tempered-accord-c1efe738",
           "type": "loreBundle",
           "body": {
-            "bundleId": "bundle-faction.tempered-accord-b6da3317",
+            "bundleId": "bundle-faction.tempered-accord-c1efe738",
             "summaryMarkdown": "### Tempered Accord Custodial Council\n- gains control of region.auric-steppe\n- gains control of region.kyther-range, region.sable-crescent",
             "entityId": "faction.tempered-accord",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1342,20 +1342,20 @@
               "sessionId": "qa-multi-faction-smoke",
               "moderationDecisionId": null,
               "deltaIds": [
-                "68017b96-2ae4-4f65-b115-87f12f526b94",
-                "5b37cb24-6d74-46bd-a1e4-78086cbfe6de"
+                "d7288310-9f62-45cb-907b-b1adf94c9542",
+                "0ffd58cc-b285-4b7a-b057-60d7222af452"
               ]
             }
           },
           "expectedVersion": 2
         },
         {
-          "jobId": "index-lore-bundle-faction.prismwell-kite-guild-8c897835",
+          "jobId": "index-lore-bundle-faction.prismwell-kite-guild-ff59aca2",
           "index": "lore_bundles",
-          "documentId": "bundle-faction.prismwell-kite-guild-8c897835",
+          "documentId": "bundle-faction.prismwell-kite-guild-ff59aca2",
           "type": "loreBundle",
           "body": {
-            "bundleId": "bundle-faction.prismwell-kite-guild-8c897835",
+            "bundleId": "bundle-faction.prismwell-kite-guild-ff59aca2",
             "summaryMarkdown": "### Prismwell Kite Guild\n- relinquishes region.auric-steppe\n- relinquishes region.auric-steppe, region.sable-crescent",
             "entityId": "faction.prismwell-kite-guild",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1364,20 +1364,20 @@
               "sessionId": "qa-multi-faction-smoke",
               "moderationDecisionId": null,
               "deltaIds": [
-                "f1e01589-df02-4a21-9fec-18cf695aaea6",
-                "b8e60d56-7be9-4d4d-a685-dcdfa92e93f6"
+                "884c3825-49f8-4143-8acd-53bf69e913b8",
+                "c5b52a2c-3e4c-4dba-8e39-8818ee399530"
               ]
             }
           },
           "expectedVersion": 2
         },
         {
-          "jobId": "index-lore-bundle-faction.echo-ledger-conclave-d295d73d",
+          "jobId": "index-lore-bundle-faction.echo-ledger-conclave-c156d8ab",
           "index": "lore_bundles",
-          "documentId": "bundle-faction.echo-ledger-conclave-d295d73d",
+          "documentId": "bundle-faction.echo-ledger-conclave-c156d8ab",
           "type": "loreBundle",
           "body": {
-            "bundleId": "bundle-faction.echo-ledger-conclave-d295d73d",
+            "bundleId": "bundle-faction.echo-ledger-conclave-c156d8ab",
             "summaryMarkdown": "### Echo Ledger Conclave\n- lore bundle updated",
             "entityId": "faction.echo-ledger-conclave",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1389,19 +1389,19 @@
               "sessionId": "qa-multi-faction-smoke",
               "moderationDecisionId": null,
               "deltaIds": [
-                "c1813f0e-ab5f-4fc4-a350-1aee70facbee"
+                "1e39e9da-6a32-4403-9b0c-d50b1cd504d9"
               ]
             }
           },
           "expectedVersion": 1
         },
         {
-          "jobId": "index-lore-bundle-region.kyther-range-f8b2806d",
+          "jobId": "index-lore-bundle-region.kyther-range-fa740b13",
           "index": "lore_bundles",
-          "documentId": "bundle-region.kyther-range-f8b2806d",
+          "documentId": "bundle-region.kyther-range-fa740b13",
           "type": "loreBundle",
           "body": {
-            "bundleId": "bundle-region.kyther-range-f8b2806d",
+            "bundleId": "bundle-region.kyther-range-fa740b13",
             "summaryMarkdown": "### Kyther Range Vault\n- lore bundle updated\n- status shifts to threatened",
             "entityId": "region.kyther-range",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1413,20 +1413,20 @@
               "sessionId": "qa-multi-faction-smoke",
               "moderationDecisionId": null,
               "deltaIds": [
-                "d9556854-425a-4786-b230-562f14aefa51",
-                "1f45f796-3fa1-4393-914c-05466f2dccf7"
+                "e9c55b3f-793f-445d-9695-ef01a07b8d6d",
+                "92113aed-7a76-4d69-b2b5-47a737644118"
               ]
             }
           },
           "expectedVersion": 2
         },
         {
-          "jobId": "index-lore-bundle-artifact.spectrum-bloom-array-e909904a",
+          "jobId": "index-lore-bundle-artifact.spectrum-bloom-array-35b63344",
           "index": "lore_bundles",
-          "documentId": "bundle-artifact.spectrum-bloom-array-e909904a",
+          "documentId": "bundle-artifact.spectrum-bloom-array-35b63344",
           "type": "loreBundle",
           "body": {
-            "bundleId": "bundle-artifact.spectrum-bloom-array-e909904a",
+            "bundleId": "bundle-artifact.spectrum-bloom-array-35b63344",
             "summaryMarkdown": "### Spectrum Bloom Flux Array\n- lore bundle updated",
             "entityId": "artifact.spectrum-bloom-array",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1438,19 +1438,19 @@
               "sessionId": "qa-multi-faction-smoke",
               "moderationDecisionId": null,
               "deltaIds": [
-                "c8dd2a39-65b0-4112-a64f-7a9bdb215a09"
+                "8744ee66-802d-415a-abdf-b0b5bc157f77"
               ]
             }
           },
           "expectedVersion": 1
         },
         {
-          "jobId": "index-lore-bundle-region.sable-crescent-f39e8a03",
+          "jobId": "index-lore-bundle-region.sable-crescent-97ebf68c",
           "index": "lore_bundles",
-          "documentId": "bundle-region.sable-crescent-f39e8a03",
+          "documentId": "bundle-region.sable-crescent-97ebf68c",
           "type": "loreBundle",
           "body": {
-            "bundleId": "bundle-region.sable-crescent-f39e8a03",
+            "bundleId": "bundle-region.sable-crescent-97ebf68c",
             "summaryMarkdown": "### Sable Crescent Basin\n- status shifts to threatened",
             "entityId": "region.sable-crescent",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1459,19 +1459,19 @@
               "sessionId": "qa-multi-faction-smoke",
               "moderationDecisionId": null,
               "deltaIds": [
-                "1da21224-2e0e-4de4-a683-17546cd7b4a8"
+                "75892ba6-f1d7-44d6-914f-f94ac5f361cd"
               ]
             }
           },
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-68017b96-2ae4-4f65-b115-87f12f526b94",
+          "jobId": "index-news-news-d7288310-9f62-45cb-907b-b1adf94c9542",
           "index": "news_cards",
-          "documentId": "news-68017b96-2ae4-4f65-b115-87f12f526b94",
+          "documentId": "news-d7288310-9f62-45cb-907b-b1adf94c9542",
           "type": "newsCard",
           "body": {
-            "cardId": "news-68017b96-2ae4-4f65-b115-87f12f526b94",
+            "cardId": "news-d7288310-9f62-45cb-907b-b1adf94c9542",
             "headline": "Tempered Accord Custodial Council update",
             "lead": "gains control of region.auric-steppe",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1482,12 +1482,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-f1e01589-df02-4a21-9fec-18cf695aaea6",
+          "jobId": "index-news-news-884c3825-49f8-4143-8acd-53bf69e913b8",
           "index": "news_cards",
-          "documentId": "news-f1e01589-df02-4a21-9fec-18cf695aaea6",
+          "documentId": "news-884c3825-49f8-4143-8acd-53bf69e913b8",
           "type": "newsCard",
           "body": {
-            "cardId": "news-f1e01589-df02-4a21-9fec-18cf695aaea6",
+            "cardId": "news-884c3825-49f8-4143-8acd-53bf69e913b8",
             "headline": "Prismwell Kite Guild update",
             "lead": "relinquishes region.auric-steppe",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1498,12 +1498,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+          "jobId": "index-news-news-c5b52a2c-3e4c-4dba-8e39-8818ee399530",
           "index": "news_cards",
-          "documentId": "news-b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+          "documentId": "news-c5b52a2c-3e4c-4dba-8e39-8818ee399530",
           "type": "newsCard",
           "body": {
-            "cardId": "news-b8e60d56-7be9-4d4d-a685-dcdfa92e93f6",
+            "cardId": "news-c5b52a2c-3e4c-4dba-8e39-8818ee399530",
             "headline": "Prismwell Kite Guild update",
             "lead": "relinquishes region.auric-steppe, region.sable-crescent",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1514,12 +1514,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+          "jobId": "index-news-news-1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
           "index": "news_cards",
-          "documentId": "news-c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+          "documentId": "news-1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
           "type": "newsCard",
           "body": {
-            "cardId": "news-c1813f0e-ab5f-4fc4-a350-1aee70facbee",
+            "cardId": "news-1e39e9da-6a32-4403-9b0c-d50b1cd504d9",
             "headline": "Echo Ledger Conclave update",
             "lead": "lore bundle updated",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1533,12 +1533,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-d9556854-425a-4786-b230-562f14aefa51",
+          "jobId": "index-news-news-e9c55b3f-793f-445d-9695-ef01a07b8d6d",
           "index": "news_cards",
-          "documentId": "news-d9556854-425a-4786-b230-562f14aefa51",
+          "documentId": "news-e9c55b3f-793f-445d-9695-ef01a07b8d6d",
           "type": "newsCard",
           "body": {
-            "cardId": "news-d9556854-425a-4786-b230-562f14aefa51",
+            "cardId": "news-e9c55b3f-793f-445d-9695-ef01a07b8d6d",
             "headline": "Kyther Range Vault update",
             "lead": "lore bundle updated",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1552,12 +1552,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+          "jobId": "index-news-news-8744ee66-802d-415a-abdf-b0b5bc157f77",
           "index": "news_cards",
-          "documentId": "news-c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+          "documentId": "news-8744ee66-802d-415a-abdf-b0b5bc157f77",
           "type": "newsCard",
           "body": {
-            "cardId": "news-c8dd2a39-65b0-4112-a64f-7a9bdb215a09",
+            "cardId": "news-8744ee66-802d-415a-abdf-b0b5bc157f77",
             "headline": "Spectrum Bloom Flux Array update",
             "lead": "lore bundle updated",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1571,12 +1571,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+          "jobId": "index-news-news-0ffd58cc-b285-4b7a-b057-60d7222af452",
           "index": "news_cards",
-          "documentId": "news-5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+          "documentId": "news-0ffd58cc-b285-4b7a-b057-60d7222af452",
           "type": "newsCard",
           "body": {
-            "cardId": "news-5b37cb24-6d74-46bd-a1e4-78086cbfe6de",
+            "cardId": "news-0ffd58cc-b285-4b7a-b057-60d7222af452",
             "headline": "Tempered Accord Custodial Council update",
             "lead": "gains control of region.kyther-range, region.sable-crescent",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1590,12 +1590,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-1f45f796-3fa1-4393-914c-05466f2dccf7",
+          "jobId": "index-news-news-92113aed-7a76-4d69-b2b5-47a737644118",
           "index": "news_cards",
-          "documentId": "news-1f45f796-3fa1-4393-914c-05466f2dccf7",
+          "documentId": "news-92113aed-7a76-4d69-b2b5-47a737644118",
           "type": "newsCard",
           "body": {
-            "cardId": "news-1f45f796-3fa1-4393-914c-05466f2dccf7",
+            "cardId": "news-92113aed-7a76-4d69-b2b5-47a737644118",
             "headline": "Kyther Range Vault update",
             "lead": "status shifts to threatened",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1606,12 +1606,12 @@
           "expectedVersion": 1
         },
         {
-          "jobId": "index-news-news-1da21224-2e0e-4de4-a683-17546cd7b4a8",
+          "jobId": "index-news-news-75892ba6-f1d7-44d6-914f-f94ac5f361cd",
           "index": "news_cards",
-          "documentId": "news-1da21224-2e0e-4de4-a683-17546cd7b4a8",
+          "documentId": "news-75892ba6-f1d7-44d6-914f-f94ac5f361cd",
           "type": "newsCard",
           "body": {
-            "cardId": "news-1da21224-2e0e-4de4-a683-17546cd7b4a8",
+            "cardId": "news-75892ba6-f1d7-44d6-914f-f94ac5f361cd",
             "headline": "Sable Crescent Basin update",
             "lead": "status shifts to threatened",
             "publishAt": "2025-11-04T06:00:00.000Z",
@@ -1623,5 +1623,15 @@
         }
       ]
     }
+  },
+  "moderation": {
+    "requiresModeration": true,
+    "reasons": [
+      "capability_violation",
+      "conflict_detected"
+    ],
+    "capabilityViolations": 3,
+    "conflictDetections": 1,
+    "lowConfidenceFindings": 0
   }
 }

@@ -1,0 +1,3017 @@
+{
+  "sessionId": "qa-batch-beta",
+  "exportedAt": "2025-11-04T05:26:29.006Z",
+  "turnCount": 11,
+  "resolvedChecks": [
+    {
+      "id": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2",
+      "topic": "event.checkResolved",
+      "tier": "hard-miss",
+      "result": "hard-miss",
+      "outcome": "hard-miss",
+      "rationale": "hard-miss — Total 5 vs. target 9 | Dice kept: 2, 1 | Stat modifier: +2",
+      "move": "delve-the-ruins",
+      "tags": [
+        "delve-the-ruins",
+        "risk-it-all"
+      ],
+      "difficulty": {
+        "label": "risky",
+        "target": 9
+      },
+      "dice": {
+        "seed": "qa-batch-beta:e6029193-605e-4ae7-84c6-88aebc441c1b:1:9:2",
+        "rolls": [
+          1,
+          2
+        ],
+        "kept": [
+          2,
+          1
+        ],
+        "discarded": [],
+        "advantageApplied": false,
+        "disadvantageApplied": false,
+        "bonusDice": 0,
+        "statValue": 2,
+        "total": 5
+      },
+      "flags": [
+        "disclosure:delve-the-ruins",
+        "disclosure:risk-it-all"
+      ],
+      "safetyFlags": [],
+      "momentum": {
+        "before": 0,
+        "after": 0,
+        "delta": 0,
+        "reason": "hard-miss"
+      },
+      "momentumDelta": 0,
+      "momentumReset": 0,
+      "statAdjustments": [
+        {
+          "stat": "finesse",
+          "delta": -1,
+          "reason": "hard-miss setback"
+        }
+      ],
+      "complication": {
+        "severity": "critical",
+        "tags": [
+          "delve-the-ruins",
+          "risk-it-all",
+          "hard-miss"
+        ]
+      },
+      "latencyMs": 0,
+      "telemetry": {
+        "latencyMs": 0,
+        "deterministicSeed": "qa-batch-beta:e6029193-605e-4ae7-84c6-88aebc441c1b:1:9:2"
+      },
+      "receivedAt": "2025-11-04T05:26:28.951Z"
+    },
+    {
+      "id": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e",
+      "topic": "event.checkResolved",
+      "tier": "full-success",
+      "result": "full-success",
+      "outcome": "full-success",
+      "rationale": "full-success — Total 8 vs. target 7 | Dice kept: 4, 3 | Stat modifier: +1 | Momentum shift: +1",
+      "move": "hack-the-signal",
+      "tags": [
+        "hack-the-signal",
+        "discern-the-truth"
+      ],
+      "difficulty": {
+        "label": "controlled",
+        "target": 7
+      },
+      "dice": {
+        "seed": "qa-batch-beta:a9d287c3-8d17-4100-bf29-a72220f1bbf4:2:7:1",
+        "rolls": [
+          3,
+          4
+        ],
+        "kept": [
+          4,
+          3
+        ],
+        "discarded": [],
+        "advantageApplied": false,
+        "disadvantageApplied": false,
+        "bonusDice": 0,
+        "statValue": 1,
+        "total": 8
+      },
+      "flags": [
+        "disclosure:hack-the-signal"
+      ],
+      "safetyFlags": [],
+      "momentum": {
+        "before": 0,
+        "after": 1,
+        "delta": 1,
+        "reason": "full-success"
+      },
+      "momentumDelta": 1,
+      "statAdjustments": [],
+      "complication": null,
+      "latencyMs": 0,
+      "telemetry": {
+        "latencyMs": 0,
+        "deterministicSeed": "qa-batch-beta:a9d287c3-8d17-4100-bf29-a72220f1bbf4:2:7:1"
+      },
+      "receivedAt": "2025-11-04T05:26:28.962Z"
+    }
+  ],
+  "vetoedChecks": [
+    {
+      "id": "safety-qa-batch-beta-4",
+      "sessionId": "qa-batch-beta",
+      "topic": "event.checkVetoed",
+      "createdAt": "2025-11-04T05:26:28.972Z",
+      "auditRef": "safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192",
+      "reason": "prohibited-capability",
+      "safetyFlags": [
+        "prohibited-capability"
+      ],
+      "data": {
+        "move": "safety-intercept",
+        "playerId": "player-vertical",
+        "message": "Check vetoed due to safety policy trigger.",
+        "occurredAt": "2025-11-04T05:26:28.972Z"
+      }
+    }
+  ],
+  "adminAlerts": [
+    {
+      "id": "b1a76254-e062-4522-8662-808fb27db9fc",
+      "sessionId": "qa-batch-beta",
+      "topic": "admin.alert",
+      "createdAt": "2025-11-04T05:26:28.971Z",
+      "severity": "critical",
+      "reason": "safety_gate_triggered",
+      "data": {}
+    },
+    {
+      "id": "88f64acc-c88c-491c-a709-1ee147b1ec84",
+      "sessionId": "qa-batch-beta",
+      "topic": "admin.alert",
+      "createdAt": "2025-11-04T05:26:28.972Z",
+      "severity": "high",
+      "reason": "prohibited-capability",
+      "data": {
+        "checkId": "safety-qa-batch-beta-4",
+        "auditRef": "safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192",
+        "safetyFlags": [
+          "prohibited-capability"
+        ],
+        "latencyMs": 0
+      }
+    }
+  ],
+  "closureStatus": "completed",
+  "closureResult": {
+    "summaryVersion": 1,
+    "mentionCount": 0,
+    "deltaCount": 0,
+    "publishing": {
+      "batchId": "qa-batch-beta-batch-0",
+      "scheduledAt": "2025-11-04T06:26:28.981Z"
+    },
+    "searchJobs": []
+  },
+  "telemetryEvents": [
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.947Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "start",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.947Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "success",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.947Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "start",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.947Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "success",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.947Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "start",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.948Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "success",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.948Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "start",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.948Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "success",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.948Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "start",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.948Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "success",
+      "turnSequence": 1
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.check-dispatch",
+      "timestamp": "2025-11-04T05:26:28.950Z",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2",
+      "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b"
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.check-resolution",
+      "timestamp": "2025-11-04T05:26:28.951Z",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2",
+      "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+      "result": "hard-miss"
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "start",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "success",
+      "turnSequence": 2
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.check-dispatch",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e",
+      "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.check-resolution",
+      "timestamp": "2025-11-04T05:26:28.962Z",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e",
+      "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+      "result": "full-success"
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "start",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "scene-frame",
+      "status": "success",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "start",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "intent-intake",
+      "status": "success",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "start",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "safety-gate",
+      "status": "success",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "start",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "check-planner",
+      "status": "success",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "start",
+      "turnSequence": 3
+    },
+    {
+      "level": "info",
+      "message": "telemetry.session.transition",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "sessionId": "qa-batch-beta",
+      "nodeId": "narrative-weaver",
+      "status": "success",
+      "turnSequence": 3
+    },
+    {
+      "level": "warn",
+      "message": "telemetry.session.safety",
+      "timestamp": "2025-11-04T05:26:28.972Z",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192",
+      "severity": "critical",
+      "flags": [
+        "prohibited-capability"
+      ],
+      "reason": "safety_gate_triggered"
+    },
+    {
+      "level": "warn",
+      "message": "telemetry.session.safety",
+      "timestamp": "2025-11-04T05:26:28.972Z",
+      "sessionId": "qa-batch-beta",
+      "auditRef": "safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192",
+      "severity": "high",
+      "flags": [
+        "prohibited-capability"
+      ],
+      "reason": "prohibited-capability"
+    }
+  ],
+  "narrative": {
+    "turnCount": 11,
+    "playerMessages": 4,
+    "gmMessages": 4,
+    "systemMessages": 3,
+    "safetyFlags": [
+      "prohibited-capability"
+    ],
+    "moves": []
+  },
+  "transcript": [
+    {
+      "id": "transcript-1",
+      "role": "player",
+      "content": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+      "text": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+      "metadata": {
+        "turnHint": "stealth-advance"
+      },
+      "speaker": "player",
+      "playerId": "player-vertical",
+      "timestamp": "2025-11-04T05:26:28.947Z"
+    },
+    {
+      "id": "transcript-2",
+      "role": "gm",
+      "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+      "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+      "metadata": {
+        "promptPackets": [
+          {
+            "type": "scene-frame",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+          },
+          {
+            "type": "intent-intake",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+          },
+          {
+            "type": "safety-gate",
+            "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+          },
+          {
+            "type": "check-planner",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nMove Tags: delve-the-ruins, risk-it-all\nMomentum: 0\nDifficulty: risky (9)\nAbility: finesse\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+          },
+          {
+            "type": "narrative-weaver",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2\nMove: delve-the-ruins\nDifficulty: risky (9)\nAbility: finesse\nRecommended Narration: Success: Navigating hostile corridors with limited visibility. unfolds in the player's favor. Complication: escalate via security_alert\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+          }
+        ],
+        "auditTrail": [
+          {
+            "nodeId": "check-planner",
+            "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+          }
+        ]
+      },
+      "markers": [
+        {
+          "type": "session.marker",
+          "marker": "narrative-beat",
+          "tone": "stealth"
+        },
+        {
+          "type": "session.marker",
+          "marker": "momentum-state",
+          "value": 0
+        },
+        {
+          "type": "session.marker",
+          "marker": "check-requested",
+          "move": "delve-the-ruins",
+          "ability": "finesse",
+          "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+        }
+      ],
+      "speaker": "gm",
+      "timestamp": "2025-11-04T05:26:28.950Z"
+    },
+    {
+      "id": "transcript-3",
+      "role": "system",
+      "content": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+      "text": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+      "metadata": {
+        "type": "check-resolution",
+        "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+        "result": "hard-miss",
+        "momentumBefore": 0,
+        "momentumAfter": 0,
+        "difficulty": "risky",
+        "difficultyTarget": 9
+      },
+      "speaker": "system",
+      "type": "check-resolution",
+      "timestamp": "2025-11-04T05:26:28.951Z"
+    },
+    {
+      "id": "transcript-4",
+      "role": "player",
+      "content": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+      "text": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+      "metadata": {
+        "turnHint": "rally-call"
+      },
+      "speaker": "player",
+      "playerId": "player-vertical",
+      "timestamp": "2025-11-04T05:26:28.960Z"
+    },
+    {
+      "id": "transcript-5",
+      "role": "gm",
+      "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+      "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+      "metadata": {
+        "promptPackets": [
+          {
+            "type": "scene-frame",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+          },
+          {
+            "type": "intent-intake",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I broadcast our momentum to rally the Prismwell guild before the next move.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+          },
+          {
+            "type": "safety-gate",
+            "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+          },
+          {
+            "type": "narrative-weaver",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+          }
+        ],
+        "auditTrail": []
+      },
+      "markers": [
+        {
+          "type": "session.marker",
+          "marker": "narrative-beat",
+          "tone": "narrative"
+        },
+        {
+          "type": "session.marker",
+          "marker": "momentum-state",
+          "value": 0
+        }
+      ],
+      "speaker": "gm",
+      "timestamp": "2025-11-04T05:26:28.961Z"
+    },
+    {
+      "id": "transcript-6",
+      "role": "player",
+      "content": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+      "text": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+      "metadata": {
+        "turnHint": "signal-hack"
+      },
+      "speaker": "player",
+      "playerId": "player-vertical",
+      "timestamp": "2025-11-04T05:26:28.961Z"
+    },
+    {
+      "id": "transcript-7",
+      "role": "gm",
+      "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+      "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+      "metadata": {
+        "promptPackets": [
+          {
+            "type": "scene-frame",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+          },
+          {
+            "type": "intent-intake",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+          },
+          {
+            "type": "safety-gate",
+            "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+          },
+          {
+            "type": "check-planner",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nMove Tags: hack-the-signal, discern-the-truth\nMomentum: 0\nDifficulty: controlled (7)\nAbility: ingenuity\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+          },
+          {
+            "type": "narrative-weaver",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e\nMove: hack-the-signal\nDifficulty: controlled (7)\nAbility: ingenuity\nRecommended Narration: Success: Decoding signal lattice to extract actionable intel. unfolds in the player's favor. Complication: escalate via signal_feedback\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+          }
+        ],
+        "auditTrail": [
+          {
+            "nodeId": "check-planner",
+            "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+          }
+        ]
+      },
+      "markers": [
+        {
+          "type": "session.marker",
+          "marker": "narrative-beat",
+          "tone": "narrative"
+        },
+        {
+          "type": "session.marker",
+          "marker": "momentum-state",
+          "value": 0
+        },
+        {
+          "type": "session.marker",
+          "marker": "check-requested",
+          "move": "hack-the-signal",
+          "ability": "ingenuity",
+          "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+        }
+      ],
+      "speaker": "gm",
+      "timestamp": "2025-11-04T05:26:28.961Z"
+    },
+    {
+      "id": "transcript-8",
+      "role": "system",
+      "content": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+      "text": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+      "metadata": {
+        "type": "check-resolution",
+        "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+        "result": "full-success",
+        "momentumBefore": 0,
+        "momentumAfter": 1,
+        "difficulty": "controlled",
+        "difficultyTarget": 7
+      },
+      "speaker": "system",
+      "type": "check-resolution",
+      "timestamp": "2025-11-04T05:26:28.962Z"
+    },
+    {
+      "id": "transcript-9",
+      "role": "player",
+      "content": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+      "text": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+      "metadata": {
+        "turnHint": "prohibited-action"
+      },
+      "speaker": "player",
+      "playerId": "player-vertical",
+      "timestamp": "2025-11-04T05:26:28.971Z"
+    },
+    {
+      "id": "transcript-10",
+      "role": "gm",
+      "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+      "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+      "metadata": {
+        "promptPackets": [
+          {
+            "type": "scene-frame",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 1 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+          },
+          {
+            "type": "intent-intake",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I rewrite history so the collapse never happened, bending time despite the prohibitions.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+          },
+          {
+            "type": "safety-gate",
+            "prompt": "{\"flags\":[\"prohibited-capability\"],\"severity\":\"critical\",\"escalate\":true,\"reason\":\"safety_gate_triggered\",\"auditRef\":\"safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192\"}"
+          },
+          {
+            "type": "narrative-weaver",
+            "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: prohibited-capability – escalate to moderation queue."
+          }
+        ],
+        "auditTrail": []
+      },
+      "markers": [
+        {
+          "type": "session.marker",
+          "marker": "narrative-beat",
+          "tone": "narrative"
+        },
+        {
+          "type": "session.marker",
+          "marker": "momentum-state",
+          "value": 1
+        },
+        {
+          "type": "session.marker",
+          "marker": "safety-escalated",
+          "flags": [
+            "prohibited-capability"
+          ],
+          "severity": "critical"
+        }
+      ],
+      "speaker": "gm",
+      "timestamp": "2025-11-04T05:26:28.971Z"
+    },
+    {
+      "id": "transcript-11",
+      "role": "system",
+      "content": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+      "text": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+      "metadata": {
+        "type": "check-veto",
+        "checkId": "safety-qa-batch-beta-4",
+        "reason": "prohibited-capability",
+        "safetyFlags": [
+          "prohibited-capability"
+        ]
+      },
+      "speaker": "system",
+      "type": "check-veto",
+      "timestamp": "2025-11-04T05:26:28.972Z"
+    }
+  ],
+  "changeFeed": [
+    {
+      "cursor": 1,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "player",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 1,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.947Z",
+      "metadata": {
+        "role": "player",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-1",
+        "role": "player",
+        "content": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+        "text": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+        "metadata": {
+          "turnHint": "stealth-advance"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.947Z"
+      }
+    },
+    {
+      "cursor": 2,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "gm",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 2,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.950Z",
+      "metadata": {
+        "role": "gm",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-2",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+            },
+            {
+              "type": "check-planner",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nMove Tags: delve-the-ruins, risk-it-all\nMomentum: 0\nDifficulty: risky (9)\nAbility: finesse\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2\nMove: delve-the-ruins\nDifficulty: risky (9)\nAbility: finesse\nRecommended Narration: Success: Navigating hostile corridors with limited visibility. unfolds in the player's favor. Complication: escalate via security_alert\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+            }
+          ],
+          "auditTrail": [
+            {
+              "nodeId": "check-planner",
+              "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+            }
+          ]
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "stealth"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 0
+          },
+          {
+            "type": "session.marker",
+            "marker": "check-requested",
+            "move": "delve-the-ruins",
+            "ability": "finesse",
+            "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.950Z"
+      }
+    },
+    {
+      "cursor": 3,
+      "sessionId": "qa-batch-beta",
+      "shard": "character",
+      "action": "stat-adjustment",
+      "actor": "checkRunner",
+      "reason": "stat-adjustment",
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 2,
+      "scope": "ephemeral",
+      "timestamp": "2025-11-04T05:26:28.951Z",
+      "metadata": {
+        "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b"
+      },
+      "before": {
+        "name": "Avery Glass",
+        "pronouns": "they/them",
+        "archetype": "Wayfarer Archivist",
+        "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+        "stats": {
+          "ingenuity": 1,
+          "resolve": 1,
+          "finesse": 2,
+          "presence": 1,
+          "weird": 0,
+          "grit": 1
+        },
+        "tags": [
+          "region.auric-steppe",
+          "faction.prismwell-kite-guild",
+          "anchor.prism-spire.auric-step"
+        ]
+      },
+      "after": {
+        "name": "Avery Glass",
+        "pronouns": "they/them",
+        "archetype": "Wayfarer Archivist",
+        "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+        "stats": {
+          "ingenuity": 1,
+          "resolve": 1,
+          "finesse": 1,
+          "presence": 1,
+          "weird": 0,
+          "grit": 1
+        },
+        "tags": [
+          "region.auric-steppe",
+          "faction.prismwell-kite-guild",
+          "anchor.prism-spire.auric-step"
+        ]
+      }
+    },
+    {
+      "cursor": 4,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "system",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 3,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.951Z",
+      "metadata": {
+        "role": "system",
+        "type": "check-resolution",
+        "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+        "result": "hard-miss"
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-3",
+        "role": "system",
+        "content": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+        "text": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+        "metadata": {
+          "type": "check-resolution",
+          "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+          "result": "hard-miss",
+          "momentumBefore": 0,
+          "momentumAfter": 0,
+          "difficulty": "risky",
+          "difficultyTarget": 9
+        },
+        "speaker": "system",
+        "type": "check-resolution",
+        "timestamp": "2025-11-04T05:26:28.951Z"
+      }
+    },
+    {
+      "cursor": 5,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "player",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 4,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.960Z",
+      "metadata": {
+        "role": "player",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-4",
+        "role": "player",
+        "content": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+        "text": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+        "metadata": {
+          "turnHint": "rally-call"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.960Z"
+      }
+    },
+    {
+      "cursor": 6,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "gm",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 5,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "metadata": {
+        "role": "gm",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-5",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I broadcast our momentum to rally the Prismwell guild before the next move.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+            }
+          ],
+          "auditTrail": []
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "narrative"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 0
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.961Z"
+      }
+    },
+    {
+      "cursor": 7,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "player",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 6,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.961Z",
+      "metadata": {
+        "role": "player",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-6",
+        "role": "player",
+        "content": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+        "text": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+        "metadata": {
+          "turnHint": "signal-hack"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.961Z"
+      }
+    },
+    {
+      "cursor": 8,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "gm",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 7,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.962Z",
+      "metadata": {
+        "role": "gm",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-7",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+            },
+            {
+              "type": "check-planner",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nMove Tags: hack-the-signal, discern-the-truth\nMomentum: 0\nDifficulty: controlled (7)\nAbility: ingenuity\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e\nMove: hack-the-signal\nDifficulty: controlled (7)\nAbility: ingenuity\nRecommended Narration: Success: Decoding signal lattice to extract actionable intel. unfolds in the player's favor. Complication: escalate via signal_feedback\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+            }
+          ],
+          "auditTrail": [
+            {
+              "nodeId": "check-planner",
+              "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+            }
+          ]
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "narrative"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 0
+          },
+          {
+            "type": "session.marker",
+            "marker": "check-requested",
+            "move": "hack-the-signal",
+            "ability": "ingenuity",
+            "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.961Z"
+      }
+    },
+    {
+      "cursor": 9,
+      "sessionId": "qa-batch-beta",
+      "shard": "momentum",
+      "action": "momentum-adjustment",
+      "actor": "checkRunner",
+      "reason": "full-success",
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 2,
+      "scope": "ephemeral",
+      "timestamp": "2025-11-04T05:26:28.962Z",
+      "metadata": {
+        "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+      },
+      "before": {
+        "current": 0,
+        "floor": -2,
+        "ceiling": 3,
+        "baseline": 0,
+        "history": []
+      },
+      "after": {
+        "current": 1,
+        "floor": -2,
+        "ceiling": 3,
+        "baseline": 0,
+        "history": [
+          {
+            "before": 0,
+            "after": 1,
+            "delta": 1,
+            "reason": "full-success",
+            "at": "2025-11-04T05:26:28.962Z",
+            "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+          }
+        ]
+      }
+    },
+    {
+      "cursor": 10,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "system",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 8,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.962Z",
+      "metadata": {
+        "role": "system",
+        "type": "check-resolution",
+        "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+        "result": "full-success"
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-8",
+        "role": "system",
+        "content": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+        "text": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+        "metadata": {
+          "type": "check-resolution",
+          "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+          "result": "full-success",
+          "momentumBefore": 0,
+          "momentumAfter": 1,
+          "difficulty": "controlled",
+          "difficultyTarget": 7
+        },
+        "speaker": "system",
+        "type": "check-resolution",
+        "timestamp": "2025-11-04T05:26:28.962Z"
+      }
+    },
+    {
+      "cursor": 11,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "player",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 9,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "metadata": {
+        "role": "player",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-9",
+        "role": "player",
+        "content": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+        "text": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+        "metadata": {
+          "turnHint": "prohibited-action"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.971Z"
+      }
+    },
+    {
+      "cursor": 12,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "gm",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 10,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.971Z",
+      "metadata": {
+        "role": "gm",
+        "type": null,
+        "checkId": null,
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-10",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 1 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I rewrite history so the collapse never happened, bending time despite the prohibitions.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[\"prohibited-capability\"],\"severity\":\"critical\",\"escalate\":true,\"reason\":\"safety_gate_triggered\",\"auditRef\":\"safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192\"}"
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: prohibited-capability – escalate to moderation queue."
+            }
+          ],
+          "auditTrail": []
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "narrative"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 1
+          },
+          {
+            "type": "session.marker",
+            "marker": "safety-escalated",
+            "flags": [
+              "prohibited-capability"
+            ],
+            "severity": "critical"
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.971Z"
+      }
+    },
+    {
+      "cursor": 13,
+      "sessionId": "qa-batch-beta",
+      "shard": "transcript",
+      "action": "append",
+      "actor": "system",
+      "reason": null,
+      "capabilityRefs": [],
+      "safetyFlags": [],
+      "revision": 11,
+      "scope": "transcript",
+      "timestamp": "2025-11-04T05:26:28.972Z",
+      "metadata": {
+        "role": "system",
+        "type": "check-veto",
+        "checkId": "safety-qa-batch-beta-4",
+        "result": null
+      },
+      "before": null,
+      "after": {
+        "id": "transcript-11",
+        "role": "system",
+        "content": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+        "text": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+        "metadata": {
+          "type": "check-veto",
+          "checkId": "safety-qa-batch-beta-4",
+          "reason": "prohibited-capability",
+          "safetyFlags": [
+            "prohibited-capability"
+          ]
+        },
+        "speaker": "system",
+        "type": "check-veto",
+        "timestamp": "2025-11-04T05:26:28.972Z"
+      }
+    }
+  ],
+  "closureJob": {
+    "jobId": "f0c1adf8-c8de-46e3-b32f-3f095a7021f1",
+    "sessionId": "qa-batch-beta",
+    "trigger": "session_closed",
+    "status": "completed",
+    "enqueuedAt": "2025-11-04T05:26:28.981Z",
+    "startedAt": "2025-11-04T05:26:28.982Z",
+    "completedAt": "2025-11-04T05:26:28.986Z",
+    "durationMs": 4,
+    "attempts": 1,
+    "auditRef": "vertical-slice:qa-batch-beta",
+    "reason": "vertical_slice.completed",
+    "closedAt": "2025-11-04T05:26:28.981Z",
+    "momentum": {
+      "current": 1,
+      "floor": -2,
+      "ceiling": 3,
+      "baseline": 0,
+      "history": [
+        {
+          "before": 0,
+          "after": 1,
+          "delta": 1,
+          "reason": "full-success",
+          "at": "2025-11-04T05:26:28.962Z",
+          "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+        }
+      ]
+    },
+    "changeCursor": 13,
+    "lastAckCursor": 0,
+    "pendingChecks": 0,
+    "result": {
+      "summaryVersion": 1,
+      "mentionCount": 0,
+      "deltaCount": 0,
+      "publishing": {
+        "batchId": "qa-batch-beta-batch-0",
+        "scheduledAt": "2025-11-04T06:26:28.981Z"
+      },
+      "searchJobs": []
+    },
+    "error": null
+  },
+  "sessionState": {
+    "sessionId": "qa-batch-beta",
+    "createdAt": "2025-11-04T05:26:28.946Z",
+    "updatedAt": "2025-11-04T05:26:28.981Z",
+    "player": {
+      "id": "player-qa-batch-beta",
+      "name": "Frontier Runner"
+    },
+    "location": {
+      "region": "Auric Steppe Corridor",
+      "anchorId": "anchor.prism-spire.auric-step",
+      "locale": "Eclipse Relay Hub",
+      "atmosphere": "Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays."
+    },
+    "shards": {
+      "character": {
+        "data": {
+          "name": "Avery Glass",
+          "pronouns": "they/them",
+          "archetype": "Wayfarer Archivist",
+          "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+          "stats": {
+            "ingenuity": 1,
+            "resolve": 1,
+            "finesse": 1,
+            "presence": 1,
+            "weird": 0,
+            "grit": 1
+          },
+          "tags": [
+            "region.auric-steppe",
+            "faction.prismwell-kite-guild",
+            "anchor.prism-spire.auric-step"
+          ]
+        },
+        "revision": 2,
+        "updatedAt": "2025-11-04T05:26:28.951Z",
+        "updatedBy": "checkRunner"
+      },
+      "inventory": {
+        "data": [
+          {
+            "id": "item.glass-frontier-compass",
+            "name": "Glass Frontier Compass",
+            "tags": [
+              "narrative-anchor",
+              "tech.tier.resonance"
+            ]
+          },
+          {
+            "id": "item.echo-ledger-fragment",
+            "name": "Echo Ledger Fragment",
+            "tags": [
+              "lore-hook",
+              "faction.echo-ledger-conclave"
+            ]
+          }
+        ],
+        "revision": 1,
+        "updatedAt": "2025-11-04T05:26:28.946Z",
+        "updatedBy": "seed"
+      },
+      "relationships": {
+        "data": [
+          {
+            "id": "faction.cinder-scout-collective",
+            "name": "Cinder Scout Collective",
+            "status": "guarded",
+            "bond": 1
+          },
+          {
+            "id": "faction.prismwell-kite-guild",
+            "name": "Prismwell Kite Guild",
+            "status": "trusted",
+            "bond": 2
+          }
+        ],
+        "revision": 1,
+        "updatedAt": "2025-11-04T05:26:28.946Z",
+        "updatedBy": "seed"
+      },
+      "momentum": {
+        "data": {
+          "current": 1,
+          "floor": -2,
+          "ceiling": 3,
+          "baseline": 0,
+          "history": [
+            {
+              "before": 0,
+              "after": 1,
+              "delta": 1,
+              "reason": "full-success",
+              "at": "2025-11-04T05:26:28.962Z",
+              "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+            }
+          ]
+        },
+        "revision": 2,
+        "updatedAt": "2025-11-04T05:26:28.962Z",
+        "updatedBy": "checkRunner"
+      }
+    },
+    "controls": [],
+    "transcript": [
+      {
+        "id": "transcript-1",
+        "role": "player",
+        "content": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+        "text": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+        "metadata": {
+          "turnHint": "stealth-advance"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.947Z"
+      },
+      {
+        "id": "transcript-2",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+            },
+            {
+              "type": "check-planner",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nMove Tags: delve-the-ruins, risk-it-all\nMomentum: 0\nDifficulty: risky (9)\nAbility: finesse\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2\nMove: delve-the-ruins\nDifficulty: risky (9)\nAbility: finesse\nRecommended Narration: Success: Navigating hostile corridors with limited visibility. unfolds in the player's favor. Complication: escalate via security_alert\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+            }
+          ],
+          "auditTrail": [
+            {
+              "nodeId": "check-planner",
+              "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+            }
+          ]
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "stealth"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 0
+          },
+          {
+            "type": "session.marker",
+            "marker": "check-requested",
+            "move": "delve-the-ruins",
+            "ability": "finesse",
+            "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.950Z"
+      },
+      {
+        "id": "transcript-3",
+        "role": "system",
+        "content": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+        "text": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+        "metadata": {
+          "type": "check-resolution",
+          "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+          "result": "hard-miss",
+          "momentumBefore": 0,
+          "momentumAfter": 0,
+          "difficulty": "risky",
+          "difficultyTarget": 9
+        },
+        "speaker": "system",
+        "type": "check-resolution",
+        "timestamp": "2025-11-04T05:26:28.951Z"
+      },
+      {
+        "id": "transcript-4",
+        "role": "player",
+        "content": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+        "text": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+        "metadata": {
+          "turnHint": "rally-call"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.960Z"
+      },
+      {
+        "id": "transcript-5",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I broadcast our momentum to rally the Prismwell guild before the next move.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+            }
+          ],
+          "auditTrail": []
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "narrative"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 0
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.961Z"
+      },
+      {
+        "id": "transcript-6",
+        "role": "player",
+        "content": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+        "text": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+        "metadata": {
+          "turnHint": "signal-hack"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.961Z"
+      },
+      {
+        "id": "transcript-7",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+            },
+            {
+              "type": "check-planner",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nMove Tags: hack-the-signal, discern-the-truth\nMomentum: 0\nDifficulty: controlled (7)\nAbility: ingenuity\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e\nMove: hack-the-signal\nDifficulty: controlled (7)\nAbility: ingenuity\nRecommended Narration: Success: Decoding signal lattice to extract actionable intel. unfolds in the player's favor. Complication: escalate via signal_feedback\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+            }
+          ],
+          "auditTrail": [
+            {
+              "nodeId": "check-planner",
+              "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+            }
+          ]
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "narrative"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 0
+          },
+          {
+            "type": "session.marker",
+            "marker": "check-requested",
+            "move": "hack-the-signal",
+            "ability": "ingenuity",
+            "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.961Z"
+      },
+      {
+        "id": "transcript-8",
+        "role": "system",
+        "content": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+        "text": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+        "metadata": {
+          "type": "check-resolution",
+          "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+          "result": "full-success",
+          "momentumBefore": 0,
+          "momentumAfter": 1,
+          "difficulty": "controlled",
+          "difficultyTarget": 7
+        },
+        "speaker": "system",
+        "type": "check-resolution",
+        "timestamp": "2025-11-04T05:26:28.962Z"
+      },
+      {
+        "id": "transcript-9",
+        "role": "player",
+        "content": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+        "text": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+        "metadata": {
+          "turnHint": "prohibited-action"
+        },
+        "speaker": "player",
+        "playerId": "player-vertical",
+        "timestamp": "2025-11-04T05:26:28.971Z"
+      },
+      {
+        "id": "transcript-10",
+        "role": "gm",
+        "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+        "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+        "metadata": {
+          "promptPackets": [
+            {
+              "type": "scene-frame",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 1 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+            },
+            {
+              "type": "intent-intake",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I rewrite history so the collapse never happened, bending time despite the prohibitions.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+            },
+            {
+              "type": "safety-gate",
+              "prompt": "{\"flags\":[\"prohibited-capability\"],\"severity\":\"critical\",\"escalate\":true,\"reason\":\"safety_gate_triggered\",\"auditRef\":\"safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192\"}"
+            },
+            {
+              "type": "narrative-weaver",
+              "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: prohibited-capability – escalate to moderation queue."
+            }
+          ],
+          "auditTrail": []
+        },
+        "markers": [
+          {
+            "type": "session.marker",
+            "marker": "narrative-beat",
+            "tone": "narrative"
+          },
+          {
+            "type": "session.marker",
+            "marker": "momentum-state",
+            "value": 1
+          },
+          {
+            "type": "session.marker",
+            "marker": "safety-escalated",
+            "flags": [
+              "prohibited-capability"
+            ],
+            "severity": "critical"
+          }
+        ],
+        "speaker": "gm",
+        "timestamp": "2025-11-04T05:26:28.971Z"
+      },
+      {
+        "id": "transcript-11",
+        "role": "system",
+        "content": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+        "text": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+        "metadata": {
+          "type": "check-veto",
+          "checkId": "safety-qa-batch-beta-4",
+          "reason": "prohibited-capability",
+          "safetyFlags": [
+            "prohibited-capability"
+          ]
+        },
+        "speaker": "system",
+        "type": "check-veto",
+        "timestamp": "2025-11-04T05:26:28.972Z"
+      }
+    ],
+    "pendingChecks": [],
+    "resolvedChecks": [
+      {
+        "id": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+        "sessionId": "qa-batch-beta",
+        "turnSequence": 1,
+        "origin": "narrative-engine",
+        "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2",
+        "trigger": {
+          "detectedMove": "delve-the-ruins",
+          "detectedMoveTags": [
+            "delve-the-ruins",
+            "risk-it-all"
+          ],
+          "playerUtterance": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+          "momentum": 0,
+          "narrativeTags": [
+            "delve-the-ruins",
+            "risk-it-all"
+          ],
+          "safetyFlags": []
+        },
+        "mechanics": {
+          "checkType": "2d6+stat",
+          "stat": "finesse",
+          "difficulty": "risky",
+          "difficultyValue": 9,
+          "advantage": false,
+          "bonusDice": 0,
+          "complicationSeeds": [
+            "security_alert",
+            "echoing_footfalls"
+          ]
+        },
+        "recommendedNarration": "Success: Navigating hostile corridors with limited visibility. unfolds in the player's favor. Complication: escalate via security_alert",
+        "expiresAt": "2025-11-04T05:27:58.948Z",
+        "metadata": {
+          "tone": "stealth",
+          "promptHash": "f79318a17835bdd8346b0e6ae7d4321a38faf9bd2db9ac5ca3e01f46dda7156d",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nMove Tags: delve-the-ruins, risk-it-all\nMomentum: 0\nDifficulty: risky (9)\nAbility: finesse\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths.",
+          "creativeSpark": false,
+          "safetyFlags": []
+        },
+        "data": {
+          "move": "delve-the-ruins",
+          "tags": [
+            "delve-the-ruins",
+            "risk-it-all"
+          ],
+          "difficulty": "risky",
+          "difficultyValue": 9,
+          "ability": "finesse",
+          "momentum": 0,
+          "flags": [
+            "disclosure:delve-the-ruins",
+            "disclosure:risk-it-all"
+          ],
+          "safetyFlags": [],
+          "playerId": "player-vertical",
+          "mechanics": {
+            "stat": "finesse",
+            "statValue": 2,
+            "bonusDice": 0,
+            "difficulty": "risky",
+            "difficultyValue": 9,
+            "momentum": 0,
+            "advantage": false
+          }
+        },
+        "flags": [
+          "disclosure:delve-the-ruins",
+          "disclosure:risk-it-all"
+        ],
+        "requestedAt": "2025-11-04T05:26:28.948Z",
+        "sequence": 1,
+        "topic": "event.checkResolved",
+        "tier": "hard-miss",
+        "result": "hard-miss",
+        "outcome": "hard-miss",
+        "rationale": "hard-miss — Total 5 vs. target 9 | Dice kept: 2, 1 | Stat modifier: +2",
+        "move": "delve-the-ruins",
+        "tags": [
+          "delve-the-ruins",
+          "risk-it-all"
+        ],
+        "difficulty": {
+          "label": "risky",
+          "target": 9
+        },
+        "dice": {
+          "seed": "qa-batch-beta:e6029193-605e-4ae7-84c6-88aebc441c1b:1:9:2",
+          "rolls": [
+            1,
+            2
+          ],
+          "kept": [
+            2,
+            1
+          ],
+          "discarded": [],
+          "advantageApplied": false,
+          "disadvantageApplied": false,
+          "bonusDice": 0,
+          "statValue": 2,
+          "total": 5
+        },
+        "safetyFlags": [],
+        "momentum": {
+          "before": 0,
+          "after": 0,
+          "delta": 0,
+          "reason": "hard-miss"
+        },
+        "momentumDelta": 0,
+        "momentumReset": 0,
+        "statAdjustments": [
+          {
+            "stat": "finesse",
+            "delta": -1,
+            "reason": "hard-miss setback"
+          }
+        ],
+        "complication": {
+          "severity": "critical",
+          "tags": [
+            "delve-the-ruins",
+            "risk-it-all",
+            "hard-miss"
+          ]
+        },
+        "latencyMs": 0,
+        "telemetry": {
+          "latencyMs": 0,
+          "deterministicSeed": "qa-batch-beta:e6029193-605e-4ae7-84c6-88aebc441c1b:1:9:2"
+        },
+        "receivedAt": "2025-11-04T05:26:28.951Z"
+      },
+      {
+        "id": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+        "sessionId": "qa-batch-beta",
+        "turnSequence": 2,
+        "origin": "narrative-engine",
+        "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e",
+        "trigger": {
+          "detectedMove": "hack-the-signal",
+          "detectedMoveTags": [
+            "hack-the-signal",
+            "discern-the-truth"
+          ],
+          "playerUtterance": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+          "momentum": 0,
+          "narrativeTags": [
+            "hack-the-signal",
+            "discern-the-truth"
+          ],
+          "safetyFlags": []
+        },
+        "mechanics": {
+          "checkType": "2d6+stat",
+          "stat": "ingenuity",
+          "difficulty": "controlled",
+          "difficultyValue": 7,
+          "advantage": false,
+          "bonusDice": 0,
+          "complicationSeeds": [
+            "signal_feedback",
+            "trace_routine"
+          ]
+        },
+        "recommendedNarration": "Success: Decoding signal lattice to extract actionable intel. unfolds in the player's favor. Complication: escalate via signal_feedback",
+        "expiresAt": "2025-11-04T05:27:58.961Z",
+        "metadata": {
+          "tone": "narrative",
+          "promptHash": "23bdb1bfc297ad30d57c55eb9e76afdba436bfa3223e7af408d9b052acfb6582",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nMove Tags: hack-the-signal, discern-the-truth\nMomentum: 0\nDifficulty: controlled (7)\nAbility: ingenuity\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths.",
+          "creativeSpark": false,
+          "safetyFlags": []
+        },
+        "data": {
+          "move": "hack-the-signal",
+          "tags": [
+            "hack-the-signal",
+            "discern-the-truth"
+          ],
+          "difficulty": "controlled",
+          "difficultyValue": 7,
+          "ability": "ingenuity",
+          "momentum": 0,
+          "flags": [
+            "disclosure:hack-the-signal"
+          ],
+          "safetyFlags": [],
+          "playerId": "player-vertical",
+          "mechanics": {
+            "stat": "ingenuity",
+            "statValue": 1,
+            "bonusDice": 0,
+            "difficulty": "controlled",
+            "difficultyValue": 7,
+            "momentum": 0,
+            "advantage": false
+          }
+        },
+        "flags": [
+          "disclosure:hack-the-signal"
+        ],
+        "requestedAt": "2025-11-04T05:26:28.961Z",
+        "sequence": 2,
+        "topic": "event.checkResolved",
+        "tier": "full-success",
+        "result": "full-success",
+        "outcome": "full-success",
+        "rationale": "full-success — Total 8 vs. target 7 | Dice kept: 4, 3 | Stat modifier: +1 | Momentum shift: +1",
+        "move": "hack-the-signal",
+        "tags": [
+          "hack-the-signal",
+          "discern-the-truth"
+        ],
+        "difficulty": {
+          "label": "controlled",
+          "target": 7
+        },
+        "dice": {
+          "seed": "qa-batch-beta:a9d287c3-8d17-4100-bf29-a72220f1bbf4:2:7:1",
+          "rolls": [
+            3,
+            4
+          ],
+          "kept": [
+            4,
+            3
+          ],
+          "discarded": [],
+          "advantageApplied": false,
+          "disadvantageApplied": false,
+          "bonusDice": 0,
+          "statValue": 1,
+          "total": 8
+        },
+        "safetyFlags": [],
+        "momentum": {
+          "before": 0,
+          "after": 1,
+          "delta": 1,
+          "reason": "full-success"
+        },
+        "momentumDelta": 1,
+        "statAdjustments": [],
+        "complication": null,
+        "latencyMs": 0,
+        "telemetry": {
+          "latencyMs": 0,
+          "deterministicSeed": "qa-batch-beta:a9d287c3-8d17-4100-bf29-a72220f1bbf4:2:7:1"
+        },
+        "receivedAt": "2025-11-04T05:26:28.962Z"
+      }
+    ],
+    "vetoedChecks": [
+      {
+        "id": "safety-qa-batch-beta-4",
+        "sessionId": "qa-batch-beta",
+        "topic": "event.checkVetoed",
+        "createdAt": "2025-11-04T05:26:28.972Z",
+        "auditRef": "safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192",
+        "reason": "prohibited-capability",
+        "safetyFlags": [
+          "prohibited-capability"
+        ],
+        "data": {
+          "move": "safety-intercept",
+          "playerId": "player-vertical",
+          "message": "Check vetoed due to safety policy trigger.",
+          "occurredAt": "2025-11-04T05:26:28.972Z"
+        },
+        "recordedAt": "2025-11-04T05:26:28.972Z"
+      }
+    ],
+    "statAdjustments": [
+      {
+        "stat": "finesse",
+        "delta": -1,
+        "reason": "hard-miss setback",
+        "appliedAt": "2025-11-04T05:26:28.951Z",
+        "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b"
+      }
+    ],
+    "changeFeed": [
+      {
+        "cursor": 1,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "player",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 1,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.947Z",
+        "metadata": {
+          "role": "player",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-1",
+          "role": "player",
+          "content": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+          "text": "I sneak across the relay scaffolds and risk a roll to outflank the sentries.",
+          "metadata": {
+            "turnHint": "stealth-advance"
+          },
+          "speaker": "player",
+          "playerId": "player-vertical",
+          "timestamp": "2025-11-04T05:26:28.947Z"
+        }
+      },
+      {
+        "cursor": 2,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "gm",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 2,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.950Z",
+        "metadata": {
+          "role": "gm",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-2",
+          "role": "gm",
+          "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+          "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. Shadows stretch, inviting silent movement. A delve-the-ruins check (finesse, risky) approaches.",
+          "metadata": {
+            "promptPackets": [
+              {
+                "type": "scene-frame",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+              },
+              {
+                "type": "intent-intake",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+              },
+              {
+                "type": "safety-gate",
+                "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+              },
+              {
+                "type": "check-planner",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I sneak across the relay scaffolds and risk a roll to outflank the sentries.\"\"\"\nMove Tags: delve-the-ruins, risk-it-all\nMomentum: 0\nDifficulty: risky (9)\nAbility: finesse\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+              },
+              {
+                "type": "narrative-weaver",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2\nMove: delve-the-ruins\nDifficulty: risky (9)\nAbility: finesse\nRecommended Narration: Success: Navigating hostile corridors with limited visibility. unfolds in the player's favor. Complication: escalate via security_alert\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+              }
+            ],
+            "auditTrail": [
+              {
+                "nodeId": "check-planner",
+                "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+              }
+            ]
+          },
+          "markers": [
+            {
+              "type": "session.marker",
+              "marker": "narrative-beat",
+              "tone": "stealth"
+            },
+            {
+              "type": "session.marker",
+              "marker": "momentum-state",
+              "value": 0
+            },
+            {
+              "type": "session.marker",
+              "marker": "check-requested",
+              "move": "delve-the-ruins",
+              "ability": "finesse",
+              "auditRef": "check:qa-batch-beta:1:6254cd78-7a7a-478c-8a3b-03e5faec30f2"
+            }
+          ],
+          "speaker": "gm",
+          "timestamp": "2025-11-04T05:26:28.950Z"
+        }
+      },
+      {
+        "cursor": 3,
+        "sessionId": "qa-batch-beta",
+        "shard": "character",
+        "action": "stat-adjustment",
+        "actor": "checkRunner",
+        "reason": "stat-adjustment",
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 2,
+        "scope": "ephemeral",
+        "timestamp": "2025-11-04T05:26:28.951Z",
+        "metadata": {
+          "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b"
+        },
+        "before": {
+          "name": "Avery Glass",
+          "pronouns": "they/them",
+          "archetype": "Wayfarer Archivist",
+          "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+          "stats": {
+            "ingenuity": 1,
+            "resolve": 1,
+            "finesse": 2,
+            "presence": 1,
+            "weird": 0,
+            "grit": 1
+          },
+          "tags": [
+            "region.auric-steppe",
+            "faction.prismwell-kite-guild",
+            "anchor.prism-spire.auric-step"
+          ]
+        },
+        "after": {
+          "name": "Avery Glass",
+          "pronouns": "they/them",
+          "archetype": "Wayfarer Archivist",
+          "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+          "stats": {
+            "ingenuity": 1,
+            "resolve": 1,
+            "finesse": 1,
+            "presence": 1,
+            "weird": 0,
+            "grit": 1
+          },
+          "tags": [
+            "region.auric-steppe",
+            "faction.prismwell-kite-guild",
+            "anchor.prism-spire.auric-step"
+          ]
+        }
+      },
+      {
+        "cursor": 4,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "system",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 3,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.951Z",
+        "metadata": {
+          "role": "system",
+          "type": "check-resolution",
+          "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+          "result": "hard-miss"
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-3",
+          "role": "system",
+          "content": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+          "text": "Check delve-the-ruins resolved as hard-miss. Difficulty risky (9). Dice 5 + stat 2. Momentum 0 → 0.",
+          "metadata": {
+            "type": "check-resolution",
+            "checkId": "e6029193-605e-4ae7-84c6-88aebc441c1b",
+            "result": "hard-miss",
+            "momentumBefore": 0,
+            "momentumAfter": 0,
+            "difficulty": "risky",
+            "difficultyTarget": 9
+          },
+          "speaker": "system",
+          "type": "check-resolution",
+          "timestamp": "2025-11-04T05:26:28.951Z"
+        }
+      },
+      {
+        "cursor": 5,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "player",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 4,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.960Z",
+        "metadata": {
+          "role": "player",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-4",
+          "role": "player",
+          "content": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+          "text": "I broadcast our momentum to rally the Prismwell guild before the next move.",
+          "metadata": {
+            "turnHint": "rally-call"
+          },
+          "speaker": "player",
+          "playerId": "player-vertical",
+          "timestamp": "2025-11-04T05:26:28.960Z"
+        }
+      },
+      {
+        "cursor": 6,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "gm",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 5,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.961Z",
+        "metadata": {
+          "role": "gm",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-5",
+          "role": "gm",
+          "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+          "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+          "metadata": {
+            "promptPackets": [
+              {
+                "type": "scene-frame",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+              },
+              {
+                "type": "intent-intake",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I broadcast our momentum to rally the Prismwell guild before the next move.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+              },
+              {
+                "type": "safety-gate",
+                "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+              },
+              {
+                "type": "narrative-weaver",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+              }
+            ],
+            "auditTrail": []
+          },
+          "markers": [
+            {
+              "type": "session.marker",
+              "marker": "narrative-beat",
+              "tone": "narrative"
+            },
+            {
+              "type": "session.marker",
+              "marker": "momentum-state",
+              "value": 0
+            }
+          ],
+          "speaker": "gm",
+          "timestamp": "2025-11-04T05:26:28.961Z"
+        }
+      },
+      {
+        "cursor": 7,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "player",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 6,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.961Z",
+        "metadata": {
+          "role": "player",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-6",
+          "role": "player",
+          "content": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+          "text": "I hack the signal lattice to expose a hidden countermeasure and attempt a roll.",
+          "metadata": {
+            "turnHint": "signal-hack"
+          },
+          "speaker": "player",
+          "playerId": "player-vertical",
+          "timestamp": "2025-11-04T05:26:28.961Z"
+        }
+      },
+      {
+        "cursor": 8,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "gm",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 7,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.962Z",
+        "metadata": {
+          "role": "gm",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-7",
+          "role": "gm",
+          "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+          "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. A hack-the-signal check (ingenuity, controlled) approaches.",
+          "metadata": {
+            "promptPackets": [
+              {
+                "type": "scene-frame",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+              },
+              {
+                "type": "intent-intake",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+              },
+              {
+                "type": "safety-gate",
+                "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+              },
+              {
+                "type": "check-planner",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Check Planning\nPlayer Utterance: \"\"\"I hack the signal lattice to expose a hidden countermeasure and attempt a roll.\"\"\"\nMove Tags: hack-the-signal, discern-the-truth\nMomentum: 0\nDifficulty: controlled (7)\nAbility: ingenuity\nCreative Spark: false\nSafety Flags: none\n\nReturn a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+              },
+              {
+                "type": "narrative-weaver",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nCheck Audit Ref: check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e\nMove: hack-the-signal\nDifficulty: controlled (7)\nAbility: ingenuity\nRecommended Narration: Success: Decoding signal lattice to extract actionable intel. unfolds in the player's favor. Complication: escalate via signal_feedback\nBlend mechanical transparency with collaborative storytelling. Mention upcoming check without breaking immersion."
+              }
+            ],
+            "auditTrail": [
+              {
+                "nodeId": "check-planner",
+                "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+              }
+            ]
+          },
+          "markers": [
+            {
+              "type": "session.marker",
+              "marker": "narrative-beat",
+              "tone": "narrative"
+            },
+            {
+              "type": "session.marker",
+              "marker": "momentum-state",
+              "value": 0
+            },
+            {
+              "type": "session.marker",
+              "marker": "check-requested",
+              "move": "hack-the-signal",
+              "ability": "ingenuity",
+              "auditRef": "check:qa-batch-beta:2:5ff760b4-17d1-437a-9d48-12c00eb1782e"
+            }
+          ],
+          "speaker": "gm",
+          "timestamp": "2025-11-04T05:26:28.961Z"
+        }
+      },
+      {
+        "cursor": 9,
+        "sessionId": "qa-batch-beta",
+        "shard": "momentum",
+        "action": "momentum-adjustment",
+        "actor": "checkRunner",
+        "reason": "full-success",
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 2,
+        "scope": "ephemeral",
+        "timestamp": "2025-11-04T05:26:28.962Z",
+        "metadata": {
+          "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+        },
+        "before": {
+          "current": 0,
+          "floor": -2,
+          "ceiling": 3,
+          "baseline": 0,
+          "history": []
+        },
+        "after": {
+          "current": 1,
+          "floor": -2,
+          "ceiling": 3,
+          "baseline": 0,
+          "history": [
+            {
+              "before": 0,
+              "after": 1,
+              "delta": 1,
+              "reason": "full-success",
+              "at": "2025-11-04T05:26:28.962Z",
+              "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+            }
+          ]
+        }
+      },
+      {
+        "cursor": 10,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "system",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 8,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.962Z",
+        "metadata": {
+          "role": "system",
+          "type": "check-resolution",
+          "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+          "result": "full-success"
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-8",
+          "role": "system",
+          "content": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+          "text": "Check hack-the-signal resolved as full-success. Difficulty controlled (7). Dice 8 + stat 1. Momentum 0 → 1.",
+          "metadata": {
+            "type": "check-resolution",
+            "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4",
+            "result": "full-success",
+            "momentumBefore": 0,
+            "momentumAfter": 1,
+            "difficulty": "controlled",
+            "difficultyTarget": 7
+          },
+          "speaker": "system",
+          "type": "check-resolution",
+          "timestamp": "2025-11-04T05:26:28.962Z"
+        }
+      },
+      {
+        "cursor": 11,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "player",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 9,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.971Z",
+        "metadata": {
+          "role": "player",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-9",
+          "role": "player",
+          "content": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+          "text": "I rewrite history so the collapse never happened, bending time despite the prohibitions.",
+          "metadata": {
+            "turnHint": "prohibited-action"
+          },
+          "speaker": "player",
+          "playerId": "player-vertical",
+          "timestamp": "2025-11-04T05:26:28.971Z"
+        }
+      },
+      {
+        "cursor": 12,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "gm",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 10,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.971Z",
+        "metadata": {
+          "role": "gm",
+          "type": null,
+          "checkId": null,
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-10",
+          "role": "gm",
+          "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+          "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move. Moderator review has been queued to keep the table safe.",
+          "metadata": {
+            "promptPackets": [
+              {
+                "type": "scene-frame",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 1 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+              },
+              {
+                "type": "intent-intake",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I rewrite history so the collapse never happened, bending time despite the prohibitions.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+              },
+              {
+                "type": "safety-gate",
+                "prompt": "{\"flags\":[\"prohibited-capability\"],\"severity\":\"critical\",\"escalate\":true,\"reason\":\"safety_gate_triggered\",\"auditRef\":\"safety-gate:qa-batch-beta:3:7fc3a131-f04a-4fcb-a358-5b06e8503192\"}"
+              },
+              {
+                "type": "narrative-weaver",
+                "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: prohibited-capability – escalate to moderation queue."
+              }
+            ],
+            "auditTrail": []
+          },
+          "markers": [
+            {
+              "type": "session.marker",
+              "marker": "narrative-beat",
+              "tone": "narrative"
+            },
+            {
+              "type": "session.marker",
+              "marker": "momentum-state",
+              "value": 1
+            },
+            {
+              "type": "session.marker",
+              "marker": "safety-escalated",
+              "flags": [
+                "prohibited-capability"
+              ],
+              "severity": "critical"
+            }
+          ],
+          "speaker": "gm",
+          "timestamp": "2025-11-04T05:26:28.971Z"
+        }
+      },
+      {
+        "cursor": 13,
+        "sessionId": "qa-batch-beta",
+        "shard": "transcript",
+        "action": "append",
+        "actor": "system",
+        "reason": null,
+        "capabilityRefs": [],
+        "safetyFlags": [],
+        "revision": 11,
+        "scope": "transcript",
+        "timestamp": "2025-11-04T05:26:28.972Z",
+        "metadata": {
+          "role": "system",
+          "type": "check-veto",
+          "checkId": "safety-qa-batch-beta-4",
+          "result": null
+        },
+        "before": null,
+        "after": {
+          "id": "transcript-11",
+          "role": "system",
+          "content": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+          "text": "Check safety-qa-batch-beta-4 vetoed (prohibited-capability).",
+          "metadata": {
+            "type": "check-veto",
+            "checkId": "safety-qa-batch-beta-4",
+            "reason": "prohibited-capability",
+            "safetyFlags": [
+              "prohibited-capability"
+            ]
+          },
+          "speaker": "system",
+          "type": "check-veto",
+          "timestamp": "2025-11-04T05:26:28.972Z"
+        }
+      }
+    ],
+    "changeCursor": 13,
+    "lastAckCursor": 13,
+    "capabilityReferences": [],
+    "pendingOfflineReconcile": false,
+    "offlineWorkflowHistory": [
+      {
+        "jobId": "f0c1adf8-c8de-46e3-b32f-3f095a7021f1",
+        "auditRef": "vertical-slice:qa-batch-beta",
+        "status": "completed",
+        "startedAt": "2025-11-04T05:26:28.982Z",
+        "completedAt": "2025-11-04T05:26:28.986Z",
+        "durationMs": 4,
+        "summaryVersion": 1,
+        "mentionCount": 0,
+        "deltaCount": 0,
+        "publishingBatchId": "qa-batch-beta-batch-0",
+        "error": null,
+        "reconciledAt": "2025-11-04T05:26:28.986Z"
+      }
+    ],
+    "lastOfflineWorkflowRun": {
+      "jobId": "f0c1adf8-c8de-46e3-b32f-3f095a7021f1",
+      "auditRef": "vertical-slice:qa-batch-beta",
+      "status": "completed",
+      "startedAt": "2025-11-04T05:26:28.982Z",
+      "completedAt": "2025-11-04T05:26:28.986Z",
+      "durationMs": 4,
+      "summaryVersion": 1,
+      "mentionCount": 0,
+      "deltaCount": 0,
+      "publishingBatchId": "qa-batch-beta-batch-0",
+      "error": null,
+      "reconciledAt": "2025-11-04T05:26:28.986Z"
+    },
+    "offlineReconciledAt": "2025-11-04T05:26:28.986Z",
+    "offlineReconcileAuditRef": "vertical-slice:qa-batch-beta",
+    "turnSequence": 3,
+    "characterRevision": 6,
+    "character": {
+      "name": "Avery Glass",
+      "pronouns": "they/them",
+      "archetype": "Wayfarer Archivist",
+      "background": "Custodian scout cataloguing resonance anomalies across the Auric Steppe Corridor for the Prismwell Kite Guild.",
+      "stats": {
+        "ingenuity": 1,
+        "resolve": 1,
+        "finesse": 1,
+        "presence": 1,
+        "weird": 0,
+        "grit": 1
+      },
+      "tags": [
+        "region.auric-steppe",
+        "faction.prismwell-kite-guild",
+        "anchor.prism-spire.auric-step"
+      ]
+    },
+    "inventory": [
+      {
+        "id": "item.glass-frontier-compass",
+        "name": "Glass Frontier Compass",
+        "tags": [
+          "narrative-anchor",
+          "tech.tier.resonance"
+        ]
+      },
+      {
+        "id": "item.echo-ledger-fragment",
+        "name": "Echo Ledger Fragment",
+        "tags": [
+          "lore-hook",
+          "faction.echo-ledger-conclave"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "id": "faction.cinder-scout-collective",
+        "name": "Cinder Scout Collective",
+        "status": "guarded",
+        "bond": 1
+      },
+      {
+        "id": "faction.prismwell-kite-guild",
+        "name": "Prismwell Kite Guild",
+        "status": "trusted",
+        "bond": 2
+      }
+    ],
+    "momentum": {
+      "current": 1,
+      "floor": -2,
+      "ceiling": 3,
+      "baseline": 0,
+      "history": [
+        {
+          "before": 0,
+          "after": 1,
+          "delta": 1,
+          "reason": "full-success",
+          "at": "2025-11-04T05:26:28.962Z",
+          "checkId": "a9d287c3-8d17-4100-bf29-a72220f1bbf4"
+        }
+      ]
+    },
+    "closedAt": "2025-11-04T05:26:28.981Z",
+    "closedBy": "system.vertical-slice",
+    "closureReason": "vertical_slice.completed",
+    "lastClosureAuditRef": "vertical-slice:qa-batch-beta"
+  }
+}

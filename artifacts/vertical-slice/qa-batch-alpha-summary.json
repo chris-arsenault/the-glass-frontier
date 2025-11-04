@@ -1,0 +1,30 @@
+{
+  "sessionId": "qa-batch-alpha",
+  "exportedAt": "2025-11-04T05:26:15.397Z",
+  "turnCount": 11,
+  "resolvedChecks": 2,
+  "vetoedChecks": 1,
+  "adminAlerts": 2,
+  "closureStatus": "completed",
+  "closureResult": {
+    "summaryVersion": 1,
+    "mentionCount": 0,
+    "deltaCount": 0,
+    "publishing": {
+      "batchId": "qa-batch-alpha-batch-0",
+      "scheduledAt": "2025-11-04T06:26:15.372Z"
+    },
+    "searchJobs": []
+  },
+  "telemetryEvents": 46,
+  "narrative": {
+    "turnCount": 11,
+    "playerMessages": 4,
+    "gmMessages": 4,
+    "systemMessages": 3,
+    "safetyFlags": [
+      "prohibited-capability"
+    ],
+    "moves": []
+  }
+}

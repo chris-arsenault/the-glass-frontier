@@ -9,6 +9,21 @@ const {
   publishing: { PublishingCoordinator }
 } = require("../src/offline");
 
+function isSessionArtifactFile(filePath) {
+  const base = path.basename(filePath);
+  if (!base.endsWith(".json")) {
+    return false;
+  }
+  if (base.includes("offline-qa")) {
+    return false;
+  }
+  if (base.endsWith("-transcript.json") || base.endsWith("-summary.json")) {
+    return false;
+  }
+
+  return true;
+}
+
 function parseArgs(argv) {
   const defaults = {
     input: path.join(process.cwd(), "artifacts", "vertical-slice", "imp-gm-06-smoke.json"),
@@ -140,8 +155,118 @@ function composeQaResult({
       schedule: publishingPlan.schedule,
       preparedBatch: publishingPlan.publishing,
       searchPlan
-    }
+    },
+    moderation: summarizeModeration(deltas)
   };
+}
+
+function summarizeModeration(deltas = []) {
+  const summary = {
+    requiresModeration: false,
+    reasons: [],
+    capabilityViolations: 0,
+    conflictDetections: 0,
+    lowConfidenceFindings: 0
+  };
+
+  const reasonSet = new Set();
+
+  deltas.forEach((delta) => {
+    if (!delta || !delta.safety) {
+      return;
+    }
+
+    if (delta.safety.requiresModeration) {
+      summary.requiresModeration = true;
+    }
+
+    const reasons = Array.isArray(delta.safety.reasons) ? delta.safety.reasons : [];
+    reasons.forEach((reason) => {
+      reasonSet.add(reason);
+      if (reason === "capability_violation") {
+        summary.capabilityViolations += 1;
+      }
+      if (reason === "conflict_detected") {
+        summary.conflictDetections += 1;
+      }
+      if (reason === "low_confidence") {
+        summary.lowConfidenceFindings += 1;
+      }
+    });
+  });
+
+  summary.reasons = Array.from(reasonSet).sort();
+  return summary;
+}
+
+function resolveInputTargets(inputPath) {
+  if (!inputPath) {
+    throw new Error("offline_qa_requires_input");
+  }
+
+  let stats;
+  try {
+    stats = fs.statSync(inputPath);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      throw new Error(`offline_qa_input_missing: ${inputPath}`);
+    }
+    throw error;
+  }
+
+  if (!stats.isDirectory()) {
+    return [inputPath];
+  }
+
+  const entries = fs
+    .readdirSync(inputPath)
+    .map((entry) => path.join(inputPath, entry))
+    .filter((candidate) => {
+      try {
+        return fs.statSync(candidate).isFile() && isSessionArtifactFile(candidate);
+      } catch (_error) {
+        return false;
+      }
+    })
+    .sort();
+
+  if (entries.length === 0) {
+    throw new Error(`offline_qa_no_session_artifacts: ${inputPath}`);
+  }
+
+  return entries;
+}
+
+function composeBatchRollup(summaries = []) {
+  const rollup = {
+    totalSessions: summaries.length,
+    totalMentions: 0,
+    totalDeltas: 0,
+    sessionsWithModeration: 0,
+    sessionsWithCapabilityViolations: 0,
+    sessionsWithConflicts: 0,
+    sessionsWithLowConfidence: 0
+  };
+
+  summaries.forEach((summary) => {
+    rollup.totalMentions += summary.mentionCount || 0;
+    rollup.totalDeltas += summary.deltaCount || 0;
+
+    if (summary.requiresModeration) {
+      rollup.sessionsWithModeration += 1;
+    }
+    if ((summary.capabilityViolations || 0) > 0) {
+      rollup.sessionsWithCapabilityViolations += 1;
+    }
+    if ((summary.conflictDetections || 0) > 0) {
+      rollup.sessionsWithConflicts += 1;
+    }
+    if ((summary.lowConfidenceDeltas || 0) > 0) {
+      rollup.sessionsWithLowConfidence += 1;
+    }
+  });
+
+  return rollup;
 }
 
 async function executeOfflineQa(options) {
@@ -220,28 +345,62 @@ async function main() {
     const args = parseArgs(process.argv.slice(2));
     ensureDirectory(args.outputDir);
 
-    const result = await executeOfflineQa(args);
-    const outputPath = path.join(
-      args.outputDir,
-      `${result.sessionId}-offline-qa.json`
-    );
-    fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+    const inputTargets = resolveInputTargets(args.input);
+    const summaries = [];
 
-    const summary = {
-      sessionId: result.sessionId,
-      sceneCount: result.summary.sceneBreakdown?.length || 0,
-      mentionCount: result.entityExtraction.mentionCount,
-      deltaCount: result.worldDeltas.deltaCount,
-      batchId: result.publishing.preparedBatch?.batchId || null,
-      scheduledRun:
-        result.publishing.preparedBatch?.scheduledAt ||
-        result.publishing.schedule?.batches?.[0]?.runAt ||
-        null,
-      outputPath
-    };
+    for (const target of inputTargets) {
+      const runArgs = { ...args, input: target };
+      const result = await executeOfflineQa(runArgs);
+      const outputPath = path.join(
+        args.outputDir,
+        `${result.sessionId}-offline-qa.json`
+      );
+      fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+
+      const moderationSummary = result.moderation || summarizeModeration(result.worldDeltas?.deltas);
+      const summary = {
+        sessionId: result.sessionId,
+        sceneCount: result.summary.sceneBreakdown?.length || 0,
+        mentionCount: result.entityExtraction.mentionCount,
+        deltaCount: result.worldDeltas.deltaCount,
+        batchId: result.publishing.preparedBatch?.batchId || null,
+        scheduledRun:
+          result.publishing.preparedBatch?.scheduledAt ||
+          result.publishing.schedule?.batches?.[0]?.runAt ||
+          null,
+        outputPath,
+        requiresModeration: Boolean(moderationSummary?.requiresModeration),
+        moderationReasons: Array.isArray(moderationSummary?.reasons)
+          ? moderationSummary.reasons
+          : [],
+        capabilityViolations: moderationSummary?.capabilityViolations || 0,
+        conflictDetections: moderationSummary?.conflictDetections || 0,
+        lowConfidenceDeltas: moderationSummary?.lowConfidenceFindings || 0
+      };
+
+      summaries.push(summary);
+    }
+
+    const payload =
+      summaries.length === 1
+        ? { status: "ok", summary: summaries[0] }
+        : {
+            status: "ok",
+            summaries,
+            rollup: composeBatchRollup(summaries)
+          };
+
+    if (payload.rollup) {
+      const aggregatePath = path.join(
+        args.outputDir,
+        `offline-qa-batch-rollup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`
+      );
+      fs.writeFileSync(aggregatePath, JSON.stringify(payload.rollup, null, 2));
+      payload.rollupPath = aggregatePath;
+    }
 
     // eslint-disable-next-line no-console
-    console.log(JSON.stringify({ status: "ok", summary }, null, 2));
+    console.log(JSON.stringify(payload, null, 2));
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(
@@ -267,5 +426,8 @@ module.exports = {
   executeOfflineQa,
   sanitizeTranscript,
   collectSafetyEvents,
-  buildSessionMetadata
+  buildSessionMetadata,
+  resolveInputTargets,
+  composeBatchRollup,
+  summarizeModeration
 };
