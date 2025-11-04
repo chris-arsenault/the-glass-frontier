@@ -1,38 +1,38 @@
 {
-  "runId": "ce29bf19-c6a4-4c8f-ad13-ff6a3fb17233",
-  "startedAt": "2025-11-04T03:28:47.697Z",
+  "runId": "6d9acf92-f0dc-4ac0-a06c-f4cfa822d6f1",
+  "startedAt": "2025-11-04T02:48:21.354Z",
   "baseUrl": "https://stage.glass-frontier.local/api",
   "config": {
     "timeoutMs": 10000,
     "skipAdminAlert": true,
-    "reportPath": "artifacts/langgraph-sse-staging.json",
+    "reportPath": "artifacts/langgraph-sse-test.json",
     "skipSse": false
   },
   "metrics": {
     "checkDispatch": {
-      "id": "806a7f72-094d-4d77-8777-32291d66502f",
-      "requestedAt": "2025-11-04T03:28:47.787Z",
+      "id": "beb1f1a2-94d0-496c-a505-43702f071c77",
+      "requestedAt": "2025-11-04T02:48:21.453Z",
       "move": "langgraph-smoke-probe"
     }
   },
   "eventCounts": {},
   "account": {
-    "id": "c190bc30-3eef-41a6-8e34-0d1f4a5a71e6",
+    "id": "c34c81f9-8432-4f55-868a-3216749b1db2",
     "email": "admin@glassfrontier",
     "role": null
   },
   "session": {
-    "id": "langgraph-sse-1762226927697",
+    "id": "langgraph-sse-1762224501354",
     "title": "LangGraph SSE Smoke Validation",
-    "createdAt": "2025-11-04T03:28:47.781Z"
+    "createdAt": "2025-11-04T02:48:21.450Z"
   },
   "stream": {
-    "connectedAt": "2025-11-04T03:28:47.787Z"
+    "connectedAt": "2025-11-04T02:48:21.453Z"
   },
   "success": false,
   "error": {
     "message": "Timed out waiting for SSE event"
   },
-  "completedAt": "2025-11-04T03:29:00.297Z",
-  "durationMs": 12600
+  "completedAt": "2025-11-04T02:48:31.457Z",
+  "durationMs": 10103
 }

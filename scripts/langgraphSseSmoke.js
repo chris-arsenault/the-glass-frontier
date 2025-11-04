@@ -5,6 +5,9 @@ const path = require("path");
 const { randomUUID } = require("crypto");
 const dns = require("dns");
 const { Agent, setGlobalDispatcher } = require("undici");
+const EventSource = require("eventsource");
+
+let customCaBuffer = null;
 
 function configureCustomCa() {
   const candidates = [];
@@ -38,8 +41,10 @@ function configureCustomCa() {
 
     try {
       const ca = fs.readFileSync(resolved);
+      customCaBuffer = ca;
       setGlobalDispatcher(
         new Agent({
+          allowH2: false,
           connect: {
             ca,
             rejectUnauthorized: true
@@ -246,117 +251,122 @@ async function openSseStream(baseUrl, sessionId, token) {
     url.searchParams.set("token", token);
   }
 
-  const controller = new AbortController();
-  const response = await fetch(url, {
-    method: "GET",
+  const options = {
     headers: {
       Accept: "text/event-stream"
-    },
-    signal: controller.signal
-  });
-
-  if (!response.ok || !response.body) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`Failed to open SSE stream (${response.status}): ${text}`);
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  const history = [];
-  const listeners = new Set();
-  let closed = false;
-
-  const pump = async () => {
-    let buffer = "";
-    try {
-      while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        const { value, done } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        const chunk = decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
-        buffer += chunk;
-        while (buffer.includes("\n\n")) {
-          const index = buffer.indexOf("\n\n");
-          const rawEvent = buffer.slice(0, index);
-          buffer = buffer.slice(index + 2);
-
-          if (!rawEvent.trim()) {
-            continue;
-          }
-
-          const lines = rawEvent.split("\n");
-          let dataPayload = "";
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith("data:")) {
-              dataPayload += trimmed.slice(5).trim();
-            }
-          }
-
-          if (!dataPayload) {
-            continue;
-          }
-
-          try {
-            const event = JSON.parse(dataPayload);
-            event.__receivedAt = Date.now();
-            history.push(event);
-            listeners.forEach((listener) => listener(event));
-          } catch {
-            // Ignore malformed partial payloads; they will resolve once the buffer completes.
-          }
-        }
-      }
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        listeners.forEach((listener) => listener({ type: "sse.error", error }));
-      }
-    } finally {
-      closed = true;
     }
   };
 
-  // Kick off the stream reader without awaiting so consumers can start listening.
-  pump();
+  if (customCaBuffer) {
+    options.https = {
+      ca: customCaBuffer,
+      rejectUnauthorized: true
+    };
+  }
 
-  const waitFor = (predicate, timeoutMs) =>
-    new Promise((resolve, reject) => {
-      const existing = history.find(predicate);
-      if (existing) {
-        resolve(existing);
-        return;
-      }
+  return new Promise((resolve, reject) => {
+    const history = [];
+    const listeners = new Set();
+    let closed = false;
+    let resolved = false;
 
-      const timeout = setTimeout(() => {
-        listeners.delete(listener);
-        reject(new Error("Timed out waiting for SSE event"));
-      }, timeoutMs);
+    const notify = (event) => {
+      listeners.forEach((listener) => listener(event));
+    };
 
-      const listener = (event) => {
-        if (predicate(event)) {
-          clearTimeout(timeout);
-          listeners.delete(listener);
-          resolve(event);
-        }
-      };
-
-      listeners.add(listener);
-    });
-
-  return {
-    waitFor,
-    close() {
+    const cleanup = (source) => {
       if (closed) {
         return;
       }
-      controller.abort();
+      closed = true;
       listeners.clear();
-    },
-    history
-  };
+      try {
+        source.close();
+      } catch {
+        // ignore
+      }
+    };
+
+    let eventSource = null;
+    try {
+      eventSource = new EventSource(url.toString(), options);
+    } catch (error) {
+      reject(new Error(`Failed to open SSE stream: ${error.message}`));
+      return;
+    }
+
+    eventSource.onmessage = (event) => {
+      if (!event?.data) {
+        return;
+      }
+      try {
+        const payload = JSON.parse(event.data);
+        payload.__receivedAt = Date.now();
+        history.push(payload);
+        notify(payload);
+      } catch (error) {
+        if (process.env.LANGGRAPH_SMOKE_DEBUG === "true") {
+          console.warn(`[sse-smoke] Failed to parse SSE payload: ${error.message}`);
+        }
+        notify({ type: "sse.parseError", error });
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup(eventSource);
+        reject(
+          new Error(
+            `Failed to open SSE stream${
+              error?.status ? ` (${error.status})` : ""
+            }: ${error?.message || "unknown error"}`
+          )
+        );
+        return;
+      }
+      notify({ type: "sse.error", error });
+    };
+
+    eventSource.onopen = () => {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+
+      const waitFor = (predicate, timeoutMs) =>
+        new Promise((resolveWait, rejectWait) => {
+          const existing = history.find(predicate);
+          if (existing) {
+            resolveWait(existing);
+            return;
+          }
+
+          const timeout = setTimeout(() => {
+            listeners.delete(listener);
+            rejectWait(new Error("Timed out waiting for SSE event"));
+          }, timeoutMs);
+
+          const listener = (event) => {
+            if (predicate(event)) {
+              clearTimeout(timeout);
+              listeners.delete(listener);
+              resolveWait(event);
+            }
+          };
+
+          listeners.add(listener);
+        });
+
+      resolve({
+        waitFor,
+        close() {
+          cleanup(eventSource);
+        },
+        history
+      });
+    };
+  });
 }
 
 async function triggerDebugCheck(baseUrl, token, sessionId, body) {
