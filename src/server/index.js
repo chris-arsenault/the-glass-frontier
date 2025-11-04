@@ -29,12 +29,16 @@ const { SessionClosureCoordinator } = require("../offline/sessionClosureCoordina
 const { ClosureWorkflowOrchestrator } = require("../offline/closureWorkflowOrchestrator");
 const { ModerationQueueStore } = require("../moderation/moderationQueueStore");
 const { PostgresPublishingStateStore } = require("../offline/publishing/postgresPublishingStateStore");
+const { TemporalModerationBridge } = require("../offline/moderation/temporalModerationBridge");
+const { HttpTemporalModerationClient } = require("../offline/moderation/httpTemporalModerationClient");
+const { fetch: undiciFetch } = require("undici");
 
 const ADMIN_MODERATION_CHANNEL = "admin:moderation";
 
 let moderationPool = null;
 let moderationQueueStore = null;
 let publishingStateStore = null;
+let temporalModerationBridge = null;
 
 const moderationDatabaseUrl =
   process.env.MODERATION_DATABASE_URL ||
@@ -118,6 +122,28 @@ const closureWorkflowOrchestrator = new ClosureWorkflowOrchestrator({
   checkBus
 });
 closureWorkflowOrchestrator.start();
+
+if (process.env.TEMPORAL_MODERATION_ENDPOINT) {
+  try {
+    const temporalClient = new HttpTemporalModerationClient({
+      endpoint: process.env.TEMPORAL_MODERATION_ENDPOINT,
+      token: process.env.TEMPORAL_MODERATION_TOKEN || null,
+      sharedTransportKey: process.env.SHARED_TRANSPORT_KEY || null,
+      channel: process.env.TEMPORAL_MODERATION_CHANNEL || ADMIN_MODERATION_CHANNEL,
+      fetchImpl: undiciFetch
+    });
+    temporalModerationBridge = new TemporalModerationBridge({
+      sessionMemory,
+      queueStore: moderationQueueStore,
+      temporalClient
+    });
+  } catch (error) {
+    log("error", "Failed to initialise temporal moderation bridge", {
+      message: error.message
+    });
+    temporalModerationBridge = null;
+  }
+}
 
 const app = createApp({
   narrativeEngine,
@@ -239,6 +265,15 @@ Promise.resolve()
       log("error", "Failed to hydrate moderation queues on startup", { message: error.message });
     }
   })
+  .then(() => {
+    if (!temporalModerationBridge) {
+      return null;
+    }
+    return temporalModerationBridge.start().catch((error) => {
+      log("error", "Failed to start temporal moderation bridge", { message: error.message });
+      return null;
+    });
+  })
   .finally(() => {
     server.listen(port, () => {
       log("info", "Narrative engine server listening", { port });
@@ -248,6 +283,11 @@ Promise.resolve()
 function shutdown() {
   log("info", "Shutting down narrative engine server");
   closureWorkflowOrchestrator.stop();
+  if (temporalModerationBridge) {
+    Promise.resolve(temporalModerationBridge.stop()).catch((error) => {
+      log("warn", "Failed to stop temporal moderation bridge", { message: error.message });
+    });
+  }
   if (hubVerbPool) {
     hubVerbPool.end().catch((error) => {
       log("warn", "Failed to close hub verb pool", { error: error.message });

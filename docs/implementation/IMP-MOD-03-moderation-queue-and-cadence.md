@@ -10,6 +10,7 @@
 - Exposed `/admin/moderation/cadence` endpoint returning session-level cadence summaries consumed by the admin moderation dashboard.
 - Implemented `ModerationCadenceStrip` UI showing SLA countdowns, pending delta counts, and quick links to review alerts, ensuring admins see publishing blocks in real time.
 - Broadcast moderation queue and cadence updates over the shared transport admin channel so the dashboard reflects changes immediately after persistence.
+- Wired a Temporal moderation bridge that hydrates persisted queue snapshots and forwards live cadence updates to configured Temporal endpoints using shared transport credentials.
 - Aggregated cadence data now groups blocking deltas by entity/reason and highlights capability flags so moderators can triage multi-delta sessions faster.
 - Added cadence override endpoint and admin strip controls so moderators can defer lore batches within DES-16 limits while session memory updates cadence state immediately.
 - Persisted moderation queue snapshots and publishing cadence schedules to PostgreSQL (`moderation_queue_state`, `publishing_cadence_state`) with automatic hydration on server startup when `MODERATION_DATABASE_URL` is configured.
@@ -25,10 +26,12 @@
 | `src/server/routes/moderation.js` | Serves `/admin/moderation/cadence` API. |
 | `client/src/components/ModerationCadenceStrip.jsx` | Admin UI strip displaying moderation backlog timers and direct review controls. |
 | `client/src/components/ModerationDashboard.jsx` | Integrates cadence strip, fetch pipeline, and session focus callbacks. |
+| `src/offline/moderation/temporalModerationBridge.js` | Subscribes to persisted queue updates and relays cadence snapshots to Temporal moderation workflows. |
+| `src/offline/moderation/httpTemporalModerationClient.js` | HTTP client that posts queue snapshots to the Temporal endpoint with shared transport credentials. |
 
 ## Verification
 - `npm test -- --runInBand`
 - Playwright: `npx playwright test tests/e2e/admin-moderation.spec.js`
 
 ## Follow-Ups
-1. Expose persisted cadence snapshots to Temporal moderation workflows once shared transport credentials unblock orchestration hooks.
+1. Capture transport retry/backoff metrics for the Temporal moderation bridge and surface failures to operations dashboards.
