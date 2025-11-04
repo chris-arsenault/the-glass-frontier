@@ -1,0 +1,46 @@
+[
+  {
+    "content": "I descend into the Meridian Rift bazaar, trading captured starmaps for whispers about Prismwell Kite Guild caravans.",
+    "metadata": { "turnHint": "gather-information" }
+  },
+  {
+    "content": "I sketch the caravan's last known trail, overlaying leyline pulses from the Resonant Vein around the Auric Steppe Corridor.",
+    "metadata": { "turnHint": "survey-leylines" }
+  },
+  {
+    "content": "I invoke a binding oath with the Rift broker so they alert me if Spectrum Bloom Flux Array partisans appear.",
+    "metadata": { "turnHint": "forge-pact" }
+  },
+  {
+    "content": "I splice a memory shard into the caravan's comms rig, letting our hub listen for distress signals from the Tempered Accord Custodial Council.",
+    "metadata": { "turnHint": "tech-infiltration" }
+  },
+  {
+    "content": "I confer with the caravan captain, sharing news that the Echo Ledger Conclave may abandon the Sable Crescent Basin if another storm hits.",
+    "metadata": { "turnHint": "briefing-update" }
+  },
+  {
+    "content": "I call on the Echo Choir to map nearby voidwraith signatures before we push deeper into the Auric Step Prism Spire routes.",
+    "metadata": { "turnHint": "mystic-scan" }
+  },
+  {
+    "content": "I push the caravan through the crystalline pass, coordinating scouts so the Prismwell Kite Guild can seize the Auric Steppe Corridor from Spectrum Bloom holdouts.",
+    "metadata": { "turnHint": "tactical-advance" }
+  },
+  {
+    "content": "I whip the weather lattice into a shield wall, blocking corrosive sleet from smashing the convoy while the Tempered Accord stabilises the corridor.",
+    "metadata": { "turnHint": "defensive-magic" }
+  },
+  {
+    "content": "I urge the captain to release the Beacon Fang artifact so the convoy keeps hope alive and the Echo Ledger Conclave hears of our resolve.",
+    "metadata": { "turnHint": "rally-convoy" }
+  },
+  {
+    "content": "I nearly reach for the Temporal Loom to erase the voidwraith assault, but I stop short of rewriting fate and note the prohibited capability warning.",
+    "metadata": { "turnHint": "prohibited-near-miss" }
+  },
+  {
+    "content": "I document the convoy's survival, tagging routes for admin hubs and reporting that Spectrum Bloom routed forces lost control of the Auric Steppe Corridor.",
+    "metadata": { "turnHint": "report-findings" }
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "sessionId": "qa-batch-zeta",
+  "exportedAt": "2025-11-04T06:12:23.450Z",
+  "turnCount": 24,
+  "resolvedChecks": 2,
+  "vetoedChecks": 0,
+  "adminAlerts": 0,
+  "closureStatus": "completed",
+  "closureResult": {
+    "summaryVersion": 1,
+    "mentionCount": 1,
+    "deltaCount": 1,
+    "publishing": {
+      "batchId": "qa-batch-zeta-batch-0",
+      "scheduledAt": "2025-11-04T07:12:23.424Z",
+      "status": "awaiting_moderation",
+      "moderation": {
+        "requiresModeration": true,
+        "reasons": [
+          "capability_violation"
+        ],
+        "capabilityViolations": 1,
+        "conflictDetections": 0,
+        "lowConfidenceFindings": 0
+      }
+    },
+    "searchJobs": []
+  },
+  "telemetryEvents": 114,
+  "narrative": {
+    "turnCount": 24,
+    "playerMessages": 11,
+    "gmMessages": 11,
+    "systemMessages": 2,
+    "safetyFlags": [],
+    "moves": []
+  }
+}

@@ -1,6 +1,6 @@
 {
   "sessionId": "imp-gm-06-smoke",
-  "generatedAt": "2025-11-04T05:51:46.385Z",
+  "generatedAt": "2025-11-04T06:12:39.578Z",
   "summary": {
     "sessionId": "imp-gm-06-smoke",
     "version": 1,
@@ -253,7 +253,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T05:51:46.383Z",
+    "generatedAt": "2025-11-04T06:12:39.575Z",
     "statistics": {
       "turnCount": 11,
       "sceneCount": 11,
@@ -291,7 +291,7 @@
           "type": "hourly",
           "runAt": "2025-11-04T05:50:34.577Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T05:51:46.385Z",
+          "preparedAt": "2025-11-04T06:12:39.578Z",
           "deltaCount": 0
         }
       ],
@@ -301,13 +301,13 @@
       },
       "overrides": [],
       "sessionId": "imp-gm-06-smoke",
-      "stateId": "de44f4fb-6ed1-40e0-95ee-d2c16a222829",
-      "createdAt": "2025-11-04T05:51:46.385Z",
-      "updatedAt": "2025-11-04T05:51:46.385Z",
+      "stateId": "38483881-b64c-4666-ab55-b09032572866",
+      "createdAt": "2025-11-04T06:12:39.578Z",
+      "updatedAt": "2025-11-04T06:12:39.578Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T05:51:46.385Z",
+          "occurredAt": "2025-11-04T06:12:39.578Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T04:50:34.577Z",
             "moderationStartAt": "2025-11-04T05:05:34.577Z",
@@ -317,12 +317,12 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T05:51:46.385Z",
+          "occurredAt": "2025-11-04T06:12:39.578Z",
           "payload": {
             "batchId": "imp-gm-06-smoke-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T05:51:46.385Z",
+              "preparedAt": "2025-11-04T06:12:39.578Z",
               "deltaCount": 0
             }
           }
@@ -330,7 +330,7 @@
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T05:51:46.385Z",
+      "preparedAt": "2025-11-04T06:12:39.578Z",
       "loreBundles": [],
       "newsCards": [],
       "overlayPayloads": []

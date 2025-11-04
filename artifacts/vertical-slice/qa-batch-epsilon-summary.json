@@ -1,0 +1,38 @@
+{
+  "sessionId": "qa-batch-epsilon",
+  "exportedAt": "2025-11-04T06:12:12.287Z",
+  "turnCount": 20,
+  "resolvedChecks": 0,
+  "vetoedChecks": 0,
+  "adminAlerts": 0,
+  "closureStatus": "completed",
+  "closureResult": {
+    "summaryVersion": 1,
+    "mentionCount": 5,
+    "deltaCount": 5,
+    "publishing": {
+      "batchId": "qa-batch-epsilon-batch-0",
+      "scheduledAt": "2025-11-04T07:12:12.262Z",
+      "status": "awaiting_moderation",
+      "moderation": {
+        "requiresModeration": true,
+        "reasons": [
+          "capability_violation"
+        ],
+        "capabilityViolations": 5,
+        "conflictDetections": 0,
+        "lowConfidenceFindings": 0
+      }
+    },
+    "searchJobs": []
+  },
+  "telemetryEvents": 100,
+  "narrative": {
+    "turnCount": 20,
+    "playerMessages": 10,
+    "gmMessages": 10,
+    "systemMessages": 0,
+    "safetyFlags": [],
+    "moves": []
+  }
+}

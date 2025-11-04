@@ -1,0 +1,532 @@
+[
+  {
+    "id": "transcript-1",
+    "role": "player",
+    "content": "I circle the shattered Prismwell Kite Guild observatory, mapping sentry routes before slipping through the broken dome.",
+    "text": "I circle the shattered Prismwell Kite Guild observatory, mapping sentry routes before slipping through the broken dome.",
+    "metadata": {
+      "turnHint": "stealth-survey"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.256Z"
+  },
+  {
+    "id": "transcript-2",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I circle the shattered Prismwell Kite Guild observatory, mapping sentry routes before slipping through the broken dome.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.257Z"
+  },
+  {
+    "id": "transcript-3",
+    "role": "player",
+    "content": "I hail the Echo Ledger Conclave broker in the Sable Crescent Basin and bargain for a fragment of their manifest.",
+    "text": "I hail the Echo Ledger Conclave broker in the Sable Crescent Basin and bargain for a fragment of their manifest.",
+    "metadata": {
+      "turnHint": "parley-archivist"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.259Z"
+  },
+  {
+    "id": "transcript-4",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I hail the Echo Ledger Conclave broker in the Sable Crescent Basin and bargain for a fragment of their manifest.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-5",
+    "role": "player",
+    "content": "I splice a salvage drone into the Auric Step Prism Spire relay so it can tail the manifest courier unnoticed.",
+    "text": "I splice a salvage drone into the Auric Step Prism Spire relay so it can tail the manifest courier unnoticed.",
+    "metadata": {
+      "turnHint": "tech-infiltration"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-6",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I splice a salvage drone into the Auric Step Prism Spire relay so it can tail the manifest courier unnoticed.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-7",
+    "role": "player",
+    "content": "I steady the crew's morale, recounting how the Tempered Accord Custodial Council shielded the Auric Steppe Corridor during the last auric storm.",
+    "text": "I steady the crew's morale, recounting how the Tempered Accord Custodial Council shielded the Auric Steppe Corridor during the last auric storm.",
+    "metadata": {
+      "turnHint": "rally-crew"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-8",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I steady the crew's morale, recounting how the Tempered Accord Custodial Council shielded the Auric Steppe Corridor during the last auric storm.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-9",
+    "role": "player",
+    "content": "I trigger the hidden slipway gate to divert patrols toward a decoy plasma flare near the Auric Steppe Corridor.",
+    "text": "I trigger the hidden slipway gate to divert patrols toward a decoy plasma flare near the Auric Steppe Corridor.",
+    "metadata": {
+      "turnHint": "tactical-diversion"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-10",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I trigger the hidden slipway gate to divert patrols toward a decoy plasma flare near the Auric Steppe Corridor.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-11",
+    "role": "player",
+    "content": "I tap the Resonant Vein, asking it to reveal whether Spectrum Bloom Flux Array residuals cling to the manifest crate.",
+    "text": "I tap the Resonant Vein, asking it to reveal whether Spectrum Bloom Flux Array residuals cling to the manifest crate.",
+    "metadata": {
+      "turnHint": "mystic-revelation"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-12",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I tap the Resonant Vein, asking it to reveal whether Spectrum Bloom Flux Array residuals cling to the manifest crate.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-13",
+    "role": "player",
+    "content": "I decode the courier's cipherbook and rewrite the route so the Prismwell Kite Guild seizes the Sable Crescent Basin from the Echo Ledger Conclave.",
+    "text": "I decode the courier's cipherbook and rewrite the route so the Prismwell Kite Guild seizes the Sable Crescent Basin from the Echo Ledger Conclave.",
+    "metadata": {
+      "turnHint": "sabotage-routing"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.260Z"
+  },
+  {
+    "id": "transcript-14",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I decode the courier's cipherbook and rewrite the route so the Prismwell Kite Guild seizes the Sable Crescent Basin from the Echo Ledger Conclave.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  },
+  {
+    "id": "transcript-15",
+    "role": "player",
+    "content": "I reach for the Broken Hourglass, threatening to rewind the courier's memories despite the prohibited capability warnings.",
+    "text": "I reach for the Broken Hourglass, threatening to rewind the courier's memories despite the prohibited capability warnings.",
+    "metadata": {
+      "turnHint": "prohibited-capability"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  },
+  {
+    "id": "transcript-16",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I reach for the Broken Hourglass, threatening to rewind the courier's memories despite the prohibited capability warnings.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  },
+  {
+    "id": "transcript-17",
+    "role": "player",
+    "content": "I brace the manifest vault doors with a quantum lock, buying the Tempered Accord Custodial Council time to stabilise the Auric Steppe Corridor.",
+    "text": "I brace the manifest vault doors with a quantum lock, buying the Tempered Accord Custodial Council time to stabilise the Auric Steppe Corridor.",
+    "metadata": {
+      "turnHint": "defensive-engineering"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  },
+  {
+    "id": "transcript-18",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I brace the manifest vault doors with a quantum lock, buying the Tempered Accord Custodial Council time to stabilise the Auric Steppe Corridor.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  },
+  {
+    "id": "transcript-19",
+    "role": "player",
+    "content": "I log the intel for the Prismwell Kite Guild, flagging Spectrum Bloom Flux Array sympathies in the courier's ledger and noting the Echo Ledger Conclave lost the Sable Crescent Basin.",
+    "text": "I log the intel for the Prismwell Kite Guild, flagging Spectrum Bloom Flux Array sympathies in the courier's ledger and noting the Echo Ledger Conclave lost the Sable Crescent Basin.",
+    "metadata": {
+      "turnHint": "intel-report"
+    },
+    "speaker": "player",
+    "playerId": "player-vertical",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  },
+  {
+    "id": "transcript-20",
+    "role": "gm",
+    "content": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "text": "The relay at Eclipse Relay Hub hums as Avery Glass steadies themselves. Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays. The frontier waits, attentive to your next move.",
+    "metadata": {
+      "promptPackets": [
+        {
+          "type": "scene-frame",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Scene Framing\nCharacter: Avery Glass (Wayfarer Archivist)\nPronouns: they/them\nLocation: Eclipse Relay Hub – Glassfall mist refracts across suspended relay pylons as Prismwell couriers converge on relays.\nMomentum: 0 (floor -2, ceiling 3)\nInventory Highlights: Glass Frontier Compass, Echo Ledger Fragment\n\nRespond with concise guidance for the intent interpreter, not with player-facing prose."
+        },
+        {
+          "type": "intent-intake",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Intent Intake\nPlayer Utterance: \"\"\"I log the intel for the Prismwell Kite Guild, flagging Spectrum Bloom Flux Array sympathies in the courier's ledger and noting the Echo Ledger Conclave lost the Sable Crescent Basin.\"\"\"\nCharacter Context: Avery Glass – region.auric-steppe, faction.prismwell-kite-guild, anchor.prism-spire.auric-step\nLocation Context: Eclipse Relay Hub\nInfer dominant tone, move family, and whether a mechanical check is required.\nReturn JSON with { tone, moveTags[], requiresCheck }."
+        },
+        {
+          "type": "safety-gate",
+          "prompt": "{\"flags\":[],\"severity\":\"low\",\"escalate\":false,\"reason\":null,\"auditRef\":null}"
+        },
+        {
+          "type": "narrative-weaver",
+          "prompt": "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.\n\n## Narrative Outcome\nNo mechanical check triggered. Provide evocative narration that advances the fiction and tags tone markers.\nSafety Context: none."
+        }
+      ],
+      "auditTrail": []
+    },
+    "markers": [
+      {
+        "type": "session.marker",
+        "marker": "narrative-beat",
+        "tone": "narrative"
+      },
+      {
+        "type": "session.marker",
+        "marker": "momentum-state",
+        "value": 0
+      }
+    ],
+    "speaker": "gm",
+    "timestamp": "2025-11-04T06:12:12.261Z"
+  }
+]

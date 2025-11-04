@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-delta",
-  "generatedAt": "2025-11-04T05:51:46.390Z",
+  "generatedAt": "2025-11-04T06:12:39.584Z",
   "summary": {
     "sessionId": "qa-batch-delta",
     "version": 1,
@@ -152,7 +152,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T05:51:46.389Z",
+    "generatedAt": "2025-11-04T06:12:39.583Z",
     "statistics": {
       "turnCount": 6,
       "sceneCount": 6,
@@ -167,7 +167,7 @@
     "mentionCount": 3,
     "mentions": [
       {
-        "mentionId": "b233707d-fadb-41ce-a5ef-f980acec0133",
+        "mentionId": "988b7d27-5efc-499b-a9ac-0a626f358328",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -197,7 +197,7 @@
         }
       },
       {
-        "mentionId": "ae2acdd3-ecb4-4058-b0e7-99791dc7050f",
+        "mentionId": "043a3167-8956-4fbf-89a8-e51f38690929",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -227,7 +227,7 @@
         }
       },
       {
-        "mentionId": "6524614c-9fdc-42c0-a5c1-5a8535c63af0",
+        "mentionId": "c9764174-49f6-4cad-96cd-88aa94192090",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -262,7 +262,7 @@
     "deltaCount": 3,
     "deltas": [
       {
-        "deltaId": "654df689-b7a6-458f-b3e9-d6ffeea882fd",
+        "deltaId": "91b0dbc6-b066-4609-87cf-9d46cf095527",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -304,10 +304,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:51:46.390Z"
+        "createdAt": "2025-11-04T06:12:39.584Z"
       },
       {
-        "deltaId": "54aee50b-3b5a-47a1-a5ea-4d74b184993f",
+        "deltaId": "b35e3b91-2f46-44c7-b7c8-4ce1a00f6f29",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -349,10 +349,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:51:46.390Z"
+        "createdAt": "2025-11-04T06:12:39.584Z"
       },
       {
-        "deltaId": "744fba21-e1f8-427e-aac1-f4147a6d9184",
+        "deltaId": "07edef11-63f7-4242-88b3-045a3d75551a",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -394,7 +394,7 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:51:46.390Z"
+        "createdAt": "2025-11-04T06:12:39.584Z"
       }
     ]
   },
@@ -427,13 +427,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-delta",
-      "stateId": "e7256f5f-21c4-4679-bcae-c700083dd218",
-      "createdAt": "2025-11-04T05:51:46.390Z",
-      "updatedAt": "2025-11-04T05:51:46.390Z",
+      "stateId": "e2c1096e-5ac5-41c7-b0dd-44683eee580e",
+      "createdAt": "2025-11-04T06:12:39.584Z",
+      "updatedAt": "2025-11-04T06:12:39.584Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T05:51:46.390Z",
+          "occurredAt": "2025-11-04T06:12:39.584Z",
           "payload": {
             "sessionClosedAt": "2025-11-05T06:30:00.000Z",
             "moderationStartAt": "2025-11-05T06:45:00.000Z",
@@ -443,7 +443,7 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T05:51:46.390Z",
+          "occurredAt": "2025-11-04T06:12:39.584Z",
           "payload": {
             "batchId": "qa-batch-delta-batch-0",
             "status": "awaiting_moderation",
