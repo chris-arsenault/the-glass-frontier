@@ -10,9 +10,10 @@ TAG="${CI_IMAGE_TAG:-${TAG:-${DEFAULT_TAG}}}"
 REGISTRY="${CI_REGISTRY:-${REGISTRY:-registry.stage}}"
 PLATFORM="${CI_IMAGE_PLATFORM:-${PLATFORM:-}}"
 MANIFEST_PATH="${CI_IMAGE_MANIFEST:-${REPO_ROOT}/artifacts/docker/service-image-manifest.json}"
+DOCKER_CLI="${CI_DOCKER_CLI:-${DOCKER_CLI:-docker}}"
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "[publish-services] docker command not found" >&2
+if ! command -v "${DOCKER_CLI}" >/dev/null 2>&1; then
+  echo "[publish-services] ${DOCKER_CLI} command not found" >&2
   exit 1
 fi
 
@@ -54,7 +55,7 @@ if [[ "${PUSH_IMAGES}" == "true" ]]; then
   fi
 
   echo "[publish-services] Logging into ${REGISTRY}"
-  printf '%s' "${PASSWORD}" | docker login "${REGISTRY}" --username "${USERNAME}" --password-stdin
+  printf '%s' "${PASSWORD}" | "${DOCKER_CLI}" login "${REGISTRY}" --username "${USERNAME}" --password-stdin
 else
   echo "[publish-services] Push disabled; images will remain local."
 fi
@@ -84,6 +85,7 @@ for arg in "${EXTRA_BUILD_ARGS[@]}"; do
 done
 
 echo "[publish-services] Executing: ${BUILD_COMMAND[*]}"
+export DOCKER_CLI
 "${BUILD_COMMAND[@]}"
 
 mkdir -p "$(dirname "${MANIFEST_PATH}")"

@@ -3,9 +3,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_LIST_FILE="${SERVICE_LIST_FILE:-${SCRIPT_DIR}/services.list}"
+DOCKER_CLI="${DOCKER_CLI:-docker}"
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "[build-services] docker command not found" >&2
+if ! command -v "${DOCKER_CLI}" >/dev/null 2>&1; then
+  echo "[build-services] ${DOCKER_CLI} command not found" >&2
   exit 1
 fi
 
@@ -31,7 +32,7 @@ Options:
   -h, --help             Show this help message
 
 Environment variables:
-  TAG, REGISTRY, NODE_VERSION, DOCKERFILE, PUSH_IMAGES, PLATFORM, SERVICE_LIST_FILE
+  TAG, REGISTRY, NODE_VERSION, DOCKERFILE, PUSH_IMAGES, PLATFORM, SERVICE_LIST_FILE, DOCKER_CLI
 EOF
 }
 
@@ -106,7 +107,7 @@ for service in "${SERVICES[@]}"; do
 
   echo "==> Building ${image}"
 
-  build_cmd=(docker build)
+  build_cmd=("${DOCKER_CLI}" "build")
   if [[ -n "${PLATFORM}" ]]; then
     build_cmd+=("--platform" "${PLATFORM}")
   fi
@@ -131,7 +132,7 @@ for service in "${SERVICES[@]}"; do
 
   if [[ "${PUSH_IMAGES}" == "true" ]]; then
     echo "==> Pushing ${image}"
-    docker push "${image}"
+    "${DOCKER_CLI}" push "${image}"
   fi
 done
 

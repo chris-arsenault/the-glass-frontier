@@ -10,6 +10,7 @@
 - `CI_IMAGE_PLATFORM` *(optional)* – forwarded to Docker’s `--platform` flag (e.g. `linux/amd64`).
 - `CI_BUILD_ARGS` *(optional)* – comma or newline separated entries passed through as `--build-arg`.
 - `CI_PUSH` *(default `true`)* – set to `false` when running dry runs without registry pushes.
+- `CI_DOCKER_CLI` *(optional)* – override the Docker-compatible CLI binary (`docker`, `nerdctl`, stub) for build/publish runs. Also honoured by `infra/docker/build-services.sh` via `DOCKER_CLI`.
 
 ## Invocation
 ```bash
