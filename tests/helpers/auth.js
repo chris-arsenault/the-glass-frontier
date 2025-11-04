@@ -8,6 +8,10 @@ const ADMIN_CREDENTIALS = Object.freeze({
   email: "admin@glassfrontier",
   password: "admin-pass"
 });
+const RUNNER_CREDENTIALS = Object.freeze({
+  email: "runner@glassfrontier",
+  password: "runner-pass"
+});
 
 /**
  * Authenticate as the seeded admin account and seed localStorage
@@ -70,7 +74,7 @@ export async function createSession(page, token, options = {}) {
  * @param {import('@playwright/test').Page} page
  * @returns {Promise<{ token: string }>}
  */
-export async function loginAsAdminViaUi(page) {
+async function loginViaUi(page, credentials = ADMIN_CREDENTIALS) {
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
 
@@ -78,15 +82,18 @@ export async function loginAsAdminViaUi(page) {
   if ((await composer.count()) === 0) {
     const loginForm = page.getByTestId("account-form");
     await loginForm.waitFor({ state: "visible", timeout: 10000 });
-    await page.fill("#account-email", ADMIN_CREDENTIALS.email);
-    await page.fill("#account-password", ADMIN_CREDENTIALS.password);
+    await page.fill("#account-email", credentials.email);
+    await page.fill("#account-password", credentials.password);
     const loginResponsePromise = page.waitForResponse(
       (response) =>
         response.url().endsWith("/auth/login") && response.request().method() === "POST"
     );
     await page.click('[data-testid="account-submit"]');
     const loginResponse = await loginResponsePromise;
-    expect(loginResponse.ok(), "Admin UI login request should succeed").toBeTruthy();
+    expect(
+      loginResponse.ok(),
+      `${credentials.email} UI login request should succeed`
+    ).toBeTruthy();
   }
 
   const dashboard = page.getByTestId("session-dashboard");
@@ -106,7 +113,7 @@ export async function loginAsAdminViaUi(page) {
     if ((await authFeedback.count()) > 0) {
       const feedbackText = await authFeedback.innerText();
       if (feedbackText && feedbackText.includes("failed")) {
-        throw new Error(`Admin UI login failed. Feedback: ${feedbackText}`);
+        throw new Error(`${credentials.email} UI login failed. Feedback: ${feedbackText}`);
       }
     }
     await page.waitForTimeout(200);
@@ -115,7 +122,7 @@ export async function loginAsAdminViaUi(page) {
   if (!authenticated) {
     const feedback = (await authFeedback.innerText().catch(() => "")) || "none";
     throw new Error(
-      `Admin UI login did not complete within ${timeoutMs}ms. Feedback: ${feedback}.`
+      `${credentials.email} UI login did not complete within ${timeoutMs}ms. Feedback: ${feedback}.`
     );
   }
 
@@ -131,4 +138,12 @@ export async function loginAsAdminViaUi(page) {
   expect(token, "UI login should populate auth token in storage").toBeTruthy();
 
   return { token };
+}
+
+export async function loginAsAdminViaUi(page) {
+  return loginViaUi(page, ADMIN_CREDENTIALS);
+}
+
+export async function loginAsRunnerViaUi(page) {
+  return loginViaUi(page, RUNNER_CREDENTIALS);
 }
