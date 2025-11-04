@@ -6,7 +6,7 @@ Generated: 2025-11-03
 
 | Feature | Priority | Status | Owner | Open PBIs |
 |---------|----------|--------|-------|-----------|
-| IMP-GM: Narrative Engine & Check Runner | 3 | in-progress | codex | 1 |
+| IMP-GM: Narrative Engine & Check Runner | 3 | in-progress | codex | 0 |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | 4 | in-progress | codex | 1 |
 | IMP-HUBS: Hub Implementation & Load Readiness | 5 | in-progress | codex | 1 |
 | IMP-CLIENT: Unified Web Client Shell | 6 | blocked | codex | 1 |
@@ -16,12 +16,12 @@ Generated: 2025-11-03
 | DES-CORE: Foundational Design | 2 | delivered | — | 0 |
 | NAR-CORE: Worldbuilding Foundations | 9 | delivered | codex | 0 |
 
-- WIP (in-progress + blocked): 3 / 10 limit.
+- WIP (in-progress + blocked): 2 / 10 limit.
 
 ## Backlog Detail
 
 ### IMP-GM: Narrative Engine & Check Runner
-- `IMP-GM-06: Live Session Vertical Slice & Transcript Export` — `in-progress`, `P1` — Validate the vertical slice against live LangGraph backends, capture QA feedback, and export the approved transcript artifacts to feed IMP-OFFLINE-05.
+- `IMP-GM-06: Live Session Vertical Slice & Transcript Export` — `done`, `P1` — Vertical slice CLI (`npm run gm:vertical-slice`) exports transcript/change-feed artifacts with QA log in `docs/reports/imp-gm-06-vertical-slice-qa-2025-11-05.md`, ready for IMP-OFFLINE-05 ingestion.
 - Closed prior to this audit: `IMP-GM-01` through `IMP-GM-05` (`done`).
 
 ### IMP-OFFLINE: Post-Session Publishing Pipeline

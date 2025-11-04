@@ -17,6 +17,7 @@
     "db:seed:hub-verbs": "node scripts/seedHubVerbs.js",
     "storage:lifecycle": "node scripts/minio/applyLifecycle.js",
     "smoke:langgraph-sse": "node scripts/langgraphSseSmoke.js",
+    "gm:vertical-slice": "node scripts/runVerticalSlice.js",
     "stage:smoke": "node scripts/runStageSmoke.js",
     "stage:alerts": "node scripts/adminAlertStatus.js"
   },

@@ -22,6 +22,7 @@
   - `__tests__/integration/gm/verticalSliceScenario.test.js` runs the harness end-to-end, verifying transcript logging, closure job completion, and delta/mention counts.
   - `__tests__/unit/memory/sessionMemory.transcript.test.js` locks down transcript/change-feed behaviour for append, resolution, and veto paths.
 - `npm test` passes, including the vertical slice integration run.
+- `scripts/runVerticalSlice.js` CLI executes the harness and exports transcript/change-feed artifacts plus a summary into `artifacts/vertical-slice/` for downstream QA (`npm run gm:vertical-slice`).
 
 ## Validation Strategy
 - **Integration Test:** Add a Jest integration test that runs the full harness, verifying:
@@ -35,3 +36,4 @@
 - Playwright coverage for the client overlays will be deferred to client-focused PBIs (`IMP-CLIENT-06` already tracks overlay validation).
 - Live LangGraph smoke validation remains an outstanding task noted on the backlog item (requires backend environment).
 - Additional safety scripting (e.g., consent-required soft fails) can be layered once we flesh out the full move library.
+- Future QA runs should reference `docs/reports/imp-gm-06-vertical-slice-qa-2025-11-05.md` for the latest validation log and artifact pointers that feed `IMP-OFFLINE-05`.
