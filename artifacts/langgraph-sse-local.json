@@ -1,0 +1,77 @@
+{
+  "runId": "1f6e760f-885d-4e4e-a3de-ba0516c60504",
+  "startedAt": "2025-11-04T01:45:34.736Z",
+  "baseUrl": "http://localhost:3000",
+  "config": {
+    "timeoutMs": 10000,
+    "skipAdminAlert": false,
+    "reportPath": "artifacts/langgraph-sse-local.json"
+  },
+  "metrics": {
+    "checkDispatch": {
+      "id": "e5d160f4-e0c9-4445-ae01-17107db21ab7",
+      "requestedAt": "2025-11-04T01:45:34.820Z",
+      "move": "langgraph-smoke-probe"
+    },
+    "checkResolution": {
+      "id": "e5d160f4-e0c9-4445-ae01-17107db21ab7",
+      "tier": "full-success",
+      "latencyMs": 4
+    },
+    "overlaySync": {
+      "observed": true,
+      "latencyMs": 4
+    },
+    "safetyCheck": {
+      "id": "7c53c8f4-ac4d-4e22-8bdc-9c3663f412dd",
+      "requestedAt": "2025-11-04T01:45:34.824Z",
+      "move": "langgraph-smoke-safety"
+    },
+    "safetyVeto": {
+      "observed": true,
+      "latencyMs": 2
+    },
+    "adminAlert": {
+      "observed": true,
+      "latencyMs": 3,
+      "severity": "high",
+      "reason": "prohibited-capability"
+    },
+    "sessionClosure": {
+      "latencyMs": 2
+    },
+    "offlineQueue": {
+      "observed": true,
+      "latencyMs": 2,
+      "jobId": "d335c2ec-3ecc-4058-91ad-adf982aff060"
+    }
+  },
+  "eventCounts": {
+    "intent.checkRequest": 2,
+    "check.prompt": 2,
+    "event.checkResolved": 1,
+    "check.result": 1,
+    "overlay.characterSync": 1,
+    "event.checkVetoed": 1,
+    "admin.alert": 1,
+    "offline.sessionClosure.queued": 1,
+    "session.statusChanged": 1,
+    "session.closed": 1
+  },
+  "account": {
+    "id": "2c266cba-74a9-4036-9993-76e8db6f529c",
+    "email": "admin@glassfrontier",
+    "role": null
+  },
+  "session": {
+    "id": "langgraph-sse-1762220734736",
+    "title": "LangGraph SSE Smoke Validation",
+    "createdAt": "2025-11-04T01:45:34.817Z"
+  },
+  "stream": {
+    "connectedAt": "2025-11-04T01:45:34.820Z"
+  },
+  "success": true,
+  "completedAt": "2025-11-04T01:45:34.831Z",
+  "durationMs": 95
+}
