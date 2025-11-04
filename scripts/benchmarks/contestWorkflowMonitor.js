@@ -65,18 +65,16 @@ function parseArgs(argv) {
   return args;
 }
 
-function readInputLines(inputPath) {
+function readInputContent(inputPath) {
   if (inputPath) {
     const resolved = path.resolve(process.cwd(), inputPath);
     if (!fs.existsSync(resolved)) {
       throw new Error(`Input file not found: ${resolved}`);
     }
-    const content = fs.readFileSync(resolved, "utf8");
-    return content.split(/\r?\n/);
+    return fs.readFileSync(resolved, "utf8");
   }
 
-  const buffer = fs.readFileSync(0, "utf8");
-  return buffer.split(/\r?\n/);
+  return fs.readFileSync(0, "utf8");
 }
 
 function safeParse(line) {
@@ -88,6 +86,171 @@ function safeParse(line) {
   } catch (error) {
     return null;
   }
+}
+
+function parseNdjsonLines(rawContent) {
+  if (!rawContent) {
+    return [];
+  }
+  const lines = rawContent.split(/\r?\n/);
+  const events = [];
+  lines.forEach((line) => {
+    const parsed = safeParse(line);
+    if (parsed && typeof parsed === "object" && parsed.message) {
+      events.push(parsed);
+    }
+  });
+  return events;
+}
+
+function mapTimelineType(type) {
+  switch (type) {
+    case "telemetry.hub.contestArmed":
+      return "telemetry.contest.armed";
+    case "telemetry.hub.contestLaunched":
+      return "telemetry.contest.launched";
+    case "telemetry.hub.contestResolved":
+      return "telemetry.contest.resolved";
+    case "telemetry.hub.contestWorkflowFailed":
+      return "telemetry.contest.workflowFailed";
+    default:
+      return null;
+  }
+}
+
+function parseStructuredEvents(rawContent) {
+  if (!rawContent) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawContent);
+
+    const rootEvents = [];
+
+    if (Array.isArray(parsed)) {
+      parsed.forEach((entry) => {
+        if (entry && typeof entry === "object" && entry.message) {
+          rootEvents.push(entry);
+        }
+      });
+      if (rootEvents.length > 0) {
+        return rootEvents;
+      }
+    }
+
+    if (!parsed || typeof parsed !== "object") {
+      return [];
+    }
+
+    const events = [];
+
+    const timeline = Array.isArray(parsed.timeline) ? parsed.timeline : null;
+    if (!timeline) {
+      // continue to other structured formats
+    } else {
+      timeline.forEach((entry) => {
+        if (!entry || typeof entry !== "object") {
+          return;
+        }
+
+        const mappedMessage = mapTimelineType(entry.type);
+        if (!mappedMessage) {
+          return;
+        }
+
+        const payload = entry.payload || {};
+        events.push({
+          message: mappedMessage,
+          hubId: payload.hubId || parsed.hubId || null,
+          roomId: payload.roomId || parsed.roomId || null,
+          contestId: payload.contestId || parsed.contestId || null,
+          contestKey: payload.contestKey || parsed.contestKey || null,
+          armingDurationMs:
+            payload.armingDurationMs !== undefined ? payload.armingDurationMs : null,
+          resolutionDurationMs:
+            payload.resolutionDurationMs !== undefined ? payload.resolutionDurationMs : null,
+          participantCount:
+            payload.participantCount !== undefined ? payload.participantCount : null,
+          participantCapacity:
+            payload.participantCapacity !== undefined ? payload.participantCapacity : null,
+          outcomeTier:
+            (payload.outcome && payload.outcome.tier) || payload.outcomeTier || null
+        });
+      });
+    }
+
+    const rawContests = parsed.raw?.contests;
+    if (Array.isArray(rawContests) && rawContests.length > 0) {
+      rawContests.forEach((contest) => {
+        if (!contest || typeof contest !== "object") {
+          return;
+        }
+
+        events.push({
+          message: "telemetry.contest.launched",
+          contestId: contest.contestId || null,
+          hubId: contest.hubId || null,
+          roomId: contest.roomId || null,
+          armingDurationMs:
+            contest.armingDurationMs !== undefined ? contest.armingDurationMs : null,
+          participantCount:
+            contest.participantCount !== undefined ? contest.participantCount : null,
+          participantCapacity:
+            contest.participantCapacity !== undefined ? contest.participantCapacity : null
+        });
+
+        events.push({
+          message: "telemetry.contest.resolved",
+          contestId: contest.contestId || null,
+          hubId: contest.hubId || null,
+          roomId: contest.roomId || null,
+          armingDurationMs:
+            contest.armingDurationMs !== undefined ? contest.armingDurationMs : null,
+          resolutionDurationMs:
+            contest.resolutionDurationMs !== undefined ? contest.resolutionDurationMs : null,
+          participantCount:
+            contest.participantCount !== undefined ? contest.participantCount : null,
+          participantCapacity:
+            contest.participantCapacity !== undefined ? contest.participantCapacity : null,
+          outcomeTier: Array.isArray(contest.outcomes) ? contest.outcomes[0] || null : null
+        });
+      });
+    }
+
+    const rawFailures = parsed.raw?.workflowFailures;
+    if (Array.isArray(rawFailures) && rawFailures.length > 0) {
+      rawFailures.forEach((failure) => {
+        if (!failure || typeof failure !== "object") {
+          return;
+        }
+        events.push({
+          message: "telemetry.contest.workflowFailed",
+          contestId: failure.contestId || null,
+          hubId: failure.hubId || null,
+          roomId: failure.roomId || null,
+          error: failure.error || "workflow_failed"
+        });
+      });
+    }
+
+    return events;
+  } catch (_error) {
+    return [];
+  }
+}
+
+function parseContestEvents(rawContent) {
+  if (!rawContent) {
+    return [];
+  }
+
+  const ndjsonEvents = parseNdjsonLines(rawContent);
+  if (ndjsonEvents.length > 0) {
+    return ndjsonEvents;
+  }
+
+  return parseStructuredEvents(rawContent);
 }
 
 function percentile(sortedValues, rank) {
@@ -152,7 +315,8 @@ function buildSummary(events, thresholds) {
         resolutionDurationMs: null,
         participantCount: null,
         participantCapacity: null,
-        outcomes: []
+        outcomes: [],
+        resolved: false
       });
     }
 
@@ -169,6 +333,7 @@ function buildSummary(events, thresholds) {
     }
 
     if (message === "telemetry.contest.resolved") {
+      record.resolved = true;
       record.resolutionDurationMs =
         collectNumber(event.resolutionDurationMs) ?? record.resolutionDurationMs;
       record.armingDurationMs =
@@ -188,6 +353,7 @@ function buildSummary(events, thresholds) {
   const participantCounts = [];
   const participantCapacities = [];
 
+  let resolvedContests = 0;
   let missingArming = 0;
   let missingResolution = 0;
 
@@ -200,8 +366,12 @@ function buildSummary(events, thresholds) {
 
     if (record.resolutionDurationMs !== null) {
       resolutionDurations.push(record.resolutionDurationMs);
-    } else {
+    } else if (record.resolved) {
       missingResolution += 1;
+    }
+
+    if (record.resolved) {
+      resolvedContests += 1;
     }
 
     if (record.participantCount !== null) {
@@ -226,7 +396,7 @@ function buildSummary(events, thresholds) {
   return {
     totals: {
       contestsObserved: contests.size,
-      resolvedContests: contests.size - missingResolution,
+      resolvedContests,
       workflowFailures: workflowFailures.length
     },
     durations: {
@@ -337,8 +507,8 @@ function formatSummary(summary) {
 function main() {
   try {
     const args = parseArgs(process.argv);
-    const lines = readInputLines(args.input);
-    const events = lines.map(safeParse).filter(Boolean);
+    const rawContent = readInputContent(args.input);
+    const events = parseContestEvents(rawContent);
     const summary = buildSummary(events, {
       armingP95: args.armingP95,
       resolutionP95: args.resolutionP95
@@ -362,6 +532,7 @@ if (require.main === module) {
 module.exports = {
   DEFAULT_THRESHOLDS,
   parseArgs,
+  parseContestEvents,
   buildSummary,
   formatSummary
 };

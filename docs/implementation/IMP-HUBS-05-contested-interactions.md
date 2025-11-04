@@ -7,6 +7,7 @@
 - Wired Temporal contest resolution payloads back into hub room state so overlays disclose outcome tiers, momentum shifts, and shared complications as soon as workflows complete.
 - Hardened publishing retry summaries so offline cadence reporting remains resilient when contest-driven retries occur.
 - Captured moderation-dashboard-ready telemetry for contested sparring flows (`artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json`) showing armed → launched → resolved lifecycle payloads and broadcast samples for admin review.
+- Extended the contest monitoring CLI and moderation ingestion so NDJSON logs, timeline artefacts, and stored summaries all produce the same aggregated contest metrics for admin dashboards.
 
 ## Implementation Notes
 - `src/hub/config/defaultVerbCatalog.json` now defines `contest` blocks (window, label, roles, moderation/shared complication tags) for contested verbs spanning duels, sparring, and social clashes. The verb catalog normaliser (`src/hub/verbCatalog.js`) validates the new schema.
@@ -21,8 +22,8 @@
 
 ## Monitoring & Benchmarking
 - Contest telemetry now emits structured JSON log lines (`telemetry.contest.armed|launched|resolved`) carrying arming/resolve durations, participant counts, and moderation context.
-- Run `npm run monitor:contests -- --input <telemetry-log.ndjson>` to summarise p50/p95 arming and resolution latency against the DES-BENCH-01 targets (arming ≤8,000 ms p95, resolution ≤800 ms p95) and to track multi-actor demand via participant counts.
-- Generated summaries should accompany moderation dashboard runs so `IMP-MOD-01` can ingest both lifecycle artefacts and latency health checks.
+- Run `npm run monitor:contests -- --input <telemetry-log.ndjson|timeline.json|summary.json>` to summarise p50/p95 arming and resolution latency against the DES-BENCH-01 targets (arming ≤8,000 ms p95, resolution ≤800 ms p95) and to track multi-actor demand via participant counts. The CLI now accepts the sparring artefact (`artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json`) and its generated summary (`artifacts/hub/contest-moderation-summary-2025-11-04T08-30-00Z.json`).
+- Generated summaries should accompany moderation dashboard runs so `IMP-MOD-01` can ingest both lifecycle artefacts and latency health checks without additional transformation.
 
 ## Testing
 - Added integration coverage in `__tests__/integration/hub/hubOrchestrator.integration.test.js` validating duel verbs arm → launch contest workflows and broadcast contest state/meta.
@@ -31,8 +32,8 @@
 - Ran `npm test` to exercise the full Jest suite (hub orchestration, offline pipelines, client overlays).
 
 ## Next Steps & Risks
-- Execute `npm run monitor:contests` during hub load exercises to track arming/resolution venting against DES-BENCH-01 budgets; adjust contest window if p95 breaches persist.
-- Coordinate with `IMP-MOD-01` once moderation dashboards begin implementation so the captured contest telemetry artefacts wire directly into admin override workflows.
+- Execute `npm run monitor:contests` during hub load exercises to collect latency samples against DES-BENCH-01 budgets; adjust contest windows if p95 breaches persist once real data lands.
+- Share refreshed CLI summaries with `IMP-MOD-01` SMEs and fold dashboard feedback into moderation UX/polish workstreams.
 - Evaluate demand for multi-actor skirmishes; if required, extend contest key generation to support >2 participants without fragmenting registration windows.
 
 ## References

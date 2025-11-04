@@ -5,7 +5,8 @@ const path = require("path");
 const { v4: uuid } = require("uuid");
 const {
   DEFAULT_THRESHOLDS,
-  buildSummary
+  buildSummary,
+  parseContestEvents
 } = require("../../scripts/benchmarks/contestWorkflowMonitor");
 
 const ALERT_STATUS_LIVE = "live";
@@ -351,7 +352,7 @@ class ModerationService {
     }
 
     const rawContent = fs.readFileSync(artefactPath, "utf8");
-    const events = this.#parseContestEvents(rawContent);
+    const events = parseContestEvents(rawContent);
     const summary = buildSummary(events, {
       armingP95: thresholds.armingP95 || DEFAULT_THRESHOLDS.armingP95,
       resolutionP95: thresholds.resolutionP95 || DEFAULT_THRESHOLDS.resolutionP95
@@ -388,84 +389,6 @@ class ModerationService {
       decisions: alert.decisions.map((decision) => clone(decision)),
       history: alert.history.map((entry) => clone(entry))
     };
-  }
-
-  #parseContestEvents(rawContent) {
-    const events = [];
-    const lines = rawContent.split(/\r?\n/).filter((line) => line.trim().length > 0);
-
-    let jsonLinesParsed = 0;
-    lines.forEach((line) => {
-      try {
-        const parsed = JSON.parse(line);
-        if (parsed && typeof parsed === "object" && parsed.message) {
-          events.push(parsed);
-          jsonLinesParsed += 1;
-        }
-      } catch (error) {
-        // ignore, may not be JSON line
-      }
-    });
-
-    if (jsonLinesParsed > 0) {
-      return events;
-    }
-
-    try {
-      const parsed = JSON.parse(rawContent);
-      if (parsed && Array.isArray(parsed.timeline)) {
-        parsed.timeline.forEach((entry) => {
-          if (!entry || typeof entry !== "object") {
-            return;
-          }
-
-          const mappedMessage = this.#mapTimelineType(entry.type);
-          if (!mappedMessage) {
-            return;
-          }
-
-          const payload = entry.payload || {};
-          events.push({
-            message: mappedMessage,
-            hubId: payload.hubId || parsed.hubId || null,
-            roomId: payload.roomId || parsed.roomId || null,
-            contestId: payload.contestId || parsed.contestId || null,
-            contestKey: payload.contestKey || parsed.contestKey || null,
-            armingDurationMs:
-              payload.armingDurationMs !== undefined ? payload.armingDurationMs : null,
-            resolutionDurationMs:
-              payload.resolutionDurationMs !== undefined
-                ? payload.resolutionDurationMs
-                : null,
-            participantCount:
-              payload.participantCount !== undefined ? payload.participantCount : null,
-            participantCapacity:
-              payload.participantCapacity !== undefined ? payload.participantCapacity : null,
-            outcomeTier:
-              (payload.outcome && payload.outcome.tier) || payload.outcomeTier || null
-          });
-        });
-      }
-    } catch (error) {
-      // ignore, fallback to empty
-    }
-
-    return events;
-  }
-
-  #mapTimelineType(type) {
-    switch (type) {
-      case "telemetry.hub.contestArmed":
-        return "telemetry.contest.armed";
-      case "telemetry.hub.contestLaunched":
-        return "telemetry.contest.launched";
-      case "telemetry.hub.contestResolved":
-        return "telemetry.contest.resolved";
-      case "telemetry.hub.contestWorkflowFailed":
-        return "telemetry.contest.workflowFailed";
-      default:
-        return null;
-    }
   }
 
   #nowIso() {
