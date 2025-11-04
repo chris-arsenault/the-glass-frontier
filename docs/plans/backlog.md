@@ -5,9 +5,9 @@ Updated for Session 101 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | blocked | P1 | Blocked on staging MinIO/Backblaze credential restoration before cadence rehearsal, drift simulation verification, and overlay evidence capture with IMP-CLIENT-06. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | SME sign-off pending; keep `npm run stage:smoke` / `npm run stage:alerts` telemetry current and sync with offline QA artefacts once staging stabilises. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | blocked | P1 | Waiting on staging connectivity to rerun `npm run monitor:contests`, distribute telemetry to SMEs, and confirm moderation override readiness. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | blocked | P1 | Drift-sim QA refreshed (2025-11-04T10:13Z rollup). Still blocked on staging MinIO/Backblaze credentials to rehearse storage writes and capture overlay evidence with IMP-CLIENT-06. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | Stage smoke (2025-11-04T10:12Z) reports 5 ms check/overlay, 4 ms offline queue, live admin alert at 3 ms; SME confirmations in `#client-overlays` / `#admin-sse` remain outstanding. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | blocked | P1 | Generated refreshed CLI summary (`artifacts/hub/contest-monitor-summary-2025-11-04T10-17-19Z.json`); awaiting live staging contest runs to validate Temporal telemetry and brief moderation SMEs. |
 
 ## Tier 2 (P2)
 | Feature | Item | Status | Priority | Notes |

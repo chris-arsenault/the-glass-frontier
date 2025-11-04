@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-epsilon",
-  "generatedAt": "2025-11-04T06:12:39.586Z",
+  "generatedAt": "2025-11-04T10:13:20.541Z",
   "summary": {
     "sessionId": "qa-batch-epsilon",
     "version": 1,
@@ -408,7 +408,7 @@
     },
     "safetyNotes": [],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T06:12:39.585Z",
+    "generatedAt": "2025-11-04T10:13:20.539Z",
     "statistics": {
       "turnCount": 20,
       "sceneCount": 20,
@@ -423,7 +423,7 @@
     "mentionCount": 5,
     "mentions": [
       {
-        "mentionId": "ab934c46-d663-49ef-ad8c-711c847dc9d0",
+        "mentionId": "2582582b-fcd5-4021-a796-49900fc56f21",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -453,7 +453,7 @@
         }
       },
       {
-        "mentionId": "a24aba31-1855-4218-91f9-7b2aeef3ce82",
+        "mentionId": "3cce4d22-adbe-4107-a24b-e355c81cf844",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -490,7 +490,7 @@
         }
       },
       {
-        "mentionId": "959a18b5-6d7e-49e3-9ef3-56b4adb4e8fe",
+        "mentionId": "3c389c06-8e47-45e8-8937-633a0b09174c",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -527,7 +527,7 @@
         }
       },
       {
-        "mentionId": "f3e2b9f1-2edc-4809-b26d-5f64fc4d7f70",
+        "mentionId": "8e682137-272f-4896-9246-b7f99325b242",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -557,7 +557,7 @@
         }
       },
       {
-        "mentionId": "6fcc120c-ffd2-4a59-8482-2ce660ff7d51",
+        "mentionId": "87f9ae5b-75d0-43f4-a3fa-72669ea7eb62",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -592,7 +592,7 @@
     "deltaCount": 5,
     "deltas": [
       {
-        "deltaId": "851804b3-868e-4dc4-b485-e41db7a6a2ea",
+        "deltaId": "710dcb59-f06a-464a-97fe-6e08e5e415e7",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -634,10 +634,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.586Z"
+        "createdAt": "2025-11-04T10:13:20.540Z"
       },
       {
-        "deltaId": "85e2c3ad-2bf6-446b-a54c-e1ceeba88a57",
+        "deltaId": "fcce78f2-b50b-4b33-891e-4ea13cb9b7d6",
         "entityId": "faction.prismwell-kite-guild",
         "entityType": "faction",
         "canonicalName": "Prismwell Kite Guild",
@@ -688,10 +688,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.586Z"
+        "createdAt": "2025-11-04T10:13:20.540Z"
       },
       {
-        "deltaId": "b7962253-5d31-4643-88e6-d65a0faca03d",
+        "deltaId": "051afdf4-14a9-45fd-98c5-0f06a8700ec7",
         "entityId": "faction.echo-ledger-conclave",
         "entityType": "faction",
         "canonicalName": "Echo Ledger Conclave",
@@ -742,10 +742,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.586Z"
+        "createdAt": "2025-11-04T10:13:20.540Z"
       },
       {
-        "deltaId": "3fc6b052-5a27-427e-9537-48b485b6ccfb",
+        "deltaId": "46efde12-8b8d-4896-ac37-cb98aaa53b55",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -787,10 +787,10 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.586Z"
+        "createdAt": "2025-11-04T10:13:20.540Z"
       },
       {
-        "deltaId": "fece3354-39b3-41d0-b3fb-88711c7cb69f",
+        "deltaId": "42ec6e7b-266f-4ebd-817f-874c41040bf0",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -832,12 +832,12 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.586Z"
+        "createdAt": "2025-11-04T10:13:20.540Z"
       }
     ]
   },
   "publishing": {
-    "status": "awaiting_moderation",
+    "status": "published",
     "schedule": {
       "sessionClosedAt": "2025-11-04T06:12:12.261Z",
       "moderation": {
@@ -865,13 +865,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-epsilon",
-      "stateId": "96ac10e5-8c6b-4818-ad28-a73362be3eeb",
-      "createdAt": "2025-11-04T06:12:39.586Z",
-      "updatedAt": "2025-11-04T06:12:39.586Z",
+      "stateId": "b832066b-9341-4028-9473-73add60a0872",
+      "createdAt": "2025-11-04T10:13:20.540Z",
+      "updatedAt": "2025-11-04T10:13:20.540Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T06:12:39.586Z",
+          "occurredAt": "2025-11-04T10:13:20.540Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T06:12:12.261Z",
             "moderationStartAt": "2025-11-04T06:27:12.261Z",
@@ -881,7 +881,7 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T06:12:39.586Z",
+          "occurredAt": "2025-11-04T10:13:20.540Z",
           "payload": {
             "batchId": "qa-batch-epsilon-batch-0",
             "status": "awaiting_moderation",
@@ -896,7 +896,13 @@
     "preparedBatch": null,
     "searchPlan": {
       "jobs": [],
-      "status": "blocked"
+      "status": "published",
+      "retrySummary": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      }
     },
     "moderation": {
       "requiresModeration": true,
@@ -906,6 +912,22 @@
       "capabilityViolations": 5,
       "conflictDetections": 0,
       "lowConfidenceFindings": 0
+    },
+    "retryQueue": {
+      "status": "clear",
+      "beforeDrain": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      },
+      "afterDrain": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      },
+      "drainedJobs": []
     }
   },
   "moderation": {

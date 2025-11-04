@@ -26,6 +26,12 @@
 6. `npm run offline:qa -- --input artifacts/vertical-slice --output artifacts/offline-qa` (post-synthesis batch)
    - Replayed the full directory including new gamma/delta artefacts; rollup aggregated 11 mentions, 11 deltas, and two moderation-required sessions.
    - Updated batch rollup available at `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-51-46-392Z.json`, now surfacing per-session `publishingStatus` so moderation holds stand out in dashboards.
+7. `npm run offline:qa -- --input artifacts/vertical-slice --simulate-search-drift`
+   - Refreshed the directory replay with drift simulation to validate retry telemetry plumbing; rollup now written to `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T10-13-20-546Z.json`.
+   - Moderation-gated sessions kept search sync jobs blocked, so drift results drained immediately (before/after summaries show `pendingCount: 0`)—confirms QA harness records the empty drain state ahead of staging storage rehearsals.
+8. `npm run offline:qa -- --input artifacts/offline-qa/qa-multi-faction-session.json --simulate-search-drift`
+   - Multi-faction stress scenario revalidated moderation gating (capability + conflict flags) while exercising the drift simulation path; retry queue drained cleanly after enqueue, maintaining parity with the admin overlay telemetry contract.
+   - Output refreshed at `artifacts/offline-qa/qa-multi-faction-smoke-offline-qa.json` (generated 2025-11-04T10:15Z) for IMP-CLIENT-06 overlay evidence once staging storage returns.
 
 ## Tooling Updates
 - `scripts/runOfflinePublishingQa.js` now accepts a directory input, filters session artifacts, and emits batch rollups that flag moderation hotspots.
@@ -48,7 +54,9 @@
   - `artifacts/offline-qa/qa-multi-faction-smoke-offline-qa.json`  
   - `artifacts/offline-qa/qa-batch-gamma-offline-qa.json`  
   - `artifacts/offline-qa/qa-batch-delta-offline-qa.json`
-- Rollup: `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-51-46-392Z.json`
+- Rollups:  
+  - `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-51-46-392Z.json`  
+  - `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T10-13-20-546Z.json`
 - Sample transcripts:  
   - `artifacts/offline-qa/qa-multi-faction-session.json`  
   - `artifacts/vertical-slice/qa-batch-gamma.json`  
@@ -56,5 +64,5 @@
 - Script: `scripts/runOfflinePublishingQa.js` (npm alias `offline:qa`)
 
 ## Outstanding
-- Run the cadence against staging storage infrastructure when access resumes, capturing rollback + moderation hold notes.
+- Run the cadence against staging storage infrastructure when access resumes, capturing rollback + moderation hold notes and verifying drift telemetry reaches the admin overlay with live storage credentials.
 - Extend the QA harness once additional real transcripts arrive (IMP-GM backlog) to measure extraction precision on longer arcs.

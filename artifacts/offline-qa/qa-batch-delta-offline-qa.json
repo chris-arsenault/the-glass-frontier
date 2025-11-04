@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-delta",
-  "generatedAt": "2025-11-04T06:12:39.584Z",
+  "generatedAt": "2025-11-04T10:13:20.538Z",
   "summary": {
     "sessionId": "qa-batch-delta",
     "version": 1,
@@ -152,7 +152,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T06:12:39.583Z",
+    "generatedAt": "2025-11-04T10:13:20.536Z",
     "statistics": {
       "turnCount": 6,
       "sceneCount": 6,
@@ -167,7 +167,7 @@
     "mentionCount": 3,
     "mentions": [
       {
-        "mentionId": "988b7d27-5efc-499b-a9ac-0a626f358328",
+        "mentionId": "35d9935d-77bd-4b18-bfc5-bc4204d2c894",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -197,7 +197,7 @@
         }
       },
       {
-        "mentionId": "043a3167-8956-4fbf-89a8-e51f38690929",
+        "mentionId": "495452bf-3c79-45ec-9fea-90c7fc734eb5",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -227,7 +227,7 @@
         }
       },
       {
-        "mentionId": "c9764174-49f6-4cad-96cd-88aa94192090",
+        "mentionId": "ffd533c6-b0e6-4337-99ac-79cee5747b07",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -262,7 +262,7 @@
     "deltaCount": 3,
     "deltas": [
       {
-        "deltaId": "91b0dbc6-b066-4609-87cf-9d46cf095527",
+        "deltaId": "9a4c19a7-7694-49b0-ac26-58171a659b21",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -304,10 +304,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.584Z"
+        "createdAt": "2025-11-04T10:13:20.537Z"
       },
       {
-        "deltaId": "b35e3b91-2f46-44c7-b7c8-4ce1a00f6f29",
+        "deltaId": "11b603c4-a32c-41f7-b519-ae8e74d6d451",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -349,10 +349,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.584Z"
+        "createdAt": "2025-11-04T10:13:20.537Z"
       },
       {
-        "deltaId": "07edef11-63f7-4242-88b3-045a3d75551a",
+        "deltaId": "ce849a53-8b57-4291-92fb-fab82c2e4712",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -394,12 +394,12 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T06:12:39.584Z"
+        "createdAt": "2025-11-04T10:13:20.537Z"
       }
     ]
   },
   "publishing": {
-    "status": "awaiting_moderation",
+    "status": "published",
     "schedule": {
       "sessionClosedAt": "2025-11-05T06:30:00.000Z",
       "moderation": {
@@ -427,13 +427,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-delta",
-      "stateId": "e2c1096e-5ac5-41c7-b0dd-44683eee580e",
-      "createdAt": "2025-11-04T06:12:39.584Z",
-      "updatedAt": "2025-11-04T06:12:39.584Z",
+      "stateId": "c672ab0b-f8cb-42d0-9da1-4f88b379450f",
+      "createdAt": "2025-11-04T10:13:20.537Z",
+      "updatedAt": "2025-11-04T10:13:20.537Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T06:12:39.584Z",
+          "occurredAt": "2025-11-04T10:13:20.537Z",
           "payload": {
             "sessionClosedAt": "2025-11-05T06:30:00.000Z",
             "moderationStartAt": "2025-11-05T06:45:00.000Z",
@@ -443,7 +443,7 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T06:12:39.584Z",
+          "occurredAt": "2025-11-04T10:13:20.537Z",
           "payload": {
             "batchId": "qa-batch-delta-batch-0",
             "status": "awaiting_moderation",
@@ -458,7 +458,13 @@
     "preparedBatch": null,
     "searchPlan": {
       "jobs": [],
-      "status": "blocked"
+      "status": "published",
+      "retrySummary": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      }
     },
     "moderation": {
       "requiresModeration": true,
@@ -468,6 +474,22 @@
       "capabilityViolations": 3,
       "conflictDetections": 0,
       "lowConfidenceFindings": 0
+    },
+    "retryQueue": {
+      "status": "clear",
+      "beforeDrain": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      },
+      "afterDrain": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      },
+      "drainedJobs": []
     }
   },
   "moderation": {

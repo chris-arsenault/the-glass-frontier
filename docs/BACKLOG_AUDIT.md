@@ -6,9 +6,9 @@ Generated: 2025-11-04
 
 | Feature | Status | Priority | Owner | Notes |
 |---------|--------|----------|-------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | blocked | 4 | codex | Waiting on staging MinIO/Backblaze credentials to validate end-to-end QA (IMP-OFFLINE-05). |
-| IMP-HUBS: Hub Implementation & Load Readiness | blocked | 5 | codex | Live contest verification stalled until staging connectivity returns (IMP-HUBS-05). |
-| IMP-CLIENT: Unified Web Client Shell | blocked | 6 | codex | Overlay + pipeline telemetry integration held for SME approval (IMP-CLIENT-06). |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | blocked | 4 | codex | Drift-sim QA refreshed (2025-11-04T10:13Z); staging MinIO/Backblaze credentials still required for end-to-end rehearsal (IMP-OFFLINE-05). |
+| IMP-HUBS: Hub Implementation & Load Readiness | blocked | 5 | codex | Contest telemetry summary updated (contest-monitor-summary-2025-11-04T10-17-19Z.json); pending live staging verification (IMP-HUBS-05). |
+| IMP-CLIENT: Unified Web Client Shell | blocked | 6 | codex | Stage smoke (2025-11-04T10:12Z) healthy; SME approval still outstanding for overlay/pipeline telemetry (IMP-CLIENT-06). |
 | IMP-PLATFORM: Platform Implementation Foundations | blocked | 7 | codex | Platform tasks paused until Tier 1 deliverables and staging credentials stabilise. |
 | IMP-MOD: Moderation & Admin Surfaces | todo | 8 | codex | Moderation tooling queued behind Tier 1 loop readiness. |
 
@@ -18,19 +18,19 @@ Generated: 2025-11-04
 
 | Backlog Item | Status | Priority | Notes |
 |--------------|--------|----------|-------|
-| IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | blocked | P1 | Restore staging credentials, rerun `npm run offline:qa` with drift simulation, and capture admin overlay evidence with IMP-CLIENT-06. |
+| IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | blocked | P1 | Drift simulation rerun at 2025-11-04T10:13Z (rollup refreshed); staging credentials still needed for storage + overlay evidence. |
 
 ### IMP-HUBS: Hub Implementation & Load Readiness
 
 | Backlog Item | Status | Priority | Notes |
 |--------------|--------|----------|-------|
-| IMP-HUBS-05: Hub PvP Contested Interactions | blocked | P1 | Staging rerun of `npm run monitor:contests` required to close DES-BENCH-01 validation and gather SME feedback. |
+| IMP-HUBS-05: Hub PvP Contested Interactions | blocked | P1 | CLI summary regenerated (contest-monitor-summary-2025-11-04T10-17-19Z.json); awaiting live staging contest telemetry and SME review. |
 
 ### IMP-CLIENT: Unified Web Client Shell
 
 | Backlog Item | Status | Priority | Notes |
 |--------------|--------|----------|-------|
-| IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | Await SME confirmation and staging telemetry to unlock final overlay release. |
+| IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | Latest stage smoke (2025-11-04T10:12Z) delivers 5 ms overlay/4 ms offline queue metrics; SME confirmation still pending. |
 
 ### IMP-PLATFORM: Platform Implementation Foundations
 

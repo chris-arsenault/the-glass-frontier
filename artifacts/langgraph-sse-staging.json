@@ -1,6 +1,6 @@
 {
-  "runId": "227f0696-fc31-45c7-8082-06d3c479e826",
-  "startedAt": "2025-11-04T06:37:13.041Z",
+  "runId": "e4edf33d-ee08-4d4a-94f7-15346a569088",
+  "startedAt": "2025-11-04T10:12:44.710Z",
   "baseUrl": "https://stage.glass-frontier.local/api",
   "config": {
     "timeoutMs": 10000,
@@ -12,7 +12,7 @@
     "adminAlertObservationPath": "/home/tsonu/src/the-glass-frontier/artifacts/admin-alert-observations.json",
     "adminAlertObservationWindowMs": 21600000,
     "adminAlertAutoDecision": {
-      "lastObservedAt": "2025-11-04T06:18:31.996Z",
+      "lastObservedAt": "2025-11-04T06:37:13.142Z",
       "lastSeeded": false,
       "withinWindow": true,
       "observationPath": "/home/tsonu/src/the-glass-frontier/artifacts/admin-alert-observations.json"
@@ -20,44 +20,44 @@
   },
   "metrics": {
     "checkDispatch": {
-      "id": "7625fd0f-ee28-4d8c-b77a-aefab896ef54",
-      "requestedAt": "2025-11-04T06:37:13.135Z",
+      "id": "0ffed249-80d4-44b7-9fb7-f92b788f048a",
+      "requestedAt": "2025-11-04T10:12:44.808Z",
       "move": "langgraph-smoke-probe"
     },
     "checkResolution": {
-      "id": "7625fd0f-ee28-4d8c-b77a-aefab896ef54",
-      "tier": "partial-success",
-      "latencyMs": 4
+      "id": "0ffed249-80d4-44b7-9fb7-f92b788f048a",
+      "tier": "fail-forward",
+      "latencyMs": 5
     },
     "overlaySync": {
       "observed": true,
       "latencyMs": 5
     },
     "safetyCheck": {
-      "id": "3692ca6d-1b5a-4e50-b90f-e18ebe02fdca",
-      "requestedAt": "2025-11-04T06:37:13.140Z",
+      "id": "1ed4122f-54c4-4901-b367-070440cbe97c",
+      "requestedAt": "2025-11-04T10:12:44.813Z",
       "move": "langgraph-smoke-safety"
     },
     "safetyVeto": {
       "observed": true,
-      "latencyMs": 2
+      "latencyMs": 3
     },
     "adminAlert": {
       "observed": true,
-      "latencyMs": 2,
+      "latencyMs": 3,
       "severity": "high",
       "reason": "prohibited-capability",
       "seeded": false,
-      "checkId": "3692ca6d-1b5a-4e50-b90f-e18ebe02fdca",
-      "observedAt": "2025-11-04T06:37:13.142Z"
+      "checkId": "1ed4122f-54c4-4901-b367-070440cbe97c",
+      "observedAt": "2025-11-04T10:12:44.816Z"
     },
     "sessionClosure": {
-      "latencyMs": 3
+      "latencyMs": 4
     },
     "offlineQueue": {
       "observed": true,
-      "latencyMs": 3,
-      "jobId": "34c0c384-ee2f-4b71-b9e7-5c4c3af94a55"
+      "latencyMs": 4,
+      "jobId": "9233f883-022d-4e45-8b4f-a65ad28e0a2d"
     }
   },
   "eventCounts": {
@@ -73,19 +73,19 @@
     "session.closed": 1
   },
   "account": {
-    "id": "548c0ba1-0efd-442a-ace6-c343ece12d5f",
+    "id": "b7f31e4f-2ef8-4d26-9c64-4567e88c84e0",
     "email": "admin@glassfrontier",
     "role": null
   },
   "session": {
-    "id": "langgraph-sse-1762238233041",
+    "id": "langgraph-sse-1762251164710",
     "title": "LangGraph SSE Smoke Validation",
-    "createdAt": "2025-11-04T06:37:13.128Z"
+    "createdAt": "2025-11-04T10:12:44.801Z"
   },
   "stream": {
-    "connectedAt": "2025-11-04T06:37:13.135Z"
+    "connectedAt": "2025-11-04T10:12:44.808Z"
   },
   "success": true,
-  "completedAt": "2025-11-04T06:37:13.146Z",
-  "durationMs": 105
+  "completedAt": "2025-11-04T10:12:44.820Z",
+  "durationMs": 110
 }
