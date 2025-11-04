@@ -14,6 +14,22 @@ LangGraph stage parity is restored for success check streaming. `npm run stage:s
 
 **Artefact:** `artifacts/langgraph-sse-staging.json` (run `cat artifacts/langgraph-sse-staging.json` for raw capture, run `npm run stage:smoke` to regenerate).
 
+## Admin Alert Observation Snapshot — 2025-11-04T04:30Z
+Latest `npm run stage:alerts` output (2025-11-04T04:30:28Z UTC) confirms that staging has not yet produced a live admin alert capture. The CLI falls back gracefully when `artifacts/admin-alert-observations.json` is absent and recommends keeping fallback seeding enabled until telemetry is refreshed.
+
+```
+Admin Alert Observation Summary
+--------------------------------
+Source: /home/tsonu/src/the-glass-frontier/artifacts/admin-alert-observations.json
+Observed at: no admin alerts recorded
+Seeded fallback: unknown
+Within window (6h 0m): no
+
+Recommendation: keep fallback seeding enabled
+Rationale: Observation file missing; rerun stage smoke to collect telemetry.
+Status: missing
+```
+
 ## Distribution Outline
 - Share the metrics snapshot and artefact link in `#client-overlays` and `#admin-sse` channels.
 - Highlight the restored `/api/sessions/:id/events` connectivity and confirm overlay deltas stream without manual intervention.
@@ -33,4 +49,4 @@ LangGraph stage parity is restored for success check streaming. `npm run stage:s
 - Track validation responses in the table above; once both stakeholders respond, update `IMP-CLIENT-06` and handoff notes.
 - Stage harness now re-enables admin alert assertions via seeded fallback; coordinate with platform telemetry to source live alert traffic and retire the debug seed once available.
 - New automation: `npm run stage:smoke` records the latest admin alert observation in `artifacts/admin-alert-observations.json` and disables fallback seeding once a real alert lands within a six-hour window. Check the artefact before toggling `LANGGRAPH_SMOKE_SEED_ADMIN_ALERT`.
-- Run `npm run stage:alerts` after each smoke pass to publish the current admin alert status (live vs seeded, latency, window freshness) directly in stakeholder updates.
+- Run `npm run stage:alerts` after each smoke pass to publish the current admin alert status (live vs seeded, latency, window freshness) directly in stakeholder updates. Capture the CLI snippet above in stakeholder updates until a live alert lands and the recommendation flips to \"disable fallback seeding\".
