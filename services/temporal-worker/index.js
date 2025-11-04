@@ -11,8 +11,29 @@ const {
 const { CheckMetrics } = require("../../src/telemetry/checkMetrics");
 const { SessionClosureCoordinator } = require("../../src/offline/sessionClosureCoordinator");
 const { ClosureWorkflowOrchestrator } = require("../../src/offline/closureWorkflowOrchestrator");
+const {
+  resolveAndValidateTemporalWorkerConfig,
+  shouldEnforceStrictTemporalConfig
+} = require("../../src/offline/temporal/workerConfig");
 
 process.env.SERVICE_NAME = process.env.SERVICE_NAME || "temporal-worker";
+
+const temporalConfig = resolveAndValidateTemporalWorkerConfig(process.env, {
+  strict: shouldEnforceStrictTemporalConfig(process.env)
+});
+
+process.env.TEMPORAL_NAMESPACE = temporalConfig.namespace;
+process.env.TEMPORAL_TASK_QUEUE = temporalConfig.taskQueue;
+if (temporalConfig.metricsNamespace) {
+  process.env.METRICS_NAMESPACE = temporalConfig.metricsNamespace;
+}
+
+log("info", "Temporal worker configuration resolved", {
+  namespace: process.env.TEMPORAL_NAMESPACE,
+  taskQueue: process.env.TEMPORAL_TASK_QUEUE,
+  metricsNamespace: process.env.METRICS_NAMESPACE || null,
+  otelExporterConfigured: Boolean(temporalConfig.otelEndpoint)
+});
 
 const sessionMemory = new SessionMemoryFacade();
 const checkBus = new CheckBus();

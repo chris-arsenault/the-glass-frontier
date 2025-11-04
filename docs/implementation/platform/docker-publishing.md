@@ -24,6 +24,12 @@ npm run docker:publish:services
 
 The script performs `docker login`, calls `infra/docker/build-services.sh --push`, and writes a JSON manifest to `artifacts/docker/service-image-manifest.json` describing the registry, tag, and fully qualified image references.
 
+### Targeted rehearsals
+- Use `CI_SERVICES` (comma or newline separated) to restrict the run to a subset of services. This is ideal for the first staging rehearsal while registry credentials finalize, e.g. `CI_SERVICES="temporal-worker"`.
+- `CI_SERVICE_FILTER` and `SERVICES` provide equivalent overrides for bespoke CI systems.
+- To dry-run the manifest generation without a Docker daemon, point `CI_DOCKER_CLI` at a stub script that logs invocations (see `__tests__/infra/publishServices.test.js` for an example). Combine this with `CI_PUSH=false` to validate manifest output locally before unlocking registry pushes.
+- Invalid names abort the run with `Unknown service(s) requested`, ensuring CI jobs fail fast when filters drift from `infra/docker/services.list`.
+
 ## Output manifest
 Example excerpt:
 ```json

@@ -17,6 +17,7 @@
 - `src/auth/sessionDirectory.js`: exposes `offlineLastRun` and `offlineReconciledAt` summaries for client dashboards.
 - `src/server/index.js`: boots the orchestrator alongside the HTTP stack and gracefully stops it on shutdown.
 - `src/telemetry/offlineMetrics.js`: telemetry emitter for `telemetry.offline.workflow.*` topics.
+- `src/offline/temporal/workerConfig.js`: parses Temporal worker environment configuration so Nomad jobs can inject namespaces/task queues without hard-coding stage values.
 - `__tests__/unit/offline/*.test.js`: coverage for coordinator lifecycle and orchestration success/failure flows.
 
 ## Telemetry & Alerts
