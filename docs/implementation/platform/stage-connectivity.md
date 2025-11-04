@@ -17,7 +17,7 @@ The smoke harness (`npm run stage:smoke`) orchestrates the entire flow:
 5. Execute the LangGraph smoke harness (`scripts/runStageSmoke.js`) targeting the staged URL. The harness now exercises the full SSE assertions against staging, verifying overlay sync and offline queue events end-to-end.
 6. Tear everything down on success/failure.
 
-> **Note:** Stage and local runs both exercise the SSE assertions. The proxy CA plus DNS override allow `npm run stage:smoke` to stream overlay events directly from `https://stage.glass-frontier.local/api`.
+> **Note:** Stage and local runs both exercise the SSE assertions. The proxy CA plus DNS override allow `npm run stage:smoke` to stream overlay events directly from `https://stage.glass-frontier.local/api`. When staging lacks live admin alerts, the harness seeds a `debug.seed.admin_alert` event by setting `LANGGRAPH_SMOKE_SEED_ADMIN_ALERT=true` so moderation surfaces remain validated.
 
 ## Commands
 
@@ -39,5 +39,5 @@ cat artifacts/langgraph-sse-staging.json
 
 ## Residual Risks
 
-- Admin alert streaming remains skipped for stage smoke runs while staging lacks real alert traffic; re-enable assertions once representative events are available.
+- Admin alert streaming now uses a seeded fallback (`LANGGRAPH_SMOKE_SEED_ADMIN_ALERT=true`) when staging lacks alert traffic; replace the seed with live events once telemetry provides representative data.
 - Developers must have Docker available so the TLS proxy can bind to port 443 via the daemon.

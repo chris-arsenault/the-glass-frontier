@@ -142,6 +142,7 @@ function parseArgs(argv) {
     sessionId: process.env.LANGGRAPH_SMOKE_SESSION_ID || `langgraph-sse-${Date.now()}`,
     timeoutMs: Number.parseInt(process.env.LANGGRAPH_SMOKE_TIMEOUT_MS || "", 10) || 10000,
     skipAdminAlert: process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT === "true",
+    seedAdminAlert: process.env.LANGGRAPH_SMOKE_SEED_ADMIN_ALERT === "true",
     reportPath: process.env.LANGGRAPH_SMOKE_REPORT_PATH || "",
     skipSse: process.env.LANGGRAPH_SMOKE_SKIP_SSE === "true"
   };
@@ -171,6 +172,12 @@ function parseArgs(argv) {
         break;
       case "--skip-admin-alert":
         config.skipAdminAlert = true;
+        break;
+      case "--seed-admin-alert":
+        config.seedAdminAlert = true;
+        break;
+      case "--no-seed-admin-alert":
+        config.seedAdminAlert = false;
         break;
       case "--report":
         config.reportPath = argv[++index] || config.reportPath;
@@ -397,6 +404,33 @@ async function triggerDebugCheck(baseUrl, token, sessionId, body) {
   return response.json();
 }
 
+async function triggerDebugAdminAlert(baseUrl, token, sessionId, body = {}) {
+  const response = await fetch(
+    createUrl(baseUrl, `/debug/sessions/${encodeURIComponent(sessionId)}/admin-alerts`),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    }
+  );
+
+  if (response.status === 404) {
+    throw new Error(
+      "Debug admin alert endpoint is unavailable. Set ENABLE_DEBUG_ENDPOINTS=true on the server."
+    );
+  }
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Debug admin alert request failed (${response.status}): ${text}`);
+  }
+
+  return response.json();
+}
+
 async function closeSession(baseUrl, token, sessionId, reason = "session.closed") {
   const response = await fetch(
     createUrl(baseUrl, `/sessions/${encodeURIComponent(sessionId)}/close`),
@@ -463,6 +497,7 @@ async function run(argv = process.argv) {
     config: {
       timeoutMs: config.timeoutMs,
       skipAdminAlert: config.skipAdminAlert,
+      seedAdminAlert: config.seedAdminAlert,
       reportPath: config.reportPath || null,
       skipSse: config.skipSse
     },
@@ -621,20 +656,76 @@ async function run(argv = process.argv) {
         logStep("Check veto event not observed within timeout");
       }
 
-      const alertEvent = await stream.waitFor(
-        (event) => event.type === "admin.alert" && event.payload?.data?.checkId === safetyCheckId,
-        config.timeoutMs
-      );
-      const alertLatency = (alertEvent.__receivedAt || Date.now()) - safetyStart;
-      summary.metrics.adminAlert = {
-        observed: true,
-        latencyMs: alertLatency,
-        severity: alertEvent.payload?.severity || null,
-        reason: alertEvent.payload?.reason || null
-      };
-      logStep(
-        `Admin alert ${alertEvent.payload?.reason} received in ${alertLatency}ms (severity ${alertEvent.payload?.severity})`
-      );
+      let adminAlertLatency = null;
+      let adminAlertEvent = null;
+      let seededAdminAlert = false;
+
+      try {
+        const alertEvent = await stream.waitFor(
+          (event) => event.type === "admin.alert" && event.payload?.data?.checkId === safetyCheckId,
+          config.timeoutMs
+        );
+        adminAlertEvent = alertEvent;
+        adminAlertLatency = (alertEvent.__receivedAt || Date.now()) - safetyStart;
+      } catch (primaryError) {
+        if (!config.seedAdminAlert) {
+          throw primaryError;
+        }
+
+        logStep("Admin alert not observed; seeding fallback debug alert");
+        const seedStart = Date.now();
+        await triggerDebugAdminAlert(config.baseUrl, auth.token, session.sessionId, {
+          reason: "debug.seed.admin_alert",
+          severity: "medium",
+          data: {
+            checkId: safetyCheckId || null,
+            seedSource: "langgraph-smoke",
+            runId: summary.runId,
+            fallback: true
+          }
+        });
+        seededAdminAlert = true;
+
+        try {
+          const seededEvent = await stream.waitFor(
+            (event) =>
+              event.type === "admin.alert" &&
+              event.payload?.data?.seedSource === "langgraph-smoke" &&
+              event.payload?.data?.runId === summary.runId,
+            config.timeoutMs
+          );
+          adminAlertEvent = seededEvent;
+          adminAlertLatency = (seededEvent.__receivedAt || Date.now()) - seedStart;
+        } catch (seedError) {
+          summary.metrics.adminAlert = {
+            observed: false,
+            seeded: true
+          };
+          logStep("Seeded admin alert not observed within timeout");
+          throw seedError;
+        }
+      }
+
+      if (adminAlertEvent) {
+        summary.metrics.adminAlert = {
+          observed: true,
+          latencyMs: adminAlertLatency,
+          severity: adminAlertEvent.payload?.severity || null,
+          reason: adminAlertEvent.payload?.reason || null,
+          seeded: seededAdminAlert,
+          checkId: safetyCheckId || null
+        };
+
+        if (seededAdminAlert) {
+          logStep(
+            `Seeded admin alert ${adminAlertEvent.payload?.reason} received in ${adminAlertLatency}ms (severity ${adminAlertEvent.payload?.severity})`
+          );
+        } else {
+          logStep(
+            `Admin alert ${adminAlertEvent.payload?.reason} received in ${adminAlertLatency}ms (severity ${adminAlertEvent.payload?.severity})`
+          );
+        }
+      }
     } else {
       summary.metrics.adminAlert = {
         observed: false,
@@ -730,6 +821,7 @@ module.exports = {
   createSession,
   openSseStream,
   triggerDebugCheck,
+  triggerDebugAdminAlert,
   closeSession,
   run,
   writeReport

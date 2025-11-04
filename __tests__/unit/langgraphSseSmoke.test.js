@@ -16,6 +16,7 @@ describe("langgraph SSE smoke tooling", () => {
     "LANGGRAPH_SMOKE_SESSION_ID",
     "LANGGRAPH_SMOKE_TIMEOUT_MS",
     "LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT",
+    "LANGGRAPH_SMOKE_SEED_ADMIN_ALERT",
     "LANGGRAPH_SMOKE_REPORT_PATH"
   ];
 
@@ -37,13 +38,29 @@ describe("langgraph SSE smoke tooling", () => {
     process.env.LANGGRAPH_SMOKE_BASE_URL = "http://env.local";
     process.env.LANGGRAPH_SMOKE_TIMEOUT_MS = "15000";
     process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT = "true";
+    process.env.LANGGRAPH_SMOKE_SEED_ADMIN_ALERT = "true";
 
     const config = parseArgs(["node", "script", "--report", "/tmp/report.json"]);
 
     expect(config.baseUrl).toBe("http://env.local");
     expect(config.timeoutMs).toBe(15000);
     expect(config.skipAdminAlert).toBe(true);
+    expect(config.seedAdminAlert).toBe(true);
     expect(config.reportPath).toBe("/tmp/report.json");
+  });
+
+  test("parseArgs allows CLI toggling of seed admin alert", () => {
+    const config = parseArgs([
+      "node",
+      "script",
+      "--seed-admin-alert",
+      "--no-seed-admin-alert"
+    ]);
+
+    expect(config.seedAdminAlert).toBe(false);
+
+    const configWithFlag = parseArgs(["node", "script", "--seed-admin-alert"]);
+    expect(configWithFlag.seedAdminAlert).toBe(true);
   });
 
   test("writeReport persists structured summaries when a path is provided", () => {

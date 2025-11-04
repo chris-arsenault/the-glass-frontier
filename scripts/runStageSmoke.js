@@ -131,7 +131,7 @@ async function runSmoke(reportPath) {
         ...process.env,
         LANGGRAPH_SMOKE_CA_PATH: CA_PATH,
         LANGGRAPH_SMOKE_ADDRESS: STAGE_PROXY_ADDRESS,
-        LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT: "true"
+        LANGGRAPH_SMOKE_SEED_ADMIN_ALERT: "true"
       }
     }
   );

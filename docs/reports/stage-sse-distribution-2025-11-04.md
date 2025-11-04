@@ -10,14 +10,14 @@ LangGraph stage parity is restored for success check streaming. `npm run stage:s
 | Overlay sync latency | 4 ms | `overlaySync.observed === true`; overlay stream now stays connected for the full run. |
 | Offline queue enqueue latency | 2 ms | `metrics.offlineQueue.latencyMs` for session closure hand-off. |
 | Session closure latency | 3 ms | Time to transition from live to closed state. |
-| Admin alert stream | Skipped | Stage lacks representative alerts; harness flag `skipAdminAlert` remains true. |
+| Admin alert stream | Pending rerun | Harness now seeds a `debug.seed.admin_alert` fallback when `LANGGRAPH_SMOKE_SEED_ADMIN_ALERT=true`; rerun stage smoke to capture latency once the proxy is up. |
 
 **Artefact:** `artifacts/langgraph-sse-staging.json` (run `cat artifacts/langgraph-sse-staging.json` for raw capture, run `npm run stage:smoke` to regenerate).
 
 ## Distribution Outline
 - Share the metrics snapshot and artefact link in `#client-overlays` and `#admin-sse` channels.
 - Highlight the restored `/api/sessions/:id/events` connectivity and confirm overlay deltas stream without manual intervention.
-- Note that admin alerts remain skipped pending representative traffic and that we will re-enable assertions once staging emits alerts.
+- Note that admin alert assertions now use a seeded fallback (`LANGGRAPH_SMOKE_SEED_ADMIN_ALERT=true`) until staging emits representative traffic; share ETA for replacing the seed with live alerts.
 
 ### Suggested Announcement Snippet
 > Stage SSE smoke run (2025-11-04) is green. Check resolution 4 ms, overlay sync 4 ms, offline queue enqueue 2 ms. Artefact: `artifacts/langgraph-sse-staging.json`. Admin alerts still gated until staging emits sample events; expect a follow-up validation task.
@@ -30,4 +30,4 @@ LangGraph stage parity is restored for success check streaming. `npm run stage:s
 
 ## Follow-ups
 - Track validation responses in the table above; once both stakeholders respond, update `IMP-CLIENT-06` and handoff notes.
-- Prepare to re-enable admin alert SSE assertions when representative events appear; coordinate with platform telemetry to seed sample alerts.
+- Stage harness now re-enables admin alert assertions via seeded fallback; coordinate with platform telemetry to source live alert traffic and retire the debug seed once available.
