@@ -246,7 +246,8 @@ async function createSession(baseUrl, token, sessionId, title) {
 }
 
 async function openSseStream(baseUrl, sessionId, token) {
-  const url = new URL(`/sessions/${encodeURIComponent(sessionId)}/events`, baseUrl);
+  const resourcePath = `/sessions/${encodeURIComponent(sessionId)}/events`;
+  const url = new URL(createUrl(baseUrl, resourcePath));
   if (token) {
     url.searchParams.set("token", token);
   }

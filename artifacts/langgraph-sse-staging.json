@@ -1,6 +1,6 @@
 {
-  "runId": "ce29bf19-c6a4-4c8f-ad13-ff6a3fb17233",
-  "startedAt": "2025-11-04T03:28:47.697Z",
+  "runId": "7aff7469-33c6-4ada-beaf-b17e4ff140cf",
+  "startedAt": "2025-11-04T03:40:09.733Z",
   "baseUrl": "https://stage.glass-frontier.local/api",
   "config": {
     "timeoutMs": 10000,
@@ -10,29 +10,56 @@
   },
   "metrics": {
     "checkDispatch": {
-      "id": "806a7f72-094d-4d77-8777-32291d66502f",
-      "requestedAt": "2025-11-04T03:28:47.787Z",
+      "id": "f9dbc0cf-53e9-41f0-b54f-f50df4d8b7e7",
+      "requestedAt": "2025-11-04T03:40:09.820Z",
       "move": "langgraph-smoke-probe"
+    },
+    "checkResolution": {
+      "id": "f9dbc0cf-53e9-41f0-b54f-f50df4d8b7e7",
+      "tier": "critical-success",
+      "latencyMs": 4
+    },
+    "overlaySync": {
+      "observed": true,
+      "latencyMs": 4
+    },
+    "adminAlert": {
+      "observed": false,
+      "skipped": true
+    },
+    "sessionClosure": {
+      "latencyMs": 3
+    },
+    "offlineQueue": {
+      "observed": true,
+      "latencyMs": 2,
+      "jobId": "da07fbad-08e5-4f5d-8c8f-d33192a14abb"
     }
   },
-  "eventCounts": {},
+  "eventCounts": {
+    "intent.checkRequest": 1,
+    "check.prompt": 1,
+    "event.checkResolved": 1,
+    "check.result": 1,
+    "overlay.characterSync": 1,
+    "offline.sessionClosure.queued": 1,
+    "session.statusChanged": 1,
+    "session.closed": 1
+  },
   "account": {
-    "id": "c190bc30-3eef-41a6-8e34-0d1f4a5a71e6",
+    "id": "f35918be-9590-4dd4-bf23-22e918448ebb",
     "email": "admin@glassfrontier",
     "role": null
   },
   "session": {
-    "id": "langgraph-sse-1762226927697",
+    "id": "langgraph-sse-1762227609733",
     "title": "LangGraph SSE Smoke Validation",
-    "createdAt": "2025-11-04T03:28:47.781Z"
+    "createdAt": "2025-11-04T03:40:09.813Z"
   },
   "stream": {
-    "connectedAt": "2025-11-04T03:28:47.787Z"
+    "connectedAt": "2025-11-04T03:40:09.820Z"
   },
-  "success": false,
-  "error": {
-    "message": "Timed out waiting for SSE event"
-  },
-  "completedAt": "2025-11-04T03:29:00.297Z",
-  "durationMs": 12600
+  "success": true,
+  "completedAt": "2025-11-04T03:40:09.827Z",
+  "durationMs": 94
 }
