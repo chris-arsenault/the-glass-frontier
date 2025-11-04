@@ -173,4 +173,100 @@ describe("infra/docker/publish-services.sh", () => {
       expect(fs.statSync(entrypointPath).isFile()).toBe(true);
     });
   });
+
+  it("filters services when CI_SERVICES is provided", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "publish-services-filter-"));
+    const dockerBin = path.join(tempDir, "docker");
+    const manifestPath = path.join(tempDir, "manifest.json");
+    const dockerLog = path.join(tempDir, "docker.log");
+
+    const dockerScript = ["#!/bin/sh", 'printf "%s\\n" "$0 $@" >> "$DOCKER_STUB_LOG"', "exit 0", ""].join(
+      "\n"
+    );
+    fs.writeFileSync(dockerBin, dockerScript, { mode: 0o755 });
+
+    const includedServices = ["api-gateway", "llm-proxy"];
+    const env = {
+      ...process.env,
+      CI_PUSH: "false",
+      CI_IMAGE_TAG: "filter-test",
+      CI_REGISTRY: "registry.filter",
+      CI_IMAGE_MANIFEST: manifestPath,
+      CI_DOCKER_CLI: dockerBin,
+      CI_SERVICES: includedServices.join(","),
+      DOCKER_STUB_LOG: dockerLog,
+      PATH: `${tempDir}:${process.env.PATH}`
+    };
+
+    try {
+      const scriptPath = path.join(repoRoot(), "infra", "docker", "publish-services.sh");
+      const result = spawnSync("bash", [scriptPath], {
+        cwd: repoRoot(),
+        env,
+        encoding: "utf-8"
+      });
+
+      if (result.status !== 0) {
+        throw new Error(
+          `publish-services.sh failed: ${result.stderr || ""}\nstdout: ${result.stdout || ""}`
+        );
+      }
+
+      const manifestRaw = fs.readFileSync(manifestPath, "utf-8");
+      const manifest = JSON.parse(manifestRaw);
+      expect(manifest.images.map((entry) => entry.name)).toEqual(includedServices);
+
+      const dockerLogContents = fs.readFileSync(dockerLog, "utf-8");
+      const logText = dockerLogContents.split("\n").filter(Boolean).join(" ");
+
+      includedServices.forEach((serviceName) => {
+        expect(logText).toContain(`registry.filter/${serviceName}:filter-test`);
+      });
+
+      const excluded = readServiceNames().filter((name) => !includedServices.includes(name));
+      excluded.forEach((serviceName) => {
+        expect(logText).not.toContain(`registry.filter/${serviceName}:filter-test`);
+      });
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("fails when CI_SERVICES references an unknown service", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "publish-services-filter-fail-"));
+    const dockerBin = path.join(tempDir, "docker");
+    const manifestPath = path.join(tempDir, "manifest.json");
+    const dockerLog = path.join(tempDir, "docker.log");
+
+    const dockerScript = ["#!/bin/sh", 'printf "%s\\n" "$0 $@" >> "$DOCKER_STUB_LOG"', "exit 0", ""].join(
+      "\n"
+    );
+    fs.writeFileSync(dockerBin, dockerScript, { mode: 0o755 });
+
+    const env = {
+      ...process.env,
+      CI_PUSH: "false",
+      CI_IMAGE_TAG: "filter-fail",
+      CI_REGISTRY: "registry.filter",
+      CI_IMAGE_MANIFEST: manifestPath,
+      CI_DOCKER_CLI: dockerBin,
+      CI_SERVICES: "unknown-service",
+      DOCKER_STUB_LOG: dockerLog,
+      PATH: `${tempDir}:${process.env.PATH}`
+    };
+
+    try {
+      const scriptPath = path.join(repoRoot(), "infra", "docker", "publish-services.sh");
+      const result = spawnSync("bash", [scriptPath], {
+        cwd: repoRoot(),
+        env,
+        encoding: "utf-8"
+      });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("Unknown service(s) requested");
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 });

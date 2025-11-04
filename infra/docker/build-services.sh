@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_LIST_FILE="${SERVICE_LIST_FILE:-${SCRIPT_DIR}/services.list}"
 DOCKER_CLI="${DOCKER_CLI:-docker}"
+SERVICE_FILTER_RAW="${CI_SERVICE_FILTER:-${SERVICE_FILTER:-${CI_SERVICES:-${SERVICES:-}}}}"
 
 if ! command -v "${DOCKER_CLI}" >/dev/null 2>&1; then
   echo "[build-services] ${DOCKER_CLI} command not found" >&2
@@ -32,7 +33,8 @@ Options:
   -h, --help             Show this help message
 
 Environment variables:
-  TAG, REGISTRY, NODE_VERSION, DOCKERFILE, PUSH_IMAGES, PLATFORM, SERVICE_LIST_FILE, DOCKER_CLI
+  TAG, REGISTRY, NODE_VERSION, DOCKERFILE, PUSH_IMAGES, PLATFORM, SERVICE_LIST_FILE, DOCKER_CLI,
+  SERVICE_FILTER / CI_SERVICE_FILTER / CI_SERVICES / SERVICES (comma or newline separated service names)
 EOF
 }
 
@@ -97,6 +99,51 @@ if [[ ! -f "${SERVICE_LIST_FILE}" ]]; then
 fi
 
 mapfile -t SERVICES < <(grep -v '^\s*#' "${SERVICE_LIST_FILE}" | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' | sed '/^$/d')
+
+if [[ -n "${SERVICE_FILTER_RAW}" ]]; then
+  declare -a SERVICE_FILTER=()
+  declare -A SERVICE_FILTER_SEEN=()
+  while IFS= read -r name; do
+    trimmed="$(echo "${name}" | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')"
+    if [[ -n "${trimmed}" && -z "${SERVICE_FILTER_SEEN[${trimmed}]:-}" ]]; then
+      SERVICE_FILTER+=("${trimmed}")
+      SERVICE_FILTER_SEEN["${trimmed}"]=0
+    fi
+  done < <(printf '%s\n' "${SERVICE_FILTER_RAW}" | tr ',' '\n')
+
+  if [[ "${#SERVICE_FILTER[@]}" -eq 0 ]]; then
+    echo "[build-services] Service filter resolved to zero services." >&2
+    exit 1
+  fi
+
+  declare -a FILTERED_SERVICES=()
+  for service in "${SERVICES[@]}"; do
+    name="${service%%:*}"
+    if [[ -n "${SERVICE_FILTER_SEEN[${name}]:-}" ]]; then
+      FILTERED_SERVICES+=("${service}")
+      SERVICE_FILTER_SEEN["${name}"]=1
+    fi
+  done
+
+  declare -a MISSING_SERVICES=()
+  for name in "${SERVICE_FILTER[@]}"; do
+    if [[ "${SERVICE_FILTER_SEEN[${name}]:-0}" -eq 0 ]]; then
+      MISSING_SERVICES+=("${name}")
+    fi
+  done
+
+  if [[ "${#MISSING_SERVICES[@]}" -gt 0 ]]; then
+    printf '[build-services] Unknown service(s) requested: %s\n' "$(IFS=', '; echo "${MISSING_SERVICES[*]}")" >&2
+    exit 1
+  fi
+
+  if [[ "${#FILTERED_SERVICES[@]}" -eq 0 ]]; then
+    echo "[build-services] No services matched the provided filter." >&2
+    exit 1
+  fi
+
+  SERVICES=("${FILTERED_SERVICES[@]}")
+fi
 
 echo "[build-services] Building services with tag ${TAG} (registry ${REGISTRY})"
 

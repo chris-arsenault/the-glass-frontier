@@ -11,6 +11,7 @@ REGISTRY="${CI_REGISTRY:-${REGISTRY:-registry.stage}}"
 PLATFORM="${CI_IMAGE_PLATFORM:-${PLATFORM:-}}"
 MANIFEST_PATH="${CI_IMAGE_MANIFEST:-${REPO_ROOT}/artifacts/docker/service-image-manifest.json}"
 DOCKER_CLI="${CI_DOCKER_CLI:-${DOCKER_CLI:-docker}}"
+SERVICE_FILTER_RAW="${CI_SERVICE_FILTER:-${SERVICE_FILTER:-${CI_SERVICES:-${SERVICES:-}}}}"
 
 if ! command -v "${DOCKER_CLI}" >/dev/null 2>&1; then
   echo "[publish-services] ${DOCKER_CLI} command not found" >&2
@@ -43,6 +44,51 @@ mapfile -t SERVICE_DEFINITIONS < <(grep -v '^\s*#' "${SERVICE_LIST_FILE}" | sed 
 if [[ "${#SERVICE_DEFINITIONS[@]}" -eq 0 ]]; then
   echo "[publish-services] No services defined in ${SERVICE_LIST_FILE}" >&2
   exit 1
+fi
+
+if [[ -n "${SERVICE_FILTER_RAW}" ]]; then
+  declare -a SERVICE_FILTER=()
+  declare -A SERVICE_FILTER_SEEN=()
+  while IFS= read -r name; do
+    trimmed="$(echo "${name}" | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')"
+    if [[ -n "${trimmed}" && -z "${SERVICE_FILTER_SEEN[${trimmed}]:-}" ]]; then
+      SERVICE_FILTER+=("${trimmed}")
+      SERVICE_FILTER_SEEN["${trimmed}"]=0
+    fi
+  done < <(printf '%s\n' "${SERVICE_FILTER_RAW}" | tr ',' '\n')
+
+  if [[ "${#SERVICE_FILTER[@]}" -eq 0 ]]; then
+    echo "[publish-services] Service filter resolved to zero services." >&2
+    exit 1
+  fi
+
+  declare -a FILTERED_SERVICES=()
+  for service in "${SERVICE_DEFINITIONS[@]}"; do
+    name="${service%%:*}"
+    if [[ -n "${SERVICE_FILTER_SEEN[${name}]:-}" ]]; then
+      FILTERED_SERVICES+=("${service}")
+      SERVICE_FILTER_SEEN["${name}"]=1
+    fi
+  done
+
+  declare -a MISSING_SERVICES=()
+  for name in "${SERVICE_FILTER[@]}"; do
+    if [[ "${SERVICE_FILTER_SEEN[${name}]:-0}" -eq 0 ]]; then
+      MISSING_SERVICES+=("${name}")
+    fi
+  done
+
+  if [[ "${#MISSING_SERVICES[@]}" -gt 0 ]]; then
+    printf '[publish-services] Unknown service(s) requested: %s\n' "$(IFS=', '; echo "${MISSING_SERVICES[*]}")" >&2
+    exit 1
+  fi
+
+  if [[ "${#FILTERED_SERVICES[@]}" -eq 0 ]]; then
+    echo "[publish-services] No services matched the provided filter." >&2
+    exit 1
+  fi
+
+  SERVICE_DEFINITIONS=("${FILTERED_SERVICES[@]}")
 fi
 
 USERNAME="${CI_REGISTRY_USERNAME:-${REGISTRY_USERNAME:-}}"
