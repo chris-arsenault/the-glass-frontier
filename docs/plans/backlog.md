@@ -5,7 +5,7 @@ Updated for Session 101 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Docker build assets created for langgraph, API gateway, hub gateway, LLM proxy, Temporal worker, and platform tasks; publish scripts under `infra/docker/` ready for registry pushes once staging credentials return. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Docker build assets created for langgraph, API gateway, hub gateway, LLM proxy, Temporal worker, and platform tasks; `infra/docker/build-services.sh` now supports registry pushes/platform overrides and the LLM proxy ships a provider router with fallback + streaming to prepare for staging pipeline wiring. |
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
