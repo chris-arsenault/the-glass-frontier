@@ -1,68 +1,34 @@
 # Backlog Snapshot
 
-Updated for Session 85 (offline QA expansion).
+Updated for Session 91 grooming. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
 
-## Active Implementation Backlog
+## Tier 1 (P1)
+| Feature | Item | Status | Priority | Notes |
+|---------|------|--------|----------|-------|
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | in-progress | P1 | Await MinIO/Backblaze credentials to re-run `npm run offline:qa`, capture drift simulation outputs, and export overlay evidence with IMP-CLIENT-06. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | SME sign-off pending; keep `npm run stage:smoke` / `npm run stage:alerts` telemetry current and sync with offline QA artifacts. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | todo | P1 | Deliver contested workflows, broadcast outcomes, and emit moderation telemetry to close the hub core loop. |
 
-| Feature | Item | Status | Priority | Tags | Notes |
-|---------|------|--------|----------|------|-------|
-| IMP-GM: Narrative Engine & Check Runner | IMP-GM-01: LangGraph Narrative Engine Skeleton | done | P1 | phase:implementation, pillar:gameplay | Stand up LangGraph flow, chat intake, and check dispatch per DES-11/12/13. |
-| IMP-GM: Narrative Engine & Check Runner | IMP-GM-02: Temporal Check Runner & Momentum Engine | done | P1 | phase:implementation, pillar:gameplay | Deterministic check runner landed in `src/checkRunner/checkRunner.js`; see `docs/implementation/IMP-GM-02-check-runner.md`. |
-| IMP-GM: Narrative Engine & Check Runner | IMP-GM-03: Session Memory & Character Facade | done | P1 | phase:implementation, pillar:gameplay | REST + change-feed facade captured in `docs/implementation/IMP-GM-03-session-memory.md`. |
-| IMP-GM: Narrative Engine & Check Runner | **IMP-GM-04: LangGraph Narrative Nodes & Tool Harness** | done | P1 | phase:implementation, pillar:gameplay | Production LangGraph graph + harness shipped (`docs/implementation/IMP-GM-04-langgraph-production-graph.md`). |
-| IMP-GM: Narrative Engine & Check Runner | **IMP-GM-05: Session Closure & Offline Triggering** | done | P1 | phase:implementation, pillar:gameplay, pillar:pipeline | Close-session API + offline trigger to hand off live runs to post-session pipeline. |
-| IMP-GM: Narrative Engine & Check Runner | **IMP-GM-06: Live Session Vertical Slice & Transcript Export** | done | P1 | phase:implementation, pillar:gameplay | `npm run gm:vertical-slice` now exports transcript/change-feed artifacts (`artifacts/vertical-slice/imp-gm-06-smoke*.json`) with QA notes in `docs/reports/imp-gm-06-vertical-slice-qa-2025-11-05.md`. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-01: Story Consolidation Workflow MVP** | done | P1 | phase:implementation, pillar:pipeline | `StoryConsolidationWorkflow` orchestrator, summary composer, and telemetry landed – see `docs/implementation/IMP-OFFLINE-01-story-consolidation-workflow.md`. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-02: Entity Extraction & Delta Queue | done | P1 | phase:implementation, pillar:pipeline | Entity extractor + world delta queue shipped; see `docs/implementation/IMP-OFFLINE-02-entity-extraction-delta-queue.md`. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-03: Publishing Cadence & Search Sync** | done | P1 | phase:implementation, pillar:pipeline | Cadence scheduler, bundler, search sync landed – see `docs/implementation/IMP-OFFLINE-03-publishing-cadence.md`. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-04: Closure Triggered Workflow Orchestration** | done | P1 | phase:implementation, pillar:pipeline | Closure jobs now drive story consolidation → entity extraction → publishing prep with telemetry and admin alerts; Session 57 verified via `npm test` with refreshed notes (`docs/implementation/IMP-OFFLINE-04-closure-workflow-orchestration.md`). |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | **IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync** | in-progress | P1 | phase:implementation, pillar:pipeline | Offline QA harness now surfaces per-session `publishingStatus` plus search retry queue summaries (`status`, `beforeDrain`, `afterDrain`) via the new `--simulate-search-drift` option, alongside long-arc transcripts (`qa-batch-epsilon`, `qa-batch-zeta`) that exercise capability enforcement. Directory replay (`npm run offline:qa -- --input artifacts/vertical-slice --output artifacts/offline-qa`) produces the latest rollup `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T06-12-39-590Z.json` (17 mentions / 17 deltas, 4 moderation holds). Stage storage push + rollback remain blocked on MinIO/Backblaze creds; staging rehearsal will use drift simulation to confirm admin overlay telemetry. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUB-01: Hub Gateway & Command Parser Skeleton | done | P1 | phase:implementation, pillar:multiplayer | Hub gateway, verb DSL, SSE fallback, telemetry scaffolding – see `docs/implementation/IMP-HUB-01-hub-gateway-parser.md`. |
-| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-02: Hub Orchestrator & Temporal Hooks** | done | P1 | phase:implementation, pillar:multiplayer | HubOrchestrator worker, room state caches, Temporal workflow hooks shipped (docs/implementation/IMP-HUB-02-hub-orchestrator.md). |
-| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-03: Hub Narrative Bridge & Safety Telemetry** | done | P1 | phase:implementation, pillar:multiplayer | Hub narration bridge, capability enforcement, moderation telemetry. |
-| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUB-04: Verb Catalog Persistence & Admin Controls** | done | P1 | phase:implementation, pillar:multiplayer | PostgreSQL-backed verb catalogs with cache broadcasts and admin CRUD shipped (`docs/implementation/IMP-HUB-04-verb-catalog-persistence.md`). |
-| IMP-HUBS: Hub Implementation & Load Readiness | **IMP-HUBS-05: Hub PvP Contested Interactions** | todo | P2 | phase:implementation, pillar:multiplayer | Extend hub orchestrator for contested encounters with moderation visibility hooks and align contested workflows with IMP-GM-06 momentum data. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-01: Web Client Shell & Chat Canvas | done | P1 | phase:implementation, pillar:client | React/Vite shell with chat-first UX, WebSocket/SSE transport. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-02: Overlay System & Pacing Ribbon | done | P1 | phase:implementation, pillar:client | Overlay sync, check disclosures, pacing ribbon controls. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-03: Service Worker & Offline Continuity | done | P1 | phase:implementation, pillar:client | Service worker, IndexedDB caching, offline intent queue. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-AXE-01: Accessibility Automation Pipeline | done | P1 | phase:implementation, discipline:qa | `npm run test:accessibility` publishes axe-core JSON/HTML reports. |
-| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-04: Account & Session Management UI** | done | P1 | phase:implementation, pillar:client | Authentication flows, session resume dashboard, RBAC-aware navigation. |
-| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-05: Session Closure Controls & Offline Status** | done | P1 | phase:implementation, pillar:client | Dashboard closure controls, status indicators, cadence reminders tied to new API (`docs/implementation/IMP-CLIENT-05-session-closure-ui.md`, `tests/e2e/session-closure.spec.js`). |
-| IMP-CLIENT: Unified Web Client Shell | **IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration** | blocked | P1 | phase:implementation, pillar:client | Transparency overlays and pipeline dashboards are implemented; a live staging admin alert captured on 2025-11-04T06:37Z let us disable fallback seeding, and the latest drift simulation run refreshed retry queue telemetry. SME sign-off in `#client-overlays` and `#admin-sse` is still pending—continue logging `npm run stage:smoke` / `npm run stage:alerts` outputs in `docs/reports/stage-sse-distribution-2025-11-04.md`. |
-| IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-01: Moderation Dashboard & Live Overrides** | todo | P2 | phase:implementation, pillar:moderation | Admin console for alert triage, overrides, and audit logging. |
-| IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-02: Prohibited Capability Registry & Policy Editor** | todo | P2 | phase:implementation, pillar:moderation | Capability registry CRUD, role assignments, sync events. |
-| IMP-MOD: Moderation & Admin Surfaces | **IMP-MOD-03: Moderation Queue & Publishing Sync** | todo | P2 | phase:implementation, pillar:moderation | Moderation SLA timers connected to publishing cadence controls. |
-| IMP-PLATFORM: Platform Implementation Foundations | **IMP-IAC-01: Nomad & Vault Operations Modules** | done | P2 | phase:implementation, pillar:platform | Terraform modules for Nomad core, Vault AppRoles/rotation, and observability artefacts live under `infra/terraform/**`. |
-| IMP-PLATFORM: Platform Implementation Foundations | **IMP-PLATFORM-02: LangGraph Staging DNS & Connectivity** | done | P1 | phase:implementation, pillar:platform | Added Caddy-based TLS proxy + mDNS helper (`infra/stage/*`, `scripts/stage/mdnsAdvertiser.js`) and automated harness (`npm run stage:smoke`) to validate `https://stage.glass-frontier.local/api`. Smoke artefact stored at `artifacts/langgraph-sse-staging.json`; rollout notes in `docs/implementation/platform/stage-connectivity.md`. |
-| IMP-PLATFORM: Platform Implementation Foundations | **IMP-MINIO-01: MinIO Lifecycle Automation** | blocked | P2 | phase:implementation, discipline:storage | Automation scripts/tests shipped; blocked on staged MinIO credentials and Backblaze rehearsal to verify remote-tier dashboards and alerts. |
-| IMP-PLATFORM: Platform Implementation Foundations | **IMP-SEARCH-01: Lore Search Differential Indexing** | todo | P2 | phase:implementation, discipline:search | Incremental indexing jobs and drift monitoring for self-hosted search. |
-| IMP-PLATFORM: Platform Implementation Foundations | **IMP-OBS-01: Observability & Incident Dashboards** | todo | P3 | phase:implementation, pillar:platform | OTEL collectors, VictoriaMetrics/Loki/Grafana dashboards, alerts. |
+## Tier 2 (P2)
+| Feature | Item | Status | Priority | Notes |
+|---------|------|--------|----------|-------|
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-MINIO-01: MinIO Lifecycle Automation | blocked | P2 | Lifecycle rehearsal on hold until stage credentials arrive; resume immediately once secrets land. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | Stand up differential indexing and pg_trgm fallback after publishing QA stabilises delta feeds. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-01: Moderation Dashboard & Live Overrides | todo | P2 | Build admin UI for alert triage and live overrides once client overlays are green-lit. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Implement capability registry CRUD, event emission, and audit trails tied to session memory. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | todo | P2 | Enforce moderation queue SLAs inside publishing cadence after IMP-OFFLINE-05 completes. |
 
-## Delivered Discovery Backlog
+## Tier 3 (P3)
+| Feature | Item | Status | Priority | Notes |
+|---------|------|--------|----------|-------|
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-OBS-01: Observability & Incident Dashboards | todo | P3 | Deploy OTEL/VictoriaMetrics/Loki/Grafana stack after Tier 1 systems stabilize. |
 
-| Feature | Item | Status | Priority | Tags | Notes |
-|---------|------|--------|----------|------|-------|
-| RES-CORE: Foundational Research | RES-01: Narrative & Genre Benchmarking | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-01-narrative-benchmarking.md`, MCP cache `f842e6b4-7606-400a-81fe-8c86769126fb`. |
-| RES-CORE: Foundational Research | RES-02: Extended Narrative Benchmarking | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-02-extended-narrative-benchmarking.md`, MCP cache `8bb87b27-7d88-4b7c-beb1-5320e9b34bdb`. |
-| RES-CORE: Foundational Research | RES-03: Gameplay & System Comparables | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-03-gameplay-system-comparables.md`, MCP cache `8d888e77-b09b-4c8a-b8b4-126063c82421`. |
-| RES-CORE: Foundational Research | RES-04: Automated Check Runner Tradeoffs | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-04-automated-check-runner-tradeoffs.md`, MCP cache `53f00d71-a60b-4b70-ad63-37126355480c`. |
-| RES-CORE: Foundational Research | RES-05: Player Experience & UX Patterns | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-05-player-experience-ux.md`, MCP cache `783ae922-e057-457c-93d3-2f6609a6e50e`. |
-| RES-CORE: Foundational Research | RES-06: Context Dock Resilience & Pacing UX | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-06-context-dock-resilience.md`, MCP cache `cac74e47-4010-4601-8838-3c45d217a22c`. |
-| RES-CORE: Foundational Research | RES-07: Offline Post-Session Pipelines & Moderation | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-07-offline-pipelines-and-moderation.md`, MCP cache `7b9222b6-b7e4-47d2-be4d-a3372780d89b`. |
-| RES-CORE: Foundational Research | RES-08: Story Consolidation & World Delta Integration | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-08-story-consolidation-world-deltas.md`, MCP cache `93ab540d-5f7a-4076-a16a-2e6fac8792af`. |
-| RES-CORE: Foundational Research | RES-09: Technical Landscape Deep Dive | done | P1 | phase:research, cycle:1 | Findings in `docs/research/session-09-technical-landscape.md`, MCP cache `73b3791b-b896-4805-af3e-5c50ae6ad874`. |
-| RES-CORE: Foundational Research | RES-10: Market Research Synthesis Brief | done | P0 | phase:research, cycle:1 | Summary in `MARKET_RESEARCH_SUMMARY.md` and `docs/research/session-10-market-research-brief.md`, MCP cache `94a66ac4-9fba-4bf2-9588-4f0d87205fc8`. |
-| DES-CORE: Foundational Design | DES-11: Global Systems Map Foundations | done | P1 | phase:design, cycle:1 | Spec in `docs/design/DES-11-global-systems-map.md`, diagram `docs/design/diagrams/DES-11-global-systems-map.mmd`. |
-| DES-CORE: Foundational Design | DES-12: Interface Schemas & Accessibility Hooks | done | P1 | phase:design, cycle:1 | Spec in `docs/design/DES-12-interface-schemas.md`, sequence diagram `docs/design/diagrams/DES-12-narrative-check-sequence.mmd`. |
-| DES-CORE: Foundational Design | DES-13: Narrative Rules Framework & LLM Hand-Off | done | P1 | phase:design, cycle:2 | Spec in `docs/design/DES-13-rules-framework.md`, diagram `docs/design/diagrams/DES-13-rules-flow.mmd`. |
-| DES-CORE: Foundational Design | DES-15: Persistence & Lore Pipeline Blueprint | done | P1 | phase:design, cycle:3 | Spec in `docs/design/DES-15-persistence-lore-pipeline.md`, diagram `docs/design/diagrams/DES-15-persistence-pipeline.mmd`. |
-| DES-CORE: Foundational Design | DES-16: Lore Publishing Cadence & Surfaces | done | P1 | phase:design, cycle:3 | Spec in `docs/design/DES-16-lore-publishing-cadence.md`, diagram `docs/design/diagrams/DES-16-publishing-cadence.mmd`. |
-| DES-CORE: Foundational Design | DES-17: Multiplayer Hub Real-Time Stack | done | P1 | phase:design, cycle:4 | Spec in `docs/design/DES-17-multiplayer-hub-stack.md`, event flow diagram `docs/design/diagrams/DES-17-hub-event-flow.mmd`. |
-| DES-CORE: Foundational Design | DES-18: Admin & Moderation Workflows | done | P1 | phase:design, cycle:4 | Spec in `docs/design/DES-18-admin-moderation-workflows.md`, workflow diagram `docs/design/diagrams/DES-18-moderation-workflow.mmd`. |
-| DES-CORE: Foundational Design | DES-20: System Synthesis & SDD Production | done | P1 | phase:design, cycle:5 | `SYSTEM_DESIGN_SPEC.md`, diagram `docs/design/diagrams/DES-20-system-synthesis.mmd`. |
-| DES-CORE: Foundational Design | DES-BENCH-01: Temporal Throughput Benchmarking | done | P2 | phase:design, discipline:systems, discipline:performance, cycle:2 | Harness in `scripts/benchmarks/checkRunnerBenchmark.js`, report `docs/implementation/DES-BENCH-01-temporal-throughput-benchmark.md`, alert thresholds captured in architecture decision `4ed47803-6c02-4721-a15c-acef3357997d`. |
-| NAR-CORE: Worldbuilding Foundations | NAR-30: Day-0 World Bible Consolidation | done | P1 | phase:narrative, cycle:6 | `docs/lore/WORLD_BIBLE.md`, MCP narrative `6c329d6f-35d2-42d6-a142-c0b7599aec5a`, lore entry `4e18e698-b85d-4f53-b27c-2940d268a3f0`. |
+## Delivered / Closed Features
+- RES-CORE: Foundational Research
+- DES-CORE: Foundational Design
+- IMP-GM: Narrative Engine & Check Runner
+- NAR-CORE: Worldbuilding Foundations
 
-## Outstanding Design Backlog
-
-No outstanding design backlog items; remaining follow-ups were closed or superseded by implementation stories during Session 61 grooming.
+## Health Checks
+- Active WIP (blocked + in-progress): 3 items, within the WIP ≤ 10 limit.
+- No orphan PBIs; every backlog item remains linked to its owning feature in MCP.

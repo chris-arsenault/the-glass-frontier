@@ -1,51 +1,38 @@
-# Backlog Audit – Session 80 Grooming
+# Backlog Audit – Session 91 (Grooming)
 
-Generated: 2025-11-03
+## Feature Overview
+| Feature | Status | Priority | Owner | Notes |
+|---------|--------|----------|-------|-------|
+| IMP-OFFLINE: Post-Session Publishing Pipeline | in-progress | 4 | codex | Final QA still underway; staging storage rehearsal blocked on MinIO/Backblaze credentials. |
+| IMP-HUBS: Hub Implementation & Load Readiness | in-progress | 5 | codex | Core hub verbs live; contested interactions remain to unlock full loop. |
+| IMP-CLIENT: Unified Web Client Shell | blocked | 6 | codex | Awaiting SME sign-off and fresh stage telemetry before closing overlay integration. |
+| IMP-PLATFORM: Platform Implementation Foundations | blocked | 7 | codex | Deferred until credentials land and Tier 1 gameplay/client work signs off. |
+| IMP-MOD: Moderation & Admin Surfaces | todo | 8 | codex | Work queued behind gameplay, offline pipeline, and web client delivery. |
 
-## Feature Summary
+_Delivered features_: RES-CORE, DES-CORE, IMP-GM, and NAR-CORE remain complete with no open PBIs.
 
-| Feature | Priority | Status | Owner | Open PBIs |
-|---------|----------|--------|-------|-----------|
-| IMP-GM: Narrative Engine & Check Runner | 3 | in-progress | codex | 0 |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | 4 | in-progress | codex | 1 |
-| IMP-HUBS: Hub Implementation & Load Readiness | 5 | in-progress | codex | 1 |
-| IMP-CLIENT: Unified Web Client Shell | 6 | blocked | codex | 1 |
-| IMP-PLATFORM: Platform Implementation Foundations | 7 | in-progress | codex | 3 |
-| IMP-MOD: Moderation & Admin Surfaces | 8 | todo | codex | 3 |
-| RES-CORE: Foundational Research | 1 | delivered | — | 0 |
-| DES-CORE: Foundational Design | 2 | delivered | — | 0 |
-| NAR-CORE: Worldbuilding Foundations | 9 | delivered | codex | 0 |
+## Open Backlog Items by Feature
 
-- WIP (in-progress + blocked): 2 / 10 limit.
+### IMP-OFFLINE
+- `IMP-OFFLINE-05` (P1, in-progress) — Continue end-to-end publishing QA once storage credentials return, exercise `--simulate-search-drift`, and coordinate with IMP-CLIENT-06 for overlay evidence.
 
-## Backlog Detail
+### IMP-HUBS
+- `IMP-HUBS-05` (P1, todo) — Implement contested PvP workflows, broadcast results to players, and emit moderation/telemetry hooks ahead of multiplayer go-live.
 
-### IMP-GM: Narrative Engine & Check Runner
-- `IMP-GM-06: Live Session Vertical Slice & Transcript Export` — `done`, `P1` — Vertical slice CLI (`npm run gm:vertical-slice`) exports transcript/change-feed artifacts with QA log in `docs/reports/imp-gm-06-vertical-slice-qa-2025-11-05.md`, ready for IMP-OFFLINE-05 ingestion.
-- Closed prior to this audit: `IMP-GM-01` through `IMP-GM-05` (`done`).
+### IMP-CLIENT
+- `IMP-CLIENT-06` (P1, blocked) — Secure SME confirmation in `#client-overlays` and `#admin-sse`, keep stage smoke/alert captures current, and document overlay telemetry once offline QA artifacts refresh.
 
-### IMP-OFFLINE: Post-Session Publishing Pipeline
-- `IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync` — `todo`, `P1` — Run publishing QA using the IMP-GM-06 transcript, confirm entity extraction moderation metadata, and document rollback behaviour.
-- Closed prior to this audit: `IMP-OFFLINE-01` through `IMP-OFFLINE-04` (`done`).
+### IMP-PLATFORM
+- `IMP-MINIO-01` (P2, blocked) — Lifecycle rehearsal paused pending stage MinIO/Backblaze credentials.
+- `IMP-SEARCH-01` (P2, todo) — Design differential indexing and fallback search flows for lore/news updates.
+- `IMP-OBS-01` (P3, todo) — Observability stack installation deferred until Tier 1 deliverables stabilize.
 
-### IMP-HUBS: Hub Implementation & Load Readiness
-- `IMP-HUBS-05: Hub PvP Contested Interactions` — `todo`, `P2` — Extend orchestrator support for contested encounters, wiring moderation alerts and momentum hooks from the check runner.
-- Closed prior to this audit: `IMP-HUB-01` through `IMP-HUB-04` (`done`).
+### IMP-MOD
+- `IMP-MOD-01` (P2, todo) — Build moderation dashboard and live override controls tied to `admin.alert` stream.
+- `IMP-MOD-02` (P2, todo) — Ship prohibited capability registry + policy editor with event emission.
+- `IMP-MOD-03` (P2, todo) — Wire moderation queue enforcement into publishing cadence with SLA timers.
 
-### IMP-CLIENT: Unified Web Client Shell
-- `IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration` — `blocked`, `P1` — Await SME validation and live staging admin-alert telemetry before finalising overlay/pipeline disclosure surfaces; continue logging outputs in `docs/reports/stage-sse-distribution-2025-11-04.md`.
-- Closed prior to this audit: `IMP-CLIENT-01` through `IMP-CLIENT-05`, `IMP-AXE-01` (`done`).
-
-### IMP-PLATFORM: Platform Implementation Foundations
-- `IMP-MINIO-01: MinIO Lifecycle Automation` — `blocked`, `P2` — Lifecycle automation scripts landed; blocked on staged MinIO credentials and Backblaze rehearsal before dashboards can be validated.
-- `IMP-SEARCH-01: Lore Search Differential Indexing` — `todo`, `P2` — Differential indexing pipeline and fallback search strategy remain queued behind Tier 1 gameplay deliverables.
-- `IMP-OBS-01: Observability & Incident Dashboards` — `todo`, `P3` — Observability stack deferred until after gameplay/client priorities close.
-- Closed prior to this audit: `IMP-IAC-01`, `IMP-PLATFORM-02` (`done`).
-
-### IMP-MOD: Moderation & Admin Surfaces
-- `IMP-MOD-01: Moderation Dashboard & Live Overrides` — `todo`, `P2` — Build admin triage console for `admin.alert` processing and override actions.
-- `IMP-MOD-02: Prohibited Capability Registry & Policy Editor` — `todo`, `P2` — Deliver capability governance editor with event propagation and audit trails.
-- `IMP-MOD-03: Moderation Queue & Publishing Sync` — `todo`, `P2` — Enforce publishing cadence gates tied to moderation queue status.
-
-### Delivered Phases
-- Research (`RES-CORE`), Design (`DES-CORE`), and Narrative (`NAR-CORE`) feature backlogs remain closed; no orphaned items identified.
+## Sanity Checks
+- Active WIP items (in-progress/blocked): 3 (`IMP-OFFLINE-05`, `IMP-CLIENT-06`, `IMP-MINIO-01`) — within the WIP ≤ 10 limit.
+- No orphaned backlog entries; every PBI remains linked to its owning feature.
+- Tier allocations match GROOMING.md: gameplay/offline/client items sit in P1, supporting systems in P2, deferred platform/observability in P3.
