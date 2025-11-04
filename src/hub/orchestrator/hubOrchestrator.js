@@ -3,6 +3,7 @@
 const EventEmitter = require("events");
 const { v4: uuidv4 } = require("uuid");
 const { InMemoryRoomStateStore } = require("../state/inMemoryRoomStateStore");
+const { ContestCoordinator } = require("./contestCoordinator");
 
 function clone(value) {
   if (value === null || value === undefined) {
@@ -23,7 +24,9 @@ class HubOrchestrator extends EventEmitter {
     maxRecentCommands = 20,
     maxChatMessages = 20,
     maxPendingTrades = 10,
-    maxRitualHistory = 10
+    maxRitualHistory = 10,
+    maxContestHistory = 5,
+    contestCoordinator = null
   } = {}) {
     super();
     if (!gateway) {
@@ -45,6 +48,12 @@ class HubOrchestrator extends EventEmitter {
     this.maxChatMessages = maxChatMessages;
     this.maxPendingTrades = maxPendingTrades;
     this.maxRitualHistory = maxRitualHistory;
+    this.maxContestHistory = maxContestHistory;
+    this.contestCoordinator =
+      contestCoordinator ||
+      new ContestCoordinator({
+        clock
+      });
 
     this.workers = Array.from({ length: this.workerCount }, () => ({
       queue: [],
@@ -200,6 +209,11 @@ class HubOrchestrator extends EventEmitter {
       workflowContext = await this._startHubWorkflow(entry, issuedAt);
     }
 
+    let contestEvent = null;
+    if (this.contestCoordinator && entry.metadata?.contest) {
+      contestEvent = await this._registerContest(entry, issuedAt);
+    }
+
     let participants = null;
     if (this.presenceStore && typeof this.presenceStore.listRoomParticipants === "function") {
       try {
@@ -224,7 +238,8 @@ class HubOrchestrator extends EventEmitter {
           entry,
           issuedAt,
           workflowContext,
-          participants
+          participants,
+          contestEvent
         })
     });
 
@@ -255,6 +270,17 @@ class HubOrchestrator extends EventEmitter {
           }
         : null;
 
+    const meta = {};
+    if (contestEvent?.state) {
+      meta.contestEvent = {
+        status: contestEvent.status,
+        contestId: contestEvent.state.contestId || null,
+        contestKey: contestEvent.state.contestKey || null,
+        label: contestEvent.state.label || null,
+        participants: contestEvent.state.participants || []
+      };
+    }
+
     this._broadcastState({
       hubId: entry.hubId,
       roomId: entry.roomId,
@@ -266,7 +292,8 @@ class HubOrchestrator extends EventEmitter {
         args: clone(entry.command?.args || {}),
         issuedAt
       },
-      workflow: workflowPayload
+      workflow: workflowPayload,
+      meta
     });
 
     if (this.telemetry && typeof this.telemetry.recordStateUpdated === "function") {
@@ -283,7 +310,8 @@ class HubOrchestrator extends EventEmitter {
       entry,
       state: result.state,
       version: result.version,
-      workflow: workflowContext
+      workflow: workflowContext,
+      contestEvent
     });
   }
 
@@ -338,6 +366,100 @@ class HubOrchestrator extends EventEmitter {
         });
       }
       this.emit("workflowError", { entry, error });
+      return {
+        error: {
+          message: error?.message || "workflow_failed"
+        }
+      };
+    }
+  }
+
+  async _registerContest(entry, issuedAt) {
+    try {
+      const registration = this.contestCoordinator.register({ entry, issuedAt });
+      if (!registration) {
+        return null;
+      }
+
+      if (registration.status === "arming") {
+        if (this.telemetry && typeof this.telemetry.recordContestArmed === "function") {
+          this.telemetry.recordContestArmed({
+            hubId: entry.hubId,
+            roomId: entry.roomId,
+            contestKey: registration.contestKey,
+            participantCount: registration.state?.participants?.length || 1
+          });
+        }
+        return registration;
+      }
+
+      if (registration.status === "started") {
+        if (this.telemetry && typeof this.telemetry.recordContestLaunched === "function") {
+          this.telemetry.recordContestLaunched({
+            hubId: entry.hubId,
+            roomId: entry.roomId,
+            contestId: registration.contestId,
+            contestKey: registration.contestKey,
+            participantCount: registration.state?.participants?.length || 0
+          });
+        }
+        const workflow = await this._startContestWorkflow(registration.bundle);
+        registration.workflow = workflow;
+        return registration;
+      }
+
+      return registration;
+    } catch (error) {
+      this.emit("processingError", {
+        stage: "contestRegistration",
+        error,
+        context: {
+          hubId: entry.hubId,
+          roomId: entry.roomId,
+          contestKey: entry.metadata?.contest?.contestKey || null
+        }
+      });
+      return null;
+    }
+  }
+
+  async _startContestWorkflow(bundle) {
+    if (
+      !bundle ||
+      !this.temporalClient ||
+      typeof this.temporalClient.startHubContestWorkflow !== "function"
+    ) {
+      return null;
+    }
+
+    try {
+      const result = await this.temporalClient.startHubContestWorkflow(bundle);
+      if (this.telemetry && typeof this.telemetry.recordContestWorkflowStarted === "function") {
+        this.telemetry.recordContestWorkflowStarted({
+          hubId: bundle.hubId,
+          roomId: bundle.roomId,
+          contestId: bundle.contestId,
+          workflowId: result?.workflowId || null,
+          runId: result?.runId || null
+        });
+      }
+      return {
+        workflowId: result?.workflowId || null,
+        runId: result?.runId || null
+      };
+    } catch (error) {
+      if (this.telemetry && typeof this.telemetry.recordContestWorkflowFailed === "function") {
+        this.telemetry.recordContestWorkflowFailed({
+          hubId: bundle.hubId,
+          roomId: bundle.roomId,
+          contestId: bundle.contestId,
+          error: error?.message || "workflow_failed"
+        });
+      }
+      this.emit("contestWorkflowError", {
+        bundle,
+        error
+      });
       return {
         error: {
           message: error?.message || "workflow_failed"
@@ -497,7 +619,7 @@ class HubOrchestrator extends EventEmitter {
     }
   }
 
-  _projectState(state, { entry, issuedAt, workflowContext, participants }) {
+  _projectState(state, { entry, issuedAt, workflowContext, participants, contestEvent }) {
     const next = state || {};
     next.commandCount = (next.commandCount || 0) + 1;
     next.lastUpdatedAt = issuedAt;
@@ -602,6 +724,13 @@ class HubOrchestrator extends EventEmitter {
       );
     }
 
+    if (contestEvent?.state) {
+      next.contests = this._mergeContestState(
+        Array.isArray(next.contests) ? next.contests : [],
+        contestEvent.state
+      );
+    }
+
     return next;
   }
 
@@ -611,6 +740,44 @@ class HubOrchestrator extends EventEmitter {
     while (limit && next.length > limit) {
       next.shift();
     }
+    return next;
+  }
+
+  _mergeContestState(list, contestState) {
+    const next = Array.isArray(list) ? [...list] : [];
+    const identifier = contestState.contestId || contestState.contestKey || null;
+    const index = identifier
+      ? next.findIndex((entry) => {
+          if (contestState.contestId && entry.contestId) {
+            return entry.contestId === contestState.contestId;
+          }
+          if (contestState.contestKey && entry.contestKey) {
+            return entry.contestKey === contestState.contestKey;
+          }
+          return false;
+        })
+      : -1;
+
+    const normalized = {
+      ...contestState,
+      participants: Array.isArray(contestState.participants)
+        ? contestState.participants.map((participant) => ({ ...participant }))
+        : []
+    };
+
+    if (index >= 0) {
+      next[index] = {
+        ...next[index],
+        ...normalized
+      };
+    } else {
+      next.push(normalized);
+    }
+
+    while (this.maxContestHistory && next.length > this.maxContestHistory) {
+      next.shift();
+    }
+
     return next;
   }
 

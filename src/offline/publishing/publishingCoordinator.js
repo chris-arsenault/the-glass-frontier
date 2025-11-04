@@ -138,14 +138,24 @@ class PublishingCoordinator {
       );
     }
 
-    const retrySummary = this.retryQueue
-      ? this.retryQueue.summarize()
-      : {
-          pendingCount: 0,
-          status: "clear",
-          nextRetryAt: null,
-          jobs: []
-        };
+    let retrySummary;
+    if (this.retryQueue && typeof this.retryQueue.summarize === "function") {
+      retrySummary = this.retryQueue.summarize();
+    } else if (retryJobs.length > 0) {
+      retrySummary = {
+        pendingCount: retryJobs.length,
+        status: "pending",
+        nextRetryAt: null,
+        jobs: retryJobs
+      };
+    } else {
+      retrySummary = {
+        pendingCount: 0,
+        status: "clear",
+        nextRetryAt: null,
+        jobs: []
+      };
+    }
 
     const batchStatus = retrySummary.pendingCount > 0 ? "retry_pending" : "published";
 

@@ -38,8 +38,30 @@ function describeAdvantage(dice = null) {
   return "Neutral";
 }
 
+function formatContestStatus(status) {
+  if (!status) {
+    return "Pending";
+  }
+  return status
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatContestParticipants(participants = []) {
+  if (!Array.isArray(participants) || participants.length === 0) {
+    return "Awaiting opponent";
+  }
+  return participants
+    .map((participant) => {
+      const name = participant.actorId || "Unknown";
+      const role = participant.role ? ` (${participant.role})` : "";
+      return `${name}${role}`;
+    })
+    .join(" vs ");
+}
+
 export function CheckOverlay() {
-  const { activeCheck, recentChecks } = useSessionContext();
+  const { activeCheck, recentChecks, hubContests = [] } = useSessionContext();
   const latestResult = useMemo(() => recentChecks.slice(-1)[0] || null, [recentChecks]);
   const pending = activeCheck;
   const diceSummary = buildDiceSummary(latestResult?.dice);
@@ -52,6 +74,18 @@ export function CheckOverlay() {
     typeof latestResult?.momentum?.before === "number" ? latestResult.momentum.before : null;
   const momentumAfter =
     typeof latestResult?.momentum?.after === "number" ? latestResult.momentum.after : null;
+  const contestEntries = useMemo(() => {
+    if (!Array.isArray(hubContests)) {
+      return [];
+    }
+    const trimmed = hubContests.slice(-3);
+    return trimmed.map((contest) => ({
+      ...contest,
+      participants: Array.isArray(contest.participants)
+        ? contest.participants.map((participant) => ({ ...participant }))
+        : []
+    }));
+  }, [hubContests]);
 
   return (
     <section
@@ -183,6 +217,40 @@ export function CheckOverlay() {
         ) : (
           <p className="overlay-empty" data-testid="overlay-no-result">
             No check results have been recorded yet.
+          </p>
+        )}
+      </div>
+      <div className="overlay-check-section" aria-live="polite">
+        <h3 className="overlay-check-subheading">Contested encounters</h3>
+        {contestEntries.length > 0 ? (
+          <ul className="overlay-contest-list" data-testid="overlay-contest-list">
+            {contestEntries.map((contest, index) => (
+              <li
+                key={
+                  contest.contestId ||
+                  contest.contestKey ||
+                  `${contest.label || "contest"}-${index}`
+                }
+                className="overlay-contest-item"
+              >
+                <p className="overlay-contest-title">
+                  {contest.label || "Contested Move"} · {formatContestStatus(contest.status)}
+                </p>
+                <p className="overlay-contest-participants">
+                  {formatContestParticipants(contest.participants)}
+                </p>
+                {contest.status === "arming" ? (
+                  <p className="overlay-contest-meta">Awaiting counter action…</p>
+                ) : null}
+                {contest.status === "resolving" && contest.contestId ? (
+                  <p className="overlay-contest-meta">Contest ID: {contest.contestId}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="overlay-empty" data-testid="overlay-no-contests">
+            No contested encounters active.
           </p>
         )}
       </div>

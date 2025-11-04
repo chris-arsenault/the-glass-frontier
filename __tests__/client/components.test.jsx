@@ -97,6 +97,14 @@ function buildSessionValue(overrides = {}) {
     setPipelineFilter: jest.fn(),
     togglePipelineTimeline: jest.fn(),
     acknowledgePipelineAlert: jest.fn(),
+    hubState: {
+      hubId: null,
+      roomId: null,
+      version: 0,
+      state: {},
+      contests: []
+    },
+    hubContests: [],
     ...overrides
   };
 }
@@ -430,6 +438,18 @@ describe("Client shell components", () => {
             delta: 1
           }
         }
+      ],
+      hubContests: [
+        {
+          contestId: "contest-42",
+          contestKey: "verb.challengeDuel:actor-alpha::actor-beta",
+          status: "resolving",
+          label: "Challenge Duel",
+          participants: [
+            { actorId: "actor-alpha", role: "challenger" },
+            { actorId: "actor-beta", role: "defender" }
+          ]
+        }
       ]
     });
 
@@ -449,6 +469,13 @@ describe("Client shell components", () => {
       .closest("div")
       .querySelector("dd");
     expect(momentumInputField).toHaveTextContent("2");
+    expect(screen.getByTestId("overlay-contest-list")).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes("Challenge Duel"))
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes("actor-alpha") && content.includes("actor-beta"))
+    ).toBeInTheDocument();
   });
 
   test("SessionMarkerRibbon wrap controls dispatch player control intents", async () => {

@@ -294,16 +294,48 @@ class HubGateway {
         ? parsed.verb.capabilities.map((ref) => ({ ...ref }))
         : [];
 
+      const contestMetadata = parsed.metadata?.contest
+        ? JSON.parse(JSON.stringify(parsed.metadata.contest))
+        : null;
+      if (contestMetadata) {
+        contestMetadata.hubId = contestMetadata.hubId || parsed.hubId;
+        contestMetadata.roomId = contestMetadata.roomId || parsed.roomId;
+        if (contestMetadata.participants?.length > 0) {
+          contestMetadata.participants = contestMetadata.participants.map((participant) => ({
+            ...participant
+          }));
+        }
+      }
+
+      const contestedActorsSet = new Set(
+        Array.isArray(parsed.metadata?.contestedActors) ? parsed.metadata.contestedActors : []
+      );
+      contestedActorsSet.add(parsed.actorId);
+      if (contestMetadata?.contestActors) {
+        contestMetadata.contestActors.forEach((actorId) => contestedActorsSet.add(actorId));
+      }
+
       const commandMetadata = {
         ...parsed.metadata,
         capabilityRefs,
         safetyFlags: Array.from(safetyFlagSet),
         momentumCost: parsed.verb?.momentum || null,
-        narrativeTemplate: parsed.verb?.narrative?.narrationTemplate || null
+        narrativeTemplate: parsed.verb?.narrative?.narrationTemplate || null,
+        contest: contestMetadata,
+        contestedActors: Array.from(contestedActorsSet)
       };
 
       if (!commandMetadata.auditRef) {
         commandMetadata.auditRef = `hub-command:${uuid()}`;
+      }
+
+      if (commandMetadata.contest?.participants?.length) {
+        commandMetadata.contest.participants = commandMetadata.contest.participants.map(
+          (participant) => ({
+            ...participant,
+            auditRef: participant.auditRef || commandMetadata.auditRef
+          })
+        );
       }
 
       parsed.metadata = commandMetadata;

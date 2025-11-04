@@ -15,6 +15,7 @@ const { HubVerbRepository } = require("./verbs/hubVerbRepository");
 const { HubVerbCatalogStore } = require("./verbs/hubVerbCatalogStore");
 const { HubVerbService } = require("./verbs/hubVerbService");
 const { HubOrchestrator } = require("./orchestrator/hubOrchestrator");
+const { ContestCoordinator } = require("./orchestrator/contestCoordinator");
 const { InMemoryRoomStateStore } = require("./state/inMemoryRoomStateStore");
 const { RedisRoomStateStore } = require("./state/redisRoomStateStore");
 
@@ -34,6 +35,7 @@ module.exports = {
   HubVerbCatalogStore,
   HubVerbService,
   HubOrchestrator,
+  ContestCoordinator,
   InMemoryRoomStateStore,
   RedisRoomStateStore
 };

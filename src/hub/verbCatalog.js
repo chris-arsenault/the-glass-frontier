@@ -76,6 +76,67 @@ function normalizeNarrative(entry = {}) {
   };
 }
 
+function normalizeContest(entry = null) {
+  if (!entry || entry.enabled === false) {
+    return null;
+  }
+
+  const targetParameter = entry.targetParameter;
+  if (!targetParameter || typeof targetParameter !== "string") {
+    throw new HubValidationError("verb_contest_missing_target_parameter", { entry });
+  }
+
+  const windowSeconds =
+    typeof entry.windowSeconds === "number" && entry.windowSeconds > 0 ? entry.windowSeconds : 8;
+
+  const roles = {
+    initiator:
+      typeof entry.roles?.initiator === "string" && entry.roles.initiator.trim().length > 0
+        ? entry.roles.initiator
+        : "challenger",
+    target:
+      typeof entry.roles?.target === "string" && entry.roles.target.trim().length > 0
+        ? entry.roles.target
+        : "defender",
+    support:
+      typeof entry.roles?.support === "string" && entry.roles.support.trim().length > 0
+        ? entry.roles.support
+        : "participant"
+  };
+
+  const moderationTags = Array.isArray(entry.moderationTags)
+    ? [...new Set(entry.moderationTags.filter((tag) => typeof tag === "string" && tag.length > 0))]
+    : [];
+
+  const sharedComplicationTags = Array.isArray(entry.sharedComplicationTags)
+    ? [
+        ...new Set(
+          entry.sharedComplicationTags.filter((tag) => typeof tag === "string" && tag.length > 0)
+        )
+      ]
+    : [];
+
+  const maxParticipants =
+    typeof entry.maxParticipants === "number" && entry.maxParticipants >= 2
+      ? Math.floor(entry.maxParticipants)
+      : 2;
+
+  return {
+    enabled: true,
+    type: entry.type || "pvp",
+    label: entry.label || null,
+    move: entry.move || null,
+    checkTemplate: entry.checkTemplate || null,
+    targetParameter,
+    windowMs: windowSeconds * 1000,
+    roles,
+    moderationTags,
+    sharedComplicationTags,
+    maxParticipants,
+    broadcast: entry.broadcast !== false
+  };
+}
+
 function normalizeVerbDefinition(raw) {
   if (!raw?.verbId) {
     throw new HubValidationError("verb_missing_id", { raw });
@@ -97,7 +158,8 @@ function normalizeVerbDefinition(raw) {
     momentum: raw.momentum || null,
     narrative: normalizeNarrative(raw.narrative),
     rateLimit: buildRateLimit(raw.rateLimit),
-    replayable: raw.replayable !== false
+    replayable: raw.replayable !== false,
+    contest: normalizeContest(raw.contest)
   };
 
   return normalized;

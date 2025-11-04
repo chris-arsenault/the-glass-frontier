@@ -231,6 +231,13 @@ export function useSessionConnection({
   const [pendingControl, setPendingControl] = useState(false);
   const [controlError, setControlError] = useState(null);
   const [hubCatalog, setHubCatalog] = useState(null);
+  const [hubState, setHubState] = useState(() => ({
+    hubId: null,
+    roomId: null,
+    version: 0,
+    state: {},
+    contests: []
+  }));
   const [sessionMeta, setSessionMeta] = useState(() => ({
     status: sessionSummary?.status || "active",
     closedAt:
@@ -872,6 +879,33 @@ export function useSessionConnection({
             }
           }
           break;
+        case "hub.stateSnapshot":
+        case "hub.stateUpdate": {
+          const hubPayload = payload || {};
+          if (hubPayload?.state) {
+            setHubState((current) => {
+              const nextState = hubPayload.state ? { ...hubPayload.state } : current.state || {};
+              const contests = Array.isArray(nextState.contests)
+                ? nextState.contests.map((contest) => ({
+                    ...contest,
+                    participants: Array.isArray(contest.participants)
+                      ? contest.participants.map((participant) => ({ ...participant }))
+                      : []
+                  }))
+                : [];
+              const version =
+                typeof hubPayload.version === "number" ? hubPayload.version : current.version;
+              return {
+                hubId: hubPayload.hubId || current.hubId,
+                roomId: hubPayload.roomId || current.roomId,
+                version,
+                state: nextState,
+                contests
+              };
+            });
+          }
+          break;
+        }
         case "overlay.characterSync":
           if (payload) {
             const offlinePending = isOfflineRef.current || queuedIntentsRef.current.length > 0;
@@ -1503,7 +1537,9 @@ export function useSessionConnection({
       pipelinePreferences: sessionMeta.pipelinePreferences,
       setPipelineFilter,
       togglePipelineTimeline,
-      acknowledgePipelineAlert
+      acknowledgePipelineAlert,
+      hubContests: hubState.contests,
+      hubState
     }),
     [
       activeCheck,
@@ -1521,6 +1557,7 @@ export function useSessionConnection({
       pendingRequest,
       queuedIntents,
       recentChecks,
+      hubState,
       sendPlayerControl,
       sendPlayerMessage,
       sessionId,

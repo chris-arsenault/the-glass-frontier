@@ -302,4 +302,139 @@ describe("HubOrchestrator integration", () => {
 
     await orchestrator.stop();
   });
+
+  test("coordinates contested duel commands and launches contest workflow", async () => {
+    const temporalClient = {
+      startHubActionWorkflow: jest.fn(),
+      startHubContestWorkflow: jest.fn().mockResolvedValue({
+        workflowId: "contest-workflow",
+        runId: "contest-run"
+      })
+    };
+    const app = buildApp();
+    const orchestrator = new HubOrchestrator({
+      gateway: app.gateway,
+      stateStore: app.roomStateStore,
+      presenceStore: app.presenceStore,
+      telemetry: app.telemetry,
+      temporalClient,
+      clock: { now: () => Date.now() },
+      maxContestHistory: 5
+    });
+    orchestrator.start();
+
+    const challengerTransport = new MockTransport();
+    const defenderTransport = new MockTransport();
+
+    await app.gateway.acceptConnection({
+      transport: challengerTransport,
+      handshake: {
+        hubId: "hub-contest",
+        roomId: "room-duel",
+        actorId: "actor-alpha",
+        sessionId: "session-alpha",
+        connectionId: "conn-alpha"
+      }
+    });
+
+    await orchestrator.whenIdle("room-duel");
+
+    await app.gateway.acceptConnection({
+      transport: defenderTransport,
+      handshake: {
+        hubId: "hub-contest",
+        roomId: "room-duel",
+        actorId: "actor-beta",
+        sessionId: "session-beta",
+        connectionId: "conn-beta"
+      }
+    });
+
+    await orchestrator.whenIdle("room-duel");
+
+    await challengerTransport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.challengeDuel",
+        args: {
+          target: "actor-beta",
+          stakes: "First strike takes the lead."
+        },
+        metadata: {}
+      }
+    });
+
+    await orchestrator.whenIdle("room-duel");
+
+    const armingUpdate = challengerTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .pop();
+    expect(armingUpdate).toBeDefined();
+    expect(armingUpdate.payload.meta?.contestEvent).toMatchObject({
+      status: "arming",
+      contestId: null,
+      contestKey: expect.stringContaining("verb.challengeDuel"),
+      participants: expect.arrayContaining([expect.objectContaining({ actorId: "actor-alpha" })])
+    });
+    expect(armingUpdate.payload.state.contests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "arming",
+          participants: expect.arrayContaining([
+            expect.objectContaining({ actorId: "actor-alpha", role: "challenger" })
+          ])
+        })
+      ])
+    );
+
+    await defenderTransport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.challengeDuel",
+        args: {
+          target: "actor-alpha",
+          stakes: "Winner claims the shard."
+        },
+        metadata: {}
+      }
+    });
+
+    await orchestrator.whenIdle("room-duel");
+
+    expect(temporalClient.startHubContestWorkflow).toHaveBeenCalledTimes(1);
+    const contestPayload = temporalClient.startHubContestWorkflow.mock.calls[0][0];
+    expect(contestPayload).toMatchObject({
+      contestId: expect.any(String),
+      hubId: "hub-contest",
+      roomId: "room-duel",
+      contestKey: expect.stringContaining("verb.challengeDuel"),
+      participants: expect.arrayContaining([
+        expect.objectContaining({ actorId: "actor-alpha", role: "challenger" }),
+        expect.objectContaining({ actorId: "actor-beta", role: expect.any(String) })
+      ])
+    });
+
+    const resolvingUpdate = defenderTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .pop();
+    expect(resolvingUpdate).toBeDefined();
+    expect(resolvingUpdate.payload.meta?.contestEvent).toMatchObject({
+      status: "started",
+      contestId: contestPayload.contestId
+    });
+    expect(resolvingUpdate.payload.state.contests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          contestId: contestPayload.contestId,
+          status: "resolving",
+          participants: expect.arrayContaining([
+            expect.objectContaining({ actorId: "actor-alpha" }),
+            expect.objectContaining({ actorId: "actor-beta" })
+          ])
+        })
+      ])
+    );
+
+    await orchestrator.stop();
+  });
 });

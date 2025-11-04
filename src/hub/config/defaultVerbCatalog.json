@@ -85,6 +85,53 @@
         "cost": 2,
         "rewardOnSuccess": 4
       }
+    },
+    {
+      "verbId": "verb.challengeDuel",
+      "label": "Challenge Duel",
+      "category": "conflict",
+      "description": "Challenge another participant to a contested duel, triggering PvP resolution and moderation visibility.",
+      "parameters": [
+        {
+          "name": "target",
+          "type": "string",
+          "required": true,
+          "description": "Actor identifier for the rival you are contesting."
+        },
+        {
+          "name": "stakes",
+          "type": "string",
+          "required": false,
+          "maxLength": 140,
+          "description": "Optional statement of stakes or terms for the duel."
+        }
+      ],
+      "safetyTags": ["combat", "pvp"],
+      "rateLimit": {
+        "burst": 2,
+        "perSeconds": 20,
+        "scope": "actor"
+      },
+      "narrative": {
+        "escalation": "always",
+        "narrationTemplate": "contest.duel",
+        "checkTemplate": "hub.pvp.skirmish"
+      },
+      "contest": {
+        "type": "pvp",
+        "targetParameter": "target",
+        "checkTemplate": "hub.pvp.skirmish",
+        "move": "risk-it-all",
+        "windowSeconds": 8,
+        "moderationTags": ["hub-pvp"],
+        "sharedComplicationTags": ["hub", "pvp"],
+        "maxParticipants": 2,
+        "roles": {
+          "initiator": "challenger",
+          "target": "defender",
+          "support": "ally"
+        }
+      }
     }
   ]
 }

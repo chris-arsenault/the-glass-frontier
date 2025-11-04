@@ -46,6 +46,69 @@ function normalizeArgs(parameters, provided = {}) {
   return normalized;
 }
 
+function buildContestMetadata(definition, args, context) {
+  const contestConfig = definition?.contest;
+  if (!contestConfig || contestConfig.enabled === false) {
+    return null;
+  }
+
+  const targetActorId = contestConfig.targetParameter ? args[contestConfig.targetParameter] : null;
+  if (!targetActorId || typeof targetActorId !== "string") {
+    throw new HubValidationError("verb_contest_missing_target_actor", {
+      verbId: definition.verbId,
+      targetParameter: contestConfig.targetParameter
+    });
+  }
+
+  const actorSet = new Set([context.actorId, targetActorId]);
+  const contestKey = `${definition.verbId}:${Array.from(actorSet).sort().join("::")}`;
+  const roles = contestConfig.roles || {};
+  const participantArgs = JSON.parse(JSON.stringify(args || {}));
+
+  return {
+    enabled: true,
+    hubId: context.hubId,
+    roomId: context.roomId,
+    sessionId: context.metadata?.sessionId || null,
+    contestKey,
+    type: contestConfig.type || "pvp",
+    move: contestConfig.move || definition.verbId,
+    label: contestConfig.label || definition.label,
+    checkTemplate: contestConfig.checkTemplate || definition.narrative?.checkTemplate || null,
+    targetParameter: contestConfig.targetParameter,
+    targetActorId,
+    windowMs:
+      typeof contestConfig.windowMs === "number" && contestConfig.windowMs > 0
+        ? contestConfig.windowMs
+        : 8000,
+    roles,
+    moderationTags: Array.isArray(contestConfig.moderationTags)
+      ? [...contestConfig.moderationTags]
+      : [],
+    sharedComplicationTags: Array.isArray(contestConfig.sharedComplicationTags)
+      ? [...contestConfig.sharedComplicationTags]
+      : [],
+    maxParticipants:
+      typeof contestConfig.maxParticipants === "number" && contestConfig.maxParticipants >= 2
+        ? Math.floor(contestConfig.maxParticipants)
+        : 2,
+    broadcast: contestConfig.broadcast !== false,
+    participants: [
+      {
+        actorId: context.actorId,
+        role: roles.initiator || "challenger",
+        verbId: definition.verbId,
+        args: participantArgs,
+        targetActorId,
+        auditRef: context.metadata?.auditRef || null,
+        issuedAt: context.issuedAt
+      }
+    ],
+    contestActors: Array.from(actorSet),
+    createdAt: context.issuedAt
+  };
+}
+
 class CommandParser {
   constructor({ verbCatalog, rateLimiter, clock = Date, catalogResolver = null }) {
     if (!verbCatalog && typeof catalogResolver !== "function") {
@@ -115,6 +178,23 @@ class CommandParser {
     const issuedAt =
       metadata.issuedAt ||
       (this.clock && typeof this.clock.now === "function" ? this.clock.now() : Date.now());
+
+    const contestMetadata = buildContestMetadata(definition, normalizedArgs, {
+      actorId,
+      hubId,
+      roomId,
+      metadata,
+      issuedAt
+    });
+
+    if (contestMetadata) {
+      const contestedActors = new Set(
+        Array.isArray(metadata.contestedActors) ? metadata.contestedActors : []
+      );
+      contestMetadata.contestActors.forEach((actor) => contestedActors.add(actor));
+      metadata.contest = contestMetadata;
+      metadata.contestedActors = Array.from(contestedActors);
+    }
 
     return {
       verb: definition,

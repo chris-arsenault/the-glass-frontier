@@ -128,6 +128,53 @@ class HubTelemetry {
       version
     });
   }
+
+  recordContestArmed({ hubId, roomId, contestKey, participantCount }) {
+    this.emit("telemetry.hub.contestArmed", {
+      hubId,
+      roomId,
+      contestKey,
+      participantCount
+    });
+  }
+
+  recordContestLaunched({ hubId, roomId, contestId, contestKey, participantCount }) {
+    this.emit("telemetry.hub.contestLaunched", {
+      hubId,
+      roomId,
+      contestId,
+      contestKey,
+      participantCount
+    });
+  }
+
+  recordContestWorkflowStarted({ hubId, roomId, contestId, workflowId, runId }) {
+    this.emit("telemetry.hub.contestWorkflowStarted", {
+      hubId,
+      roomId,
+      contestId,
+      workflowId,
+      runId
+    });
+  }
+
+  recordContestWorkflowFailed({ hubId, roomId, contestId, error }) {
+    this.emit("telemetry.hub.contestWorkflowFailed", {
+      hubId,
+      roomId,
+      contestId,
+      error
+    });
+  }
+
+  recordContestResolved({ hubId, roomId, contestId, outcome }) {
+    this.emit("telemetry.hub.contestResolved", {
+      hubId,
+      roomId,
+      contestId,
+      outcome
+    });
+  }
 }
 
 module.exports = {
