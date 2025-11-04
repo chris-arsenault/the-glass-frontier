@@ -480,6 +480,88 @@ function createApp({
     }
   });
 
+  if (process.env.ENABLE_DEBUG_ENDPOINTS === "true") {
+    app.post("/debug/sessions/:sessionId/checks", authenticate, (req, res, next) => {
+      const { sessionId } = req.params;
+      const body = req.body || {};
+
+      try {
+        sessionMemory.ensureSession(sessionId);
+
+        const checkId = body.checkId || uuid();
+        const move = body.move || "debug-check";
+        const auditRef = body.auditRef || `debug.check:${checkId}`;
+        const difficultyLabel = body.difficulty || "standard";
+        const difficultyTarget =
+          typeof body.difficultyTarget === "number" ? body.difficultyTarget : undefined;
+        const stat = body.stat || "grit";
+        const statValue = typeof body.statValue === "number" ? body.statValue : 1;
+        const bonusDice = typeof body.bonusDice === "number" ? body.bonusDice : 0;
+        const flags = Array.isArray(body.flags) ? body.flags : [];
+        const safetyFlags = Array.isArray(body.safetyFlags) ? body.safetyFlags : [];
+
+        const request = {
+          id: checkId,
+          sessionId,
+          auditRef,
+          move,
+          playerId: body.playerId || req.account?.id || "debug-runner",
+          data: {
+            move,
+            difficulty: difficultyLabel,
+            difficultyValue: difficultyTarget,
+            ability: stat,
+            mechanics: {
+              stat,
+              statValue,
+              bonusDice
+            },
+            flags,
+            safetyFlags
+          }
+        };
+
+        sessionMemory.recordCheckRequest(sessionId, request);
+        const envelope = checkBus.emitCheckRequest(sessionId, request);
+
+        res.status(202).json({
+          check: {
+            id: envelope.id,
+            auditRef: envelope.auditRef,
+            move: envelope.move || move,
+            flags,
+            safetyFlags,
+            difficulty: {
+              label: difficultyLabel,
+              target: difficultyTarget ?? null
+            }
+          }
+        });
+      } catch (error) {
+        next(error);
+      }
+    });
+
+    app.post("/debug/sessions/:sessionId/admin-alerts", authenticate, (req, res, next) => {
+      const { sessionId } = req.params;
+      const body = req.body || {};
+
+      try {
+        const envelope = checkBus.emitAdminAlert({
+          sessionId,
+          reason: body.reason || "debug.alert",
+          severity: body.severity || "medium",
+          data: body.data || { note: "debug" },
+          auditRef: body.auditRef || `debug.alert:${uuid()}`
+        });
+
+        res.status(202).json({ alert: envelope });
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
+
   if (hubVerbService) {
     app.use("/admin/hubs", createAdminHubVerbRouter({ hubVerbService }));
   }

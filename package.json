@@ -15,7 +15,8 @@
     "test:accessibility": "playwright test tests/e2e/accessibility.spec.js",
     "bench:check-runner": "node scripts/benchmarks/checkRunnerBenchmark.js",
     "db:seed:hub-verbs": "node scripts/seedHubVerbs.js",
-    "storage:lifecycle": "node scripts/minio/applyLifecycle.js"
+    "storage:lifecycle": "node scripts/minio/applyLifecycle.js",
+    "smoke:langgraph-sse": "node scripts/langgraphSseSmoke.js"
   },
   "keywords": [
     "glass-frontier",
