@@ -9,6 +9,7 @@ const { ChatComposer } = require("../../client/src/components/ChatComposer.jsx")
 const { SessionMarkerRibbon } = require("../../client/src/components/SessionMarkerRibbon.jsx");
 const { OverlayDock } = require("../../client/src/components/OverlayDock.jsx");
 const { CheckOverlay } = require("../../client/src/components/CheckOverlay.jsx");
+const { ModerationCadenceStrip } = require("../../client/src/components/ModerationCadenceStrip.jsx");
 const {
   SessionConnectionStates
 } = require("../../client/src/hooks/useSessionConnection.js");
@@ -552,5 +553,93 @@ describe("Client shell components", () => {
 
     expect(screen.getByTestId("wrap-control-1")).toBeDisabled();
     expect(screen.getByTestId("wrap-feedback")).toHaveTextContent(/Offline mode/i);
+  });
+
+  describe("ModerationCadenceStrip", () => {
+    const baseSession = {
+      sessionId: "session-test",
+      player: { name: "Archivist Liora" },
+      queue: {
+        items: [
+          {
+            deltaId: "delta-1",
+            status: "needs-review",
+            blocking: true,
+            reasons: ["capability_violation"],
+            deadlineAt: "2025-11-05T00:45:00.000Z"
+          }
+        ],
+        window: {
+          status: "awaiting_review",
+          startAt: "2025-11-05T00:15:00.000Z",
+          endAt: "2025-11-05T00:45:00.000Z",
+          escalations: []
+        },
+        cadence: {
+          nextBatchAt: "2025-11-05T01:00:00.000Z",
+          nextDigestAt: "2025-11-06T02:00:00.000Z",
+          batches: [
+            {
+              batchId: "session-test-batch-0",
+              runAt: "2025-11-05T01:00:00.000Z",
+              status: "scheduled"
+            }
+          ],
+          digest: null
+        }
+      },
+      stats: { totalAlerts: 1 },
+      aggregates: { blockingGroups: [], reasonCounts: [], capabilityCounts: [] }
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date("2025-11-05T00:00:00.000Z"));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test("invokes override callback with defer minutes and reason", async () => {
+      const applyOverride = jest.fn().mockResolvedValue(true);
+      render(
+        React.createElement(ModerationCadenceStrip, {
+          sessions: [baseSession],
+          onApplyOverride: applyOverride
+        })
+      );
+
+      const minutesInput = screen.getByTestId("moderation-cadence-override-minutes");
+      const reasonInput = screen.getByTestId("moderation-cadence-override-reason");
+      fireEvent.change(minutesInput, { target: { value: "90" } });
+      fireEvent.change(reasonInput, { target: { value: "awaiting admin rewrite" } });
+      fireEvent.click(screen.getByTestId("moderation-cadence-override-submit"));
+
+      await waitFor(() => expect(applyOverride).toHaveBeenCalledTimes(1));
+      expect(applyOverride).toHaveBeenCalledWith("session-test", {
+        deferByMinutes: 90,
+        reason: "awaiting admin rewrite"
+      });
+    });
+
+    test("shows validation message when override fails", async () => {
+      const applyOverride = jest.fn().mockRejectedValue(new Error("publishing_override_failed"));
+      render(
+        React.createElement(ModerationCadenceStrip, {
+          sessions: [baseSession],
+          onApplyOverride: applyOverride
+        })
+      );
+
+      fireEvent.change(screen.getByTestId("moderation-cadence-override-minutes"), {
+        target: { value: "45" }
+      });
+      fireEvent.click(screen.getByTestId("moderation-cadence-override-submit"));
+
+      await waitFor(() =>
+        expect(screen.getByText(/Failed to apply cadence override/i)).toBeInTheDocument()
+      );
+      expect(applyOverride).toHaveBeenCalledTimes(1);
+    });
   });
 });

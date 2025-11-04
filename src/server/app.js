@@ -590,7 +590,8 @@ function createApp({
       authenticate,
       createModerationRouter({
         moderationService: moderation,
-        sessionMemory
+        sessionMemory,
+        publishingCadence: cadence
       })
     );
   }

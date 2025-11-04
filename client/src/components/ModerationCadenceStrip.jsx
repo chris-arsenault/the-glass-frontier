@@ -74,8 +74,19 @@ function formatEntityType(entityType) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-export function ModerationCadenceStrip({ sessions = [], loading = false, error = null, onRefresh, onSelectSession }) {
+export function ModerationCadenceStrip({
+  sessions = [],
+  loading = false,
+  error = null,
+  onRefresh,
+  onSelectSession,
+  onApplyOverride
+}) {
   const [now, setNow] = useState(new Date());
+  const [overrideMinutes, setOverrideMinutes] = useState({});
+  const [overrideReasons, setOverrideReasons] = useState({});
+  const [overrideErrors, setOverrideErrors] = useState({});
+  const [overrideSubmitting, setOverrideSubmitting] = useState({});
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -126,6 +137,31 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
       });
   }, [sessions]);
 
+  function updateOverrideError(sessionId, message) {
+    setOverrideErrors((prev) => {
+      const next = { ...prev };
+      if (!message) {
+        delete next[sessionId];
+      } else {
+        next[sessionId] = message;
+      }
+      return next;
+    });
+  }
+
+  function clearOverrideInputs(sessionId) {
+    setOverrideMinutes((prev) => {
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+    setOverrideReasons((prev) => {
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+  }
+
   return (
     <section
       className="moderation-cadence"
@@ -159,13 +195,60 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
       ) : (
         <ul className="moderation-cadence__list">
           {orderedSessions.map((entry) => {
+            const sessionId = entry.sessionId;
             const countdownLabel = formatCountdown(entry.deadline, now);
             const nextBatchLabel = entry.nextBatchAt ? formatIso(entry.nextBatchAt) : "Not scheduled";
             const nextDigestLabel = entry.nextDigestAt ? formatIso(entry.nextDigestAt) : "Not scheduled";
             const hasBlocking = entry.blockingItems.length > 0;
+            const minutesValue = overrideMinutes[sessionId] ?? "60";
+            const reasonValue = overrideReasons[sessionId] ?? "";
+            const submitting = Boolean(overrideSubmitting[sessionId]);
+            const localError = overrideErrors[sessionId] || null;
+
+            const handleSubmitOverride = async () => {
+              if (!onApplyOverride) {
+                return;
+              }
+
+              const parsedMinutes = Number(minutesValue);
+              if (!Number.isFinite(parsedMinutes) || parsedMinutes <= 0) {
+                updateOverrideError(sessionId, "Enter minutes greater than zero.");
+                return;
+              }
+
+              updateOverrideError(sessionId, null);
+              setOverrideSubmitting((prev) => ({ ...prev, [sessionId]: true }));
+
+              try {
+                const result = await onApplyOverride(sessionId, {
+                  deferByMinutes: parsedMinutes,
+                  reason: reasonValue.trim() ? reasonValue.trim() : undefined
+                });
+                if (result === false) {
+                  updateOverrideError(sessionId, "Override could not be applied.");
+                } else {
+                  clearOverrideInputs(sessionId);
+                  updateOverrideError(sessionId, null);
+                }
+              } catch (applyError) {
+                const rawMessage = applyError?.message;
+                const friendlyMessage =
+                  !rawMessage || rawMessage.startsWith("publishing_")
+                    ? "Failed to apply cadence override."
+                    : rawMessage;
+                updateOverrideError(sessionId, friendlyMessage);
+              } finally {
+                setOverrideSubmitting((prev) => {
+                  const next = { ...prev };
+                  delete next[sessionId];
+                  return next;
+                });
+              }
+            };
+
             return (
               <li
-                key={entry.sessionId}
+                key={sessionId}
                 className={`moderation-cadence__item${hasBlocking ? " moderation-cadence__item--blocking" : ""}`}
                 data-testid="moderation-cadence-item"
               >
@@ -213,6 +296,61 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
                     </button>
                   ) : null}
                 </div>
+                {hasBlocking && onApplyOverride ? (
+                  <div className="moderation-cadence__override" data-testid="moderation-cadence-override">
+                    <label htmlFor={`cadence-override-minutes-${sessionId}`}>
+                      Defer batch (minutes)
+                      <input
+                        id={`cadence-override-minutes-${sessionId}`}
+                        type="number"
+                        min="1"
+                        max="720"
+                        value={minutesValue}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setOverrideMinutes((prev) => ({
+                            ...prev,
+                            [sessionId]: value
+                          }));
+                          updateOverrideError(sessionId, null);
+                        }}
+                        data-testid="moderation-cadence-override-minutes"
+                      />
+                    </label>
+                    <label htmlFor={`cadence-override-reason-${sessionId}`}>
+                      Reason (optional)
+                      <input
+                        id={`cadence-override-reason-${sessionId}`}
+                        type="text"
+                        value={reasonValue}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setOverrideReasons((prev) => ({
+                            ...prev,
+                            [sessionId]: value
+                          }));
+                          updateOverrideError(sessionId, null);
+                        }}
+                        placeholder="e.g. awaiting admin rewrite"
+                        data-testid="moderation-cadence-override-reason"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="moderation-cadence__override-button"
+                      onClick={handleSubmitOverride}
+                      disabled={loading || submitting}
+                      data-testid="moderation-cadence-override-submit"
+                    >
+                      {submitting ? "Applying…" : "Apply Override"}
+                    </button>
+                    {localError ? (
+                      <p className="moderation-cadence__override-error" role="alert">
+                        {localError}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {entry.aggregates.blockingGroups.length > 0 ? (
                   <ul
                     className="moderation-cadence__clusters"

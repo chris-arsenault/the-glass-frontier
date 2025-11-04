@@ -251,6 +251,53 @@ export function ModerationDashboard() {
     loadCadence();
   }, [loadAlerts, loadCadence]);
 
+  const applyCadenceOverride = useCallback(
+    async (sessionId, options = {}) => {
+      if (!sessionId) {
+        return false;
+      }
+
+      setCadenceError(null);
+      try {
+        const payload = {};
+        if (options.deferUntil) {
+          payload.deferUntil = options.deferUntil;
+        } else if (Number.isFinite(options.deferByMinutes)) {
+          payload.deferByMinutes = options.deferByMinutes;
+        } else {
+          throw new Error("Override requires a defer time.");
+        }
+        if (options.reason) {
+          payload.reason = options.reason;
+        }
+        if (Number.isInteger(options.batchIndex)) {
+          payload.batchIndex = options.batchIndex;
+        }
+
+        const response = await fetchWithAuth(
+          `/admin/moderation/cadence/${encodeURIComponent(sessionId)}/override`,
+          {
+            method: "POST",
+            body: JSON.stringify(payload)
+          }
+        );
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error || `Failed to apply override (${response.status})`);
+        }
+
+        await response.json().catch(() => ({}));
+        await loadCadence();
+        setFlashMessage?.("Publishing cadence override applied.");
+        return true;
+      } catch (overrideError) {
+        setCadenceError(overrideError.message);
+        return false;
+      }
+    },
+    [fetchWithAuth, loadCadence, setFlashMessage]
+  );
+
   return (
     <div className="moderation-dashboard" data-testid="moderation-dashboard">
       <header className="moderation-dashboard-header">
@@ -287,6 +334,7 @@ export function ModerationDashboard() {
         error={cadenceError}
         onRefresh={loadCadence}
         onSelectSession={handleSelectCadenceSession}
+        onApplyOverride={applyCadenceOverride}
       />
       <div className="moderation-layout">
         <section className="moderation-columns" aria-label="Moderation alert columns">

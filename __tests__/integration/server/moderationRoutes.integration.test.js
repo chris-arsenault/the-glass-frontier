@@ -107,4 +107,83 @@ describe("moderation routes", () => {
       })
     );
   });
+
+  test("applies publishing cadence overrides for blocking sessions", async () => {
+    const sessionId = "session-override";
+    sessionMemory.ensureSession(sessionId);
+    app.locals.sessionDirectory.publishingCadence.planForSession({
+      sessionId,
+      sessionClosedAt: "2025-11-04T08:00:00.000Z"
+    });
+
+    sessionMemory.recordModerationQueue(sessionId, {
+      generatedAt: "2025-11-04T08:30:00.000Z",
+      pendingCount: 1,
+      items: [
+        {
+          deltaId: "delta-override",
+          sessionId,
+          status: "needs-review",
+          blocking: true,
+          reasons: ["capability_violation"],
+          deadlineAt: "2025-11-04T09:15:00.000Z",
+          countdownMs: 1800000
+        }
+      ],
+      window: {
+        status: "awaiting_review",
+        startAt: "2025-11-04T08:45:00.000Z",
+        endAt: "2025-11-04T09:15:00.000Z",
+        escalations: []
+      },
+      cadence: {
+        nextBatchAt: "2025-11-04T09:30:00.000Z",
+        nextDigestAt: "2025-11-05T02:00:00.000Z",
+        batches: [],
+        digest: null
+      }
+    });
+
+    const response = await request(app)
+      .post(`/admin/moderation/cadence/${sessionId}/override`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        deferByMinutes: 60,
+        reason: "awaiting narrative rewrite"
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.cadence).toBeDefined();
+    expect(Array.isArray(response.body.cadence.batches)).toBe(true);
+    const batch = response.body.cadence.batches[0];
+    expect(batch.override).toEqual(
+      expect.objectContaining({
+        reason: "awaiting narrative rewrite"
+      })
+    );
+
+    const moderationState = sessionMemory.getModerationState(sessionId);
+    expect(moderationState.queue.cadence.batches[0].override).toEqual(
+      expect.objectContaining({
+        reason: "awaiting narrative rewrite"
+      })
+    );
+  });
+
+  test("rejects invalid override payloads", async () => {
+    const sessionId = "session-invalid-override";
+    sessionMemory.ensureSession(sessionId);
+    app.locals.sessionDirectory.publishingCadence.planForSession({
+      sessionId,
+      sessionClosedAt: "2025-11-04T08:00:00.000Z"
+    });
+
+    const response = await request(app)
+      .post(`/admin/moderation/cadence/${sessionId}/override`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ deferByMinutes: 0 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("publishing_override_invalid_defer");
+  });
 });

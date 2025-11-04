@@ -443,6 +443,30 @@ class SessionMemoryFacade {
     return clone(next);
   }
 
+  updateModerationCadence(sessionId, cadenceState = null) {
+    const session = this.ensureSession(sessionId);
+    const moderationState = ensureModerationState(session);
+    const nowIso = new Date().toISOString();
+
+    if (!moderationState.queue) {
+      moderationState.queue = {
+        generatedAt: nowIso,
+        updatedAt: nowIso,
+        pendingCount: 0,
+        items: [],
+        window: null,
+        cadence: cadenceState ? clone(cadenceState) : null
+      };
+      session.updatedAt = nowIso;
+      return clone(moderationState.queue);
+    }
+
+    moderationState.queue.cadence = cadenceState ? clone(cadenceState) : null;
+    moderationState.queue.updatedAt = nowIso;
+    session.updatedAt = nowIso;
+    return clone(moderationState.queue);
+  }
+
   listModerationQueues() {
     return Array.from(this.sessions.values()).map((session) => {
       const moderationState = ensureModerationState(session);

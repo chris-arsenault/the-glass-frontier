@@ -15,7 +15,38 @@ function normaliseList(value) {
     .filter(Boolean);
 }
 
-function createModerationRouter({ moderationService, sessionMemory } = {}) {
+function buildCadenceSnapshot(schedule) {
+  if (!schedule) {
+    return null;
+  }
+  const batches = Array.isArray(schedule.batches) ? schedule.batches : [];
+  const digest = schedule.digest || null;
+  return {
+    nextBatchAt: batches.length > 0 ? batches[0].runAt || null : null,
+    nextDigestAt: digest?.runAt || null,
+    batches: batches.map((batch) => ({
+      batchId: batch.batchId,
+      type: batch.type || "hourly",
+      runAt: batch.runAt || null,
+      status: batch.status || "scheduled",
+      preparedAt: batch.preparedAt || null,
+      publishedAt: batch.publishedAt || null,
+      deltaCount: batch.deltaCount ?? null,
+      latencyMs: batch.latencyMs ?? null,
+      notes: batch.notes || null,
+      override: batch.override ? { ...batch.override } : null
+    })),
+    digest: digest
+      ? {
+          runAt: digest.runAt || null,
+          status: digest.status || "scheduled",
+          notes: digest.notes || null
+        }
+      : null
+  };
+}
+
+function createModerationRouter({ moderationService, sessionMemory, publishingCadence } = {}) {
   if (!moderationService) {
     throw new Error("moderation_router_requires_service");
   }
@@ -133,6 +164,75 @@ function createModerationRouter({ moderationService, sessionMemory } = {}) {
   router.get("/cadence", (_req, res) => {
     const overview = moderationService.listCadenceOverview();
     res.json({ sessions: overview });
+  });
+
+  router.post("/cadence/:sessionId/override", (req, res) => {
+    if (!publishingCadence) {
+      res.status(503).json({ error: "publishing_cadence_unavailable" });
+      return;
+    }
+
+    const { sessionId } = req.params;
+    const body = req.body || {};
+    try {
+      if (!sessionId) {
+        res.status(400).json({ error: "publishing_override_requires_session" });
+        return;
+      }
+
+      const overrideOptions = {
+        target: "loreBatch",
+        batchIndex: Number.isInteger(body.batchIndex) ? body.batchIndex : undefined,
+        reason: body.reason || null
+      };
+
+      if (body.deferUntil) {
+        overrideOptions.deferUntil = body.deferUntil;
+      } else if (body.deferByMinutes !== undefined && body.deferByMinutes !== null) {
+        const deferMinutes = Number(body.deferByMinutes);
+        if (!Number.isFinite(deferMinutes) || deferMinutes <= 0) {
+          res.status(400).json({ error: "publishing_override_invalid_defer" });
+          return;
+        }
+        overrideOptions.deferByMinutes = deferMinutes;
+      } else {
+        res.status(400).json({ error: "publishing_override_requires_defer" });
+        return;
+      }
+
+      const actorLabel =
+        req.account?.displayName || req.account?.email || req.account?.id || "admin.system";
+      overrideOptions.actor = actorLabel;
+
+      const schedule = publishingCadence.applyOverride(sessionId, overrideOptions);
+      const cadenceSnapshot = buildCadenceSnapshot(schedule);
+      sessionMemory.updateModerationCadence(sessionId, cadenceSnapshot);
+
+      const overview = moderationService.listCadenceOverview();
+      const sessionSummary = overview.find((entry) => entry.sessionId === sessionId) || null;
+
+      res.status(200).json({
+        schedule,
+        cadence: cadenceSnapshot,
+        session: sessionSummary
+      });
+    } catch (error) {
+      if (
+        error.message === "publishing_override_session_missing" ||
+        error.message === "moderation_state_unavailable"
+      ) {
+        res.status(404).json({ error: error.message });
+      } else if (
+        error.message === "publishing_override_requires_future_time" ||
+        error.message === "publishing_override_target_unsupported" ||
+        error.message === "publishing_override_batch_missing" ||
+        error.message === "publishing_override_exceeds_limit"
+      ) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "publishing_override_failed", message: error.message });
+      }
+    }
   });
 
   router.get("/contest/artefacts", (_req, res) => {
