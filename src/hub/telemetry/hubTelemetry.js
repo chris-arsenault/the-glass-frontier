@@ -144,12 +144,31 @@ class HubTelemetry {
     });
   }
 
-  recordContestArmed({ hubId, roomId, contestKey, participantCount }) {
+  recordContestArmed({
+    hubId,
+    roomId,
+    contestKey,
+    participantCount,
+    participantCapacity = null,
+    createdAt = null,
+    expiresAt = null,
+    windowMs = null,
+    label = null,
+    move = null,
+    type = null
+  }) {
     const payload = {
       hubId,
       roomId,
       contestKey,
-      participantCount
+      participantCount,
+      participantCapacity,
+      createdAt,
+      expiresAt,
+      windowMs,
+      label,
+      move,
+      type
     };
     this.emit("telemetry.hub.contestArmed", payload);
     if (this.metrics && typeof this.metrics.recordArmed === "function") {

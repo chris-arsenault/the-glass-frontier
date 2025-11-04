@@ -16,6 +16,26 @@ function uniqueActors(participants = []) {
   return set;
 }
 
+function coerceTimestamp(value) {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+function coerceDuration(value) {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+  return null;
+}
+
 class ContestCoordinator {
   constructor({ clock = Date } = {}) {
     this.clock = clock;
@@ -67,6 +87,7 @@ class ContestCoordinator {
       move: pending.move,
       label: pending.label,
       checkTemplate: pending.checkTemplate,
+      windowMs: pending.windowMs || null,
       participantCapacity: pending.participantCapacity || null,
       moderationTags: pending.moderationTags,
       sharedComplicationTags: pending.sharedComplicationTags,
@@ -89,6 +110,7 @@ class ContestCoordinator {
       sessionId: entry.metadata?.sessionId || null,
       participantCapacity: pending.participantCapacity || null,
       createdAt: pending.createdAt,
+      windowMs: pending.windowMs || null,
       participants: participants.map((participantEntry) => ({
         actorId: participantEntry.actorId,
         role: participantEntry.role,
@@ -119,7 +141,8 @@ class ContestCoordinator {
       return null;
     }
     const record = this.activeById.get(contestId);
-    const resolvedAt = this.#now();
+    const now = this.#now();
+    const resolvedAt = this.#resolveResolvedAt(record, resolution, now);
     const resolvedRecord = {
       ...record,
       status: "resolved",
@@ -152,6 +175,13 @@ class ContestCoordinator {
       return existing;
     }
 
+    const windowMs =
+      typeof contestMetadata.windowMs === "number" && contestMetadata.windowMs > 0
+        ? contestMetadata.windowMs
+        : 8000;
+
+    const createdAt = this.#now();
+
     const record = {
       contestKey: contestMetadata.contestKey,
       hubId: contestMetadata.hubId,
@@ -172,12 +202,9 @@ class ContestCoordinator {
       sharedComplicationTags: Array.isArray(contestMetadata.sharedComplicationTags)
         ? [...new Set(contestMetadata.sharedComplicationTags)]
         : [],
-      windowMs:
-        typeof contestMetadata.windowMs === "number" && contestMetadata.windowMs > 0
-          ? contestMetadata.windowMs
-          : 8000,
-      createdAt: this.#now(),
-      expiresAt: this.#now() + (contestMetadata.windowMs || 8000),
+      windowMs,
+      createdAt,
+      expiresAt: createdAt + windowMs,
       participants: [],
       roles: contestMetadata.roles || {}
     };
@@ -212,9 +239,10 @@ class ContestCoordinator {
     } else {
       pending.participants.push(participant);
     }
+    const windowMs = pending.windowMs || contestMetadata.windowMs || 8000;
     pending.expiresAt = Math.max(
       pending.expiresAt || 0,
-      participant.issuedAt + (contestMetadata.windowMs || 8000)
+      participant.issuedAt + windowMs
     );
     this.#assignRoles(pending);
   }
@@ -264,6 +292,7 @@ class ContestCoordinator {
       hubId: pending.hubId || null,
       roomId: pending.roomId || null,
       expiresAt: pending.expiresAt,
+      windowMs: pending.windowMs || null,
       createdAt: pending.createdAt,
       participantCapacity: pending.participantCapacity || null,
       moderationTags: Array.isArray(pending.moderationTags)
@@ -294,6 +323,7 @@ class ContestCoordinator {
       hubId: activeRecord.hubId || null,
       roomId: activeRecord.roomId || null,
       startedAt: activeRecord.startedAt,
+      windowMs: activeRecord.windowMs || null,
       createdAt: activeRecord.createdAt || null,
       expiresAt: activeRecord.expiresAt || null,
       participantCapacity: activeRecord.participantCapacity || null,
@@ -326,6 +356,7 @@ class ContestCoordinator {
       roomId: resolvedRecord.roomId || null,
       startedAt: resolvedRecord.startedAt,
       resolvedAt: resolvedRecord.resolvedAt,
+      windowMs: resolvedRecord.windowMs || null,
       createdAt: resolvedRecord.createdAt || null,
       expiresAt: resolvedRecord.expiresAt || null,
       outcome: resolvedRecord.outcome || null,
@@ -363,6 +394,42 @@ class ContestCoordinator {
     if (roomPending.size === 0) {
       this.pendingByRoom.delete(roomId);
     }
+  }
+
+  #resolveResolvedAt(record, resolution, fallbackNow) {
+    const explicitResolved =
+      coerceTimestamp(
+        resolution?.resolvedAt ??
+          resolution?.timings?.resolvedAt ??
+          resolution?.meta?.resolvedAt ??
+          null
+      ) ?? null;
+    if (explicitResolved !== null) {
+      return Math.min(explicitResolved, fallbackNow);
+    }
+
+    const duration =
+      coerceDuration(
+        resolution?.timings?.resolutionDurationMs ??
+          resolution?.durationMs ??
+          resolution?.metrics?.resolutionDurationMs ??
+          null
+      ) ?? null;
+
+    const startedAt =
+      coerceTimestamp(
+        resolution?.startedAt ??
+          resolution?.timings?.startedAt ??
+          resolution?.meta?.startedAt ??
+          null
+      ) ?? record.startedAt ?? record.createdAt ?? null;
+
+    if (duration !== null && startedAt !== null) {
+      const candidate = Math.max(startedAt, startedAt + duration);
+      return Math.min(candidate, fallbackNow);
+    }
+
+    return fallbackNow;
   }
 
   #now() {

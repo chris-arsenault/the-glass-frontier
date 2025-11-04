@@ -122,16 +122,16 @@
         "targetParameter": "target",
         "checkTemplate": "hub.pvp.skirmish",
         "move": "risk-it-all",
-        "windowSeconds": 8,
+        "windowSeconds": 6,
         "moderationTags": ["hub-pvp"],
         "sharedComplicationTags": ["hub", "pvp"],
         "maxParticipants": 2,
         "roles": {
           "initiator": "challenger",
           "target": "defender",
-        "support": "ally"
+          "support": "ally"
+        }
       }
-    }
     },
     {
       "verbId": "verb.sparringMatch",
@@ -171,7 +171,7 @@
         "targetParameter": "target",
         "checkTemplate": "hub.pvp.sparring",
         "move": "sparring-match",
-        "windowSeconds": 10,
+        "windowSeconds": 7,
         "moderationTags": ["hub-pvp", "consent-required"],
         "sharedComplicationTags": ["hub", "pvp", "training"],
         "maxParticipants": 2,
@@ -219,7 +219,7 @@
         "targetParameter": "target",
         "checkTemplate": "hub.pvp.social",
         "move": "clash-of-wills",
-        "windowSeconds": 12,
+        "windowSeconds": 7,
         "moderationTags": ["hub-pvp", "rhetoric"],
         "sharedComplicationTags": ["hub", "pvp", "influence"],
         "maxParticipants": 2,
