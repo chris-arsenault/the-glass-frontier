@@ -1,0 +1,121 @@
+{
+  "sessionId": "qa-batch-gamma",
+  "exportedAt": "2025-11-05T06:10:00.000Z",
+  "resolvedChecks": [
+    {
+      "id": "gamma-check-1",
+      "sessionId": "qa-batch-gamma",
+      "auditRef": "check:qa-batch-gamma:1",
+      "topic": "event.checkResolved",
+      "tier": "mixed-success",
+      "result": "mixed-success",
+      "outcome": "mixed-success",
+      "rationale": "mixed-success — Total 10 vs. target 9 | Dice kept: 6, 2 | Stat modifier: +2 | Momentum shift: +1",
+      "move": "seize-the-field",
+      "tags": ["seize-the-field", "prismwell"],
+      "difficulty": {
+        "label": "risky",
+        "target": 9
+      },
+      "dice": {
+        "seed": "qa-batch-gamma:gamma-check-1",
+        "rolls": [6, 2],
+        "kept": [6, 2],
+        "discarded": [],
+        "advantageApplied": false,
+        "disadvantageApplied": false,
+        "bonusDice": 0,
+        "statValue": 2,
+        "total": 10
+      }
+    }
+  ],
+  "closureJob": {
+    "auditRef": "qa-batch-gamma:closure",
+    "reason": "qa.gamma-escalation",
+    "closedAt": "2025-11-05T06:15:00.000Z",
+    "trigger": "qa_script",
+    "pendingChecks": 0
+  },
+  "sessionState": {
+    "sessionId": "qa-batch-gamma",
+    "closedAt": "2025-11-05T06:15:00.000Z",
+    "closureReason": "qa.gamma-escalation",
+    "lastClosureAuditRef": "qa-batch-gamma:closure",
+    "character": {
+      "name": "Ilya Straylight",
+      "pronouns": "she/they",
+      "archetype": "Resonance Cartographer",
+      "background": "Former Custodial scout aligning fractured relay maps between the Prismwell Kite Guild and Tempered Accord envoys.",
+      "tags": [
+        "region.auric-steppe",
+        "faction.prismwell-kite-guild",
+        "faction.tempered-accord"
+      ]
+    },
+    "location": {
+      "region": "Kyther Range Vault",
+      "anchorId": "anchor.prism-spire.auric-step",
+      "locale": "Vault Interface Tier",
+      "atmosphere": "Crystalline fog hums around the interface pylons while seized wards flare across the basin."
+    },
+    "momentum": {
+      "current": 2,
+      "floor": -2,
+      "ceiling": 3,
+      "baseline": 0,
+      "history": [1, 2]
+    },
+    "changeFeed": [
+      {
+        "id": "gamma-change-1",
+        "timestamp": "2025-11-05T06:12:00.000Z",
+        "shard": "transcript",
+        "safetyFlags": ["prohibited-capability"],
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.temporal-retcon",
+            "severity": "high"
+          }
+        ],
+        "reason": "Echo Ledger Conclave allegedly invoked the Temporal Retcon Protocol.",
+        "metadata": {
+          "confidence": "low"
+        }
+      }
+    ],
+    "pendingOfflineReconcile": false
+  },
+  "transcript": [
+    {
+      "turnId": "turn-1",
+      "speaker": "gm",
+      "text": "Tempered Accord Custodial Council seized the Sable Crescent Basin from the Echo Ledger Conclave with coordinated prism-fire assaults."
+    },
+    {
+      "turnId": "turn-2",
+      "speaker": "gm",
+      "text": "Echo Ledger Conclave lost the basin foothold and retreated toward the Auric Steppe Corridor to regroup."
+    },
+    {
+      "turnId": "turn-3",
+      "speaker": "gm",
+      "text": "Prismwell Kite Guild stabilised the Kyther Range Vault, raising relay wards that echo through the Auric Step Prism Spire."
+    },
+    {
+      "turnId": "turn-4",
+      "speaker": "gm",
+      "text": "Echo Ledger Conclave allegedly enacted the Temporal Retcon Protocol to rewrite the siege, though the council contests the timeline."
+    },
+    {
+      "turnId": "turn-5",
+      "speaker": "gm",
+      "text": "Spectrum Bloom Flux Array resonated dangerously across the Auric Steppe Corridor, prompting emergency audits."
+    },
+    {
+      "turnId": "turn-6",
+      "speaker": "gm",
+      "text": "Auric Step Prism Spire remains under serious threat until the Accord certifies the wardens and reverse the flux damage."
+    }
+  ]
+}

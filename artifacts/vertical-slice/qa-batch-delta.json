@@ -1,0 +1,121 @@
+{
+  "sessionId": "qa-batch-delta",
+  "exportedAt": "2025-11-05T06:20:00.000Z",
+  "resolvedChecks": [
+    {
+      "id": "delta-check-1",
+      "sessionId": "qa-batch-delta",
+      "auditRef": "check:qa-batch-delta:1",
+      "topic": "event.checkResolved",
+      "tier": "critical-success",
+      "result": "critical-success",
+      "outcome": "critical-success",
+      "rationale": "critical-success — Total 14 vs. target 9 | Dice kept: 6, 6 | Stat modifier: +2 | Momentum shift: +2",
+      "move": "secure-the-bridge",
+      "tags": ["secure-the-bridge", "tempered-accord"],
+      "difficulty": {
+        "label": "risky",
+        "target": 9
+      },
+      "dice": {
+        "seed": "qa-batch-delta:delta-check-1",
+        "rolls": [6, 6],
+        "kept": [6, 6],
+        "discarded": [],
+        "advantageApplied": false,
+        "disadvantageApplied": false,
+        "bonusDice": 0,
+        "statValue": 2,
+        "total": 14
+      }
+    }
+  ],
+  "closureJob": {
+    "auditRef": "qa-batch-delta:closure",
+    "reason": "qa.delta-longform",
+    "closedAt": "2025-11-05T06:30:00.000Z",
+    "trigger": "qa_script",
+    "pendingChecks": 0
+  },
+  "sessionState": {
+    "sessionId": "qa-batch-delta",
+    "closedAt": "2025-11-05T06:30:00.000Z",
+    "closureReason": "qa.delta-longform",
+    "lastClosureAuditRef": "qa-batch-delta:closure",
+    "character": {
+      "name": "Sera Vay",
+      "pronouns": "he/they",
+      "archetype": "Temporal Archivist",
+      "background": "Field archivist documenting Accord governance while shadowing Echo Ledger emissaries.",
+      "tags": [
+        "faction.tempered-accord",
+        "faction.echo-ledger-conclave",
+        "region.sable-crescent"
+      ]
+    },
+    "location": {
+      "region": "Sable Crescent Basin",
+      "anchorId": "anchor.prism-spire.auric-step",
+      "locale": "Crescent Governance Forum",
+      "atmosphere": "Luminescent sand and mirrored wards reveal stress fractures in the basin's governance lattice."
+    },
+    "momentum": {
+      "current": 3,
+      "floor": -3,
+      "ceiling": 4,
+      "baseline": 1,
+      "history": [0, 1, 2, 3]
+    },
+    "changeFeed": [
+      {
+        "id": "delta-change-1",
+        "timestamp": "2025-11-05T06:24:00.000Z",
+        "shard": "transcript",
+        "safetyFlags": ["moderation-review"],
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrumless-manifest",
+            "severity": "critical"
+          }
+        ],
+        "reason": "Rumored spectrumless manifestation appeared during the council's intervention.",
+        "metadata": {
+          "source": "rumor"
+        }
+      }
+    ],
+    "pendingOfflineReconcile": false
+  },
+  "transcript": [
+    {
+      "turnId": "turn-1",
+      "speaker": "gm",
+      "text": "Rumor spreads that a spectrumless manifestation stalks the Sable Crescent Basin as the Tempered Accord Custodial Council mobilizes."
+    },
+    {
+      "turnId": "turn-2",
+      "speaker": "gm",
+      "text": "Tempered Accord Custodial Council secured the basin while Prismwell Kite Guild allegedly ceded control amid diplomatic pressure."
+    },
+    {
+      "turnId": "turn-3",
+      "speaker": "gm",
+      "text": "Echo Ledger Conclave brokers a truce, insisting the Accord abandons speculative retcons and publishes the audit trail."
+    },
+    {
+      "turnId": "turn-4",
+      "speaker": "gm",
+      "text": "Auric Step Prism Spire reports the basin remains devastated until the council restores lattice resonance."
+    },
+    {
+      "turnId": "turn-5",
+      "speaker": "gm",
+      "text": "Witnesses whisper that the Spectrum Bloom Flux Array quietly hummed in the command deck despite the ban."
+    },
+    {
+      "turnId": "turn-6",
+      "speaker": "gm",
+      "text": "Custodial auditors flag low confidence findings because the truce records conflict with Accord dispatches."
+    }
+  ]
+}

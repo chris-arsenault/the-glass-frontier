@@ -1,0 +1,800 @@
+{
+  "sessionId": "qa-batch-delta",
+  "generatedAt": "2025-11-04T05:35:53.748Z",
+  "summary": {
+    "sessionId": "qa-batch-delta",
+    "version": 1,
+    "sceneBreakdown": [
+      {
+        "sceneId": "act:default:scene:1",
+        "title": "Scene 1",
+        "actId": "act:default",
+        "summary": "Rumor spreads that a spectrumless manifestation stalks the Sable Crescent Basin as the Tempered Accord Custodial Council mobilizes.",
+        "tension": {
+          "level": "steady",
+          "spikes": []
+        },
+        "unresolvedHooks": [],
+        "keyMoments": [],
+        "safetyFlags": [],
+        "tags": [],
+        "timeRange": {
+          "start": null,
+          "end": null
+        }
+      },
+      {
+        "sceneId": "act:default:scene:2",
+        "title": "Scene 2",
+        "actId": "act:default",
+        "summary": "Tempered Accord Custodial Council secured the basin while Prismwell Kite Guild allegedly ceded control amid diplomatic pressure.",
+        "tension": {
+          "level": "steady",
+          "spikes": []
+        },
+        "unresolvedHooks": [],
+        "keyMoments": [],
+        "safetyFlags": [],
+        "tags": [],
+        "timeRange": {
+          "start": null,
+          "end": null
+        }
+      },
+      {
+        "sceneId": "act:default:scene:3",
+        "title": "Scene 3",
+        "actId": "act:default",
+        "summary": "Echo Ledger Conclave brokers a truce, insisting the Accord abandons speculative retcons and publishes the audit trail.",
+        "tension": {
+          "level": "steady",
+          "spikes": []
+        },
+        "unresolvedHooks": [],
+        "keyMoments": [],
+        "safetyFlags": [],
+        "tags": [],
+        "timeRange": {
+          "start": null,
+          "end": null
+        }
+      },
+      {
+        "sceneId": "act:default:scene:4",
+        "title": "Scene 4",
+        "actId": "act:default",
+        "summary": "Auric Step Prism Spire reports the basin remains devastated until the council restores lattice resonance.",
+        "tension": {
+          "level": "steady",
+          "spikes": []
+        },
+        "unresolvedHooks": [],
+        "keyMoments": [],
+        "safetyFlags": [],
+        "tags": [],
+        "timeRange": {
+          "start": null,
+          "end": null
+        }
+      },
+      {
+        "sceneId": "act:default:scene:5",
+        "title": "Scene 5",
+        "actId": "act:default",
+        "summary": "Witnesses whisper that the Spectrum Bloom Flux Array quietly hummed in the command deck despite the ban.",
+        "tension": {
+          "level": "steady",
+          "spikes": []
+        },
+        "unresolvedHooks": [],
+        "keyMoments": [],
+        "safetyFlags": [],
+        "tags": [],
+        "timeRange": {
+          "start": null,
+          "end": null
+        }
+      },
+      {
+        "sceneId": "act:default:scene:6",
+        "title": "Scene 6",
+        "actId": "act:default",
+        "summary": "Custodial auditors flag low confidence findings because the truce records conflict with Accord dispatches.",
+        "tension": {
+          "level": "steady",
+          "spikes": []
+        },
+        "unresolvedHooks": [],
+        "keyMoments": [],
+        "safetyFlags": [],
+        "tags": [],
+        "timeRange": {
+          "start": null,
+          "end": null
+        }
+      }
+    ],
+    "actSummary": [
+      {
+        "actId": "act:default",
+        "title": "Act 1",
+        "summary": "Rumor spreads that a spectrumless manifestation stalks the Sable Crescent Basin as the Tempered Accord Custodial Council mobilizes. Tempered Accord Custodial Council secured the basin while Prismwell Kite Guild allegedly ceded control amid diplomatic pressure. Echo Ledger Conclave brokers a truce, insisting the Accord abandons speculative retcons and publishes the audit trail. Auric Step Prism Spire reports the basin remains devastated until the council restores lattice resonance. Witnesses whisper that the Spectrum Bloom Flux Array quietly hummed in the command deck despite the ban. Custodial auditors flag low confidence findings …",
+        "scenes": [
+          "act:default:scene:1",
+          "act:default:scene:2",
+          "act:default:scene:3",
+          "act:default:scene:4",
+          "act:default:scene:5",
+          "act:default:scene:6"
+        ],
+        "unresolvedHooks": [],
+        "dominantThemes": [],
+        "momentumArc": null
+      }
+    ],
+    "playerHighlights": {
+      "achievements": [],
+      "assetsEarned": [],
+      "debtsIncurred": [],
+      "reputationShifts": [],
+      "memorableQuotes": [],
+      "momentumChanges": []
+    },
+    "safetyNotes": [
+      {
+        "type": "event",
+        "sceneId": null,
+        "turnId": null,
+        "flag": "safety_event",
+        "severity": "medium",
+        "description": null,
+        "occurredAt": "2025-11-05T06:24:00.000Z"
+      }
+    ],
+    "attachmentsUrl": null,
+    "generatedAt": "2025-11-04T05:35:53.746Z",
+    "statistics": {
+      "turnCount": 6,
+      "sceneCount": 6,
+      "playerActionCount": 0,
+      "gmActionCount": 6,
+      "safetyFlagCount": 1,
+      "hooksOutstanding": 0,
+      "momentumEvents": 0
+    }
+  },
+  "entityExtraction": {
+    "mentionCount": 3,
+    "mentions": [
+      {
+        "mentionId": "33ea8c6d-1df2-4e00-9031-16568f37de9d",
+        "entityId": "faction.tempered-accord",
+        "entityType": "faction",
+        "canonicalName": "Tempered Accord Custodial Council",
+        "match": {
+          "type": "canonical",
+          "value": "Tempered Accord Custodial Council"
+        },
+        "confidence": 0.6499999999999999,
+        "sentence": "Rumor spreads that a spectrumless manifestation stalks the Sable Crescent Basin as the Tempered Accord Custodial Council mobilizes.",
+        "source": {
+          "sessionId": "qa-batch-delta",
+          "sceneId": null,
+          "turnId": "turn-1",
+          "speaker": "gm",
+          "sentenceIndex": 0
+        },
+        "proposedChanges": null,
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrumless-manifest",
+            "severity": "critical"
+          }
+        ],
+        "context": {
+          "previous": null,
+          "next": null
+        }
+      },
+      {
+        "mentionId": "6e083763-ba0a-4fb5-9bf4-fcd6311b2999",
+        "entityId": "region.sable-crescent",
+        "entityType": "region",
+        "canonicalName": "Sable Crescent Basin",
+        "match": {
+          "type": "canonical",
+          "value": "Sable Crescent Basin"
+        },
+        "confidence": 0.6499999999999999,
+        "sentence": "Rumor spreads that a spectrumless manifestation stalks the Sable Crescent Basin as the Tempered Accord Custodial Council mobilizes.",
+        "source": {
+          "sessionId": "qa-batch-delta",
+          "sceneId": null,
+          "turnId": "turn-1",
+          "speaker": "gm",
+          "sentenceIndex": 0
+        },
+        "proposedChanges": null,
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrumless-manifest",
+            "severity": "critical"
+          }
+        ],
+        "context": {
+          "previous": null,
+          "next": null
+        }
+      },
+      {
+        "mentionId": "073e423f-818d-4f77-9fd0-c049bd9b437d",
+        "entityId": "artifact.spectrum-bloom-array",
+        "entityType": "artifact",
+        "canonicalName": "Spectrum Bloom Flux Array",
+        "match": {
+          "type": "canonical",
+          "value": "Spectrum Bloom Flux Array"
+        },
+        "confidence": 0.95,
+        "sentence": "Witnesses whisper that the Spectrum Bloom Flux Array quietly hummed in the command deck despite the ban.",
+        "source": {
+          "sessionId": "qa-batch-delta",
+          "sceneId": null,
+          "turnId": "turn-5",
+          "speaker": "gm",
+          "sentenceIndex": 0
+        },
+        "proposedChanges": null,
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrum-bloom-array",
+            "severity": "critical"
+          }
+        ],
+        "context": {
+          "previous": null,
+          "next": null
+        }
+      }
+    ]
+  },
+  "worldDeltas": {
+    "deltaCount": 3,
+    "deltas": [
+      {
+        "deltaId": "d9537d7d-02da-4cb5-a91f-988aa370a72b",
+        "entityId": "faction.tempered-accord",
+        "entityType": "faction",
+        "canonicalName": "Tempered Accord Custodial Council",
+        "confidence": 0.6499999999999999,
+        "confidenceTier": "low",
+        "source": {
+          "sessionId": "qa-batch-delta",
+          "sceneId": null,
+          "turnId": "turn-1",
+          "speaker": "gm",
+          "sentenceIndex": 0
+        },
+        "proposedChanges": null,
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrumless-manifest",
+            "severity": "critical",
+            "label": "Spectrumless Manifestation",
+            "rationale": "Legends Watch entry flags Spectrumless claims as moderator escalations; violates safety hooks in WORLD_BIBLE cosmology.",
+            "source": null
+          }
+        ],
+        "before": {},
+        "after": {},
+        "safety": {
+          "requiresModeration": true,
+          "reasons": [
+            "capability_violation"
+          ],
+          "capabilityViolations": [
+            {
+              "capabilityId": "capability.spectrumless-manifest",
+              "severity": "critical",
+              "label": "Spectrumless Manifestation",
+              "rationale": "Legends Watch entry flags Spectrumless claims as moderator escalations; violates safety hooks in WORLD_BIBLE cosmology.",
+              "source": null
+            }
+          ],
+          "confidence": "low"
+        },
+        "status": "pending",
+        "createdAt": "2025-11-04T05:35:53.747Z"
+      },
+      {
+        "deltaId": "e9374f14-1c5d-4abe-95f3-4418101accb1",
+        "entityId": "region.sable-crescent",
+        "entityType": "region",
+        "canonicalName": "Sable Crescent Basin",
+        "confidence": 0.6499999999999999,
+        "confidenceTier": "low",
+        "source": {
+          "sessionId": "qa-batch-delta",
+          "sceneId": null,
+          "turnId": "turn-1",
+          "speaker": "gm",
+          "sentenceIndex": 0
+        },
+        "proposedChanges": null,
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrumless-manifest",
+            "severity": "critical",
+            "label": "Spectrumless Manifestation",
+            "rationale": "Legends Watch entry flags Spectrumless claims as moderator escalations; violates safety hooks in WORLD_BIBLE cosmology.",
+            "source": null
+          }
+        ],
+        "before": {},
+        "after": {},
+        "safety": {
+          "requiresModeration": true,
+          "reasons": [
+            "capability_violation"
+          ],
+          "capabilityViolations": [
+            {
+              "capabilityId": "capability.spectrumless-manifest",
+              "severity": "critical",
+              "label": "Spectrumless Manifestation",
+              "rationale": "Legends Watch entry flags Spectrumless claims as moderator escalations; violates safety hooks in WORLD_BIBLE cosmology.",
+              "source": null
+            }
+          ],
+          "confidence": "low"
+        },
+        "status": "pending",
+        "createdAt": "2025-11-04T05:35:53.747Z"
+      },
+      {
+        "deltaId": "945deb09-f2f4-4119-9339-e3b42234d3e8",
+        "entityId": "artifact.spectrum-bloom-array",
+        "entityType": "artifact",
+        "canonicalName": "Spectrum Bloom Flux Array",
+        "confidence": 0.95,
+        "confidenceTier": "high",
+        "source": {
+          "sessionId": "qa-batch-delta",
+          "sceneId": null,
+          "turnId": "turn-5",
+          "speaker": "gm",
+          "sentenceIndex": 0
+        },
+        "proposedChanges": null,
+        "capabilityRefs": [
+          {
+            "capabilityId": "capability.spectrum-bloom-array",
+            "severity": "critical",
+            "label": "Spectrum Bloom Flux Array",
+            "rationale": "Legendary device claims simultaneous resonance across every band. Violates Resonance Charter safeguards noted in WORLD_BIBLE.md (Technology · Spectrum Bloom Flux Array).",
+            "source": null
+          }
+        ],
+        "before": {},
+        "after": {},
+        "safety": {
+          "requiresModeration": true,
+          "reasons": [
+            "capability_violation"
+          ],
+          "capabilityViolations": [
+            {
+              "capabilityId": "capability.spectrum-bloom-array",
+              "severity": "critical",
+              "label": "Spectrum Bloom Flux Array",
+              "rationale": "Legendary device claims simultaneous resonance across every band. Violates Resonance Charter safeguards noted in WORLD_BIBLE.md (Technology · Spectrum Bloom Flux Array).",
+              "source": null
+            }
+          ],
+          "confidence": "high"
+        },
+        "status": "pending",
+        "createdAt": "2025-11-04T05:35:53.747Z"
+      }
+    ]
+  },
+  "publishing": {
+    "schedule": {
+      "sessionClosedAt": "2025-11-05T06:30:00.000Z",
+      "moderation": {
+        "startAt": "2025-11-05T06:45:00.000Z",
+        "endAt": "2025-11-05T07:30:00.000Z",
+        "escalations": [
+          "2025-11-05T07:15:00.000Z",
+          "2025-11-05T07:25:00.000Z"
+        ],
+        "status": "scheduled"
+      },
+      "batches": [
+        {
+          "batchId": "qa-batch-delta-batch-0",
+          "type": "hourly",
+          "runAt": "2025-11-05T07:30:00.000Z",
+          "status": "ready",
+          "preparedAt": "2025-11-04T05:35:53.747Z",
+          "deltaCount": 3
+        }
+      ],
+      "digest": {
+        "runAt": "2025-11-06T02:00:00.000Z",
+        "status": "scheduled"
+      },
+      "overrides": [],
+      "sessionId": "qa-batch-delta",
+      "stateId": "1053efed-7fb8-4744-b1a6-a67917ed983d",
+      "createdAt": "2025-11-04T05:35:53.747Z",
+      "updatedAt": "2025-11-04T05:35:53.748Z",
+      "history": [
+        {
+          "type": "cadence.initialised",
+          "occurredAt": "2025-11-04T05:35:53.747Z",
+          "payload": {
+            "sessionClosedAt": "2025-11-05T06:30:00.000Z",
+            "moderationStartAt": "2025-11-05T06:45:00.000Z",
+            "loreBatchRunAt": "2025-11-05T07:30:00.000Z",
+            "digestRunAt": "2025-11-06T02:00:00.000Z"
+          }
+        },
+        {
+          "type": "cadence.batch.status",
+          "occurredAt": "2025-11-04T05:35:53.748Z",
+          "payload": {
+            "batchId": "qa-batch-delta-batch-0",
+            "status": "ready",
+            "metadata": {
+              "preparedAt": "2025-11-04T05:35:53.747Z",
+              "deltaCount": 3
+            }
+          }
+        }
+      ]
+    },
+    "preparedBatch": {
+      "preparedAt": "2025-11-04T05:35:53.747Z",
+      "loreBundles": [
+        {
+          "bundleId": "bundle-faction.tempered-accord-5292665a",
+          "entityId": "faction.tempered-accord",
+          "entityType": "faction",
+          "canonicalName": "Tempered Accord Custodial Council",
+          "entityRefs": [
+            "faction.tempered-accord"
+          ],
+          "summaryMarkdown": "### Tempered Accord Custodial Council\n- lore bundle updated",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "preparedAt": "2025-11-04T05:35:53.747Z",
+          "revisions": [
+            {
+              "version": 1,
+              "deltaId": "d9537d7d-02da-4cb5-a91f-988aa370a72b",
+              "editor": "qa.offline",
+              "appliedAt": "2025-11-04T05:35:53.747Z"
+            }
+          ],
+          "provenance": {
+            "sessionId": "qa-batch-delta",
+            "moderationDecisionId": null,
+            "deltaIds": [
+              "d9537d7d-02da-4cb5-a91f-988aa370a72b"
+            ]
+          },
+          "safetyTags": [
+            "capability_violation",
+            "moderation_required"
+          ],
+          "status": "ready"
+        },
+        {
+          "bundleId": "bundle-region.sable-crescent-aef9727d",
+          "entityId": "region.sable-crescent",
+          "entityType": "region",
+          "canonicalName": "Sable Crescent Basin",
+          "entityRefs": [
+            "region.sable-crescent"
+          ],
+          "summaryMarkdown": "### Sable Crescent Basin\n- lore bundle updated",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "preparedAt": "2025-11-04T05:35:53.747Z",
+          "revisions": [
+            {
+              "version": 1,
+              "deltaId": "e9374f14-1c5d-4abe-95f3-4418101accb1",
+              "editor": "qa.offline",
+              "appliedAt": "2025-11-04T05:35:53.747Z"
+            }
+          ],
+          "provenance": {
+            "sessionId": "qa-batch-delta",
+            "moderationDecisionId": null,
+            "deltaIds": [
+              "e9374f14-1c5d-4abe-95f3-4418101accb1"
+            ]
+          },
+          "safetyTags": [
+            "capability_violation",
+            "moderation_required"
+          ],
+          "status": "ready"
+        },
+        {
+          "bundleId": "bundle-artifact.spectrum-bloom-array-fd569a5f",
+          "entityId": "artifact.spectrum-bloom-array",
+          "entityType": "artifact",
+          "canonicalName": "Spectrum Bloom Flux Array",
+          "entityRefs": [
+            "artifact.spectrum-bloom-array"
+          ],
+          "summaryMarkdown": "### Spectrum Bloom Flux Array\n- lore bundle updated",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "preparedAt": "2025-11-04T05:35:53.747Z",
+          "revisions": [
+            {
+              "version": 1,
+              "deltaId": "945deb09-f2f4-4119-9339-e3b42234d3e8",
+              "editor": "qa.offline",
+              "appliedAt": "2025-11-04T05:35:53.747Z"
+            }
+          ],
+          "provenance": {
+            "sessionId": "qa-batch-delta",
+            "moderationDecisionId": null,
+            "deltaIds": [
+              "945deb09-f2f4-4119-9339-e3b42234d3e8"
+            ]
+          },
+          "safetyTags": [
+            "capability_violation",
+            "moderation_required"
+          ],
+          "status": "ready"
+        }
+      ],
+      "newsCards": [
+        {
+          "cardId": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
+          "headline": "Tempered Accord Custodial Council update",
+          "lead": "lore bundle updated",
+          "factionTags": [
+            "faction.tempered-accord"
+          ],
+          "urgency": "high",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "expiresAt": "2026-02-03T07:30:00.000Z",
+          "cardType": "flash",
+          "provenanceRefs": [
+            "qa-batch-delta",
+            "d9537d7d-02da-4cb5-a91f-988aa370a72b"
+          ],
+          "safetyTags": [
+            "capability_violation",
+            "moderation_required"
+          ],
+          "ariaSummary": "Tempered Accord Custodial Council update: lore bundle updated"
+        },
+        {
+          "cardId": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
+          "headline": "Sable Crescent Basin update",
+          "lead": "lore bundle updated",
+          "factionTags": [],
+          "urgency": "high",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "expiresAt": "2026-02-03T07:30:00.000Z",
+          "cardType": "flash",
+          "provenanceRefs": [
+            "qa-batch-delta",
+            "e9374f14-1c5d-4abe-95f3-4418101accb1"
+          ],
+          "safetyTags": [
+            "capability_violation",
+            "moderation_required"
+          ],
+          "ariaSummary": "Sable Crescent Basin update: lore bundle updated"
+        },
+        {
+          "cardId": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
+          "headline": "Spectrum Bloom Flux Array update",
+          "lead": "lore bundle updated",
+          "factionTags": [],
+          "urgency": "high",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "expiresAt": "2026-02-03T07:30:00.000Z",
+          "cardType": "flash",
+          "provenanceRefs": [
+            "qa-batch-delta",
+            "945deb09-f2f4-4119-9339-e3b42234d3e8"
+          ],
+          "safetyTags": [
+            "capability_violation",
+            "moderation_required"
+          ],
+          "ariaSummary": "Spectrum Bloom Flux Array update: lore bundle updated"
+        }
+      ],
+      "overlayPayloads": [
+        {
+          "type": "overlay.loreLink",
+          "headline": "Tempered Accord Custodial Council update",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "urgency": "high",
+          "newsCardRef": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
+          "provenanceBadge": {
+            "label": "Lore Drop",
+            "context": "flash",
+            "severity": "warn"
+          }
+        },
+        {
+          "type": "overlay.loreLink",
+          "headline": "Sable Crescent Basin update",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "urgency": "high",
+          "newsCardRef": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
+          "provenanceBadge": {
+            "label": "Lore Drop",
+            "context": "flash",
+            "severity": "warn"
+          }
+        },
+        {
+          "type": "overlay.loreLink",
+          "headline": "Spectrum Bloom Flux Array update",
+          "publishAt": "2025-11-05T07:30:00.000Z",
+          "urgency": "high",
+          "newsCardRef": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
+          "provenanceBadge": {
+            "label": "Lore Drop",
+            "context": "flash",
+            "severity": "warn"
+          }
+        }
+      ]
+    },
+    "searchPlan": {
+      "jobs": [
+        {
+          "jobId": "index-lore-bundle-faction.tempered-accord-5292665a",
+          "index": "lore_bundles",
+          "documentId": "bundle-faction.tempered-accord-5292665a",
+          "type": "loreBundle",
+          "body": {
+            "bundleId": "bundle-faction.tempered-accord-5292665a",
+            "summaryMarkdown": "### Tempered Accord Custodial Council\n- lore bundle updated",
+            "entityId": "faction.tempered-accord",
+            "publishAt": "2025-11-05T07:30:00.000Z",
+            "safetyTags": [
+              "capability_violation",
+              "moderation_required"
+            ],
+            "provenance": {
+              "sessionId": "qa-batch-delta",
+              "moderationDecisionId": null,
+              "deltaIds": [
+                "d9537d7d-02da-4cb5-a91f-988aa370a72b"
+              ]
+            }
+          },
+          "expectedVersion": 1
+        },
+        {
+          "jobId": "index-lore-bundle-region.sable-crescent-aef9727d",
+          "index": "lore_bundles",
+          "documentId": "bundle-region.sable-crescent-aef9727d",
+          "type": "loreBundle",
+          "body": {
+            "bundleId": "bundle-region.sable-crescent-aef9727d",
+            "summaryMarkdown": "### Sable Crescent Basin\n- lore bundle updated",
+            "entityId": "region.sable-crescent",
+            "publishAt": "2025-11-05T07:30:00.000Z",
+            "safetyTags": [
+              "capability_violation",
+              "moderation_required"
+            ],
+            "provenance": {
+              "sessionId": "qa-batch-delta",
+              "moderationDecisionId": null,
+              "deltaIds": [
+                "e9374f14-1c5d-4abe-95f3-4418101accb1"
+              ]
+            }
+          },
+          "expectedVersion": 1
+        },
+        {
+          "jobId": "index-lore-bundle-artifact.spectrum-bloom-array-fd569a5f",
+          "index": "lore_bundles",
+          "documentId": "bundle-artifact.spectrum-bloom-array-fd569a5f",
+          "type": "loreBundle",
+          "body": {
+            "bundleId": "bundle-artifact.spectrum-bloom-array-fd569a5f",
+            "summaryMarkdown": "### Spectrum Bloom Flux Array\n- lore bundle updated",
+            "entityId": "artifact.spectrum-bloom-array",
+            "publishAt": "2025-11-05T07:30:00.000Z",
+            "safetyTags": [
+              "capability_violation",
+              "moderation_required"
+            ],
+            "provenance": {
+              "sessionId": "qa-batch-delta",
+              "moderationDecisionId": null,
+              "deltaIds": [
+                "945deb09-f2f4-4119-9339-e3b42234d3e8"
+              ]
+            }
+          },
+          "expectedVersion": 1
+        },
+        {
+          "jobId": "index-news-news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
+          "index": "news_cards",
+          "documentId": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
+          "type": "newsCard",
+          "body": {
+            "cardId": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
+            "headline": "Tempered Accord Custodial Council update",
+            "lead": "lore bundle updated",
+            "publishAt": "2025-11-05T07:30:00.000Z",
+            "expiresAt": "2026-02-03T07:30:00.000Z",
+            "urgency": "high",
+            "safetyTags": [
+              "capability_violation",
+              "moderation_required"
+            ]
+          },
+          "expectedVersion": 1
+        },
+        {
+          "jobId": "index-news-news-e9374f14-1c5d-4abe-95f3-4418101accb1",
+          "index": "news_cards",
+          "documentId": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
+          "type": "newsCard",
+          "body": {
+            "cardId": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
+            "headline": "Sable Crescent Basin update",
+            "lead": "lore bundle updated",
+            "publishAt": "2025-11-05T07:30:00.000Z",
+            "expiresAt": "2026-02-03T07:30:00.000Z",
+            "urgency": "high",
+            "safetyTags": [
+              "capability_violation",
+              "moderation_required"
+            ]
+          },
+          "expectedVersion": 1
+        },
+        {
+          "jobId": "index-news-news-945deb09-f2f4-4119-9339-e3b42234d3e8",
+          "index": "news_cards",
+          "documentId": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
+          "type": "newsCard",
+          "body": {
+            "cardId": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
+            "headline": "Spectrum Bloom Flux Array update",
+            "lead": "lore bundle updated",
+            "publishAt": "2025-11-05T07:30:00.000Z",
+            "expiresAt": "2026-02-03T07:30:00.000Z",
+            "urgency": "high",
+            "safetyTags": [
+              "capability_violation",
+              "moderation_required"
+            ]
+          },
+          "expectedVersion": 1
+        }
+      ]
+    }
+  },
+  "moderation": {
+    "requiresModeration": true,
+    "reasons": [
+      "capability_violation"
+    ],
+    "capabilityViolations": 3,
+    "conflictDetections": 0,
+    "lowConfidenceFindings": 0
+  }
+}
