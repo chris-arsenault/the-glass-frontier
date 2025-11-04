@@ -1,56 +1,50 @@
-# Backlog Audit – Session 51
+# Backlog Audit – Session 61 Grooming
 
-Date: 2025-11-04  
-Compiled by: Codex (implementation phase kickoff)
+Generated: 2025-11-04
 
-## Feature Overview
+## Feature Summary
 
-| Feature | Status | Priority | Owner | Open PBIs (status → priority) | Notes |
-|---------|--------|----------|-------|-------------------------------|-------|
-| RES-CORE: Foundational Research | delivered | 1 | – | None | All research artefacts archived; no further PBIs. |
-| DES-CORE: Foundational Design | delivered | 2 | – | DES-PVP-01 (todo → P3) | One outstanding design follow-up on hub PvP schema. |
-| IMP-GM: Narrative Engine & Check Runner | in-progress | 3 | codex | None (IMP-GM-05 delivered) | Closure API shipped; awaiting offline orchestration tie-in before feature closeout. |
-| IMP-OFFLINE: Post-Session Publishing Pipeline | in-progress | 4 | codex | IMP-OFFLINE-04 (todo → P1) | Needs closure-driven orchestration. |
-| IMP-HUBS: Hub Implementation & Load Readiness | in-progress | 5 | codex | None | All tracked PBIs complete; ready for validation pass. |
-| IMP-CLIENT: Unified Web Client Shell | in-progress | 6 | codex | IMP-CLIENT-05 (todo → P1) | UI needs closure controls and offline status reporting. |
-| IMP-PLATFORM: Platform Implementation Foundations | in-progress | 7 | codex | IMP-MINIO-01 (todo → P2), IMP-SEARCH-01 (todo → P2), IMP-OBS-01 (todo → P3) | Infrastructure follow-ups pending post core gameplay. |
-| IMP-MOD: Moderation & Admin Surfaces | in-progress | 8 | codex | IMP-MOD-01/02/03 (todo → P2) | Moderation dashboard, policy editor, and queue sync outstanding. |
-| NAR-CORE: Worldbuilding Foundations | delivered | 9 | codex | None | World bible baseline locked. |
+| Feature | Priority | Status | Owner | Open PBIs |
+|---------|----------|--------|-------|-----------|
+| IMP-GM: Narrative Engine & Check Runner | 3 | in-progress | codex | 1 |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | 4 | in-progress | codex | 1 |
+| IMP-HUBS: Hub Implementation & Load Readiness | 5 | in-progress | codex | 1 |
+| IMP-CLIENT: Unified Web Client Shell | 6 | in-progress | codex | 1 |
+| IMP-PLATFORM: Platform Implementation Foundations | 7 | in-progress | codex | 3 |
+| IMP-MOD: Moderation & Admin Surfaces | 8 | in-progress | codex | 3 |
+| RES-CORE: Foundational Research | 1 | delivered | — | 0 |
+| DES-CORE: Foundational Design | 2 | delivered | — | 0 |
+| NAR-CORE: Worldbuilding Foundations | 9 | delivered | codex | 0 |
 
-## Feature Details
+## Backlog Detail
 
 ### IMP-GM: Narrative Engine & Check Runner
-- **Open PBIs:** None — `IMP-GM-05` completed in Session 51.
-- **Notes:** Closure API is live; feature remains open pending validation with `IMP-OFFLINE-04` orchestration.
+- `IMP-GM-06: Live Session Vertical Slice & Transcript Export` — `todo`, `P1` — Build an end-to-end solo session that drives transcripts and check disclosures into the offline pipeline feed.
+- Closed prior to this audit: `IMP-GM-01` through `IMP-GM-05` (`done`).
 
 ### IMP-OFFLINE: Post-Session Publishing Pipeline
-- **Open PBIs:** `IMP-OFFLINE-04` (todo, P1) — subscribes to closure events and chains consolidation → extraction → publishing cadence.
-- **Notes:** Work waits on live closure trigger from IMP-GM-05.
+- `IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync` — `todo`, `P1` — Validate story consolidation → entity extraction → publishing in staging with rollback notes.
+- Closed prior to this audit: `IMP-OFFLINE-01` through `IMP-OFFLINE-04` (`done`).
+
+### IMP-HUBS: Hub Implementation & Load Readiness
+- `IMP-HUBS-05: Hub PvP Contested Interactions` — `todo`, `P2` — Extend orchestrator for contested encounters and expose moderation hooks.
+- Closed prior to this audit: `IMP-HUB-01` through `IMP-HUB-04` (`done`).
 
 ### IMP-CLIENT: Unified Web Client Shell
-- **Open PBIs:** `IMP-CLIENT-05` (todo, P1) — closure controls, status indicators, cadence reminders.
-- **Notes:** Dependent on IMP-GM-05 API; accessibility baseline already in place via IMP-AXE-01.
-
-### IMP-MOD: Moderation & Admin Surfaces
-- **Open PBIs:** `IMP-MOD-01`, `IMP-MOD-02`, `IMP-MOD-03` (all todo, P2).
-- **Notes:** Pending server closure + offline orchestration to generate moderation workloads; no additional features required.
+- `IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration` — `todo`, `P1` — Surface check disclosures, session memory, and offline cadence status in the web client.
+- Closed prior to this audit: `IMP-CLIENT-01` through `IMP-CLIENT-05`, `IMP-AXE-01` (`done`).
 
 ### IMP-PLATFORM: Platform Implementation Foundations
-- **Open PBIs:** `IMP-MINIO-01`, `IMP-SEARCH-01` (todo, P2); `IMP-OBS-01` (todo, P3).
-- **Notes:** Deferred until Tier 1 gameplay/offline work lands; Terraform/Nomad modules already delivered.
+- `IMP-MINIO-01: MinIO Lifecycle Automation` — `in-progress`, `P2` — Awaiting stage validation of remote tier rehearsals and dashboards.
+- `IMP-SEARCH-01: Lore Search Differential Indexing` — `todo`, `P2` — Differential indexing pipeline and failover strategy.
+- `IMP-OBS-01: Observability & Incident Dashboards` — `todo`, `P3` — OTEL stack deployment and alert coverage.
 
-### DES-CORE: Foundational Design
-- **Open PBI:** `DES-PVP-01` (todo, P3) — PvP schema for hubs.
-- **Notes:** Aligns with future hub expansions; keep in backlog but deprioritised.
+### IMP-MOD: Moderation & Admin Surfaces
+- `IMP-MOD-01: Moderation Dashboard & Live Overrides` — `todo`, `P2` — Deliver admin console for handling `admin.alert` events and overrides.
+- `IMP-MOD-02: Prohibited Capability Registry & Policy Editor` — `todo`, `P2` — Policy management UI and backend services.
+- `IMP-MOD-03: Moderation Queue & Publishing Sync` — `todo`, `P2` — Ensure publishing cadence respects moderation queue state.
 
-## Orphan Check
+### Delivered Phases
+- Research (`RES-CORE`), Design (`DES-CORE`), and Narrative (`NAR-CORE`) feature backlogs remain closed; no orphaned items.
+- Legacy design tasks `DES-PVP-01` and `DES-MOD-01` were closed or superseded during this grooming pass to remove duplicates.
 
-- All backlog items are assigned to the correct feature.
-- No items discovered without feature linkage.
-
-## Recommended Actions
-
-1. Execute `IMP-GM-05` → unlock `IMP-OFFLINE-04` and `IMP-CLIENT-05`.
-2. Once closure/offline path validated, schedule moderation PBIs (IMP-MOD-01/02/03) for subsequent sprint.
-3. Leave platform tasks (IMP-MINIO-01, IMP-SEARCH-01, IMP-OBS-01) in queue; revisit after Tier 1 completion.
-4. Address `DES-PVP-01` during hub combat enablement or retire if scope changes.
