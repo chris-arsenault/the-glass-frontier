@@ -1,0 +1,22 @@
+# Exclude development artifacts and local tooling when building Docker images
+.git
+.github
+node_modules
+artifacts
+infra/stage/data
+infra/stage/certs
+infra/stage/config
+infra/stage/Caddyfile
+.cache
+.npm
+logs
+coverage
+dist
+docs/reports
+docs/plans/backlog.md
+docs/BACKLOG_AUDIT.md
+docs/NEXT_SPRINT_PLAN.md
+test-results
+tmp
+.DS_Store
+*.log

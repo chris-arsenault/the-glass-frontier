@@ -2,6 +2,11 @@
 
 Updated for Session 101 grooming cycle. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
 
+## Tier 0 (P0)
+| Feature | Item | Status | Priority | Notes |
+|---------|------|--------|----------|-------|
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Docker build assets created for langgraph, API gateway, hub gateway, LLM proxy, Temporal worker, and platform tasks; publish scripts under `infra/docker/` ready for registry pushes once staging credentials return. |
+
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
