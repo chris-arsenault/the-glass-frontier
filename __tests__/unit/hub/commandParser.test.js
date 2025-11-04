@@ -1,5 +1,6 @@
 "use strict";
 
+const path = require("path");
 const { CommandParser } = require("../../../src/hub/commandParser");
 const { RateLimiter } = require("../../../src/hub/rateLimiter");
 const { VerbCatalog, normalizeVerbDefinition } = require("../../../src/hub/verbCatalog");
@@ -103,5 +104,49 @@ describe("CommandParser", () => {
         metadata: {}
       })
     ).toThrow(HubRateLimitError);
+  });
+
+  test("produces contest metadata for sparring match verb", () => {
+    const catalogPath = path.join(
+      __dirname,
+      "../../../src/hub/config/defaultVerbCatalog.json"
+    );
+    const catalog = VerbCatalog.fromFile(catalogPath);
+    const contestParser = new CommandParser({
+      verbCatalog: catalog,
+      rateLimiter: new RateLimiter({
+        clock: {
+          now: () => 2_000
+        }
+      }),
+      clock: {
+        now: () => 2_000
+      }
+    });
+
+    const result = contestParser.parse({
+      verb: "verb.sparringMatch",
+      actorId: "actor-alpha",
+      roomId: "room-hub",
+      hubId: "hub-main",
+      args: { target: "actor-beta", intensity: "measured" },
+      metadata: {}
+    });
+
+    expect(result.metadata.contest).toMatchObject({
+      label: "Sparring Match",
+      targetActorId: "actor-beta",
+      roles: expect.objectContaining({
+        initiator: "challenger",
+        target: "partner"
+      }),
+      sharedComplicationTags: expect.arrayContaining(["training"]),
+      moderationTags: expect.arrayContaining(["hub-pvp"])
+    });
+    expect(result.metadata.contest.participants[0]).toMatchObject({
+      actorId: "actor-alpha",
+      role: "challenger",
+      verbId: "verb.sparringMatch"
+    });
   });
 });

@@ -19,6 +19,7 @@ Frame a reusable pattern for adjudicating contested moves when multiple actors p
 | **Social duel** (debate, sway vs. resist) | Player persuasion meets an NPC or rival player counterpoint with stated stakes | Dual check bundle mixing `sway-a-faction` and `resolve`-focused defensive move | Complication queue seeds fallout threads for post-session consolidation. |
 | **Race/chase** (escape vs. pursuit) | Movement intents targeting same objective where momentum differentials matter | Multi-actor bundle where rank order determines position deltas | Injects `pacing marker` events when chase nears completion to comply with breakpoint UI cues. |
 
+**Hub implementation note:** `IMP-HUBS-05` now exposes duel, sparring, and social confrontation verbs (`verb.challengeDuel`, `verb.sparringMatch`, `verb.clashOfWills`). Sparring flows prioritise consent cues (`moderationTags: ["hub-pvp","consent-required"]`) while social clashes lean on rhetoric tags, ensuring moderation dashboards can distinguish training rounds from high-stakes disputes. Refer to `artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json` for armed → launched → resolved payload samples destined for the dashboard.
 ## Coordination Workflow
 Refer to `docs/design/diagrams/DES-EDGE-01-contested-move-flow.mmd` for sequence detail.
 

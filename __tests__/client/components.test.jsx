@@ -489,7 +489,7 @@ describe("Client shell components", () => {
     expect(screen.getByTestId("overlay-check")).toBeInTheDocument();
     expect(screen.getByTestId("overlay-check-pending")).toHaveTextContent("analysis");
     expect(screen.getByTestId("overlay-check-result")).toHaveTextContent(/strong hit/i);
-    expect(screen.getByText(/Momentum shift/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Momentum shift/).length).toBeGreaterThan(0);
     const modifierField = screen.getByText(/Modifier/i).closest("div").querySelector("dd");
     expect(modifierField).toHaveTextContent("+2");
     const advantageLabel = screen.getAllByText(/Advantage/i, { selector: "dt" })[0];
@@ -504,14 +504,15 @@ describe("Client shell components", () => {
     expect(
       screen.getByText((content) => content.includes("Challenge Duel"))
     ).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes("actor-alpha") && content.includes("actor-beta"))
-    ).toBeInTheDocument();
+    const participantDisplays = screen.getAllByText((content) =>
+      content.includes("actor-alpha") && content.includes("actor-beta")
+    );
+    expect(participantDisplays.length).toBeGreaterThan(0);
     expect(screen.getByText(/Outcome: Success — Alpha edges out Beta\./i)).toBeInTheDocument();
     expect(screen.getByText(/Success — Claims the initiative\./i)).toBeInTheDocument();
     expect(screen.getByText(/Miss — Stumbles and yields ground\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Momentum shift: \+1/)).toBeInTheDocument();
-    expect(screen.getByText(/Momentum shift: -1/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Momentum shift: \+1/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Momentum shift: -1/).length).toBeGreaterThan(0);
     expect(screen.getByText(/#crowd-panics Spectators gasp and shuffle back\./i)).toBeInTheDocument();
     expect(screen.getByText(/#bruised Bruised pride\./i)).toBeInTheDocument();
   });

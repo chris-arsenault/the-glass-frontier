@@ -7,7 +7,7 @@ Updated for Session 91 grooming. Focus stays on Tier 1 gameplay, offline publish
 |---------|------|--------|----------|-------|
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | in-progress | P1 | Await MinIO/Backblaze credentials to re-run `npm run offline:qa`, capture drift simulation outputs, and export overlay evidence with IMP-CLIENT-06. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | SME sign-off pending; keep `npm run stage:smoke` / `npm run stage:alerts` telemetry current and sync with offline QA artifacts. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest coordinator + duel verb + outcome wiring landed; capture moderation evidence and expand verb catalog next. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Duel, sparring, and social contest verbs now ship with telemetry artefacts; monitor Temporal load, feed data into IMP-MOD-01, and explore multi-actor skirmish support. |
 
 ## Tier 2 (P2)
 | Feature | Item | Status | Priority | Notes |
