@@ -25,11 +25,33 @@ function buildDiceSummary(dice) {
   return `Kept: ${kept} | Discarded: ${discarded}`;
 }
 
+function describeAdvantage(dice = null) {
+  if (!dice) {
+    return "Neutral";
+  }
+  if (dice.advantageApplied && !dice.disadvantageApplied) {
+    return "Advantage";
+  }
+  if (dice.disadvantageApplied && !dice.advantageApplied) {
+    return "Disadvantage";
+  }
+  return "Neutral";
+}
+
 export function CheckOverlay() {
   const { activeCheck, recentChecks } = useSessionContext();
   const latestResult = useMemo(() => recentChecks.slice(-1)[0] || null, [recentChecks]);
   const pending = activeCheck;
   const diceSummary = buildDiceSummary(latestResult?.dice);
+  const modifier =
+    typeof latestResult?.dice?.statValue === "number" ? latestResult.dice.statValue : null;
+  const advantageLabel = describeAdvantage(latestResult?.dice);
+  const bonusDice =
+    typeof latestResult?.dice?.bonusDice === "number" ? latestResult.dice.bonusDice : 0;
+  const momentumBefore =
+    typeof latestResult?.momentum?.before === "number" ? latestResult.momentum.before : null;
+  const momentumAfter =
+    typeof latestResult?.momentum?.after === "number" ? latestResult.momentum.after : null;
 
   return (
     <section
@@ -76,6 +98,12 @@ export function CheckOverlay() {
               <dt>Safety</dt>
               <dd>{formatList(pending.data?.safetyFlags)}</dd>
             </div>
+            <div>
+              <dt>Momentum Input</dt>
+              <dd>
+                {typeof pending.data?.momentum === "number" ? pending.data.momentum : "–"}
+              </dd>
+            </div>
           </dl>
         ) : (
           <p className="overlay-empty" data-testid="overlay-no-pending">
@@ -113,12 +141,35 @@ export function CheckOverlay() {
                 <dd>{diceSummary}</dd>
               </div>
               <div>
+                <dt>Modifier</dt>
+                <dd>
+                  {modifier !== null ? (modifier >= 0 ? `+${modifier}` : modifier) : "–"}
+                </dd>
+              </div>
+              <div>
+                <dt>Advantage</dt>
+                <dd>
+                  {advantageLabel}
+                  {bonusDice > 0 ? ` (+${bonusDice} bonus)` : ""}
+                </dd>
+              </div>
+              <div>
                 <dt>Complication</dt>
                 <dd>{latestResult.complication || "None"}</dd>
               </div>
               <div>
                 <dt>Audit Ref</dt>
                 <dd>{latestResult.auditRef || "–"}</dd>
+              </div>
+              <div>
+                <dt>Momentum</dt>
+                <dd>
+                  {momentumBefore !== null && momentumAfter !== null
+                    ? `${momentumBefore} → ${momentumAfter}`
+                    : momentumAfter !== null
+                    ? momentumAfter
+                    : "–"}
+                </dd>
               </div>
             </dl>
             <p className="overlay-rationale">{latestResult.rationale}</p>

@@ -29,11 +29,31 @@ const EMPTY_OVERLAY = () => ({
       presence: 1,
       weird: 0,
       grit: 1
-    }
+    },
+    tags: [
+      "region.auric-steppe",
+      "faction.prismwell-kite-guild",
+      "anchor.prism-spire.auric-step"
+    ]
   },
   inventory: [
     { id: "compass", name: "Glass Frontier Compass", tags: ["narrative-anchor"] }
   ],
+  relationships: [
+    {
+      id: "faction.prismwell-kite-guild",
+      name: "Prismwell Kite Guild",
+      status: "trusted",
+      bond: 2
+    },
+    {
+      id: "faction.cinder-scout-collective",
+      name: "Cinder Scout Collective",
+      status: "guarded",
+      bond: 1
+    }
+  ],
+  capabilityReferences: [],
   momentum: {
     current: 0,
     floor: -2,
@@ -42,6 +62,9 @@ const EMPTY_OVERLAY = () => ({
     history: []
   },
   pendingOfflineReconcile: false,
+  lastChangeCursor: null,
+  lastAcknowledgedCursor: null,
+  lastUpdatedAt: null,
   lastSyncedAt: null
 });
 
@@ -76,6 +99,15 @@ function isNetworkError(error) {
   return message.includes("NetworkError") || message.includes("Failed to fetch");
 }
 
+function appendHistory(history, entry, limit = 5) {
+  const list = Array.isArray(history) ? history.slice() : [];
+  list.push(entry);
+  if (list.length > limit) {
+    list.splice(0, list.length - limit);
+  }
+  return list;
+}
+
 export function useSessionConnection({
   sessionId: override,
   account = null,
@@ -105,7 +137,11 @@ export function useSessionConnection({
       sessionSummary?.status === "closed" ? sessionSummary?.updatedAt || null : null,
     pendingOffline: Boolean(sessionSummary?.offlinePending),
     cadence: sessionSummary?.cadence || null,
-    auditRef: null
+    auditRef: null,
+    offlineLastRun: sessionSummary?.offlineLastRun || null,
+    offlineJob: null,
+    offlineHistory: [],
+    adminAlerts: []
   }));
   const wsRef = useRef(null);
   const sseRef = useRef(null);
@@ -194,13 +230,44 @@ export function useSessionConnection({
               ...state.overlay,
               character: {
                 ...fallback.character,
-                ...(state.overlay.character || {})
+                ...(state.overlay.character || {}),
+                stats: {
+                  ...fallback.character.stats,
+                  ...(state.overlay.character?.stats || {})
+                },
+                tags: Array.isArray(state.overlay.character?.tags)
+                  ? state.overlay.character.tags
+                  : fallback.character.tags
               },
               inventory: Array.isArray(state.overlay.inventory)
-                ? state.overlay.inventory
+                ? state.overlay.inventory.map((item) => ({ ...item }))
                 : fallback.inventory,
-              momentum: state.overlay.momentum || fallback.momentum,
-              pendingOfflineReconcile: Boolean(state.overlay.pendingOfflineReconcile)
+              relationships: Array.isArray(state.overlay.relationships)
+                ? state.overlay.relationships.map((entry) => ({ ...entry }))
+                : fallback.relationships,
+              capabilityReferences: Array.isArray(state.overlay.capabilityReferences)
+                ? state.overlay.capabilityReferences.map((entry) => ({ ...entry }))
+                : fallback.capabilityReferences,
+              momentum: state.overlay.momentum
+                ? {
+                    ...fallback.momentum,
+                    ...state.overlay.momentum,
+                    history: Array.isArray(state.overlay.momentum.history)
+                      ? state.overlay.momentum.history.slice()
+                      : fallback.momentum.history
+                  }
+                : fallback.momentum,
+              pendingOfflineReconcile: Boolean(state.overlay.pendingOfflineReconcile),
+              lastChangeCursor:
+                typeof state.overlay.lastChangeCursor === "number"
+                  ? state.overlay.lastChangeCursor
+                  : fallback.lastChangeCursor,
+              lastAcknowledgedCursor:
+                typeof state.overlay.lastAcknowledgedCursor === "number"
+                  ? state.overlay.lastAcknowledgedCursor
+                  : fallback.lastAcknowledgedCursor,
+              lastUpdatedAt: state.overlay.lastUpdatedAt || fallback.lastUpdatedAt,
+              lastSyncedAt: state.overlay.lastSyncedAt || fallback.lastSyncedAt
             };
             setOverlay(overlaySnapshot);
           }
@@ -242,11 +309,14 @@ export function useSessionConnection({
           ? sessionSummary.offlinePending
           : current.pendingOffline;
       const nextCadence = sessionSummary.cadence || current.cadence;
+      const nextOfflineLastRun =
+        sessionSummary.offlineLastRun || current.offlineLastRun || null;
       if (
         nextStatus === current.status &&
         nextClosedAt === current.closedAt &&
         nextPendingOffline === current.pendingOffline &&
-        nextCadence === current.cadence
+        nextCadence === current.cadence &&
+        JSON.stringify(nextOfflineLastRun) === JSON.stringify(current.offlineLastRun)
       ) {
         return current;
       }
@@ -255,7 +325,8 @@ export function useSessionConnection({
         status: nextStatus,
         closedAt: nextClosedAt,
         pendingOffline: nextPendingOffline,
-        cadence: nextCadence
+        cadence: nextCadence,
+        offlineLastRun: nextOfflineLastRun
       };
     });
   }, [sessionSummary]);
@@ -649,6 +720,173 @@ export function useSessionConnection({
             });
           }
           break;
+        case "offline.sessionClosure.queued":
+          if (payload) {
+            const timestamp = payload.enqueuedAt || new Date().toISOString();
+            setSessionMeta((current) => ({
+              ...current,
+              pendingOffline: true,
+              offlineJob: {
+                jobId: payload.jobId || current.offlineJob?.jobId || null,
+                status: "queued",
+                enqueuedAt: timestamp,
+                startedAt: null,
+                completedAt: null,
+                durationMs: null,
+                attempts:
+                  typeof payload.attempts === "number"
+                    ? payload.attempts
+                    : current.offlineJob?.attempts || 0,
+                error: null
+              },
+              offlineHistory: appendHistory(current.offlineHistory, {
+                status: "queued",
+                jobId: payload.jobId || null,
+                at: timestamp
+              })
+            }));
+          }
+          break;
+        case "offline.sessionClosure.started":
+          if (payload) {
+            const startedAt = payload.startedAt || new Date().toISOString();
+            setSessionMeta((current) => {
+              const previousJob =
+                current.offlineJob && current.offlineJob.jobId === payload.jobId
+                  ? current.offlineJob
+                  : null;
+              return {
+                ...current,
+                pendingOffline: true,
+                offlineJob: {
+                  jobId: payload.jobId || previousJob?.jobId || null,
+                  status: "processing",
+                  enqueuedAt: previousJob?.enqueuedAt || payload.enqueuedAt || startedAt,
+                  startedAt,
+                  completedAt: null,
+                  durationMs: null,
+                  attempts:
+                    typeof payload.attempts === "number"
+                      ? payload.attempts
+                      : previousJob?.attempts || 1,
+                  error: null
+                },
+                offlineHistory: appendHistory(current.offlineHistory, {
+                  status: "processing",
+                  jobId: payload.jobId || null,
+                  at: startedAt,
+                  attempts:
+                    typeof payload.attempts === "number"
+                      ? payload.attempts
+                      : previousJob?.attempts || 1
+                })
+              };
+            });
+          }
+          break;
+        case "offline.sessionClosure.completed":
+          if (payload) {
+            const completedAt = payload.completedAt || new Date().toISOString();
+            const durationMs =
+              typeof payload.durationMs === "number" ? payload.durationMs : null;
+            const result = payload.result || null;
+            setSessionMeta((current) => {
+              const isCurrentJob =
+                current.offlineJob && current.offlineJob.jobId === payload.jobId;
+              const nextJob = isCurrentJob
+                ? {
+                    ...current.offlineJob,
+                    status: "completed",
+                    completedAt,
+                    durationMs,
+                    error: null
+                  }
+                : current.offlineJob;
+              return {
+                ...current,
+                pendingOffline: false,
+                offlineJob: nextJob,
+                offlineLastRun: {
+                  status: "completed",
+                  completedAt,
+                  durationMs,
+                  jobId: payload.jobId || null,
+                  summaryVersion:
+                    result && result.summaryVersion !== undefined
+                      ? result.summaryVersion
+                      : result?.summary?.version ?? null,
+                  mentionCount:
+                    typeof result?.mentionCount === "number" ? result.mentionCount : null,
+                  deltaCount:
+                    typeof result?.deltaCount === "number" ? result.deltaCount : null,
+                  publishingBatchId:
+                    result?.publishing?.batchId || result?.publishingBatchId || null
+                },
+                offlineHistory: appendHistory(current.offlineHistory, {
+                  status: "completed",
+                  jobId: payload.jobId || null,
+                  at: completedAt,
+                  durationMs
+                })
+              };
+            });
+          }
+          break;
+        case "offline.sessionClosure.failed":
+          if (payload) {
+            const failedAt = payload.completedAt || new Date().toISOString();
+            const durationMs =
+              typeof payload.durationMs === "number" ? payload.durationMs : null;
+            const errorMessage =
+              payload.error?.message || payload.message || "workflow_failed";
+            setSessionMeta((current) => {
+              const isCurrentJob =
+                current.offlineJob && current.offlineJob.jobId === payload.jobId;
+              const nextJob = isCurrentJob
+                ? {
+                    ...current.offlineJob,
+                    status: "failed",
+                    completedAt: failedAt,
+                    durationMs,
+                    error: errorMessage
+                  }
+                : current.offlineJob;
+              return {
+                ...current,
+                pendingOffline: true,
+                offlineJob: nextJob,
+                offlineHistory: appendHistory(current.offlineHistory, {
+                  status: "failed",
+                  jobId: payload.jobId || null,
+                  at: failedAt,
+                  durationMs,
+                  message: errorMessage
+                }),
+                adminAlerts: appendHistory(current.adminAlerts, {
+                  reason: "offline.workflow_failed",
+                  severity: "high",
+                  at: failedAt,
+                  message: errorMessage
+                })
+              };
+            });
+          }
+          break;
+        case "admin.alert":
+          if (payload) {
+            const timestamp = payload.createdAt || payload.timestamp || new Date().toISOString();
+            setSessionMeta((current) => ({
+              ...current,
+              adminAlerts: appendHistory(current.adminAlerts, {
+                reason: payload.reason || "admin.alert",
+                severity: payload.severity || "info",
+                at: timestamp,
+                message: payload.message || payload.reason || "Alert",
+                data: payload.data || null
+              })
+            }));
+          }
+          break;
         case "player.control":
           if (payload) {
             setLastPlayerControl(payload);
@@ -696,24 +934,65 @@ export function useSessionConnection({
           const overlaySnapshot = {
             ...fallback,
             ...data.overlay,
-            character: data.overlay.character || fallback.character,
+            character: {
+              ...fallback.character,
+              ...(data.overlay.character || {}),
+              stats: {
+                ...fallback.character.stats,
+                ...(data.overlay.character?.stats || {})
+              },
+              tags: Array.isArray(data.overlay.character?.tags)
+                ? data.overlay.character.tags
+                : fallback.character.tags
+            },
             inventory: Array.isArray(data.overlay.inventory)
-              ? data.overlay.inventory
+              ? data.overlay.inventory.map((item) => ({ ...item }))
               : fallback.inventory,
-            momentum: data.overlay.momentum || fallback.momentum,
-            pendingOfflineReconcile: offlinePending ? true : Boolean(data.overlay.pendingOfflineReconcile),
+            relationships: Array.isArray(data.overlay.relationships)
+              ? data.overlay.relationships.map((entry) => ({ ...entry }))
+              : fallback.relationships,
+            capabilityReferences: Array.isArray(data.overlay.capabilityReferences)
+              ? data.overlay.capabilityReferences.map((entry) => ({ ...entry }))
+              : fallback.capabilityReferences,
+            momentum: data.overlay.momentum
+              ? {
+                  ...fallback.momentum,
+                  ...data.overlay.momentum,
+                  history: Array.isArray(data.overlay.momentum.history)
+                    ? data.overlay.momentum.history.slice()
+                    : fallback.momentum.history
+                }
+              : fallback.momentum,
+            pendingOfflineReconcile: offlinePending
+              ? true
+              : Boolean(data.overlay.pendingOfflineReconcile),
+            lastChangeCursor:
+              typeof data.overlay.lastChangeCursor === "number"
+                ? data.overlay.lastChangeCursor
+                : fallback.lastChangeCursor,
+            lastAcknowledgedCursor:
+              typeof data.overlay.lastAcknowledgedCursor === "number"
+                ? data.overlay.lastAcknowledgedCursor
+                : fallback.lastAcknowledgedCursor,
+            lastUpdatedAt: data.overlay.lastUpdatedAt || fallback.lastUpdatedAt,
             lastSyncedAt: data.overlay.lastSyncedAt || new Date().toISOString()
           };
           setOverlay(overlaySnapshot);
           persistSessionState(sessionId, { overlay: overlaySnapshot }).catch(() => {});
           setSessionMeta((current) => {
             const remotePending = Boolean(data.overlay.pendingOfflineReconcile);
-            if (remotePending === current.pendingOffline) {
+            const nextOfflineLastRun =
+              data.overlay.lastOfflineWorkflowRun || current.offlineLastRun;
+            if (
+              remotePending === current.pendingOffline &&
+              JSON.stringify(nextOfflineLastRun) === JSON.stringify(current.offlineLastRun)
+            ) {
               return current;
             }
             return {
               ...current,
-              pendingOffline: remotePending
+              pendingOffline: remotePending,
+              offlineLastRun: nextOfflineLastRun
             };
           });
         }
@@ -1030,7 +1309,11 @@ export function useSessionConnection({
       sessionClosedAt: sessionMeta.closedAt,
       sessionPendingOffline: sessionMeta.pendingOffline,
       sessionCadence: sessionMeta.cadence,
-      sessionAuditRef: sessionMeta.auditRef
+      sessionAuditRef: sessionMeta.auditRef,
+      sessionOfflineJob: sessionMeta.offlineJob,
+      sessionOfflineHistory: sessionMeta.offlineHistory,
+      sessionOfflineLastRun: sessionMeta.offlineLastRun,
+      sessionAdminAlerts: sessionMeta.adminAlerts
     }),
     [
       activeCheck,

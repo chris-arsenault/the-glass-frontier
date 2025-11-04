@@ -135,7 +135,8 @@ class SessionClosureCoordinator {
       jobId: job.jobId,
       sessionId: job.sessionId,
       completedAt,
-      durationMs: job.durationMs
+      durationMs: job.durationMs,
+      result: job.result || null
     });
 
     return job;
@@ -162,7 +163,8 @@ class SessionClosureCoordinator {
       sessionId: job.sessionId,
       completedAt,
       durationMs: job.durationMs,
-      message: job.error.message
+      message: job.error.message,
+      error: job.error
     });
 
     return job;

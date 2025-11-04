@@ -1,5 +1,6 @@
 import { useSessionContext } from "../context/SessionContext.jsx";
 import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
+import { useAccountContext } from "../context/AccountContext.jsx";
 import { CheckOverlay } from "./CheckOverlay.jsx";
 import { AdminVerbCatalogPanel } from "./AdminVerbCatalogPanel.jsx";
 
@@ -27,6 +28,37 @@ function describeCadence(cadence) {
   const batch = cadence.nextBatchAt ? `Batch @ ${formatIso(cadence.nextBatchAt)}` : null;
   const parts = [batch, digest].filter(Boolean);
   return parts.length > 0 ? parts.join(" • ") : "Publishing cadence pending.";
+}
+
+function titleCase(value) {
+  if (!value) {
+    return "Unknown";
+  }
+  return String(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatRelationshipStatus(status) {
+  return titleCase(status || "unknown");
+}
+
+function formatDuration(durationMs) {
+  if (typeof durationMs !== "number" || Number.isNaN(durationMs) || durationMs < 0) {
+    return "Unknown";
+  }
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  }
+  const seconds = Math.round(durationMs / 1000);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`;
 }
 
 const FALLBACK_CHARACTER = {
@@ -58,8 +90,14 @@ export function OverlayDock() {
     sessionStatus,
     sessionClosedAt,
     sessionPendingOffline,
-    sessionCadence
+    sessionCadence,
+    isAdmin,
+    sessionOfflineJob,
+    sessionOfflineHistory,
+    sessionOfflineLastRun,
+    sessionAdminAlerts
   } = useSessionContext();
+  const accountContext = useAccountContext() || {};
 
   const character = overlay?.character || FALLBACK_CHARACTER;
   const inventory = Array.isArray(overlay?.inventory) && overlay.inventory.length > 0
@@ -68,6 +106,8 @@ export function OverlayDock() {
   const momentumValue =
     typeof overlay?.momentum?.current === "number" ? overlay.momentum.current : 0;
   const stats = character.stats || {};
+  const traits = Array.isArray(character.tags) ? character.tags : [];
+  const relationships = Array.isArray(overlay?.relationships) ? overlay.relationships : [];
   const sessionClosed = sessionStatus === "closed";
   const queuedCount = Array.isArray(queuedIntents) ? queuedIntents.length : 0;
   const queueLabel = queuedCount === 1 ? "intent" : "intents";
@@ -92,6 +132,18 @@ export function OverlayDock() {
   ]
     .filter(Boolean)
     .join(" ");
+  const pipelineHistory = Array.isArray(sessionOfflineHistory)
+    ? sessionOfflineHistory.slice().reverse().slice(0, 4)
+    : [];
+  const pipelineAlerts = Array.isArray(sessionAdminAlerts)
+    ? sessionAdminAlerts.slice().reverse().slice(0, 3)
+    : [];
+  const offlineJob = sessionOfflineJob || null;
+  const pipelineStatus =
+    offlineJob?.status || (sessionPendingOffline ? "queued" : "idle");
+  const moderationQueueCount = Array.isArray(accountContext.sessions)
+    ? accountContext.sessions.filter((entry) => entry?.requiresApproval).length
+    : 0;
 
   return (
     <aside className="overlay-dock" aria-label="Session overlays" data-testid="overlay-dock">
@@ -146,6 +198,15 @@ export function OverlayDock() {
             </span>
           ))}
         </div>
+        {traits.length > 0 ? (
+          <div className="overlay-traits" role="list" aria-label="Character traits">
+            {traits.map((trait) => (
+              <span key={trait} className="overlay-trait-chip" role="listitem">
+                {trait}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {sessionClosed ? (
           <p className="overlay-alert" role="status" data-testid="overlay-closed-status">
             Session closed
@@ -187,6 +248,113 @@ export function OverlayDock() {
           ))}
         </ul>
       </section>
+      <section
+        className="overlay-card overlay-relationships"
+        aria-labelledby="overlay-relationships-heading"
+      >
+        <header className="overlay-card-header">
+          <h2 id="overlay-relationships-heading">Allies & Factions</h2>
+          <span className="overlay-meta" aria-live="polite">
+            {relationships.length} tracked
+          </span>
+        </header>
+        {relationships.length > 0 ? (
+          <ul className="overlay-relationships-list">
+            {relationships.map((relationship) => (
+              <li key={relationship.id} className="overlay-relationship-item">
+                <div className="overlay-relationship-header">
+                  <span className="overlay-relationship-name">
+                    {relationship.name || relationship.id || "Unknown"}
+                  </span>
+                  <span
+                    className={`overlay-relationship-status overlay-relationship-status-${relationship.status || "unknown"}`}
+                  >
+                    {formatRelationshipStatus(relationship.status)}
+                  </span>
+                </div>
+                <p className="overlay-relationship-meta">
+                  Bond {typeof relationship.bond === "number" ? relationship.bond : "—"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="overlay-muted">No relationships recorded yet.</p>
+        )}
+      </section>
+      {isAdmin ? (
+        <section
+          className="overlay-card overlay-pipeline"
+          aria-labelledby="overlay-pipeline-heading"
+          data-testid="overlay-pipeline"
+        >
+          <header className="overlay-card-header">
+            <h2 id="overlay-pipeline-heading">Pipeline Status</h2>
+            <span className="overlay-meta">
+              Moderation queue: {moderationQueueCount}
+            </span>
+          </header>
+          <dl className="overlay-pipeline-details">
+            <div>
+              <dt>Current status</dt>
+              <dd>
+                {titleCase(pipelineStatus)}
+                {offlineJob?.jobId ? ` (${offlineJob.jobId.slice(0, 8)})` : ""}
+              </dd>
+            </div>
+            <div>
+              <dt>Pending offline</dt>
+              <dd>{sessionPendingOffline ? "Yes" : "No"}</dd>
+            </div>
+            <div>
+              <dt>Latest run</dt>
+              <dd>
+                {sessionOfflineLastRun?.completedAt
+                  ? `${formatIso(sessionOfflineLastRun.completedAt)} • ${formatDuration(
+                      sessionOfflineLastRun.durationMs
+                    )}`
+                  : "No runs yet"}
+              </dd>
+            </div>
+          </dl>
+          {pipelineHistory.length > 0 ? (
+            <div className="overlay-pipeline-history">
+              <p className="overlay-pipeline-subheading">Recent transitions</p>
+              <ul>
+                {pipelineHistory.map((entry, index) => (
+                  <li key={`${entry.jobId || "job"}-${index}`}>
+                    <span className={`overlay-pipeline-badge status-${entry.status || "unknown"}`}>
+                      {titleCase(entry.status || "unknown")}
+                    </span>
+                    <span className="overlay-pipeline-meta">
+                      {entry.at ? formatIso(entry.at) : "Unknown time"}
+                      {entry.durationMs ? ` • ${formatDuration(entry.durationMs)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {pipelineAlerts.length > 0 ? (
+            <div className="overlay-pipeline-alerts" role="alert">
+              <p className="overlay-pipeline-subheading">Alerts</p>
+              <ul>
+                {pipelineAlerts.map((alert, index) => (
+                  <li key={`${alert.reason || "alert"}-${index}`}>
+                    <span className={`overlay-pipeline-badge severity-${alert.severity || "info"}`}>
+                      {titleCase(alert.severity || "info")}
+                    </span>
+                    <span className="overlay-pipeline-meta">
+                      {alert.message || alert.reason || "Alert"} •{" "}
+                      {alert.at ? formatIso(alert.at) : "Unknown time"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
       <AdminVerbCatalogPanel />
     </aside>
   );

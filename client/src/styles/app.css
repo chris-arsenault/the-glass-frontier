@@ -309,6 +309,22 @@ body {
   color: #f8fafc;
 }
 
+.overlay-traits {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.overlay-trait-chip {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  font-size: 0.75rem;
+  color: #cbd5f5;
+}
+
 .overlay-alert {
   margin-top: 0.75rem;
   font-size: 0.85rem;
@@ -333,6 +349,180 @@ body {
 .overlay-item-tags {
   color: #94a3b8;
   font-size: 0.8rem;
+}
+
+.overlay-relationships-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.overlay-relationship-item {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  background: rgba(30, 41, 59, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.overlay-relationship-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.overlay-relationship-name {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.overlay-relationship-status {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #cbd5f5;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.overlay-relationship-status-trusted {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #bbf7d0;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.overlay-relationship-status-allied {
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #bfdbfe;
+  background: rgba(96, 165, 250, 0.18);
+}
+
+.overlay-relationship-status-guarded {
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #fef08a;
+  background: rgba(234, 179, 8, 0.18);
+}
+
+.overlay-relationship-status-hostile {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.18);
+}
+
+.overlay-relationship-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.overlay-muted {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.overlay-pipeline-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.overlay-pipeline-details dt {
+  font-weight: 600;
+  color: #cbd5f5;
+}
+
+.overlay-pipeline-details dd {
+  margin: 0.15rem 0 0;
+}
+
+.overlay-pipeline-subheading {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.4rem;
+}
+
+.overlay-pipeline-history ul,
+.overlay-pipeline-alerts ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.overlay-pipeline-history li,
+.overlay-pipeline-alerts li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.overlay-pipeline-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.7);
+  color: #cbd5f5;
+}
+
+.overlay-pipeline-badge.status-completed {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #bbf7d0;
+  background: rgba(74, 222, 128, 0.18);
+}
+
+.overlay-pipeline-badge.status-processing {
+  border-color: rgba(96, 165, 250, 0.45);
+  color: #bfdbfe;
+  background: rgba(96, 165, 250, 0.2);
+}
+
+.overlay-pipeline-badge.status-queued {
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #fef08a;
+  background: rgba(234, 179, 8, 0.2);
+}
+
+.overlay-pipeline-badge.status-failed {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.overlay-pipeline-badge.severity-high {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.18);
+}
+
+.overlay-pipeline-badge.severity-medium {
+  border-color: rgba(234, 179, 8, 0.45);
+  color: #fef08a;
+  background: rgba(234, 179, 8, 0.2);
+}
+
+.overlay-pipeline-badge.severity-info {
+  border-color: rgba(96, 165, 250, 0.45);
+  color: #bfdbfe;
+  background: rgba(96, 165, 250, 0.2);
+}
+
+.overlay-pipeline-meta {
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 .overlay-meta-group {

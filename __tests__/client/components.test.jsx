@@ -3,6 +3,7 @@
 const React = require("react");
 const { render, screen, fireEvent, waitFor } = require("@testing-library/react");
 const { SessionProvider } = require("../../client/src/context/SessionContext.jsx");
+const { AccountContext } = require("../../client/src/context/AccountContext.jsx");
 const { ChatCanvas } = require("../../client/src/components/ChatCanvas.jsx");
 const { ChatComposer } = require("../../client/src/components/ChatComposer.jsx");
 const { SessionMarkerRibbon } = require("../../client/src/components/SessionMarkerRibbon.jsx");
@@ -12,8 +13,21 @@ const {
   SessionConnectionStates
 } = require("../../client/src/hooks/useSessionConnection.js");
 
-function renderWithSession(value, node) {
-  return render(React.createElement(SessionProvider, { value }, node));
+function renderWithSession(value, node, accountOverrides = {}) {
+  const accountValue = {
+    isAdmin: false,
+    sessions: [],
+    status: "authenticated",
+    ...accountOverrides
+  };
+
+  return render(
+    React.createElement(
+      AccountContext.Provider,
+      { value: accountValue },
+      React.createElement(SessionProvider, { value }, node)
+    )
+  );
 }
 
 function buildSessionValue(overrides = {}) {
@@ -31,11 +45,16 @@ function buildSessionValue(overrides = {}) {
         presence: 1,
         weird: 0,
         grit: 1
-      }
+      },
+      tags: ["region.auric-steppe"]
     },
     inventory: [
       { id: "compass", name: "Glass Frontier Compass", tags: ["narrative-anchor"] }
     ],
+    relationships: [
+      { id: "ally-1", name: "Prismwell Kite Guild", status: "trusted", bond: 2 }
+    ],
+    capabilityReferences: [],
     momentum: {
       current: 0,
       baseline: 0,
@@ -218,6 +237,101 @@ describe("Client shell components", () => {
     expect(screen.getByText(/Offline changes pending sync \(1 intent queued\)/i)).toBeInTheDocument();
   });
 
+  test("OverlayDock renders character traits and relationships", () => {
+    const session = buildSessionValue({
+      overlay: {
+        revision: 4,
+        character: {
+          name: "Avery Glass",
+          pronouns: "they/them",
+          archetype: "Wayfarer Archivist",
+          background: "Custodian scout cataloguing resonance anomalies.",
+          stats: { ingenuity: 2 },
+          tags: ["region.auric-steppe", "faction.prismwell-kite-guild"]
+        },
+        inventory: [],
+        relationships: [
+          { id: "ally", name: "Prismwell Kite Guild", status: "trusted", bond: 3 }
+        ],
+        momentum: {
+          current: 1,
+          baseline: 0,
+          floor: -2,
+          ceiling: 3,
+          history: []
+        },
+        pendingOfflineReconcile: false,
+        lastSyncedAt: new Date().toISOString()
+      }
+    });
+
+    renderWithSession(session, React.createElement(OverlayDock));
+
+    expect(screen.getByText("region.auric-steppe")).toBeInTheDocument();
+    expect(screen.getByText("Prismwell Kite Guild")).toBeInTheDocument();
+    expect(screen.getByText(/Bond 3/)).toBeInTheDocument();
+  });
+
+  test("OverlayDock surfaces admin pipeline status overview", () => {
+    const session = buildSessionValue({
+      isAdmin: true,
+      sessionPendingOffline: true,
+      sessionOfflineJob: {
+        jobId: "job-123",
+        status: "processing",
+        enqueuedAt: "2025-11-04T10:00:00.000Z",
+        startedAt: "2025-11-04T10:01:00.000Z",
+        durationMs: null,
+        attempts: 1,
+        error: null
+      },
+      sessionOfflineHistory: [
+        {
+          jobId: "job-120",
+          status: "completed",
+          at: "2025-11-03T22:00:00.000Z",
+          durationMs: 42000
+        }
+      ],
+      sessionOfflineLastRun: {
+        status: "completed",
+        jobId: "job-120",
+        completedAt: "2025-11-03T22:00:00.000Z",
+        durationMs: 42000,
+        summaryVersion: 3,
+        deltaCount: 5,
+        mentionCount: 12
+      },
+      sessionAdminAlerts: [
+        {
+          severity: "high",
+          reason: "offline.workflow_sla_exceeded",
+          message: "Workflow exceeded SLA",
+          at: "2025-11-03T22:05:00.000Z"
+        }
+      ]
+    });
+
+    const accountSessions = [
+      { sessionId: "demo", requiresApproval: true },
+      { sessionId: "runner", requiresApproval: true }
+    ];
+
+    renderWithSession(
+      session,
+      React.createElement(OverlayDock),
+      {
+        isAdmin: true,
+        sessions: accountSessions
+      }
+    );
+
+    expect(screen.getByTestId("overlay-pipeline")).toBeInTheDocument();
+    expect(screen.getByText(/Moderation queue: 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Processing/)).toBeInTheDocument();
+    expect(screen.getByText(/Workflow exceeded SLA/)).toBeInTheDocument();
+  });
+
   test("CheckOverlay surfaces pending and resolved check details", () => {
     const session = buildSessionValue({
       activeCheck: {
@@ -230,7 +344,8 @@ describe("Client shell components", () => {
           difficultyValue: 7,
           rationale: "Player studies the data",
           flags: ["disclosure:analysis"],
-          safetyFlags: []
+          safetyFlags: [],
+          momentum: 2
         }
       },
       recentChecks: [
@@ -239,11 +354,23 @@ describe("Client shell components", () => {
           tier: "strong-hit",
           move: "analysis",
           difficulty: { label: "controlled", target: 7 },
-          dice: { kept: [5, 6], discarded: [1], total: 14 },
+          dice: {
+            kept: [5, 6],
+            discarded: [1],
+            total: 14,
+            statValue: 2,
+            advantageApplied: true,
+            bonusDice: 1
+          },
           complication: "New insight discovered",
           auditRef: "audit-1",
           rationale: "Roll succeeds with style.",
-          momentumDelta: 1
+          momentumDelta: 1,
+          momentum: {
+            before: 1,
+            after: 2,
+            delta: 1
+          }
         }
       ]
     });
@@ -254,6 +381,15 @@ describe("Client shell components", () => {
     expect(screen.getByTestId("overlay-check-pending")).toHaveTextContent("analysis");
     expect(screen.getByTestId("overlay-check-result")).toHaveTextContent(/strong hit/i);
     expect(screen.getByText(/Momentum shift/)).toBeInTheDocument();
+    const modifierField = screen.getByText(/Modifier/i).closest("div").querySelector("dd");
+    expect(modifierField).toHaveTextContent("+2");
+    const advantageField = screen.getByText(/Advantage/i).closest("div").querySelector("dd");
+    expect(advantageField).toHaveTextContent(/Advantage/);
+    const momentumInputField = screen
+      .getByText(/Momentum Input/i)
+      .closest("div")
+      .querySelector("dd");
+    expect(momentumInputField).toHaveTextContent("2");
   });
 
   test("SessionMarkerRibbon wrap controls dispatch player control intents", async () => {

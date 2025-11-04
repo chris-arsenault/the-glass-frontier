@@ -71,7 +71,19 @@ if (process.env.HUB_VERB_DATABASE_URL) {
   }
 }
 
-const sessionClosureCoordinator = new SessionClosureCoordinator();
+const sessionClosureCoordinator = new SessionClosureCoordinator({
+  publisher: {
+    publish(topic, payload) {
+      log("info", topic, payload);
+      if (payload && payload.sessionId) {
+        broadcaster.publish(payload.sessionId, {
+          type: topic,
+          payload
+        });
+      }
+    }
+  }
+});
 const closureWorkflowOrchestrator = new ClosureWorkflowOrchestrator({
   coordinator: sessionClosureCoordinator,
   sessionMemory,
