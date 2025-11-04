@@ -1,13 +1,16 @@
-# Next Sprint Plan – Sessions 91–100
+# Next Sprint Plan – Sessions 101–110
 
-| Priority | Focus Area | MCP Backlog Items | Key Actions & Dependencies |
-|----------|------------|-------------------|----------------------------|
-| P1 | Gameplay & Pipeline Integration | `IMP-OFFLINE-05`, `IMP-CLIENT-06`, `IMP-HUBS-05` | Finish offline publishing QA once storage credentials unlock, feed resulting telemetry into the unified client overlays, and ship contested hub interactions to round out the core loop. Coordinate staging rehearsals so retry queue metrics surface in client/admin views and PvP outcomes feed the offline cadence. |
-| P2 | Moderation & Platform Support | `IMP-MOD-01`, `IMP-MOD-02`, `IMP-MOD-03`, `IMP-SEARCH-01`, `IMP-MINIO-01` | Prepare human-in-loop tooling and storage/search foundations immediately after Tier 1 sign-off. MinIO lifecycle rehearsal remains blocked on credentials; search differential indexing should start once publishing QA produces stable deltas. |
-| P3 | Observability & Operations | `IMP-OBS-01` | Stand up OTEL/VictoriaMetrics/Loki/Grafana stack after gameplay/client/pipeline milestones stabilize; reuse IaC modules already authored under IMP-PLATFORM. |
+Generated: 2025-11-04
 
-## Guidance for the Next 10 Sessions
-- Prioritise staging rehearsal that links the offline QA harness (`npm run offline:qa`) with overlay validation so SMEs can unblock `IMP-CLIENT-06`.
-- Schedule contested hub interaction spikes early to expose any GM integration gaps before the next content drop.
-- Track credential delivery for MinIO/Backblaze closely; unblock Tier 2 work immediately when secrets arrive.
-- Keep moderation backlog warm by refining UI wireframes and dependencies while Tier 1 work is underway, but do not start implementation until gameplay/client pieces are signed off.
+| Priority | Tier | Focus Area | Key Backlog Items | Immediate Actions | Dependencies / Notes |
+|----------|------|------------|-------------------|-------------------|----------------------|
+| P1 | Tier 1 | Gameplay implementation (hub contests + offline pipeline) | IMP-HUBS-05, IMP-OFFLINE-05 | Escalate staging connectivity + credential restoration; rerun `npm run monitor:contests` and `npm run offline:qa -- --simulate-search-drift`; distribute telemetry to moderation SMEs. | Requires staging Temporal + storage access; outputs must satisfy DES-BENCH-01 and DES-16. |
+| P1 | Tier 1a | Unified web client overlays | IMP-CLIENT-06 | Maintain stage telemetry runs (`npm run stage:smoke`, `npm run stage:alerts`), capture overlay evidence post-staging restore, and secure SME approval in #client-overlays / #admin-sse. | Depends on IMP-OFFLINE-05 drift telemetry and contest data to display retry/alert info. |
+| P2 | Tier 2 | Moderation, admin, and lore surfacing systems | IMP-MOD-01, IMP-MOD-02, IMP-MOD-03, IMP-SEARCH-01 | Finalise UX specs, prep API scaffolding, and queue implementation once Tier 1 blockers clear; ensure moderation queue integrations mirror offline cadence outputs. | Unblock after Tier 1 artefacts confirm pipeline + overlay readiness; aligns with REQUIREMENTS.md moderation mandates. |
+| P3 | Tier 3 | Platform hardening and observability | IMP-MINIO-01, IMP-OBS-01 | Resume MinIO lifecycle rehearsals and observability stack rollout after staging credentials return and Tier 1 loops stabilise. | Defer until gameplay/client/offline deliverables ship; track credential availability with platform ops. |
+
+## Supporting Notes
+
+- Maintain WIP discipline: keep only the Tier 1/Tier 1a items active until staging access is restored and validations complete.
+- Validate every Tier 1 milestone with updated documentation (`docs/plans/backlog.md`, session handoffs) and artefact links for SME review.
+- Confirm alignment with REQUIREMENTS.md for offline publishing, unified web client, and moderation control surfaces before promoting Tier 2 work.
