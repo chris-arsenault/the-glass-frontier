@@ -14,6 +14,7 @@
 - Aggregated cadence data now groups blocking deltas by entity/reason and highlights capability flags so moderators can triage multi-delta sessions faster.
 - Added cadence override endpoint and admin strip controls so moderators can defer lore batches within DES-16 limits while session memory updates cadence state immediately.
 - Persisted moderation queue snapshots and publishing cadence schedules to PostgreSQL (`moderation_queue_state`, `publishing_cadence_state`) with automatic hydration on server startup when `MODERATION_DATABASE_URL` is configured.
+- Instrumented the Temporal moderation bridge with exponential backoff, retry telemetry (`telemetry.moderation.temporal.*` events), and final-failure alerts so ops dashboards surface transport health alongside cadence snapshots.
 
 ## Code Surfaces
 | Path | Purpose |
@@ -34,4 +35,4 @@
 - Playwright: `npx playwright test tests/e2e/admin-moderation.spec.js`
 
 ## Follow-Ups
-1. Capture transport retry/backoff metrics for the Temporal moderation bridge and surface failures to operations dashboards.
+1. Coordinate with ops to validate the new Temporal transport telemetry on staging dashboards once credentials are restored.

@@ -21,7 +21,7 @@ Updated for Session 114 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 | IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | Stand up differential indexing and pg_trgm fallback after publishing QA stabilises delta feeds. |
 | IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-01: Moderation Dashboard & Live Overrides | done | P2 | Moderation dashboard shipped with DES-18 role guard, override drawer, and Playwright coverage for alert approval flows (`tests/e2e/admin-moderation.spec.js`). |
 | IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Implement capability registry CRUD, event emission, and audit trails tied to session memory. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | Temporal bridge now forwards persisted cadence snapshots to moderation workflows; next step is instrumenting retry/backoff telemetry so ops can monitor transport health. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | Temporal bridge now emits retry/backoff telemetry (`telemetry.moderation.temporal.*`) with exponential backoff; ops validation in staging remains pending. |
 
 ## Tier 3 (P3)
 | Feature | Item | Status | Priority | Notes |
