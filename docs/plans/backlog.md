@@ -1,11 +1,11 @@
 # Backlog Snapshot
 
-Updated for Session 101 grooming cycle. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
+Updated for Session 111 grooming cycle. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Docker build assets created for langgraph, API gateway, hub gateway, LLM proxy, Temporal worker, and platform tasks; `infra/docker/build-services.sh` now supports registry pushes/platform overrides, `infra/docker/publish-services.sh` produces CI-ready manifests with registry login, CLI overrides through `CI_DOCKER_CLI`/`DOCKER_CLI`, and the LLM proxy ships a provider router with fallback + streaming plus Jest coverage for publish manifest generation and push-mode login/push simulation (including build-arg newline fix and service entrypoint validation) to prepare for staging pipeline wiring. Targeted service builds/pushes now supported via `CI_SERVICES` filters with regression coverage to scope staging rehearsal blasts while credentials are pending. Temporal worker image now resolves namespace/task queue configuration via `src/offline/temporal/workerConfig.js`, logging resolved settings so the Nomad deployment can switch namespaces without rebuilding; docs updated with rehearsal guidance for narrow service pushes ahead of staging credentials, and a turnkey `npm run docker:publish:temporal-worker` helper with regression coverage now locks staging CI to a single worker image once registry access unlocks. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | blocked | P0 | Docker build + publish tooling complete (multi-service manifest, targeted push filters, Temporal worker namespace overrides, `npm run docker:publish:temporal-worker`). Awaiting staging registry credentials before CI rehearsal can run and promote the worker image. |
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
@@ -35,5 +35,5 @@ Updated for Session 101 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 - NAR-CORE: Worldbuilding Foundations
 
 ## Health Checks
-- Active WIP (blocked + in-progress): 4 items, within the WIP ≤ 10 limit.
+- Active WIP (blocked + in-progress): 5 items, within the WIP ≤ 10 limit.
 - No orphan PBIs; every backlog item remains linked to its owning feature in MCP.
