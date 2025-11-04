@@ -202,6 +202,11 @@ async function main() {
     console.log("[stage-smoke] Running LangGraph SSE smoke against staging endpoint");
     await runSmoke(reportPath);
 
+    console.log("[stage-smoke] Summarising admin alert observation artefact");
+    await runCommand("node", ["scripts/adminAlertStatus.js"], {
+      cwd: REPO_ROOT
+    });
+
     console.log("[stage-smoke] Smoke run completed successfully");
   } finally {
     if (stopMdns) {

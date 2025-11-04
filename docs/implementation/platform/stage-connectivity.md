@@ -25,6 +25,9 @@ The smoke harness (`npm run stage:smoke`) orchestrates the entire flow:
 # Run stage connectivity validation end-to-end
 npm run stage:smoke
 
+# Summarise the latest admin alert observation and fallback recommendation
+npm run stage:alerts
+
 # Inspect the latest staging smoke artefact
 cat artifacts/langgraph-sse-staging.json
 ```
@@ -35,9 +38,11 @@ cat artifacts/langgraph-sse-staging.json
 - `infra/stage/Caddyfile` – Reverse proxy & transport settings for the stage domain.
 - `scripts/stage/mdnsAdvertiser.js` – mDNS helper for `.local` hostname resolution.
 - `scripts/runStageSmoke.js` – Orchestrated stage smoke harness.
+- `scripts/adminAlertStatus.js` – CLI summary for admin alert observations (invoked from `npm run stage:alerts` and post-run during the stage harness).
 - `artifacts/langgraph-sse-staging.json` – Most recent stage smoke report.
 
 ## Residual Risks
 
 - Admin alert streaming now uses a seeded fallback (`LANGGRAPH_SMOKE_SEED_ADMIN_ALERT=true`) when staging lacks alert traffic; replace the seed with live events once telemetry provides representative data.
+- Always run `npm run stage:alerts` after staging validation to confirm whether fallback seeding can retire; missing or seeded observations require follow-up telemetry.
 - Developers must have Docker available so the TLS proxy can bind to port 443 via the daemon.
