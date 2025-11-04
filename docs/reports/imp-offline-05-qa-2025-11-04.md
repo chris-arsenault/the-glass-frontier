@@ -25,10 +25,11 @@
    - Moderation summary logged three capability violations with rumour-tagged change feed to support auditor review; output stored at `artifacts/offline-qa/qa-batch-delta-offline-qa.json`.
 6. `npm run offline:qa -- --input artifacts/vertical-slice --output artifacts/offline-qa` (post-synthesis batch)
    - Replayed the full directory including new gamma/delta artefacts; rollup aggregated 11 mentions, 11 deltas, and two moderation-required sessions.
-   - Updated batch rollup available at `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-35-53-750Z.json` for dashboard ingestion tests.
+   - Updated batch rollup available at `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-51-46-392Z.json`, now surfacing per-session `publishingStatus` so moderation holds stand out in dashboards.
 
 ## Tooling Updates
 - `scripts/runOfflinePublishingQa.js` now accepts a directory input, filters session artifacts, and emits batch rollups that flag moderation hotspots.
+- QA harness exports `publishingStatus` alongside moderation summaries, preventing lore batches with safety violations from auto-publishing until an audit decision (auditRef) clears the gate.
 - Added Jest coverage for helper utilities (`resolveInputTargets`, `composeBatchRollup`, `summarizeModeration`) to keep QA harness behavior deterministic.
 
 ## Key Observations
@@ -37,6 +38,7 @@
 - Publishing coordinator produced cadence windows (moderation start/end, hourly batch, digest) suitable for staging rehearsal once MinIO + Backblaze credentials unlock writes.
 - Gamma/Delta transcripts confirm Spectrum Bloom + Temporal Retcon references propagate into moderation rollups with correct capability counts and no spurious low-confidence flags despite rumour qualifiers.
 - Control-change heuristics handled simultaneous gain/loss across Sable Crescent Basin and Kyther Range, matching lexicon defaults.
+- Moderation gating now marks gamma/delta batches as `awaiting_moderation`, ensuring publishing waits on explicit approval instead of silently scheduling capability violations.
 
 ## Artefacts
 - Results:  
@@ -44,6 +46,7 @@
   - `artifacts/offline-qa/qa-multi-faction-smoke-offline-qa.json`  
   - `artifacts/offline-qa/qa-batch-gamma-offline-qa.json`  
   - `artifacts/offline-qa/qa-batch-delta-offline-qa.json`
+- Rollup: `artifacts/offline-qa/offline-qa-batch-rollup-2025-11-04T05-51-46-392Z.json`
 - Sample transcripts:  
   - `artifacts/offline-qa/qa-multi-faction-session.json`  
   - `artifacts/vertical-slice/qa-batch-gamma.json`  

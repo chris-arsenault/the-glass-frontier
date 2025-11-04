@@ -1,0 +1,9 @@
+{
+  "totalSessions": 5,
+  "totalMentions": 11,
+  "totalDeltas": 11,
+  "sessionsWithModeration": 2,
+  "sessionsWithCapabilityViolations": 2,
+  "sessionsWithConflicts": 0,
+  "sessionsWithLowConfidence": 0
+}

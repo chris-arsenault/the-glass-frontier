@@ -5,6 +5,7 @@ const { PublishingStateStore } = require("./publishingStateStore");
 const { BundleComposer } = require("./bundleComposer");
 const { SearchSyncPlanner } = require("./searchSync");
 const { PublishingMetrics } = require("../../telemetry/publishingMetrics");
+const { summarizeModeration } = require("../moderation/moderationSummary");
 
 class PublishingCoordinator {
   constructor(options = {}) {
@@ -46,6 +47,23 @@ class PublishingCoordinator {
 
     const schedule = this.ensureSession({ sessionId, sessionClosedAt });
     const targetBatch = selectBatch(schedule, batchId);
+    const moderation = summarizeModeration(deltas);
+    const awaitingModeration = moderation.requiresModeration && !moderationDecisionId;
+
+    if (awaitingModeration) {
+      this.cadence.updateBatchStatus(sessionId, targetBatch.batchId, "awaiting_moderation", {
+        deltaCount: deltas.length,
+        notes: "moderation_gate_pending"
+      });
+
+      return {
+        status: "awaiting_moderation",
+        schedule: this.cadence.getSchedule(sessionId),
+        publishing: null,
+        searchPlan: { jobs: [], status: "blocked" },
+        moderation
+      };
+    }
 
     const publishing = this.composer.compose({
       sessionId,
@@ -65,11 +83,14 @@ class PublishingCoordinator {
       sessionId,
       batchId: targetBatch.batchId
     });
+    searchPlan.status = "ready";
 
     return {
+      status: "ready",
       schedule: this.cadence.getSchedule(sessionId),
       publishing,
-      searchPlan
+      searchPlan,
+      moderation
     };
   }
 

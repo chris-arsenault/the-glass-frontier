@@ -8,6 +8,9 @@ const {
   delta: { WorldDeltaQueue },
   publishing: { PublishingCoordinator }
 } = require("../src/offline");
+const {
+  summarizeModeration
+} = require("../src/offline/moderation/moderationSummary");
 
 function isSessionArtifactFile(filePath) {
   const base = path.basename(filePath);
@@ -131,14 +134,12 @@ function collectSafetyEvents(sessionState = {}) {
     }));
 }
 
-function composeQaResult({
-  sessionId,
-  summaryRecord,
-  mentions,
-  deltas,
-  publishingPlan,
-  searchPlan
-}) {
+function composeQaResult({ sessionId, summaryRecord, mentions, deltas, publishingPlan }) {
+  const moderationSummary = publishingPlan?.moderation || summarizeModeration(deltas);
+  const publishingStatus =
+    publishingPlan?.status ||
+    (moderationSummary.requiresModeration ? "awaiting_moderation" : "ready");
+
   return {
     sessionId,
     generatedAt: new Date().toISOString(),
@@ -152,51 +153,14 @@ function composeQaResult({
       deltas
     },
     publishing: {
-      schedule: publishingPlan.schedule,
-      preparedBatch: publishingPlan.publishing,
-      searchPlan
+      status: publishingStatus,
+      schedule: publishingPlan?.schedule || null,
+      preparedBatch: publishingPlan?.publishing || null,
+      searchPlan: publishingPlan?.searchPlan || null,
+      moderation: moderationSummary
     },
-    moderation: summarizeModeration(deltas)
+    moderation: moderationSummary
   };
-}
-
-function summarizeModeration(deltas = []) {
-  const summary = {
-    requiresModeration: false,
-    reasons: [],
-    capabilityViolations: 0,
-    conflictDetections: 0,
-    lowConfidenceFindings: 0
-  };
-
-  const reasonSet = new Set();
-
-  deltas.forEach((delta) => {
-    if (!delta || !delta.safety) {
-      return;
-    }
-
-    if (delta.safety.requiresModeration) {
-      summary.requiresModeration = true;
-    }
-
-    const reasons = Array.isArray(delta.safety.reasons) ? delta.safety.reasons : [];
-    reasons.forEach((reason) => {
-      reasonSet.add(reason);
-      if (reason === "capability_violation") {
-        summary.capabilityViolations += 1;
-      }
-      if (reason === "conflict_detected") {
-        summary.conflictDetections += 1;
-      }
-      if (reason === "low_confidence") {
-        summary.lowConfidenceFindings += 1;
-      }
-    });
-  });
-
-  summary.reasons = Array.from(reasonSet).sort();
-  return summary;
 }
 
 function resolveInputTargets(inputPath) {
@@ -333,8 +297,7 @@ async function executeOfflineQa(options) {
     summaryRecord,
     mentions,
     deltas,
-    publishingPlan,
-    searchPlan: publishingPlan.searchPlan
+    publishingPlan
   });
 
   return qaResult;
@@ -357,13 +320,20 @@ async function main() {
       );
       fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
 
-      const moderationSummary = result.moderation || summarizeModeration(result.worldDeltas?.deltas);
+      const moderationSummary =
+        result.publishing?.moderation ||
+        result.moderation ||
+        summarizeModeration(result.worldDeltas?.deltas);
       const summary = {
         sessionId: result.sessionId,
         sceneCount: result.summary.sceneBreakdown?.length || 0,
         mentionCount: result.entityExtraction.mentionCount,
         deltaCount: result.worldDeltas.deltaCount,
-        batchId: result.publishing.preparedBatch?.batchId || null,
+        publishingStatus: result.publishing.status || "unknown",
+        batchId:
+          result.publishing.preparedBatch?.batchId ||
+          result.publishing.schedule?.batches?.[0]?.batchId ||
+          null,
         scheduledRun:
           result.publishing.preparedBatch?.scheduledAt ||
           result.publishing.schedule?.batches?.[0]?.runAt ||
@@ -428,6 +398,5 @@ module.exports = {
   collectSafetyEvents,
   buildSessionMetadata,
   resolveInputTargets,
-  composeBatchRollup,
-  summarizeModeration
+  composeBatchRollup
 };

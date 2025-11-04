@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-delta",
-  "generatedAt": "2025-11-04T05:35:53.748Z",
+  "generatedAt": "2025-11-04T05:51:46.390Z",
   "summary": {
     "sessionId": "qa-batch-delta",
     "version": 1,
@@ -152,7 +152,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T05:35:53.746Z",
+    "generatedAt": "2025-11-04T05:51:46.389Z",
     "statistics": {
       "turnCount": 6,
       "sceneCount": 6,
@@ -167,7 +167,7 @@
     "mentionCount": 3,
     "mentions": [
       {
-        "mentionId": "33ea8c6d-1df2-4e00-9031-16568f37de9d",
+        "mentionId": "b233707d-fadb-41ce-a5ef-f980acec0133",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -197,7 +197,7 @@
         }
       },
       {
-        "mentionId": "6e083763-ba0a-4fb5-9bf4-fcd6311b2999",
+        "mentionId": "ae2acdd3-ecb4-4058-b0e7-99791dc7050f",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -227,7 +227,7 @@
         }
       },
       {
-        "mentionId": "073e423f-818d-4f77-9fd0-c049bd9b437d",
+        "mentionId": "6524614c-9fdc-42c0-a5c1-5a8535c63af0",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -262,7 +262,7 @@
     "deltaCount": 3,
     "deltas": [
       {
-        "deltaId": "d9537d7d-02da-4cb5-a91f-988aa370a72b",
+        "deltaId": "654df689-b7a6-458f-b3e9-d6ffeea882fd",
         "entityId": "faction.tempered-accord",
         "entityType": "faction",
         "canonicalName": "Tempered Accord Custodial Council",
@@ -304,10 +304,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:35:53.747Z"
+        "createdAt": "2025-11-04T05:51:46.390Z"
       },
       {
-        "deltaId": "e9374f14-1c5d-4abe-95f3-4418101accb1",
+        "deltaId": "54aee50b-3b5a-47a1-a5ea-4d74b184993f",
         "entityId": "region.sable-crescent",
         "entityType": "region",
         "canonicalName": "Sable Crescent Basin",
@@ -349,10 +349,10 @@
           "confidence": "low"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:35:53.747Z"
+        "createdAt": "2025-11-04T05:51:46.390Z"
       },
       {
-        "deltaId": "945deb09-f2f4-4119-9339-e3b42234d3e8",
+        "deltaId": "744fba21-e1f8-427e-aac1-f4147a6d9184",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -394,11 +394,12 @@
           "confidence": "high"
         },
         "status": "pending",
-        "createdAt": "2025-11-04T05:35:53.747Z"
+        "createdAt": "2025-11-04T05:51:46.390Z"
       }
     ]
   },
   "publishing": {
+    "status": "awaiting_moderation",
     "schedule": {
       "sessionClosedAt": "2025-11-05T06:30:00.000Z",
       "moderation": {
@@ -415,9 +416,9 @@
           "batchId": "qa-batch-delta-batch-0",
           "type": "hourly",
           "runAt": "2025-11-05T07:30:00.000Z",
-          "status": "ready",
-          "preparedAt": "2025-11-04T05:35:53.747Z",
-          "deltaCount": 3
+          "status": "awaiting_moderation",
+          "deltaCount": 3,
+          "notes": "moderation_gate_pending"
         }
       ],
       "digest": {
@@ -426,13 +427,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-delta",
-      "stateId": "1053efed-7fb8-4744-b1a6-a67917ed983d",
-      "createdAt": "2025-11-04T05:35:53.747Z",
-      "updatedAt": "2025-11-04T05:35:53.748Z",
+      "stateId": "e7256f5f-21c4-4679-bcae-c700083dd218",
+      "createdAt": "2025-11-04T05:51:46.390Z",
+      "updatedAt": "2025-11-04T05:51:46.390Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T05:35:53.747Z",
+          "occurredAt": "2025-11-04T05:51:46.390Z",
           "payload": {
             "sessionClosedAt": "2025-11-05T06:30:00.000Z",
             "moderationStartAt": "2025-11-05T06:45:00.000Z",
@@ -442,350 +443,31 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T05:35:53.748Z",
+          "occurredAt": "2025-11-04T05:51:46.390Z",
           "payload": {
             "batchId": "qa-batch-delta-batch-0",
-            "status": "ready",
+            "status": "awaiting_moderation",
             "metadata": {
-              "preparedAt": "2025-11-04T05:35:53.747Z",
-              "deltaCount": 3
+              "deltaCount": 3,
+              "notes": "moderation_gate_pending"
             }
           }
         }
       ]
     },
-    "preparedBatch": {
-      "preparedAt": "2025-11-04T05:35:53.747Z",
-      "loreBundles": [
-        {
-          "bundleId": "bundle-faction.tempered-accord-5292665a",
-          "entityId": "faction.tempered-accord",
-          "entityType": "faction",
-          "canonicalName": "Tempered Accord Custodial Council",
-          "entityRefs": [
-            "faction.tempered-accord"
-          ],
-          "summaryMarkdown": "### Tempered Accord Custodial Council\n- lore bundle updated",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "preparedAt": "2025-11-04T05:35:53.747Z",
-          "revisions": [
-            {
-              "version": 1,
-              "deltaId": "d9537d7d-02da-4cb5-a91f-988aa370a72b",
-              "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:35:53.747Z"
-            }
-          ],
-          "provenance": {
-            "sessionId": "qa-batch-delta",
-            "moderationDecisionId": null,
-            "deltaIds": [
-              "d9537d7d-02da-4cb5-a91f-988aa370a72b"
-            ]
-          },
-          "safetyTags": [
-            "capability_violation",
-            "moderation_required"
-          ],
-          "status": "ready"
-        },
-        {
-          "bundleId": "bundle-region.sable-crescent-aef9727d",
-          "entityId": "region.sable-crescent",
-          "entityType": "region",
-          "canonicalName": "Sable Crescent Basin",
-          "entityRefs": [
-            "region.sable-crescent"
-          ],
-          "summaryMarkdown": "### Sable Crescent Basin\n- lore bundle updated",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "preparedAt": "2025-11-04T05:35:53.747Z",
-          "revisions": [
-            {
-              "version": 1,
-              "deltaId": "e9374f14-1c5d-4abe-95f3-4418101accb1",
-              "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:35:53.747Z"
-            }
-          ],
-          "provenance": {
-            "sessionId": "qa-batch-delta",
-            "moderationDecisionId": null,
-            "deltaIds": [
-              "e9374f14-1c5d-4abe-95f3-4418101accb1"
-            ]
-          },
-          "safetyTags": [
-            "capability_violation",
-            "moderation_required"
-          ],
-          "status": "ready"
-        },
-        {
-          "bundleId": "bundle-artifact.spectrum-bloom-array-fd569a5f",
-          "entityId": "artifact.spectrum-bloom-array",
-          "entityType": "artifact",
-          "canonicalName": "Spectrum Bloom Flux Array",
-          "entityRefs": [
-            "artifact.spectrum-bloom-array"
-          ],
-          "summaryMarkdown": "### Spectrum Bloom Flux Array\n- lore bundle updated",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "preparedAt": "2025-11-04T05:35:53.747Z",
-          "revisions": [
-            {
-              "version": 1,
-              "deltaId": "945deb09-f2f4-4119-9339-e3b42234d3e8",
-              "editor": "qa.offline",
-              "appliedAt": "2025-11-04T05:35:53.747Z"
-            }
-          ],
-          "provenance": {
-            "sessionId": "qa-batch-delta",
-            "moderationDecisionId": null,
-            "deltaIds": [
-              "945deb09-f2f4-4119-9339-e3b42234d3e8"
-            ]
-          },
-          "safetyTags": [
-            "capability_violation",
-            "moderation_required"
-          ],
-          "status": "ready"
-        }
-      ],
-      "newsCards": [
-        {
-          "cardId": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
-          "headline": "Tempered Accord Custodial Council update",
-          "lead": "lore bundle updated",
-          "factionTags": [
-            "faction.tempered-accord"
-          ],
-          "urgency": "high",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "expiresAt": "2026-02-03T07:30:00.000Z",
-          "cardType": "flash",
-          "provenanceRefs": [
-            "qa-batch-delta",
-            "d9537d7d-02da-4cb5-a91f-988aa370a72b"
-          ],
-          "safetyTags": [
-            "capability_violation",
-            "moderation_required"
-          ],
-          "ariaSummary": "Tempered Accord Custodial Council update: lore bundle updated"
-        },
-        {
-          "cardId": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
-          "headline": "Sable Crescent Basin update",
-          "lead": "lore bundle updated",
-          "factionTags": [],
-          "urgency": "high",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "expiresAt": "2026-02-03T07:30:00.000Z",
-          "cardType": "flash",
-          "provenanceRefs": [
-            "qa-batch-delta",
-            "e9374f14-1c5d-4abe-95f3-4418101accb1"
-          ],
-          "safetyTags": [
-            "capability_violation",
-            "moderation_required"
-          ],
-          "ariaSummary": "Sable Crescent Basin update: lore bundle updated"
-        },
-        {
-          "cardId": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
-          "headline": "Spectrum Bloom Flux Array update",
-          "lead": "lore bundle updated",
-          "factionTags": [],
-          "urgency": "high",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "expiresAt": "2026-02-03T07:30:00.000Z",
-          "cardType": "flash",
-          "provenanceRefs": [
-            "qa-batch-delta",
-            "945deb09-f2f4-4119-9339-e3b42234d3e8"
-          ],
-          "safetyTags": [
-            "capability_violation",
-            "moderation_required"
-          ],
-          "ariaSummary": "Spectrum Bloom Flux Array update: lore bundle updated"
-        }
-      ],
-      "overlayPayloads": [
-        {
-          "type": "overlay.loreLink",
-          "headline": "Tempered Accord Custodial Council update",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "urgency": "high",
-          "newsCardRef": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
-          "provenanceBadge": {
-            "label": "Lore Drop",
-            "context": "flash",
-            "severity": "warn"
-          }
-        },
-        {
-          "type": "overlay.loreLink",
-          "headline": "Sable Crescent Basin update",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "urgency": "high",
-          "newsCardRef": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
-          "provenanceBadge": {
-            "label": "Lore Drop",
-            "context": "flash",
-            "severity": "warn"
-          }
-        },
-        {
-          "type": "overlay.loreLink",
-          "headline": "Spectrum Bloom Flux Array update",
-          "publishAt": "2025-11-05T07:30:00.000Z",
-          "urgency": "high",
-          "newsCardRef": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
-          "provenanceBadge": {
-            "label": "Lore Drop",
-            "context": "flash",
-            "severity": "warn"
-          }
-        }
-      ]
-    },
+    "preparedBatch": null,
     "searchPlan": {
-      "jobs": [
-        {
-          "jobId": "index-lore-bundle-faction.tempered-accord-5292665a",
-          "index": "lore_bundles",
-          "documentId": "bundle-faction.tempered-accord-5292665a",
-          "type": "loreBundle",
-          "body": {
-            "bundleId": "bundle-faction.tempered-accord-5292665a",
-            "summaryMarkdown": "### Tempered Accord Custodial Council\n- lore bundle updated",
-            "entityId": "faction.tempered-accord",
-            "publishAt": "2025-11-05T07:30:00.000Z",
-            "safetyTags": [
-              "capability_violation",
-              "moderation_required"
-            ],
-            "provenance": {
-              "sessionId": "qa-batch-delta",
-              "moderationDecisionId": null,
-              "deltaIds": [
-                "d9537d7d-02da-4cb5-a91f-988aa370a72b"
-              ]
-            }
-          },
-          "expectedVersion": 1
-        },
-        {
-          "jobId": "index-lore-bundle-region.sable-crescent-aef9727d",
-          "index": "lore_bundles",
-          "documentId": "bundle-region.sable-crescent-aef9727d",
-          "type": "loreBundle",
-          "body": {
-            "bundleId": "bundle-region.sable-crescent-aef9727d",
-            "summaryMarkdown": "### Sable Crescent Basin\n- lore bundle updated",
-            "entityId": "region.sable-crescent",
-            "publishAt": "2025-11-05T07:30:00.000Z",
-            "safetyTags": [
-              "capability_violation",
-              "moderation_required"
-            ],
-            "provenance": {
-              "sessionId": "qa-batch-delta",
-              "moderationDecisionId": null,
-              "deltaIds": [
-                "e9374f14-1c5d-4abe-95f3-4418101accb1"
-              ]
-            }
-          },
-          "expectedVersion": 1
-        },
-        {
-          "jobId": "index-lore-bundle-artifact.spectrum-bloom-array-fd569a5f",
-          "index": "lore_bundles",
-          "documentId": "bundle-artifact.spectrum-bloom-array-fd569a5f",
-          "type": "loreBundle",
-          "body": {
-            "bundleId": "bundle-artifact.spectrum-bloom-array-fd569a5f",
-            "summaryMarkdown": "### Spectrum Bloom Flux Array\n- lore bundle updated",
-            "entityId": "artifact.spectrum-bloom-array",
-            "publishAt": "2025-11-05T07:30:00.000Z",
-            "safetyTags": [
-              "capability_violation",
-              "moderation_required"
-            ],
-            "provenance": {
-              "sessionId": "qa-batch-delta",
-              "moderationDecisionId": null,
-              "deltaIds": [
-                "945deb09-f2f4-4119-9339-e3b42234d3e8"
-              ]
-            }
-          },
-          "expectedVersion": 1
-        },
-        {
-          "jobId": "index-news-news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
-          "index": "news_cards",
-          "documentId": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
-          "type": "newsCard",
-          "body": {
-            "cardId": "news-d9537d7d-02da-4cb5-a91f-988aa370a72b",
-            "headline": "Tempered Accord Custodial Council update",
-            "lead": "lore bundle updated",
-            "publishAt": "2025-11-05T07:30:00.000Z",
-            "expiresAt": "2026-02-03T07:30:00.000Z",
-            "urgency": "high",
-            "safetyTags": [
-              "capability_violation",
-              "moderation_required"
-            ]
-          },
-          "expectedVersion": 1
-        },
-        {
-          "jobId": "index-news-news-e9374f14-1c5d-4abe-95f3-4418101accb1",
-          "index": "news_cards",
-          "documentId": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
-          "type": "newsCard",
-          "body": {
-            "cardId": "news-e9374f14-1c5d-4abe-95f3-4418101accb1",
-            "headline": "Sable Crescent Basin update",
-            "lead": "lore bundle updated",
-            "publishAt": "2025-11-05T07:30:00.000Z",
-            "expiresAt": "2026-02-03T07:30:00.000Z",
-            "urgency": "high",
-            "safetyTags": [
-              "capability_violation",
-              "moderation_required"
-            ]
-          },
-          "expectedVersion": 1
-        },
-        {
-          "jobId": "index-news-news-945deb09-f2f4-4119-9339-e3b42234d3e8",
-          "index": "news_cards",
-          "documentId": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
-          "type": "newsCard",
-          "body": {
-            "cardId": "news-945deb09-f2f4-4119-9339-e3b42234d3e8",
-            "headline": "Spectrum Bloom Flux Array update",
-            "lead": "lore bundle updated",
-            "publishAt": "2025-11-05T07:30:00.000Z",
-            "expiresAt": "2026-02-03T07:30:00.000Z",
-            "urgency": "high",
-            "safetyTags": [
-              "capability_violation",
-              "moderation_required"
-            ]
-          },
-          "expectedVersion": 1
-        }
-      ]
+      "jobs": [],
+      "status": "blocked"
+    },
+    "moderation": {
+      "requiresModeration": true,
+      "reasons": [
+        "capability_violation"
+      ],
+      "capabilityViolations": 3,
+      "conflictDetections": 0,
+      "lowConfidenceFindings": 0
     }
   },
   "moderation": {

@@ -4,11 +4,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const {
-  resolveInputTargets,
-  composeBatchRollup,
-  summarizeModeration
-} = require("../../scripts/runOfflinePublishingQa");
+const { resolveInputTargets, composeBatchRollup } = require("../../scripts/runOfflinePublishingQa");
+const { summarizeModeration } = require("../../src/offline/moderation/moderationSummary");
 
 describe("runOfflinePublishingQa helpers", () => {
   describe("resolveInputTargets", () => {

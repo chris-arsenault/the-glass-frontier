@@ -57,6 +57,8 @@ describe("PublishingCoordinator", () => {
     const batchId = schedule.batches[0].batchId;
 
     expect(schedule.batches[0].status).toBe("ready");
+    expect(preparation.status).toBe("ready");
+    expect(preparation.moderation.requiresModeration).toBe(false);
     expect(preparation.publishing.loreBundles).toHaveLength(1);
     expect(preparation.searchPlan.jobs).toHaveLength(2);
     expect(metrics.recordBatchPrepared).toHaveBeenCalled();
@@ -97,5 +99,44 @@ describe("PublishingCoordinator", () => {
     );
     expect(metrics.recordSearchDrift).not.toHaveBeenCalled();
     expect(publication.drifts).toHaveLength(0);
+  });
+
+  test("awaits moderation when deltas require approval", () => {
+    const { coordinator, metrics } = createCoordinator();
+    const delta = createDelta({
+      safety: {
+        requiresModeration: true,
+        reasons: ["capability_violation"]
+      }
+    });
+
+    const gated = coordinator.prepareBatch({
+      sessionId: "session-555",
+      sessionClosedAt,
+      deltas: [delta]
+    });
+
+    expect(gated.status).toBe("awaiting_moderation");
+    expect(gated.schedule.batches[0].status).toBe("awaiting_moderation");
+    expect(gated.publishing).toBeNull();
+    expect(gated.searchPlan.jobs).toHaveLength(0);
+    expect(gated.moderation.requiresModeration).toBe(true);
+    expect(gated.moderation.reasons).toContain("capability_violation");
+    expect(metrics.recordBatchPrepared).not.toHaveBeenCalled();
+    expect(metrics.recordSearchSyncPlanned).not.toHaveBeenCalled();
+
+    const approved = coordinator.prepareBatch({
+      sessionId: "session-555",
+      sessionClosedAt,
+      deltas: [delta],
+      moderationDecisionId: "mod-approval-01",
+      approvedBy: "admin.eira"
+    });
+
+    expect(approved.status).toBe("ready");
+    expect(approved.publishing.loreBundles).toHaveLength(1);
+    expect(approved.schedule.batches[0].status).toBe("ready");
+    expect(metrics.recordBatchPrepared).toHaveBeenCalledTimes(1);
+    expect(metrics.recordSearchSyncPlanned).toHaveBeenCalledTimes(1);
   });
 });

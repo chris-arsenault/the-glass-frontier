@@ -203,14 +203,21 @@ class ClosureWorkflowOrchestrator {
         deltas,
         approvedBy: "system.offline"
       });
+      const batchInfo =
+        (publishingPlan.schedule && Array.isArray(publishingPlan.schedule.batches)
+          ? publishingPlan.schedule.batches[0]
+          : null) || {};
+      const moderationSummary = publishingPlan.moderation || null;
 
       const completedJob = this.coordinator.completeJob(job.jobId, {
         summaryVersion: summaryRecord.version,
         mentionCount: mentions.length,
         deltaCount: deltas.length,
         publishing: {
-          batchId: publishingPlan.schedule?.batches?.[0]?.batchId || null,
-          scheduledAt: publishingPlan.schedule?.batches?.[0]?.runAt || null
+          batchId: batchInfo.batchId || null,
+          scheduledAt: batchInfo.runAt || null,
+          status: publishingPlan.status || null,
+          moderation: moderationSummary
         },
         searchJobs: publishingPlan.searchPlan?.jobs || []
       });
@@ -229,7 +236,15 @@ class ClosureWorkflowOrchestrator {
         summaryVersion: summaryRecord.version,
         mentionCount: mentions.length,
         deltaCount: deltas.length,
-        publishingBatchId: publishingPlan.schedule?.batches?.[0]?.batchId || null
+        publishingBatchId: batchInfo.batchId || null,
+        publishingStatus: publishingPlan.status || null,
+        requiresModeration: Boolean(moderationSummary?.requiresModeration),
+        moderationReasons: Array.isArray(moderationSummary?.reasons)
+          ? moderationSummary.reasons
+          : [],
+        moderationCapabilityViolations: moderationSummary?.capabilityViolations || 0,
+        moderationConflictDetections: moderationSummary?.conflictDetections || 0,
+        moderationLowConfidence: moderationSummary?.lowConfidenceFindings || 0
       });
 
       this.sessionMemory.markOfflineReconciled(job.sessionId, {

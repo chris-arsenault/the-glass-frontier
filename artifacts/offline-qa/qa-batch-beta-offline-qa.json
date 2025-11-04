@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-beta",
-  "generatedAt": "2025-11-04T05:35:53.746Z",
+  "generatedAt": "2025-11-04T05:51:46.389Z",
   "summary": {
     "sessionId": "qa-batch-beta",
     "version": 1,
@@ -253,7 +253,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T05:35:53.745Z",
+    "generatedAt": "2025-11-04T05:51:46.388Z",
     "statistics": {
       "turnCount": 11,
       "sceneCount": 11,
@@ -273,6 +273,7 @@
     "deltas": []
   },
   "publishing": {
+    "status": "ready",
     "schedule": {
       "sessionClosedAt": "2025-11-04T05:26:28.981Z",
       "moderation": {
@@ -290,7 +291,7 @@
           "type": "hourly",
           "runAt": "2025-11-04T06:26:28.981Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T05:35:53.746Z",
+          "preparedAt": "2025-11-04T05:51:46.389Z",
           "deltaCount": 0
         }
       ],
@@ -300,13 +301,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-beta",
-      "stateId": "4b468bc6-3455-4a26-9e18-3ff0c29eaf73",
-      "createdAt": "2025-11-04T05:35:53.746Z",
-      "updatedAt": "2025-11-04T05:35:53.746Z",
+      "stateId": "b8c04afb-c989-471a-8507-1fa3beec10f8",
+      "createdAt": "2025-11-04T05:51:46.389Z",
+      "updatedAt": "2025-11-04T05:51:46.389Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T05:35:53.746Z",
+          "occurredAt": "2025-11-04T05:51:46.389Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T05:26:28.981Z",
             "moderationStartAt": "2025-11-04T05:41:28.981Z",
@@ -316,12 +317,12 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T05:35:53.746Z",
+          "occurredAt": "2025-11-04T05:51:46.389Z",
           "payload": {
             "batchId": "qa-batch-beta-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T05:35:53.746Z",
+              "preparedAt": "2025-11-04T05:51:46.389Z",
               "deltaCount": 0
             }
           }
@@ -329,13 +330,21 @@
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T05:35:53.746Z",
+      "preparedAt": "2025-11-04T05:51:46.389Z",
       "loreBundles": [],
       "newsCards": [],
       "overlayPayloads": []
     },
     "searchPlan": {
-      "jobs": []
+      "jobs": [],
+      "status": "ready"
+    },
+    "moderation": {
+      "requiresModeration": false,
+      "reasons": [],
+      "capabilityViolations": 0,
+      "conflictDetections": 0,
+      "lowConfidenceFindings": 0
     }
   },
   "moderation": {

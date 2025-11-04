@@ -689,6 +689,21 @@ class SessionMemoryFacade {
         typeof run.mentionCount === "number" ? run.mentionCount : null,
       deltaCount: typeof run.deltaCount === "number" ? run.deltaCount : null,
       publishingBatchId: run.publishingBatchId || null,
+      publishingStatus: run.publishingStatus || null,
+      requiresModeration: Boolean(run.requiresModeration),
+      moderationReasons: Array.isArray(run.moderationReasons)
+        ? [...run.moderationReasons]
+        : [],
+      moderationCapabilityViolations:
+        typeof run.moderationCapabilityViolations === "number"
+          ? run.moderationCapabilityViolations
+          : 0,
+      moderationConflictDetections:
+        typeof run.moderationConflictDetections === "number"
+          ? run.moderationConflictDetections
+          : 0,
+      moderationLowConfidence:
+        typeof run.moderationLowConfidence === "number" ? run.moderationLowConfidence : 0,
       error: run.error || null
     };
 
