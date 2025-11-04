@@ -1,8 +1,15 @@
 "use strict";
 
+const { ContestMetrics } = require("../../telemetry/contestMetrics");
+
 class HubTelemetry {
-  constructor({ emitter } = {}) {
+  constructor({ emitter, contestMetrics, clock = Date } = {}) {
     this.emitter = emitter || null;
+    this.metrics =
+      contestMetrics ||
+      new ContestMetrics({
+        clock
+      });
   }
 
   emit(topic, payload) {
@@ -37,7 +44,15 @@ class HubTelemetry {
     this.emit("telemetry.hub.narrativeEscalation", { hubId, roomId, actorId, verbId });
   }
 
-  recordNarrativeDelivered({ hubId, roomId, actorId, verbId, auditRef, contested, safetyEscalated }) {
+  recordNarrativeDelivered({
+    hubId,
+    roomId,
+    actorId,
+    verbId,
+    auditRef,
+    contested,
+    safetyEscalated
+  }) {
     this.emit("telemetry.hub.narrativeDelivered", {
       hubId,
       roomId,
@@ -130,50 +145,109 @@ class HubTelemetry {
   }
 
   recordContestArmed({ hubId, roomId, contestKey, participantCount }) {
-    this.emit("telemetry.hub.contestArmed", {
+    const payload = {
       hubId,
       roomId,
       contestKey,
       participantCount
-    });
+    };
+    this.emit("telemetry.hub.contestArmed", payload);
+    if (this.metrics && typeof this.metrics.recordArmed === "function") {
+      this.metrics.recordArmed(payload);
+    }
   }
 
-  recordContestLaunched({ hubId, roomId, contestId, contestKey, participantCount }) {
-    this.emit("telemetry.hub.contestLaunched", {
+  recordContestLaunched({
+    hubId,
+    roomId,
+    contestId,
+    contestKey,
+    participantCount,
+    participantCapacity,
+    createdAt,
+    startedAt,
+    label,
+    move,
+    type
+  }) {
+    const payload = {
       hubId,
       roomId,
       contestId,
       contestKey,
-      participantCount
-    });
+      participantCount,
+      participantCapacity,
+      createdAt,
+      startedAt,
+      label,
+      move,
+      type
+    };
+    this.emit("telemetry.hub.contestLaunched", payload);
+    if (this.metrics && typeof this.metrics.recordLaunched === "function") {
+      this.metrics.recordLaunched(payload);
+    }
   }
 
-  recordContestWorkflowStarted({ hubId, roomId, contestId, workflowId, runId }) {
-    this.emit("telemetry.hub.contestWorkflowStarted", {
+  recordContestWorkflowStarted({ hubId, roomId, contestId, contestKey, workflowId, runId }) {
+    const payload = {
       hubId,
       roomId,
       contestId,
+      contestKey,
       workflowId,
       runId
-    });
+    };
+    this.emit("telemetry.hub.contestWorkflowStarted", payload);
+    if (this.metrics && typeof this.metrics.recordWorkflowStarted === "function") {
+      this.metrics.recordWorkflowStarted(payload);
+    }
   }
 
-  recordContestWorkflowFailed({ hubId, roomId, contestId, error }) {
-    this.emit("telemetry.hub.contestWorkflowFailed", {
+  recordContestWorkflowFailed({ hubId, roomId, contestId, contestKey, error }) {
+    const payload = {
       hubId,
       roomId,
       contestId,
+      contestKey,
       error
-    });
+    };
+    this.emit("telemetry.hub.contestWorkflowFailed", payload);
+    if (this.metrics && typeof this.metrics.recordWorkflowFailed === "function") {
+      this.metrics.recordWorkflowFailed(payload);
+    }
   }
 
-  recordContestResolved({ hubId, roomId, contestId, outcome }) {
-    this.emit("telemetry.hub.contestResolved", {
+  recordContestResolved({
+    hubId,
+    roomId,
+    contestId,
+    contestKey,
+    outcome,
+    resolvedAt,
+    startedAt,
+    createdAt,
+    participantCount,
+    participantCapacity,
+    sharedComplicationCount
+  }) {
+    const payload = {
       hubId,
       roomId,
       contestId,
-      outcome
-    });
+      contestKey,
+      outcome,
+      resolvedAt,
+      startedAt,
+      createdAt,
+      participantCount,
+      participantCapacity,
+      sharedComplicationCount
+    };
+    this.emit("telemetry.hub.contestResolved", payload);
+    if (this.metrics && typeof this.metrics.recordResolved === "function") {
+      this.metrics.recordResolved(payload);
+    }
   }
 }
 

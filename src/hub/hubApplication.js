@@ -85,7 +85,7 @@ function createHubApplication({
     commandParser = new CommandParser({ verbCatalog: fallbackCatalog, rateLimiter, clock });
   }
 
-  const telemetry = new HubTelemetry({ emitter: telemetryEmitter });
+  const telemetry = new HubTelemetry({ emitter: telemetryEmitter, clock });
   const narrativeBridge = narrativeEngine
     ? new HubNarrativeBridge({ narrativeEngine, stateStore: roomStateStore, clock })
     : null;

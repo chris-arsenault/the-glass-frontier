@@ -40,3 +40,4 @@
 - Instrument the live Temporal deployment to emit the same latency histograms and queue depth gauges, validating these findings against real Nomad worker CPU usage.
 - Extend the harness with Temporal workflow stubs once infrastructure (IMP-IAC-01) is credentialled, ensuring activity heartbeat latency is captured alongside pure resolution time.
 - Feed the benchmark summary into DES-19 scaling topology and update Alertmanager templates with the recommended soft-warning threshold.
+- Mirror contested workflow monitoring with `npm run monitor:contests` so hub PvP telemetry shares the same DES-BENCH-01 thresholds (arming ≤8s p95, resolution ≤800 ms p95) and surfaces multi-actor demand trends.

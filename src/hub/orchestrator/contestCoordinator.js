@@ -67,9 +67,12 @@ class ContestCoordinator {
       move: pending.move,
       label: pending.label,
       checkTemplate: pending.checkTemplate,
+      participantCapacity: pending.participantCapacity || null,
       moderationTags: pending.moderationTags,
       sharedComplicationTags: pending.sharedComplicationTags,
       participants,
+      createdAt: pending.createdAt,
+      expiresAt: pending.expiresAt,
       startedAt: now
     };
 
@@ -84,6 +87,8 @@ class ContestCoordinator {
       move: pending.move,
       checkTemplate: pending.checkTemplate,
       sessionId: entry.metadata?.sessionId || null,
+      participantCapacity: pending.participantCapacity || null,
+      createdAt: pending.createdAt,
       participants: participants.map((participantEntry) => ({
         actorId: participantEntry.actorId,
         role: participantEntry.role,
@@ -155,6 +160,12 @@ class ContestCoordinator {
       move: contestMetadata.move,
       label: contestMetadata.label,
       checkTemplate: contestMetadata.checkTemplate,
+      participantCapacity:
+        typeof contestMetadata.maxParticipants === "number" &&
+        Number.isFinite(contestMetadata.maxParticipants) &&
+        contestMetadata.maxParticipants >= 2
+          ? Math.floor(contestMetadata.maxParticipants)
+          : null,
       moderationTags: Array.isArray(contestMetadata.moderationTags)
         ? [...new Set(contestMetadata.moderationTags)]
         : [],
@@ -254,6 +265,7 @@ class ContestCoordinator {
       roomId: pending.roomId || null,
       expiresAt: pending.expiresAt,
       createdAt: pending.createdAt,
+      participantCapacity: pending.participantCapacity || null,
       moderationTags: Array.isArray(pending.moderationTags)
         ? [...pending.moderationTags]
         : [],
@@ -282,6 +294,9 @@ class ContestCoordinator {
       hubId: activeRecord.hubId || null,
       roomId: activeRecord.roomId || null,
       startedAt: activeRecord.startedAt,
+      createdAt: activeRecord.createdAt || null,
+      expiresAt: activeRecord.expiresAt || null,
+      participantCapacity: activeRecord.participantCapacity || null,
       moderationTags: Array.isArray(activeRecord.moderationTags)
         ? [...activeRecord.moderationTags]
         : [],
@@ -311,10 +326,13 @@ class ContestCoordinator {
       roomId: resolvedRecord.roomId || null,
       startedAt: resolvedRecord.startedAt,
       resolvedAt: resolvedRecord.resolvedAt,
+      createdAt: resolvedRecord.createdAt || null,
+      expiresAt: resolvedRecord.expiresAt || null,
       outcome: resolvedRecord.outcome || null,
       sharedComplications: Array.isArray(resolvedRecord.sharedComplications)
         ? resolvedRecord.sharedComplications.map((entry) => clone(entry))
         : [],
+      participantCapacity: resolvedRecord.participantCapacity || null,
       moderationTags: Array.isArray(resolvedRecord.moderationTags)
         ? [...resolvedRecord.moderationTags]
         : [],

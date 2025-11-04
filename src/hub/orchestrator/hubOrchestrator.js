@@ -387,7 +387,13 @@ class HubOrchestrator extends EventEmitter {
             hubId: entry.hubId,
             roomId: entry.roomId,
             contestKey: registration.contestKey,
-            participantCount: registration.state?.participants?.length || 1
+            participantCount: registration.state?.participants?.length || 1,
+            participantCapacity: registration.state?.participantCapacity || null,
+            createdAt: registration.state?.createdAt || issuedAt,
+            expiresAt: registration.state?.expiresAt || null,
+            label: registration.state?.label || null,
+            move: registration.state?.move || null,
+            type: registration.state?.type || null
           });
         }
         return registration;
@@ -400,7 +406,13 @@ class HubOrchestrator extends EventEmitter {
             roomId: entry.roomId,
             contestId: registration.contestId,
             contestKey: registration.contestKey,
-            participantCount: registration.state?.participants?.length || 0
+            participantCount: registration.state?.participants?.length || 0,
+            participantCapacity: registration.state?.participantCapacity || null,
+            createdAt: registration.state?.createdAt || null,
+            startedAt: registration.state?.startedAt || issuedAt,
+            label: registration.state?.label || null,
+            move: registration.state?.move || null,
+            type: registration.state?.type || null
           });
         }
         const workflow = await this._startContestWorkflow(registration.bundle);
@@ -439,6 +451,7 @@ class HubOrchestrator extends EventEmitter {
           hubId: bundle.hubId,
           roomId: bundle.roomId,
           contestId: bundle.contestId,
+          contestKey: bundle.contestKey || null,
           workflowId: result?.workflowId || null,
           runId: result?.runId || null
         });
@@ -453,6 +466,7 @@ class HubOrchestrator extends EventEmitter {
           hubId: bundle.hubId,
           roomId: bundle.roomId,
           contestId: bundle.contestId,
+          contestKey: bundle.contestKey || null,
           error: error?.message || "workflow_failed"
         });
       }
@@ -556,7 +570,18 @@ class HubOrchestrator extends EventEmitter {
         hubId,
         roomId,
         contestId: contestState.contestId,
-        outcome: contestState.outcome || null
+        contestKey: contestState.contestKey || null,
+        outcome: contestState.outcome || null,
+        resolvedAt: contestState.resolvedAt || null,
+        startedAt: contestState.startedAt || null,
+        createdAt: contestState.createdAt || null,
+        participantCount: Array.isArray(contestState.participants)
+          ? contestState.participants.length
+          : null,
+        participantCapacity: contestState.participantCapacity || null,
+        sharedComplicationCount: Array.isArray(contestState.sharedComplications)
+          ? contestState.sharedComplications.length
+          : 0
       });
     } catch (error) {
       this.emit("processingError", {
