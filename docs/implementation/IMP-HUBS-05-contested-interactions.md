@@ -23,6 +23,7 @@
 ## Monitoring & Benchmarking
 - Contest telemetry now emits structured JSON log lines (`telemetry.contest.armed|launched|resolved`) carrying arming/resolve durations, participant counts, and moderation context.
 - Run `npm run monitor:contests -- --input <telemetry-log.ndjson|timeline.json|summary.json>` to summarise p50/p95 arming and resolution latency against the DES-BENCH-01 targets (arming ≤8,000 ms p95, resolution ≤800 ms p95) and to track multi-actor demand via participant counts. The CLI now accepts the sparring artefact (`artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json`) and its generated summary (`artifacts/hub/contest-moderation-summary-2025-11-04T08-30-00Z.json`).
+- Latest load telemetry captured on 2025-11-04 (`artifacts/hub/contest-moderation-load-2025-11-04T09-32-50.395Z.ndjson`) covers four contests and surfaced p95 breaches (`arming` 9,200 ms, `resolution` 930 ms) via the generated summary (`artifacts/hub/contest-moderation-summary-2025-11-04T09-32-50.395Z.json`). Multi-actor demand (3 participants, capacity 4) now has real samples for DES-BENCH-01 review.
 - Generated summaries should accompany moderation dashboard runs so `IMP-MOD-01` can ingest both lifecycle artefacts and latency health checks without additional transformation.
 
 ## Testing
@@ -33,6 +34,7 @@
 
 ## Next Steps & Risks
 - Execute `npm run monitor:contests` during hub load exercises to collect latency samples against DES-BENCH-01 budgets; adjust contest windows if p95 breaches persist once real data lands.
+- Investigate the 9.2 s arming and 930 ms resolution outliers from the 2025-11-04 telemetry run, tuning contest windows or Temporal workflow pacing before lifting PvP caps.
 - Share refreshed CLI summaries with `IMP-MOD-01` SMEs and fold dashboard feedback into moderation UX/polish workstreams.
 - Evaluate demand for multi-actor skirmishes; if required, extend contest key generation to support >2 participants without fragmenting registration windows.
 

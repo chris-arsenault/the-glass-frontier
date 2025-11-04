@@ -1,13 +1,13 @@
 # Backlog Snapshot
 
-Updated for Session 91 grooming. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
+Updated for Session 98 contested telemetry run. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | in-progress | P1 | Await MinIO/Backblaze credentials to re-run `npm run offline:qa`, capture drift simulation outputs, and export overlay evidence with IMP-CLIENT-06. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | blocked | P1 | SME sign-off pending; keep `npm run stage:smoke` / `npm run stage:alerts` telemetry current and sync with offline QA artifacts. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest telemetry + CLI summaries now feed moderation dashboards (artefacts in `artifacts/hub/`); capture fresh load-run samples to validate DES-BENCH-01 latency and multi-actor demand. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Load telemetry (2025-11-04T09:32Z) logged four contests; p95 arming 9.2 s and resolution 930 ms breach DES-BENCH-01 budgets—tune contest windows/Temporal pacing and capture follow-up samples. |
 
 ## Tier 2 (P2)
 | Feature | Item | Status | Priority | Notes |
