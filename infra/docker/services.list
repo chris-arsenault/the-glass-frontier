@@ -1,0 +1,6 @@
+langgraph:services/langgraph/index.js
+api-gateway:services/api-gateway/index.js
+hub-gateway:services/hub-gateway/index.js
+llm-proxy:services/llm-proxy/index.js
+temporal-worker:services/temporal-worker/index.js
+platform-tasks:scripts/minio/applyLifecycle.js

@@ -22,7 +22,8 @@
     "offline:qa": "node scripts/runOfflinePublishingQa.js",
     "stage:smoke": "node scripts/runStageSmoke.js",
     "stage:alerts": "node scripts/adminAlertStatus.js",
-    "docker:build:services": "bash infra/docker/build-services.sh"
+    "docker:build:services": "bash infra/docker/build-services.sh",
+    "docker:publish:services": "bash infra/docker/publish-services.sh"
   },
   "keywords": [
     "glass-frontier",

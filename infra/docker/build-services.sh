@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICE_LIST_FILE="${SERVICE_LIST_FILE:-${SCRIPT_DIR}/services.list}"
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "[build-services] docker command not found" >&2
   exit 1
@@ -23,11 +26,12 @@ Options:
   --registry <registry>  Override the registry prefix (default: ${REGISTRY})
   --push                 Push images after a successful build
   --platform <platform>  Pass --platform to docker build (e.g. linux/amd64)
+  --service-file <path>  Override the service definition list (default: ${SERVICE_LIST_FILE})
   --build-arg KEY=VALUE  Append additional build arguments (repeatable)
   -h, --help             Show this help message
 
 Environment variables:
-  TAG, REGISTRY, NODE_VERSION, DOCKERFILE, PUSH_IMAGES, PLATFORM
+  TAG, REGISTRY, NODE_VERSION, DOCKERFILE, PUSH_IMAGES, PLATFORM, SERVICE_LIST_FILE
 EOF
 }
 
@@ -50,6 +54,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --platform)
       PLATFORM="$2"
+      shift 2
+      ;;
+    --service-file)
+      SERVICE_LIST_FILE="$2"
       shift 2
       ;;
     --build-arg)
@@ -82,14 +90,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SERVICES=(
-  "langgraph:services/langgraph/index.js"
-  "api-gateway:services/api-gateway/index.js"
-  "hub-gateway:services/hub-gateway/index.js"
-  "llm-proxy:services/llm-proxy/index.js"
-  "temporal-worker:services/temporal-worker/index.js"
-  "platform-tasks:scripts/minio/applyLifecycle.js"
-)
+if [[ ! -f "${SERVICE_LIST_FILE}" ]]; then
+  echo "[build-services] Service definition file not found: ${SERVICE_LIST_FILE}" >&2
+  exit 1
+fi
+
+mapfile -t SERVICES < <(grep -v '^\s*#' "${SERVICE_LIST_FILE}" | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' | sed '/^$/d')
 
 echo "[build-services] Building services with tag ${TAG} (registry ${REGISTRY})"
 
