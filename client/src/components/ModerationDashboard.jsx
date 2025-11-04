@@ -213,10 +213,18 @@ export function ModerationDashboard() {
           <p>Live override queue, contest telemetry snapshots, and decision audit trail.</p>
         </div>
         <div className="moderation-dashboard-stats">
-          <span title="Live alerts">Live: {stats.live}</span>
-          <span title="Queued for follow-up">Queued: {stats.queued}</span>
-          <span title="Escalated to admins">Escalated: {stats.escalated}</span>
-          <span title="Resolved alerts">Resolved: {stats.resolved}</span>
+          <span title="Live alerts" data-testid="moderation-count-live">
+            Live: {stats.live}
+          </span>
+          <span title="Queued for follow-up" data-testid="moderation-count-queued">
+            Queued: {stats.queued}
+          </span>
+          <span title="Escalated to admins" data-testid="moderation-count-escalated">
+            Escalated: {stats.escalated}
+          </span>
+          <span title="Resolved alerts" data-testid="moderation-count-resolved">
+            Resolved: {stats.resolved}
+          </span>
         </div>
         <button type="button" onClick={loadAlerts} className="moderation-refresh-button">
           Refresh
@@ -230,7 +238,11 @@ export function ModerationDashboard() {
       <div className="moderation-layout">
         <section className="moderation-columns" aria-label="Moderation alert columns">
           {STATUS_ORDER.map((status) => (
-            <div key={status} className={`moderation-column moderation-column-${status}`}>
+            <div
+              key={status}
+              className={`moderation-column moderation-column-${status}`}
+              data-testid={`moderation-column-${status}`}
+            >
               <h3>{STATUS_LABELS[status]}</h3>
               {loading && alerts.length === 0 ? (
                 <p className="moderation-empty">Loading…</p>
@@ -244,6 +256,7 @@ export function ModerationDashboard() {
                           alert.id === selectedAlertId ? " moderation-alert-button-active" : ""
                         }`}
                         onClick={() => setSelectedAlertId(alert.id)}
+                        data-testid={`moderation-alert-${alert.id}`}
                       >
                         <span className="moderation-alert-reason">{alert.reason}</span>
                         <span className={`moderation-alert-severity severity-${alert.severity || "info"}`}>
@@ -270,7 +283,9 @@ export function ModerationDashboard() {
                 <span className={`moderation-alert-severity severity-${selectedAlert.severity || "info"}`}>
                   {selectedAlert.severity}
                 </span>
-                <span className="moderation-detail-status">Status: {selectedAlert.status}</span>
+                <span className="moderation-detail-status" data-testid="moderation-detail-status">
+                  Status: {selectedAlert.status}
+                </span>
               </header>
               <p className="moderation-detail-meta">
                 Session <strong>{selectedAlert.sessionId}</strong> • Created{" "}
@@ -343,16 +358,32 @@ export function ModerationDashboard() {
                         type="button"
                         onClick={() => applyDecision("approve")}
                         disabled={detailLoading}
+                        data-testid="moderation-decision-approve"
                       >
                         Approve
                       </button>
-                      <button type="button" onClick={() => applyDecision("amend")} disabled={detailLoading}>
+                      <button
+                        type="button"
+                        onClick={() => applyDecision("amend")}
+                        disabled={detailLoading}
+                        data-testid="moderation-decision-amend"
+                      >
                         Amend
                       </button>
-                      <button type="button" onClick={() => applyDecision("escalate")} disabled={detailLoading}>
+                      <button
+                        type="button"
+                        onClick={() => applyDecision("escalate")}
+                        disabled={detailLoading}
+                        data-testid="moderation-decision-escalate"
+                      >
                         Escalate
                       </button>
-                      <button type="button" onClick={() => applyDecision("pause")} disabled={detailLoading}>
+                      <button
+                        type="button"
+                        onClick={() => applyDecision("pause")}
+                        disabled={detailLoading}
+                        data-testid="moderation-decision-pause"
+                      >
                         Pause
                       </button>
                     </div>
