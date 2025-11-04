@@ -27,8 +27,33 @@ const {
 } = require("../hub");
 const { SessionClosureCoordinator } = require("../offline/sessionClosureCoordinator");
 const { ClosureWorkflowOrchestrator } = require("../offline/closureWorkflowOrchestrator");
+const { ModerationQueueStore } = require("../moderation/moderationQueueStore");
+const { PostgresPublishingStateStore } = require("../offline/publishing/postgresPublishingStateStore");
 
-const sessionMemory = new SessionMemoryFacade();
+let moderationPool = null;
+let moderationQueueStore = null;
+let publishingStateStore = null;
+
+const moderationDatabaseUrl =
+  process.env.MODERATION_DATABASE_URL ||
+  process.env.PUBLISHING_DATABASE_URL ||
+  process.env.MIGRATIONS_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  null;
+
+if (moderationDatabaseUrl) {
+  try {
+    moderationPool = new Pool({ connectionString: moderationDatabaseUrl });
+    moderationQueueStore = new ModerationQueueStore({ client: moderationPool });
+    publishingStateStore = new PostgresPublishingStateStore({ client: moderationPool });
+  } catch (error) {
+    log("error", "Failed to initialise moderation persistence stores", {
+      message: error.message
+    });
+  }
+}
+
+const sessionMemory = new SessionMemoryFacade({ moderationQueueStore });
 const checkBus = new CheckBus();
 const broadcaster = new Broadcaster();
 const narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
@@ -97,6 +122,7 @@ const app = createApp({
   checkBus,
   broadcaster,
   sessionMemory,
+  publishingStateStore,
   hubVerbService,
   offlineCoordinator: sessionClosureCoordinator
 });
@@ -174,9 +200,18 @@ checkBus.onModerationDecision((envelope) => {
 });
 
 const port = process.env.PORT || 3000;
-server.listen(port, () => {
-  log("info", "Narrative engine server listening", { port });
-});
+Promise.resolve()
+  .then(() => sessionMemory.hydrateModerationQueuesFromStore())
+  .catch((error) => {
+    if (error) {
+      log("error", "Failed to hydrate moderation queues on startup", { message: error.message });
+    }
+  })
+  .finally(() => {
+    server.listen(port, () => {
+      log("info", "Narrative engine server listening", { port });
+    });
+  });
 
 function shutdown() {
   log("info", "Shutting down narrative engine server");
@@ -184,6 +219,11 @@ function shutdown() {
   if (hubVerbPool) {
     hubVerbPool.end().catch((error) => {
       log("warn", "Failed to close hub verb pool", { error: error.message });
+    });
+  }
+  if (moderationPool) {
+    moderationPool.end().catch((error) => {
+      log("warn", "Failed to close moderation pool", { error: error.message });
     });
   }
   wss.close();

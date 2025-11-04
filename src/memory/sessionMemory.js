@@ -2,6 +2,7 @@
 
 const { clamp } = require("../utils/math");
 const { validateCapabilityRefs } = require("../moderation/prohibitedCapabilitiesRegistry");
+const { log } = require("../utils/logger");
 
 const ALLOWED_SHARDS = new Set(["character", "inventory", "relationships", "momentum"]);
 const CHANGE_FEED_LIMIT = 500;
@@ -160,8 +161,38 @@ function ensureModerationState(session) {
 }
 
 class SessionMemoryFacade {
-  constructor() {
+  constructor({ moderationQueueStore = null, clock = () => new Date() } = {}) {
     this.sessions = new Map();
+    this.moderationQueueStore = moderationQueueStore;
+    this.clock = clock;
+    this.hydratingModerationQueues = false;
+  }
+
+  async hydrateModerationQueuesFromStore() {
+    if (!this.moderationQueueStore) {
+      return;
+    }
+
+    this.hydratingModerationQueues = true;
+    try {
+      const records = await this.moderationQueueStore.listQueues();
+      for (const record of records) {
+        try {
+          this.recordModerationQueue(record.sessionId, record.state || {});
+        } catch (error) {
+          log("warn", "Failed to hydrate moderation queue entry", {
+            sessionId: record.sessionId,
+            message: error.message
+          });
+        }
+      }
+    } catch (error) {
+      log("error", "Failed to hydrate moderation queues from store", {
+        message: error.message
+      });
+    } finally {
+      this.hydratingModerationQueues = false;
+    }
   }
 
   ensureSession(sessionId) {
@@ -399,6 +430,7 @@ class SessionMemoryFacade {
     };
 
     session.updatedAt = generatedAt;
+    this.scheduleModerationPersist(sessionId, moderationState.queue);
     return clone(moderationState.queue);
   }
 
@@ -440,6 +472,7 @@ class SessionMemoryFacade {
     queue.updatedAt = updatedAt;
     session.updatedAt = updatedAt;
 
+    this.scheduleModerationPersist(sessionId, queue);
     return clone(next);
   }
 
@@ -464,7 +497,24 @@ class SessionMemoryFacade {
     moderationState.queue.cadence = cadenceState ? clone(cadenceState) : null;
     moderationState.queue.updatedAt = nowIso;
     session.updatedAt = nowIso;
+    this.scheduleModerationPersist(sessionId, moderationState.queue);
     return clone(moderationState.queue);
+  }
+
+  scheduleModerationPersist(sessionId, queueState) {
+    if (!this.moderationQueueStore || this.hydratingModerationQueues) {
+      return;
+    }
+
+    const payload = clone(queueState);
+    Promise.resolve()
+      .then(() => this.moderationQueueStore.saveQueue(sessionId, payload))
+      .catch((error) => {
+        log("error", "Failed to persist moderation queue state", {
+          sessionId,
+          message: error.message
+        });
+      });
   }
 
   listModerationQueues() {

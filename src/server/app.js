@@ -25,6 +25,7 @@ function createApp({
   sessionDirectory = null,
   offlineCoordinator = null,
   publishingCadence = null,
+  publishingStateStore = null,
   moderationService = null,
   clock = () => new Date(),
   seedAccounts = true
@@ -36,7 +37,8 @@ function createApp({
   const cadence =
     publishingCadence ||
     new PublishingCadence({
-      clock
+      clock,
+      stateStore: publishingStateStore || undefined
     });
 
   const directory =

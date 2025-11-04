@@ -11,6 +11,7 @@
 - Implemented `ModerationCadenceStrip` UI showing SLA countdowns, pending delta counts, and quick links to review alerts, ensuring admins see publishing blocks in real time.
 - Aggregated cadence data now groups blocking deltas by entity/reason and highlights capability flags so moderators can triage multi-delta sessions faster.
 - Added cadence override endpoint and admin strip controls so moderators can defer lore batches within DES-16 limits while session memory updates cadence state immediately.
+- Persisted moderation queue snapshots and publishing cadence schedules to PostgreSQL (`moderation_queue_state`, `publishing_cadence_state`) with automatic hydration on server startup when `MODERATION_DATABASE_URL` is configured.
 
 ## Code Surfaces
 | Path | Purpose |
@@ -29,5 +30,5 @@
 - Playwright: `npx playwright test tests/e2e/admin-moderation.spec.js`
 
 ## Follow-Ups
-1. Persist moderation queue/session cadence data to PostgreSQL and expose Temporal workflow hooks when infra credentials unblock platform rollout.
+1. Expose persisted cadence snapshots to Temporal moderation workflows once shared transport credentials unblock orchestration hooks.
 2. Deliver live socket updates for cadence strip once shared transport lands so polling can be removed.
