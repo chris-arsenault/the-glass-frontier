@@ -22,13 +22,13 @@ Use `REQUIREMENTS.md` as the reference point for user-defined goals so research 
 
 1. **Handoff Synchronization**  
    - Load the previous report with `mcp__game-mcp-server__fetch_handoff`.  
-   - Snapshot open research work by calling `mcp__game-mcp-server__get_top_backlog_items` (or `mcp__game-mcp-server__search_backlog_semantic` for scoped terms).
+   - Snapshot open research work by calling `mcp__game-mcp-server__get_top_backlog_items` (or `mcp__game-mcp-server__search_backlog_semantic` for scoped terms). Search/list calls now return partial records, so follow up by hydrating any candidate with `mcp__game-mcp-server__get_backlog_item` before making changes.
    - Revisit `REQUIREMENTS.md` to ensure current investigations cover the required gameplay, narrative, and technical surface area.
 
 2. **Backlog Orchestration**  
-   - Treat the research epic as an MCP **feature**: confirm `RES-CORE` exists via `mcp__game-mcp-server__list_features` (features are returned in priority order; when the current feature is finished, select the next one using that ordering), update its scope when necessary (`mcp__game-mcp-server__update_feature`), or create it before Session 1 (`mcp__game-mcp-server__create_feature`).  
+   - Treat the research epic as an MCP **feature**: confirm `RES-CORE` exists via `mcp__game-mcp-server__list_features` (features are returned in priority order but only as partial records; hydrate with `mcp__game-mcp-server__get_feature` before editing, and when the current feature is finished select the next one using that ordering), update its scope when necessary (`mcp__game-mcp-server__update_feature`), or create it before Session 1 (`mcp__game-mcp-server__create_feature`).  
    - Maintain the research epic `RES-CORE` with child stories `RES-01` … `RES-10` (tags: `phase:research`, `cycle:[#]`, `discipline:lore/market`), and ensure each PBI is attached to the feature using `mcp__game-mcp-server__assign_backlog_to_feature`.  
-   - At session start, move the relevant story to `in-progress` via `mcp__game-mcp-server__update_backlog_item` and append acceptance criteria to reflect the tasks listed in the Session Grid.  
+   - At session start, pull the full story with `mcp__game-mcp-server__get_backlog_item`, move it to `in-progress` via `mcp__game-mcp-server__update_backlog_item`, and append acceptance criteria to reflect the tasks listed in the Session Grid.  
    - Record intermediate insights as checklist items or notes; link external sources in the backlog item.
 
 3. **Execution & Knowledge Capture**  

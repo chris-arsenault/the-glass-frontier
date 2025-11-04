@@ -22,12 +22,12 @@ Always ground design choices in the baseline feature and technical commitments c
 
 1. **Continuity Check**
    - Import the latest handoff via `mcp__game-mcp-server__fetch_handoff`.  
-   - Enumerate design-stage workload with `mcp__game-mcp-server__search_backlog_by_tag` (`phase:design`) or `mcp__game-mcp-server__get_top_backlog_items`.
+   - Enumerate design-stage workload with `mcp__game-mcp-server__search_backlog_by_tag` (`phase:design`) or `mcp__game-mcp-server__get_top_backlog_items`. Search/list surfaces now provide partial records; hydrate any candidate stories with `mcp__game-mcp-server__get_backlog_item` before refining or updating them.
    - Re-read `REQUIREMENTS.md` to ensure the planned scope for the session aligns with user-provided requirements before drafting new artefacts.
 
 2. **Backlog Stewardship**
-   - Manage the design epic `DES-CORE` with child stories `DES-11` … `DES-20` (tags: `phase:design`, `discipline:systems/architecture`, `cycle:[#]`).  
-   - Enter each session by updating the relevant story to `in-progress`, attaching acceptance criteria mirroring the Session Grid tasks.  
+   - Manage the design epic `DES-CORE` with child stories `DES-11` … `DES-20` (tags: `phase:design`, `discipline:systems/architecture`, `cycle:[#]`). Confirm scope via `mcp__game-mcp-server__list_features` (returns priority-ordered but partial records—hydrate with `mcp__game-mcp-server__get_feature` before edits).  
+   - Enter each session by loading the full backlog story with `mcp__game-mcp-server__get_backlog_item`, updating it to `in-progress`, and attaching acceptance criteria mirroring the Session Grid tasks.  
   - Capture diagrams, schema drafts, and API sketches as attachments or links within the backlog notes.
 
 3. **Architecture Capturing**

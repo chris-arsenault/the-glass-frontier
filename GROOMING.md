@@ -30,8 +30,8 @@ Each grooming session operates over MCP tooling and internal data from prior ses
 
 * Query all existing features via:
 
-  * `mcp__game-mcp-server__list_features` (returns features in priority order so the next focus, once the current feature is finished, should follow that queue)
-  * `mcp__game-mcp-server__list_feature_backlog_items`
+  * `mcp__game-mcp-server__list_features` (returns features in priority order so the next focus, once the current feature is finished, should follow that queue; results are partial—hydrate targets with `mcp__game-mcp-server__get_feature`)
+  * `mcp__game-mcp-server__list_feature_backlog_items` (returns partial backlog entries—follow each ID with `mcp__game-mcp-server__get_backlog_item`)
 * Identify any features missing backlog links.
 * For each uncovered area of work (new system, design, or narrative topic), create new **features** using:
 
@@ -42,7 +42,7 @@ Each grooming session operates over MCP tooling and internal data from prior ses
 
 ### 2. Update Existing Backlog Items
 
-* Review all open PBIs. For each:
+* Review all open PBIs. For each (fetch the full record with `mcp__game-mcp-server__get_backlog_item` before editing):
 
   * Verify description accuracy and current status.
   * Update or refine with `mcp__game-mcp-server__update_feature` if the feature scope or summary has evolved.
