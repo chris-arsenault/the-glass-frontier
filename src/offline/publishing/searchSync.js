@@ -32,7 +32,7 @@ class SearchSyncPlanner {
     const drifts = [];
     jobResults.forEach((result) => {
       if (result.status !== "success") {
-        drifts.push({ ...result, reason: result.status });
+        drifts.push(normalizeDrift(result, result.status));
         this.metrics.recordSearchDrift({
           index: result.index,
           documentId: result.documentId,
@@ -49,7 +49,7 @@ class SearchSyncPlanner {
         typeof actualVersion === "number" &&
         expectedVersion !== actualVersion
       ) {
-        drifts.push({ ...result, reason: "version_mismatch" });
+        drifts.push(normalizeDrift(result, "version_mismatch"));
         this.metrics.recordSearchDrift({
           index: result.index,
           documentId: result.documentId,
@@ -99,6 +99,16 @@ function buildNewsJob(card) {
     },
     expectedVersion: 1
   };
+}
+
+function normalizeDrift(result, reason) {
+  const drift = { ...result, reason };
+  if (!drift.jobId) {
+    const index = drift.index || "search";
+    const document = drift.documentId || "document";
+    drift.jobId = `${index}-${document}`;
+  }
+  return drift;
 }
 
 module.exports = {

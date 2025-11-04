@@ -11,6 +11,7 @@ class PublishingCoordinator {
   constructor(options = {}) {
     this.clock = options.clock || (() => new Date());
     this.metrics = options.metrics || new PublishingMetrics();
+    this.retryQueue = options.retryQueue || null;
 
     const stateStore =
       options.stateStore || new PublishingStateStore({ clock: this.clock });
@@ -99,6 +100,7 @@ class PublishingCoordinator {
       throw new Error("publishing_coordinator_requires_batch");
     }
 
+    const attempt = Number.isFinite(options.attempt) ? options.attempt : 1;
     const schedule = this.cadence.getSchedule(sessionId);
     if (!schedule) {
       throw new Error("publishing_coordinator_unknown_session");
@@ -130,10 +132,22 @@ class PublishingCoordinator {
     });
 
     const drifts = this.searchPlanner.evaluate(options.searchResults || []);
+    let retryJobs = [];
+    if (this.retryQueue && drifts.length > 0) {
+      retryJobs = drifts.map((drift) =>
+        this.retryQueue.enqueue({
+          sessionId,
+          batchId,
+          drift,
+          attempt
+        })
+      );
+    }
 
     return {
       schedule: this.cadence.getSchedule(sessionId),
-      drifts
+      drifts,
+      retryJobs
     };
   }
 

@@ -31,11 +31,13 @@
 - `scripts/runOfflinePublishingQa.js` now accepts a directory input, filters session artifacts, and emits batch rollups that flag moderation hotspots.
 - QA harness exports `publishingStatus` alongside moderation summaries, preventing lore batches with safety violations from auto-publishing until an audit decision (auditRef) clears the gate.
 - Added Jest coverage for helper utilities (`resolveInputTargets`, `composeBatchRollup`, `summarizeModeration`) to keep QA harness behavior deterministic.
+- Publishing coordinator now queues search retry jobs when Meilisearch indexing drifts are detected, capturing retry metadata and telemetry so failures surface in staging rehearsals.
 
 ## Key Observations
 - Story consolidation summaries retained collaborative GM voice and surfaced the prohibited capability safety note for moderation review.
 - Entity extraction + delta queue now differentiate seizing factions from those losing territory, preventing false-positive control gains.
 - Publishing coordinator produced cadence windows (moderation start/end, hourly batch, digest) suitable for staging rehearsal once MinIO + Backblaze credentials unlock writes.
+- Search sync retry queue records fallback jobs for drift scenarios, ensuring we can verify DES-16 failure handling even before staging storage access returns.
 - Gamma/Delta transcripts confirm Spectrum Bloom + Temporal Retcon references propagate into moderation rollups with correct capability counts and no spurious low-confidence flags despite rumour qualifiers.
 - Control-change heuristics handled simultaneous gain/loss across Sable Crescent Basin and Kyther Range, matching lexicon defaults.
 - Moderation gating now marks gamma/delta batches as `awaiting_moderation`, ensuring publishing waits on explicit approval instead of silently scheduling capability violations.

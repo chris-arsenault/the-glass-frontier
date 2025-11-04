@@ -99,6 +99,7 @@ describe("PublishingCoordinator", () => {
     );
     expect(metrics.recordSearchDrift).not.toHaveBeenCalled();
     expect(publication.drifts).toHaveLength(0);
+    expect(publication.retryJobs).toHaveLength(0);
   });
 
   test("awaits moderation when deltas require approval", () => {
@@ -138,5 +139,61 @@ describe("PublishingCoordinator", () => {
     expect(approved.schedule.batches[0].status).toBe("ready");
     expect(metrics.recordBatchPrepared).toHaveBeenCalledTimes(1);
     expect(metrics.recordSearchSyncPlanned).toHaveBeenCalledTimes(1);
+  });
+
+  test("queues retries when search drift detected", () => {
+    const metrics = {
+      recordBatchPrepared: jest.fn(),
+      recordBatchPublished: jest.fn(),
+      recordSearchSyncPlanned: jest.fn(),
+      recordSearchDrift: jest.fn()
+    };
+
+    const retryQueue = {
+      enqueue: jest.fn().mockImplementation(({ drift }) => ({
+        retryId: `retry-${drift.jobId}`,
+        jobId: drift.jobId
+      }))
+    };
+
+    const coordinator = new PublishingCoordinator({
+      clock,
+      metrics,
+      retryQueue
+    });
+
+    const delta = createDelta();
+    const preparation = coordinator.prepareBatch({
+      sessionId: "session-222",
+      sessionClosedAt,
+      deltas: [delta]
+    });
+
+    const batchId = preparation.schedule.batches[0].batchId;
+    const searchResults = [
+      {
+        index: "lore_bundles",
+        documentId: "bundle-xyz",
+        status: "failure",
+        expectedVersion: 1,
+        actualVersion: 0
+      }
+    ];
+
+    const publication = coordinator.markBatchPublished("session-222", batchId, {
+      searchResults,
+      attempt: 2
+    });
+
+    expect(metrics.recordSearchDrift).toHaveBeenCalledTimes(1);
+    expect(retryQueue.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "session-222",
+        batchId,
+        attempt: 2
+      })
+    );
+    expect(publication.retryJobs).toHaveLength(1);
+    expect(publication.retryJobs[0].jobId).toBe("lore_bundles-bundle-xyz");
   });
 });

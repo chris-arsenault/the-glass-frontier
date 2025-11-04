@@ -26,6 +26,23 @@ class PublishingMetrics {
   recordSearchError(payload) {
     log("error", "telemetry.search.error", sanitize(payload, ["index", "documentId", "message"]));
   }
+
+  recordSearchRetryQueued(payload) {
+    log(
+      "warn",
+      "telemetry.search.retry.queued",
+      sanitize(payload, [
+        "sessionId",
+        "batchId",
+        "jobId",
+        "index",
+        "documentId",
+        "attempt",
+        "retryAt",
+        "reason"
+      ])
+    );
+  }
 }
 
 function sanitize(source, allowedKeys) {
