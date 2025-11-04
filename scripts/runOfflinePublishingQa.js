@@ -6,7 +6,7 @@ const {
   storyConsolidation: { StoryConsolidationWorkflow },
   entityExtraction: { extractEntities },
   delta: { WorldDeltaQueue },
-  publishing: { PublishingCoordinator }
+  publishing: { PublishingCoordinator, SearchSyncRetryQueue }
 } = require("../src/offline");
 const {
   summarizeModeration
@@ -32,7 +32,8 @@ function parseArgs(argv) {
     input: path.join(process.cwd(), "artifacts", "vertical-slice", "imp-gm-06-smoke.json"),
     outputDir: path.join(process.cwd(), "artifacts", "offline-qa"),
     sessionId: null,
-    verbose: false
+    verbose: false,
+    simulateSearchDrift: false
   };
 
   const args = Array.isArray(argv) ? argv.slice() : [];
@@ -54,6 +55,10 @@ function parseArgs(argv) {
     }
     if (token === "--verbose" || token === "-v") {
       options.verbose = true;
+      continue;
+    }
+    if (token === "--simulate-search-drift") {
+      options.simulateSearchDrift = true;
       continue;
     }
     throw new Error(`Unknown argument: ${token}`);
@@ -157,7 +162,8 @@ function composeQaResult({ sessionId, summaryRecord, mentions, deltas, publishin
       schedule: publishingPlan?.schedule || null,
       preparedBatch: publishingPlan?.publishing || null,
       searchPlan: publishingPlan?.searchPlan || null,
-      moderation: moderationSummary
+      moderation: moderationSummary,
+      retryQueue: publishingPlan?.retryQueue || null
     },
     moderation: moderationSummary
   };
@@ -233,6 +239,36 @@ function composeBatchRollup(summaries = []) {
   return rollup;
 }
 
+function synthesizeSearchResults(searchPlan = {}, simulateDrift = false) {
+  const jobs = Array.isArray(searchPlan?.jobs) ? searchPlan.jobs : [];
+  if (jobs.length === 0) {
+    return [];
+  }
+
+  return jobs.map((job) => {
+    const expectedVersion =
+      typeof job.expectedVersion === "number" ? job.expectedVersion : 1;
+
+    if (simulateDrift) {
+      return {
+        index: job.index || null,
+        documentId: job.documentId || null,
+        status: "failure",
+        expectedVersion,
+        actualVersion: Math.max(0, expectedVersion - 1)
+      };
+    }
+
+    return {
+      index: job.index || null,
+      documentId: job.documentId || null,
+      status: "success",
+      expectedVersion,
+      actualVersion: expectedVersion
+    };
+  });
+}
+
 async function executeOfflineQa(options) {
   const artifact = loadSessionArtifact(options.input);
   const sessionId = options.sessionId || artifact.sessionId;
@@ -284,7 +320,8 @@ async function executeOfflineQa(options) {
   });
   const deltas = queue.enqueueFromMentions(mentions) || [];
 
-  const coordinator = new PublishingCoordinator();
+  const retryQueue = new SearchSyncRetryQueue();
+  const coordinator = new PublishingCoordinator({ retryQueue });
   const publishingPlan = coordinator.prepareBatch({
     sessionId,
     sessionClosedAt: sessionState.closedAt || null,
@@ -292,13 +329,87 @@ async function executeOfflineQa(options) {
     approvedBy: "qa.offline"
   });
 
+  const enhancedPublishingPlan = publishingPlan
+    ? JSON.parse(JSON.stringify(publishingPlan))
+    : { status: "ready", searchPlan: { status: "ready", jobs: [] } };
+
+  const batchId =
+    enhancedPublishingPlan?.schedule?.batches?.[0]?.batchId || null;
+
+  let publicationResult = null;
+  let retryQueueBeforeDrain = retryQueue.summarize();
+  let retryQueueAfterDrain = retryQueueBeforeDrain;
+  let drainedRetryJobs = [];
+
+  if (batchId) {
+    const searchResults = synthesizeSearchResults(
+      enhancedPublishingPlan.searchPlan,
+      options.simulateSearchDrift
+    );
+
+    publicationResult = coordinator.markBatchPublished(sessionId, batchId, {
+      searchResults
+    });
+
+    retryQueueBeforeDrain =
+      publicationResult?.retrySummary || retryQueue.summarize();
+
+    if (options.simulateSearchDrift) {
+      drainedRetryJobs = retryQueue.drain();
+      retryQueueAfterDrain = retryQueue.summarize();
+    } else {
+      retryQueueAfterDrain = retryQueueBeforeDrain;
+    }
+  }
+
+  const retryStatusAfterDrain =
+    (retryQueueAfterDrain.pendingCount || 0) > 0 ? "pending" : "clear";
+
+  const publishingStatus =
+    retryStatusAfterDrain === "pending"
+      ? "retry_pending"
+      : publicationResult
+      ? "published"
+      : enhancedPublishingPlan.status || "ready";
+
+  const searchPlanStatus =
+    retryStatusAfterDrain === "pending"
+      ? "retry_pending"
+      : publicationResult
+      ? "published"
+      : enhancedPublishingPlan.searchPlan?.status || "ready";
+
+  enhancedPublishingPlan.status = publishingStatus;
+  enhancedPublishingPlan.searchPlan = Object.assign(
+    {},
+    enhancedPublishingPlan.searchPlan || {},
+    {
+      status: searchPlanStatus,
+      retrySummary:
+        publicationResult?.retrySummary || retryQueueAfterDrain || {
+          pendingCount: 0,
+          status: "clear",
+          nextRetryAt: null,
+          jobs: []
+        }
+    }
+  );
+  enhancedPublishingPlan.retryQueue = {
+    status: retryStatusAfterDrain,
+    beforeDrain: retryQueueBeforeDrain,
+    afterDrain: retryQueueAfterDrain,
+    drainedJobs: drainedRetryJobs
+  };
+
   const qaResult = composeQaResult({
     sessionId,
     summaryRecord,
     mentions,
     deltas,
-    publishingPlan
+    publishingPlan: enhancedPublishingPlan
   });
+
+  qaResult.publishing.retryQueue = enhancedPublishingPlan.retryQueue;
 
   return qaResult;
 }

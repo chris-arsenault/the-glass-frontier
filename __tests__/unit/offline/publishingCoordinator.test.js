@@ -91,6 +91,12 @@ describe("PublishingCoordinator", () => {
     });
 
     expect(publication.schedule.batches[0].status).toBe("published");
+    expect(publication.retrySummary).toEqual(
+      expect.objectContaining({
+        pendingCount: 0,
+        status: "clear"
+      })
+    );
     expect(metrics.recordBatchPublished).toHaveBeenCalledWith(
       expect.objectContaining({
         sessionId: "session-789",
@@ -195,5 +201,12 @@ describe("PublishingCoordinator", () => {
     );
     expect(publication.retryJobs).toHaveLength(1);
     expect(publication.retryJobs[0].jobId).toBe("lore_bundles-bundle-xyz");
+    expect(publication.retrySummary).toEqual(
+      expect.objectContaining({
+        pendingCount: 1,
+        status: "pending"
+      })
+    );
+    expect(publication.schedule.batches[0].status).toBe("retry_pending");
   });
 });

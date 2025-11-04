@@ -125,12 +125,6 @@ class PublishingCoordinator {
       latencyMs
     });
 
-    this.cadence.updateBatchStatus(sessionId, batchId, "published", {
-      publishedAt,
-      deltaCount,
-      latencyMs
-    });
-
     const drifts = this.searchPlanner.evaluate(options.searchResults || []);
     let retryJobs = [];
     if (this.retryQueue && drifts.length > 0) {
@@ -144,10 +138,29 @@ class PublishingCoordinator {
       );
     }
 
+    const retrySummary = this.retryQueue
+      ? this.retryQueue.summarize()
+      : {
+          pendingCount: 0,
+          status: "clear",
+          nextRetryAt: null,
+          jobs: []
+        };
+
+    const batchStatus = retrySummary.pendingCount > 0 ? "retry_pending" : "published";
+
+    this.cadence.updateBatchStatus(sessionId, batchId, batchStatus, {
+      publishedAt,
+      deltaCount,
+      latencyMs,
+      notes: retrySummary.pendingCount > 0 ? "search_retry_pending" : undefined
+    });
+
     return {
       schedule: this.cadence.getSchedule(sessionId),
       drifts,
-      retryJobs
+      retryJobs,
+      retrySummary
     };
   }
 

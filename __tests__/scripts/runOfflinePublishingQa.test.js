@@ -4,10 +4,22 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const { resolveInputTargets, composeBatchRollup } = require("../../scripts/runOfflinePublishingQa");
+const {
+  resolveInputTargets,
+  composeBatchRollup,
+  parseArgs
+} = require("../../scripts/runOfflinePublishingQa");
 const { summarizeModeration } = require("../../src/offline/moderation/moderationSummary");
 
 describe("runOfflinePublishingQa helpers", () => {
+  describe("parseArgs", () => {
+    test("enables simulate search drift flag", () => {
+      const parsed = parseArgs(["--simulate-search-drift"]);
+      expect(parsed.simulateSearchDrift).toBe(true);
+      expect(parsed.verbose).toBe(false);
+    });
+  });
+
   describe("resolveInputTargets", () => {
     let tempDir;
 

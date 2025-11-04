@@ -55,6 +55,29 @@ class SearchSyncRetryQueue {
     return this.jobs.map((job) => ({ ...job }));
   }
 
+  summarize() {
+    const jobs = this.getPending();
+    let nextRetryAt = null;
+    if (jobs.length > 0) {
+      nextRetryAt = jobs.reduce((earliest, job) => {
+        if (!earliest) {
+          return job.retryAt || null;
+        }
+        if (!job.retryAt) {
+          return earliest;
+        }
+        return job.retryAt < earliest ? job.retryAt : earliest;
+      }, null);
+    }
+
+    return {
+      pendingCount: jobs.length,
+      status: jobs.length > 0 ? "pending" : "clear",
+      nextRetryAt,
+      jobs
+    };
+  }
+
   drain() {
     const pending = this.getPending();
     this.jobs = [];

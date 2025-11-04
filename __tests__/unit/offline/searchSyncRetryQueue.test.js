@@ -69,4 +69,37 @@ describe("SearchSyncRetryQueue", () => {
     expect(drained).toHaveLength(1);
     expect(queue.getPending()).toHaveLength(0);
   });
+
+  test("summarizes pending jobs and clears after drain", () => {
+    const metrics = createMetrics();
+    const queue = new SearchSyncRetryQueue({ clock, metrics });
+
+    queue.enqueue({
+      sessionId: "session-777",
+      batchId: "session-777-batch-0",
+      drift: createDrift({ jobId: "index-lore-bundle-777" })
+    });
+
+    queue.enqueue({
+      sessionId: "session-777",
+      batchId: "session-777-batch-0",
+      drift: createDrift({ jobId: "index-news-card-777", index: "news_cards" }),
+      attempt: 2
+    });
+
+    const summary = queue.summarize();
+    expect(summary.status).toBe("pending");
+    expect(summary.pendingCount).toBe(2);
+    expect(summary.nextRetryAt).toBe("2025-11-05T10:05:00.000Z");
+    expect(Array.isArray(summary.jobs)).toBe(true);
+    expect(summary.jobs).toHaveLength(2);
+
+    queue.drain();
+
+    const cleared = queue.summarize();
+    expect(cleared.status).toBe("clear");
+    expect(cleared.pendingCount).toBe(0);
+    expect(cleared.nextRetryAt).toBeNull();
+    expect(cleared.jobs).toEqual([]);
+  });
 });

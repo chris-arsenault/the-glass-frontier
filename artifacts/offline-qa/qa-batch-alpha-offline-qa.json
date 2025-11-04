@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-alpha",
-  "generatedAt": "2025-11-04T06:12:39.581Z",
+  "generatedAt": "2025-11-04T06:30:50.570Z",
   "summary": {
     "sessionId": "qa-batch-alpha",
     "version": 1,
@@ -253,7 +253,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T06:12:39.580Z",
+    "generatedAt": "2025-11-04T06:30:50.567Z",
     "statistics": {
       "turnCount": 11,
       "sceneCount": 11,
@@ -273,7 +273,7 @@
     "deltas": []
   },
   "publishing": {
-    "status": "ready",
+    "status": "published",
     "schedule": {
       "sessionClosedAt": "2025-11-04T05:26:15.372Z",
       "moderation": {
@@ -291,7 +291,7 @@
           "type": "hourly",
           "runAt": "2025-11-04T06:26:15.372Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T06:12:39.581Z",
+          "preparedAt": "2025-11-04T06:30:50.569Z",
           "deltaCount": 0
         }
       ],
@@ -301,13 +301,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-alpha",
-      "stateId": "50bb78cc-fd9b-4709-ade4-1bf8f4116a99",
-      "createdAt": "2025-11-04T06:12:39.581Z",
-      "updatedAt": "2025-11-04T06:12:39.581Z",
+      "stateId": "7408a923-1bca-40ca-b96b-6efeacec051b",
+      "createdAt": "2025-11-04T06:30:50.569Z",
+      "updatedAt": "2025-11-04T06:30:50.569Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T06:12:39.581Z",
+          "occurredAt": "2025-11-04T06:30:50.569Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T05:26:15.372Z",
             "moderationStartAt": "2025-11-04T05:41:15.372Z",
@@ -317,12 +317,12 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T06:12:39.581Z",
+          "occurredAt": "2025-11-04T06:30:50.569Z",
           "payload": {
             "batchId": "qa-batch-alpha-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T06:12:39.581Z",
+              "preparedAt": "2025-11-04T06:30:50.569Z",
               "deltaCount": 0
             }
           }
@@ -330,14 +330,20 @@
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T06:12:39.581Z",
+      "preparedAt": "2025-11-04T06:30:50.569Z",
       "loreBundles": [],
       "newsCards": [],
       "overlayPayloads": []
     },
     "searchPlan": {
       "jobs": [],
-      "status": "ready"
+      "status": "published",
+      "retrySummary": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      }
     },
     "moderation": {
       "requiresModeration": false,
@@ -345,6 +351,22 @@
       "capabilityViolations": 0,
       "conflictDetections": 0,
       "lowConfidenceFindings": 0
+    },
+    "retryQueue": {
+      "status": "clear",
+      "beforeDrain": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      },
+      "afterDrain": {
+        "pendingCount": 0,
+        "status": "clear",
+        "nextRetryAt": null,
+        "jobs": []
+      },
+      "drainedJobs": []
     }
   },
   "moderation": {
