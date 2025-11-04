@@ -1,0 +1,10 @@
+route:
+  receiver: pager
+
+receivers:
+  - name: pager
+    webhook_configs:
+      - url: http://pagerduty-relay.service.consul:8080/hook
+
+templates:
+  - ./artifacts/alerting/story-alerts.yaml

@@ -4,7 +4,7 @@ job "${job_name}" {
   type        = "service"
 
   constraint {
-    attribute = "${node.class}"
+    attribute = "$${node.class}"
     value     = "app"
   }
 

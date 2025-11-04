@@ -7,3 +7,7 @@
 /telemetry-artifacts/
 /deliveries/
 .env
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup

@@ -24,7 +24,7 @@ terraform {
 provider "nomad" {
   address = var.nomad_address
   region  = var.nomad_region
-  token   = var.nomad_token
+#   token   = var.nomad_token
 }
 
 provider "vault" {

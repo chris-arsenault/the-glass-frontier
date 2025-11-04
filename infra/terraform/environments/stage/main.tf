@@ -61,6 +61,7 @@ module "nomad_core" {
   redis_streams_url  = var.redis_streams_url
   couchdb_url        = var.couchdb_url
   api_base_url       = var.api_base_url
+  couchdb_admin_password = var.couchdb_admin_password
 
   langgraph_image         = "registry.stage/langgraph:2025.11.0"
   llm_proxy_image         = "registry.stage/llm-proxy:2025.11.0"
@@ -81,7 +82,7 @@ module "nomad_core" {
   minio_remote_tier          = var.minio_remote_tier
   minio_b2_key_id            = var.minio_b2_key_id
   minio_b2_application_key   = var.minio_b2_application_key
-  minio_lifecycle_policy     = file("${path.module}/../../minio/lifecycle-policies.json")
+  minio_lifecycle_policy     = file("${path.module}/../../../minio/lifecycle-policies.json")
 }
 
 module "observability" {

@@ -58,6 +58,11 @@ variable "couchdb_url" {
   default     = "http://couchdb.service.consul:5984"
 }
 
+variable "couchdb_admin_password" {
+  description = "CounchDB Admin Password"
+  type = string
+}
+
 variable "api_base_url" {
   description = "Internal API base URL."
   type        = string

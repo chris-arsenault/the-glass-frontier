@@ -47,7 +47,7 @@ EOF
         memory = ${memory}
       }
 
-      log {
+      logs {
         max_files     = 5
         max_file_size = 10
       }

@@ -30,20 +30,20 @@ variable "approle_mount_path" {
 
 variable "token_default_ttl" {
   description = "Default TTL applied to issued service tokens."
-  type        = string
-  default     = "1h"
+  type        = number
+  default     = 1 * 60 * 60
 }
 
 variable "token_max_ttl" {
   description = "Maximum TTL for issued service tokens."
-  type        = string
-  default     = "24h"
+  type        = number
+  default     = 24 * 60 * 60
 }
 
 variable "secret_id_ttl" {
   description = "TTL for generated secret IDs."
-  type        = string
-  default     = "12h"
+  type        = number
+  default     = 12 * 60 * 60
 }
 
 variable "bootstrap_secrets" {

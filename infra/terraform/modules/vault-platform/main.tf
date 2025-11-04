@@ -177,9 +177,11 @@ resource "vault_database_secret_backend_connection" "temporal" {
   plugin_name = "postgresql-database-plugin"
   allowed_roles = ["${var.namespace}-temporal"]
 
-  connection_url = var.postgres_connection_url
-  username       = var.postgres_admin_username
-  password       = var.postgres_admin_password
+  postgresql {
+    connection_url = var.postgres_connection_url
+      username       = var.postgres_admin_username
+      password       = var.postgres_admin_password
+  }
 
   verify_connection = false
 }
@@ -199,8 +201,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "{{name}}
 EOT
   ]
 
-  default_ttl = "${var.rotation_default_hours}h"
-  max_ttl     = "${var.rotation_max_hours}h"
+  default_ttl = var.rotation_default_hours * 60 * 60
+  max_ttl     = var.rotation_max_hours * 60 * 60
 }
 
 locals {
