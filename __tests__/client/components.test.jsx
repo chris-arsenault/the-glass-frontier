@@ -383,7 +383,8 @@ describe("Client shell components", () => {
     expect(screen.getByText(/Momentum shift/)).toBeInTheDocument();
     const modifierField = screen.getByText(/Modifier/i).closest("div").querySelector("dd");
     expect(modifierField).toHaveTextContent("+2");
-    const advantageField = screen.getByText(/Advantage/i).closest("div").querySelector("dd");
+    const advantageLabel = screen.getAllByText(/Advantage/i, { selector: "dt" })[0];
+    const advantageField = advantageLabel.closest("div").querySelector("dd");
     expect(advantageField).toHaveTextContent(/Advantage/);
     const momentumInputField = screen
       .getByText(/Momentum Input/i)

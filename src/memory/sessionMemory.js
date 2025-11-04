@@ -185,11 +185,47 @@ class SessionMemoryFacade {
 
   appendTranscript(sessionId, entry) {
     const session = this.ensureSession(sessionId);
-    session.transcript.push({
-      ...entry,
-      timestamp: entry.timestamp || new Date().toISOString()
+    const timestamp = entry.timestamp || new Date().toISOString();
+    const baseContent =
+      entry.content !== undefined
+        ? entry.content
+        : entry.text !== undefined
+        ? entry.text
+        : "";
+    const textValue = entry.text !== undefined ? entry.text : baseContent;
+    const record = {
+      id: entry.id || `transcript-${session.transcript.length + 1}`,
+      role: entry.role || "system",
+      content: baseContent,
+      text: textValue,
+      metadata: entry.metadata ? { ...entry.metadata } : undefined,
+      markers: Array.isArray(entry.markers) ? entry.markers.map((marker) => ({ ...marker })) : undefined,
+      speaker: entry.speaker || entry.role || "system",
+      playerId: entry.playerId,
+      turnSequence: entry.turnSequence,
+      type: entry.type || entry.metadata?.type,
+      timestamp
+    };
+
+    session.transcript.push(record);
+
+    this._recordChange(session, "transcript", {
+      action: "append",
+      actor: record.role || "system",
+      reason: entry.reason || null,
+      metadata: {
+        role: record.role || "system",
+        type: record.type || null,
+        checkId: entry.metadata?.checkId || null,
+        result: entry.metadata?.result || null
+      },
+      revision: session.transcript.length,
+      scope: "transcript",
+      before: null,
+      after: record
     });
-    return session;
+
+    return record;
   }
 
   markSessionClosed(sessionId, options = {}) {
@@ -237,15 +273,68 @@ class SessionMemoryFacade {
       session.pendingChecks.delete(envelope.id);
     }
 
+    const momentumBefore =
+      session?.shards?.momentum?.data?.current ?? session?.momentum?.current ?? 0;
+
     this.applyMomentum(session, envelope);
     this.applyStatAdjustments(session, envelope);
 
-    session.resolvedChecks.push({
+    const resolved = {
       ...pending,
       ...envelope
-    });
+    };
+
+    session.resolvedChecks.push(resolved);
 
     session.characterRevision += 1;
+
+    const momentumAfter =
+      session?.shards?.momentum?.data?.current ?? session?.momentum?.current ?? momentumBefore;
+
+    const difficultyLabel =
+      envelope.difficulty?.label || pending?.difficulty?.label || pending?.data?.difficulty;
+    const difficultyTarget =
+      envelope.difficulty?.target ||
+      pending?.difficulty?.target ||
+      pending?.data?.difficultyValue;
+    const diceTotal =
+      envelope.dice?.total !== undefined
+        ? envelope.dice.total
+        : Array.isArray(envelope.dice?.kept)
+        ? envelope.dice.kept.reduce((sum, die) => sum + die, 0)
+        : null;
+    const statValue = envelope.dice?.statValue ?? pending?.data?.mechanics?.statValue ?? 0;
+    const contentSegments = [
+      `Check ${envelope.move || pending?.data?.move || "narrative"} resolved as ${
+        envelope.tier || envelope.result
+      }.`,
+      difficultyLabel && difficultyTarget
+        ? `Difficulty ${difficultyLabel} (${difficultyTarget}).`
+        : null,
+      diceTotal !== null
+        ? `Dice ${diceTotal} + stat ${statValue}${
+            typeof envelope.dice?.bonusDice === "number" && envelope.dice.bonusDice > 0
+              ? ` (+${envelope.dice.bonusDice} bonus)`
+              : ""
+          }.`
+        : null,
+      `Momentum ${momentumBefore} → ${momentumAfter}.`
+    ].filter(Boolean);
+
+    this.appendTranscript(sessionId, {
+      role: "system",
+      type: "check-resolution",
+      content: contentSegments.join(" "),
+      metadata: {
+        type: "check-resolution",
+        checkId: envelope.id,
+        result: envelope.result || envelope.tier,
+        momentumBefore,
+        momentumAfter,
+        difficulty: difficultyLabel,
+        difficultyTarget
+      }
+    });
 
     return session;
   }
@@ -261,9 +350,23 @@ class SessionMemoryFacade {
       return session;
     }
 
-    session.vetoedChecks.push({
+    const vetoRecord = {
       ...envelope,
       recordedAt: new Date().toISOString()
+    };
+
+    session.vetoedChecks.push(vetoRecord);
+
+    this.appendTranscript(sessionId, {
+      role: "system",
+      type: "check-veto",
+      content: `Check ${envelope.id} vetoed (${envelope.reason || "safety policy"}).`,
+      metadata: {
+        type: "check-veto",
+        checkId: envelope.id,
+        reason: envelope.reason || null,
+        safetyFlags: envelope.safetyFlags || []
+      }
     });
     return session;
   }
