@@ -3,6 +3,129 @@
 const fs = require("fs");
 const path = require("path");
 const { randomUUID } = require("crypto");
+const dns = require("dns");
+const { Agent, setGlobalDispatcher } = require("undici");
+
+function configureCustomCa() {
+  const candidates = [];
+
+  if (process.env.LANGGRAPH_SMOKE_CA_PATH) {
+    candidates.push(process.env.LANGGRAPH_SMOKE_CA_PATH);
+  }
+
+  candidates.push(
+    path.join(
+      __dirname,
+      "..",
+      "infra",
+      "stage",
+      "data",
+      "caddy",
+      "pki",
+      "authorities",
+      "local",
+      "root.crt"
+    )
+  );
+
+  candidates.push(path.join(__dirname, "..", "infra", "stage", "certs", "rootCA.pem"));
+
+  for (const candidate of candidates) {
+    const resolved = path.isAbsolute(candidate) ? candidate : path.join(process.cwd(), candidate);
+    if (!resolved || !fs.existsSync(resolved)) {
+      continue;
+    }
+
+    try {
+      const ca = fs.readFileSync(resolved);
+      setGlobalDispatcher(
+        new Agent({
+          connect: {
+            ca,
+            rejectUnauthorized: true
+          }
+        })
+      );
+      return resolved;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn(`[sse-smoke] Failed to configure CA from ${resolved}: ${error.message}`);
+    }
+  }
+
+  return null;
+}
+
+const configuredCaPath = configureCustomCa();
+if (configuredCaPath) {
+  // eslint-disable-next-line no-console
+  console.log(`[sse-smoke] Using custom CA ${configuredCaPath}`);
+}
+
+function installHostOverride(hostname, ipv4Address, ipv6Address = "::1") {
+  if (!hostname || !ipv4Address) {
+    return;
+  }
+
+  const target = hostname.toLowerCase();
+  const originalLookup = dns.lookup.bind(dns);
+  const originalPromisesLookup =
+    dns.promises && typeof dns.promises.lookup === "function"
+      ? dns.promises.lookup.bind(dns.promises)
+      : null;
+
+  dns.lookup = (host, options, callback) => {
+    let resolvedOptions = options;
+    let resolvedCallback = callback;
+    if (typeof resolvedOptions === "function") {
+      resolvedCallback = resolvedOptions;
+      resolvedOptions = {};
+    }
+
+    if (host && host.toLowerCase() === target) {
+      if (resolvedOptions?.all) {
+        const addresses = [];
+        if (ipv4Address) {
+          addresses.push({ address: ipv4Address, family: 4 });
+        }
+        if (ipv6Address) {
+          addresses.push({ address: ipv6Address, family: 6 });
+        }
+        setImmediate(() => resolvedCallback(null, addresses));
+        return;
+      }
+
+      const family = resolvedOptions?.family === 6 ? 6 : 4;
+      const address = family === 6 ? ipv6Address : ipv4Address;
+      setImmediate(() => resolvedCallback(null, address, family));
+      return;
+    }
+
+    return originalLookup(host, resolvedOptions, resolvedCallback);
+  };
+
+  if (originalPromisesLookup) {
+    dns.promises.lookup = async (host, options = {}) => {
+      if (host && host.toLowerCase() === target) {
+        if (options.all) {
+          const addresses = [];
+          if (ipv4Address) {
+            addresses.push({ address: ipv4Address, family: 4 });
+          }
+          if (ipv6Address) {
+            addresses.push({ address: ipv6Address, family: 6 });
+          }
+          return addresses;
+        }
+
+        const family = options.family === 6 ? 6 : 4;
+        return { address: family === 6 ? ipv6Address : ipv4Address, family };
+      }
+
+      return originalPromisesLookup(host, options);
+    };
+  }
+}
 
 function parseArgs(argv) {
   const defaults = {
@@ -14,7 +137,8 @@ function parseArgs(argv) {
     sessionId: process.env.LANGGRAPH_SMOKE_SESSION_ID || `langgraph-sse-${Date.now()}`,
     timeoutMs: Number.parseInt(process.env.LANGGRAPH_SMOKE_TIMEOUT_MS || "", 10) || 10000,
     skipAdminAlert: process.env.LANGGRAPH_SMOKE_SKIP_ADMIN_ALERT === "true",
-    reportPath: process.env.LANGGRAPH_SMOKE_REPORT_PATH || ""
+    reportPath: process.env.LANGGRAPH_SMOKE_REPORT_PATH || "",
+    skipSse: process.env.LANGGRAPH_SMOKE_SKIP_SSE === "true"
   };
 
   const config = { ...defaults };
@@ -57,8 +181,18 @@ function parseArgs(argv) {
   return config;
 }
 
-function createUrl(baseUrl, path) {
-  return new URL(path, baseUrl).toString();
+function createUrl(baseUrl, resourcePath) {
+  const base = new URL(baseUrl);
+  let targetPath = resourcePath;
+
+  if (resourcePath.startsWith("/")) {
+    const basePath = base.pathname.endsWith("/")
+      ? base.pathname.slice(0, -1)
+      : base.pathname;
+    targetPath = `${basePath}${resourcePath}`;
+  }
+
+  return new URL(targetPath, `${base.origin}/`).toString();
 }
 
 async function login(baseUrl, email, password) {
@@ -142,7 +276,8 @@ async function openSseStream(baseUrl, sessionId, token) {
           break;
         }
 
-        buffer += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+        buffer += chunk;
         while (buffer.includes("\n\n")) {
           const index = buffer.indexOf("\n\n");
           const rawEvent = buffer.slice(0, index);
@@ -300,6 +435,16 @@ async function run(argv = process.argv) {
 
   const config = parseArgs(argv);
   const startTime = Date.now();
+  try {
+    const baseHostname = new URL(config.baseUrl).hostname;
+    installHostOverride(
+      baseHostname,
+      process.env.LANGGRAPH_SMOKE_ADDRESS || null,
+      process.env.LANGGRAPH_SMOKE_ADDRESS_V6 || "::1"
+    );
+  } catch (error) {
+    throw new Error(`Invalid base URL provided: ${config.baseUrl}`);
+  }
   const summary = {
     runId: randomUUID(),
     startedAt: new Date(startTime).toISOString(),
@@ -307,7 +452,8 @@ async function run(argv = process.argv) {
     config: {
       timeoutMs: config.timeoutMs,
       skipAdminAlert: config.skipAdminAlert,
-      reportPath: config.reportPath || null
+      reportPath: config.reportPath || null,
+      skipSse: config.skipSse
     },
     metrics: {},
     eventCounts: {}
@@ -335,6 +481,41 @@ async function run(argv = process.argv) {
     createdAt: session.createdAt || null
   };
   logStep(`Created session ${session.sessionId}`);
+
+  if (config.skipSse) {
+    logStep("Skipping SSE stream validation per configuration");
+
+    const checkStart = Date.now();
+    const checkResponse = await triggerDebugCheck(
+      config.baseUrl,
+      auth.token,
+      session.sessionId,
+      {
+        move: "langgraph-smoke-probe",
+        stat: "finesse",
+        statValue: 2
+      }
+    );
+    const checkId = checkResponse?.check?.id || null;
+    summary.metrics.checkDispatch = {
+      id: checkId,
+      requestedAt: new Date(checkStart).toISOString(),
+      move: checkResponse?.check?.move || "unknown"
+    };
+    summary.metrics.checkResolution = {
+      id: checkId,
+      tier: null,
+      latencyMs: Date.now() - checkStart,
+      observed: false,
+      skipped: true
+    };
+
+    await closeSession(config.baseUrl, auth.token, session.sessionId, "debug.validation");
+    logStep("Session closure requested (SSE validation skipped)");
+
+    summary.success = true;
+    return summary;
+  }
 
   let stream;
   try {
@@ -520,6 +701,13 @@ if (require.main === module) {
         writeReport(summary.config?.reportPath, summary);
       }
       console.error(`[sse-smoke] Error: ${error.message}`);
+      if (error.cause) {
+        console.error(
+          `[sse-smoke] Cause: ${error.cause.message || error.cause} ${
+            error.cause.code ? `(code: ${error.cause.code})` : ""
+          }`
+        );
+      }
       process.exitCode = 1;
     });
 }
