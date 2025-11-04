@@ -108,6 +108,72 @@ function appendHistory(history, entry, limit = 5) {
   return list;
 }
 
+const PIPELINE_FILTERS = ["all", "alerts", "runs"];
+
+const DEFAULT_PIPELINE_PREFERENCES = {
+  filter: "all",
+  timelineExpanded: false,
+  acknowledged: []
+};
+
+function clonePipelinePreferences() {
+  return {
+    filter: DEFAULT_PIPELINE_PREFERENCES.filter,
+    timelineExpanded: DEFAULT_PIPELINE_PREFERENCES.timelineExpanded,
+    acknowledged: []
+  };
+}
+
+function normalizePipelinePreferences(preferences) {
+  if (!preferences || typeof preferences !== "object") {
+    return clonePipelinePreferences();
+  }
+  const filterCandidate = PIPELINE_FILTERS.includes(preferences.filter)
+    ? preferences.filter
+    : DEFAULT_PIPELINE_PREFERENCES.filter;
+  const acknowledged = Array.isArray(preferences.acknowledged)
+    ? preferences.acknowledged
+        .filter((value) => typeof value === "string" && value.length > 0)
+        .slice(-40)
+    : [];
+  return {
+    filter: filterCandidate,
+    timelineExpanded: Boolean(preferences.timelineExpanded),
+    acknowledged
+  };
+}
+
+function arePipelinePreferencesEqual(a, b) {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  if (a.filter !== b.filter || a.timelineExpanded !== b.timelineExpanded) {
+    return false;
+  }
+  if (a.acknowledged.length !== b.acknowledged.length) {
+    return false;
+  }
+  for (let index = 0; index < a.acknowledged.length; index += 1) {
+    if (a.acknowledged[index] !== b.acknowledged[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function pipelineAlertKey(alert) {
+  if (!alert || typeof alert !== "object") {
+    return "alert";
+  }
+  const reason = alert.reason || alert.message || "alert";
+  const timestamp = alert.at || alert.timestamp || "";
+  const severity = alert.severity || "info";
+  return `${reason}|${timestamp}|${severity}`;
+}
+
 export function useSessionConnection({
   sessionId: override,
   account = null,
@@ -141,7 +207,8 @@ export function useSessionConnection({
     offlineLastRun: sessionSummary?.offlineLastRun || null,
     offlineJob: null,
     offlineHistory: [],
-    adminAlerts: []
+    adminAlerts: [],
+    pipelinePreferences: clonePipelinePreferences()
   }));
   const wsRef = useRef(null);
   const sseRef = useRef(null);
@@ -195,6 +262,71 @@ export function useSessionConnection({
       });
     },
     [sessionId]
+  );
+
+  const updatePipelinePreferences = useCallback(
+    (updater) => {
+      setSessionMeta((current) => {
+        const previous = normalizePipelinePreferences(current.pipelinePreferences);
+        const nextCandidate =
+          typeof updater === "function" ? updater(previous) || previous : { ...previous, ...updater };
+        const next = normalizePipelinePreferences(nextCandidate);
+        if (arePipelinePreferencesEqual(previous, next)) {
+          return current;
+        }
+        persistSessionState(sessionId, { pipelinePreferences: next }).catch(() => {});
+        return {
+          ...current,
+          pipelinePreferences: next
+        };
+      });
+    },
+    [sessionId]
+  );
+
+  const setPipelineFilter = useCallback(
+    (filter) => {
+      const filterValue = PIPELINE_FILTERS.includes(filter)
+        ? filter
+        : DEFAULT_PIPELINE_PREFERENCES.filter;
+      updatePipelinePreferences((previous) => {
+        if (previous.filter === filterValue) {
+          return previous;
+        }
+        return {
+          ...previous,
+          filter: filterValue
+        };
+      });
+    },
+    [updatePipelinePreferences]
+  );
+
+  const togglePipelineTimeline = useCallback(() => {
+    updatePipelinePreferences((previous) => ({
+      ...previous,
+      timelineExpanded: !previous.timelineExpanded
+    }));
+  }, [updatePipelinePreferences]);
+
+  const acknowledgePipelineAlert = useCallback(
+    (alert) => {
+      if (!alert) {
+        return;
+      }
+      const key = pipelineAlertKey(alert);
+      updatePipelinePreferences((previous) => {
+        if (previous.acknowledged.includes(key)) {
+          return previous;
+        }
+        const nextAcknowledged = previous.acknowledged.concat(key).slice(-40);
+        return {
+          ...previous,
+          acknowledged: nextAcknowledged
+        };
+      });
+    },
+    [updatePipelinePreferences]
   );
 
   useEffect(() => {
@@ -270,6 +402,20 @@ export function useSessionConnection({
               lastSyncedAt: state.overlay.lastSyncedAt || fallback.lastSyncedAt
             };
             setOverlay(overlaySnapshot);
+          }
+
+          if (state.pipelinePreferences) {
+            const storedPreferences = normalizePipelinePreferences(state.pipelinePreferences);
+            setSessionMeta((current) => {
+              const previous = normalizePipelinePreferences(current.pipelinePreferences);
+              if (arePipelinePreferencesEqual(previous, storedPreferences)) {
+                return current;
+              }
+              return {
+                ...current,
+                pipelinePreferences: storedPreferences
+              };
+            });
           }
         }
 
@@ -1313,11 +1459,16 @@ export function useSessionConnection({
       sessionOfflineJob: sessionMeta.offlineJob,
       sessionOfflineHistory: sessionMeta.offlineHistory,
       sessionOfflineLastRun: sessionMeta.offlineLastRun,
-      sessionAdminAlerts: sessionMeta.adminAlerts
+      sessionAdminAlerts: sessionMeta.adminAlerts,
+      pipelinePreferences: sessionMeta.pipelinePreferences,
+      setPipelineFilter,
+      togglePipelineTimeline,
+      acknowledgePipelineAlert
     }),
     [
       activeCheck,
       adminConfig,
+      acknowledgePipelineAlert,
       connectionState,
       controlError,
       flushQueuedIntents,
@@ -1333,9 +1484,11 @@ export function useSessionConnection({
       sendPlayerControl,
       sendPlayerMessage,
       sessionId,
-      transportError,
+      setPipelineFilter,
+      togglePipelineTimeline,
       hubCatalog,
-      sessionMeta
+      sessionMeta,
+      transportError
     ]
   );
 

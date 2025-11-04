@@ -56,6 +56,7 @@ test.describe("narrative overlays", () => {
     await expect(pipelinePanel).toBeVisible({ timeout: 10000 });
     await expect(pipelinePanel).toContainText(/Pipeline Status/i);
     await expect(pipelinePanel).toContainText(/Moderation queue/i);
-    await expect(pipelinePanel).toContainText(/Current status/i);
+    await expect(pipelinePanel.getByTestId("pipeline-filter-alerts")).toBeVisible();
+    await expect(pipelinePanel.getByTestId("pipeline-details-toggle")).toBeVisible();
   });
 });

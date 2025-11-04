@@ -89,6 +89,14 @@ function buildSessionValue(overrides = {}) {
     isAdmin: false,
     adminHubId: "global",
     adminUser: "admin@test",
+    pipelinePreferences: {
+      filter: "all",
+      timelineExpanded: false,
+      acknowledged: []
+    },
+    setPipelineFilter: jest.fn(),
+    togglePipelineTimeline: jest.fn(),
+    acknowledgePipelineAlert: jest.fn(),
     ...overrides
   };
 }
@@ -273,6 +281,9 @@ describe("Client shell components", () => {
   });
 
   test("OverlayDock surfaces admin pipeline status overview", () => {
+    const setPipelineFilter = jest.fn();
+    const togglePipelineTimeline = jest.fn();
+    const acknowledgePipelineAlert = jest.fn();
     const session = buildSessionValue({
       isAdmin: true,
       sessionPendingOffline: true,
@@ -291,6 +302,13 @@ describe("Client shell components", () => {
           status: "completed",
           at: "2025-11-03T22:00:00.000Z",
           durationMs: 42000
+        },
+        {
+          jobId: "job-119",
+          status: "failed",
+          at: "2025-11-03T21:45:00.000Z",
+          durationMs: 36000,
+          message: "Upstream outage"
         }
       ],
       sessionOfflineLastRun: {
@@ -309,7 +327,15 @@ describe("Client shell components", () => {
           message: "Workflow exceeded SLA",
           at: "2025-11-03T22:05:00.000Z"
         }
-      ]
+      ],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      },
+      setPipelineFilter,
+      togglePipelineTimeline,
+      acknowledgePipelineAlert
     });
 
     const accountSessions = [
@@ -328,8 +354,24 @@ describe("Client shell components", () => {
 
     expect(screen.getByTestId("overlay-pipeline")).toBeInTheDocument();
     expect(screen.getByText(/Moderation queue: 2/)).toBeInTheDocument();
-    expect(screen.getByText(/Processing/)).toBeInTheDocument();
+    expect(screen.getByText(/Processing/i)).toBeInTheDocument();
     expect(screen.getByText(/Workflow exceeded SLA/)).toBeInTheDocument();
+
+    const detailsToggle = screen.getByTestId("pipeline-details-toggle");
+    fireEvent.click(detailsToggle);
+    expect(screen.getByText(/Latest run/)).toBeInTheDocument();
+
+    const alertsFilter = screen.getByTestId("pipeline-filter-alerts");
+    fireEvent.click(alertsFilter);
+    expect(setPipelineFilter).toHaveBeenCalledWith("alerts");
+
+    const timelineToggle = screen.getByTestId("pipeline-timeline-toggle");
+    fireEvent.click(timelineToggle);
+    expect(togglePipelineTimeline).toHaveBeenCalledTimes(1);
+
+    const acknowledgeButton = screen.getByTestId("pipeline-ack-0");
+    fireEvent.click(acknowledgeButton);
+    expect(acknowledgePipelineAlert).toHaveBeenCalledTimes(1);
   });
 
   test("CheckOverlay surfaces pending and resolved check details", () => {
