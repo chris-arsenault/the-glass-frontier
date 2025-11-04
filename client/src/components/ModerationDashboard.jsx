@@ -41,7 +41,7 @@ function groupAlertsByStatus(alerts) {
 }
 
 export function ModerationDashboard() {
-  const { fetchWithAuth, setFlashMessage } = useAccountContext();
+  const { fetchWithAuth, setFlashMessage, isAdmin } = useAccountContext();
   const [alerts, setAlerts] = useState([]);
   const [stats, setStats] = useState({ total: 0, live: 0, queued: 0, escalated: 0, resolved: 0 });
   const [selectedAlertId, setSelectedAlertId] = useState(null);
@@ -166,6 +166,125 @@ export function ModerationDashboard() {
     loadCadence();
     loadContestArtefacts();
   }, [loadAlerts, loadCadence, loadContestArtefacts]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isAdmin) {
+      return undefined;
+    }
+
+    const channelId = "admin:moderation";
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${protocol}://${window.location.host}/ws?sessionId=${encodeURIComponent(channelId)}`;
+
+    let ws;
+    let eventSource;
+    let reconnectTimer;
+    let closed = false;
+
+    const scheduleReconnect = (callback, delay = 200) => {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      reconnectTimer = window.setTimeout(callback, delay);
+    };
+
+    const handleEnvelope = (data) => {
+      if (!data || data.type !== "admin.moderation.cadence") {
+        return;
+      }
+      const sessions = Array.isArray(data.payload?.sessions) ? data.payload.sessions : [];
+      setCadenceSessions(sessions);
+      setCadenceError(null);
+    };
+
+    const connectEventSource = () => {
+      if (closed) {
+        return;
+      }
+      if (typeof window.EventSource !== "function") {
+        scheduleReconnect(connectWebSocket, 2000);
+        return;
+      }
+      eventSource = new EventSource(`/sessions/${encodeURIComponent(channelId)}/events`);
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleEnvelope(data);
+        } catch (streamError) {
+          setCadenceError(streamError.message);
+        }
+      };
+      eventSource.onerror = () => {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        if (!closed) {
+          scheduleReconnect(connectWebSocket, 2000);
+        }
+      };
+    };
+
+    const connectWebSocket = () => {
+      if (closed) {
+        return;
+      }
+
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (creationError) {
+        setCadenceError(creationError.message);
+        scheduleReconnect(connectEventSource, 2000);
+        return;
+      }
+
+      ws.onopen = () => {
+        setCadenceError(null);
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleEnvelope(data);
+        } catch (parseError) {
+          setCadenceError(parseError.message);
+        }
+      };
+      ws.onerror = () => {
+        if (!closed) {
+          scheduleReconnect(connectEventSource, 200);
+        }
+        try {
+          ws.close();
+        } catch (_error) {
+          // ignore close errors
+        }
+      };
+      ws.onclose = () => {
+        if (!closed) {
+          scheduleReconnect(connectEventSource, 200);
+        }
+      };
+    };
+
+    connectWebSocket();
+
+    return () => {
+      closed = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      if (ws) {
+        try {
+          ws.close();
+        } catch (_error) {
+          // ignore close errors
+        }
+      }
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [isAdmin]);
 
   useEffect(() => {
     if (selectedAlertId) {

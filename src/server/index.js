@@ -30,6 +30,8 @@ const { ClosureWorkflowOrchestrator } = require("../offline/closureWorkflowOrche
 const { ModerationQueueStore } = require("../moderation/moderationQueueStore");
 const { PostgresPublishingStateStore } = require("../offline/publishing/postgresPublishingStateStore");
 
+const ADMIN_MODERATION_CHANNEL = "admin:moderation";
+
 let moderationPool = null;
 let moderationQueueStore = null;
 let publishingStateStore = null;
@@ -126,6 +128,36 @@ const app = createApp({
   hubVerbService,
   offlineCoordinator: sessionClosureCoordinator
 });
+const moderationService = app.locals?.moderationService || null;
+
+sessionMemory.onModerationQueueUpdated((sessionId, queueState) => {
+  broadcaster.publish(sessionId, {
+    type: "moderation.queue.updated",
+    payload: {
+      sessionId,
+      queue: queueState
+    }
+  });
+
+  if (moderationService) {
+    try {
+      const overview = moderationService.listCadenceOverview();
+      broadcaster.publish(ADMIN_MODERATION_CHANNEL, {
+        type: "admin.moderation.cadence",
+        payload: {
+          sessions: overview,
+          updatedAt: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      log("error", "Failed to broadcast admin moderation cadence", {
+        sessionId,
+        message: error.message
+      });
+    }
+  }
+});
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 

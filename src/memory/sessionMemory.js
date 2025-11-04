@@ -166,6 +166,7 @@ class SessionMemoryFacade {
     this.moderationQueueStore = moderationQueueStore;
     this.clock = clock;
     this.hydratingModerationQueues = false;
+    this.moderationQueueListeners = new Set();
   }
 
   async hydrateModerationQueuesFromStore() {
@@ -431,6 +432,7 @@ class SessionMemoryFacade {
 
     session.updatedAt = generatedAt;
     this.scheduleModerationPersist(sessionId, moderationState.queue);
+    this.emitModerationQueueUpdated(sessionId, moderationState.queue);
     return clone(moderationState.queue);
   }
 
@@ -473,6 +475,7 @@ class SessionMemoryFacade {
     session.updatedAt = updatedAt;
 
     this.scheduleModerationPersist(sessionId, queue);
+    this.emitModerationQueueUpdated(sessionId, queue);
     return clone(next);
   }
 
@@ -498,6 +501,7 @@ class SessionMemoryFacade {
     moderationState.queue.updatedAt = nowIso;
     session.updatedAt = nowIso;
     this.scheduleModerationPersist(sessionId, moderationState.queue);
+    this.emitModerationQueueUpdated(sessionId, moderationState.queue);
     return clone(moderationState.queue);
   }
 
@@ -515,6 +519,33 @@ class SessionMemoryFacade {
           message: error.message
         });
       });
+  }
+
+  onModerationQueueUpdated(listener) {
+    if (typeof listener !== "function") {
+      throw new Error("session_memory_requires_moderation_listener");
+    }
+    this.moderationQueueListeners.add(listener);
+    return () => {
+      this.moderationQueueListeners.delete(listener);
+    };
+  }
+
+  emitModerationQueueUpdated(sessionId, queueState) {
+    if (!queueState || this.moderationQueueListeners.size === 0) {
+      return;
+    }
+
+    for (const listener of this.moderationQueueListeners) {
+      try {
+        listener(sessionId, clone(queueState));
+      } catch (error) {
+        log("error", "moderation_queue_listener_failed", {
+          sessionId,
+          message: error.message
+        });
+      }
+    }
   }
 
   listModerationQueues() {

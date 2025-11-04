@@ -9,6 +9,7 @@
 - Extended `PublishingCoordinator` and `PublishingCadence` to surface moderation gate status, pending counts, and cadence history so publishing batches remain blocked until approvals land.
 - Exposed `/admin/moderation/cadence` endpoint returning session-level cadence summaries consumed by the admin moderation dashboard.
 - Implemented `ModerationCadenceStrip` UI showing SLA countdowns, pending delta counts, and quick links to review alerts, ensuring admins see publishing blocks in real time.
+- Broadcast moderation queue and cadence updates over the shared transport admin channel so the dashboard reflects changes immediately after persistence.
 - Aggregated cadence data now groups blocking deltas by entity/reason and highlights capability flags so moderators can triage multi-delta sessions faster.
 - Added cadence override endpoint and admin strip controls so moderators can defer lore batches within DES-16 limits while session memory updates cadence state immediately.
 - Persisted moderation queue snapshots and publishing cadence schedules to PostgreSQL (`moderation_queue_state`, `publishing_cadence_state`) with automatic hydration on server startup when `MODERATION_DATABASE_URL` is configured.
@@ -31,4 +32,3 @@
 
 ## Follow-Ups
 1. Expose persisted cadence snapshots to Temporal moderation workflows once shared transport credentials unblock orchestration hooks.
-2. Deliver live socket updates for cadence strip once shared transport lands so polling can be removed.
