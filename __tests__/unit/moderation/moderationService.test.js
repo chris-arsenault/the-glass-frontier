@@ -163,6 +163,11 @@ describe("ModerationService", () => {
     expect(entry).toBeDefined();
     expect(entry.queue.pendingCount).toBe(0);
     expect(entry.queue.items[0].status).toBe("resolved");
+    expect(entry.aggregates).toEqual({
+      blockingGroups: [],
+      reasonCounts: [],
+      capabilityCounts: []
+    });
   });
 
   test("loads contest summaries from timeline artefacts", () => {
@@ -216,5 +221,93 @@ describe("ModerationService", () => {
     expect(summary.summary.totals.contestsObserved).toBeGreaterThanOrEqual(1);
     expect(summary.summary.durations.arming.samples).toBe(1);
     expect(summary.summary.durations.resolution.samples).toBe(1);
+  });
+
+  test("aggregates blocking moderation queue items for cadence overview", () => {
+    const sessionId = "session-aggregate-1";
+    sessionMemory.recordModerationQueue(sessionId, {
+      generatedAt: "2025-11-04T07:30:00.000Z",
+      pendingCount: 3,
+      items: [
+        {
+          deltaId: "delta-aggregate-1",
+          sessionId,
+          status: "needs-review",
+          blocking: true,
+          entityType: "location",
+          entityId: "loc-glass-1",
+          canonicalName: "Glass Frontier Gate",
+          reasons: ["safety_violation"],
+          capabilityViolations: ["cap.temporal-distortion"]
+        },
+        {
+          deltaId: "delta-aggregate-2",
+          sessionId,
+          status: "needs-review",
+          blocking: true,
+          entityType: "location",
+          entityId: "loc-glass-1",
+          canonicalName: "Glass Frontier Gate",
+          reasons: ["safety_violation", "lore_conflict"],
+          capabilityViolations: []
+        },
+        {
+          deltaId: "delta-aggregate-3",
+          sessionId,
+          status: "needs-review",
+          blocking: true,
+          entityType: "faction",
+          entityId: "faction-order-1",
+          canonicalName: "Crystalline Order",
+          reasons: ["faction_policy"],
+          capabilityViolations: ["cap.brute_force"]
+        }
+      ],
+      window: {
+        status: "awaiting_review",
+        startAt: "2025-11-04T07:00:00.000Z",
+        endAt: "2025-11-04T08:00:00.000Z",
+        escalations: []
+      },
+      cadence: {
+        nextBatchAt: "2025-11-04T08:30:00.000Z",
+        nextDigestAt: "2025-11-05T02:00:00.000Z",
+        batches: [],
+        digest: null
+      }
+    });
+
+    const overview = moderation.listCadenceOverview();
+    const entry = overview.find((session) => session.sessionId === sessionId);
+    expect(entry).toBeDefined();
+    expect(entry.aggregates.blockingGroups).toEqual([
+      {
+        key: "location|Glass Frontier Gate",
+        entityType: "location",
+        canonicalName: "Glass Frontier Gate",
+        entityId: "loc-glass-1",
+        count: 2,
+        reasons: ["lore_conflict", "safety_violation"],
+        capabilityViolations: ["cap.temporal-distortion"]
+      },
+      {
+        key: "faction|Crystalline Order",
+        entityType: "faction",
+        canonicalName: "Crystalline Order",
+        entityId: "faction-order-1",
+        count: 1,
+        reasons: ["faction_policy"],
+        capabilityViolations: ["cap.brute_force"]
+      }
+    ]);
+    expect(entry.aggregates.reasonCounts).toEqual([
+      { reason: "safety_violation", count: 2 },
+      { reason: "faction_policy", count: 1 },
+      { reason: "lore_conflict", count: 1 }
+    ]);
+    expect(entry.aggregates.capabilityCounts).toEqual([
+      { capability: "cap.brute_force", count: 1 },
+      { capability: "cap.temporal-distortion", count: 1 }
+    ]);
   });
 });

@@ -9,6 +9,7 @@
 - Extended `PublishingCoordinator` and `PublishingCadence` to surface moderation gate status, pending counts, and cadence history so publishing batches remain blocked until approvals land.
 - Exposed `/admin/moderation/cadence` endpoint returning session-level cadence summaries consumed by the admin moderation dashboard.
 - Implemented `ModerationCadenceStrip` UI showing SLA countdowns, pending delta counts, and quick links to review alerts, ensuring admins see publishing blocks in real time.
+- Aggregated cadence data now groups blocking deltas by entity/reason and highlights capability flags so moderators can triage multi-delta sessions faster.
 
 ## Code Surfaces
 | Path | Purpose |
@@ -29,4 +30,3 @@
 ## Follow-Ups
 1. Surface cadence overrides directly in UI once cadence override APIs land (link to publishing coordinator overrides).
 2. Persist moderation queue/session cadence data to PostgreSQL and expose Temporal workflow hooks when infra credentials unblock platform rollout.
-3. Add alert grouping for multiple deltas per session to reduce manual scanning once backlog density increases.

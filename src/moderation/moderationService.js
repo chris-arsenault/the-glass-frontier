@@ -54,6 +54,101 @@ function toLowerSet(values) {
   return new Set(normaliseArray(values).map((value) => String(value).toLowerCase()));
 }
 
+function aggregateBlockingQueueItems(items = []) {
+  const blockingItems = items.filter((item) => item && item.blocking !== false);
+  if (blockingItems.length === 0) {
+    return {
+      blockingGroups: [],
+      reasonCounts: [],
+      capabilityCounts: []
+    };
+  }
+
+  const groupMap = new Map();
+  const reasonCounts = new Map();
+  const capabilityCounts = new Map();
+
+  blockingItems.forEach((item) => {
+    const entityType = item.entityType || null;
+    const canonicalName = item.canonicalName || null;
+    const entityId = item.entityId || null;
+    const groupKey = `${entityType || "unknown"}|${canonicalName || entityId || "unlabelled"}`;
+
+    const existing = groupMap.get(groupKey) || {
+      key: groupKey,
+      entityType,
+      canonicalName,
+      entityId,
+      count: 0,
+      reasons: new Set(),
+      capabilityViolations: new Set()
+    };
+
+    existing.count += 1;
+
+    const reasons = Array.isArray(item.reasons) ? item.reasons : [];
+    reasons.forEach((reason) => {
+      if (reason) {
+        existing.reasons.add(reason);
+        reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+      }
+    });
+
+    const capabilities = Array.isArray(item.capabilityViolations) ? item.capabilityViolations : [];
+    capabilities.forEach((capability) => {
+      if (capability) {
+        existing.capabilityViolations.add(capability);
+        capabilityCounts.set(capability, (capabilityCounts.get(capability) || 0) + 1);
+      }
+    });
+
+    groupMap.set(groupKey, existing);
+  });
+
+  const blockingGroups = Array.from(groupMap.values())
+    .map((group) => ({
+      key: group.key,
+      entityType: group.entityType,
+      canonicalName: group.canonicalName,
+      entityId: group.entityId,
+      count: group.count,
+      reasons: Array.from(group.reasons).sort(),
+      capabilityViolations: Array.from(group.capabilityViolations).sort()
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      const aName = a.canonicalName || a.entityId || "";
+      const bName = b.canonicalName || b.entityId || "";
+      return aName.localeCompare(bName);
+    });
+
+  const sortedReasonCounts = Array.from(reasonCounts.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.reason.localeCompare(b.reason);
+    });
+
+  const sortedCapabilityCounts = Array.from(capabilityCounts.entries())
+    .map(([capability, count]) => ({ capability, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.capability.localeCompare(b.capability);
+    });
+
+  return {
+    blockingGroups,
+    reasonCounts: sortedReasonCounts,
+    capabilityCounts: sortedCapabilityCounts
+  };
+}
+
 class ModerationService {
   constructor({
     sessionMemory,
@@ -403,6 +498,7 @@ class ModerationService {
     return queues.map((entry) => {
       const queue = entry.queue || {};
       const items = Array.isArray(queue.items) ? queue.items : [];
+      const aggregates = aggregateBlockingQueueItems(items);
       return {
         sessionId: entry.sessionId,
         player: entry.player || null,
@@ -435,7 +531,8 @@ class ModerationService {
           }))
         },
         stats: entry.stats || {},
-        lastOfflineWorkflowRun: entry.lastOfflineWorkflowRun || null
+        lastOfflineWorkflowRun: entry.lastOfflineWorkflowRun || null,
+        aggregates
       };
     });
   }

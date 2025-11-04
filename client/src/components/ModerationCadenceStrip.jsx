@@ -53,6 +53,27 @@ function collectReasons(items) {
   return Array.from(reasonSet).sort();
 }
 
+function formatReasonCounts(reasonCounts, fallbackReasons) {
+  if (Array.isArray(reasonCounts) && reasonCounts.length > 0) {
+    return reasonCounts
+      .map((entry) => `${entry.reason} (${entry.count})`)
+      .join(", ");
+  }
+  if (Array.isArray(fallbackReasons) && fallbackReasons.length > 0) {
+    return fallbackReasons.join(", ");
+  }
+  return "Awaiting review";
+}
+
+function formatEntityType(entityType) {
+  if (!entityType) {
+    return "Entity";
+  }
+  return String(entityType)
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 export function ModerationCadenceStrip({ sessions = [], loading = false, error = null, onRefresh, onSelectSession }) {
   const [now, setNow] = useState(new Date());
 
@@ -71,6 +92,9 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
         const blockingItems = items.filter((item) => item.blocking !== false);
         const deadlineIso = queue.window?.endAt || blockingItems[0]?.deadlineAt || null;
         const deadline = toDate(deadlineIso);
+        const aggregates = entry.aggregates || {};
+        const blockingGroups = Array.isArray(aggregates.blockingGroups) ? aggregates.blockingGroups : [];
+        const reasonCounts = Array.isArray(aggregates.reasonCounts) ? aggregates.reasonCounts : [];
         return {
           sessionId: entry.sessionId,
           playerName: entry.player?.name || entry.player?.displayName || entry.sessionId,
@@ -78,11 +102,18 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
           blockingItems,
           totalAlerts: entry.stats?.totalAlerts ?? 0,
           deadline,
-          reasons: collectReasons(blockingItems),
+          reasonSummary: formatReasonCounts(reasonCounts, collectReasons(blockingItems)),
           nextBatchAt: queue.cadence?.nextBatchAt || null,
-          nextDigestAt: queue.cadence?.nextDigestAt || null
+          nextDigestAt: queue.cadence?.nextDigestAt || null,
+          aggregates: {
+            blockingGroups,
+            capabilityCounts: Array.isArray(aggregates.capabilityCounts)
+              ? aggregates.capabilityCounts
+              : []
+          }
         };
       })
+      .filter((entry) => entry.blockingItems.length > 0)
       .sort((a, b) => {
         const aPending = a.blockingItems.length;
         const bPending = b.blockingItems.length;
@@ -154,7 +185,7 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
                   </div>
                   <div>
                     <dt>Reasons</dt>
-                    <dd>{entry.reasons.length > 0 ? entry.reasons.join(", ") : "Awaiting review"}</dd>
+                    <dd>{entry.reasonSummary}</dd>
                   </div>
                   <div>
                     <dt>Next Batch</dt>
@@ -182,6 +213,36 @@ export function ModerationCadenceStrip({ sessions = [], loading = false, error =
                     </button>
                   ) : null}
                 </div>
+                {entry.aggregates.blockingGroups.length > 0 ? (
+                  <ul
+                    className="moderation-cadence__clusters"
+                    aria-label="Blocking delta groups"
+                    data-testid="moderation-cadence-clusters"
+                  >
+                    {entry.aggregates.blockingGroups.map((group) => (
+                      <li
+                        key={group.key}
+                        className="moderation-cadence__cluster"
+                        data-testid="moderation-cadence-cluster"
+                      >
+                        <div className="moderation-cadence__cluster-header">
+                          <strong>{group.count}×</strong> {formatEntityType(group.entityType)}
+                          {group.canonicalName ? <span> • {group.canonicalName}</span> : null}
+                        </div>
+                        {group.reasons.length > 0 ? (
+                          <div className="moderation-cadence__cluster-meta">
+                            Reasons: {group.reasons.join(", ")}
+                          </div>
+                        ) : null}
+                        {group.capabilityViolations.length > 0 ? (
+                          <div className="moderation-cadence__cluster-meta">
+                            Capability flags: {group.capabilityViolations.join(", ")}
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             );
           })}

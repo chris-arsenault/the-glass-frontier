@@ -1866,6 +1866,35 @@ body {
   font-size: 0.95rem;
 }
 
+.moderation-cadence__clusters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.moderation-cadence__cluster {
+  border-left: 3px solid var(--border-muted);
+  padding-left: 0.5rem;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.moderation-cadence__cluster-header {
+  display: flex;
+  gap: 0.25rem;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.moderation-cadence__cluster-meta {
+  color: var(--text-muted);
+}
+
 .moderation-cadence__footer {
   display: flex;
   justify-content: space-between;
