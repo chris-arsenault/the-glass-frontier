@@ -67,7 +67,7 @@ if [[ -n "${CI_BUILD_ARGS:-${BUILD_ARGS:-}}" ]]; then
     if [[ -n "${trimmed_line}" ]]; then
       EXTRA_BUILD_ARGS+=("${trimmed_line}")
     fi
-  done < <(printf '%s' "${CI_BUILD_ARGS:-${BUILD_ARGS:-}}" | tr ',' '\n')
+  done < <(printf '%s\n' "${CI_BUILD_ARGS:-${BUILD_ARGS:-}}" | tr ',' '\n')
 fi
 
 BUILD_COMMAND=(bash "${SCRIPT_DIR}/build-services.sh" "--tag" "${TAG}" "--registry" "${REGISTRY}" "--service-file" "${SERVICE_LIST_FILE}")
