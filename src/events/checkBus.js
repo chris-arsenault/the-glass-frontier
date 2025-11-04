@@ -8,6 +8,7 @@ const CHECK_REQUEST_TOPIC = "intent.checkRequest";
 const CHECK_RESOLVED_TOPIC = "event.checkResolved";
 const CHECK_VETOED_TOPIC = "event.checkVetoed";
 const ADMIN_ALERT_TOPIC = "admin.alert";
+const MODERATION_DECISION_TOPIC = "moderation.decision";
 
 class CheckBus extends EventEmitter {
   constructor() {
@@ -97,6 +98,34 @@ class CheckBus extends EventEmitter {
   onAdminAlert(listener) {
     this.on(ADMIN_ALERT_TOPIC, listener);
   }
+
+  emitModerationDecision(payload) {
+    if (!payload || !payload.sessionId) {
+      throw new Error("moderation_decision_requires_session");
+    }
+
+    const envelope = {
+      id: payload.id || uuid(),
+      sessionId: payload.sessionId,
+      topic: MODERATION_DECISION_TOPIC,
+      createdAt: new Date().toISOString(),
+      action: payload.action || "acknowledge",
+      alertId: payload.alertId || null,
+      auditRef: payload.auditRef || uuid(),
+      actor: payload.actor || null,
+      notes: payload.notes || null,
+      metadata: payload.metadata || {},
+      status: payload.status || null
+    };
+
+    this.emit(MODERATION_DECISION_TOPIC, envelope);
+    log("info", "moderation.decision dispatched", { envelope });
+    return envelope;
+  }
+
+  onModerationDecision(listener) {
+    this.on(MODERATION_DECISION_TOPIC, listener);
+  }
 }
 
 module.exports = {
@@ -104,5 +133,6 @@ module.exports = {
   CHECK_REQUEST_TOPIC,
   CHECK_RESOLVED_TOPIC,
   CHECK_VETOED_TOPIC,
-  ADMIN_ALERT_TOPIC
+  ADMIN_ALERT_TOPIC,
+  MODERATION_DECISION_TOPIC
 };

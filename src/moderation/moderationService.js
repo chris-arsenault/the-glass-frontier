@@ -1,0 +1,486 @@
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const { v4: uuid } = require("uuid");
+const {
+  DEFAULT_THRESHOLDS,
+  buildSummary
+} = require("../../scripts/benchmarks/contestWorkflowMonitor");
+
+const ALERT_STATUS_LIVE = "live";
+const ALERT_STATUS_QUEUED = "queued";
+const ALERT_STATUS_ESCALATED = "escalated";
+const ALERT_STATUS_RESOLVED = "resolved";
+
+const ACTION_STATUS_MAP = {
+  approve: ALERT_STATUS_RESOLVED,
+  amend: ALERT_STATUS_RESOLVED,
+  resolve: ALERT_STATUS_RESOLVED,
+  escalate: ALERT_STATUS_ESCALATED,
+  pause: ALERT_STATUS_QUEUED,
+  defer: ALERT_STATUS_QUEUED,
+  queue: ALERT_STATUS_QUEUED,
+  acknowledge: ALERT_STATUS_LIVE
+};
+
+function clone(value) {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normaliseArray(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return input.filter((item) => item !== undefined && item !== null);
+}
+
+function toLowerSet(values) {
+  return new Set(normaliseArray(values).map((value) => String(value).toLowerCase()));
+}
+
+class ModerationService {
+  constructor({
+    sessionMemory,
+    checkBus,
+    contestLogDirectory = path.resolve(process.cwd(), "artifacts", "hub"),
+    clock = () => new Date()
+  } = {}) {
+    if (!sessionMemory) {
+      throw new Error("moderation_service_requires_session_memory");
+    }
+    if (!checkBus) {
+      throw new Error("moderation_service_requires_check_bus");
+    }
+
+    this.sessionMemory = sessionMemory;
+    this.checkBus = checkBus;
+    this.contestLogDirectory = contestLogDirectory;
+    this.clock = clock;
+    this.alerts = new Map();
+    this.decisions = new Map();
+    this.contestSummaryCache = new Map();
+
+    this.handleAdminAlert = this.handleAdminAlert.bind(this);
+    this.checkBus.onAdminAlert(this.handleAdminAlert);
+  }
+
+  destroy() {
+    if (typeof this.checkBus.off === "function") {
+      this.checkBus.off("admin.alert", this.handleAdminAlert);
+    }
+  }
+
+  handleAdminAlert(envelope) {
+    try {
+      this.recordAlert(envelope);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("[ModerationService] Failed to record admin alert", error);
+    }
+  }
+
+  recordAlert(envelope) {
+    if (!envelope || !envelope.sessionId) {
+      throw new Error("moderation_alert_requires_session");
+    }
+
+    const createdAt = envelope.createdAt || this.#nowIso();
+    const alert = {
+      id: envelope.id || uuid(),
+      sessionId: envelope.sessionId,
+      createdAt,
+      updatedAt: createdAt,
+      severity: envelope.severity || "info",
+      reason: envelope.reason || "admin.alert",
+      status: ALERT_STATUS_LIVE,
+      data: clone(envelope.data || {}),
+      auditRef: envelope.auditRef || null,
+      message: envelope.message || null,
+      source: envelope.source || null,
+      decisions: [],
+      history: []
+    };
+
+    this.alerts.set(alert.id, alert);
+    this.sessionMemory.recordModerationAlert(alert.sessionId, clone(alert));
+    return clone(alert);
+  }
+
+  listAlerts(filters = {}) {
+    const statusFilter = filters.status
+      ? toLowerSet(Array.isArray(filters.status) ? filters.status : [filters.status])
+      : null;
+    const severityFilter = filters.severity
+      ? toLowerSet(Array.isArray(filters.severity) ? filters.severity : [filters.severity])
+      : null;
+    const reasonFilter = filters.reason
+      ? toLowerSet(Array.isArray(filters.reason) ? filters.reason : [filters.reason])
+      : null;
+    const safetyFlagFilter = filters.safetyFlag
+      ? toLowerSet(Array.isArray(filters.safetyFlag) ? filters.safetyFlag : [filters.safetyFlag])
+      : null;
+    const hubFilter = filters.hubId
+      ? toLowerSet(Array.isArray(filters.hubId) ? filters.hubId : [filters.hubId])
+      : null;
+    const sessionFilter = filters.sessionId
+      ? toLowerSet(Array.isArray(filters.sessionId) ? filters.sessionId : [filters.sessionId])
+      : null;
+    const searchTerm = filters.search ? String(filters.search).toLowerCase().trim() : null;
+
+    const alerts = Array.from(this.alerts.values()).filter((alert) => {
+      if (statusFilter && !statusFilter.has(String(alert.status || "").toLowerCase())) {
+        return false;
+      }
+      if (
+        severityFilter &&
+        !severityFilter.has(String(alert.severity || "").toLowerCase())
+      ) {
+        return false;
+      }
+      if (reasonFilter && !reasonFilter.has(String(alert.reason || "").toLowerCase())) {
+        return false;
+      }
+      if (sessionFilter && !sessionFilter.has(String(alert.sessionId).toLowerCase())) {
+        return false;
+      }
+      if (hubFilter) {
+        const alertHubId =
+          alert.data?.hubId ||
+          alert.data?.contest?.hubId ||
+          alert.data?.metadata?.hubId ||
+          null;
+        if (!alertHubId || !hubFilter.has(String(alertHubId).toLowerCase())) {
+          return false;
+        }
+      }
+      if (safetyFlagFilter) {
+        const flags = Array.isArray(alert.data?.safetyFlags)
+          ? alert.data.safetyFlags.map((flag) => String(flag).toLowerCase())
+          : [];
+        const hasFlag = flags.some((flag) => safetyFlagFilter.has(flag));
+        if (!hasFlag) {
+          return false;
+        }
+      }
+      if (searchTerm) {
+        const fields = [
+          alert.reason,
+          alert.message,
+          alert.sessionId,
+          alert.data?.contestId,
+          alert.data?.contestKey
+        ]
+          .filter(Boolean)
+          .map((value) => String(value).toLowerCase());
+        const matches = fields.some((value) => value.includes(searchTerm));
+        if (!matches) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    alerts.sort((a, b) => {
+      const aTime = Date.parse(b.updatedAt || b.createdAt || 0);
+      const bTime = Date.parse(a.updatedAt || a.createdAt || 0);
+      return aTime - bTime;
+    });
+
+    const limit =
+      typeof filters.limit === "number" && filters.limit > 0 ? filters.limit : undefined;
+    const sliced = limit ? alerts.slice(0, limit) : alerts;
+    return sliced.map((alert) => this.serializeAlert(alert));
+  }
+
+  getAlert(alertId) {
+    const alert = this.alerts.get(alertId);
+    if (!alert) {
+      return null;
+    }
+    return this.serializeAlert(alert);
+  }
+
+  applyDecision(alertId, payload = {}, actor = null) {
+    const alert = this.alerts.get(alertId);
+    if (!alert) {
+      throw new Error("moderation_alert_not_found");
+    }
+
+    const action = String(payload.action || "acknowledge").toLowerCase();
+    const status = ACTION_STATUS_MAP[action];
+    if (!status) {
+      throw new Error(`moderation_decision_unknown_action:${action}`);
+    }
+
+    const decisionId = uuid();
+    const createdAt = this.#nowIso();
+    const decision = {
+      id: decisionId,
+      alertId: alert.id,
+      sessionId: alert.sessionId,
+      action,
+      status,
+      notes: payload.notes || null,
+      createdAt,
+      actor: actor
+        ? {
+            id: actor.id || null,
+            displayName: actor.displayName || actor.email || actor.id || "moderator",
+            roles: Array.isArray(actor.roles) ? [...actor.roles] : []
+          }
+        : null,
+      metadata: clone(payload.metadata || {}),
+      override: payload.override ? clone(payload.override) : null,
+      escalation: payload.escalation ? clone(payload.escalation) : null
+    };
+
+    alert.status = status;
+    alert.updatedAt = createdAt;
+    alert.decisions.push(decision);
+    alert.history.push({
+      at: createdAt,
+      action,
+      status,
+      actor: decision.actor
+    });
+
+    if (status === ALERT_STATUS_RESOLVED) {
+      alert.resolvedAt = createdAt;
+    }
+
+    this.decisions.set(decisionId, decision);
+    this.sessionMemory.updateModerationAlert(alert.sessionId, alert.id, {
+      status: alert.status,
+      updatedAt: alert.updatedAt,
+      resolvedAt: alert.resolvedAt || null,
+      decisions: alert.decisions.map((entry) => clone(entry)),
+      history: alert.history.map((entry) => clone(entry))
+    });
+    this.sessionMemory.recordModerationDecision(alert.sessionId, clone(decision));
+
+    this.checkBus.emitModerationDecision({
+      id: decision.id,
+      sessionId: decision.sessionId,
+      alertId: decision.alertId,
+      action: decision.action,
+      status: decision.status,
+      actor: decision.actor,
+      notes: decision.notes,
+      metadata: {
+        ...decision.metadata,
+        override: decision.override || undefined,
+        escalation: decision.escalation || undefined,
+        reason: alert.reason,
+        severity: alert.severity
+      }
+    });
+
+    return this.serializeAlert(alert);
+  }
+
+  listDecisions(filters = {}) {
+    const decisions = Array.from(this.decisions.values());
+    const sessionFilter = filters.sessionId
+      ? toLowerSet(Array.isArray(filters.sessionId) ? filters.sessionId : [filters.sessionId])
+      : null;
+    const alertFilter = filters.alertId
+      ? toLowerSet(Array.isArray(filters.alertId) ? filters.alertId : [filters.alertId])
+      : null;
+    const actionFilter = filters.action
+      ? toLowerSet(Array.isArray(filters.action) ? filters.action : [filters.action])
+      : null;
+
+    const filtered = decisions.filter((decision) => {
+      if (sessionFilter && !sessionFilter.has(String(decision.sessionId).toLowerCase())) {
+        return false;
+      }
+      if (alertFilter && !alertFilter.has(String(decision.alertId).toLowerCase())) {
+        return false;
+      }
+      if (actionFilter && !actionFilter.has(String(decision.action || "").toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+
+    filtered.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return filtered.map((decision) => clone(decision));
+  }
+
+  listContestArtefacts() {
+    if (!fs.existsSync(this.contestLogDirectory)) {
+      return [];
+    }
+
+    const entries = fs.readdirSync(this.contestLogDirectory);
+    return entries
+      .filter((name) => name.includes("contest"))
+      .map((name) => {
+        const filePath = path.join(this.contestLogDirectory, name);
+        const stats = fs.statSync(filePath);
+        return {
+          name,
+          path: filePath,
+          size: stats.size,
+          modifiedAt: stats.mtime.toISOString()
+        };
+      })
+      .sort((a, b) => Date.parse(b.modifiedAt) - Date.parse(a.modifiedAt));
+  }
+
+  loadContestSummary(fileName, thresholds = DEFAULT_THRESHOLDS) {
+    if (!fileName) {
+      throw new Error("contest_summary_requires_file");
+    }
+
+    const artefactPath = path.isAbsolute(fileName)
+      ? fileName
+      : path.join(this.contestLogDirectory, fileName);
+
+    if (!fs.existsSync(artefactPath)) {
+      throw new Error("contest_artefact_not_found");
+    }
+
+    const cacheKey = `${artefactPath}:${JSON.stringify(thresholds)}`;
+    if (this.contestSummaryCache.has(cacheKey)) {
+      return clone(this.contestSummaryCache.get(cacheKey));
+    }
+
+    const rawContent = fs.readFileSync(artefactPath, "utf8");
+    const events = this.#parseContestEvents(rawContent);
+    const summary = buildSummary(events, {
+      armingP95: thresholds.armingP95 || DEFAULT_THRESHOLDS.armingP95,
+      resolutionP95: thresholds.resolutionP95 || DEFAULT_THRESHOLDS.resolutionP95
+    });
+
+    const result = {
+      source: artefactPath,
+      generatedAt: this.#nowIso(),
+      summary
+    };
+
+    this.contestSummaryCache.set(cacheKey, result);
+    return clone(result);
+  }
+
+  getModerationState(sessionId) {
+    return this.sessionMemory.getModerationState(sessionId);
+  }
+
+  serializeAlert(alert) {
+    return {
+      id: alert.id,
+      sessionId: alert.sessionId,
+      createdAt: alert.createdAt,
+      updatedAt: alert.updatedAt,
+      resolvedAt: alert.resolvedAt || null,
+      severity: alert.severity,
+      reason: alert.reason,
+      status: alert.status,
+      auditRef: alert.auditRef || null,
+      message: alert.message || null,
+      source: alert.source || null,
+      data: clone(alert.data),
+      decisions: alert.decisions.map((decision) => clone(decision)),
+      history: alert.history.map((entry) => clone(entry))
+    };
+  }
+
+  #parseContestEvents(rawContent) {
+    const events = [];
+    const lines = rawContent.split(/\r?\n/).filter((line) => line.trim().length > 0);
+
+    let jsonLinesParsed = 0;
+    lines.forEach((line) => {
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed && typeof parsed === "object" && parsed.message) {
+          events.push(parsed);
+          jsonLinesParsed += 1;
+        }
+      } catch (error) {
+        // ignore, may not be JSON line
+      }
+    });
+
+    if (jsonLinesParsed > 0) {
+      return events;
+    }
+
+    try {
+      const parsed = JSON.parse(rawContent);
+      if (parsed && Array.isArray(parsed.timeline)) {
+        parsed.timeline.forEach((entry) => {
+          if (!entry || typeof entry !== "object") {
+            return;
+          }
+
+          const mappedMessage = this.#mapTimelineType(entry.type);
+          if (!mappedMessage) {
+            return;
+          }
+
+          const payload = entry.payload || {};
+          events.push({
+            message: mappedMessage,
+            hubId: payload.hubId || parsed.hubId || null,
+            roomId: payload.roomId || parsed.roomId || null,
+            contestId: payload.contestId || parsed.contestId || null,
+            contestKey: payload.contestKey || parsed.contestKey || null,
+            armingDurationMs:
+              payload.armingDurationMs !== undefined ? payload.armingDurationMs : null,
+            resolutionDurationMs:
+              payload.resolutionDurationMs !== undefined
+                ? payload.resolutionDurationMs
+                : null,
+            participantCount:
+              payload.participantCount !== undefined ? payload.participantCount : null,
+            participantCapacity:
+              payload.participantCapacity !== undefined ? payload.participantCapacity : null,
+            outcomeTier:
+              (payload.outcome && payload.outcome.tier) || payload.outcomeTier || null
+          });
+        });
+      }
+    } catch (error) {
+      // ignore, fallback to empty
+    }
+
+    return events;
+  }
+
+  #mapTimelineType(type) {
+    switch (type) {
+      case "telemetry.hub.contestArmed":
+        return "telemetry.contest.armed";
+      case "telemetry.hub.contestLaunched":
+        return "telemetry.contest.launched";
+      case "telemetry.hub.contestResolved":
+        return "telemetry.contest.resolved";
+      case "telemetry.hub.contestWorkflowFailed":
+        return "telemetry.contest.workflowFailed";
+      default:
+        return null;
+    }
+  }
+
+  #nowIso() {
+    const value = this.clock();
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    return new Date(value || Date.now()).toISOString();
+  }
+}
+
+module.exports = {
+  ModerationService,
+  ALERT_STATUS_LIVE,
+  ALERT_STATUS_QUEUED,
+  ALERT_STATUS_ESCALATED,
+  ALERT_STATUS_RESOLVED
+};

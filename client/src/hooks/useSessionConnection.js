@@ -142,12 +142,143 @@ function isDebugAdminAlert(reason, data) {
   return false;
 }
 
+function rebuildModerationStats(alerts) {
+  const stats = {
+    total: alerts.length,
+    live: 0,
+    queued: 0,
+    escalated: 0,
+    resolved: 0
+  };
+  alerts.forEach((alert) => {
+    switch (alert.status) {
+      case "live":
+        stats.live += 1;
+        break;
+      case "queued":
+        stats.queued += 1;
+        break;
+      case "escalated":
+        stats.escalated += 1;
+        break;
+      case "resolved":
+        stats.resolved += 1;
+        break;
+      default:
+        break;
+    }
+  });
+  return stats;
+}
+
+function normaliseModerationState(value) {
+  const alerts = Array.isArray(value?.alerts)
+    ? value.alerts.map((alert) => ({ ...alert }))
+    : [];
+  const decisions = Array.isArray(value?.decisions)
+    ? value.decisions.map((decision) => ({ ...decision }))
+    : [];
+  const stats =
+    value?.stats && typeof value.stats === "object"
+      ? {
+          total: value.stats.total ?? alerts.length,
+          live: value.stats.live ?? alerts.filter((alert) => alert.status === "live").length,
+          queued: value.stats.queued ?? alerts.filter((alert) => alert.status === "queued").length,
+          escalated:
+            value.stats.escalated ?? alerts.filter((alert) => alert.status === "escalated").length,
+          resolved:
+            value.stats.resolved ?? alerts.filter((alert) => alert.status === "resolved").length
+        }
+      : rebuildModerationStats(alerts);
+
+  return {
+    alerts,
+    decisions,
+    stats
+  };
+}
+
+function toClientAdminAlert(alert) {
+  if (!alert) {
+    return null;
+  }
+  const at = alert.updatedAt || alert.createdAt || new Date().toISOString();
+  const reason = alert.reason || "admin.alert";
+  const data = alert.data || {};
+  return {
+    reason,
+    severity: alert.severity || "info",
+    at,
+    message: alert.message || reason,
+    data,
+    status: alert.status || "live",
+    alertId: alert.id,
+    isSeeded: isSeededAdminAlert(reason, data),
+    isDebug: isDebugAdminAlert(reason, data)
+  };
+}
+
+function mergeModerationAlert(state, alert) {
+  const previous = state || { alerts: [], decisions: [], stats: { total: 0, live: 0, queued: 0, escalated: 0, resolved: 0 } };
+  const alerts = Array.isArray(previous.alerts) ? previous.alerts.slice() : [];
+  const index = alerts.findIndex((entry) => entry.id === alert.id);
+  if (index >= 0) {
+    alerts[index] = { ...alerts[index], ...alert };
+  } else {
+    alerts.unshift({ ...alert });
+  }
+  return {
+    alerts,
+    decisions: Array.isArray(previous.decisions) ? previous.decisions.slice() : [],
+    stats: rebuildModerationStats(alerts)
+  };
+}
+
+function mergeModerationDecision(state, decision) {
+  const previous = state || { alerts: [], decisions: [], stats: { total: 0, live: 0, queued: 0, escalated: 0, resolved: 0 } };
+  const alerts = Array.isArray(previous.alerts) ? previous.alerts.slice() : [];
+  const decisions = Array.isArray(previous.decisions) ? previous.decisions.slice() : [];
+  const decisionIndex = decisions.findIndex((entry) => entry.id === decision.id);
+  if (decisionIndex >= 0) {
+    decisions[decisionIndex] = { ...decisions[decisionIndex], ...decision };
+  } else {
+    decisions.unshift({ ...decision });
+  }
+  if (decision.alertId) {
+    const alertIndex = alerts.findIndex((entry) => entry.id === decision.alertId);
+    if (alertIndex >= 0) {
+      const alert = { ...alerts[alertIndex] };
+      alert.status = decision.status || alert.status;
+      alert.updatedAt = decision.createdAt || alert.updatedAt;
+      alert.decisions = appendHistory(alert.decisions, { ...decision }, 50);
+      alerts[alertIndex] = alert;
+    }
+  }
+  return {
+    alerts,
+    decisions,
+    stats: rebuildModerationStats(alerts)
+  };
+}
+
 const PIPELINE_FILTERS = ["all", "alerts", "runs"];
 
 const DEFAULT_PIPELINE_PREFERENCES = {
   filter: "all",
   timelineExpanded: false,
   acknowledged: []
+};
+
+const DEFAULT_MODERATION_STATE = {
+  alerts: [],
+  decisions: [],
+  stats: {
+    total: 0,
+    live: 0,
+    queued: 0,
+    escalated: 0,
+    resolved: 0
+  }
 };
 
 function clonePipelinePreferences() {
@@ -249,7 +380,12 @@ export function useSessionConnection({
     offlineJob: null,
     offlineHistory: [],
     adminAlerts: [],
-    pipelinePreferences: clonePipelinePreferences()
+    pipelinePreferences: clonePipelinePreferences(),
+    moderationState: {
+      alerts: [],
+      decisions: [],
+      stats: { ...DEFAULT_MODERATION_STATE.stats }
+    }
   }));
   const wsRef = useRef(null);
   const sseRef = useRef(null);
@@ -1110,20 +1246,62 @@ export function useSessionConnection({
             const timestamp = payload.createdAt || payload.timestamp || new Date().toISOString();
             const reason = payload.reason || "admin.alert";
             const data = payload.data || null;
-            const seeded = isSeededAdminAlert(reason, data);
-            const debug = seeded || isDebugAdminAlert(reason, data);
+            const moderationAlert = {
+              id: payload.id || `admin-alert:${timestamp}`,
+              sessionId,
+              createdAt: payload.createdAt || timestamp,
+              updatedAt: timestamp,
+              severity: payload.severity || "info",
+              reason,
+              status: payload.status || "live",
+              data,
+              message: payload.message || reason || "Alert"
+            };
+            const clientAlert = toClientAdminAlert(moderationAlert);
             setSessionMeta((current) => ({
               ...current,
-              adminAlerts: appendHistory(current.adminAlerts, {
-                reason,
-                severity: payload.severity || "info",
-                at: timestamp,
-                message: payload.message || reason || "Alert",
-                data,
-                isSeeded: seeded,
-                isDebug: debug
-              })
+              adminAlerts: clientAlert
+                ? appendHistory(current.adminAlerts, clientAlert)
+                : current.adminAlerts,
+              moderationState: mergeModerationAlert(current.moderationState, moderationAlert)
             }));
+          }
+          break;
+        case "moderation.decision":
+          if (payload) {
+            const moderationDecision = {
+              id: payload.id || `moderation-decision:${Date.now()}`,
+              alertId: payload.alertId || null,
+              sessionId: payload.sessionId || sessionId,
+              action: payload.action || "acknowledge",
+              status: payload.status || "live",
+              createdAt: payload.createdAt || new Date().toISOString(),
+              notes: payload.notes || null,
+              actor: payload.actor || null,
+              metadata: payload.metadata || {}
+            };
+            setSessionMeta((current) => {
+              const nextModeration = mergeModerationDecision(current.moderationState, moderationDecision);
+              let nextAdminAlerts = current.adminAlerts;
+              if (moderationDecision.alertId) {
+                const updatedAlert = nextModeration.alerts.find(
+                  (entry) => entry.id === moderationDecision.alertId
+                );
+                if (updatedAlert) {
+                  const clientAlert = toClientAdminAlert(updatedAlert);
+                  if (clientAlert) {
+                    nextAdminAlerts = current.adminAlerts.map((entry) =>
+                      entry.alertId === moderationDecision.alertId ? clientAlert : entry
+                    );
+                  }
+                }
+              }
+              return {
+                ...current,
+                moderationState: nextModeration,
+                adminAlerts: nextAdminAlerts
+              };
+            });
           }
           break;
         case "player.control":
@@ -1260,6 +1438,18 @@ export function useSessionConnection({
           const resolved = data.resolvedChecks.slice(-5);
           setRecentChecks(resolved);
           persistSessionState(sessionId, { recentChecks: resolved }).catch(() => {});
+        }
+
+        if (data.moderation) {
+          const moderationState = normaliseModerationState(data.moderation);
+          setSessionMeta((current) => ({
+            ...current,
+            moderationState,
+            adminAlerts: moderationState.alerts
+              .map((alert) => toClientAdminAlert(alert))
+              .filter(Boolean)
+              .slice(0, 5)
+          }));
         }
       } catch (error) {
         if (isNetworkError(error)) {

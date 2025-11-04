@@ -8,7 +8,7 @@ import { SessionMarkerRibbon } from "./components/SessionMarkerRibbon.jsx";
 import { OverlayDock } from "./components/OverlayDock.jsx";
 import { AccountGate } from "./components/AccountGate.jsx";
 import { SessionDashboard } from "./components/SessionDashboard.jsx";
-import { AdminVerbCatalogPanel } from "./components/AdminVerbCatalogPanel.jsx";
+import { AdminToolsPanel } from "./components/AdminToolsPanel.jsx";
 
 export default function App() {
   return (
@@ -139,7 +139,7 @@ export function SessionWorkspace() {
         ) : null}
         {showAdminPanel ? (
           <section className="app-admin-panel" aria-label="Admin tools">
-            <AdminVerbCatalogPanel />
+            <AdminToolsPanel />
           </section>
         ) : showDashboard ? (
           <section className="app-dashboard-panel" aria-label="Session management">

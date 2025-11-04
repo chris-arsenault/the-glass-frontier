@@ -393,7 +393,8 @@ export function AccountProvider({ children }) {
       clearFlashMessage,
       setFlashMessage,
       authError,
-      authLoading
+      authLoading,
+      fetchWithAuth
     }),
     [
       account,
@@ -416,7 +417,8 @@ export function AccountProvider({ children }) {
       status,
       token,
       setActiveView,
-      setFlashMessage
+      setFlashMessage,
+      fetchWithAuth
     ]
   );
 

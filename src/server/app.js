@@ -12,6 +12,8 @@ const { PublishingCadence } = require("../offline/publishing/publishingCadence")
 const { createAuthRouter } = require("./routes/auth");
 const { createAccountsRouter } = require("./routes/accounts");
 const { SessionClosureCoordinator } = require("../offline/sessionClosureCoordinator");
+const { ModerationService } = require("../moderation/moderationService");
+const { createModerationRouter } = require("./routes/moderation");
 
 function createApp({
   narrativeEngine,
@@ -23,6 +25,7 @@ function createApp({
   sessionDirectory = null,
   offlineCoordinator = null,
   publishingCadence = null,
+  moderationService = null,
   clock = () => new Date(),
   seedAccounts = true
 }) {
@@ -58,10 +61,23 @@ function createApp({
     offlineCoordinator ||
     new SessionClosureCoordinator();
 
+  const moderation =
+    moderationService ||
+    (checkBus
+      ? new ModerationService({
+          sessionMemory,
+          checkBus,
+          clock
+        })
+      : null);
+
   const app = express();
   app.locals.accountService = accounts;
   app.locals.sessionDirectory = directory;
   app.locals.offlineCoordinator = closures;
+  if (moderation) {
+    app.locals.moderationService = moderation;
+  }
   app.use(express.json());
 
   function handleMemoryError(error, res, next) {
@@ -271,12 +287,14 @@ function createApp({
       const overlay = sessionMemory.getOverlaySnapshot(sessionId);
       const pendingChecks = sessionMemory.listPendingChecks(sessionId);
       const resolvedChecks = sessionMemory.listRecentResolvedChecks(sessionId, 5);
+      const moderationState = sessionMemory.getModerationState(sessionId);
 
       res.json({
         sessionId,
         overlay,
         pendingChecks,
-        resolvedChecks
+        resolvedChecks,
+        moderation: moderationState
       });
     } catch (error) {
       next(error);
@@ -564,6 +582,17 @@ function createApp({
 
   if (hubVerbService) {
     app.use("/admin/hubs", createAdminHubVerbRouter({ hubVerbService }));
+  }
+
+  if (moderation) {
+    app.use(
+      "/admin/moderation",
+      authenticate,
+      createModerationRouter({
+        moderationService: moderation,
+        sessionMemory
+      })
+    );
   }
 
   app.use("/auth", createAuthRouter({ accountService: accounts }));

@@ -10,7 +10,8 @@ const {
   CHECK_REQUEST_TOPIC,
   CHECK_RESOLVED_TOPIC,
   CHECK_VETOED_TOPIC,
-  ADMIN_ALERT_TOPIC
+  ADMIN_ALERT_TOPIC,
+  MODERATION_DECISION_TOPIC
 } = require("../events/checkBus");
 const { NarrativeEngine } = require("../narrative/narrativeEngine");
 const { CheckRunner } = require("../checkRunner/checkRunner");
@@ -161,6 +162,13 @@ checkBus.onCheckVetoed((envelope) => {
 checkBus.onAdminAlert((envelope) => {
   broadcaster.publish(envelope.sessionId, {
     type: ADMIN_ALERT_TOPIC,
+    payload: envelope
+  });
+});
+
+checkBus.onModerationDecision((envelope) => {
+  broadcaster.publish(envelope.sessionId, {
+    type: MODERATION_DECISION_TOPIC,
     payload: envelope
   });
 });
