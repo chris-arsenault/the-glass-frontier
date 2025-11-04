@@ -558,6 +558,19 @@ export function OverlayDock() {
               <ul>
                 {pipelineAlerts.map((alert, index) => {
                   const key = pipelineAlertIdentifier(alert);
+                  const isSeeded = alert?.isSeeded === true;
+                  const isDebug = alert?.isDebug === true;
+                  const tagLabel = isSeeded ? "Seeded fallback" : isDebug ? "Debug" : null;
+                  const tagClassName = isSeeded
+                    ? "overlay-pipeline-tag overlay-pipeline-tag-fallback"
+                    : isDebug
+                    ? "overlay-pipeline-tag overlay-pipeline-tag-debug"
+                    : null;
+                  const tagTestId = isSeeded
+                    ? "pipeline-alert-seeded"
+                    : isDebug
+                    ? "pipeline-alert-debug"
+                    : null;
                   return (
                     <li key={key}>
                       <span
@@ -574,9 +587,17 @@ export function OverlayDock() {
                           <span className="overlay-pipeline-alert-message">
                             {alert.message || alert.reason || "Alert"}
                           </span>
+                          {tagLabel && tagClassName ? (
+                            <span className={tagClassName} data-testid={tagTestId}>
+                              {tagLabel}
+                            </span>
+                          ) : null}
                         </div>
                         <p className="overlay-pipeline-meta">
                           {alert.at ? formatIso(alert.at) : "Unknown time"}
+                          {tagLabel && alert?.data?.seedSource
+                            ? ` • Source: ${alert.data.seedSource}`
+                            : null}
                         </p>
                         <button
                           type="button"

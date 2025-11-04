@@ -108,6 +108,40 @@ function appendHistory(history, entry, limit = 5) {
   return list;
 }
 
+function isSeededAdminAlert(reason, data) {
+  if (!reason && !data) {
+    return false;
+  }
+  if (data && typeof data === "object") {
+    if (data.fallback === true || data.seeded === true) {
+      return true;
+    }
+    if (typeof data.seedSource === "string") {
+      const normalized = data.seedSource.toLowerCase();
+      if (normalized.includes("langgraph-smoke") || normalized.includes("debug")) {
+        return true;
+      }
+    }
+  }
+  if (typeof reason === "string") {
+    return reason.startsWith("debug.") || reason.includes("seed.admin_alert");
+  }
+  return false;
+}
+
+function isDebugAdminAlert(reason, data) {
+  if (isSeededAdminAlert(reason, data)) {
+    return true;
+  }
+  if (data && typeof data === "object" && data.debug === true) {
+    return true;
+  }
+  if (typeof reason === "string") {
+    return reason.startsWith("debug.") || reason.includes(".debug.");
+  }
+  return false;
+}
+
 const PIPELINE_FILTERS = ["all", "alerts", "runs"];
 
 const DEFAULT_PIPELINE_PREFERENCES = {
@@ -1021,14 +1055,20 @@ export function useSessionConnection({
         case "admin.alert":
           if (payload) {
             const timestamp = payload.createdAt || payload.timestamp || new Date().toISOString();
+            const reason = payload.reason || "admin.alert";
+            const data = payload.data || null;
+            const seeded = isSeededAdminAlert(reason, data);
+            const debug = seeded || isDebugAdminAlert(reason, data);
             setSessionMeta((current) => ({
               ...current,
               adminAlerts: appendHistory(current.adminAlerts, {
-                reason: payload.reason || "admin.alert",
+                reason,
                 severity: payload.severity || "info",
                 at: timestamp,
-                message: payload.message || payload.reason || "Alert",
-                data: payload.data || null
+                message: payload.message || reason || "Alert",
+                data,
+                isSeeded: seeded,
+                isDebug: debug
               })
             }));
           }

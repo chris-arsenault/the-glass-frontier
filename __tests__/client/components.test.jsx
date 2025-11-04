@@ -326,6 +326,18 @@ describe("Client shell components", () => {
           reason: "offline.workflow_sla_exceeded",
           message: "Workflow exceeded SLA",
           at: "2025-11-03T22:05:00.000Z"
+        },
+        {
+          severity: "medium",
+          reason: "debug.seed.admin_alert",
+          message: "Seeded admin alert (debug)",
+          at: "2025-11-03T22:06:00.000Z",
+          isSeeded: true,
+          isDebug: true,
+          data: {
+            fallback: true,
+            seedSource: "langgraph-smoke"
+          }
         }
       ],
       pipelinePreferences: {
@@ -356,6 +368,10 @@ describe("Client shell components", () => {
     expect(screen.getByText(/Moderation queue: 2/)).toBeInTheDocument();
     expect(screen.getByText(/Processing/i)).toBeInTheDocument();
     expect(screen.getByText(/Workflow exceeded SLA/)).toBeInTheDocument();
+    expect(screen.getByTestId("pipeline-alert-seeded")).toHaveTextContent(/Seeded fallback/i);
+    expect(
+      screen.getByText((content) => typeof content === "string" && content.includes("Source: langgraph-smoke"))
+    ).toBeInTheDocument();
 
     const detailsToggle = screen.getByTestId("pipeline-details-toggle");
     fireEvent.click(detailsToggle);
