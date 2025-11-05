@@ -23,8 +23,8 @@ export function ChatComposer() {
       return;
     }
 
-    await sendPlayerMessage({ content: trimmed });
     setDraft("");
+    await sendPlayerMessage({ content: trimmed });
   };
 
   const queuedCount = Array.isArray(queuedIntents)

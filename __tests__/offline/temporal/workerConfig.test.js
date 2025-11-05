@@ -50,7 +50,7 @@ describe("offline/temporal/workerConfig", () => {
 
   it("enforces required config in strict mode", () => {
     const env = cloneEnv({ NODE_ENV: "production" });
-    expect(() => resolveAndValidateTemporalWorkerConfig(env)).toThrowError(
+    expect(() => resolveAndValidateTemporalWorkerConfig(env)).toThrow(
       /temporal_worker_missing_config/
     );
   });
@@ -105,4 +105,3 @@ describe("offline/temporal/workerConfig", () => {
     });
   });
 });
-
