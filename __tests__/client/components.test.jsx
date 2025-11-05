@@ -912,6 +912,14 @@ describe("Client shell components", () => {
 
       await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(1));
 
+      const sentimentSummary = await screen.findByTestId("contest-sentiment-summary");
+      expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment: Elevated\./i);
+      expect(sentimentSummary).toHaveTextContent(
+        /50% of cooldown chatter shows frustration \(2\/4\)\./i
+      );
+      expect(sentimentSummary).toHaveTextContent(/Longest cooldown 15s remaining\./i);
+      expect(screen.getByTestId("contest-moderation-open")).toBeInTheDocument();
+
       act(() => {
         jest.advanceTimersByTime(16000);
       });
@@ -920,6 +928,17 @@ describe("Client shell components", () => {
       });
 
       await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(2));
+
+      await waitFor(() => {
+        expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment: Watch\./i);
+        expect(sentimentSummary).toHaveTextContent(
+          /20% of cooldown chatter shows frustration \(1\/5\)\./i
+        );
+        expect(sentimentSummary).toHaveTextContent(/Longest cooldown 9s remaining\./i);
+      });
+      await waitFor(() =>
+        expect(screen.queryByTestId("contest-moderation-open")).not.toBeInTheDocument()
+      );
     } finally {
       jest.useRealTimers();
     }

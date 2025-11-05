@@ -32,6 +32,7 @@ Backlog item: `IMP-CLIENT-07` (MCP ID `64d6a12c-15e6-4064-9e9f-2d4e6b9cfcf0`)
 
 - `npm test -- --runInBand`
   - Extends `__tests__/client/components.test.jsx` to cover contest timelines, sentiment loading, moderation CTA routing, and pipeline stage presentation.
+  - Adds staging playback coverage that simulates cooldown churn, verifying sentence copy, cadence prompts, and moderation CTA transitions; see `artifacts/client/contest-sentiment-staging-2025-11-05T10-26-22Z.md`.
 - Playwright coverage: `tests/e2e/overlay-sentiment.spec.js` verifies the admin sentiment panel auto-refreshes when telemetry becomes stale.
 
 ## Offline Terminology Alignment
