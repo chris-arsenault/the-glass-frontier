@@ -52,6 +52,7 @@ function parseArgs(argv = process.argv) {
     configId: tier1ReminderConfig.id,
     mode: "preview",
     output: "text",
+    checkEnv: false,
     allowLate: false,
     force: false,
     windowBeforeMs: parseDurationMs("5m"),
@@ -81,6 +82,9 @@ function parseArgs(argv = process.argv) {
         break;
       case "--allow-late":
         options.allowLate = true;
+        break;
+      case "--check-env":
+        options.checkEnv = true;
         break;
       case "--force":
         options.force = true;
@@ -285,10 +289,11 @@ async function executeJobs(options, config, jobs, executionLog) {
   const dueJobs = [];
 
   for (const job of jobs) {
-    const channelId =
+    const envValue =
       job.reminder.channelEnv && process.env[job.reminder.channelEnv]
         ? process.env[job.reminder.channelEnv]
         : null;
+    const channelId = envValue ? String(envValue).trim() : null;
     const state = computeJobState(
       job,
       now,
@@ -311,12 +316,27 @@ async function executeJobs(options, config, jobs, executionLog) {
     return results;
   }
 
-  const token = process.env.SLACK_BOT_TOKEN;
-  if (!token) {
+  const requiredEnv = new Set(["SLACK_BOT_TOKEN"]);
+  for (const { job } of dueJobs) {
+    if (job.reminder.channelEnv) {
+      requiredEnv.add(job.reminder.channelEnv);
+    }
+  }
+
+  const missingEnv = Array.from(requiredEnv).filter((envName) => {
+    const value = process.env[envName];
+    return !value || !String(value).trim().length;
+  });
+
+  if (missingEnv.length > 0) {
     throw new Error(
-      "SLACK_BOT_TOKEN environment variable is required when running with --send"
+      `Missing environment variables for send mode: ${missingEnv.join(
+        ", "
+      )}. Run with --check-env to review requirements.`
     );
   }
+
+  const token = String(process.env.SLACK_BOT_TOKEN).trim();
 
   const newLogEntries = [...executionLog];
   const timestamp = new Date().toISOString();
@@ -378,6 +398,71 @@ function renderResults(results, output) {
   }
 }
 
+function collectRequiredEnv(config) {
+  const channelMap = new Map();
+  for (const event of config.events) {
+    for (const reminder of event.reminders) {
+      if (!reminder.channelEnv) {
+        continue;
+      }
+      if (!channelMap.has(reminder.channelEnv)) {
+        channelMap.set(reminder.channelEnv, new Set());
+      }
+      const targets = channelMap.get(reminder.channelEnv);
+      if (reminder.fallbackChannel) {
+        targets.add(reminder.fallbackChannel);
+      }
+    }
+  }
+
+  return {
+    allEnv: [
+      "SLACK_BOT_TOKEN",
+      ...Array.from(channelMap.keys()).sort((a, b) => a.localeCompare(b))
+    ],
+    channelTargets: channelMap
+  };
+}
+
+function buildEnvReport(config, envSource = process.env) {
+  const { allEnv, channelTargets } = collectRequiredEnv(config);
+  return allEnv.map((envName) => {
+    const rawValue = envSource[envName];
+    const isSet =
+      typeof rawValue === "string" && rawValue.trim().length > 0;
+    const channels = channelTargets.has(envName)
+      ? Array.from(channelTargets.get(envName)).sort()
+      : [];
+    return {
+      name: envName,
+      isSet,
+      valueLength: isSet ? rawValue.trim().length : 0,
+      channels
+    };
+  });
+}
+
+function renderEnvReport(report, output) {
+  if (output === "json") {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
+  for (const entry of report) {
+    const status = entry.isSet ? "present" : "missing";
+    const lengthLabel = entry.isSet ? ` (length ${entry.valueLength})` : "";
+    const channelLabel =
+      entry.channels.length > 0
+        ? ` targets: ${entry.channels.join(", ")}`
+        : entry.name === "SLACK_BOT_TOKEN"
+        ? " targets: Slack API access token"
+        : "";
+    console.log(
+      `[${status}] ${entry.name}${lengthLabel}${channelLabel}`
+    );
+  }
+}
+
 async function main(argv = process.argv) {
   const options = parseArgs(argv);
 
@@ -386,6 +471,7 @@ async function main(argv = process.argv) {
       "Usage: node scripts/reminders/runTier1Reminders.js [options]\n" +
         "  --preview              Preview upcoming reminders (default)\n" +
         "  --send                 Send reminders via Slack\n" +
+        "  --check-env            Report required Slack environment variables\n" +
         "  --config <id>          Reminder configuration to execute\n" +
         "  --window-before <dur>  Lead window before scheduled time (default 5m)\n" +
         "  --window-after <dur>   Tail window after scheduled time (default 10m)\n" +
@@ -399,6 +485,13 @@ async function main(argv = process.argv) {
   }
 
   const config = resolveConfig(options.configId);
+
+  if (options.checkEnv) {
+    const report = buildEnvReport(config);
+    renderEnvReport(report, options.output);
+    return;
+  }
+
   const events = loadIcsEvents(config.icsPath);
   const jobs = createJobs(config, events);
   const executionLog = options.force
@@ -410,6 +503,8 @@ async function main(argv = process.argv) {
 
 module.exports = {
   CONFIG_REGISTRY,
+  buildEnvReport,
+  collectRequiredEnv,
   computeJobState,
   createJobs,
   executeJobs,

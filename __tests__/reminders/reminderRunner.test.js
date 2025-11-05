@@ -1,8 +1,11 @@
 "use strict";
 
 const {
+  buildEnvReport,
+  collectRequiredEnv,
   computeJobState,
   createJobs,
+  executeJobs,
   parseArgs,
   parseDurationMs,
   resolveConfig
@@ -12,6 +15,14 @@ const { loadIcsEvents } = require("../../scripts/reminders/reminderUtils");
 describe("reminder runner utilities", () => {
   const config = resolveConfig("stage-deploy-tag7-tier1");
   const events = loadIcsEvents(config.icsPath);
+
+  afterEach(() => {
+    delete process.env.SLACK_BOT_TOKEN;
+    delete process.env.SLACK_CHANNEL_TIER1_PLATFORM;
+    delete process.env.SLACK_CHANNEL_OFFLINE_PUBLISHING;
+    delete process.env.SLACK_CHANNEL_CLIENT_OVERLAYS;
+    delete process.env.SLACK_CHANNEL_HUB_CONTESTS;
+  });
 
   it("parses durations with units", () => {
     expect(parseDurationMs("5m")).toBe(5 * 60 * 1000);
@@ -99,5 +110,54 @@ describe("reminder runner utilities", () => {
       new Set([`${summaryJob.eventUid}::${summaryJob.reminder.templateId}::${summaryJob.reminder.channelEnv}`])
     );
     expect(sentState).toBe("sent");
+  });
+
+  it("collects reminder environment requirements", () => {
+    const { allEnv } = collectRequiredEnv(config);
+    expect(allEnv).toEqual([
+      "SLACK_BOT_TOKEN",
+      "SLACK_CHANNEL_CLIENT_OVERLAYS",
+      "SLACK_CHANNEL_HUB_CONTESTS",
+      "SLACK_CHANNEL_OFFLINE_PUBLISHING",
+      "SLACK_CHANNEL_TIER1_PLATFORM"
+    ]);
+
+    const report = buildEnvReport(config, {
+      SLACK_CHANNEL_TIER1_PLATFORM: "C1234567",
+      SLACK_CHANNEL_OFFLINE_PUBLISHING: "",
+      SLACK_CHANNEL_CLIENT_OVERLAYS: "C7654321"
+    });
+    const tier1Entry = report.find(
+      (entry) => entry.name === "SLACK_CHANNEL_TIER1_PLATFORM"
+    );
+    const offlineEntry = report.find(
+      (entry) => entry.name === "SLACK_CHANNEL_OFFLINE_PUBLISHING"
+    );
+    expect(tier1Entry).toMatchObject({
+      isSet: true,
+      valueLength: 8,
+      channels: ["#tier1-platform"]
+    });
+    expect(offlineEntry).toMatchObject({
+      isSet: false,
+      valueLength: 0,
+      channels: ["#offline-publishing"]
+    });
+  });
+
+  it("aggregates missing environment variables before sending", async () => {
+    const jobs = createJobs(config, events);
+    const options = {
+      mode: "send",
+      now: new Date("2025-11-05T09:02:00Z"),
+      windowBeforeMs: 5 * 60 * 1000,
+      windowAfterMs: 10 * 60 * 1000,
+      allowLate: false
+    };
+    await expect(
+      executeJobs(options, config, jobs, [])
+    ).rejects.toThrow(
+      /Missing environment variables for send mode: SLACK_BOT_TOKEN, SLACK_CHANNEL_TIER1_PLATFORM, SLACK_CHANNEL_OFFLINE_PUBLISHING, SLACK_CHANNEL_CLIENT_OVERLAYS, SLACK_CHANNEL_HUB_CONTESTS\. Run with --check-env to review requirements\./
+    );
   });
 });
