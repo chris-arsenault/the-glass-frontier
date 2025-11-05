@@ -283,6 +283,85 @@ class ContestMetrics {
     });
   }
 
+  recordRematchCooling({
+    hubId,
+    roomId,
+    contestKey,
+    cooldownMs,
+    availableAt,
+    expiredAt,
+    participantCount,
+    severity,
+    missingParticipants
+  }) {
+    this.log("info", "telemetry.contest.rematchCooling", {
+      hubId,
+      roomId,
+      contestKey,
+      cooldownMs: toPositiveNumber(cooldownMs, null),
+      availableAt: toPositiveNumber(availableAt, null),
+      expiredAt: toPositiveNumber(expiredAt, null),
+      participantCount: toPositiveNumber(participantCount, null),
+      severity: severity || null,
+      missingParticipants: toPositiveNumber(missingParticipants, null)
+    });
+  }
+
+  recordRematchBlocked({
+    hubId,
+    roomId,
+    contestKey,
+    actorId,
+    remainingMs,
+    cooldownMs
+  }) {
+    this.log("info", "telemetry.contest.rematchBlocked", {
+      hubId,
+      roomId,
+      contestKey,
+      actorId: actorId || null,
+      remainingMs: toPositiveNumber(remainingMs, 0),
+      cooldownMs: toPositiveNumber(cooldownMs, null)
+    });
+  }
+
+  recordSentimentSample({
+    hubId,
+    roomId,
+    contestKey,
+    actorId,
+    sentiment,
+    tone,
+    phase,
+    messageLength,
+    remainingCooldownMs,
+    cooldownMs,
+    issuedAt
+  }) {
+    this.log("info", "telemetry.contest.sentiment", {
+      hubId,
+      roomId,
+      contestKey,
+      actorId: actorId || null,
+      sentiment: sentiment || "neutral",
+      tone: tone || "neutral",
+      phase: phase || "post-expiration",
+      messageLength: toPositiveNumber(messageLength, 0),
+      remainingCooldownMs: toPositiveNumber(remainingCooldownMs, 0),
+      cooldownMs: toPositiveNumber(cooldownMs, null),
+      issuedAt: toPositiveNumber(issuedAt, null)
+    });
+  }
+
+  recordTimingFallback({ hubId, roomId, contestId, timings }) {
+    this.log("warn", "telemetry.contest.timingFallback", {
+      hubId,
+      roomId,
+      contestId,
+      timings: timings || null
+    });
+  }
+
   #pendingKey({ hubId, roomId, contestKey }) {
     return `${hubId || "unknown"}:${roomId || "unknown"}:${contestKey || "unknown"}`;
   }

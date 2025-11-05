@@ -148,4 +148,99 @@ describe("ContestMetrics", () => {
     });
     expect(metrics.pendingByKey.size).toBe(0);
   });
+
+  test("records rematch cooling, block attempts, and sentiment samples", () => {
+    const logs = [];
+    const logger = (level, message, metadata = {}) => {
+      logs.push({ level, message, ...metadata });
+    };
+
+    const metrics = new ContestMetrics({ logger });
+
+    metrics.recordRematchCooling({
+      hubId: "hub-1",
+      roomId: "room-c",
+      contestKey: "verb.sparringMatch::alpha",
+      cooldownMs: 12000,
+      availableAt: 18000,
+      expiredAt: 6000,
+      participantCount: 2,
+      severity: "moderate",
+      missingParticipants: 1
+    });
+
+    metrics.recordRematchBlocked({
+      hubId: "hub-1",
+      roomId: "room-c",
+      contestKey: "verb.sparringMatch::alpha",
+      actorId: "actor-alpha",
+      remainingMs: 8000,
+      cooldownMs: 12000
+    });
+
+    metrics.recordSentimentSample({
+      hubId: "hub-1",
+      roomId: "room-c",
+      contestKey: "verb.sparringMatch::alpha",
+      actorId: "actor-beta",
+      sentiment: "negative",
+      tone: "aggressive",
+      phase: "cooldown",
+      messageLength: 32,
+      remainingCooldownMs: 4000,
+      cooldownMs: 12000,
+      issuedAt: 9000
+    });
+
+    metrics.recordTimingFallback({
+      hubId: "hub-1",
+      roomId: "room-c",
+      contestId: "contest-123",
+      timings: {
+        startedAt: 8200,
+        resolvedAt: 8700,
+        resolutionDurationMs: 500
+      }
+    });
+
+    const coolingLog = logs.find(
+      (entry) => entry.message === "telemetry.contest.rematchCooling"
+    );
+    expect(coolingLog).toMatchObject({
+      cooldownMs: 12000,
+      severity: "moderate",
+      participantCount: 2,
+      missingParticipants: 1
+    });
+
+    const blockedLog = logs.find(
+      (entry) => entry.message === "telemetry.contest.rematchBlocked"
+    );
+    expect(blockedLog).toMatchObject({
+      actorId: "actor-alpha",
+      remainingMs: 8000,
+      cooldownMs: 12000
+    });
+
+    const sentimentLog = logs.find(
+      (entry) => entry.message === "telemetry.contest.sentiment"
+    );
+    expect(sentimentLog).toMatchObject({
+      sentiment: "negative",
+      tone: "aggressive",
+      phase: "cooldown",
+      messageLength: 32,
+      remainingCooldownMs: 4000
+    });
+
+    const timingLog = logs.find(
+      (entry) => entry.message === "telemetry.contest.timingFallback"
+    );
+    expect(timingLog).toMatchObject({
+      contestId: "contest-123",
+      timings: expect.objectContaining({
+        resolutionDurationMs: 500
+      })
+    });
+  });
 });

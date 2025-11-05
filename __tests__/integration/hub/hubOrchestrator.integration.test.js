@@ -607,10 +607,17 @@ describe("HubOrchestrator integration", () => {
     );
 
     const resolutionPayload = {
+      hubId: "hub-contest",
+      roomId: "room-duel",
       outcome: { tier: "major-success", summary: "Alpha seizes the initiative." },
       sharedComplications: [
         { tag: "crowd-panics", summary: "Spectators scatter amidst the clash." }
       ],
+      timings: {
+        startedAt: 1600,
+        resolvedAt: 2200,
+        resolutionDurationMs: 600
+      },
       participants: [
         {
           actorId: "actor-alpha",

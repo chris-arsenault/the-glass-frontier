@@ -300,6 +300,101 @@ class HubTelemetry {
       this.metrics.recordExpired(payload);
     }
   }
+
+  recordContestRematchCooling({
+    hubId,
+    roomId,
+    contestKey,
+    cooldownMs,
+    availableAt,
+    expiredAt,
+    participantCount,
+    severity,
+    missingParticipants
+  }) {
+    const payload = {
+      hubId,
+      roomId,
+      contestKey,
+      cooldownMs,
+      availableAt,
+      expiredAt,
+      participantCount,
+      severity,
+      missingParticipants
+    };
+    this.emit("telemetry.hub.contestRematchCooling", payload);
+    if (this.metrics && typeof this.metrics.recordRematchCooling === "function") {
+      this.metrics.recordRematchCooling(payload);
+    }
+  }
+
+  recordContestRematchBlocked({
+    hubId,
+    roomId,
+    contestKey,
+    actorId,
+    remainingMs,
+    cooldownMs
+  }) {
+    const payload = {
+      hubId,
+      roomId,
+      contestKey,
+      actorId,
+      remainingMs,
+      cooldownMs
+    };
+    this.emit("telemetry.hub.contestRematchBlocked", payload);
+    if (this.metrics && typeof this.metrics.recordRematchBlocked === "function") {
+      this.metrics.recordRematchBlocked(payload);
+    }
+  }
+
+  recordContestSentiment({
+    hubId,
+    roomId,
+    contestKey,
+    actorId,
+    sentiment,
+    tone,
+    phase,
+    messageLength,
+    remainingCooldownMs,
+    cooldownMs,
+    issuedAt
+  }) {
+    const payload = {
+      hubId,
+      roomId,
+      contestKey,
+      actorId,
+      sentiment,
+      tone,
+      phase,
+      messageLength,
+      remainingCooldownMs,
+      cooldownMs,
+      issuedAt
+    };
+    this.emit("telemetry.hub.contestSentiment", payload);
+    if (this.metrics && typeof this.metrics.recordSentimentSample === "function") {
+      this.metrics.recordSentimentSample(payload);
+    }
+  }
+
+  recordContestTimingFallback({ hubId, roomId, contestId, timings }) {
+    const payload = {
+      hubId,
+      roomId,
+      contestId,
+      timings: timings || null
+    };
+    this.emit("telemetry.hub.contestTimingFallback", payload);
+    if (this.metrics && typeof this.metrics.recordTimingFallback === "function") {
+      this.metrics.recordTimingFallback(payload);
+    }
+  }
 }
 
 module.exports = {

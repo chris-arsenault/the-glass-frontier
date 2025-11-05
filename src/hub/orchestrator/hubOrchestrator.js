@@ -4,12 +4,33 @@ const EventEmitter = require("events");
 const { v4: uuidv4 } = require("uuid");
 const { InMemoryRoomStateStore } = require("../state/inMemoryRoomStateStore");
 const { ContestCoordinator } = require("./contestCoordinator");
+const { classifySentiment, inferTone } = require("../../utils/sentiment");
 
 function clone(value) {
   if (value === null || value === undefined) {
     return value;
   }
   return JSON.parse(JSON.stringify(value));
+}
+
+function coerceTimestamp(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+function coerceDuration(value) {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+  return null;
 }
 
 class HubOrchestrator extends EventEmitter {
@@ -54,6 +75,9 @@ class HubOrchestrator extends EventEmitter {
       new ContestCoordinator({
         clock
       });
+    this.contestSentimentByRoom = new Map();
+    this.contestSentimentWindowMs = 120000;
+    this.contestSentimentRetentionMs = 300000;
 
     this.workers = Array.from({ length: this.workerCount }, () => ({
       queue: [],
@@ -204,6 +228,8 @@ class HubOrchestrator extends EventEmitter {
       entry.metadata?.issuedAt ||
       (typeof this.clock.now === "function" ? this.clock.now() : Date.now());
 
+    this._trimContestSentimentWindows(issuedAt);
+
     if (this.contestCoordinator && typeof this.contestCoordinator.expire === "function") {
       const expired = this.contestCoordinator.expire({
         roomId: entry.roomId,
@@ -317,6 +343,16 @@ class HubOrchestrator extends EventEmitter {
         version: result.version,
         verbId: entry.command?.verbId || null,
         actorId: entry.actorId || null
+      });
+    }
+
+    if (entry.command?.verbId === "verb.say") {
+      this._recordContestSentiment({
+        hubId: entry.hubId,
+        roomId: entry.roomId,
+        actorId: entry.actorId || null,
+        message: entry.command?.args?.message || "",
+        issuedAt
       });
     }
 
@@ -434,6 +470,19 @@ class HubOrchestrator extends EventEmitter {
         return registration;
       }
 
+      if (registration.status === "cooldown") {
+        this._recordRematchCooldownBlock({
+          hubId: entry.hubId,
+          roomId: entry.roomId,
+          contestKey: registration.contestKey || entry.metadata?.contest?.contestKey || null,
+          actorId: entry.actorId || null,
+          remainingMs: registration.remainingMs || 0,
+          cooldownMs: registration.state?.rematch?.cooldownMs || null,
+          availableAt: registration.state?.rematch?.availableAt || null,
+          issuedAt
+        });
+      }
+
       return registration;
     } catch (error) {
       this.emit("processingError", {
@@ -511,25 +560,37 @@ class HubOrchestrator extends EventEmitter {
       return null;
     }
 
-    const contestState = this.contestCoordinator.resolve(contestId, resolution);
+    const hubId = resolution.hubId || null;
+    const normalizedResolution = this._ensureResolutionTimings({
+      resolution,
+      fallbackNow: this._now(),
+      contestId,
+      hubId,
+      roomId: resolution.roomId || null
+    });
+    const contestState = this.contestCoordinator.resolve(contestId, normalizedResolution);
     if (!contestState) {
       return null;
     }
 
-    const hubId = contestState.hubId || resolution.hubId || null;
+    const resolvedHubId = contestState.hubId || hubId || null;
     const roomId = contestState.roomId || resolution.roomId || null;
     if (!roomId) {
       throw new Error("resolveContest requires a roomId");
     }
 
-    const stateResult = await this._updateContestState({ hubId, roomId, contestState });
+    const stateResult = await this._updateContestState({
+      hubId: resolvedHubId,
+      roomId,
+      contestState
+    });
     const contestMeta = this._buildContestMeta(contestState);
 
-    this._broadcastContestResolution({ hubId, roomId, stateResult, contestMeta });
-    this._recordContestResolvedTelemetry({ hubId, roomId, contestState });
+    this._broadcastContestResolution({ hubId: resolvedHubId, roomId, stateResult, contestMeta });
+    this._recordContestResolvedTelemetry({ hubId: resolvedHubId, roomId, contestState });
 
     return this._emitContestResolutionEvents(
-      { hubId, roomId, contestState },
+      { hubId: resolvedHubId, roomId, contestState },
       stateResult,
       contestMeta
     );
@@ -645,6 +706,32 @@ class HubOrchestrator extends EventEmitter {
         move: contestState.move || null,
         type: contestState.type || null
       });
+      if (
+        contestState.rematch &&
+        typeof this.telemetry.recordContestRematchCooling === "function"
+      ) {
+        this.telemetry.recordContestRematchCooling({
+          hubId,
+          roomId,
+          contestKey: contestState.contestKey || null,
+          cooldownMs: contestState.rematch.cooldownMs || null,
+          availableAt: contestState.rematch.availableAt || null,
+          expiredAt: contestState.expiredAt || null,
+          participantCount: Array.isArray(contestState.participants)
+            ? contestState.participants.length
+            : null,
+          severity:
+            Array.isArray(contestState.sharedComplications) &&
+            contestState.sharedComplications.length > 0
+              ? contestState.sharedComplications[0].severity || null
+              : null,
+          missingParticipants:
+            typeof contestState.outcome?.missingParticipants === "number"
+              ? contestState.outcome.missingParticipants
+              : null
+        });
+      }
+      this._storeContestSentimentWindow({ hubId, roomId, contestState });
     } catch (error) {
       this.emit("processingError", {
         stage: "contestExpiredTelemetry",
@@ -1129,6 +1216,292 @@ class HubOrchestrator extends EventEmitter {
       rituals: Array.isArray(state.rituals) ? state.rituals.slice(-this.maxRitualHistory) : [],
       chatLog: Array.isArray(state.chatLog) ? state.chatLog.slice(-this.maxChatMessages) : []
     };
+  }
+
+  _ensureResolutionTimings({ resolution = {}, fallbackNow, contestId, hubId, roomId }) {
+    const base = resolution && typeof resolution === "object" ? { ...resolution } : {};
+    const incomingTimings =
+      base.timings && typeof base.timings === "object" ? { ...base.timings } : {};
+
+    const rawStartedAt =
+      coerceTimestamp(incomingTimings.startedAt) ?? coerceTimestamp(base.startedAt);
+    const rawResolvedAt =
+      coerceTimestamp(incomingTimings.resolvedAt) ?? coerceTimestamp(base.resolvedAt);
+    const rawDuration =
+      coerceDuration(incomingTimings.resolutionDurationMs) ?? coerceDuration(base.durationMs);
+
+    const normalizedResolvedAt = rawResolvedAt !== null ? rawResolvedAt : fallbackNow;
+    let normalizedStartedAt = rawStartedAt;
+    if (normalizedStartedAt === null) {
+      if (rawDuration !== null && normalizedResolvedAt !== null) {
+        normalizedStartedAt = Math.max(0, normalizedResolvedAt - rawDuration);
+      } else {
+        normalizedStartedAt = normalizedResolvedAt;
+      }
+    }
+
+    let normalizedDuration = rawDuration;
+    if (
+      normalizedDuration === null &&
+      normalizedStartedAt !== null &&
+      normalizedResolvedAt !== null
+    ) {
+      normalizedDuration = Math.max(0, normalizedResolvedAt - normalizedStartedAt);
+    }
+
+    const normalized = {
+      ...base,
+      timings: {
+        ...incomingTimings,
+        startedAt: normalizedStartedAt,
+        resolvedAt: normalizedResolvedAt,
+        resolutionDurationMs: normalizedDuration ?? 0
+      }
+    };
+
+    const needsFallback =
+      coerceTimestamp(incomingTimings.startedAt) === null ||
+      coerceTimestamp(incomingTimings.resolvedAt) === null ||
+      coerceDuration(incomingTimings.resolutionDurationMs) === null;
+
+    if (needsFallback) {
+      this._recordResolutionTimingFallback({
+        hubId,
+        roomId: roomId || base.roomId || null,
+        contestId,
+        timings: normalized.timings
+      });
+    }
+
+    return normalized;
+  }
+
+  _recordResolutionTimingFallback({ hubId, roomId, contestId, timings }) {
+    if (this.telemetry && typeof this.telemetry.recordContestTimingFallback === "function") {
+      try {
+        this.telemetry.recordContestTimingFallback({
+          hubId,
+          roomId,
+          contestId,
+          timings
+        });
+      } catch (error) {
+        this.emit("processingError", {
+          stage: "contestResolutionTimingFallback",
+          error,
+          context: {
+            hubId,
+            roomId,
+            contestId
+          }
+        });
+      }
+    } else {
+      this.emit("processingError", {
+        stage: "contestResolutionTimingFallback",
+        error: new Error("resolution timings missing"),
+        context: {
+          hubId,
+          roomId,
+          contestId
+        }
+      });
+    }
+  }
+
+  _recordRematchCooldownBlock({
+    hubId,
+    roomId,
+    contestKey,
+    actorId,
+    remainingMs,
+    cooldownMs,
+    availableAt,
+    issuedAt
+  }) {
+    if (this.telemetry && typeof this.telemetry.recordContestRematchBlocked === "function") {
+      try {
+        this.telemetry.recordContestRematchBlocked({
+          hubId,
+          roomId,
+          contestKey,
+          actorId,
+          remainingMs,
+          cooldownMs
+        });
+      } catch (error) {
+        this.emit("processingError", {
+          stage: "contestRematchBlockedTelemetry",
+          error,
+          context: {
+            hubId,
+            roomId,
+            contestKey
+          }
+        });
+      }
+    }
+
+    this._extendContestSentimentWindow({
+      roomId,
+      contestKey,
+      issuedAt,
+      availableAt,
+      cooldownMs
+    });
+  }
+
+  _storeContestSentimentWindow({ hubId, roomId, contestState }) {
+    if (!roomId) {
+      return;
+    }
+    const now = contestState?.expiredAt || this._now();
+    const cooldownMs =
+      typeof contestState?.rematch?.cooldownMs === "number"
+        ? contestState.rematch.cooldownMs
+        : null;
+    const availableAt =
+      typeof contestState?.rematch?.availableAt === "number"
+        ? contestState.rematch.availableAt
+        : cooldownMs !== null
+        ? now + cooldownMs
+        : null;
+
+    const entry = {
+      hubId,
+      contestKey: contestState?.contestKey || null,
+      expiredAt: contestState?.expiredAt || now,
+      availableAt,
+      cooldownMs,
+      participants: Array.isArray(contestState?.participants)
+        ? contestState.participants.map((participant) => ({
+            actorId: participant?.actorId || null,
+            role: participant?.role || null
+          }))
+        : [],
+      severity:
+        Array.isArray(contestState?.sharedComplications) &&
+        contestState.sharedComplications.length > 0
+          ? contestState.sharedComplications[0].severity || null
+          : null,
+      missingParticipants:
+        typeof contestState?.outcome?.missingParticipants === "number"
+          ? contestState.outcome.missingParticipants
+          : null,
+      lastUpdatedAt: now,
+      lastAttemptAt: null
+    };
+
+    this.contestSentimentByRoom.set(roomId, entry);
+    this._trimContestSentimentWindows(now);
+  }
+
+  _extendContestSentimentWindow({ roomId, contestKey, issuedAt, availableAt, cooldownMs }) {
+    if (!roomId) {
+      return;
+    }
+    const now = issuedAt || this._now();
+    const existing = this.contestSentimentByRoom.get(roomId) || {
+      hubId: null,
+      contestKey: contestKey || null,
+      expiredAt: now,
+      availableAt: availableAt || null,
+      cooldownMs: cooldownMs || null,
+      participants: [],
+      severity: null,
+      missingParticipants: null,
+      lastUpdatedAt: now,
+      lastAttemptAt: now
+    };
+
+    if (!existing.contestKey && contestKey) {
+      existing.contestKey = contestKey;
+    }
+    if (availableAt !== undefined && availableAt !== null) {
+      existing.availableAt = availableAt;
+    }
+    if (cooldownMs !== undefined && cooldownMs !== null) {
+      existing.cooldownMs = cooldownMs;
+    }
+
+    existing.lastAttemptAt = now;
+    existing.lastUpdatedAt = now;
+
+    this.contestSentimentByRoom.set(roomId, existing);
+    this._trimContestSentimentWindows(now);
+  }
+
+  _recordContestSentiment({ hubId, roomId, actorId, message, issuedAt }) {
+    if (!roomId) {
+      return;
+    }
+
+    const entry = this.contestSentimentByRoom.get(roomId);
+    if (!entry) {
+      return;
+    }
+
+    const now = issuedAt || this._now();
+    const anchor = entry.lastUpdatedAt || entry.expiredAt || 0;
+    if (anchor && now - anchor > this.contestSentimentRetentionMs) {
+      this.contestSentimentByRoom.delete(roomId);
+      return;
+    }
+
+    const text = typeof message === "string" ? message : "";
+    const sentiment = classifySentiment(text);
+    const tone = inferTone(text);
+    const messageLength = text.trim().length;
+    const remainingCooldownMs =
+      entry.availableAt && entry.availableAt > now ? entry.availableAt - now : 0;
+    const phase =
+      entry.availableAt && now < entry.availableAt
+        ? "cooldown"
+        : entry.availableAt && now - entry.availableAt <= this.contestSentimentWindowMs
+        ? "post-cooldown"
+        : "post-expiration";
+
+    if (this.telemetry && typeof this.telemetry.recordContestSentiment === "function") {
+      try {
+        this.telemetry.recordContestSentiment({
+          hubId,
+          roomId,
+          contestKey: entry.contestKey,
+          actorId,
+          sentiment,
+          tone,
+          phase,
+          messageLength,
+          remainingCooldownMs,
+          cooldownMs: entry.cooldownMs || null,
+          issuedAt: now
+        });
+      } catch (error) {
+        this.emit("processingError", {
+          stage: "contestSentimentTelemetry",
+          error,
+          context: {
+            hubId,
+            roomId,
+            contestKey: entry.contestKey
+          }
+        });
+      }
+    }
+
+    entry.lastUpdatedAt = now;
+    this.contestSentimentByRoom.set(roomId, entry);
+    this._trimContestSentimentWindows(now);
+  }
+
+  _trimContestSentimentWindows(now = this._now()) {
+    const threshold = now - this.contestSentimentRetentionMs;
+    for (const [roomId, entry] of this.contestSentimentByRoom.entries()) {
+      const anchor = entry?.lastUpdatedAt || entry?.expiredAt || 0;
+      if (anchor < threshold) {
+        this.contestSentimentByRoom.delete(roomId);
+      }
+    }
   }
 
   _now() {

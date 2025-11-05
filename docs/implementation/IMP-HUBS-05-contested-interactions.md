@@ -9,6 +9,7 @@
 - Check Overlay now narrates `contestExpired` events with in-world prompts and rematch cues so players feel the fizzle and know how to re-engage.
 - Contest timeouts now generate rematch offers with verb-specific cooldowns; Hub Orchestrator blocks spammy re-queues while the overlay highlights when a respectful rematch window opens.
 - Contest timeout simulation now applies momentum penalties and shared complications when multi-actor windows lapse, keeping expired contests aligned with DES-EDGE-01 fairness guidance.
+- Telemetry now tracks rematch cooling windows, blocked rematch attempts, and chat sentiment samples while enforcing workflow timing payloads so moderation dashboards can monitor pacing and player response.
 - Captured moderation-dashboard-ready telemetry for contested sparring flows (`artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json`) showing armed → launched → resolved lifecycle payloads and broadcast samples for admin review.
 - Extended the contest monitoring CLI and moderation ingestion so NDJSON logs, timeline artefacts, and stored summaries all produce the same aggregated contest metrics, now including timeout/expiry samples.
 - Tuned contested PvP verb windows (6–7 s) and Temporal resolution timing so the latest load sample lands within DES-BENCH-01 targets (arming p95 7.1 s, resolution p95 780 ms); captured the confirming artefacts in `artifacts/hub/contest-moderation-load-2025-11-04T11-15-00.000Z.ndjson` and its generated summary.
@@ -22,6 +23,9 @@
 - `HubOrchestrator` persists contest state updates (arming, resolving, expired, resolved), rebroadcasts hub state, records telemetry, and emits downstream events so overlays and narrative hooks stay synchronized; it also normalises rematch offers and broadcasts cooldown status changes.
 - Hub telemetry (`src/hub/telemetry/hubTelemetry.js`) gained contest lifecycle events (`contestArmed`, `contestLaunched`, `contestWorkflow*`, `contestResolved`) for observability dashboards.
 - `src/telemetry/contestMetrics.js` captures contest lifecycle metrics (arming latency, timeout latency, resolution latency, participant demand) and logs `telemetry.contest.*` events consumed by DES-BENCH-01 benchmarking and moderation dashboards. The CLI helper `scripts/benchmarks/contestWorkflowMonitor.js` now surfaces timeout aggregates alongside p95 checks against the 8 s arming / 800 ms resolution budgets.
+- `src/utils/sentiment.js` classifies player chat sentiment/tone so the orchestrator can emit telemetry when cooldown chatter spikes.
+- `src/hub/orchestrator/hubOrchestrator.js` stores cooldown sentiment windows, emits rematch cooling/blocked telemetry, normalises Temporal `resolution.timings` payloads, and samples chat sentiment during the cooldown window.
+- `src/hub/telemetry/hubTelemetry.js` and `src/telemetry/contestMetrics.js` now emit `telemetry.hub.contestRematchCooling`, `telemetry.hub.contestRematchBlocked`, `telemetry.hub.contestSentiment`, and `telemetry.hub.contestTimingFallback` events so downstream dashboards can audit pacing and workflow coverage.
 - Client hook `useSessionConnection` listens for `hub.stateSnapshot`/`hub.stateUpdate` envelopes, caching contest arrays that feed the refreshed `CheckOverlay`.
 - `client/src/components/CheckOverlay.jsx` renders a "Contested encounters" section, highlighting arming/resolving contests with participant roles and contest IDs for rapid moderation follow-through, and now surfaces cooldown-aware rematch prompts once duels expire.
 - `artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json` captures sparring telemetry and broadcast payloads for moderation dashboards to ingest while the dedicated UI lands (`IMP-MOD-01`).
@@ -30,6 +34,12 @@
 - Contest telemetry now emits structured JSON log lines (`telemetry.contest.armed|launched|resolved`) carrying arming/resolve durations, participant counts, and moderation context.
 - Run `npm run monitor:contests -- --input <telemetry-log.ndjson|timeline.json|summary.json>` to summarise p50/p95 arming and resolution latency against the DES-BENCH-01 targets (arming ≤8,000 ms p95, resolution ≤800 ms p95) and to track multi-actor demand via participant counts. Timeout samples now appear in the summary so designers can audit how often duels elapse without defenders.
 - Latest load telemetry captured on 2025-11-04 (`artifacts/hub/contest-moderation-load-2025-11-04T11-15-00.000Z.ndjson`) lands within budget (arming p95 7,100 ms, resolution p95 780 ms) per the generated summary (`artifacts/hub/contest-moderation-summary-2025-11-04T11-15-00.000Z.json`). Timeout metrics remain available for on-demand review rather than automated distribution.
+- New telemetry events:
+  - `telemetry.hub.contestRematchCooling` / `telemetry.contest.rematchCooling` capture cooldown duration, severity, and missing participant counts.
+  - `telemetry.hub.contestRematchBlocked` / `telemetry.contest.rematchBlocked` highlight spam attempts during cooldown.
+  - `telemetry.hub.contestSentiment` / `telemetry.contest.sentiment` summarise chat sentiment, tone, and remaining cooldown to flag frustration spikes.
+  - `telemetry.hub.contestTimingFallback` / `telemetry.contest.timingFallback` fire when workflow payloads omit `resolution.timings`, allowing Temporal owners to plug gaps.
+
 
 ## Testing
 - Added integration coverage in `__tests__/integration/hub/hubOrchestrator.integration.test.js` validating duel verbs arm → launch contest workflows and broadcast contest state/meta.
@@ -39,9 +49,9 @@
 - Ran targeted Jest suites (`client`, `unit/hub/contestCoordinator`, `integration/hub/hubOrchestrator`) with ESM support plus the standard `npm test` smoke to validate the refreshed overlay experience.
 
 ## Next Steps & Risks
-- Capture cooldown telemetry once live duels run to confirm verb-specific tuning, momentum penalties, and moderation hooks remain healthy under load; adjust rematch defaults if churn spikes.
-- Coordinate with Temporal workflow owners to guarantee `resolution.timings` payloads remain populated so telemetry stays aligned with real workflow runtimes.
-- Monitor player sentiment around the new timeout narration and penalties to shape rematch pacing and future moderation hooks.
+- Review rematch cooling telemetry and sentiment samples to tune cooldown lengths, rematch prompts, and momentum penalties before expanding the contested verb catalog.
+- Feed sentiment telemetry into moderation dashboards (IMP-MOD-01) so moderators can spot frustration spikes and respond with narrative follow-ups.
+- Validate workflow logs for the next Temporal contest deployments and retire fallback warnings once timing payload compliance holds for two consecutive releases.
 
 ## References
 - Backlog: `IMP-HUBS-05` (`b183607a-8f77-4693-8eea-99409baec014`)
