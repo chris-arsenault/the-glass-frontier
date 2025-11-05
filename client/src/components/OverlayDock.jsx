@@ -102,6 +102,8 @@ const PIPELINE_STAGE_DEFS = [
   { id: "publish", label: "Publish" }
 ];
 
+const SENTIMENT_STALE_THRESHOLD_MS = 5 * 60 * 1000;
+
 function formatPercent(value) {
   if (!Number.isFinite(value)) {
     return null;
@@ -200,13 +202,13 @@ function buildPipelineStages({ jobStatus, jobError, lastRun, latestHistoryStatus
     detail: "Awaiting session closure"
   };
   if (failure) {
-    storyStage.status = "blocked";
-    storyStage.detail = failureDetail || "Last offline run failed";
+    storyStage.status = "failed";
+    storyStage.detail = failureDetail || "Temporal workflow failed";
   } else if (normalizedJobStatus === "processing") {
-    storyStage.status = "running";
+    storyStage.status = "processing";
     storyStage.detail = "Processing current transcript";
   } else if (summaryVersion !== null) {
-    storyStage.status = "complete";
+    storyStage.status = "completed";
     storyStage.detail = `Version ${summaryVersion}`;
   } else if (pendingOffline) {
     storyStage.status = "queued";
@@ -220,13 +222,13 @@ function buildPipelineStages({ jobStatus, jobError, lastRun, latestHistoryStatus
     detail: "Awaiting story output"
   };
   if (failure) {
-    deltaStage.status = "blocked";
-    deltaStage.detail = failureDetail || "Last offline run failed";
+    deltaStage.status = "failed";
+    deltaStage.detail = failureDetail || "Temporal workflow failed";
   } else if (normalizedJobStatus === "processing") {
-    deltaStage.status = "pending";
+    deltaStage.status = "processing";
     deltaStage.detail = "Generating contest deltas";
   } else if (deltaCount !== null) {
-    deltaStage.status = "complete";
+    deltaStage.status = "completed";
     deltaStage.detail =
       deltaCount === 0 ? "No deltas generated" : `${deltaCount} delta${deltaCount === 1 ? "" : "s"} queued`;
   } else if (pendingOffline) {
@@ -241,13 +243,13 @@ function buildPipelineStages({ jobStatus, jobError, lastRun, latestHistoryStatus
     detail: "No publishing required yet"
   };
   if (failure) {
-    publishStage.status = "blocked";
-    publishStage.detail = failureDetail || "Last offline run failed";
+    publishStage.status = "failed";
+    publishStage.detail = failureDetail || "Temporal workflow failed";
   } else if (normalizedJobStatus === "processing") {
-    publishStage.status = "pending";
+    publishStage.status = "processing";
     publishStage.detail = "Scheduling publishing batch";
   } else if (publishingStatus || publishingBatchId) {
-    publishStage.status = "complete";
+    publishStage.status = "completed";
     const parts = [];
     if (publishingStatus) {
       parts.push(titleCase(publishingStatus));
@@ -549,15 +551,28 @@ export function OverlayDock() {
       typeof cooldown.frustrationRatio === "number" && !Number.isNaN(cooldown.frustrationRatio)
         ? cooldown.frustrationRatio
         : null;
+    const activeSamples =
+      typeof cooldown.activeSamples === "number" && !Number.isNaN(cooldown.activeSamples)
+        ? cooldown.activeSamples
+        : 0;
+    const generatedTimestamp = toTimestampMs(contestSentiment.generatedAt);
+    const updatedIso = generatedTimestamp !== null ? new Date(generatedTimestamp).toISOString() : null;
+    const updatedRelative = updatedIso ? formatRelativeTime(updatedIso) : null;
+    const stale =
+      generatedTimestamp !== null && Date.now() - generatedTimestamp > SENTIMENT_STALE_THRESHOLD_MS;
     return {
       level: cooldown.frustrationLevel || "steady",
       percent: formatPercent(ratio),
       negative: cooldown.negativeDuringCooldown ?? 0,
-      total: cooldown.activeSamples ?? 0,
+      total: activeSamples,
       remainingMs:
         typeof cooldown.maxRemainingCooldownMs === "number"
           ? cooldown.maxRemainingCooldownMs
-          : null
+          : null,
+      updatedIso,
+      updatedRelative,
+      stale,
+      hasSamples: activeSamples > 0
     };
   }, [contestSentiment]);
   const sentimentLevel = sentimentSummary?.level || null;
@@ -565,11 +580,50 @@ export function OverlayDock() {
     sentimentSummary?.remainingMs !== null && sentimentSummary?.remainingMs !== undefined
       ? formatDuration(sentimentSummary.remainingMs)
       : null;
+  const sentimentUpdatedLabel = sentimentSummary?.updatedRelative || null;
+  const sentimentIsStale = Boolean(sentimentSummary?.stale);
+  const sentimentHasSamples = Boolean(sentimentSummary?.hasSamples);
+  const sentimentCopy = useMemo(() => {
+    if (!sentimentSummary || !sentimentHasSamples) {
+      return null;
+    }
+    const parts = [`Cooldown sentiment — ${titleCase(sentimentLevel || "steady")}`];
+    if (sentimentSummary.percent) {
+      parts.push(
+        `${sentimentSummary.percent} negative (${sentimentSummary.negative}/${sentimentSummary.total})`
+      );
+    }
+    if (sentimentRemainingLabel) {
+      parts.push(`Longest cooldown ${sentimentRemainingLabel}`);
+    }
+    if (sentimentUpdatedLabel) {
+      parts.push(`Updated ${sentimentUpdatedLabel}${sentimentIsStale ? " (stale)" : ""}`);
+    }
+    return parts.join(" • ");
+  }, [
+    sentimentHasSamples,
+    sentimentIsStale,
+    sentimentLevel,
+    sentimentRemainingLabel,
+    sentimentSummary,
+    sentimentUpdatedLabel
+  ]);
+  const sentimentFallbackCopy = useMemo(() => {
+    if (!sentimentSummary || sentimentHasSamples) {
+      return null;
+    }
+    if (sentimentUpdatedLabel) {
+      return `Cooldown sentiment data pending new contest completions. Last update ${sentimentUpdatedLabel}${sentimentIsStale ? " (stale)" : ""}.`;
+    }
+    return "Cooldown sentiment data pending new contest completions.";
+  }, [sentimentHasSamples, sentimentIsStale, sentimentSummary, sentimentUpdatedLabel]);
   const showContestTimelineCard =
     contestTimelineEntries.length > 0 ||
     (isAdmin && (sentimentSummary || sentimentLoading || sentimentError));
   const showModerationCTA =
-    Boolean(isAdmin) && (sentimentLevel === "elevated" || sentimentLevel === "critical");
+    Boolean(isAdmin) &&
+    sentimentHasSamples &&
+    (sentimentLevel === "elevated" || sentimentLevel === "critical");
   const summaryLabel = useMemo(() => {
     const parts = [];
     parts.push(titleCase(pipelineStatus || "unknown"));
@@ -805,23 +859,31 @@ export function OverlayDock() {
           {isAdmin ? (
             sentimentLoading ? (
               <p className="overlay-muted" data-testid="contest-sentiment-loading">
-                Loading sentiment…
+                Loading cooldown sentiment…
               </p>
             ) : sentimentSummary ? (
-              <p
-                className={`overlay-contest-sentiment level-${sentimentLevel || "steady"}`}
-                data-testid="contest-sentiment-summary"
-              >
-                Cooldown sentiment: {titleCase(sentimentLevel || "steady")}
-                {sentimentSummary.percent ? ` • ${sentimentSummary.percent} negative` : ""}
-                {sentimentSummary.total
-                  ? ` (${sentimentSummary.negative}/${sentimentSummary.total} samples)`
-                  : ""}
-                {sentimentRemainingLabel ? ` • Max cooldown ${sentimentRemainingLabel}` : ""}
-              </p>
+              sentimentHasSamples ? (
+                <p
+                  className={`overlay-contest-sentiment level-${sentimentLevel || "steady"}${
+                    sentimentIsStale ? " overlay-contest-sentiment-stale" : ""
+                  }`}
+                  data-testid="contest-sentiment-summary"
+                >
+                  {sentimentCopy}
+                </p>
+              ) : (
+                <p
+                  className={`overlay-muted overlay-contest-sentiment-empty${
+                    sentimentIsStale ? " overlay-contest-sentiment-stale" : ""
+                  }`}
+                  data-testid="contest-sentiment-empty"
+                >
+                  {sentimentFallbackCopy}
+                </p>
+              )
             ) : sentimentError ? (
               <p className="overlay-alert" data-testid="contest-sentiment-error">
-                Unable to load sentiment telemetry ({sentimentError})
+                Cooldown sentiment temporarily unavailable ({sentimentError})
               </p>
             ) : null
           ) : null}

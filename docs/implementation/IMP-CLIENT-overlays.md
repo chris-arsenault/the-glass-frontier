@@ -14,8 +14,9 @@ Backlog item: `IMP-CLIENT-07` (MCP ID `64d6a12c-15e6-4064-9e9f-2d4e6b9cfcf0`)
 - `OverlayDock.jsx`
   - New **Contest Timeline** card renders the latest hub contest history with role-tagged participants, momentum shifts, and complication excerpts.
   - Sentiment summary badge (steady/watch/elevated/critical) pulls from `/admin/moderation/contest/sentiment` and announces negative cooldown ratios in-line.
+  - Sentiment badge now highlights stale telemetry, shows an empty-state when no cooldown samples are available, and withholds the moderation CTA until meaningful data arrives.
   - Admin CTA (“Review capability policy”) jumps to the Moderation tab and drops a flash message when frustration crosses the elevated line.
-  - Pipeline card now shows explicit stage chips with color-coded status (`running`, `queued`, `blocked`, `idle`, `complete`) and richer offline metadata.
+  - Pipeline card now shows explicit stage chips with Temporal-aligned status labels (`queued`, `processing`, `completed`, `failed`, `idle`) and richer offline metadata.
 - `app.css` gains supporting styles for contest timeline layouts, status pills, sentiment badges, and pipeline stage blocks.
 
 ## Data & Telemetry

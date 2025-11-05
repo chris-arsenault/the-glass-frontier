@@ -484,13 +484,58 @@ describe("Client shell components", () => {
     expect(timelineItem).toHaveTextContent(/Rematch cooling/i);
 
     const sentimentSummary = await screen.findByTestId("contest-sentiment-summary");
-    expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment: Elevated/i);
-    expect(sentimentSummary).toHaveTextContent(/40% negative/i);
+    expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment — Elevated/i);
+    expect(sentimentSummary).toHaveTextContent(/40% negative \(2\/5\)/i);
+    expect(sentimentSummary).toHaveTextContent(/Longest cooldown 9s/i);
 
     const moderationButton = screen.getByTestId("contest-moderation-open");
     fireEvent.click(moderationButton);
     expect(setActiveView).toHaveBeenCalledWith("admin");
     expect(setFlashMessage).toHaveBeenCalledWith(expect.stringContaining("Opening moderation capability review"));
+  });
+
+  test("OverlayDock renders sentiment fallback when no samples are available", async () => {
+    const fetchWithAuth = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        generatedAt: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
+        cooldown: {
+          activeSamples: 0,
+          negativeDuringCooldown: 0,
+          maxRemainingCooldownMs: null,
+          frustrationRatio: 0,
+          frustrationLevel: "steady"
+        }
+      })
+    });
+    const session = buildSessionValue({
+      isAdmin: true,
+      hubContests: [],
+      sessionOfflineHistory: [],
+      sessionAdminAlerts: [],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      }
+    });
+
+    renderWithSession(
+      session,
+      React.createElement(OverlayDock),
+      {
+        isAdmin: true,
+        fetchWithAuth
+      }
+    );
+
+    await waitFor(() => expect(fetchWithAuth).toHaveBeenCalled());
+
+    const emptyState = await screen.findByTestId("contest-sentiment-empty");
+    expect(emptyState).toHaveTextContent(/Cooldown sentiment data pending new contest completions/i);
+    expect(emptyState).toHaveTextContent(/Last update/i);
+    expect(screen.queryByTestId("contest-moderation-open")).not.toBeInTheDocument();
   });
 
   test("CheckOverlay surfaces pending and resolved check details", () => {
