@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSessionContext } from "../context/SessionContext.jsx";
 import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
 import { useAccountContext } from "../context/AccountContext.jsx";
@@ -96,6 +96,174 @@ function formatRelativeTime(isoString) {
   return days >= 0 ? `${days}d ago` : `in ${Math.abs(days)}d`;
 }
 
+const PIPELINE_STAGE_DEFS = [
+  { id: "story", label: "Story Consolidation" },
+  { id: "delta", label: "Delta Review" },
+  { id: "publish", label: "Publish" }
+];
+
+function formatPercent(value) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatContestLabel(contest) {
+  if (!contest) {
+    return "Contest";
+  }
+  if (contest.label) {
+    return contest.label;
+  }
+  if (contest.move) {
+    return titleCase(contest.move);
+  }
+  if (contest.contestKey) {
+    const [verb] = String(contest.contestKey).split(":");
+    return titleCase(verb);
+  }
+  return contest.contestId || "Contest";
+}
+
+function buildContestParticipants(participants) {
+  if (!Array.isArray(participants) || participants.length === 0) {
+    return [];
+  }
+  return participants.map((participant, index) => {
+    const roleLabel = participant?.role ? titleCase(participant.role) : null;
+    const actorLabel =
+      participant?.actorId ||
+      participant?.characterId ||
+      participant?.connectionId ||
+      `participant-${index + 1}`;
+    const momentumDelta =
+      typeof participant?.result?.momentumDelta === "number"
+        ? participant.result.momentumDelta
+        : null;
+    return {
+      id: participant?.actorId || participant?.characterId || `participant-${index + 1}`,
+      role: roleLabel,
+      actor: actorLabel,
+      resultSummary: participant?.result?.summary || null,
+      resultTier: participant?.result?.tier || null,
+      momentumDelta
+    };
+  });
+}
+
+function toTimestampMs(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function pickContestTimestamp(contest) {
+  if (!contest) {
+    return { ms: null, iso: null };
+  }
+  const candidates = [contest.resolvedAt, contest.expiredAt, contest.updatedAt, contest.createdAt];
+  for (const candidate of candidates) {
+    const ms = toTimestampMs(candidate);
+    if (ms !== null) {
+      return { ms, iso: new Date(ms).toISOString() };
+    }
+  }
+  return { ms: null, iso: null };
+}
+
+function buildPipelineStages({ jobStatus, jobError, lastRun, latestHistoryStatus, pendingOffline }) {
+  const normalizedJobStatus = jobStatus || "idle";
+  const failure =
+    normalizedJobStatus === "failed" || latestHistoryStatus === "failed" || latestHistoryStatus === "error";
+  const failureDetail = jobError || (failure ? "Offline workflow failed" : null);
+  const summaryVersion =
+    typeof lastRun?.summaryVersion === "number" && !Number.isNaN(lastRun.summaryVersion)
+      ? lastRun.summaryVersion
+      : null;
+  const deltaCount =
+    typeof lastRun?.deltaCount === "number" && !Number.isNaN(lastRun.deltaCount)
+      ? lastRun.deltaCount
+      : null;
+  const publishingStatus = lastRun?.publishingStatus || null;
+  const publishingBatchId = lastRun?.publishingBatchId || null;
+
+  const storyStage = {
+    id: "story",
+    label: PIPELINE_STAGE_DEFS[0].label,
+    status: "idle",
+    detail: "Awaiting session closure"
+  };
+  if (failure) {
+    storyStage.status = "blocked";
+    storyStage.detail = failureDetail || "Last offline run failed";
+  } else if (normalizedJobStatus === "processing") {
+    storyStage.status = "running";
+    storyStage.detail = "Processing current transcript";
+  } else if (summaryVersion !== null) {
+    storyStage.status = "complete";
+    storyStage.detail = `Version ${summaryVersion}`;
+  } else if (pendingOffline) {
+    storyStage.status = "queued";
+    storyStage.detail = "Queued for next cadence";
+  }
+
+  const deltaStage = {
+    id: "delta",
+    label: PIPELINE_STAGE_DEFS[1].label,
+    status: "idle",
+    detail: "Awaiting story output"
+  };
+  if (failure) {
+    deltaStage.status = "blocked";
+    deltaStage.detail = failureDetail || "Last offline run failed";
+  } else if (normalizedJobStatus === "processing") {
+    deltaStage.status = "pending";
+    deltaStage.detail = "Generating contest deltas";
+  } else if (deltaCount !== null) {
+    deltaStage.status = "complete";
+    deltaStage.detail =
+      deltaCount === 0 ? "No deltas generated" : `${deltaCount} delta${deltaCount === 1 ? "" : "s"} queued`;
+  } else if (pendingOffline) {
+    deltaStage.status = "queued";
+    deltaStage.detail = "Pending extraction";
+  }
+
+  const publishStage = {
+    id: "publish",
+    label: PIPELINE_STAGE_DEFS[2].label,
+    status: "idle",
+    detail: "No publishing required yet"
+  };
+  if (failure) {
+    publishStage.status = "blocked";
+    publishStage.detail = failureDetail || "Last offline run failed";
+  } else if (normalizedJobStatus === "processing") {
+    publishStage.status = "pending";
+    publishStage.detail = "Scheduling publishing batch";
+  } else if (publishingStatus || publishingBatchId) {
+    publishStage.status = "complete";
+    const parts = [];
+    if (publishingStatus) {
+      parts.push(titleCase(publishingStatus));
+    }
+    if (publishingBatchId) {
+      parts.push(`Batch ${publishingBatchId.slice(0, 8)}`);
+    }
+    publishStage.detail = parts.length > 0 ? parts.join(" • ") : "Publishing scheduled";
+  } else if (pendingOffline) {
+    publishStage.status = "queued";
+    publishStage.detail = "Awaiting moderation cadence";
+  }
+
+  return [storyStage, deltaStage, publishStage];
+}
+
 function pipelineAlertIdentifier(alert) {
   if (!alert || typeof alert !== "object") {
     return "alert";
@@ -170,10 +338,60 @@ export function OverlayDock() {
     pipelinePreferences,
     setPipelineFilter,
     togglePipelineTimeline,
-    acknowledgePipelineAlert
+    acknowledgePipelineAlert,
+    hubContests
   } = useSessionContext();
   const accountContext = useAccountContext() || {};
+  const {
+    fetchWithAuth,
+    setActiveView: setAccountActiveView,
+    setFlashMessage: pushFlashMessage
+  } = accountContext;
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [contestSentiment, setContestSentiment] = useState(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [sentimentError, setSentimentError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isAdmin || typeof fetchWithAuth !== "function") {
+      setContestSentiment(null);
+      setSentimentError(null);
+      setSentimentLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setSentimentLoading(true);
+    (async () => {
+      try {
+        const response = await fetchWithAuth("/admin/moderation/contest/sentiment?limit=5");
+        const payload = await response.json().catch(() => ({}));
+        if (cancelled) {
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(payload.error || `contest_sentiment_${response.status}`);
+        }
+        setContestSentiment(payload);
+        setSentimentError(null);
+      } catch (error) {
+        if (!cancelled) {
+          setContestSentiment(null);
+          setSentimentError(error.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setSentimentLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchWithAuth, isAdmin]);
 
   const character = overlay?.character || FALLBACK_CHARACTER;
   const inventory = Array.isArray(overlay?.inventory) && overlay.inventory.length > 0
@@ -229,6 +447,53 @@ export function OverlayDock() {
     }
     return sessionOfflineHistory.slice().reverse();
   }, [sessionOfflineHistory]);
+  const contestTimelineEntries = useMemo(() => {
+    if (!Array.isArray(hubContests) || hubContests.length === 0) {
+      return [];
+    }
+    return hubContests
+      .map((contest, index) => {
+        const timestamp = pickContestTimestamp(contest);
+        const participants = buildContestParticipants(contest.participants);
+        const complications = Array.isArray(contest.sharedComplications)
+          ? contest.sharedComplications.slice(0, 2).map((entry, complicationIndex) => ({
+              tag: entry?.tag || null,
+              summary: entry?.summary || null,
+              id: `${entry?.tag || "complication"}-${complicationIndex}`
+            }))
+          : [];
+        const rematch = contest.rematch
+          ? {
+              status: contest.rematch.status || "cooldown",
+              remainingMs:
+                typeof contest.rematch.remainingMs === "number"
+                  ? contest.rematch.remainingMs
+                  : null,
+              cooldownMs:
+                typeof contest.rematch.cooldownMs === "number"
+                  ? contest.rematch.cooldownMs
+                  : null
+            }
+          : null;
+        return {
+          id: contest.contestId || contest.contestKey || `contest-${index}`,
+          label: formatContestLabel(contest),
+          status: contest.status || "unknown",
+          outcomeSummary: contest.outcome?.summary || null,
+          outcomeTier: contest.outcome?.tier || null,
+          rematch,
+          timestamp,
+          relativeTime: timestamp.iso ? formatRelativeTime(timestamp.iso) : null,
+          absoluteTime: timestamp.iso ? formatIso(timestamp.iso) : null,
+          participants,
+          complications,
+          sortKey: timestamp.ms || 0
+        };
+      })
+      .sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0))
+      .slice(0, 5)
+      .map(({ sortKey, ...entry }) => entry);
+  }, [hubContests]);
   const rawPipelineAlerts = useMemo(() => {
     if (!Array.isArray(sessionAdminAlerts)) {
       return [];
@@ -244,11 +509,25 @@ export function OverlayDock() {
     [acknowledgedAlerts, rawPipelineAlerts]
   );
   const offlineJob = sessionOfflineJob || null;
+  const offlineJobError = offlineJob?.error || null;
   const pipelineStatus =
     offlineJob?.status || (sessionPendingOffline ? "queued" : "idle");
+  const latestPipelineEntry = pipelineHistory[0] || null;
+  const latestPipelineStatus = latestPipelineEntry?.status || null;
   const moderationQueueCount = Array.isArray(accountContext.sessions)
     ? accountContext.sessions.filter((entry) => entry?.requiresApproval).length
     : 0;
+  const pipelineStages = useMemo(
+    () =>
+      buildPipelineStages({
+        jobStatus: pipelineStatus,
+        jobError: offlineJobError,
+        lastRun: sessionOfflineLastRun || null,
+        latestHistoryStatus: latestPipelineStatus,
+        pendingOffline: sessionPendingOffline
+      }),
+    [offlineJobError, latestPipelineStatus, pipelineStatus, sessionOfflineLastRun, sessionPendingOffline]
+  );
   const filterValue = resolvedPipelinePreferences.filter;
   const timelineExpanded = resolvedPipelinePreferences.timelineExpanded;
   const displayedHistory = useMemo(
@@ -261,6 +540,36 @@ export function OverlayDock() {
   const showAlertsEmptyState = filterValue === "alerts" && pipelineAlerts.length === 0;
   const showHistoryEmptyState = filterValue === "runs" && displayedHistory.length === 0;
   const latestJobId = offlineJob?.jobId ? offlineJob.jobId.slice(0, 8) : null;
+  const sentimentSummary = useMemo(() => {
+    if (!contestSentiment || typeof contestSentiment !== "object") {
+      return null;
+    }
+    const cooldown = contestSentiment.cooldown || {};
+    const ratio =
+      typeof cooldown.frustrationRatio === "number" && !Number.isNaN(cooldown.frustrationRatio)
+        ? cooldown.frustrationRatio
+        : null;
+    return {
+      level: cooldown.frustrationLevel || "steady",
+      percent: formatPercent(ratio),
+      negative: cooldown.negativeDuringCooldown ?? 0,
+      total: cooldown.activeSamples ?? 0,
+      remainingMs:
+        typeof cooldown.maxRemainingCooldownMs === "number"
+          ? cooldown.maxRemainingCooldownMs
+          : null
+    };
+  }, [contestSentiment]);
+  const sentimentLevel = sentimentSummary?.level || null;
+  const sentimentRemainingLabel =
+    sentimentSummary?.remainingMs !== null && sentimentSummary?.remainingMs !== undefined
+      ? formatDuration(sentimentSummary.remainingMs)
+      : null;
+  const showContestTimelineCard =
+    contestTimelineEntries.length > 0 ||
+    (isAdmin && (sentimentSummary || sentimentLoading || sentimentError));
+  const showModerationCTA =
+    Boolean(isAdmin) && (sentimentLevel === "elevated" || sentimentLevel === "critical");
   const summaryLabel = useMemo(() => {
     const parts = [];
     parts.push(titleCase(pipelineStatus || "unknown"));
@@ -317,6 +626,18 @@ export function OverlayDock() {
     },
     [acknowledgePipelineAlert]
   );
+  const handleOpenModeration = useCallback(() => {
+    if (typeof setAccountActiveView === "function") {
+      setAccountActiveView("admin");
+    }
+    if (typeof pushFlashMessage === "function") {
+      pushFlashMessage("Opening moderation capability review…");
+    }
+    emitTelemetry("client.overlay.moderation.opened", {
+      source: "contest-sentiment",
+      level: sentimentLevel || "unknown"
+    });
+  }, [pushFlashMessage, sentimentLevel, setAccountActiveView]);
   const handleDetailsToggle = useCallback(() => {
     setDetailsExpanded((expanded) => {
       const next = !expanded;
@@ -462,6 +783,144 @@ export function OverlayDock() {
           <p className="overlay-muted">No relationships recorded yet.</p>
         )}
       </section>
+      {showContestTimelineCard ? (
+        <section
+          className="overlay-card overlay-contest-timeline"
+          aria-labelledby="overlay-contest-timeline-heading"
+          data-testid="overlay-contest-timeline"
+        >
+          <header className="overlay-card-header">
+            <h2 id="overlay-contest-timeline-heading">Contest Timeline</h2>
+            {showModerationCTA ? (
+              <button
+                type="button"
+                className="overlay-contest-moderation-button"
+                onClick={handleOpenModeration}
+                data-testid="contest-moderation-open"
+              >
+                Review capability policy
+              </button>
+            ) : null}
+          </header>
+          {isAdmin ? (
+            sentimentLoading ? (
+              <p className="overlay-muted" data-testid="contest-sentiment-loading">
+                Loading sentiment…
+              </p>
+            ) : sentimentSummary ? (
+              <p
+                className={`overlay-contest-sentiment level-${sentimentLevel || "steady"}`}
+                data-testid="contest-sentiment-summary"
+              >
+                Cooldown sentiment: {titleCase(sentimentLevel || "steady")}
+                {sentimentSummary.percent ? ` • ${sentimentSummary.percent} negative` : ""}
+                {sentimentSummary.total
+                  ? ` (${sentimentSummary.negative}/${sentimentSummary.total} samples)`
+                  : ""}
+                {sentimentRemainingLabel ? ` • Max cooldown ${sentimentRemainingLabel}` : ""}
+              </p>
+            ) : sentimentError ? (
+              <p className="overlay-alert" data-testid="contest-sentiment-error">
+                Unable to load sentiment telemetry ({sentimentError})
+              </p>
+            ) : null
+          ) : null}
+          {contestTimelineEntries.length > 0 ? (
+            <ul className="overlay-contest-timeline-list">
+              {contestTimelineEntries.map((contest) => {
+                const rematchRemaining =
+                  typeof contest.rematch?.remainingMs === "number" && contest.rematch.remainingMs >= 0
+                    ? formatDuration(contest.rematch.remainingMs)
+                    : typeof contest.rematch?.cooldownMs === "number" && contest.rematch.cooldownMs >= 0
+                    ? formatDuration(contest.rematch.cooldownMs)
+                    : null;
+                return (
+                  <li
+                    key={contest.id}
+                    className="overlay-contest-timeline-item"
+                    data-testid="contest-timeline-item"
+                  >
+                    <div className="overlay-contest-timeline-header">
+                      <p className="overlay-contest-timeline-title">
+                        {contest.label}
+                        <span className={`overlay-status-pill status-${contest.status}`}>
+                          {titleCase(contest.status)}
+                        </span>
+                      </p>
+                      {contest.relativeTime || contest.absoluteTime ? (
+                        <p className="overlay-contest-timeline-meta">
+                          {contest.relativeTime || contest.absoluteTime}
+                          {contest.relativeTime && contest.absoluteTime
+                            ? ` • ${contest.absoluteTime}`
+                            : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                    {contest.outcomeSummary ? (
+                      <p className="overlay-contest-timeline-outcome">
+                        {contest.outcomeTier ? `${titleCase(contest.outcomeTier)} — ` : ""}
+                        {contest.outcomeSummary}
+                      </p>
+                    ) : (
+                      <p className="overlay-contest-timeline-outcome overlay-muted">
+                        Resolution pending.
+                      </p>
+                    )}
+                    {contest.participants.length > 0 ? (
+                      <ul className="overlay-contest-timeline-participants">
+                        {contest.participants.map((participant) => (
+                          <li key={participant.id}>
+                            <span className="overlay-contest-participant-name">
+                              {participant.role ? `${participant.role}: ` : ""}
+                              {participant.actor}
+                            </span>
+                            {participant.resultSummary ? (
+                              <span className="overlay-contest-participant-summary">
+                                {" "}
+                                — {participant.resultSummary}
+                              </span>
+                            ) : null}
+                            {typeof participant.momentumDelta === "number" ? (
+                              <span className="overlay-contest-participant-momentum">
+                                {" "}
+                                · Momentum shift: {participant.momentumDelta >= 0 ? "+" : ""}
+                                {participant.momentumDelta}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {contest.rematch ? (
+                      <p className="overlay-contest-timeline-rematch">
+                        {contest.rematch.status === "ready"
+                          ? "Rematch ready"
+                          : rematchRemaining
+                          ? `Rematch cooling · ${rematchRemaining} remaining`
+                          : "Rematch cooling"}
+                      </p>
+                    ) : null}
+                    {contest.complications.length > 0 ? (
+                      <ul className="overlay-contest-timeline-complications">
+                        {contest.complications.map((complication) => (
+                          <li key={complication.id}>
+                            {complication.tag ? `#${complication.tag} ` : ""}
+                            {complication.summary}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="overlay-muted overlay-contest-empty">
+              No contested encounters captured yet.
+            </p>
+          )}
+        </section>
+      ) : null}
       {isAdmin ? (
         <section
           className="overlay-card overlay-pipeline"
@@ -487,6 +946,20 @@ export function OverlayDock() {
             >
               {detailsExpanded ? "Hide details" : "Show details"}
             </button>
+          </div>
+          <div className="overlay-pipeline-stages" role="list">
+            {pipelineStages.map((stage) => (
+              <div
+                key={stage.id}
+                className={`overlay-pipeline-stage status-${stage.status}`}
+                role="listitem"
+                data-testid={`pipeline-stage-${stage.id}`}
+              >
+                <span className="overlay-pipeline-stage-label">{stage.label}</span>
+                <span className="overlay-pipeline-stage-status">{titleCase(stage.status)}</span>
+                <span className="overlay-pipeline-stage-detail">{stage.detail}</span>
+              </div>
+            ))}
           </div>
           {detailsExpanded ? (
             <dl className="overlay-pipeline-details">

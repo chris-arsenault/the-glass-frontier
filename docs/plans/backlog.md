@@ -13,7 +13,7 @@ Updated for Session 141 grooming cycle. Tier 1 emphasis remains on gameplay de
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Monitor cooldown sentiment (<40% negative), validate Temporal payload timing across two releases, then close contested PvP tuning. |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-06: Contest Fallout Quest Hooks | todo | P1 | Design follow-up quest verbs driven by contest telemetry and route fallout through the offline pipeline once IMP-HUBS-05 closes. |
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-06: Contest Delta Integration & Conflict Review | todo | P1 | Ingest contested artefacts, flag conflicting deltas, and gate publishing pending review to honour post-session workflow rules. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-07: Contest & Publishing Overlays Unification | todo | P1 | Combine contest timelines and publishing progress in one overlay with SME feedback before implementation. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-07: Contest & Publishing Overlays Unification | in-progress | P1 | Contest timeline + publishing stages merged in client overlay; capture SME feedback and live sentiment telemetry before closure. |
 | IMP-GM: Narrative Engine & Check Runner | IMP-GM-07: Memory Stress Harness & Transparent Check Narration | todo | P1 | Build multi-session stress harness, expose transparent check narration, and document outputs for auditability. |
 
 ## Tier 2 (P2)

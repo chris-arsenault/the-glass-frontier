@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 const React = require("react");
-const { render, screen, fireEvent, waitFor } = require("@testing-library/react");
+const { render, screen, fireEvent, waitFor, within } = require("@testing-library/react");
 const { SessionProvider } = require("../../client/src/context/SessionContext.jsx");
 const { AccountContext } = require("../../client/src/context/AccountContext.jsx");
 const { ChatCanvas } = require("../../client/src/components/ChatCanvas.jsx");
@@ -307,17 +307,17 @@ describe("Client shell components", () => {
       },
       sessionOfflineHistory: [
         {
-          jobId: "job-120",
-          status: "completed",
-          at: "2025-11-03T22:00:00.000Z",
-          durationMs: 42000
-        },
-        {
           jobId: "job-119",
           status: "failed",
           at: "2025-11-03T21:45:00.000Z",
           durationMs: 36000,
           message: "Upstream outage"
+        },
+        {
+          jobId: "job-120",
+          status: "completed",
+          at: "2025-11-03T22:00:00.000Z",
+          durationMs: 42000
         }
       ],
       sessionOfflineLastRun: {
@@ -375,12 +375,21 @@ describe("Client shell components", () => {
 
     expect(screen.getByTestId("overlay-pipeline")).toBeInTheDocument();
     expect(screen.getByText(/Moderation queue: 2/)).toBeInTheDocument();
-    expect(screen.getByText(/Processing/i)).toBeInTheDocument();
+    expect(screen.getByText(/Processing • Job job-123/i)).toBeInTheDocument();
     expect(screen.getByText(/Workflow exceeded SLA/)).toBeInTheDocument();
     expect(screen.getByTestId("pipeline-alert-seeded")).toHaveTextContent(/Seeded fallback/i);
     expect(
       screen.getByText((content) => typeof content === "string" && content.includes("Source: langgraph-smoke"))
     ).toBeInTheDocument();
+    expect(screen.queryByTestId("overlay-contest-timeline")).not.toBeInTheDocument();
+
+    const storyStage = screen.getByTestId("pipeline-stage-story");
+    expect(within(storyStage).getByText(/Story Consolidation/i)).toBeInTheDocument();
+    expect(within(storyStage).getByText(/Processing current transcript/i)).toBeInTheDocument();
+    const deltaStage = screen.getByTestId("pipeline-stage-delta");
+    expect(within(deltaStage).getByText(/Generating contest deltas/i)).toBeInTheDocument();
+    const publishStage = screen.getByTestId("pipeline-stage-publish");
+    expect(within(publishStage).getByText(/Scheduling publishing batch/i)).toBeInTheDocument();
 
     const detailsToggle = screen.getByTestId("pipeline-details-toggle");
     fireEvent.click(detailsToggle);
@@ -397,6 +406,91 @@ describe("Client shell components", () => {
     const acknowledgeButton = screen.getByTestId("pipeline-ack-0");
     fireEvent.click(acknowledgeButton);
     expect(acknowledgePipelineAlert).toHaveBeenCalledTimes(1);
+  });
+
+  test("OverlayDock renders contest timeline with sentiment controls", async () => {
+    const fetchWithAuth = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        cooldown: {
+          frustrationLevel: "elevated",
+          frustrationRatio: 0.4,
+          activeSamples: 5,
+          negativeDuringCooldown: 2,
+          maxRemainingCooldownMs: 9000
+        }
+      })
+    });
+    const setActiveView = jest.fn();
+    const setFlashMessage = jest.fn();
+    const session = buildSessionValue({
+      isAdmin: true,
+      hubContests: [
+        {
+          contestId: "contest-001",
+          label: "Challenge Duel",
+          status: "resolved",
+          resolvedAt: "2025-11-05T09:00:00.000Z",
+          outcome: { tier: "success", summary: "Alpha edges out Beta." },
+          rematch: { status: "cooldown", remainingMs: 6000, cooldownMs: 6000 },
+          participants: [
+            {
+              actorId: "actor-alpha",
+              role: "challenger",
+              result: { summary: "Claims the initiative.", momentumDelta: 1 }
+            },
+            {
+              actorId: "actor-beta",
+              role: "defender",
+              result: { summary: "Falls back cautiously.", momentumDelta: -1 }
+            }
+          ],
+          sharedComplications: [
+            { tag: "crowd", summary: "Spectators chant for a rematch." }
+          ]
+        }
+      ],
+      sessionOfflineHistory: [],
+      sessionAdminAlerts: [],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      }
+    });
+
+    renderWithSession(
+      session,
+      React.createElement(OverlayDock),
+      {
+        isAdmin: true,
+        fetchWithAuth,
+        setActiveView,
+        setFlashMessage
+      }
+    );
+
+    await waitFor(() => expect(fetchWithAuth).toHaveBeenCalled());
+
+    const timelineSection = screen.getByTestId("overlay-contest-timeline");
+    const timelineItem = screen.getAllByTestId("contest-timeline-item")[0];
+    expect(timelineSection).toBeInTheDocument();
+    expect(timelineItem).toHaveTextContent(/Challenge Duel/);
+    expect(timelineItem).toHaveTextContent(/Alpha edges out Beta/i);
+    expect(timelineItem).toHaveTextContent(/challenger: actor-alpha/i);
+    expect(timelineItem).toHaveTextContent(/Momentum shift:\s\+1/);
+    expect(timelineItem).toHaveTextContent(/#crowd/i);
+    expect(timelineItem).toHaveTextContent(/Rematch cooling/i);
+
+    const sentimentSummary = await screen.findByTestId("contest-sentiment-summary");
+    expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment: Elevated/i);
+    expect(sentimentSummary).toHaveTextContent(/40% negative/i);
+
+    const moderationButton = screen.getByTestId("contest-moderation-open");
+    fireEvent.click(moderationButton);
+    expect(setActiveView).toHaveBeenCalledWith("admin");
+    expect(setFlashMessage).toHaveBeenCalledWith(expect.stringContaining("Opening moderation capability review"));
   });
 
   test("CheckOverlay surfaces pending and resolved check details", () => {

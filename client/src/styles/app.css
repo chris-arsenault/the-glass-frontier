@@ -425,12 +425,254 @@ body {
   margin: 0;
 }
 
+.overlay-status-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #cbd5f5;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.overlay-status-pill.status-resolving,
+.overlay-status-pill.status-processing,
+.overlay-status-pill.status-running {
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.overlay-status-pill.status-resolved,
+.overlay-status-pill.status-complete,
+.overlay-status-pill.status-completed {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.overlay-status-pill.status-expired,
+.overlay-status-pill.status-blocked,
+.overlay-status-pill.status-failed {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.overlay-status-pill.status-cooldown,
+.overlay-status-pill.status-queued,
+.overlay-status-pill.status-pending {
+  border-color: rgba(234, 179, 8, 0.45);
+  color: #fef08a;
+  background: rgba(234, 179, 8, 0.18);
+}
+
+.overlay-status-pill.status-idle,
+.overlay-status-pill.status-unknown {
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5f5;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.overlay-contest-timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.overlay-contest-timeline-item {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+  background: rgba(17, 24, 39, 0.6);
+}
+
+.overlay-contest-timeline-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.overlay-contest-timeline-title {
+  margin: 0;
+  font-weight: 600;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.overlay-contest-timeline-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.overlay-contest-timeline-outcome {
+  margin: 0.55rem 0 0;
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.overlay-contest-timeline-participants {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #cbd5f5;
+}
+
+.overlay-contest-participant-name {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.overlay-contest-participant-summary {
+  color: #94a3b8;
+}
+
+.overlay-contest-participant-momentum {
+  color: #99f6e4;
+  font-size: 0.75rem;
+}
+
+.overlay-contest-timeline-rematch {
+  margin: 0.6rem 0 0;
+  font-size: 0.78rem;
+  color: #facc15;
+}
+
+.overlay-contest-timeline-complications {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font-size: 0.78rem;
+  color: #fda4af;
+}
+
+.overlay-contest-empty {
+  margin: 0.5rem 0 0;
+}
+
+.overlay-contest-moderation-button {
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(30, 41, 59, 0.75);
+  color: #cbd5f5;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.overlay-contest-moderation-button:focus-visible,
+.overlay-contest-moderation-button:hover {
+  border-color: rgba(45, 212, 191, 0.6);
+  background: rgba(45, 212, 191, 0.18);
+  color: #99f6e4;
+}
+
+.overlay-contest-sentiment {
+  margin: 0 0 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 0.78rem;
+  background: rgba(148, 163, 184, 0.18);
+  color: #cbd5f5;
+}
+
+.overlay-contest-sentiment.level-watch {
+  background: rgba(234, 179, 8, 0.16);
+  color: #fef08a;
+}
+
+.overlay-contest-sentiment.level-elevated {
+  background: rgba(234, 88, 12, 0.18);
+  color: #fb923c;
+}
+
+.overlay-contest-sentiment.level-critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
 .overlay-pipeline-summary-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   margin: 0.75rem 0 0.5rem;
+}
+
+.overlay-pipeline-stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+}
+
+.overlay-pipeline-stage {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.6rem;
+  padding: 0.6rem;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.overlay-pipeline-stage-label {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.overlay-pipeline-stage-status {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.overlay-pipeline-stage-detail {
+  font-size: 0.78rem;
+  color: #cbd5f5;
+}
+
+.overlay-pipeline-stage.status-complete {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.overlay-pipeline-stage.status-running {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.overlay-pipeline-stage.status-pending,
+.overlay-pipeline-stage.status-queued {
+  border-color: rgba(234, 179, 8, 0.45);
+  background: rgba(234, 179, 8, 0.16);
+}
+
+.overlay-pipeline-stage.status-blocked {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.18);
+}
+
+.overlay-pipeline-stage.status-idle {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.12);
 }
 
 .overlay-pipeline-summary {
