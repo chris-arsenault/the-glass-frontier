@@ -303,6 +303,109 @@ describe("HubOrchestrator integration", () => {
     await orchestrator.stop();
   });
 
+  test("expires contested arming windows and broadcasts timeout events", async () => {
+    let currentTime = 1000;
+    const clock = { now: () => currentTime };
+    const app = buildApp({ clock });
+    const orchestrator = new HubOrchestrator({
+      gateway: app.gateway,
+      stateStore: app.roomStateStore,
+      presenceStore: app.presenceStore,
+      telemetry: app.telemetry,
+      clock,
+      maxContestHistory: 5
+    });
+    const telemetrySpy = jest.spyOn(app.telemetry, "recordContestExpired");
+    orchestrator.start();
+
+    const challengerTransport = new MockTransport();
+    const defenderTransport = new MockTransport();
+
+    await app.gateway.acceptConnection({
+      transport: challengerTransport,
+      handshake: {
+        hubId: "hub-contest",
+        roomId: "room-timeout",
+        actorId: "actor-alpha",
+        sessionId: "session-alpha",
+        connectionId: "conn-alpha"
+      }
+    });
+
+    await orchestrator.whenIdle("room-timeout");
+
+    await app.gateway.acceptConnection({
+      transport: defenderTransport,
+      handshake: {
+        hubId: "hub-contest",
+        roomId: "room-timeout",
+        actorId: "actor-beta",
+        sessionId: "session-beta",
+        connectionId: "conn-beta"
+      }
+    });
+
+    await orchestrator.whenIdle("room-timeout");
+
+    await challengerTransport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.challengeDuel",
+        args: {
+          target: "actor-beta",
+          stakes: "Test the arena."
+        },
+        metadata: {}
+      }
+    });
+
+    await orchestrator.whenIdle("room-timeout");
+    expect(telemetrySpy).not.toHaveBeenCalled();
+
+    currentTime = 8200;
+
+    await challengerTransport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.say",
+        args: {
+          message: "Looks like nobody stepped up."
+        },
+        metadata: {}
+      }
+    });
+
+    await orchestrator.whenIdle("room-timeout");
+
+    const expiredUpdate = challengerTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .find((message) => message.payload?.meta?.contestEvent?.status === "expired");
+
+    expect(expiredUpdate).toBeDefined();
+    expect(expiredUpdate.payload.meta.contestEvent).toMatchObject({
+      status: "expired",
+      contestId: null
+    });
+    expect(expiredUpdate.payload.state.contests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "expired",
+          contestKey: expect.any(String)
+        })
+      ])
+    );
+    expect(telemetrySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hubId: "hub-contest",
+        roomId: "room-timeout",
+        contestKey: expect.any(String)
+      })
+    );
+
+    await orchestrator.stop();
+    telemetrySpy.mockRestore();
+  });
+
   test("coordinates contested duel commands and resolves contest workflow", async () => {
     const temporalClient = {
       startHubActionWorkflow: jest.fn(),

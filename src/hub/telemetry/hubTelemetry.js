@@ -268,6 +268,38 @@ class HubTelemetry {
       this.metrics.recordResolved(payload);
     }
   }
+
+  recordContestExpired({
+    hubId,
+    roomId,
+    contestKey,
+    expiredAt,
+    createdAt,
+    participantCount,
+    participantCapacity,
+    windowMs,
+    label,
+    move,
+    type
+  }) {
+    const payload = {
+      hubId,
+      roomId,
+      contestKey,
+      expiredAt,
+      createdAt,
+      participantCount,
+      participantCapacity,
+      windowMs,
+      label,
+      move,
+      type
+    };
+    this.emit("telemetry.hub.contestExpired", payload);
+    if (this.metrics && typeof this.metrics.recordExpired === "function") {
+      this.metrics.recordExpired(payload);
+    }
+  }
 }
 
 module.exports = {

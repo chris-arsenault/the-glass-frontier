@@ -38,6 +38,7 @@ class ContestMetrics {
     type
   }) {
     const normalizedCreatedAt = toPositiveNumber(createdAt, this.#now());
+    const normalizedExpiresAt = toPositiveNumber(expiresAt, null);
     const key = this.#pendingKey({ hubId, roomId, contestKey });
     this.pendingByKey.set(key, {
       hubId,
@@ -46,7 +47,11 @@ class ContestMetrics {
       participantCount: toPositiveNumber(participantCount, 1),
       participantCapacity: toPositiveNumber(participantCapacity, null),
       createdAt: normalizedCreatedAt,
-      expiresAt: toPositiveNumber(expiresAt, null),
+      expiresAt: normalizedExpiresAt,
+      windowMs:
+        normalizedExpiresAt !== null && normalizedCreatedAt !== null
+          ? Math.max(0, normalizedExpiresAt - normalizedCreatedAt)
+          : null,
       label: label || null,
       move: move || null,
       type: type || null
@@ -220,6 +225,62 @@ class ContestMetrics {
     });
 
     this.activeById.delete(contestId);
+  }
+
+  recordExpired({
+    hubId,
+    roomId,
+    contestKey,
+    expiredAt,
+    createdAt,
+    participantCount,
+    participantCapacity,
+    windowMs,
+    label,
+    move,
+    type
+  }) {
+    const key = this.#pendingKey({ hubId, roomId, contestKey });
+    const pending = this.pendingByKey.get(key);
+
+    const normalizedExpiredAt = toPositiveNumber(expiredAt, this.#now());
+    const normalizedCreatedAt =
+      toPositiveNumber(createdAt, null) ??
+      (pending ? toPositiveNumber(pending.createdAt, null) : null) ??
+      null;
+
+    const participantCountValue =
+      toPositiveNumber(participantCount, null) ??
+      (pending ? toPositiveNumber(pending.participantCount, null) : null);
+
+    const participantCapacityValue =
+      toPositiveNumber(participantCapacity, null) ??
+      (pending ? toPositiveNumber(pending.participantCapacity, null) : null);
+
+    const resolvedWindowMs =
+      toPositiveNumber(windowMs, null) ??
+      (pending ? toPositiveNumber(pending.windowMs, null) : null);
+
+    const armingDurationMs =
+      normalizedCreatedAt !== null && normalizedExpiredAt !== null
+        ? Math.max(0, normalizedExpiredAt - normalizedCreatedAt)
+        : null;
+
+    this.pendingByKey.delete(key);
+
+    this.log("info", "telemetry.contest.expired", {
+      hubId,
+      roomId,
+      contestKey,
+      participantCount: participantCountValue,
+      participantCapacity: participantCapacityValue,
+      label: label || pending?.label || null,
+      move: move || pending?.move || null,
+      type: type || pending?.type || null,
+      expiredAt: normalizedExpiredAt,
+      windowMs: resolvedWindowMs,
+      armingDurationMs
+    });
   }
 
   #pendingKey({ hubId, roomId, contestKey }) {

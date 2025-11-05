@@ -113,6 +113,8 @@ function mapTimelineType(type) {
       return "telemetry.contest.resolved";
     case "telemetry.hub.contestWorkflowFailed":
       return "telemetry.contest.workflowFailed";
+    case "telemetry.hub.contestExpired":
+      return "telemetry.contest.expired";
     default:
       return null;
   }
@@ -234,6 +236,26 @@ function parseStructuredEvents(rawContent) {
       });
     }
 
+    const rawExpired = parsed.raw?.expired;
+    const expiredDurations = Array.isArray(rawExpired?.armingDurations)
+      ? rawExpired.armingDurations
+      : [];
+    const expiredParticipants = Array.isArray(rawExpired?.participantCounts)
+      ? rawExpired.participantCounts
+      : [];
+    const expiredLength = Math.max(expiredDurations.length, expiredParticipants.length);
+    for (let index = 0; index < expiredLength; index += 1) {
+      events.push({
+        message: "telemetry.contest.expired",
+        hubId: parsed.hubId || null,
+        roomId: parsed.roomId || null,
+        armingDurationMs:
+          typeof expiredDurations[index] === "number" ? expiredDurations[index] : null,
+        participantCount:
+          typeof expiredParticipants[index] === "number" ? expiredParticipants[index] : null
+      });
+    }
+
     return events;
   } catch (_error) {
     return [];
@@ -285,6 +307,10 @@ function collectNumber(value) {
 function buildSummary(events, thresholds) {
   const contests = new Map();
   const workflowFailures = [];
+  const expiredArmingDurations = [];
+  const expiredParticipantCounts = [];
+
+  let expiredContests = 0;
 
   events.forEach((event) => {
     if (!event || typeof event !== "object") {
@@ -294,6 +320,19 @@ function buildSummary(events, thresholds) {
 
     if (message === "telemetry.contest.workflowFailed") {
       workflowFailures.push(event);
+      return;
+    }
+
+    if (message === "telemetry.contest.expired") {
+      expiredContests += 1;
+      const armingDuration = collectNumber(event.armingDurationMs);
+      if (armingDuration !== null) {
+        expiredArmingDurations.push(armingDuration);
+      }
+      const participantCount = collectNumber(event.participantCount);
+      if (participantCount !== null) {
+        expiredParticipantCounts.push(participantCount);
+      }
       return;
     }
 
@@ -386,24 +425,32 @@ function buildSummary(events, thresholds) {
   resolutionDurations.sort((a, b) => a - b);
   participantCounts.sort((a, b) => a - b);
   participantCapacities.sort((a, b) => a - b);
+  expiredArmingDurations.sort((a, b) => a - b);
+  expiredParticipantCounts.sort((a, b) => a - b);
 
   const armingP95 = percentile(armingDurations, 95);
   const resolutionP95 = percentile(resolutionDurations, 95);
+  const armingP50 = percentile(armingDurations, 50);
+  const resolutionP50 = percentile(resolutionDurations, 50);
+  const expiredArmingP95 = percentile(expiredArmingDurations, 95);
+  const expiredArmingP50 = percentile(expiredArmingDurations, 50);
 
   const multiActorCount = participantCounts.filter((count) => count > 2).length;
   const capacityOverTwo = participantCapacities.filter((count) => count > 2).length;
+  const expiredMultiActorCount = expiredParticipantCounts.filter((count) => count > 2).length;
 
   return {
     totals: {
       contestsObserved: contests.size,
       resolvedContests,
-      workflowFailures: workflowFailures.length
+      workflowFailures: workflowFailures.length,
+      expiredContests
     },
     durations: {
       arming: {
         samples: armingDurations.length,
         missing: missingArming,
-        p50: percentile(armingDurations, 50),
+        p50: armingP50,
         p95: armingP95,
         max: armingDurations.length > 0 ? armingDurations[armingDurations.length - 1] : null,
         budget: thresholds.armingP95,
@@ -412,7 +459,7 @@ function buildSummary(events, thresholds) {
       resolution: {
         samples: resolutionDurations.length,
         missing: missingResolution,
-        p50: percentile(resolutionDurations, 50),
+        p50: resolutionP50,
         p95: resolutionP95,
         max:
           resolutionDurations.length > 0
@@ -420,6 +467,18 @@ function buildSummary(events, thresholds) {
             : null,
         budget: thresholds.resolutionP95,
         breached: resolutionP95 !== null && resolutionP95 > thresholds.resolutionP95
+      },
+      expiredArming: {
+        samples: expiredArmingDurations.length,
+        missing: 0,
+        p50: expiredArmingP50,
+        p95: expiredArmingP95,
+        max:
+          expiredArmingDurations.length > 0
+            ? expiredArmingDurations[expiredArmingDurations.length - 1]
+            : null,
+        budget: thresholds.armingP95,
+        breached: expiredArmingP95 !== null && expiredArmingP95 > thresholds.armingP95
       }
     },
     participants: {
@@ -427,11 +486,26 @@ function buildSummary(events, thresholds) {
       average: average(participantCounts),
       max: participantCounts.length > 0 ? participantCounts[participantCounts.length - 1] : null,
       multiActorContests: multiActorCount,
-      capacityOverTwo
+      capacityOverTwo,
+      timeouts: {
+        samples: expiredParticipantCounts.length,
+        average: average(expiredParticipantCounts),
+        max:
+          expiredParticipantCounts.length > 0
+            ? expiredParticipantCounts[expiredParticipantCounts.length - 1]
+            : null,
+        multiActorContests: expiredMultiActorCount
+      }
     },
     raw: {
       contests: Array.from(contests.values()),
-      workflowFailures
+      workflowFailures,
+      expired: expiredArmingDurations.length > 0 || expiredParticipantCounts.length > 0
+        ? {
+            armingDurations: expiredArmingDurations,
+            participantCounts: expiredParticipantCounts
+          }
+        : null
     }
   };
 }
@@ -444,6 +518,9 @@ function formatSummary(summary) {
   lines.push(
     `Resolved contests: ${summary.totals.resolvedContests} (workflow failures: ${summary.totals.workflowFailures})`
   );
+  if (summary.totals.expiredContests > 0) {
+    lines.push(`Expired contests (timeouts): ${summary.totals.expiredContests}`);
+  }
 
   if (summary.durations.arming.samples > 0) {
     const arming = summary.durations.arming;
@@ -483,6 +560,22 @@ function formatSummary(summary) {
     lines.push("Resolution duration samples: none");
   }
 
+  if (summary.durations.expiredArming.samples > 0) {
+    const expired = summary.durations.expiredArming;
+    lines.push(
+      `Timeout arming p95: ${expired.p95?.toFixed(2) ?? "n/a"} ms (budget ${
+        expired.budget
+      } ms)`
+    );
+    lines.push(
+      `Timeout arming p50 / max: ${expired.p50?.toFixed(2) ?? "n/a"} ms / ${
+        expired.max?.toFixed(2) ?? "n/a"
+      } ms`
+    );
+  } else if (summary.totals.expiredContests > 0) {
+    lines.push("Timeout arming samples: none");
+  }
+
   if (summary.participants.samples > 0) {
     lines.push(
       `Average participants: ${summary.participants.average?.toFixed(2) ?? "n/a"} (max ${
@@ -499,6 +592,19 @@ function formatSummary(summary) {
     }
   } else {
     lines.push("Participant data: none");
+  }
+
+  if (summary.participants.timeouts.samples > 0) {
+    lines.push(
+      `Timeout participant average: ${
+        summary.participants.timeouts.average?.toFixed(2) ?? "n/a"
+      } (max ${summary.participants.timeouts.max ?? "n/a"})`
+    );
+    lines.push(
+      `Timeout contests with >2 participants: ${summary.participants.timeouts.multiActorContests} / ${summary.participants.timeouts.samples}`
+    );
+  } else if (summary.totals.expiredContests > 0) {
+    lines.push("Timeout participant data: none");
   }
 
   return lines.join("\n");

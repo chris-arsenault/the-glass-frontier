@@ -13,6 +13,9 @@ while true; do
 
   # Run Codex autonomous development
   COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and use result to plan and execute an autonomous development cycle"
+  if (( sessionNum == 134 )); then
+    COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and use result to plan and execute an autonomous development cycle. In addition to development work, close all active tasks that have to deal with CI, review, artifact generation, or other side processes that are not features of the game itself. Update instructions in *.md files to reflect that these type of tasks should no longer be worked on ever."
+  fi
   if (( sessionNum % 10 == 1 )); then
     COMMAND="review AGENTS.md, fetch handoff from game-mcp-server, and complete an autonomous development cycle. Do not complete any development work, only do backlog grooming. Analyze GROOMING.md and follow the instructions in it in addition to AGENTS.md"
   fi

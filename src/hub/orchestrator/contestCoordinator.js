@@ -43,6 +43,35 @@ class ContestCoordinator {
     this.activeById = new Map();
   }
 
+  expire({ roomId = null, now = null } = {}) {
+    const timestamp =
+      typeof now === "number" && Number.isFinite(now) && now >= 0 ? now : this.#now();
+    const rooms = roomId ? [roomId] : Array.from(this.pendingByRoom.keys());
+    const expired = [];
+
+    rooms.forEach((candidateRoomId) => {
+      const pending = this.pendingByRoom.get(candidateRoomId);
+      if (!pending) {
+        return;
+      }
+      for (const [contestKey, record] of pending.entries()) {
+        const expiresAt =
+          typeof record.expiresAt === "number" && Number.isFinite(record.expiresAt)
+            ? record.expiresAt
+            : null;
+        if (expiresAt !== null && expiresAt <= timestamp) {
+          pending.delete(contestKey);
+          expired.push(this.#serializeExpired(record, timestamp));
+        }
+      }
+      if (pending.size === 0) {
+        this.pendingByRoom.delete(candidateRoomId);
+      }
+    });
+
+    return expired;
+  }
+
   register({ entry, issuedAt }) {
     const contestMetadata = entry?.metadata?.contest;
     if (!contestMetadata || !contestMetadata.contestKey) {
@@ -378,6 +407,42 @@ class ContestCoordinator {
         auditRef: participant.auditRef,
         result: participant.result || null
       }))
+    };
+  }
+
+  #serializeExpired(record, expiredAt) {
+    return {
+      contestId: null,
+      contestKey: record.contestKey,
+      status: "expired",
+      label: record.label || null,
+      move: record.move || null,
+      type: record.type || null,
+      checkTemplate: record.checkTemplate || null,
+      hubId: record.hubId || null,
+      roomId: record.roomId || null,
+      createdAt: record.createdAt || null,
+      expiresAt: record.expiresAt || null,
+      expiredAt,
+      windowMs: record.windowMs || null,
+      participantCapacity: record.participantCapacity || null,
+      reason: "arming_timeout",
+      moderationTags: Array.isArray(record.moderationTags)
+        ? [...record.moderationTags]
+        : [],
+      sharedComplicationTags: Array.isArray(record.sharedComplicationTags)
+        ? [...record.sharedComplicationTags]
+        : [],
+      participants: record.participants.map((participant) => ({
+        actorId: participant.actorId,
+        role: participant.role,
+        verbId: participant.verbId,
+        targetActorId: participant.targetActorId,
+        auditRef: participant.auditRef || null,
+        issuedAt: participant.issuedAt || null
+      })),
+      outcome: null,
+      sharedComplications: []
     };
   }
 

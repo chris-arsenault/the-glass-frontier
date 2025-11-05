@@ -10,6 +10,7 @@ The goal of each grooming cycle is to:
 2. Close completed items aggressively.
 3. Prioritize upcoming work focused on **gameplay implementation**, the offline **post-session publishing pipeline**, and the unified web client demanded by `REQUIREMENTS.md`.
 4. Defer non‑critical concerns (performance, CI, ops) until core gameplay is functional.
+5. Permanently retire CI, deployment, reminder, and artefact-focused tracks—close or delete them instead of grooming follow-up work.
 
 ---
 
@@ -88,7 +89,7 @@ Each grooming session must produce:
 * Prioritize *player‑visible progress* first.
 * Avoid over‑engineering; focus on the smallest coherent playable loop.
 * Keep backlog lean: prefer deletion or consolidation over duplication.
-* Performance, infrastructure, and CI/CD tasks should **not** appear before playable core systems exist.
+* Performance, infrastructure, CI/CD, reminder automation, and artefact generation tasks are **out of scope**; remove them instead of reprioritizing.
 * Narrative richness and player experience are success criteria for the next cycles.
 
 ---

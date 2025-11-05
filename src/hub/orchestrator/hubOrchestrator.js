@@ -204,6 +204,20 @@ class HubOrchestrator extends EventEmitter {
       entry.metadata?.issuedAt ||
       (typeof this.clock.now === "function" ? this.clock.now() : Date.now());
 
+    if (this.contestCoordinator && typeof this.contestCoordinator.expire === "function") {
+      const expired = this.contestCoordinator.expire({
+        roomId: entry.roomId,
+        now: issuedAt
+      });
+      if (Array.isArray(expired) && expired.length > 0) {
+        await this._handleContestExpirations({
+          hubId: entry.hubId,
+          roomId: entry.roomId,
+          expiredContests: expired
+        });
+      }
+    }
+
     let workflowContext = null;
     if (this._requiresWorkflow(entry)) {
       workflowContext = await this._startHubWorkflow(entry, issuedAt);
@@ -482,6 +496,16 @@ class HubOrchestrator extends EventEmitter {
     }
   }
 
+  async _handleContestExpirations({ hubId, roomId, expiredContests }) {
+    for (const contestState of expiredContests) {
+      const stateResult = await this._updateContestState({ hubId, roomId, contestState });
+      const contestMeta = this._buildContestMeta(contestState);
+      this._broadcastContestResolution({ hubId, roomId, stateResult, contestMeta });
+      this._recordContestExpiredTelemetry({ hubId, roomId, contestState });
+      this._emitContestExpiredEvents({ hubId, roomId, contestState }, stateResult, contestMeta);
+    }
+  }
+
   async resolveContest(contestId, resolution = {}) {
     if (!contestId || !this.contestCoordinator) {
       return null;
@@ -535,11 +559,13 @@ class HubOrchestrator extends EventEmitter {
       contestId: contestState.contestId || null,
       contestKey: contestState.contestKey || null,
       label: contestState.label || null,
+      reason: contestState.reason || null,
       outcome: clone(contestState.outcome) || null,
       sharedComplications: Array.isArray(contestState.sharedComplications)
         ? contestState.sharedComplications.map((entry) => clone(entry))
         : [],
       resolvedAt: contestState.resolvedAt || null,
+      expiredAt: contestState.expiredAt || null,
       participants: Array.isArray(contestState.participants)
         ? contestState.participants.map((entry) => ({
             ...entry,
@@ -596,6 +622,39 @@ class HubOrchestrator extends EventEmitter {
     }
   }
 
+  _recordContestExpiredTelemetry({ hubId, roomId, contestState }) {
+    if (!this.telemetry || typeof this.telemetry.recordContestExpired !== "function") {
+      return;
+    }
+    try {
+      this.telemetry.recordContestExpired({
+        hubId,
+        roomId,
+        contestKey: contestState.contestKey || null,
+        expiredAt: contestState.expiredAt || null,
+        createdAt: contestState.createdAt || null,
+        participantCount: Array.isArray(contestState.participants)
+          ? contestState.participants.length
+          : null,
+        participantCapacity: contestState.participantCapacity || null,
+        windowMs: contestState.windowMs || null,
+        label: contestState.label || null,
+        move: contestState.move || null,
+        type: contestState.type || null
+      });
+    } catch (error) {
+      this.emit("processingError", {
+        stage: "contestExpiredTelemetry",
+        error,
+        context: {
+          contestKey: contestState.contestKey || null,
+          roomId,
+          hubId
+        }
+      });
+    }
+  }
+
   _emitContestResolutionEvents({ hubId, roomId, contestState }, stateResult, contestMeta) {
     const contestEvent = {
       status: contestState.status,
@@ -612,6 +671,36 @@ class HubOrchestrator extends EventEmitter {
 
     this.emit("contestResolved", {
       contestId: contestState.contestId,
+      hubId,
+      roomId,
+      state: contestState,
+      version: stateResult.version
+    });
+
+    return {
+      contest: contestState,
+      state: stateResult.state,
+      version: stateResult.version,
+      meta: contestMeta
+    };
+  }
+
+  _emitContestExpiredEvents({ hubId, roomId, contestState }, stateResult, contestMeta) {
+    const contestEvent = {
+      status: contestState.status,
+      state: contestState
+    };
+
+    this.emit("stateUpdated", {
+      entry: null,
+      state: stateResult.state,
+      version: stateResult.version,
+      workflow: null,
+      contestEvent
+    });
+
+    this.emit("contestExpired", {
+      contestKey: contestState.contestKey || null,
       hubId,
       roomId,
       state: contestState,

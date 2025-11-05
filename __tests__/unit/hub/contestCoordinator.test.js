@@ -1,5 +1,9 @@
 "use strict";
 
+jest.mock("uuid", () => ({
+  v4: jest.fn(() => "contest-uuid")
+}));
+
 const { ContestCoordinator } = require("../../../src/hub/orchestrator/contestCoordinator");
 
 function buildContestEntry({ actorId, targetActorId, issuedAt, contestKey }) {
@@ -94,5 +98,35 @@ describe("ContestCoordinator", () => {
 
     expect(resolved.resolvedAt).toBe(startedAt + 520);
     expect(resolved.windowMs).toBe(6000);
+  });
+
+  test("expires pending contests once the arming window elapses", () => {
+    const clock = { now: jest.fn() };
+    const coordinator = new ContestCoordinator({ clock });
+    const contestKey = "verb.testContest:actor-alpha::actor-beta";
+
+    clock.now.mockReturnValue(1000);
+    const entry = buildContestEntry({
+      actorId: "actor-alpha",
+      targetActorId: "actor-beta",
+      issuedAt: 1000,
+      contestKey
+    });
+
+    const arming = coordinator.register({ entry, issuedAt: 1000 });
+    expect(arming.status).toBe("arming");
+    expect(coordinator.pendingByRoom.size).toBe(1);
+
+    clock.now.mockReturnValue(8200);
+    const expired = coordinator.expire({ roomId: "room-test", now: 8200 });
+    expect(expired).toHaveLength(1);
+    expect(expired[0]).toMatchObject({
+      status: "expired",
+      contestKey,
+      expiredAt: 8200,
+      windowMs: 6000
+    });
+    expect(expired[0].participants).toHaveLength(1);
+    expect(coordinator.pendingByRoom.size).toBe(0);
   });
 });

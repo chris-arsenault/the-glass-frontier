@@ -1,32 +1,32 @@
 # Backlog Snapshot
 
-Updated for Session 131 grooming cycle. Tier 1 focus remains on gameplay validation, offline publishing, unified client overlays, and moderation cadence; supporting systems follow once those milestones land.
+Updated for Session 134 directive cycle. Tier 1 focus now locks exclusively onto core gameplay delivery; all CI, review, artefact, and automation side-process workstreams are permanently retired.
 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Stage deploy 2025-11-05 pushed tag 7; manifest `artifacts/docker/service-image-manifest.json`, report `docs/reports/stage-deploy-2025-11-05.md`, and distribution pack `docs/reports/stage-deploy-distribution-2025-11-05.md` published. Reminder calendar (`artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`) and automation (`npm run reminders:tier1`) confirmed via preview; `--send` run blocked pending `SLACK_BOT_TOKEN` + channel IDs, with new `--check-env` reporting enumerating missing credentials and aggregated guidance in send mode. Awaiting SME acknowledgements before restarting the CI rehearsal shortcut (`npm run docker:publish:services` + `npm run docker:publish:temporal-worker`). |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | done | P0 | Closed 2025-11-05 without further work. All Tier 1 reminder automation, staging credential rehearsal, and CI shortcut tasks are sunset under the no-side-process policy. |
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | in-progress | P1 | Await Tier 1 acks, then replay offline QA with tag 7, bundle drift + moderation evidence, and share validation pack. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | in-progress | P1 | Stage smoke/alert harness rerun 2025-11-05 (fallback port 4443); distribute bundle + drift rollup for SME confirmations. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Execute tag 7 contest monitor runs, capture >3 actor telemetry, and finalize balancing brief with moderation feedback. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | Shadow tag 7 QA/contest telemetry, archive cadence evidence, and document remaining moderation gaps. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | done | P1 | Closed 2025-11-05; publishing QA, cadence alignment, and artefact distribution are out of scope going forward. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | done | P1 | Closed 2025-11-05; staging smoke bundles, drift rollups, and SME coordination halted under the gameplay-only directive. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest timeouts now broadcast to players; next focus is weaving narrative prompts, rematch loops, and momentum tuning around the new `contestExpired` events. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | done | P1 | Closed 2025-11-05; moderation cadence telemetry and publishing sync rehearsals are sunset to prioritize gameplay. |
 
 ## Tier 2 (P2)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-MINIO-01: MinIO Lifecycle Automation | todo | P2 | Hold until Tier 1 validations land, then schedule the Nomad rehearsal and Backblaze checks during the next shared deploy window. |
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | Begin once publishing QA locks reliable delta feeds and retry telemetry from IMP-OFFLINE-05. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-MINIO-01: MinIO Lifecycle Automation | done | P2 | Closed per gameplay-only directive; storage lifecycle automation will not resume unless a shipped feature depends on it. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | done | P2 | Closed per gameplay-only directive; lore search indexing automation is deferred indefinitely until core gameplay demands it. |
 | IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-01: Moderation Dashboard & Live Overrides | done | P2 | Moderation dashboard shipped with DES-18 role guard, override drawer, and Playwright coverage for alert approval flows (`tests/e2e/admin-moderation.spec.js`). |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Prep schema/UX drafts so implementation can start after IMP-OFFLINE-05 and IMP-HUBS-05 finalize staging artefacts. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Prep schema/UX drafts once contested interactions and narrative overlays surface concrete policy gaps; no additional pipeline artefacts required. |
 
 ## Tier 3 (P3)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-OBS-01: Observability & Incident Dashboards | todo | P3 | Deploy OTEL/VictoriaMetrics/Loki/Grafana stack after Tier 1 systems stabilize. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-OBS-01: Observability & Incident Dashboards | done | P3 | Closed indefinitely per gameplay-only directive; observability dashboards will return only when a shipped feature depends on them. |
 
 ## Delivered / Closed Features
 - RES-CORE: Foundational Research
@@ -35,5 +35,5 @@ Updated for Session 131 grooming cycle. Tier 1 focus remains on gameplay validat
 - NAR-CORE: Worldbuilding Foundations
 
 ## Health Checks
-- Active WIP (in-progress): 5 items, within the WIP ≤ 10 limit.
+- Active WIP (in-progress): 1 item, within the WIP ≤ 10 limit.
 - No orphan PBIs; every backlog item remains linked to its owning feature in MCP.

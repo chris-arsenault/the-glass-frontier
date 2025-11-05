@@ -96,5 +96,56 @@ describe("ContestMetrics", () => {
 
     expect(metrics.activeById.size).toBe(0);
   });
-});
 
+  test("records expired contests with derived arming duration", () => {
+    const logs = [];
+    const logger = (level, message, metadata = {}) => {
+      logs.push({ level, message, ...metadata });
+    };
+
+    let currentTime = 0;
+    const clock = {
+      now: jest.fn(() => currentTime)
+    };
+
+    const metrics = new ContestMetrics({ clock, logger });
+
+    metrics.recordArmed({
+      hubId: "hub-1",
+      roomId: "room-a",
+      contestKey: "verb.sparringMatch::alpha",
+      participantCount: 1,
+      participantCapacity: 4,
+      createdAt: 100,
+      expiresAt: 700,
+      label: "Sparring Match",
+      move: "train-hard",
+      type: "sparring"
+    });
+
+    currentTime = 900;
+    metrics.recordExpired({
+      hubId: "hub-1",
+      roomId: "room-a",
+      contestKey: "verb.sparringMatch::alpha",
+      expiredAt: 900,
+      createdAt: 100,
+      participantCount: 1,
+      participantCapacity: 4,
+      windowMs: 600,
+      label: "Sparring Match",
+      move: "train-hard",
+      type: "sparring"
+    });
+
+    const expiredLog = logs.find((entry) => entry.message === "telemetry.contest.expired");
+    expect(expiredLog).toMatchObject({
+      hubId: "hub-1",
+      roomId: "room-a",
+      contestKey: "verb.sparringMatch::alpha",
+      armingDurationMs: 800,
+      windowMs: 600
+    });
+    expect(metrics.pendingByKey.size).toBe(0);
+  });
+});

@@ -56,15 +56,47 @@ describe("contestWorkflowMonitor buildSummary", () => {
 
     expect(summary.totals.contestsObserved).toBe(2);
     expect(summary.totals.workflowFailures).toBe(1);
+    expect(summary.totals.expiredContests).toBe(0);
     expect(summary.durations.arming.samples).toBe(2);
     expect(summary.durations.resolution.samples).toBe(2);
+    expect(summary.durations.expiredArming.samples).toBe(0);
     expect(summary.durations.arming.max).toBe(6200);
     expect(summary.durations.resolution.max).toBe(1500);
     expect(summary.durations.resolution.breached).toBe(true);
     expect(summary.participants.samples).toBe(2);
     expect(summary.participants.multiActorContests).toBe(1);
     expect(summary.participants.capacityOverTwo).toBe(1);
+    expect(summary.participants.timeouts.samples).toBe(0);
     expect(summary.totals.resolvedContests).toBe(2);
+  });
+
+  test("aggregates expired contest telemetry", () => {
+    const events = [
+      {
+        message: "telemetry.contest.expired",
+        hubId: "hub-expired",
+        roomId: "room-expired",
+        contestKey: "verb.challengeDuel::actor-alpha",
+        armingDurationMs: 7800,
+        participantCount: 1
+      },
+      {
+        message: "telemetry.contest.expired",
+        hubId: "hub-expired",
+        roomId: "room-expired",
+        contestKey: "verb.challengeDuel::actor-beta",
+        armingDurationMs: 6200,
+        participantCount: 3
+      }
+    ];
+
+    const summary = buildSummary(events, DEFAULT_THRESHOLDS);
+
+    expect(summary.totals.expiredContests).toBe(2);
+    expect(summary.durations.expiredArming.samples).toBe(2);
+    expect(summary.durations.expiredArming.p95).toBe(7800);
+    expect(summary.participants.timeouts.samples).toBe(2);
+    expect(summary.participants.timeouts.multiActorContests).toBe(1);
   });
 });
 
@@ -126,15 +158,26 @@ describe("contestWorkflowMonitor parseContestEvents", () => {
             resolutionDurationMs: 420,
             outcomeTier: "success"
           }
+        },
+        {
+          type: "telemetry.hub.contestExpired",
+          payload: {
+            hubId: "hub-timeline",
+            roomId: "room-timeline",
+            contestKey: "contest-key",
+            armingDurationMs: 6000,
+            participantCount: 1
+          }
         }
       ]
     };
 
     const events = parseContestEvents(JSON.stringify(timeline));
-    expect(events).toHaveLength(3);
+    expect(events).toHaveLength(4);
     expect(events[0].message).toBe("telemetry.contest.armed");
     expect(events[1].participantCapacity).toBe(4);
     expect(events[2].outcomeTier).toBe("success");
+    expect(events[3].message).toBe("telemetry.contest.expired");
   });
 
   test("parses CLI summary artefacts back into telemetry events", () => {

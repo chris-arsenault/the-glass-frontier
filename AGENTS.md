@@ -21,6 +21,7 @@
 6. **Update relentlessly:** Use `mcp__game-mcp-server__update_backlog_item` to track status, next steps, completed work, and references to architecture or narrative entries.
 7. **Close fast:** Mark stories done as soon as acceptance criteria pass; do not extend scope within the same item.
 8. **Synchronize records:** After adjusting MCP items, refresh `docs/plans/backlog.md` so markdown mirrors the authoritative backlog.
+9. **Side-Process Ban:** Immediately close or refuse any backlog work tied to CI, review tooling, artefact generation, reminder automation, or other non-gameplay side processes—they are permanently out of scope.
 
 **Non-negotiable:** Every change and new work item must be reflected in the MCP backlog, and every backlog item must belong to a feature. Stay focused on core systems—no speculative tooling or analytics. Advance core, high-priority features regardless of size; the WIP limit guides focus, not avoidance.
 
@@ -28,6 +29,7 @@
 - Maintain an up-to-date plan whenever a task spans multiple steps.
 - Stay on the highest-priority backlog commitments; accept deep work over task-churn.
 - Run shell commands with `bash -lc` and an explicit `workdir`, capturing outputs that drive decisions.
+- Reject any request to resume CI, deployment, reminder, or artefact management workflows; document the refusal and move on to gameplay systems.
 - Favor `apply_patch` (or heredocs for new files) over describing intent without implementation.
 - Summarize automated verification (tests, lint, Playwright, profiling) plus follow-ups in the final response.
 - Restrict edits to active scope; ignore unrelated files unless the user directs otherwise.
