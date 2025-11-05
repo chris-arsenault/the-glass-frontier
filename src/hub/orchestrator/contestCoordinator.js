@@ -540,65 +540,96 @@ class ContestCoordinator {
     }
 
     let severity = "minor";
-    if (missingParticipants >= readyThreshold - 1) {
+    if (missingParticipants >= Math.max(2, readyThreshold - 1)) {
       severity = "major";
-    } else if (missingParticipants >= Math.ceil(readyThreshold / 2)) {
+    } else if (missingParticipants >= 1) {
       severity = "moderate";
     }
 
-    const actorIds = participants
-      .map((participant) => participant?.actorId)
-      .filter((actorId) => typeof actorId === "string" && actorId.trim().length > 0);
-
-    const sharedComplications =
-      actorIds.length === 0
-        ? []
-        : [
-            {
-              tag: "contest.timeout.momentum-bleed",
-              summary:
-                missingParticipants > 1
-                  ? "Momentum bleeds away as the crowd watches rivals stall out."
-                  : "Momentum bleeds away when no one steps up before the window closes.",
-              severity,
-              appliedTo: actorIds
-            }
-          ];
-
-    const momentumPenalty = severity === "major" ? -2 : -1;
+    const resultEntries = [];
+    const penalizedActors = [];
 
     participants.forEach((participant, index) => {
       const key =
         typeof participant?.actorId === "string" && participant.actorId.trim().length > 0
           ? participant.actorId
           : `participant-${index}`;
+      const actorId =
+        typeof participant?.actorId === "string" && participant.actorId.trim().length > 0
+          ? participant.actorId
+          : null;
       const role = normalizeRole(participant?.role);
+      const isChallenger = role === "challenger" || role === "instigator";
+      const isDefender = role === "defender" || role === "target" || role === "resistor";
 
       let summary = "Momentum stalls while the skirmish fails to launch.";
-      if (role === "challenger") {
-        summary = "Momentum stalls as your challenge goes unanswered.";
-      } else if (role === "defender" || role === "target") {
+      if (isChallenger) {
+        summary = "Momentum plateaus as your challenge hangs unanswered.";
+      } else if (isDefender) {
         summary = "You hesitate and the challenge slips away.";
+      } else if (role === "partner" || role === "ally" || role === "coach") {
+        summary = "Your side cools while everyone waits for the rematch window.";
       }
 
+      let momentumDelta = 0;
+      if (severity === "major") {
+        if (!isChallenger && actorId) {
+          momentumDelta = -1;
+        }
+      } else if (severity === "moderate") {
+        if (isDefender && actorId) {
+          momentumDelta = -1;
+        }
+      }
+
+      if (momentumDelta < 0 && actorId) {
+        penalizedActors.push(actorId);
+      }
+
+      resultEntries.push({
+        key,
+        actorId,
+        role,
+        summary,
+        momentumDelta: actorId ? momentumDelta : 0
+      });
+    });
+
+    const sharedComplications =
+      penalizedActors.length === 0
+        ? []
+        : [
+            {
+              tag: "contest.timeout.momentum-bleed",
+              summary:
+                severity === "major"
+                  ? "Momentum bleeds away as repeated stalls sour the crowd."
+                  : "Momentum dips while rivals hesitate to re-engage.",
+              severity,
+              appliedTo: penalizedActors
+            }
+          ];
+
+    resultEntries.forEach((entry) => {
+      const isDefender =
+        entry.role === "defender" || entry.role === "target" || entry.role === "resistor";
       const complications =
-        sharedComplications.length === 0
-          ? []
-          : [
+        entry.momentumDelta < 0 && sharedComplications.length > 0
+          ? [
               {
                 tag: sharedComplications[0].tag,
-                summary:
-                  role === "defender" || role === "target"
-                    ? "Hesitation lingers; the crowd notes your non-response."
-                    : "Waiting without an opponent drains the team's momentum."
+                summary: isDefender
+                  ? "Hesitation lingers; the crowd notes your non-response."
+                  : "Waiting without an opponent drains the team's momentum."
               }
-            ];
+            ]
+          : [];
 
-      resultByKey.set(key, {
-        actorId: typeof participant?.actorId === "string" ? participant.actorId : null,
+      resultByKey.set(entry.key, {
+        actorId: entry.actorId,
         tier: "timeout",
-        summary,
-        momentumDelta: typeof participant?.actorId === "string" ? momentumPenalty : 0,
+        summary: entry.summary,
+        momentumDelta: entry.momentumDelta,
         complications
       });
     });

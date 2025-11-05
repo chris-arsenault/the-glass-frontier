@@ -72,6 +72,23 @@ export function ModerationDashboard() {
   const [sentimentLoading, setSentimentLoading] = useState(false);
   const [sentimentError, setSentimentError] = useState(null);
 
+  const cooldownStats = sentimentOverview?.cooldown || null;
+  const cooldownFrustrationRatio = cooldownStats?.frustrationRatio ?? 0;
+  const cooldownFrustrationPercent = Math.round(cooldownFrustrationRatio * 100);
+  const cooldownLevel =
+    cooldownStats?.frustrationLevel ||
+    (cooldownFrustrationRatio >= 0.6
+      ? "critical"
+      : cooldownFrustrationRatio >= 0.4
+      ? "elevated"
+      : cooldownFrustrationRatio >= 0.2
+      ? "watch"
+      : "steady");
+  const cooldownLevelClass =
+    cooldownLevel && cooldownLevel !== "steady"
+      ? `moderation-sentiment-cooldown level-${cooldownLevel}`
+      : "moderation-sentiment-cooldown";
+
   const grouped = useMemo(() => groupAlertsByStatus(alerts), [alerts]);
 
   const loadAlerts = useCallback(async () => {
@@ -689,10 +706,14 @@ export function ModerationDashboard() {
                   Samples: {sentimentOverview.totals?.total ?? 0}
                 </span>
               </div>
-              <p className="moderation-sentiment-cooldown">
+              <p className={cooldownLevelClass}>
                 Cooldown spikes:{" "}
                 {sentimentOverview.cooldown?.negativeDuringCooldown ?? 0} /
-                {sentimentOverview.cooldown?.activeSamples ?? 0} active samples • Max remaining{" "}
+                {sentimentOverview.cooldown?.activeSamples ?? 0} active samples • Frustration{" "}
+                {Number.isFinite(cooldownFrustrationPercent)
+                  ? `${cooldownFrustrationPercent}%`
+                  : "0%"}{" "}
+                ({cooldownLevel}) • Max remaining{" "}
                 {formatDurationMs(sentimentOverview.cooldown?.maxRemainingCooldownMs ?? null)}
               </p>
             </div>

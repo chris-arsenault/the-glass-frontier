@@ -1495,6 +1495,20 @@ body {
   color: #9ca3af;
 }
 
+.moderation-sentiment-cooldown.level-watch {
+  color: #facc15;
+}
+
+.moderation-sentiment-cooldown.level-elevated {
+  color: #f97316;
+  font-weight: 600;
+}
+
+.moderation-sentiment-cooldown.level-critical {
+  color: #f87171;
+  font-weight: 600;
+}
+
 .sentiment-negative {
   color: #f87171;
 }

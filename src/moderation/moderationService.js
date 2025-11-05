@@ -524,6 +524,19 @@ class ModerationService {
       const totals = sentiment.totals || {};
       const hotspots = Array.isArray(sentiment.hotspots) ? sentiment.hotspots : [];
       const latestSamples = Array.isArray(sentiment.latest) ? sentiment.latest : [];
+      const activeSamples = sentiment.cooldown?.activeSamples || 0;
+      const negativeDuringCooldown = sentiment.cooldown?.negativeDuringCooldown || 0;
+      const rawRatio =
+        activeSamples > 0 ? Math.min(1, Math.max(0, negativeDuringCooldown / activeSamples)) : 0;
+      const frustrationRatio = Number(rawRatio.toFixed(2));
+      let frustrationLevel = "steady";
+      if (activeSamples >= 3 && rawRatio >= 0.6) {
+        frustrationLevel = "critical";
+      } else if (activeSamples >= 2 && rawRatio >= 0.4) {
+        frustrationLevel = "elevated";
+      } else if (activeSamples > 0 && rawRatio >= 0.2) {
+        frustrationLevel = "watch";
+      }
       return {
         source: summary.source,
         generatedAt: summary.generatedAt,
@@ -536,10 +549,12 @@ class ModerationService {
         },
         phaseCounts: sentiment.phaseCounts || {},
         cooldown: {
-          activeSamples: sentiment.cooldown?.activeSamples || 0,
-          negativeDuringCooldown: sentiment.cooldown?.negativeDuringCooldown || 0,
+          activeSamples,
+          negativeDuringCooldown,
           maxRemainingCooldownMs:
-            sentiment.cooldown?.maxRemainingCooldownMs ?? null
+            sentiment.cooldown?.maxRemainingCooldownMs ?? null,
+          frustrationRatio,
+          frustrationLevel
         },
         hotspots: hotspots.slice(0, 10).map((entry) => clone(entry)),
         samples: latestSamples.slice(0, safeLimit).map((entry) => clone(entry))

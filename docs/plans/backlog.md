@@ -12,7 +12,7 @@ Updated for Session 134 directive cycle. Tier 1 focus now locks exclusively onto
 |---------|------|--------|----------|-------|
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | done | P1 | Closed 2025-11-05; publishing QA, cadence alignment, and artefact distribution are out of scope going forward. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | done | P1 | Closed 2025-11-05; staging smoke bundles, drift rollups, and SME coordination halted under the gameplay-only directive. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest sentiment telemetry now flows into the moderation dashboard with cooldown spike/hotspot tracking; next steps focus on tuning cooldown defaults from live samples and validating Temporal payload timing across consecutive releases. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest sentiment telemetry now flows into the moderation dashboard with cooldown spike/hotspot tracking; rematch cooldowns are trimmed (9 s/6 s/11 s) and timeout penalties softened while dashboards highlight cooldown frustration ratios. Next: monitor live cooldown sentiment for stabilization and validate Temporal payload timing across consecutive releases. |
 | IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | done | P1 | Closed 2025-11-05; moderation cadence telemetry and publishing sync rehearsals are sunset to prioritize gameplay. |
 
 ## Tier 2 (P2)

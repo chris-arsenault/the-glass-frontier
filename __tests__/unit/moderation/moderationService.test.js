@@ -274,6 +274,8 @@ describe("ModerationService", () => {
     expect(overview.samples).toHaveLength(1);
     expect(overview.totals.negative).toBe(1);
     expect(overview.cooldown.activeSamples).toBe(1);
+    expect(overview.cooldown.frustrationRatio).toBe(1);
+    expect(overview.cooldown.frustrationLevel).toBe("watch");
     expect(overview.hotspots[0]).toEqual(
       expect.objectContaining({
         hubId: "hub-sentiment",

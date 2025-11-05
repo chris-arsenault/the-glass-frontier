@@ -132,8 +132,8 @@
           "support": "ally"
         },
         "rematch": {
-          "cooldownSeconds": 12,
-          "offerWindowSeconds": 90
+          "cooldownSeconds": 9,
+          "offerWindowSeconds": 60
         }
       }
     },
@@ -185,8 +185,8 @@
           "support": "coach"
         },
         "rematch": {
-          "cooldownSeconds": 8,
-          "offerWindowSeconds": 75
+          "cooldownSeconds": 6,
+          "offerWindowSeconds": 50
         }
       }
     },
@@ -237,8 +237,8 @@
           "support": "ally"
         },
         "rematch": {
-          "cooldownSeconds": 15,
-          "offerWindowSeconds": 120
+          "cooldownSeconds": 11,
+          "offerWindowSeconds": 90
         }
       }
     }

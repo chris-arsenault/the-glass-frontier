@@ -73,7 +73,7 @@ function buildContestEntry({
         ],
         createdAt: issuedAt,
         rematch: {
-          cooldownMs: 12000,
+          cooldownMs: 9000,
           offerWindowMs: 60000,
           recommendedVerb: "verb.sparringMatch"
         }
@@ -136,13 +136,13 @@ describe("HubOrchestrator contest telemetry sentiment hooks", () => {
     expect(telemetry.recordContestExpired).toHaveBeenCalled();
     expect(telemetry.recordContestRematchCooling).toHaveBeenCalledWith(
       expect.objectContaining({
-        cooldownMs: 12000,
+        cooldownMs: 9000,
         contestKey
       })
     );
     expect(orchestrator.contestSentimentByRoom.get("room-test")).toMatchObject({
       contestKey,
-      cooldownMs: 12000
+      cooldownMs: 9000
     });
 
     clock.now.mockReturnValue(8400);

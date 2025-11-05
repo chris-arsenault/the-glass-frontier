@@ -149,10 +149,9 @@ describe("ContestCoordinator", () => {
     });
     expect(expired[0].participants[0].result).toMatchObject({
       tier: "timeout",
-      momentumDelta: -2
+      momentumDelta: 0
     });
-    expect(expired[0].sharedComplications).toHaveLength(1);
-    expect(expired[0].sharedComplications[0].severity).toBe("major");
+    expect(expired[0].sharedComplications).toHaveLength(0);
     expect(coordinator.pendingByRoom.size).toBe(0);
   });
 
@@ -195,17 +194,12 @@ describe("ContestCoordinator", () => {
       participantCount: 2,
       requiredParticipants: 3
     });
-    expect(expired[0].sharedComplications).toHaveLength(1);
-    expect(expired[0].sharedComplications[0].severity).toBe("minor");
-    expect(expired[0].sharedComplications[0]).toMatchObject({
-      tag: "contest.timeout.momentum-bleed",
-      appliedTo: expect.arrayContaining(["actor-alpha", "actor-gamma"])
-    });
+    expect(expired[0].sharedComplications).toHaveLength(0);
     const participantResults = expired[0].participants.map((participant) => participant.result);
     expect(participantResults).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ tier: "timeout", momentumDelta: -1 }),
-        expect.objectContaining({ tier: "timeout", momentumDelta: -1 })
+        expect.objectContaining({ tier: "timeout", momentumDelta: 0 }),
+        expect.objectContaining({ tier: "timeout", momentumDelta: 0 })
       ])
     );
   });
