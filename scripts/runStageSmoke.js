@@ -10,11 +10,70 @@ const REPO_ROOT = path.join(__dirname, "..");
 const STAGE_DIR = path.join(REPO_ROOT, "infra", "stage");
 const STAGE_COMPOSE_FILE = path.join(STAGE_DIR, "docker-compose.yml");
 const STAGE_HOSTNAME = "stage.glass-frontier.local";
-const STAGE_HEALTH_URL = "https://stage.glass-frontier.local/api/health";
 const LOCAL_API_URL = "http://127.0.0.1:3000/health";
 const STAGE_PROXY_ADDRESS = "127.0.0.1";
 const CA_CONTAINER_PATH = "/data/caddy/pki/authorities/local/root.crt";
 const CA_PATH = path.join(STAGE_DIR, "certs", "rootCA.pem");
+const DEFAULT_STAGE_PROXY_PORT =
+  Number.parseInt(process.env.STAGE_PROXY_PREFERRED_PORT || "", 10) || 443;
+const FALLBACK_STAGE_PROXY_PORT =
+  Number.parseInt(process.env.STAGE_PROXY_FALLBACK_PORT || "", 10) || 4443;
+
+let stageProxyPort = DEFAULT_STAGE_PROXY_PORT;
+
+let composeBinaryCache = null;
+
+function getStageUrl(pathname) {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (stageProxyPort === 443) {
+    return `https://${STAGE_HOSTNAME}${normalized}`;
+  }
+  return `https://${STAGE_HOSTNAME}:${stageProxyPort}${normalized}`;
+}
+
+function resolveComposeBinary() {
+  if (composeBinaryCache) {
+    return composeBinaryCache;
+  }
+
+  const pluginResult = spawnSync("docker", ["compose", "version"], {
+    stdio: "ignore"
+  });
+
+  if (pluginResult.status === 0) {
+    composeBinaryCache = {
+      command: "docker",
+      args: ["compose"]
+    };
+    return composeBinaryCache;
+  }
+
+  const legacyResult = spawnSync("docker-compose", ["version"], {
+    stdio: "ignore"
+  });
+
+  if (legacyResult.status === 0) {
+    composeBinaryCache = {
+      command: "docker-compose",
+      args: []
+    };
+    return composeBinaryCache;
+  }
+
+  throw new Error(
+    "Docker Compose plugin (docker compose) or docker-compose CLI is required"
+  );
+}
+
+function runCompose(args, options = {}) {
+  const { command, args: baseArgs } = resolveComposeBinary();
+  return runCommand(command, [...baseArgs, ...args], options);
+}
+
+function runComposeSync(args, options = {}) {
+  const { command, args: baseArgs } = resolveComposeBinary();
+  return spawnSync(command, [...baseArgs, ...args], options);
+}
 
 async function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -70,32 +129,86 @@ async function waitForLocalApi(retries = 30) {
 }
 
 async function ensureStageProxy() {
-  await runCommand("docker", ["compose", "-f", STAGE_COMPOSE_FILE, "up", "-d", "stage-proxy"], {
-    cwd: STAGE_DIR
-  });
-
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const result = spawnSync(
-      "docker",
-      ["compose", "-f", STAGE_COMPOSE_FILE, "exec", "-T", "stage-proxy", "cat", CA_CONTAINER_PATH],
-      {
-        cwd: STAGE_DIR,
-        encoding: "utf8"
-      }
-    );
-
-    if (result.status === 0 && result.stdout) {
-      fs.writeFileSync(CA_PATH, result.stdout, "utf8");
-      return;
-    }
-
-    await delay(1000);
+  const attemptedPorts = [];
+  const candidates = [DEFAULT_STAGE_PROXY_PORT];
+  if (!candidates.includes(FALLBACK_STAGE_PROXY_PORT)) {
+    candidates.push(FALLBACK_STAGE_PROXY_PORT);
   }
 
-  throw new Error("Timed out waiting for stage proxy CA certificate");
+  for (const candidate of candidates) {
+    try {
+      await runCompose(["-f", STAGE_COMPOSE_FILE, "up", "-d", "stage-proxy"], {
+        cwd: STAGE_DIR,
+        env: {
+          ...process.env,
+          STAGE_PROXY_HOST_PORT: String(candidate)
+        }
+      });
+      stageProxyPort = candidate;
+    } catch (error) {
+      attemptedPorts.push({ port: candidate, error });
+      console.warn(
+        `[stage-smoke] Failed to start stage proxy on port ${candidate}: ${error.message}`
+      );
+      runComposeSync(["-f", STAGE_COMPOSE_FILE, "down"], {
+        cwd: STAGE_DIR,
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          STAGE_PROXY_HOST_PORT: String(candidate)
+        }
+      });
+      continue;
+    }
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const result = runComposeSync(
+        ["-f", STAGE_COMPOSE_FILE, "exec", "-T", "stage-proxy", "cat", CA_CONTAINER_PATH],
+        {
+          cwd: STAGE_DIR,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            STAGE_PROXY_HOST_PORT: String(stageProxyPort)
+          }
+        }
+      );
+
+      if (result.status === 0 && result.stdout) {
+        fs.writeFileSync(CA_PATH, result.stdout, "utf8");
+        if (stageProxyPort !== DEFAULT_STAGE_PROXY_PORT) {
+          console.log(
+            `[stage-smoke] Stage proxy running on fallback port ${stageProxyPort}; curl + smoke harness configured accordingly`
+          );
+        }
+        return;
+      }
+
+      await delay(1000);
+    }
+
+    attemptedPorts.push({
+      port: candidate,
+      error: new Error("Timed out waiting for stage proxy CA certificate")
+    });
+    runComposeSync(["-f", STAGE_COMPOSE_FILE, "down"], {
+      cwd: STAGE_DIR,
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        STAGE_PROXY_HOST_PORT: String(candidate)
+      }
+    });
+  }
+
+  const details = attemptedPorts
+    .map((attempt) => `port ${attempt.port}: ${attempt.error?.message || "unknown error"}`)
+    .join("; ");
+  throw new Error(`Unable to start stage proxy on any configured port (${details})`);
 }
 
 async function verifyCurlConnectivity() {
+  const healthUrl = getStageUrl("/api/health");
   await runCommand(
     "curl",
     [
@@ -103,8 +216,8 @@ async function verifyCurlConnectivity() {
       "--silent",
       "--show-error",
       "--resolve",
-      `${STAGE_HOSTNAME}:443:${STAGE_PROXY_ADDRESS}`,
-      STAGE_HEALTH_URL
+      `${STAGE_HOSTNAME}:${stageProxyPort}:${STAGE_PROXY_ADDRESS}`,
+      healthUrl
     ],
     {
       env: {
@@ -116,12 +229,13 @@ async function verifyCurlConnectivity() {
 }
 
 async function runSmoke(reportPath) {
+  const baseUrl = getStageUrl("/api");
   await runCommand(
     "node",
     [
       "scripts/langgraphSseSmoke.js",
       "--base-url",
-      "https://stage.glass-frontier.local/api",
+      baseUrl,
       "--report",
       reportPath
     ],
@@ -173,9 +287,13 @@ async function shutdownServer(server) {
 }
 
 async function teardownStageProxy() {
-  spawnSync("docker", ["compose", "-f", STAGE_COMPOSE_FILE, "down"], {
+  runComposeSync(["-f", STAGE_COMPOSE_FILE, "down"], {
     cwd: STAGE_DIR,
-    stdio: "inherit"
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      STAGE_PROXY_HOST_PORT: String(stageProxyPort)
+    }
   });
 }
 

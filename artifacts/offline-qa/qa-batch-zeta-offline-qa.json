@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-zeta",
-  "generatedAt": "2025-11-04T10:13:20.546Z",
+  "generatedAt": "2025-11-05T04:53:56.862Z",
   "summary": {
     "sessionId": "qa-batch-zeta",
     "version": 1,
@@ -484,7 +484,7 @@
     },
     "safetyNotes": [],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T10:13:20.544Z",
+    "generatedAt": "2025-11-05T04:53:56.860Z",
     "statistics": {
       "turnCount": 24,
       "sceneCount": 24,
@@ -499,7 +499,7 @@
     "mentionCount": 1,
     "mentions": [
       {
-        "mentionId": "43ee9099-a333-40d2-8e24-c54b929bc967",
+        "mentionId": "4f5494f7-4cf9-4e3b-b947-d79198e33d0f",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -534,7 +534,7 @@
     "deltaCount": 1,
     "deltas": [
       {
-        "deltaId": "10c7bd67-771c-4be6-911e-4534300a3eef",
+        "deltaId": "4ffeec7c-433b-43f4-9919-7e57e6d8392f",
         "entityId": "artifact.spectrum-bloom-array",
         "entityType": "artifact",
         "canonicalName": "Spectrum Bloom Flux Array",
@@ -575,8 +575,8 @@
           ],
           "confidence": "high"
         },
-        "status": "pending",
-        "createdAt": "2025-11-04T10:13:20.545Z"
+        "status": "needs-review",
+        "createdAt": "2025-11-05T04:53:56.862Z"
       }
     ]
   },
@@ -591,7 +591,15 @@
           "2025-11-04T06:57:23.424Z",
           "2025-11-04T07:07:23.424Z"
         ],
-        "status": "scheduled"
+        "status": "awaiting_review",
+        "pendingCount": 1,
+        "reasons": [
+          "capability_violation"
+        ],
+        "deltaCount": 1,
+        "notes": null,
+        "updatedAt": "2025-11-05T04:53:56.862Z",
+        "moderationDecisionId": null
       },
       "batches": [
         {
@@ -609,13 +617,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-zeta",
-      "stateId": "c9b779b9-00bc-4f7a-9195-3dcb7ac3559c",
-      "createdAt": "2025-11-04T10:13:20.546Z",
-      "updatedAt": "2025-11-04T10:13:20.546Z",
+      "stateId": "6ff74c10-7270-469d-8534-4944b4aae40e",
+      "createdAt": "2025-11-05T04:53:56.862Z",
+      "updatedAt": "2025-11-05T04:53:56.862Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T10:13:20.546Z",
+          "occurredAt": "2025-11-05T04:53:56.862Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T06:12:23.424Z",
             "moderationStartAt": "2025-11-04T06:27:23.424Z",
@@ -625,7 +633,7 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T10:13:20.546Z",
+          "occurredAt": "2025-11-05T04:53:56.862Z",
           "payload": {
             "batchId": "qa-batch-zeta-batch-0",
             "status": "awaiting_moderation",
@@ -633,6 +641,20 @@
               "deltaCount": 1,
               "notes": "moderation_gate_pending"
             }
+          }
+        },
+        {
+          "type": "cadence.moderation.status",
+          "occurredAt": "2025-11-05T04:53:56.862Z",
+          "payload": {
+            "status": "awaiting_review",
+            "pendingCount": 1,
+            "reasons": [
+              "capability_violation"
+            ],
+            "deltaCount": 1,
+            "moderationDecisionId": null,
+            "updatedAt": "2025-11-05T04:53:56.862Z"
           }
         }
       ]

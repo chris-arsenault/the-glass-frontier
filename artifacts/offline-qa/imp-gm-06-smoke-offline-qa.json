@@ -1,6 +1,6 @@
 {
   "sessionId": "imp-gm-06-smoke",
-  "generatedAt": "2025-11-04T10:13:20.531Z",
+  "generatedAt": "2025-11-05T04:53:56.848Z",
   "summary": {
     "sessionId": "imp-gm-06-smoke",
     "version": 1,
@@ -253,7 +253,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T10:13:20.527Z",
+    "generatedAt": "2025-11-05T04:53:56.843Z",
     "statistics": {
       "turnCount": 11,
       "sceneCount": 11,
@@ -283,7 +283,13 @@
           "2025-11-04T05:35:34.577Z",
           "2025-11-04T05:45:34.577Z"
         ],
-        "status": "scheduled"
+        "status": "clear",
+        "pendingCount": 0,
+        "reasons": [],
+        "deltaCount": 0,
+        "notes": null,
+        "updatedAt": "2025-11-05T04:53:56.847Z",
+        "moderationDecisionId": null
       },
       "batches": [
         {
@@ -291,7 +297,7 @@
           "type": "hourly",
           "runAt": "2025-11-04T05:50:34.577Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T10:13:20.530Z",
+          "preparedAt": "2025-11-05T04:53:56.847Z",
           "deltaCount": 0
         }
       ],
@@ -301,13 +307,13 @@
       },
       "overrides": [],
       "sessionId": "imp-gm-06-smoke",
-      "stateId": "a8d5d64b-b850-476e-b9ed-738549d8396b",
-      "createdAt": "2025-11-04T10:13:20.530Z",
-      "updatedAt": "2025-11-04T10:13:20.530Z",
+      "stateId": "cd06e987-2ddd-4d22-a636-4394c3bfc195",
+      "createdAt": "2025-11-05T04:53:56.846Z",
+      "updatedAt": "2025-11-05T04:53:56.847Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T10:13:20.530Z",
+          "occurredAt": "2025-11-05T04:53:56.846Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T04:50:34.577Z",
             "moderationStartAt": "2025-11-04T05:05:34.577Z",
@@ -317,20 +323,32 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T10:13:20.530Z",
+          "occurredAt": "2025-11-05T04:53:56.847Z",
           "payload": {
             "batchId": "imp-gm-06-smoke-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T10:13:20.530Z",
+              "preparedAt": "2025-11-05T04:53:56.847Z",
               "deltaCount": 0
             }
+          }
+        },
+        {
+          "type": "cadence.moderation.status",
+          "occurredAt": "2025-11-05T04:53:56.847Z",
+          "payload": {
+            "status": "clear",
+            "pendingCount": 0,
+            "reasons": [],
+            "deltaCount": 0,
+            "moderationDecisionId": null,
+            "updatedAt": "2025-11-05T04:53:56.847Z"
           }
         }
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T10:13:20.530Z",
+      "preparedAt": "2025-11-05T04:53:56.847Z",
       "loreBundles": [],
       "newsCards": [],
       "overlayPayloads": []

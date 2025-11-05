@@ -1,6 +1,6 @@
 {
   "sessionId": "qa-batch-beta",
-  "generatedAt": "2025-11-04T10:13:20.536Z",
+  "generatedAt": "2025-11-05T04:53:56.852Z",
   "summary": {
     "sessionId": "qa-batch-beta",
     "version": 1,
@@ -253,7 +253,7 @@
       }
     ],
     "attachmentsUrl": null,
-    "generatedAt": "2025-11-04T10:13:20.535Z",
+    "generatedAt": "2025-11-05T04:53:56.851Z",
     "statistics": {
       "turnCount": 11,
       "sceneCount": 11,
@@ -283,7 +283,13 @@
           "2025-11-04T06:11:28.981Z",
           "2025-11-04T06:21:28.981Z"
         ],
-        "status": "scheduled"
+        "status": "clear",
+        "pendingCount": 0,
+        "reasons": [],
+        "deltaCount": 0,
+        "notes": null,
+        "updatedAt": "2025-11-05T04:53:56.852Z",
+        "moderationDecisionId": null
       },
       "batches": [
         {
@@ -291,7 +297,7 @@
           "type": "hourly",
           "runAt": "2025-11-04T06:26:28.981Z",
           "status": "ready",
-          "preparedAt": "2025-11-04T10:13:20.536Z",
+          "preparedAt": "2025-11-05T04:53:56.852Z",
           "deltaCount": 0
         }
       ],
@@ -301,13 +307,13 @@
       },
       "overrides": [],
       "sessionId": "qa-batch-beta",
-      "stateId": "de66515d-da9a-4d01-9ada-9535ce4d89a9",
-      "createdAt": "2025-11-04T10:13:20.536Z",
-      "updatedAt": "2025-11-04T10:13:20.536Z",
+      "stateId": "212848c3-48b1-4811-955d-86229eeee6c0",
+      "createdAt": "2025-11-05T04:53:56.852Z",
+      "updatedAt": "2025-11-05T04:53:56.852Z",
       "history": [
         {
           "type": "cadence.initialised",
-          "occurredAt": "2025-11-04T10:13:20.536Z",
+          "occurredAt": "2025-11-05T04:53:56.852Z",
           "payload": {
             "sessionClosedAt": "2025-11-04T05:26:28.981Z",
             "moderationStartAt": "2025-11-04T05:41:28.981Z",
@@ -317,20 +323,32 @@
         },
         {
           "type": "cadence.batch.status",
-          "occurredAt": "2025-11-04T10:13:20.536Z",
+          "occurredAt": "2025-11-05T04:53:56.852Z",
           "payload": {
             "batchId": "qa-batch-beta-batch-0",
             "status": "ready",
             "metadata": {
-              "preparedAt": "2025-11-04T10:13:20.536Z",
+              "preparedAt": "2025-11-05T04:53:56.852Z",
               "deltaCount": 0
             }
+          }
+        },
+        {
+          "type": "cadence.moderation.status",
+          "occurredAt": "2025-11-05T04:53:56.852Z",
+          "payload": {
+            "status": "clear",
+            "pendingCount": 0,
+            "reasons": [],
+            "deltaCount": 0,
+            "moderationDecisionId": null,
+            "updatedAt": "2025-11-05T04:53:56.852Z"
           }
         }
       ]
     },
     "preparedBatch": {
-      "preparedAt": "2025-11-04T10:13:20.536Z",
+      "preparedAt": "2025-11-05T04:53:56.852Z",
       "loreBundles": [],
       "newsCards": [],
       "overlayPayloads": []

@@ -5,7 +5,8 @@ const path = require("path");
 const { randomUUID } = require("crypto");
 const dns = require("dns");
 const { Agent, setGlobalDispatcher } = require("undici");
-const EventSource = require("eventsource");
+const eventSourceModule = require("eventsource");
+const EventSource = eventSourceModule.EventSource || eventSourceModule;
 
 let customCaBuffer = null;
 const DEFAULT_ADMIN_ALERT_OBSERVATION_PATH = path.join(

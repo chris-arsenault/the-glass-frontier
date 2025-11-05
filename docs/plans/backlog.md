@@ -10,8 +10,8 @@ Updated for Session 121 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | todo | P1 | Tag 7 live; rerun staging offline QA with drift simulation, capture artefacts, and package validation bundle for IMP-CLIENT-06 / IMP-MOD-03. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | todo | P1 | Consume tag 7 manifest, rerun `npm run run:stage-smoke` + `npm run run:stage-alerts`, append SME confirmations in docs/reports, and link drift telemetry. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | todo | P1 | Tag 7 live; 2025-11-05 drift simulation rollup (`artifacts/offline-qa/offline-qa-batch-rollup-2025-11-05T04-53-56-862Z.json`) ready for staging storage replay + validation bundle. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | in-progress | P1 | Stage smoke/alert harness rerun 2025-11-05 (fallback port 4443); docs updated with new metrics + drift link. Await SME confirmations. |
 | IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | todo | P1 | With tag 7 active, run `npm run monitor:contests`, gather Temporal telemetry, and wrap PvP balancing brief for moderation. |
 
 ## Tier 2 (P2)

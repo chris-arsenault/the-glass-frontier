@@ -4,7 +4,7 @@ services:
     container_name: glass-frontier-stage-proxy
     restart: unless-stopped
     ports:
-      - "443:443"
+      - "${STAGE_PROXY_HOST_PORT:-443}:443"
     environment:
       - XDG_DATA_HOME=/data
       - XDG_CONFIG_HOME=/config
