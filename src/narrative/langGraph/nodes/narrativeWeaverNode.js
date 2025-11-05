@@ -2,7 +2,7 @@
 
 const { composeOutcomePrompt } = require("../../prompts");
 
-function buildNarration({ sceneFrame, intent, checkRequest, safety }) {
+function buildFallbackNarration({ sceneFrame, intent, checkRequest, safety }) {
   const segments = [];
   const characterName = sceneFrame?.character?.name || "The protagonist";
   const location = sceneFrame?.location?.locale || "the frontier";
@@ -78,23 +78,72 @@ function createMarkers({ intent, checkRequest, safety, sceneFrame }) {
 
 const narrativeWeaverNode = {
   id: "narrative-weaver",
-  execute(context) {
+  async execute(context) {
     const prompt = composeOutcomePrompt({
       checkRequest: context.checkRequest,
       safety: context.safety
     });
+
+    const promptPackets = [...(context.promptPackets || [])];
+    let narration = null;
+
+    if (context.llm?.generateText) {
+      try {
+        const result = await context.llm.generateText({
+          prompt,
+          temperature: 0.8,
+          maxTokens: 650,
+          metadata: {
+            nodeId: "narrative-weaver",
+            sessionId: context.sessionId,
+            checkAuditRef: context.checkRequest?.auditRef || null
+          }
+        });
+        narration = result.text?.trim() || null;
+        promptPackets.push({
+          type: "narrative-weaver",
+          prompt,
+          provider: result.provider,
+          response: result.raw || result.text || null,
+          usage: result.usage || null
+        });
+      } catch (error) {
+        if (typeof context.telemetry?.recordToolError === "function") {
+          context.telemetry.recordToolError({
+            sessionId: context.sessionId,
+            operation: "llm.narrative-weaver",
+            referenceId: context.checkRequest?.auditRef || null,
+            attempt: 0,
+            message: error.message
+          });
+        }
+        promptPackets.push({
+          type: "narrative-weaver",
+          prompt,
+          error: error.message
+        });
+      }
+    } else {
+      promptPackets.push({
+        type: "narrative-weaver",
+        prompt,
+        provider: "llm-missing"
+      });
+    }
 
     const narrativeEvent = {
       type: "session.message",
       sessionId: context.sessionId,
       turnSequence: context.turnSequence,
       role: "gm",
-      content: buildNarration({
-        sceneFrame: context.sceneFrame,
-        intent: context.intent,
-        checkRequest: context.checkRequest,
-        safety: context.safety
-      }),
+      content:
+        narration ||
+        buildFallbackNarration({
+          sceneFrame: context.sceneFrame,
+          intent: context.intent,
+          checkRequest: context.checkRequest,
+          safety: context.safety
+        }),
       markers: createMarkers({
         intent: context.intent,
         checkRequest: context.checkRequest,
@@ -102,8 +151,6 @@ const narrativeWeaverNode = {
         sceneFrame: context.sceneFrame
       })
     };
-
-    const promptPackets = [...(context.promptPackets || []), { type: "narrative-weaver", prompt }];
 
     return {
       ...context,

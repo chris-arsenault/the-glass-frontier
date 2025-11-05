@@ -8,10 +8,11 @@ const { intentIntakeNode } = require("./langGraph/nodes/intentIntakeNode");
 const { safetyGateNode } = require("./langGraph/nodes/safetyGateNode");
 const { checkPlannerNode } = require("./langGraph/nodes/checkPlannerNode");
 const { narrativeWeaverNode } = require("./langGraph/nodes/narrativeWeaverNode");
+const { createLangGraphLlmClient } = require("./langGraph/llmClient");
 const { log } = require("../utils/logger");
 
 class NarrativeEngine {
-  constructor({ sessionMemory, checkBus, telemetry } = {}) {
+  constructor({ sessionMemory, checkBus, telemetry, llmClient } = {}) {
     if (!sessionMemory) {
       throw new Error("NarrativeEngine requires sessionMemory");
     }
@@ -27,6 +28,8 @@ class NarrativeEngine {
       checkBus: this.checkBus,
       telemetry: this.telemetry
     });
+
+    this.llm = llmClient || createLangGraphLlmClient();
 
     this.graph = new LangGraphOrchestrator({
       telemetry: this.telemetry,
@@ -67,6 +70,8 @@ class NarrativeEngine {
         message: { playerId, content: trimmedContent, metadata },
         session,
         tools: this.tools,
+        llm: this.llm,
+        telemetry: this.telemetry,
         promptPackets: [],
         auditTrail: []
       });

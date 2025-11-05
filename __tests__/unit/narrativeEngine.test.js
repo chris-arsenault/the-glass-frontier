@@ -4,6 +4,7 @@ const { NarrativeEngine } = require("../../src/narrative/narrativeEngine");
 const { SessionMemoryFacade } = require("../../src/memory/sessionMemory");
 const { CheckBus } = require("../../src/events/checkBus");
 const { SessionTelemetry } = require("../../src/narrative/langGraph/telemetry");
+const { createStubLlmClient } = require("../helpers/createStubLlmClient");
 
 function createTelemetrySpy() {
   const events = [];
@@ -27,7 +28,12 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
 
   test("emits a production check request with telemetry when intent suggests a roll", async () => {
     const { telemetry, events } = createTelemetrySpy();
-    const engine = new NarrativeEngine({ sessionMemory, checkBus, telemetry });
+    const engine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      telemetry,
+      llmClient: createStubLlmClient()
+    });
     const checkEvents = [];
     checkBus.onCheckRequest((envelope) => checkEvents.push(envelope));
 
@@ -53,7 +59,12 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
 
   test("retains purely narrative flow without dispatching a check", async () => {
     const { telemetry, events } = createTelemetrySpy();
-    const engine = new NarrativeEngine({ sessionMemory, checkBus, telemetry });
+    const engine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      telemetry,
+      llmClient: createStubLlmClient()
+    });
     const checkEvents = [];
     checkBus.onCheckRequest((envelope) => checkEvents.push(envelope));
 
@@ -64,7 +75,8 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
     });
 
     expect(result.checkRequest).toBeNull();
-    expect(result.narrativeEvent.content).toContain("relay");
+    expect(typeof result.narrativeEvent.content).toBe("string");
+    expect(result.narrativeEvent.content.length).toBeGreaterThan(0);
     expect(result.narrativeEvent.markers.find((marker) => marker.marker === "narrative-beat")).toBeTruthy();
     expect(checkEvents).toHaveLength(0);
     expect(events.some((entry) => entry.message === "telemetry.session.check-dispatch")).toBe(false);
@@ -72,7 +84,12 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
 
   test("escalates safety concerns to moderation with telemetry", async () => {
     const { telemetry, events } = createTelemetrySpy();
-    const engine = new NarrativeEngine({ sessionMemory, checkBus, telemetry });
+    const engine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      telemetry,
+      llmClient: createStubLlmClient()
+    });
     const adminAlerts = [];
     checkBus.onAdminAlert((envelope) => adminAlerts.push(envelope));
 
@@ -90,7 +107,11 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
   });
 
   test("escalates contested hub actions to moderation when checks are requested", async () => {
-    const engine = new NarrativeEngine({ sessionMemory, checkBus });
+    const engine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      llmClient: createStubLlmClient()
+    });
 
     jest.spyOn(engine.tools, "appendPlayerMessage").mockResolvedValue();
     jest.spyOn(engine.tools, "appendGmMessage").mockResolvedValue();
@@ -130,7 +151,12 @@ describe("NarrativeEngine · LangGraph orchestration", () => {
 
   test("records check resolution via bus event", () => {
     const { telemetry } = createTelemetrySpy();
-    const engine = new NarrativeEngine({ sessionMemory, checkBus, telemetry });
+    const engine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      telemetry,
+      llmClient: createStubLlmClient()
+    });
 
     const envelope = {
       id: "check-1",

@@ -5,6 +5,7 @@ const { createApp } = require("../../src/server/app");
 const { SessionMemoryFacade } = require("../../src/memory/sessionMemory");
 const { NarrativeEngine } = require("../../src/narrative/narrativeEngine");
 const { CheckBus } = require("../../src/events/checkBus");
+const { createStubLlmClient } = require("../helpers/createStubLlmClient");
 
 describe("Session Memory API", () => {
   let sessionMemory;
@@ -17,7 +18,11 @@ describe("Session Memory API", () => {
   beforeEach(() => {
     sessionMemory = new SessionMemoryFacade();
     checkBus = new CheckBus();
-    narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
+    narrativeEngine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      llmClient: createStubLlmClient()
+    });
     broadcaster = {
       publish: jest.fn(),
       registerStream: jest.fn(() => () => {})

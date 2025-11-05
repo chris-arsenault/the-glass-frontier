@@ -26,6 +26,7 @@ job "${job_name}" {
         ENVIRONMENT      = "${environment}"
         VAULT_ADDR       = "${vault_addr}"
         CONSUL_HTTP_ADDR = "${consul_http_addr}"
+        LLM_PROXY_PROVIDER = "openai"
       }
 
       template {

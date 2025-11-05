@@ -1,6 +1,6 @@
 "use strict";
 
-const { v4: uuid } = require("uuid");
+const { randomUUID } = require("crypto");
 
 const DEFAULT_MAX_RETRIES = 2;
 
@@ -28,7 +28,7 @@ class ToolHarness {
   }
 
   generateAuditRef({ sessionId, component, turnSequence }) {
-    return `${component}:${sessionId}:${turnSequence}:${uuid()}`;
+    return `${component}:${sessionId}:${turnSequence}:${randomUUID()}`;
   }
 
   async appendPlayerMessage(sessionId, entry) {

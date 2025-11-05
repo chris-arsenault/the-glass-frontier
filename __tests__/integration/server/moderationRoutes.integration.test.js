@@ -6,6 +6,7 @@ const { SessionMemoryFacade } = require("../../../src/memory/sessionMemory");
 const { CheckBus } = require("../../../src/events/checkBus");
 const { Broadcaster } = require("../../../src/server/broadcaster");
 const { NarrativeEngine } = require("../../../src/narrative/narrativeEngine");
+const { createStubLlmClient } = require("../../helpers/createStubLlmClient");
 
 describe("moderation routes", () => {
   let app;
@@ -17,7 +18,11 @@ describe("moderation routes", () => {
     sessionMemory = new SessionMemoryFacade();
     checkBus = new CheckBus();
     const broadcaster = new Broadcaster();
-    const narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
+    const narrativeEngine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      llmClient: createStubLlmClient()
+    });
 
     app = createApp({
       narrativeEngine,

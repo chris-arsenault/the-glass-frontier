@@ -6,6 +6,7 @@ const { NarrativeEngine } = require("../../src/narrative/narrativeEngine");
 const { SessionMemoryFacade } = require("../../src/memory/sessionMemory");
 const { CheckBus } = require("../../src/events/checkBus");
 const { CheckRunner } = require("../../src/checkRunner/checkRunner");
+const { createStubLlmClient } = require("../helpers/createStubLlmClient");
 
 describe("Narrative Engine HTTP API", () => {
   let sessionMemory;
@@ -18,7 +19,11 @@ describe("Narrative Engine HTTP API", () => {
   beforeEach(() => {
     sessionMemory = new SessionMemoryFacade();
     checkBus = new CheckBus();
-    narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
+    narrativeEngine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      llmClient: createStubLlmClient()
+    });
     checkRunner = new CheckRunner({
       checkBus,
       sessionMemory,

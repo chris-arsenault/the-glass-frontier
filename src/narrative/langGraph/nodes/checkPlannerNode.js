@@ -1,7 +1,6 @@
 "use strict";
 
-const crypto = require("crypto");
-const { v4: uuid } = require("uuid");
+const { randomUUID, createHash } = require("crypto");
 const { composeRulesContextPrompt } = require("../../prompts");
 
 const DIFFICULTY_PRESETS = {
@@ -46,7 +45,18 @@ const MOVE_LIBRARY = {
   }
 };
 
-function determineMovePlan(intent, session) {
+function calculateMomentumState(session) {
+  if (session?.momentum && typeof session.momentum.current === "number") {
+    return session.momentum.current;
+  }
+
+  const history = session?.resolvedChecks || [];
+  const base = 0;
+  const bonus = history.slice(-3).filter((check) => check?.result === "full").length;
+  return base + bonus;
+}
+
+function heuristicMovePlan(intent, session) {
   const text = (intent.text || "").toLowerCase();
   let base = MOVE_LIBRARY.clash;
 
@@ -67,29 +77,52 @@ function determineMovePlan(intent, session) {
     moveTags: base.tags,
     tags: base.tags,
     ability: intent.inferredAbility || base.ability,
-    difficulty: base.difficulty.label,
-    difficultyValue: base.difficulty.value,
+    difficulty: base.difficulty,
     rationale: base.rationale,
     complicationSeeds: base.complicationSeeds,
     momentumState: momentum,
     advantage,
     bonusDice,
-    recommendedNarration: [
-      `Success: ${base.rationale} unfolds in the player's favor.`,
-      `Complication: escalate via ${base.complicationSeeds[0]}`
-    ].join(" ")
+    recommendedNarration: {
+      success: `${base.rationale} unfolds in the player's favour.`,
+      complication: `Complication arises via ${base.complicationSeeds[0]}`
+    }
   };
 }
 
-function calculateMomentumState(session) {
-  if (session?.momentum && typeof session.momentum.current === "number") {
-    return session.momentum.current;
+function normalizePlan(seedPlan, candidate) {
+  if (!candidate) {
+    return seedPlan;
   }
 
-  const history = session?.resolvedChecks || [];
-  const base = 0;
-  const bonus = history.slice(-3).filter((check) => check?.result === "full").length;
-  return base + bonus;
+  const difficulty = candidate.difficulty || {};
+  return {
+    move: candidate.move || seedPlan.move,
+    moveTags: Array.isArray(candidate.tags) && candidate.tags.length > 0 ? candidate.tags : seedPlan.moveTags,
+    tags: Array.isArray(candidate.tags) && candidate.tags.length > 0 ? candidate.tags : seedPlan.tags,
+    ability: candidate.ability || seedPlan.ability,
+    difficulty: {
+      label: difficulty.label || seedPlan.difficulty.label,
+      value: typeof difficulty.value === "number" ? difficulty.value : seedPlan.difficulty.value
+    },
+    rationale: candidate.rationale || seedPlan.rationale,
+    complicationSeeds: Array.isArray(candidate.complicationSeeds) && candidate.complicationSeeds.length > 0
+      ? candidate.complicationSeeds
+      : seedPlan.complicationSeeds,
+    momentumState: typeof candidate.momentumState === "number" ? candidate.momentumState : seedPlan.momentumState,
+    advantage:
+      typeof candidate.advantage === "boolean" ? candidate.advantage : Boolean(seedPlan.advantage),
+    bonusDice:
+      typeof candidate.bonusDice === "number" ? candidate.bonusDice : seedPlan.bonusDice,
+    recommendedNarration: {
+      success: candidate?.recommendedNarration?.success || seedPlan.recommendedNarration.success,
+      complication: candidate?.recommendedNarration?.complication || seedPlan.recommendedNarration.complication
+    }
+  };
+}
+
+function statForAbility(session, ability) {
+  return session?.character?.stats?.[ability] ?? 0;
 }
 
 function buildFlags(intent, safety) {
@@ -102,13 +135,9 @@ function buildFlags(intent, safety) {
   return Array.from(flags);
 }
 
-function statForAbility(session, ability) {
-  return session?.character?.stats?.[ability] ?? 0;
-}
-
 const checkPlannerNode = {
   id: "check-planner",
-  execute(context) {
+  async execute(context) {
     if (!context.intent?.requiresCheck || context.safety?.escalate) {
       return {
         ...context,
@@ -116,7 +145,7 @@ const checkPlannerNode = {
       };
     }
 
-    const movePlan = determineMovePlan(context.intent, context.session);
+    const heuristicPlan = heuristicMovePlan(context.intent, context.session);
     const auditRef = context.tools.generateAuditRef({
       sessionId: context.sessionId,
       component: "check",
@@ -127,38 +156,87 @@ const checkPlannerNode = {
       session: context.session,
       intent: context.intent,
       safetyFlags: context.safety?.flags,
-      movePlan
+      movePlan: heuristicPlan
     });
 
-    const promptHash = crypto.createHash("sha256").update(prompt).digest("hex");
+    const promptPackets = [...(context.promptPackets || [])];
+    let plan = heuristicPlan;
+
+    if (context.llm?.generateJson) {
+      try {
+        const result = await context.llm.generateJson({
+          prompt,
+          temperature: 0.25,
+          maxTokens: 700,
+          metadata: { nodeId: "check-planner", sessionId: context.sessionId, auditRef }
+        });
+        plan = normalizePlan(heuristicPlan, result.json);
+
+        promptPackets.push({
+          type: "check-planner",
+          prompt,
+          provider: result.provider,
+          response: result.raw || result.json || null,
+          usage: result.usage || null
+        });
+      } catch (error) {
+        if (typeof context.telemetry?.recordToolError === "function") {
+          context.telemetry.recordToolError({
+            sessionId: context.sessionId,
+            operation: "llm.check-planner",
+            referenceId: auditRef,
+            attempt: 0,
+            message: error.message
+          });
+        }
+        promptPackets.push({
+          type: "check-planner",
+          prompt,
+          error: error.message
+        });
+      }
+    } else {
+      promptPackets.push({
+        type: "check-planner",
+        prompt,
+        provider: "llm-missing"
+      });
+    }
+
+    const promptHash = createHash("sha256").update(prompt).digest("hex");
     const expiresAt = new Date(Date.now() + 90 * 1000).toISOString();
     const flags = buildFlags(context.intent, context.safety);
-    const statValue = statForAbility(context.session, movePlan.ability);
+    const statValue = statForAbility(context.session, plan.ability);
 
     const checkRequest = {
-      id: uuid(),
+      id: randomUUID(),
       sessionId: context.sessionId,
       turnSequence: context.turnSequence,
       origin: "narrative-engine",
       auditRef,
       trigger: {
-        detectedMove: movePlan.move,
-        detectedMoveTags: movePlan.moveTags,
+        detectedMove: plan.move,
+        detectedMoveTags: plan.moveTags,
         playerUtterance: context.intent.text,
-        momentum: movePlan.momentumState,
-        narrativeTags: movePlan.tags,
+        momentum: plan.momentumState,
+        narrativeTags: plan.tags,
         safetyFlags: context.safety?.flags || []
       },
       mechanics: {
         checkType: "2d6+stat",
-        stat: movePlan.ability,
-        difficulty: movePlan.difficulty,
-        difficultyValue: movePlan.difficultyValue,
-        advantage: movePlan.advantage,
-        bonusDice: movePlan.bonusDice,
-        complicationSeeds: movePlan.complicationSeeds
+        stat: plan.ability,
+        difficulty: plan.difficulty.label,
+        difficultyValue: plan.difficulty.value,
+        advantage: Boolean(plan.advantage),
+        bonusDice: plan.bonusDice,
+        complicationSeeds: plan.complicationSeeds
       },
-      recommendedNarration: movePlan.recommendedNarration,
+      recommendedNarration: [
+        plan.recommendedNarration?.success,
+        plan.recommendedNarration?.complication
+      ]
+        .filter(Boolean)
+        .join(" "),
       expiresAt,
       metadata: {
         tone: context.intent.tone,
@@ -168,29 +246,28 @@ const checkPlannerNode = {
         safetyFlags: context.safety?.flags || []
       },
       data: {
-        move: movePlan.move,
-        tags: movePlan.tags,
-        difficulty: movePlan.difficulty,
-        difficultyValue: movePlan.difficultyValue,
-        ability: movePlan.ability,
-        momentum: movePlan.momentumState,
+        move: plan.move,
+        tags: plan.tags,
+        difficulty: plan.difficulty.label,
+        difficultyValue: plan.difficulty.value,
+        ability: plan.ability,
+        momentum: plan.momentumState,
         flags,
         safetyFlags: context.safety?.flags || [],
         playerId: context.intent.playerId,
         mechanics: {
-          stat: movePlan.ability,
+          stat: plan.ability,
           statValue,
-          bonusDice: movePlan.bonusDice,
-          difficulty: movePlan.difficulty,
-          difficultyValue: movePlan.difficultyValue,
-          momentum: movePlan.momentumState,
-          advantage: movePlan.advantage
+          bonusDice: plan.bonusDice,
+          difficulty: plan.difficulty.label,
+          difficultyValue: plan.difficulty.value,
+          momentum: plan.momentumState,
+          advantage: Boolean(plan.advantage)
         }
       },
       flags
     };
 
-    const promptPackets = [...(context.promptPackets || []), { type: "check-planner", prompt }];
     const auditTrail = [...(context.auditTrail || []), { nodeId: "check-planner", auditRef }];
 
     return {
@@ -198,7 +275,7 @@ const checkPlannerNode = {
       checkRequest,
       promptPackets,
       auditTrail,
-      movePlan
+      movePlan: plan
     };
   }
 };

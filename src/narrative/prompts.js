@@ -37,12 +37,14 @@ function composeIntentPrompt({ session, playerMessage }) {
       session?.character?.tags?.slice(0, 3).join(", ") || "No tags"
     }`,
     `Location Context: ${session?.location?.locale || "Unknown locale"}`,
-    "Infer dominant tone, move family, and whether a mechanical check is required.",
-    "Return JSON with { tone, moveTags[], requiresCheck }."
+    "Infer tone, dominant move families, mechanical intent, and safety sensitivities.",
+    "Return strict JSON with keys: tone (string), moveTags (string[]), requiresCheck (boolean), ability (string), intentSummary (string), creativeSpark (boolean), safetyFlags (string[])."
   ].join("\n");
 }
 
 function composeRulesContextPrompt({ session, intent, safetyFlags, movePlan }) {
+  const difficultyLabel = movePlan?.difficulty?.label ?? movePlan?.difficulty ?? "standard";
+  const difficultyValue = movePlan?.difficulty?.value ?? movePlan?.difficultyValue ?? 8;
   return [
     PROMPT_HEADER,
     "",
@@ -50,12 +52,23 @@ function composeRulesContextPrompt({ session, intent, safetyFlags, movePlan }) {
     `Player Utterance: """${intent.text}"""`,
     `Move Tags: ${movePlan.moveTags.join(", ")}`,
     `Momentum: ${movePlan.momentumState}`,
-    `Difficulty: ${movePlan.difficulty} (${movePlan.difficultyValue})`,
+    `Difficulty: ${difficultyLabel} (${difficultyValue})`,
     `Ability: ${movePlan.ability}`,
     `Creative Spark: ${intent.creativeSpark ? "true" : "false"}`,
     `Safety Flags: ${(safetyFlags || []).join(", ") || "none"}`,
     "",
-    "Return a rationale for the difficulty, complication seeds, and suggested narration hooks for success and complication paths."
+    "Return strict JSON describing the recommended check with keys:",
+    "{",
+    '  "move": string,',
+    '  "ability": string,',
+    '  "difficulty": { "label": string, "value": number },',
+    '  "advantage": boolean,',
+    '  "bonusDice": number,',
+    '  "complicationSeeds": string[],',
+    '  "rationale": string,',
+    '  "recommendedNarration": { "success": string, "complication": string }',
+    "}",
+    "Ensure the JSON is valid and contains each key."
   ].join("\n");
 }
 

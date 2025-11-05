@@ -8,6 +8,7 @@ const {
 const { SessionMemoryFacade } = require("../../src/memory/sessionMemory");
 const { CheckRunner } = require("../../src/checkRunner/checkRunner");
 const { NarrativeEngine } = require("../../src/narrative/narrativeEngine");
+const { createStubLlmClient } = require("../helpers/createStubLlmClient");
 
 function createRandomizer(values) {
   return jest.fn((_seed, count) => values.slice(0, count));
@@ -49,7 +50,11 @@ describe("CheckRunner", () => {
       recordCheckVeto: jest.fn(),
       recordCheckError: jest.fn()
     };
-    narrativeEngine = new NarrativeEngine({ sessionMemory, checkBus });
+    narrativeEngine = new NarrativeEngine({
+      sessionMemory,
+      checkBus,
+      llmClient: createStubLlmClient()
+    });
   });
 
   function startRunnerWithRandomizer(randomizer) {

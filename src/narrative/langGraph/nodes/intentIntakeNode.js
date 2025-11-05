@@ -32,70 +32,99 @@ const MOVE_MATCHERS = [
   }
 ];
 
-function detectMovePlan(text) {
-  for (const matcher of MOVE_MATCHERS) {
-    if (matcher.pattern.test(text)) {
-      return matcher;
+function detectFallbackIntent(text) {
+  const lower = text.toLowerCase();
+  const match = MOVE_MATCHERS.find((entry) => entry.pattern.test(lower));
+  const tone = (() => {
+    if (/\b(attack|strike|charge|brawl)\b/i.test(text)) {
+      return "aggressive";
     }
-  }
+    if (/\b(sneak|slip|quietly|hide)\b/i.test(text)) {
+      return "stealth";
+    }
+    if (/\b(parley|negotiate|talk|appeal)\b/i.test(text)) {
+      return "diplomatic";
+    }
+    return "narrative";
+  })();
 
   return {
-    tags: ["risk-it-all"],
-    requiresCheck: false,
-    ability: "grit"
+    tone,
+    moveTags: match ? match.tags : ["risk-it-all"],
+    requiresCheck: CHECK_SIGNAL_REGEX.test(text) || Boolean(match?.requiresCheck),
+    creativeSpark: CREATIVE_SPARK_KEYWORDS.some((pattern) => pattern.test(text)),
+    ability: match?.ability || "grit",
+    safetyFlags: [],
+    intentSummary: text.slice(0, 120)
   };
-}
-
-function detectTone(text) {
-  if (!text) {
-    return "neutral";
-  }
-
-  if (/\b(attack|strike|charge|brawl)\b/i.test(text)) {
-    return "aggressive";
-  }
-
-  if (/\b(sneak|slip|quietly|hide)\b/i.test(text)) {
-    return "stealth";
-  }
-
-  if (/\b(parley|negotiate|talk|appeal)\b/i.test(text)) {
-    return "diplomatic";
-  }
-
-  return "narrative";
-}
-
-function detectCreativeSpark(text) {
-  if (!text) {
-    return false;
-  }
-
-  return CREATIVE_SPARK_KEYWORDS.some((pattern) => pattern.test(text));
 }
 
 const intentIntakeNode = {
   id: "intent-intake",
-  execute(context) {
+  async execute(context) {
     const message = context.message || {};
     const text = (message.content || "").trim();
-    const lower = text.toLowerCase();
-    const movePlan = detectMovePlan(lower);
-    const requiresCheck = CHECK_SIGNAL_REGEX.test(text) || movePlan.requiresCheck;
+    const prompt = composeIntentPrompt({ session: context.session, playerMessage: text });
+    const promptPackets = [...(context.promptPackets || [])];
+    const fallback = detectFallbackIntent(text);
 
+    let parsed = null;
+
+    if (context.llm?.generateJson) {
+      try {
+        const result = await context.llm.generateJson({
+          prompt,
+          temperature: 0.1,
+          maxTokens: 500,
+          metadata: { nodeId: "intent-intake", sessionId: context.sessionId }
+        });
+        parsed = result.json;
+        promptPackets.push({
+          type: "intent-intake",
+          prompt,
+          provider: result.provider,
+          response: result.raw || result.json || null,
+          usage: result.usage || null
+        });
+      } catch (error) {
+        if (typeof context.telemetry?.recordToolError === "function") {
+          context.telemetry.recordToolError({
+            sessionId: context.sessionId,
+            operation: "llm.intent-intake",
+            referenceId: null,
+            attempt: 0,
+            message: error.message
+          });
+        }
+        promptPackets.push({
+          type: "intent-intake",
+          prompt,
+          error: error.message
+        });
+      }
+    } else {
+      promptPackets.push({
+        type: "intent-intake",
+        prompt,
+        provider: "llm-missing"
+      });
+    }
+
+    const moveTags = Array.isArray(parsed?.moveTags) && parsed.moveTags.length > 0 ? parsed.moveTags : fallback.moveTags;
     const intent = {
       playerId: message.playerId,
       sessionId: context.sessionId,
       text,
-      tone: detectTone(text),
-      moveTags: movePlan.tags,
-      requiresCheck,
-      creativeSpark: detectCreativeSpark(text),
-      inferredAbility: movePlan.ability
+      tone: parsed?.tone || fallback.tone,
+      moveTags,
+      requiresCheck:
+        typeof parsed?.requiresCheck === "boolean" ? parsed.requiresCheck : fallback.requiresCheck,
+      creativeSpark:
+        typeof parsed?.creativeSpark === "boolean" ? parsed.creativeSpark : fallback.creativeSpark,
+      inferredAbility: parsed?.ability || fallback.ability,
+      safetyFlags: Array.isArray(parsed?.safetyFlags) ? parsed.safetyFlags : fallback.safetyFlags,
+      summary: parsed?.intentSummary || fallback.intentSummary
     };
-
-    const prompt = composeIntentPrompt({ session: context.session, playerMessage: text });
-    const promptPackets = [...(context.promptPackets || []), { type: "intent-intake", prompt }];
 
     return {
       ...context,

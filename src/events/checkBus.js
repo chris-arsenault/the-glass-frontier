@@ -1,7 +1,7 @@
 "use strict";
 
 const { EventEmitter } = require("events");
-const { v4: uuid } = require("uuid");
+const { randomUUID } = require("crypto");
 const { log } = require("../utils/logger");
 
 const CHECK_REQUEST_TOPIC = "intent.checkRequest";
@@ -17,11 +17,11 @@ class CheckBus extends EventEmitter {
 
   emitCheckRequest(sessionId, payload) {
     const envelope = {
-      id: payload.id || uuid(),
+      id: payload.id || randomUUID(),
       sessionId,
       topic: CHECK_REQUEST_TOPIC,
       createdAt: new Date().toISOString(),
-      auditRef: payload.auditRef || uuid(),
+      auditRef: payload.auditRef || randomUUID(),
       ...payload
     };
 
@@ -60,11 +60,11 @@ class CheckBus extends EventEmitter {
 
   emitCheckVetoed(payload) {
     const envelope = {
-      id: payload.id || uuid(),
+      id: payload.id || randomUUID(),
       sessionId: payload.sessionId,
       topic: CHECK_VETOED_TOPIC,
       createdAt: new Date().toISOString(),
-      auditRef: payload.auditRef || uuid(),
+      auditRef: payload.auditRef || randomUUID(),
       reason: payload.reason,
       safetyFlags: payload.safetyFlags || [],
       data: payload.data || {}
@@ -81,7 +81,7 @@ class CheckBus extends EventEmitter {
 
   emitAdminAlert(payload) {
     const envelope = {
-      id: payload.id || uuid(),
+      id: payload.id || randomUUID(),
       sessionId: payload.sessionId,
       topic: ADMIN_ALERT_TOPIC,
       createdAt: new Date().toISOString(),
@@ -105,13 +105,13 @@ class CheckBus extends EventEmitter {
     }
 
     const envelope = {
-      id: payload.id || uuid(),
+      id: payload.id || randomUUID(),
       sessionId: payload.sessionId,
       topic: MODERATION_DECISION_TOPIC,
       createdAt: new Date().toISOString(),
       action: payload.action || "acknowledge",
       alertId: payload.alertId || null,
-      auditRef: payload.auditRef || uuid(),
+      auditRef: payload.auditRef || randomUUID(),
       actor: payload.actor || null,
       notes: payload.notes || null,
       metadata: payload.metadata || {},

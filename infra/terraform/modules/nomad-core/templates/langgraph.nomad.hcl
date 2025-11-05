@@ -33,6 +33,7 @@ job "${job_name}" {
         REDIS_URL         = "${redis_url}"
         COUCH_URL         = "${couchdb_url}"
         VAULT_ADDR        = "${vault_addr}"
+        LLM_PROXY_URL     = "http://172.19.28.130:8082/v1/chat/completions"
       }
 
       template {

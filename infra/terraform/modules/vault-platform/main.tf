@@ -151,6 +151,10 @@ resource "vault_kv_secret_v2" "bootstrap_secrets" {
   mount     = vault_mount.kv.path
   name      = each.key
   data_json = jsonencode(each.value)
+
+  lifecycle {
+    ignore_changes = [data_json]
+  }
 }
 
 resource "vault_kv_secret_v2" "temporal_admin" {
