@@ -36,7 +36,7 @@ Generated: 2025-11-05
 
 | Backlog Item | Status | Priority | Notes |
 |--------------|--------|----------|-------|
-| IMP-PLATFORM-03: Image management | in-progress | P0 | Execute `npm run deploy:stage`, verify Nomad allocations, and broadcast manifest links to gameplay/pipeline owners. |
+| IMP-PLATFORM-03: Image management | in-progress | P0 | Stage tag 7 live; manifest/report plus distribution pack (`docs/reports/stage-deploy-distribution-2025-11-05.md`) published. Await Tier 1 SME acknowledgements before resuming CI rehearsal. |
 | IMP-MINIO-01: MinIO Lifecycle Automation | todo | P2 | Schedule after Tier 1 validations so lifecycle rehearsal can piggyback on the same stage deploy window. |
 | IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | Kick off once publishing QA proves stable delta feeds and retry telemetry. |
 | IMP-OBS-01: Observability & Incident Dashboards | todo | P3 | Hold until gameplay/offline/client loops are validated and generating sustained telemetry. |

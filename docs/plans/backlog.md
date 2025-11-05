@@ -5,7 +5,7 @@ Updated for Session 121 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Stage deploy 2025-11-05 pushed tag 7; manifest `artifacts/docker/service-image-manifest.json` + report `docs/reports/stage-deploy-2025-11-05.md` shared. Unit tests back to green after ChatComposer draft clear + Temporal strict-mode matcher fix. Distribute links to Tier 1 owners and resume CI rehearsal once validations close. |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Stage deploy 2025-11-05 pushed tag 7; manifest `artifacts/docker/service-image-manifest.json`, report `docs/reports/stage-deploy-2025-11-05.md`, and distribution pack `docs/reports/stage-deploy-distribution-2025-11-05.md` published. Track SME acknowledgements before restarting CI rehearsal shortcut. |
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
