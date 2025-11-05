@@ -1,16 +1,16 @@
-# Next Sprint Plan – Sessions 111–120
+# Next Sprint Plan – Sessions 121–130
 
-Generated: 2025-11-04
+Generated: 2025-11-05
 
 | Priority | Tier | Focus Area | Key Backlog Items | Immediate Actions | Dependencies / Notes |
 |----------|------|------------|-------------------|-------------------|----------------------|
-| P1 | Tier 1 | Gameplay loops & offline publishing readiness | IMP-OFFLINE-05, IMP-HUBS-05, IMP-PLATFORM-03 | Clear staging credentials blockade with platform ops; schedule joint rehearsal window to rerun offline QA + contest workflows; once access returns, execute `npm run docker:publish:temporal-worker`, `npm run offline:qa`, and `npm run monitor:contests` to capture SME-ready artefacts. | Requires staging registry, MinIO, Backblaze, and Temporal connectivity; artefacts must satisfy DES-16, DES-17, and DES-BENCH-01 tolerances. |
-| P1 | Tier 1a | Unified web client overlays & admin telemetry | IMP-CLIENT-06 | Maintain daily stage smoke + alerts runs; publish metrics to `#client-overlays` and `#admin-sse`; capture overlay screenshots/logs once offline telemetry replays land to secure SME approvals. | Depends on IMP-OFFLINE-05 delivering retry telemetry and IMP-HUBS-05 supplying contest feeds. |
-| P2 | Tier 2 | Moderation & lore surfacing enablement | IMP-MOD-01, IMP-MOD-02, IMP-MOD-03, IMP-SEARCH-01 | Finalise UX specs and API scaffolding so implementation can begin immediately after Tier 1 unblock; outline data contracts tying moderation queue + search drift to publishing cadence. | Kick off once Tier 1 deliverables demonstrate stable telemetry and retry pipelines; ensure alignment with REQUIREMENTS.md moderation mandates. |
-| P3 | Tier 3 | Platform hardening & observability | IMP-MINIO-01, IMP-OBS-01 | Track credential restoration; prep rehearsal checklists for lifecycle automation and observability rollout while Tier 1 stabilises. | Resume only after Tier 1 systems deliver consistent artefacts; keep ops stakeholders informed via docs/plans/backlog.md updates. |
+| P1 | Tier 1 | Stage deploy + gameplay/offline validation | IMP-PLATFORM-03, IMP-OFFLINE-05, IMP-HUBS-05 | Execute `npm run deploy:stage`, verify Nomad allocations, then run offline QA + contest monitors; publish manifest and telemetry bundles for SME review. | Requires coordinated staging window; artefacts must satisfy DES-16, DES-17, DES-BENCH-01 tolerances and feed downstream features. |
+| P1 | Tier 1a | Unified web client overlays & admin telemetry | IMP-CLIENT-06 | After Tier 1 deploy, rerun stage smoke/alerts, capture LangGraph SSE + admin alert artefacts, and secure SME confirmations in `docs/reports`. | Depends on Tier 1 telemetry bundles (IMP-OFFLINE-05 drift, IMP-HUBS-05 contests) to validate synchronized overlays. |
+| P2 | Tier 2 | Moderation queue & governance readiness | IMP-MOD-03, IMP-MOD-02 | Shadow Tier 1 rehearsals to capture moderation cadence data, finalize dashboard gap list, and prep policy editor schema/UX for implementation kickoff. | Promoted once Tier 1 validations lock cadence signals; ensure outputs align with REQUIREMENTS.md moderation mandates. |
+| P3 | Tier 3 | Platform hardening & observability runway | IMP-MINIO-01, IMP-SEARCH-01, IMP-OBS-01 | Maintain rehearsal checklists, monitor staging deploy outcomes, and refine IaC/telemetry drafts while Tier 1 stabilises. | Resume only after Tier 1 and Tier 2 deliver consistent data feeds; keep ops stakeholders aligned via backlog updates. |
 
 ## Supporting Notes
 
-- Maintain WIP discipline: keep only the Tier 1/Tier 1a items active until staging access is restored and validations complete.
-- Validate every Tier 1 milestone with updated documentation (`docs/plans/backlog.md`, session reports) and artefact links for SME review.
-- Confirm alignment with REQUIREMENTS.md for offline publishing, unified web client, and moderation control surfaces before promoting Tier 2 work.
+- Keep WIP centered on IMP-PLATFORM-03 handoff plus IMP-OFFLINE-05 / IMP-HUBS-05 until deploy artefacts land; avoid starting Tier 2/3 execution early.
+- Log every validation run (deploy, offline QA, contest, smoke/alerts) with artefact paths and SME receipts in docs/reports and MCP backlog updates.
+- Cross-check REQUIREMENTS.md mandates—offline publishing cadence, unified client overlays, and moderation governance—before promoting Tier 2 or Tier 3 scope.
