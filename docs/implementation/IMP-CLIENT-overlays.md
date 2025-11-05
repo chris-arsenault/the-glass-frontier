@@ -22,6 +22,7 @@ Backlog item: `IMP-CLIENT-07` (MCP ID `64d6a12c-15e6-4064-9e9f-2d4e6b9cfcf0`)
 ## Data & Telemetry
 
 - Client fetches contest sentiment only when the viewer holds admin privileges; results are rendered incrementally and cached in component state.
+- Contest sentiment requests are re-triggered when hub contest telemetry delivers fresher data and when the cached payload becomes stale (5-minute threshold) so admins see live cooldown shifts without reloading.
 - Reused SSE-fed `hubContests` payload from `useSessionConnection` so timelines stay in sync with IMP-HUBS-05 telemetry.
 - Stage status builder derives failure/queued/running state from `sessionOfflineHistory`, `sessionOfflineJob`, and `sessionOfflineLastRun` to reflect Temporal job health without extra requests.
 - Button and filter interactions emit namespaced telemetry (`client.overlay.moderation.opened`, `client.pipeline.stage` events piggyback on existing pipeline event names).

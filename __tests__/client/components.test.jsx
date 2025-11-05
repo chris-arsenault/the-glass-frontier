@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 const React = require("react");
-const { render, screen, fireEvent, waitFor, within } = require("@testing-library/react");
+const { render, screen, fireEvent, waitFor, within, act } = require("@testing-library/react");
 const { SessionProvider } = require("../../client/src/context/SessionContext.jsx");
 const { AccountContext } = require("../../client/src/context/AccountContext.jsx");
 const { ChatCanvas } = require("../../client/src/components/ChatCanvas.jsx");
@@ -108,6 +108,12 @@ function buildSessionValue(overrides = {}) {
     hubContests: [],
     ...overrides
   };
+}
+
+function flushPromises() {
+  return new Promise((resolve) => {
+    Promise.resolve().then(resolve);
+  });
 }
 
 describe("Client shell components", () => {
@@ -536,6 +542,222 @@ describe("Client shell components", () => {
     expect(emptyState).toHaveTextContent(/Cooldown sentiment data pending new contest completions/i);
     expect(emptyState).toHaveTextContent(/Last update/i);
     expect(screen.queryByTestId("contest-moderation-open")).not.toBeInTheDocument();
+  });
+
+  test("OverlayDock refetches contest sentiment when new contest telemetry arrives", async () => {
+    const baseNow = Date.now();
+    const firstGeneratedAt = new Date(baseNow).toISOString();
+    const secondGeneratedAt = new Date(baseNow + 90 * 1000).toISOString();
+    const firstPayload = {
+      generatedAt: firstGeneratedAt,
+      cooldown: {
+        activeSamples: 3,
+        negativeDuringCooldown: 1,
+        maxRemainingCooldownMs: 8000,
+        frustrationRatio: 0.33,
+        frustrationLevel: "watch"
+      }
+    };
+    const secondPayload = {
+      generatedAt: secondGeneratedAt,
+      cooldown: {
+        activeSamples: 6,
+        negativeDuringCooldown: 3,
+        maxRemainingCooldownMs: 6000,
+        frustrationRatio: 0.5,
+        frustrationLevel: "elevated"
+      }
+    };
+    const fetchWithAuth = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => firstPayload
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => secondPayload
+      });
+    const accountValue = {
+      isAdmin: true,
+      fetchWithAuth,
+      setActiveView: jest.fn(),
+      setFlashMessage: jest.fn()
+    };
+    const initialContest = {
+      contestId: "contest-100",
+      status: "resolved",
+      resolvedAt: new Date(baseNow - 60 * 1000).toISOString(),
+      outcome: { tier: "success", summary: "Initial outcome." }
+    };
+    const refreshedContest = {
+      contestId: "contest-101",
+      status: "resolved",
+      resolvedAt: new Date(baseNow + 60 * 1000).toISOString(),
+      outcome: { tier: "miss", summary: "Follow-up result." }
+    };
+    const baseSession = buildSessionValue({
+      isAdmin: true,
+      hubContests: [initialContest],
+      hubState: {
+        hubId: "hub-1",
+        roomId: "room-1",
+        version: 1,
+        state: { contests: [initialContest] },
+        contests: [initialContest]
+      },
+      sessionOfflineHistory: [],
+      sessionAdminAlerts: [],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      }
+    });
+    const renderTree = React.createElement(
+      AccountContext.Provider,
+      { value: accountValue },
+      React.createElement(
+        SessionProvider,
+        { value: baseSession },
+        React.createElement(OverlayDock)
+      )
+    );
+
+    let utils;
+    await act(async () => {
+      utils = render(renderTree);
+    });
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(1));
+
+    const updatedHubContests = [...baseSession.hubContests, refreshedContest];
+    const updatedSession = {
+      ...baseSession,
+      hubContests: updatedHubContests,
+      hubState: {
+        ...baseSession.hubState,
+        contests: updatedHubContests,
+        state: { ...baseSession.hubState.state, contests: updatedHubContests }
+      }
+    };
+
+    act(() => {
+      utils.rerender(
+        React.createElement(
+          AccountContext.Provider,
+          { value: accountValue },
+          React.createElement(
+            SessionProvider,
+            { value: updatedSession },
+            React.createElement(OverlayDock)
+          )
+        )
+      );
+    });
+    await act(async () => {
+      await flushPromises();
+    });
+
+    await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(2));
+  });
+
+  test("OverlayDock schedules sentiment refresh when telemetry becomes stale", async () => {
+    jest.useFakeTimers();
+    const baseTime = new Date("2025-11-05T09:00:00.000Z");
+    jest.setSystemTime(baseTime);
+    const initialPayload = {
+      generatedAt: baseTime.toISOString(),
+      cooldown: {
+        activeSamples: 4,
+        negativeDuringCooldown: 1,
+        maxRemainingCooldownMs: 7000,
+        frustrationRatio: 0.25,
+        frustrationLevel: "steady"
+      }
+    };
+    const refreshedPayload = {
+      generatedAt: new Date(baseTime.getTime() + 5 * 60 * 1000 + 1000).toISOString(),
+      cooldown: {
+        activeSamples: 5,
+        negativeDuringCooldown: 2,
+        maxRemainingCooldownMs: 5000,
+        frustrationRatio: 0.4,
+        frustrationLevel: "watch"
+      }
+    };
+    const fetchWithAuth = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => initialPayload
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => refreshedPayload
+      });
+    const accountValue = {
+      isAdmin: true,
+      fetchWithAuth,
+      setActiveView: jest.fn(),
+      setFlashMessage: jest.fn()
+    };
+    const session = buildSessionValue({
+      isAdmin: true,
+      hubContests: [],
+      hubState: {
+        hubId: "hub-1",
+        roomId: "room-1",
+        version: 1,
+        state: { contests: [] },
+        contests: []
+      },
+      sessionOfflineHistory: [],
+      sessionAdminAlerts: [],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      }
+    });
+    const tree = React.createElement(
+      AccountContext.Provider,
+      { value: accountValue },
+      React.createElement(
+        SessionProvider,
+        { value: session },
+        React.createElement(OverlayDock)
+      )
+    );
+
+    try {
+      await act(async () => {
+        render(tree);
+      });
+      await act(async () => {
+        await flushPromises();
+      });
+
+      await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(1));
+
+      act(() => {
+        jest.advanceTimersByTime(5 * 60 * 1000 + 600);
+      });
+      await act(async () => {
+        await flushPromises();
+      });
+
+      await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(2));
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("CheckOverlay surfaces pending and resolved check details", () => {

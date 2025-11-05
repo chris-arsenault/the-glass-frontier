@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSessionContext } from "../context/SessionContext.jsx";
 import { SessionConnectionStates } from "../hooks/useSessionConnection.js";
 import { useAccountContext } from "../context/AccountContext.jsx";
@@ -103,6 +103,7 @@ const PIPELINE_STAGE_DEFS = [
 ];
 
 const SENTIMENT_STALE_THRESHOLD_MS = 5 * 60 * 1000;
+const SENTIMENT_REFRESH_MIN_DELAY_MS = 5 * 1000;
 
 function formatPercent(value) {
   if (!Number.isFinite(value)) {
@@ -353,6 +354,29 @@ export function OverlayDock() {
   const [contestSentiment, setContestSentiment] = useState(null);
   const [sentimentLoading, setSentimentLoading] = useState(false);
   const [sentimentError, setSentimentError] = useState(null);
+  const [sentimentFetchNonce, setSentimentFetchNonce] = useState(0);
+  const lastSentimentRefreshAtRef = useRef(0);
+  const sentimentFetchPendingRef = useRef(false);
+  const initialSentimentLoadedRef = useRef(false);
+  const lastContestTimestampRef = useRef(null);
+
+  const triggerSentimentRefresh = useCallback(
+    (force = false) => {
+      const now = Date.now();
+      if (!force) {
+        if (sentimentFetchPendingRef.current) {
+          return false;
+        }
+        if (now - lastSentimentRefreshAtRef.current < SENTIMENT_REFRESH_MIN_DELAY_MS) {
+          return false;
+        }
+      }
+      lastSentimentRefreshAtRef.current = now;
+      setSentimentFetchNonce((value) => value + 1);
+      return true;
+    },
+    []
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -360,11 +384,22 @@ export function OverlayDock() {
       setContestSentiment(null);
       setSentimentError(null);
       setSentimentLoading(false);
+      sentimentFetchPendingRef.current = false;
+      initialSentimentLoadedRef.current = false;
+      lastContestTimestampRef.current = null;
+      lastSentimentRefreshAtRef.current = 0;
       return () => {
         cancelled = true;
       };
     }
 
+    if (sentimentFetchNonce === 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    sentimentFetchPendingRef.current = true;
     setSentimentLoading(true);
     (async () => {
       try {
@@ -386,14 +421,16 @@ export function OverlayDock() {
       } finally {
         if (!cancelled) {
           setSentimentLoading(false);
+          sentimentFetchPendingRef.current = false;
         }
       }
     })();
 
     return () => {
       cancelled = true;
+      sentimentFetchPendingRef.current = false;
     };
-  }, [fetchWithAuth, isAdmin]);
+  }, [fetchWithAuth, isAdmin, sentimentFetchNonce]);
 
   const character = overlay?.character || FALLBACK_CHARACTER;
   const inventory = Array.isArray(overlay?.inventory) && overlay.inventory.length > 0
@@ -496,6 +533,72 @@ export function OverlayDock() {
       .slice(0, 5)
       .map(({ sortKey, ...entry }) => entry);
   }, [hubContests]);
+  const latestContestTimestamp = useMemo(() => {
+    if (!Array.isArray(hubContests) || hubContests.length === 0) {
+      return null;
+    }
+    return hubContests.reduce((latest, contest) => {
+      const { ms } = pickContestTimestamp(contest);
+      if (ms === null) {
+        return latest;
+      }
+      if (latest === null || ms > latest) {
+        return ms;
+      }
+      return latest;
+    }, null);
+  }, [hubContests]);
+  useEffect(() => {
+    if (!isAdmin || typeof fetchWithAuth !== "function") {
+      return;
+    }
+    if (initialSentimentLoadedRef.current) {
+      return;
+    }
+    initialSentimentLoadedRef.current = true;
+    lastContestTimestampRef.current = latestContestTimestamp;
+    triggerSentimentRefresh(true);
+  }, [fetchWithAuth, isAdmin, latestContestTimestamp, triggerSentimentRefresh]);
+  useEffect(() => {
+    if (!isAdmin || typeof fetchWithAuth !== "function") {
+      return;
+    }
+    if (latestContestTimestamp === null) {
+      lastContestTimestampRef.current = null;
+      return;
+    }
+    const previousTimestamp = lastContestTimestampRef.current;
+    if (previousTimestamp !== null && latestContestTimestamp <= previousTimestamp) {
+      return;
+    }
+    lastContestTimestampRef.current = latestContestTimestamp;
+    if (!initialSentimentLoadedRef.current) {
+      return;
+    }
+    triggerSentimentRefresh(true);
+  }, [fetchWithAuth, isAdmin, latestContestTimestamp, triggerSentimentRefresh]);
+  useEffect(() => {
+    if (!isAdmin || typeof fetchWithAuth !== "function") {
+      return undefined;
+    }
+    if (!contestSentiment || typeof contestSentiment !== "object") {
+      return undefined;
+    }
+    const generatedMs = toTimestampMs(contestSentiment.generatedAt);
+    if (generatedMs === null) {
+      return undefined;
+    }
+    const ageMs = Date.now() - generatedMs;
+    const remaining = SENTIMENT_STALE_THRESHOLD_MS - ageMs;
+    if (remaining <= 0) {
+      triggerSentimentRefresh(true);
+      return undefined;
+    }
+    const timeout = setTimeout(() => {
+      triggerSentimentRefresh();
+    }, remaining + 250);
+    return () => clearTimeout(timeout);
+  }, [contestSentiment, fetchWithAuth, isAdmin, triggerSentimentRefresh]);
   const rawPipelineAlerts = useMemo(() => {
     if (!Array.isArray(sessionAdminAlerts)) {
       return [];
