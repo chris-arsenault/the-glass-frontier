@@ -1,39 +1,39 @@
 # Backlog Snapshot
 
-Updated for Session 134 directive cycle. Tier 1 focus now locks exclusively onto core gameplay delivery; all CI, review, artefact, and automation side-process workstreams are permanently retired.
+Updated for Session 141 grooming cycle. Tier 1 emphasis remains on gameplay delivery, offline publishing, and the unified client; side-process and platform automation tracks stay closed.
 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | done | P0 | Closed 2025-11-05 without further work. All Tier 1 reminder automation, staging credential rehearsal, and CI shortcut tasks are sunset under the no-side-process policy. |
+| — | — | — | — | No Tier 0 items are active; emergency platform work remains sunset. |
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | done | P1 | Closed 2025-11-05; publishing QA, cadence alignment, and artefact distribution are out of scope going forward. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | done | P1 | Closed 2025-11-05; staging smoke bundles, drift rollups, and SME coordination halted under the gameplay-only directive. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest sentiment telemetry now flows into the moderation dashboard with cooldown spike/hotspot tracking; rematch cooldowns are trimmed (9 s/6 s/11 s) and timeout penalties softened while dashboards highlight cooldown frustration ratios. Next: monitor live cooldown sentiment for stabilization and validate Temporal payload timing across consecutive releases. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | done | P1 | Closed 2025-11-05; moderation cadence telemetry and publishing sync rehearsals are sunset to prioritize gameplay. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Monitor cooldown sentiment (<40% negative), validate Temporal payload timing across two releases, then close contested PvP tuning. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-06: Contest Fallout Quest Hooks | todo | P1 | Design follow-up quest verbs driven by contest telemetry and route fallout through the offline pipeline once IMP-HUBS-05 closes. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-06: Contest Delta Integration & Conflict Review | todo | P1 | Ingest contested artefacts, flag conflicting deltas, and gate publishing pending review to honour post-session workflow rules. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-07: Contest & Publishing Overlays Unification | todo | P1 | Combine contest timelines and publishing progress in one overlay with SME feedback before implementation. |
+| IMP-GM: Narrative Engine & Check Runner | IMP-GM-07: Memory Stress Harness & Transparent Check Narration | todo | P1 | Build multi-session stress harness, expose transparent check narration, and document outputs for auditability. |
 
 ## Tier 2 (P2)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-MINIO-01: MinIO Lifecycle Automation | done | P2 | Closed per gameplay-only directive; storage lifecycle automation will not resume unless a shipped feature depends on it. |
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-SEARCH-01: Lore Search Differential Indexing | done | P2 | Closed per gameplay-only directive; lore search indexing automation is deferred indefinitely until core gameplay demands it. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-01: Moderation Dashboard & Live Overrides | done | P2 | Moderation dashboard shipped with DES-18 role guard, override drawer, and Playwright coverage for alert approval flows (`tests/e2e/admin-moderation.spec.js`). |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Prep schema/UX drafts once contested interactions and narrative overlays surface concrete policy gaps; no additional pipeline artefacts required. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Queue schema + UX work behind Tier 1 validation so policy hooks reflect contest and publishing evidence. |
 
 ## Tier 3 (P3)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-OBS-01: Observability & Incident Dashboards | done | P3 | Closed indefinitely per gameplay-only directive; observability dashboards will return only when a shipped feature depends on them. |
+| — | — | — | — | No Tier 3 initiatives; observability and automation remain deferred until gameplay requires them. |
 
 ## Delivered / Closed Features
 - RES-CORE: Foundational Research
 - DES-CORE: Foundational Design
-- IMP-GM: Narrative Engine & Check Runner
+- IMP-GM: Narrative Engine & Check Runner (new Cycle 10 work tracked separately via IMP-GM-07)
+- IMP-PLATFORM: Platform Implementation Foundations
 - NAR-CORE: Worldbuilding Foundations
 
 ## Health Checks
-- Active WIP (in-progress): 1 item, within the WIP ≤ 10 limit.
-- No orphan PBIs; every backlog item remains linked to its owning feature in MCP.
+- Active WIP (in-progress): 1 item (IMP-HUBS-05), satisfying the WIP ≤ 10 rule.
+- All open PBIs remain linked to features; no orphan entries detected.
+- Tier 1 backlog now covers GM transparency, hub loops, offline publishing, and unified client mandates from `REQUIREMENTS.md`.

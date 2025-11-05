@@ -1,21 +1,19 @@
-# Next Sprint Plan – Sessions 132–141
+# Next Sprint Plan – Sessions 141–150
 
-Scope: Prioritize Tier 1 gameplay delivery, offline post-session publishing, and unified client mandates from `REQUIREMENTS.md`, with supporting systems queued behind successful validations.
+Scope: Prioritize Tier 1 gameplay delivery, offline post-session publishing, and unified client mandates from `REQUIREMENTS.md`, staging moderation governance behind proven loops.
 
 | Priority | Focus Area | MCP Item(s) | Desired Outcome | Dependencies / Notes |
 |----------|------------|-------------|-----------------|----------------------|
-| P1 | Platform follow-through | IMP-PLATFORM-03 | Execute Tier 1 reminder sends, capture SME acknowledgements, and restart CI rehearsal to keep tag 7 images current. | Requires Slack env vars; follow schedule (09:00Z/09:05Z pings, 12:00Z escalation) before CI rerun. |
-| P1 | Offline publishing validation | IMP-OFFLINE-05 | Replay offline QA with tag 7, bundle drift + moderation evidence, and publish validation pack to unblock downstream features. | Wait for Tier 1 acks, then coordinate artefact sharing with IMP-CLIENT-06. |
-| P1 | Unified client SME signoff | IMP-CLIENT-06 | Distribute stage smoke/alert bundle (port 4443) and capture SME confirmations covering overlays + admin pipeline. | Archive approvals in docs + MCP; confirm fallback auto-disables once live alerts flow. |
-| P1 | Hub PvP telemetry | IMP-HUBS-05 | Gather >3 actor contest telemetry on tag 7, circulate moderation feedback, and finalize balancing brief. | Stage contest monitor run shares artefacts with IMP-MOD-03. |
-| P1 | Moderation cadence alignment | IMP-MOD-03 | Shadow tag 7 QA/contest runs, archive cadence evidence, and document remaining moderation gaps for SME review. | Depends on IMP-OFFLINE-05 + IMP-HUBS-05 telemetry to validate queue integrations. |
-| P2 | Storage lifecycle readiness | IMP-MINIO-01 | Plan Nomad rehearsal + Backblaze checks for MinIO lifecycle automation once Tier 1 items land. | Blocked on IMP-PLATFORM-03 closure and CI stability. |
-| P2 | Lore search deltas | IMP-SEARCH-01 | Prepare differential indexing flow leveraging stable offline delta feeds. | Requires IMP-OFFLINE-05 completion for reliable telemetry. |
-| P2 | Capability governance | IMP-MOD-02 | Design and stage policy editor backend/UI for Prohibited Capabilities once moderation cadence stabilizes. | Wait for IMP-MOD-03 handoff and pipeline confirmations. |
-| P3 | Observability suite | IMP-OBS-01 | Schedule observability/incident dashboard rollout after Tier 1 loops are production-ready. | Keep deferred until gameplay + pipeline systems demonstrate sustained stability. |
+| P1 | Hub PvP stabilization | IMP-HUBS-05 | Hold cooldown frustration below 40%, confirm Temporal payload compliance across two releases, and archive telemetry for closure. | Requires staged contest monitor runs on tag 7 with moderation dashboard review. |
+| P1 | Offline contested ingestion | IMP-OFFLINE-06 | Ingest contested encounter artefacts, flag delta conflicts, and gate publishing until review completes. | Depends on finalized telemetry contract from IMP-HUBS-05. |
+| P1 | Unified overlays | IMP-CLIENT-07 | Deliver combined contest and publishing overlays so players/admins see live sentiment plus post-session progress. | Needs contest telemetry API and offline pipeline status endpoints stabilized. |
+| P1 | GM memory transparency | IMP-GM-07 | Produce multi-session memory stress artefacts and transparent check narration for auditability. | Coordinate with IMP-CLIENT overlays to surface roll context; reuse tag 7 build. |
+| P1 | Contest fallout questing | IMP-HUBS-06 | Launch quest hook templates that react to contest outcomes and route fallout through the offline pipeline. | Blocked until IMP-HUBS-05 telemetry review finishes; align with IMP-OFFLINE-06 data contracts. |
+| P2 | Capability governance | IMP-MOD-02 | Ship policy editor UX + backend for prohibited capabilities once Tier 1 loops are stable. | Wait for IMP-HUBS-05 and IMP-OFFLINE-06 evidence to identify required policy hooks. |
+| P3 | Platform automation | — | Remains deferred; IMP-PLATFORM feature is delivered and will restart only when gameplay milestones demand it. | Continue to ignore CI/automation tracks per no-side-process directive. |
 
 ### Validation Reminders
 
-- Link every execution step back to feature commitments in `REQUIREMENTS.md`.
-- Maintain WIP ≤ 10; close PBIs immediately after criteria pass.
-- Update MCP backlog and docs after each milestone to preserve traceability.
+- Anchor every execution step to feature commitments in `REQUIREMENTS.md`, especially offline world updates and unified client mandates.
+- Maintain WIP ≤ 10; close PBIs immediately once acceptance criteria pass.
+- Update MCP backlog, feature records, and docs after each milestone to preserve traceability.
