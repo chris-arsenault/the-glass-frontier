@@ -58,6 +58,12 @@ Stage deploy tag 7 is available for hub telemetry rehearsal. Manifest: artifacts
 - 2025-11-05T05:19:50Z — Posted staged announcement bundle to `#tier1-platform`, `#offline-publishing`, `#client-overlays`, and `#hub-contests` using the templates below. All posts include manifest, deploy summary, and Terraform tag references plus the relevant action prompts for each SME.
 - Awaiting acknowledgements from all Tier 1 SMEs; keep tracker updated as responses arrive and capture confirmation details in the associated MCP backlog items.
 
+## Follow-up Plan
+- 2025-11-05T09:00:00Z — Queue reminder thread in `#tier1-platform` summarising outstanding channels and requesting ETA on confirmations.
+- 2025-11-05T09:05:00Z — Post tailored reminders in `#offline-publishing`, `#client-overlays`, and `#hub-contests` with direct asks for acknowledgement plus pointers to artefacts.
+- 2025-11-05T12:00:00Z — If acknowledgements remain pending, escalate in `#tier1-platform` with summary table and request for delegate coverage.
+- Update Stakeholder Confirmation Log immediately after each response lands, including timestamp, acknowledgement text, and any follow-up actions required by the SME.
+
 ## CI Rehearsal Restart Plan
 1. Collect explicit acknowledgements from `#tier1-platform`, `#offline-publishing`, `#client-overlays`, and `#hub-contests`, then update the confirmation log and their MCP backlog items with timestamps and SME notes.
 2. Flip `IMP-PLATFORM-03` next steps to “CI rehearsal restarted” once all acknowledgements land, and broadcast the confirmation summary in `#tier1-platform` for traceability.
