@@ -6,6 +6,7 @@
 - Extended hub state snapshots and the Check Overlay UI so participants see arming/resolving contests, keyed by contest identifiers with role annotations and moderation-ready context.
 - Wired Temporal contest resolution payloads back into hub room state so overlays disclose outcome tiers, momentum shifts, and shared complications as soon as workflows complete.
 - ContestCoordinator now emits explicit timeout states; Hub Orchestrator broadcasts `contestExpired` events so players get real-time feedback when duels fizzle without a defender.
+- Check Overlay now narrates `contestExpired` events with in-world prompts and rematch cues so players feel the fizzle and know how to re-engage.
 - Captured moderation-dashboard-ready telemetry for contested sparring flows (`artifacts/hub/contest-moderation-2025-11-04T07-39-50-547Z.json`) showing armed → launched → resolved lifecycle payloads and broadcast samples for admin review.
 - Extended the contest monitoring CLI and moderation ingestion so NDJSON logs, timeline artefacts, and stored summaries all produce the same aggregated contest metrics, now including timeout/expiry samples.
 - Tuned contested PvP verb windows (6–7 s) and Temporal resolution timing so the latest load sample lands within DES-BENCH-01 targets (arming p95 7.1 s, resolution p95 780 ms); captured the confirming artefacts in `artifacts/hub/contest-moderation-load-2025-11-04T11-15-00.000Z.ndjson` and its generated summary.
@@ -30,15 +31,15 @@
 ## Testing
 - Added integration coverage in `__tests__/integration/hub/hubOrchestrator.integration.test.js` validating duel verbs arm → launch contest workflows and broadcast contest state/meta.
 - Added integration coverage for contest timeouts, ensuring `contestExpired` state updates broadcast before subsequent commands.
-- Expanded `__tests__/client/components.test.jsx` to ensure contested encounters surface in the Check Overlay and remain accessible via screen-reader-friendly copy.
+- Expanded `__tests__/client/components.test.jsx` so contested encounters—including timeout narration—surface in the Check Overlay with screen-reader-friendly copy.
 - Added unit coverage for `ContestMetrics` (`__tests__/unit/telemetry/contestMetrics.test.js`), the contest monitoring CLI (`__tests__/unit/scripts/contestWorkflowMonitor.test.js`), and the ContestCoordinator timeout workflow to keep latency analysis and multi-actor reporting deterministic.
-- Ran `npm run test:unit -- contest` to exercise the hub orchestration, telemetry, and CLI suites relevant to contested encounters.
+- Ran `npm run test:unit -- contest` for hub orchestration/telemetry suites and `npm run test:client` to validate the refreshed overlay experience.
 
 ## Next Steps & Risks
-- Layer narrative prompts into overlays when `contestExpired` events fire so players get an in-fiction response (e.g., taunts, rematch hooks, consequences for forfeiting).
 - Introduce rematch offers/cooldowns directly in contested verbs so timeouts feed back into gameplay instead of leaving rooms idle.
 - Evaluate demand for multi-actor skirmishes; if required, extend contest key generation to support >2 participants without fragmenting registration windows.
 - Coordinate with Temporal workflow owners to guarantee `resolution.timings` payloads remain populated so telemetry stays aligned with real workflow runtimes.
+- Monitor player sentiment around the new timeout narration to shape rematch pacing and future moderation hooks.
 
 ## References
 - Backlog: `IMP-HUBS-05` (`b183607a-8f77-4693-8eea-99409baec014`)

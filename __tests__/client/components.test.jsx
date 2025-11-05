@@ -518,6 +518,33 @@ describe("Client shell components", () => {
     expect(screen.getByText(/#bruised Bruised pride\./i)).toBeInTheDocument();
   });
 
+  test("CheckOverlay narrates expired contests with prompts", () => {
+    const session = buildSessionValue({
+      hubContests: [
+        {
+          contestId: null,
+          contestKey: "verb.sparringMatch:actor-alpha::actor-beta",
+          status: "expired",
+          label: "Sparring Match",
+          windowMs: 7000,
+          reason: "arming_timeout",
+          participants: [
+            { actorId: "actor-alpha", role: "challenger" },
+            { actorId: "actor-beta", role: "defender" }
+          ]
+        }
+      ]
+    });
+
+    renderWithSession(session, React.createElement(CheckOverlay));
+
+    const expiredPanel = screen.getByTestId("overlay-contest-expired");
+    expect(expiredPanel).toHaveTextContent(/Contest expired/i);
+    expect(expiredPanel).toHaveTextContent(/actor-alpha/i);
+    expect(expiredPanel).toHaveTextContent(/actor-beta/i);
+    expect(expiredPanel).toHaveTextContent(/crowd/i);
+  });
+
   test("SessionMarkerRibbon wrap controls dispatch player control intents", async () => {
     const sendPlayerControl = jest.fn().mockResolvedValue({
       id: "control-1",

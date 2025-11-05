@@ -124,6 +124,73 @@ function formatMomentumDelta(delta) {
   return `${prefix}${delta}`;
 }
 
+function formatContestWindow(windowMs) {
+  if (typeof windowMs !== "number" || Number.isNaN(windowMs) || windowMs <= 0) {
+    return null;
+  }
+  if (windowMs < 1000) {
+    return `${windowMs}ms`;
+  }
+  const seconds = windowMs / 1000;
+  if (seconds < 60) {
+    return Number.isInteger(seconds) ? `${seconds}s` : `${seconds.toFixed(1)}s`;
+  }
+  const minutes = seconds / 60;
+  if (minutes < 60) {
+    return Number.isInteger(minutes) ? `${minutes}m` : `${minutes.toFixed(1)}m`;
+  }
+  const hours = minutes / 60;
+  return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+}
+
+function describeContestExpiry(contest) {
+  const participants = Array.isArray(contest?.participants) ? contest.participants : [];
+  const challenger =
+    participants.find((entry) => (entry.role || "").toLowerCase() === "challenger") ||
+    participants[0] ||
+    null;
+  const defender =
+    participants.find((entry) => (entry.role || "").toLowerCase() === "defender") ||
+    participants.find((entry) => (entry.role || "").toLowerCase() === "target") ||
+    participants[1] ||
+    null;
+  const challengerName = challenger?.actorId || "The challenger";
+  const defenderName = defender?.actorId || (participants.length > 1 ? "their rival" : null);
+  const reason = (contest?.reason || "arming_timeout").toLowerCase();
+  const windowLabel = formatContestWindow(contest?.windowMs);
+  const linger = "The hub murmurs about unfinished business.";
+
+  if (reason === "arming_timeout") {
+    if (defenderName) {
+      return `${challengerName}'s call-out hangs unanswered as ${defenderName} lets the moment slip${
+        windowLabel ? ` past the ${windowLabel} window` : ""
+      }. ${linger}`;
+    }
+    return `${challengerName}'s call-out hangs unanswered${
+      windowLabel ? ` after ${windowLabel}` : ""
+    }. ${linger}`;
+  }
+
+  return `The duel fizzles${
+    windowLabel ? ` after ${windowLabel}` : ""
+  }, leaving tension in the air. ${linger}`;
+}
+
+function buildContestExpiryMeta(contest) {
+  const parts = [];
+  const windowLabel = formatContestWindow(contest?.windowMs);
+  if (windowLabel) {
+    parts.push(`Window ${windowLabel}`);
+  }
+  if (contest?.reason) {
+    parts.push(formatContestStatus(contest.reason));
+  }
+  if (parts.length === 0) {
+    return "Contest expired.";
+  }
+  return `Contest expired · ${parts.join(" · ")}`;
+}
+
 export function CheckOverlay() {
   const { activeCheck, recentChecks, hubContests = [] } = useSessionContext();
   const latestResult = useMemo(() => recentChecks.slice(-1)[0] || null, [recentChecks]);
@@ -316,6 +383,15 @@ export function CheckOverlay() {
                   ) : null}
                   {contest.status === "resolving" && contest.contestId ? (
                     <p className="overlay-contest-meta">Contest ID: {contest.contestId}</p>
+                  ) : null}
+                  {contest.status === "expired" ? (
+                    <div className="overlay-contest-expired" data-testid="overlay-contest-expired">
+                      <p className="overlay-contest-meta">{buildContestExpiryMeta(contest)}</p>
+                      <p className="overlay-contest-narrative">{describeContestExpiry(contest)}</p>
+                      <p className="overlay-contest-rematch">
+                        Spark a rematch when the timing feels right—the crowd is ready to lean in again.
+                      </p>
+                    </div>
                   ) : null}
                   {resolved ? (
                     <div className="overlay-contest-resolution">
