@@ -56,6 +56,8 @@ Stage deploy tag 7 is available for hub telemetry rehearsal. Manifest: artifacts
 
 ## Announcement Posting Log
 - 2025-11-05T05:19:50Z — Posted staged announcement bundle to `#tier1-platform`, `#offline-publishing`, `#client-overlays`, and `#hub-contests` using the templates below. All posts include manifest, deploy summary, and Terraform tag references plus the relevant action prompts for each SME.
+- 2025-11-05T05:47:37Z — Ran `npm run reminders:tier1 -- --preview --now 2025-11-05T05:47:37Z`; all reminder jobs currently sit in the upcoming window.
+- 2025-11-05T09:02:00Z (simulated) — Attempted `npm run reminders:tier1 -- --send --now 2025-11-05T09:02:00Z`; blocked because `SLACK_BOT_TOKEN` is unset. Acquire credentials before the 09:00Z/09:05Z reminder windows.
 - Awaiting acknowledgements from all Tier 1 SMEs; keep tracker updated as responses arrive and capture confirmation details in the associated MCP backlog items.
 
 ## Automation Support
