@@ -1,0 +1,13 @@
+{
+  "registry": "localhost:5000",
+  "tag": "7",
+  "push": true,
+  "images": [
+    { "name": "langgraph", "image": "localhost:5000/langgraph:7" },
+    { "name": "api-gateway", "image": "localhost:5000/api-gateway:7" },
+    { "name": "hub-gateway", "image": "localhost:5000/hub-gateway:7" },
+    { "name": "llm-proxy", "image": "localhost:5000/llm-proxy:7" },
+    { "name": "temporal-worker", "image": "localhost:5000/temporal-worker:7" },
+    { "name": "platform-tasks", "image": "localhost:5000/platform-tasks:7" }
+  ]
+}
