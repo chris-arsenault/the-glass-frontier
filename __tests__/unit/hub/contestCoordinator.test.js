@@ -6,7 +6,17 @@ jest.mock("uuid", () => ({
 
 const { ContestCoordinator } = require("../../../src/hub/orchestrator/contestCoordinator");
 
-function buildContestEntry({ actorId, targetActorId, issuedAt, contestKey }) {
+function buildContestEntry({
+  actorId,
+  targetActorId,
+  issuedAt,
+  contestKey,
+  rematch = {
+    cooldownMs: 12000,
+    offerWindowMs: 90000,
+    recommendedVerb: "verb.testContest"
+  }
+}) {
   return {
     hubId: "hub-test",
     roomId: "room-test",
@@ -50,7 +60,8 @@ function buildContestEntry({ actorId, targetActorId, issuedAt, contestKey }) {
           }
         ],
         contestActors: [actorId, targetActorId],
-        createdAt: issuedAt
+        createdAt: issuedAt,
+        rematch
       }
     }
   };
@@ -128,5 +139,54 @@ describe("ContestCoordinator", () => {
     });
     expect(expired[0].participants).toHaveLength(1);
     expect(coordinator.pendingByRoom.size).toBe(0);
+  });
+
+  test("enforces rematch cooldown after expiration", () => {
+    const clock = { now: jest.fn() };
+    const coordinator = new ContestCoordinator({ clock });
+    const contestKey = "verb.testContest:actor-alpha::actor-beta";
+
+    clock.now.mockReturnValue(1000);
+    const entry = buildContestEntry({
+      actorId: "actor-alpha",
+      targetActorId: "actor-beta",
+      issuedAt: 1000,
+      contestKey
+    });
+
+    const arming = coordinator.register({ entry, issuedAt: 1000 });
+    expect(arming.status).toBe("arming");
+
+    clock.now.mockReturnValue(8200);
+    const expired = coordinator.expire({ roomId: "room-test", now: 8200 });
+    expect(expired).toHaveLength(1);
+    expect(expired[0].rematch).toMatchObject({
+      status: "cooldown",
+      cooldownMs: 12000
+    });
+
+    clock.now.mockReturnValue(8400);
+    const repeatEntry = buildContestEntry({
+      actorId: "actor-alpha",
+      targetActorId: "actor-beta",
+      issuedAt: 8400,
+      contestKey
+    });
+    const cooldown = coordinator.register({ entry: repeatEntry, issuedAt: 8400 });
+    expect(cooldown.status).toBe("cooldown");
+    expect(cooldown.state.rematch).toMatchObject({
+      status: "cooldown"
+    });
+    expect(cooldown.state.rematch.remainingMs).toBeGreaterThan(0);
+
+    clock.now.mockReturnValue(22000);
+    const readyEntry = buildContestEntry({
+      actorId: "actor-alpha",
+      targetActorId: "actor-beta",
+      issuedAt: 22000,
+      contestKey
+    });
+    const rematch = coordinator.register({ entry: readyEntry, issuedAt: 22000 });
+    expect(rematch.status).toBe("arming");
   });
 });

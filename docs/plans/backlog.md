@@ -12,7 +12,7 @@ Updated for Session 134 directive cycle. Tier 1 focus now locks exclusively onto
 |---------|------|--------|----------|-------|
 | IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | done | P1 | Closed 2025-11-05; publishing QA, cadence alignment, and artefact distribution are out of scope going forward. |
 | IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | done | P1 | Closed 2025-11-05; staging smoke bundles, drift rollups, and SME coordination halted under the gameplay-only directive. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Contest timeouts now broadcast with overlay narration; next focus is rematch loops and momentum tuning around the new `contestExpired` events. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Rematch offers now gate timeout retries with verb-level cooldowns; next focus is multi-actor momentum tuning and sentiment monitoring around the refreshed duel loop. |
 | IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | done | P1 | Closed 2025-11-05; moderation cadence telemetry and publishing sync rehearsals are sunset to prioritize gameplay. |
 
 ## Tier 2 (P2)

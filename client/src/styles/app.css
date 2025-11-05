@@ -968,6 +968,14 @@ body {
   margin: 0;
   font-size: 0.8rem;
   color: #cbd5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.overlay-contest-rematch-body {
+  margin: 0;
+  color: #e2e8f0;
 }
 
 .session-ribbon {

@@ -130,6 +130,10 @@
           "initiator": "challenger",
           "target": "defender",
           "support": "ally"
+        },
+        "rematch": {
+          "cooldownSeconds": 12,
+          "offerWindowSeconds": 90
         }
       }
     },
@@ -179,6 +183,10 @@
           "initiator": "challenger",
           "target": "partner",
           "support": "coach"
+        },
+        "rematch": {
+          "cooldownSeconds": 8,
+          "offerWindowSeconds": 75
         }
       }
     },
@@ -227,6 +235,10 @@
           "initiator": "instigator",
           "target": "resistor",
           "support": "ally"
+        },
+        "rematch": {
+          "cooldownSeconds": 15,
+          "offerWindowSeconds": 120
         }
       }
     }

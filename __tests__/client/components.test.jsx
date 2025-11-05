@@ -531,7 +531,14 @@ describe("Client shell components", () => {
           participants: [
             { actorId: "actor-alpha", role: "challenger" },
             { actorId: "actor-beta", role: "defender" }
-          ]
+          ],
+          rematch: {
+            status: "cooldown",
+            cooldownMs: 10000,
+            remainingMs: 10000,
+            availableAt: 1670000000000,
+            recommendedVerb: "verb.sparringMatch"
+          }
         }
       ]
     });
@@ -542,7 +549,10 @@ describe("Client shell components", () => {
     expect(expiredPanel).toHaveTextContent(/Contest expired/i);
     expect(expiredPanel).toHaveTextContent(/actor-alpha/i);
     expect(expiredPanel).toHaveTextContent(/actor-beta/i);
-    expect(expiredPanel).toHaveTextContent(/crowd/i);
+    expect(expiredPanel).toHaveTextContent(/unfinished business/i);
+    const rematchPanel = screen.getByTestId("overlay-contest-rematch");
+    expect(rematchPanel).toHaveTextContent(/Rematch cooling/i);
+    expect(rematchPanel).toHaveTextContent(/Sparring Match/i);
   });
 
   test("SessionMarkerRibbon wrap controls dispatch player control intents", async () => {

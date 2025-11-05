@@ -1,5 +1,9 @@
 "use strict";
 
+jest.mock("uuid", () => ({
+  v4: jest.fn(() => "contest-uuid")
+}));
+
 const EventEmitter = require("events");
 const path = require("path");
 const { createHubApplication } = require("../../../src/hub/hubApplication");
@@ -400,6 +404,69 @@ describe("HubOrchestrator integration", () => {
         roomId: "room-timeout",
         contestKey: expect.any(String)
       })
+    );
+
+    currentTime += 2000;
+
+    await challengerTransport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.challengeDuel",
+        args: {
+          target: "actor-beta",
+          stakes: "Run it back instantly."
+        },
+        metadata: {}
+      }
+    });
+
+    await orchestrator.whenIdle("room-timeout");
+
+    const cooldownUpdate = challengerTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .find((message) => message.payload?.meta?.contestEvent?.status === "cooldown");
+
+    expect(cooldownUpdate).toBeDefined();
+    expect(cooldownUpdate.payload.state.contests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "expired",
+          rematch: expect.objectContaining({
+            status: "cooldown"
+          })
+        })
+      ])
+    );
+
+    currentTime += 13000;
+
+    await challengerTransport.emitMessage({
+      type: "hub.command",
+      payload: {
+        verb: "verb.challengeDuel",
+        args: {
+          target: "actor-beta",
+          stakes: "Ready after cooldown."
+        },
+        metadata: {}
+      }
+    });
+
+    await orchestrator.whenIdle("room-timeout");
+
+    const rematchUpdate = challengerTransport.messages
+      .filter((message) => message.type === "hub.stateUpdate")
+      .reverse()
+      .find((message) => message.payload?.meta?.contestEvent?.status === "arming");
+
+    expect(rematchUpdate).toBeDefined();
+    expect(rematchUpdate.payload.state.contests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "arming",
+          contestKey: expect.any(String)
+        })
+      ])
     );
 
     await orchestrator.stop();

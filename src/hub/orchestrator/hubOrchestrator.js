@@ -566,6 +566,9 @@ class HubOrchestrator extends EventEmitter {
         : [],
       resolvedAt: contestState.resolvedAt || null,
       expiredAt: contestState.expiredAt || null,
+      rematch: contestState.rematch
+        ? this._normalizeContestRematch(clone(contestState.rematch))
+        : null,
       participants: Array.isArray(contestState.participants)
         ? contestState.participants.map((entry) => ({
             ...entry,
@@ -1012,6 +1015,14 @@ class HubOrchestrator extends EventEmitter {
         : []
     };
 
+    if (contestState.rematch && typeof contestState.rematch === "object") {
+      normalized.rematch = this._normalizeContestRematch({
+        ...contestState.rematch
+      });
+    } else if ("rematch" in normalized) {
+      normalized.rematch = null;
+    }
+
     if (index >= 0) {
       next[index] = {
         ...next[index],
@@ -1026,6 +1037,48 @@ class HubOrchestrator extends EventEmitter {
     }
 
     return next;
+  }
+
+  _normalizeContestRematch(rematch) {
+    if (!rematch || typeof rematch !== "object") {
+      return null;
+    }
+
+    const now = typeof this.clock.now === "function" ? this.clock.now() : Date.now();
+    const availableAt =
+      typeof rematch.availableAt === "number" && Number.isFinite(rematch.availableAt)
+        ? rematch.availableAt
+        : null;
+    const cooldownMs =
+      typeof rematch.cooldownMs === "number" && Number.isFinite(rematch.cooldownMs)
+        ? rematch.cooldownMs
+        : null;
+
+    let remainingMs =
+      typeof rematch.remainingMs === "number" && rematch.remainingMs >= 0
+        ? rematch.remainingMs
+        : null;
+
+    if (availableAt !== null) {
+      remainingMs = Math.max(0, availableAt - now);
+    } else if (remainingMs === null && cooldownMs !== null) {
+      remainingMs = cooldownMs;
+    }
+
+    const status =
+      availableAt !== null && availableAt <= now
+        ? "ready"
+        : rematch.status && typeof rematch.status === "string"
+        ? rematch.status
+        : "cooldown";
+
+    return {
+      ...rematch,
+      status,
+      remainingMs,
+      availableAt,
+      cooldownMs
+    };
   }
 
   _serializeParticipant(participant) {

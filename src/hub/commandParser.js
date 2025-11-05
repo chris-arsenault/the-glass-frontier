@@ -60,6 +60,52 @@ function buildContestMetadata(definition, args, context) {
     });
   }
 
+  const rematchConfig = contestConfig.rematch || {};
+  const fallbackRematchCooldownSeconds =
+    typeof contestConfig.rematchCooldownSeconds === "number"
+      ? contestConfig.rematchCooldownSeconds
+      : null;
+
+  let rematchCooldownMs = null;
+  if (rematchConfig && rematchConfig.enabled === false) {
+    rematchCooldownMs = null;
+  } else if (
+    typeof rematchConfig.cooldownMs === "number" &&
+    Number.isFinite(rematchConfig.cooldownMs) &&
+    rematchConfig.cooldownMs >= 0
+  ) {
+    rematchCooldownMs = Math.floor(rematchConfig.cooldownMs);
+  } else if (
+    typeof rematchConfig.cooldownSeconds === "number" &&
+    Number.isFinite(rematchConfig.cooldownSeconds) &&
+    rematchConfig.cooldownSeconds >= 0
+  ) {
+    rematchCooldownMs = Math.floor(rematchConfig.cooldownSeconds * 1000);
+  } else if (
+    typeof fallbackRematchCooldownSeconds === "number" &&
+    Number.isFinite(fallbackRematchCooldownSeconds) &&
+    fallbackRematchCooldownSeconds >= 0
+  ) {
+    rematchCooldownMs = Math.floor(fallbackRematchCooldownSeconds * 1000);
+  } else {
+    rematchCooldownMs = 12000;
+  }
+
+  let rematchOfferWindowMs = null;
+  if (
+    typeof rematchConfig.offerWindowMs === "number" &&
+    Number.isFinite(rematchConfig.offerWindowMs) &&
+    rematchConfig.offerWindowMs > 0
+  ) {
+    rematchOfferWindowMs = Math.floor(rematchConfig.offerWindowMs);
+  } else if (
+    typeof rematchConfig.offerWindowSeconds === "number" &&
+    Number.isFinite(rematchConfig.offerWindowSeconds) &&
+    rematchConfig.offerWindowSeconds > 0
+  ) {
+    rematchOfferWindowMs = Math.floor(rematchConfig.offerWindowSeconds * 1000);
+  }
+
   const actorSet = new Set([context.actorId, targetActorId]);
   const contestKey = `${definition.verbId}:${Array.from(actorSet).sort().join("::")}`;
   const roles = contestConfig.roles || {};
@@ -105,7 +151,15 @@ function buildContestMetadata(definition, args, context) {
       }
     ],
     contestActors: Array.from(actorSet),
-    createdAt: context.issuedAt
+    createdAt: context.issuedAt,
+    rematch:
+      rematchCooldownMs !== null
+        ? {
+            cooldownMs: rematchCooldownMs,
+            offerWindowMs: rematchOfferWindowMs,
+            recommendedVerb: rematchConfig.recommendedVerb || contestConfig.move || definition.verbId
+          }
+        : null
   };
 }
 

@@ -143,6 +143,24 @@ function formatContestWindow(windowMs) {
   return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
 }
 
+function formatVerbLabel(verbId) {
+  if (!verbId) {
+    return "the contested move";
+  }
+  const normalized = verbId
+    .replace(/^verb\./i, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]/g, " ")
+    .trim();
+  if (!normalized) {
+    return "the contested move";
+  }
+  return normalized
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function describeContestExpiry(contest) {
   const participants = Array.isArray(contest?.participants) ? contest.participants : [];
   const challenger =
@@ -189,6 +207,43 @@ function buildContestExpiryMeta(contest) {
     return "Contest expired.";
   }
   return `Contest expired · ${parts.join(" · ")}`;
+}
+
+function buildRematchOfferMeta(rematch) {
+  if (!rematch) {
+    return "Rematch opportunity warming up.";
+  }
+  if (rematch.status === "ready") {
+    return "Rematch ready · The crowd leans in for round two.";
+  }
+  const remaining = formatContestWindow(rematch.remainingMs);
+  if (remaining) {
+    return `Rematch cooling · Ready in ${remaining}`;
+  }
+  const cooldown = formatContestWindow(rematch.cooldownMs);
+  if (cooldown) {
+    return `Rematch cooling · Cooldown ${cooldown}`;
+  }
+  return "Rematch cooling · Await the moderator's nod.";
+}
+
+function describeRematchOffer(rematch, contest) {
+  if (!rematch) {
+    return "Spark a rematch when the timing feels right—the crowd is ready to lean in again.";
+  }
+  const verbLabel = formatVerbLabel(rematch.recommendedVerb || contest?.move || contest?.label);
+  if (rematch.status === "ready") {
+    return `Rematch window is open—signal ${verbLabel} when you're both set for the next exchange.`;
+  }
+  const remaining = formatContestWindow(rematch.remainingMs);
+  if (remaining) {
+    return `Give everyone ${remaining} to reset before reissuing ${verbLabel}. The hub will flag spammy call-outs.`;
+  }
+  const cooldown = formatContestWindow(rematch.cooldownMs);
+  if (cooldown) {
+    return `Hold for about ${cooldown} before reissuing ${verbLabel} so the duel lands with fresh energy.`;
+  }
+  return `Let the moment settle before reprising ${verbLabel}; moderation keeps duels from spamming the room.`;
 }
 
 export function CheckOverlay() {
@@ -388,9 +443,14 @@ export function CheckOverlay() {
                     <div className="overlay-contest-expired" data-testid="overlay-contest-expired">
                       <p className="overlay-contest-meta">{buildContestExpiryMeta(contest)}</p>
                       <p className="overlay-contest-narrative">{describeContestExpiry(contest)}</p>
-                      <p className="overlay-contest-rematch">
-                        Spark a rematch when the timing feels right—the crowd is ready to lean in again.
-                      </p>
+                      <div className="overlay-contest-rematch" data-testid="overlay-contest-rematch">
+                        <p className="overlay-contest-meta">
+                          {buildRematchOfferMeta(contest.rematch)}
+                        </p>
+                        <p className="overlay-contest-rematch-body">
+                          {describeRematchOffer(contest.rematch, contest)}
+                        </p>
+                      </div>
                     </div>
                   ) : null}
                   {resolved ? (
