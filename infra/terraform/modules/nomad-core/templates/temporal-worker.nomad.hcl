@@ -7,8 +7,10 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "metrics" {
-        to = 9000
+        to     = 9000
+        static = 9000
       }
     }
 
@@ -16,14 +18,15 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {
         TEMPORAL_NAMESPACE   = "${temporal_domain}"
         TEMPORAL_TASK_QUEUE  = "${task_queue}"
         METRICS_NAMESPACE    = "${metrics_namespace}"
-        OTEL_EXPORTER_OTLP   = "http://otel-collector.service.consul:4317"
+        OTEL_EXPORTER_OTLP   = "http://localhost:4317"
         CONSUL_HTTP_ADDR     = "${consul_http_addr}"
         VAULT_ADDR           = "${vault_addr}"
       }

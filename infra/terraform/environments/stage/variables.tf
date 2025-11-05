@@ -152,3 +152,9 @@ variable "minio_lifecycle_cron" {
   type        = string
   default     = "0 */6 * * *"
 }
+
+variable "glass_docker_tag" {
+  description = "Current tag for latest custom docker builds"
+  type = string
+  default = "2025.11.1"
+}

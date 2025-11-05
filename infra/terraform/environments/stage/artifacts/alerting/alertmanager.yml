@@ -7,4 +7,4 @@ receivers:
       - url: http://pagerduty-relay.service.consul:8080/hook
 
 templates:
-  - ./artifacts/alerting/story-alerts.yaml
+  - /etc/alertmanager/story-alerts.yaml

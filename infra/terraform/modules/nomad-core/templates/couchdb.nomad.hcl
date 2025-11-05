@@ -7,8 +7,10 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "http" {
-        to = 5984
+        to     = 5984
+        static = 5984
       }
     }
 
@@ -22,8 +24,8 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["http"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {

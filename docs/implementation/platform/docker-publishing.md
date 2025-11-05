@@ -1,10 +1,10 @@
 # IMP-PLATFORM-03: Docker Publishing Automation
 
 ## Overview
-`infra/docker/publish-services.sh` wraps the shared multi-stage service build so staging pipelines can authenticate to the registry, build tagged images, and emit a manifest for downstream rollout jobs. It reuses the canonical service list in `infra/docker/services.list` to keep image coverage aligned with Terraform/nomad deployments.
+`infra/docker/publish-services.sh` wraps the shared multi-stage service build so staging pipelines can authenticate to the registry, build tagged images, and emit a manifest for downstream rollout jobs. It reuses the canonical service list in `infra/docker/services.list` to keep image coverage aligned with Terraform/nomad deployments. Local staging now relies on the bundled registry (`localhost:5000`) and Terraform promotion flow driven by `npm run deploy:stage`.
 
 ## Required environment
-- `CI_REGISTRY` *(default `registry.stage`)* – hostname for the staging registry.
+- `CI_REGISTRY` *(default `registry.stage`; `npm run deploy:stage` overrides to `localhost:5000`)* – hostname for the staging registry.
 - `CI_REGISTRY_USERNAME` / `CI_REGISTRY_PASSWORD` – credentials piped to `docker login`.
 - `CI_IMAGE_TAG` – immutable tag applied to every service image (e.g. git SHA or release stamp).
 - `CI_IMAGE_PLATFORM` *(optional)* – forwarded to Docker’s `--platform` flag (e.g. `linux/amd64`).
@@ -30,6 +30,10 @@ The script performs `docker login`, calls `infra/docker/build-services.sh --push
 - `CI_SERVICE_FILTER` and `SERVICES` provide equivalent overrides for bespoke CI systems.
 - To dry-run the manifest generation without a Docker daemon, point `CI_DOCKER_CLI` at a stub script that logs invocations (see `__tests__/infra/publishServices.test.js` for an example). Combine this with `CI_PUSH=false` to validate manifest output locally before unlocking registry pushes.
 - Invalid names abort the run with `Unknown service(s) requested`, ensuring CI jobs fail fast when filters drift from `infra/docker/services.list`.
+
+## Stage Promotion Shortcut
+
+Running `npm run deploy:stage` increments the workspace `.buildnum`, rebuilds every service image against that numeric tag, pushes to the local registry (`localhost:5000` by default), and reapplies Terraform (`infra/terraform/environments/stage/apply.sh`). The build helper now writes the fresh tag into `infra/terraform/environments/stage/stage.tfvars` (`glass_docker_tag`) so Nomad jobs pick up the new image set without manual edits.
 
 ## Output manifest
 Example excerpt:

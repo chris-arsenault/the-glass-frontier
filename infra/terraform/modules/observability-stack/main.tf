@@ -64,7 +64,8 @@ resource "nomad_job" "grafana" {
     memory            = var.grafana_memory
     admin_user        = var.grafana_admin_user
     admin_password    = var.grafana_admin_password
-    dashboard_path    = var.dashboard_output_path
+    dashboard_host_path      = var.dashboard_output_path
+    dashboard_container_path = var.grafana_dashboards_container_path
     victoria_datasource = var.victoria_metrics_url
     loki_datasource     = var.loki_url
   }))
@@ -77,7 +78,9 @@ resource "nomad_job" "alertmanager" {
     docker_image    = var.alertmanager_image
     cpu             = var.alertmanager_cpu
     memory          = var.alertmanager_memory
-    config_path     = var.alertmanager_config_path
+    host_config_path      = var.alertmanager_config_path
+    container_config_path = var.alertmanager_container_path
+    storage_path          = var.alertmanager_storage_path
   }))
 }
 
@@ -112,7 +115,7 @@ receivers:
       - url: http://pagerduty-relay.service.consul:8080/hook
 
 templates:
-  - ${var.alertmanager_config_path}/story-alerts.yaml
+  - ${var.alertmanager_container_path}/story-alerts.yaml
 EOF
 }
 

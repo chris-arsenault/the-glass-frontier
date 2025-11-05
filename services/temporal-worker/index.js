@@ -68,6 +68,10 @@ const orchestrator = new ClosureWorkflowOrchestrator({
   metrics
 });
 
+const keepAlive = setInterval(() => {
+  log("debug", "Temporal worker heartbeat");
+}, 60000);
+
 let isShuttingDown = false;
 
 function shutdown() {
@@ -76,6 +80,7 @@ function shutdown() {
   }
   isShuttingDown = true;
   log("info", "Temporal worker shutting down");
+  clearInterval(keepAlive);
   Promise.resolve(orchestrator.stop())
     .catch((error) => {
       log("warn", "Temporal worker stop failed", { message: error.message });
@@ -85,6 +90,15 @@ function shutdown() {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+process.on("unhandledRejection", (reason) => {
+  log("error", "Unhandled rejection in temporal worker", {
+    message: reason?.message || String(reason)
+  });
+});
+process.on("uncaughtException", (error) => {
+  log("error", "Uncaught exception in temporal worker", { message: error.message });
+  shutdown();
+});
 
 log("info", "Temporal worker starting");
 orchestrator.start();

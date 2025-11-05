@@ -3,7 +3,7 @@ set -euo pipefail
 
 VAULT_ADDR="${VAULT_ADDR:-}"
 APPROLE_PATH="approle"
-OUTPUT_DIR="./artifacts/vault"
+OUTPUT_DIR="/home/tsonu/src/the-glass-frontier/infra/terraform/environments/stage/artifacts/vault"
 ROTATE_SPEC="*/30 * * * *"
 
 if [[ -z "${VAULT_TOKEN:-}" ]]; then

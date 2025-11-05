@@ -28,7 +28,7 @@ const hubApp = createHubApplication({
 });
 const { gateway, telemetry, presenceStore, roomStateStore } = hubApp;
 
-gateway.setupHttpRoutes(app, { ssePath, commandPath });
+gateway.attachHttpInterface({ app, ssePath, commandPath });
 
 const orchestrator = new HubOrchestrator({
   gateway,

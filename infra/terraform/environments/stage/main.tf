@@ -1,9 +1,13 @@
 locals {
   prefix            = "gf-stage"
-  output_root       = "${path.module}/artifacts"
+  output_root       = "${abspath(path.module)}/artifacts"
   alert_config_path = "${local.output_root}/alerting"
   dashboard_path    = "${local.output_root}/dashboards"
   bootstrap_path    = "${local.output_root}/vault"
+  temporal_db_host     = "172.19.28.130"
+  temporal_db_port     = 5432
+  temporal_db_name     = "temporal"
+  temporal_visibility_db = "temporal_visibility"
 }
 
 resource "null_resource" "artifact_directories" {
@@ -43,6 +47,7 @@ module "vault_platform" {
 
   postgres_admin_username = "postgres"
   postgres_admin_password = "postgres-super-secret"
+  postgres_connection_url = "postgresql://{{username}}:{{password}}@172.19.28.130:5432/${local.temporal_db_name}?sslmode=disable"
 
   rotate_cron_spec = "*/30 * * * *"
 }
@@ -63,15 +68,39 @@ module "nomad_core" {
   api_base_url       = var.api_base_url
   couchdb_admin_password = var.couchdb_admin_password
 
-  langgraph_image         = "registry.stage/langgraph:2025.11.0"
-  llm_proxy_image         = "registry.stage/llm-proxy:2025.11.0"
-  hub_gateway_image       = "registry.stage/hub-gateway:2025.11.0"
-  temporal_worker_image   = "registry.stage/temporal-worker:2025.11.0"
-  temporal_frontend_image = "temporalio/server:1.23.0"
-  api_gateway_image       = "registry.stage/api-gateway:2025.11.0"
+  postgres_admin_user     = "postgres"
+  postgres_admin_password = "postgres-super-secret"
+  postgres_database       = local.temporal_db_name
+
+  temporal_database_host           = local.temporal_db_host
+  temporal_database_port           = local.temporal_db_port
+  temporal_database_name           = local.temporal_db_name
+  temporal_visibility_database     = local.temporal_visibility_db
+  temporal_database_user           = "temporal_admin"
+  temporal_database_password       = "super-secret"
+
+  langgraph_count         = 1
+  api_gateway_count       = 1
+  hub_gateway_count       = 1
+  llm_proxy_count         = 1
+  temporal_worker_count   = 1
+  temporal_frontend_count = 1
+  couchdb_count           = 1
+  redis_count             = 1
+
+  hub_gateway_port    = 8080
+  hub_gateway_ws_port = 8081
+  api_gateway_port    = 8088
+
+  langgraph_image         = "localhost:5000/langgraph:${var.glass_docker_tag}"
+  llm_proxy_image         = "localhost:5000/llm-proxy:${var.glass_docker_tag}"
+  hub_gateway_image       = "localhost:5000/hub-gateway:${var.glass_docker_tag}"
+  temporal_worker_image   = "localhost:5000/temporal-worker:${var.glass_docker_tag}"
+  temporal_frontend_image = "temporalio/auto-setup:1.29.1"
+  api_gateway_image       = "localhost:5000/api-gateway:${var.glass_docker_tag}"
 
   enable_minio_lifecycle_job = true
-  minio_lifecycle_image      = "registry.stage/platform-tasks:2025.11.0"
+  minio_lifecycle_image      = "localhost:5000/platform-tasks:${var.glass_docker_tag}"
   minio_lifecycle_cron       = var.minio_lifecycle_cron
   minio_endpoint             = var.minio_endpoint
   minio_port                 = var.minio_port

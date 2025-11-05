@@ -57,7 +57,7 @@ variable "api_base_url" {
 variable "langgraph_image" {
   description = "Container image for LangGraph workers."
   type        = string
-  default     = "registry.local/langgraph:latest"
+  default     = "localhost:5000/langgraph:2025.11.0"
 }
 
 variable "langgraph_cpu" {
@@ -75,13 +75,13 @@ variable "langgraph_memory" {
 variable "langgraph_count" {
   description = "Number of LangGraph allocations to schedule."
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "llm_proxy_image" {
   description = "Container image for the LLM proxy service."
   type        = string
-  default     = "registry.local/llm-proxy:latest"
+  default     = "localhost:5000/llm-proxy:2025.11.0"
 }
 
 variable "llm_proxy_cpu" {
@@ -105,7 +105,7 @@ variable "llm_proxy_count" {
 variable "hub_gateway_image" {
   description = "Container image for the hub gateway orchestrator."
   type        = string
-  default     = "registry.local/hub-gateway:latest"
+  default     = "localhost:5000/hub-gateway:2025.11.0"
 }
 
 variable "hub_gateway_cpu" {
@@ -141,7 +141,7 @@ variable "hub_gateway_ws_port" {
 variable "temporal_frontend_image" {
   description = "Container image for the Temporal frontend service."
   type        = string
-  default     = "temporalio/auto-setup:1.23.0"
+  default     = "temporalio/auto-setup:1.29.1"
 }
 
 variable "temporal_frontend_cpu" {
@@ -174,10 +174,52 @@ variable "temporal_domain" {
   default     = "glass-frontier"
 }
 
+variable "temporal_database_host" {
+  description = "Hostname for Temporal primary persistence store (PostgreSQL)."
+  type        = string
+  default     = "postgres.service.consul"
+}
+
+variable "temporal_database_port" {
+  description = "Port for Temporal persistence database."
+  type        = number
+  default     = 5432
+}
+
+variable "temporal_database_name" {
+  description = "Database name used for Temporal core persistence."
+  type        = string
+  default     = "temporal"
+}
+
+variable "temporal_visibility_database" {
+  description = "Database name used for Temporal visibility persistence."
+  type        = string
+  default     = "temporal_visibility"
+}
+
+variable "temporal_database_user" {
+  description = "Database user for Temporal persistence."
+  type        = string
+  default     = "temporal_admin"
+}
+
+variable "temporal_database_password" {
+  description = "Database password for Temporal persistence."
+  type        = string
+  sensitive   = true
+}
+
+variable "temporal_num_history_shards" {
+  description = "History shard count for Temporal persistence."
+  type        = number
+  default     = 4
+}
+
 variable "temporal_worker_image" {
   description = "Container image for Temporal workers."
   type        = string
-  default     = "registry.local/temporal-worker:latest"
+  default     = "localhost:5000/temporal-worker:2025.11.0"
 }
 
 variable "temporal_worker_cpu" {
@@ -240,6 +282,12 @@ variable "redis_volume_path" {
   default     = "/var/lib/redis"
 }
 
+variable "redis_count" {
+  description = "Number of redis instances to run"
+  type        = number
+  default     = 1
+}
+
 variable "couchdb_image" {
   description = "Container image for CouchDB."
   type        = string
@@ -288,10 +336,58 @@ variable "couchdb_admin_password" {
   sensitive   = true
 }
 
+variable "postgres_image" {
+  description = "Container image for PostgreSQL."
+  type        = string
+  default     = "postgres:16-alpine"
+}
+
+variable "postgres_cpu" {
+  description = "CPU allocation for the PostgreSQL service."
+  type        = number
+  default     = 500
+}
+
+variable "postgres_memory" {
+  description = "Memory allocation (MB) for the PostgreSQL service."
+  type        = number
+  default     = 1024
+}
+
+variable "postgres_volume_name" {
+  description = "Nomad volume name bound to PostgreSQL for persistence."
+  type        = string
+  default     = "postgres-data"
+}
+
+variable "postgres_volume_path" {
+  description = "Mount path for PostgreSQL data inside the container."
+  type        = string
+  default     = "/var/lib/postgresql/data"
+}
+
+variable "postgres_admin_user" {
+  description = "Administrative PostgreSQL username."
+  type        = string
+  default     = "postgres"
+}
+
+variable "postgres_admin_password" {
+  description = "Administrative PostgreSQL password."
+  type        = string
+  sensitive   = true
+}
+
+variable "postgres_database" {
+  description = "Primary PostgreSQL database to create for Temporal."
+  type        = string
+  default     = "temporal"
+}
+
 variable "api_gateway_image" {
   description = "Container image for the API gateway."
   type        = string
-  default     = "registry.local/api-gateway:latest"
+  default     = "localhost:5000/api-gateway:2025.11.0"
 }
 
 variable "api_gateway_cpu" {
@@ -333,7 +429,7 @@ variable "enable_minio_lifecycle_job" {
 variable "minio_lifecycle_image" {
   description = "Container image that bundles the lifecycle manager script."
   type        = string
-  default     = "registry.local/platform-tasks:latest"
+  default     = "localhost:5000/platform-tasks:2025.11.0"
 }
 
 variable "minio_lifecycle_cron" {

@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_LIST_FILE="${SERVICE_LIST_FILE:-${SCRIPT_DIR}/services.list}"
 DOCKER_CLI="${DOCKER_CLI:-docker}"
 SERVICE_FILTER_RAW="${CI_SERVICE_FILTER:-${SERVICE_FILTER:-${CI_SERVICES:-${SERVICES:-}}}}"
+STAGE_TFVARS="${STAGE_TFVARS:-${SCRIPT_DIR}/../terraform/environments/stage/stage.tfvars}"
 
 if ! command -v "${DOCKER_CLI}" >/dev/null 2>&1; then
   echo "[build-services] ${DOCKER_CLI} command not found" >&2
@@ -13,7 +14,7 @@ fi
 
 TAG="${TAG:-2025.11.0}"
 REGISTRY="${REGISTRY:-registry.stage}"
-NODE_VERSION="${NODE_VERSION:-20.18.0}"
+NODE_VERSION="${NODE_VERSION:-25.1.0}"
 DOCKERFILE="${DOCKERFILE:-infra/docker/service.Dockerfile}"
 PUSH_IMAGES="${PUSH_IMAGES:-false}"
 PLATFORM="${PLATFORM:-}"
@@ -188,4 +189,13 @@ if [[ "${PUSH_IMAGES}" == "true" ]]; then
 else
   echo "Build complete. Images tagged with ${REGISTRY}/<service>:${TAG}"
   echo "Use --push to publish to the configured registry."
+fi
+if [[ -n "${TAG}" ]]; then
+  if [[ -f "${STAGE_TFVARS}" ]]; then
+    if grep -q '^glass_docker_tag' "${STAGE_TFVARS}"; then
+      sed -i.bak -E "s#^glass_docker_tag\s*=.*#glass_docker_tag = \"${TAG}\"#" "${STAGE_TFVARS}" && rm -f "${STAGE_TFVARS}.bak"
+    else
+      printf '\nglass_docker_tag = "%s"\n' "${TAG}" >> "${STAGE_TFVARS}"
+    fi
+  fi
 fi

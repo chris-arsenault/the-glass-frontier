@@ -21,7 +21,7 @@ job "${job_name}" {
       config {
         image = "${docker_image}"
         ports = ["grpc", "http"]
-        args  = ["--config=/etc/otel/collector-config.yaml"]
+        args  = ["--config=/local/collector-config.yaml"]
       }
 
       template {
@@ -33,24 +33,29 @@ receivers:
       grpc:
       http:
 processors:
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: "${environment}"
+        action: upsert
+      - key: service.name
+        value: "${service_name}"
+        action: upsert
   batch:
 exporters:
   otlphttp:
     endpoint: "${victoria_remote}"
   loki:
     endpoint: "${loki_remote}"
-    labels:
-      environment: "${environment}"
-      service: "${service_name}"
 service:
   pipelines:
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      processors: [resource, batch]
       exporters: [otlphttp]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [resource, batch]
       exporters: [loki]
 EOF
       }

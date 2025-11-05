@@ -11,3 +11,4 @@
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
+/infra/terraform/environments/stage/artifacts/

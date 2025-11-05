@@ -4,7 +4,7 @@ job "${job_name}" {
   type        = "service"
 
   group "redis" {
-    count = 1
+    count = ${count}
 
     volume "redis-data" {
       type   = "host"
@@ -13,8 +13,10 @@ job "${job_name}" {
     }
 
     network {
+      mode = "host"
       port "db" {
-        to = 6379
+        to     = 6379
+        static = 6379
       }
     }
 
@@ -22,8 +24,8 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["db"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       volume_mount {

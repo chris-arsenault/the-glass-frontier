@@ -604,7 +604,7 @@ function createApp({
   const staticDir = path.resolve(__dirname, "../../dist");
   if (fs.existsSync(staticDir)) {
     app.use(express.static(staticDir));
-    app.get("*", (req, res, next) => {
+    app.get(/.*/, (req, res, next) => {
       if (
         req.method !== "GET" ||
         req.path.startsWith("/sessions") ||

@@ -7,11 +7,10 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "http" {
-        to = ${http_port}
-      }
-      port "ws" {
-        to = 0
+        to     = ${http_port}
+        static = ${http_port}
       }
     }
 
@@ -19,8 +18,8 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["http"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {
@@ -41,25 +40,12 @@ job "${job_name}" {
         check {
           name     = "api-gateway-http"
           type     = "http"
-          path     = "/healthz"
+          path     = "/health"
           interval = "10s"
           timeout  = "2s"
         }
       }
 
-%{ if enable_ws }
-      service {
-        name = "${service_name}-ws"
-        port = "ws"
-        tags = ["api", "gateway", "ws"]
-        check {
-          name     = "api-gateway-ws"
-          type     = "tcp"
-          interval = "15s"
-          timeout  = "2s"
-        }
-      }
-%{ endif }
     }
   }
 

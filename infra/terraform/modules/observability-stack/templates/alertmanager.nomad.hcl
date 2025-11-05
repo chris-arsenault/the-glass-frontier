@@ -12,12 +12,6 @@ job "${job_name}" {
       }
     }
 
-    volume "alertmanager-config" {
-      type   = "host"
-      source = "alertmanager-config"
-      read_only = false
-    }
-
     task "alertmanager" {
       driver = "docker"
 
@@ -25,14 +19,12 @@ job "${job_name}" {
         image = "${docker_image}"
         ports = ["http"]
         args  = [
-          "--config.file=${config_path}/alertmanager.yml",
-          "--storage.path=${config_path}/data"
+          "--config.file=${container_config_path}/alertmanager.yml",
+          "--storage.path=${storage_path}"
         ]
-      }
-
-      volume_mount {
-        volume      = "alertmanager-config"
-        destination = "${config_path}"
+        volumes = [
+          "${host_config_path}:${container_config_path}:ro"
+        ]
       }
 
       resources {

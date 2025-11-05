@@ -91,7 +91,7 @@ variable "victoriametrics_retention_days" {
 variable "loki_image" {
   description = "Container image for Grafana Loki."
   type        = string
-  default     = "grafana/loki:3.1.1"
+  default     = "grafana/loki:3.5.7"
 }
 
 variable "loki_cpu" {
@@ -143,9 +143,15 @@ variable "grafana_admin_password" {
 }
 
 variable "dashboard_output_path" {
-  description = "Filesystem path where dashboards are rendered."
+  description = "Host filesystem path where rendered Grafana dashboards are stored."
   type        = string
-  default     = "./dashboards"
+  default     = "/var/dashboards"
+}
+
+variable "grafana_dashboards_container_path" {
+  description = "Container path where Grafana expects dashboards to be mounted."
+  type        = string
+  default     = "/var/lib/grafana/dashboards"
 }
 
 variable "grafana_victoria_datasource_name" {
@@ -179,9 +185,21 @@ variable "alertmanager_memory" {
 }
 
 variable "alertmanager_config_path" {
-  description = "Host path for Alertmanager configuration."
+  description = "Host path for Alertmanager configuration artifacts."
   type        = string
-  default     = "./alerting"
+  default     = "/var/alerting"
+}
+
+variable "alertmanager_container_path" {
+  description = "Container path where Alertmanager configuration is mounted."
+  type        = string
+  default     = "/etc/alertmanager"
+}
+
+variable "alertmanager_storage_path" {
+  description = "Container path used by Alertmanager for runtime storage (no host mount by default)."
+  type        = string
+  default     = "/alertmanager"
 }
 
 variable "temporal_latency_target_ms" {

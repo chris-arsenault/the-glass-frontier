@@ -7,8 +7,10 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "http" {
-        to = 8082
+        to     = 8082
+        static = 8082
       }
     }
 
@@ -16,8 +18,8 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["http"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {
@@ -31,10 +33,10 @@ job "${job_name}" {
         change_mode = "restart"
         env         = true
         data        = <<EOF
-{{ with secret "providers/openai" -}}
+{{ with secret "platform-kv/data/providers/openai" -}}
 OPENAI_API_KEY={{ .Data.data.key }}
 {{ end -}}
-{{ with secret "providers/anthropic" -}}
+{{ with secret "platform-kv/data/providers/anthropic" -}}
 ANTHROPIC_API_KEY={{ .Data.data.key }}
 {{ end -}}
 EOF
@@ -52,7 +54,7 @@ EOF
         check {
           name     = "llm-proxy-ready"
           type     = "http"
-          path     = "/health"
+          path     = "/healthz"
           interval = "15s"
           timeout  = "2s"
         }

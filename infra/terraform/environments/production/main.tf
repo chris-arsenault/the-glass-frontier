@@ -4,6 +4,10 @@ locals {
   alert_config_path = "${local.output_root}/alerting"
   dashboard_path    = "${local.output_root}/dashboards"
   bootstrap_path    = "${local.output_root}/vault"
+  temporal_db_host     = "${var.service_namespace}-postgres.service.consul"
+  temporal_db_port     = 5432
+  temporal_db_name     = "temporal"
+  temporal_visibility_db = "temporal_visibility"
 }
 
 resource "null_resource" "artifact_directories" {
@@ -44,6 +48,7 @@ module "vault_platform" {
 
   postgres_admin_username = "postgres"
   postgres_admin_password = "rotate-me-prod"
+  postgres_connection_url = "postgresql://{{username}}:{{password}}@${var.service_namespace}-postgres.service.consul:5432/${local.temporal_db_name}?sslmode=disable"
 
   rotate_cron_spec = "*/15 * * * *"
 }
@@ -63,6 +68,17 @@ module "nomad_core" {
   couchdb_url       = var.couchdb_url
   api_base_url      = var.api_base_url
 
+  postgres_admin_user     = "postgres"
+  postgres_admin_password = "rotate-me-prod"
+  postgres_database       = local.temporal_db_name
+
+  temporal_database_host         = local.temporal_db_host
+  temporal_database_port         = local.temporal_db_port
+  temporal_database_name         = local.temporal_db_name
+  temporal_visibility_database   = local.temporal_visibility_db
+  temporal_database_user         = "temporal_admin"
+  temporal_database_password     = "rotate-me"
+
   langgraph_count = 5
   hub_gateway_count = 3
   temporal_worker_count = 5
@@ -71,7 +87,7 @@ module "nomad_core" {
   llm_proxy_image         = "registry.prod/llm-proxy:2025.11.0"
   hub_gateway_image       = "registry.prod/hub-gateway:2025.11.0"
   temporal_worker_image   = "registry.prod/temporal-worker:2025.11.0"
-  temporal_frontend_image = "temporalio/server:1.23.0"
+  temporal_frontend_image = "temporalio/auto-setup:1.23.0"
   api_gateway_image       = "registry.prod/api-gateway:2025.11.0"
 
   enable_minio_lifecycle_job = true

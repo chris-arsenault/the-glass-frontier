@@ -66,6 +66,12 @@ resource "nomad_job" "temporal_frontend" {
     count           = var.temporal_frontend_count
     temporal_ui     = var.temporal_ui_enabled
     temporal_domain = var.temporal_domain
+    temporal_db_host      = var.temporal_database_host
+    temporal_db_port      = var.temporal_database_port
+    temporal_db_name      = var.temporal_database_name
+    temporal_visibility_db = var.temporal_visibility_database
+    temporal_db_user      = var.temporal_database_user
+    temporal_db_password  = var.temporal_database_password
   }))
 }
 
@@ -90,6 +96,7 @@ resource "nomad_job" "redis" {
     docker_image = var.redis_image
     cpu          = var.redis_cpu
     memory       = var.redis_memory
+    count        = var.redis_count
     volume_name  = var.redis_volume_name
     volume_path  = var.redis_volume_path
   }))
@@ -107,6 +114,24 @@ resource "nomad_job" "couchdb" {
     volume_path   = var.couchdb_volume_path
     couchdb_admin = var.couchdb_admin_user
     couchdb_pass  = var.couchdb_admin_password
+  }))
+}
+
+resource "nomad_job" "postgres" {
+  jobspec = templatefile("${path.module}/templates/postgres.nomad.hcl", merge(local.job_context, {
+    job_name      = "${var.prefix}-postgres"
+    service_name  = "${var.service_namespace}-postgres"
+    docker_image  = var.postgres_image
+    cpu           = var.postgres_cpu
+    memory        = var.postgres_memory
+    volume_name   = var.postgres_volume_name
+    volume_path   = var.postgres_volume_path
+    admin_user    = var.postgres_admin_user
+    admin_password = var.postgres_admin_password
+    database_name = var.postgres_database
+    temporal_user = var.temporal_database_user
+    temporal_password = var.temporal_database_password
+    visibility_database = var.temporal_visibility_database
   }))
 }
 

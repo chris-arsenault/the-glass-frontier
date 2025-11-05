@@ -12,8 +12,10 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "http" {
-        to = 7000
+        to     = 7000
+        static = 7000
       }
     }
 
@@ -21,8 +23,8 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["http"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {
@@ -37,7 +39,7 @@ job "${job_name}" {
         destination = "secrets/llm-key"
         change_mode = "restart"
         env         = true
-        data        = "{{ with secret \"llm/api\" }}LLM_API_KEY={{ .Data.data.key }}{{ end }}"
+        data        = "{{ with secret \"platform-kv/data/llm/api\" }}LLM_API_KEY={{ .Data.data.key }}{{ end }}"
       }
 
       resources {

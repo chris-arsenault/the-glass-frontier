@@ -8,7 +8,9 @@ Stage validation now runs locally through a lightweight TLS proxy so workflows t
 - mDNS advertisement so the `.local` hostname resolves inside dev containers and CI runs.
 - Reverse proxy bridging to the local narrative engine on port 3000.
 
-The smoke harness (`npm run stage:smoke`) orchestrates the entire flow:
+Service images backing the staged stack are published to the local registry (`localhost:5000`) via `npm run deploy:stage`, which increments `.buildnum`, rebuilds/pushes the service set, and reapplies Terraform so Nomad picks up the refreshed `glass_docker_tag` in `infra/terraform/environments/stage/stage.tfvars`.
+
+The smoke harness (`npm run run:stage-smoke`) orchestrates the entire flow:
 
 1. Start the narrative engine with `ENABLE_DEBUG_ENDPOINTS=true`.
 2. Bring up the Caddy-based TLS proxy (`infra/stage/docker-compose.yml`). Certificates are persisted under `infra/stage/data` and the trusted root is copied to `infra/stage/certs/rootCA.pem` for curl/Node to consume.
@@ -22,11 +24,14 @@ The smoke harness (`npm run stage:smoke`) orchestrates the entire flow:
 ## Commands
 
 ```bash
+# Build, publish, and redeploy the latest service images plus Terraform updates
+npm run deploy:stage
+
 # Run stage connectivity validation end-to-end
-npm run stage:smoke
+npm run run:stage-smoke
 
 # Summarise the latest admin alert observation and fallback recommendation
-npm run stage:alerts
+npm run run:stage-alerts
 
 # Inspect the latest staging smoke artefact
 cat artifacts/langgraph-sse-staging.json

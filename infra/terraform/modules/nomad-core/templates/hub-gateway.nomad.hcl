@@ -7,11 +7,14 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "http" {
-        to = ${http_port}
+        to     = ${http_port}
+        static = ${http_port}
       }
       port "ws" {
-        to = ${ws_port}
+        to     = ${ws_port}
+        static = ${ws_port}
       }
     }
 
@@ -19,8 +22,8 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["http", "ws"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {
@@ -42,7 +45,7 @@ job "${job_name}" {
         check {
           name     = "hub-gateway-http"
           type     = "http"
-          path     = "/health"
+          path     = "/healthz"
           interval = "15s"
           timeout  = "2s"
         }
@@ -55,6 +58,7 @@ job "${job_name}" {
         check {
           name     = "hub-gateway-ws"
           type     = "tcp"
+          port     = "ws"
           interval = "15s"
           timeout  = "2s"
         }

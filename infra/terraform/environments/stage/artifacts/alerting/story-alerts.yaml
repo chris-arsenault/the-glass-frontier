@@ -2,7 +2,7 @@ groups:
   - name: story-pipeline
     rules:
       - alert: TemporalWorkflowLagHigh
-        expr: histogram_quantile(0.95, sum(rate({{ lag_metric }}_bucket[5m])) by (le)) * 1000 > 2500
+        expr: histogram_quantile(0.95, sum(rate(telemetry_check_lag_seconds_bucket[5m])) by (le)) * 1000 > 2500
         for: 5m
         labels:
           severity: critical

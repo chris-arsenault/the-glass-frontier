@@ -7,11 +7,14 @@ job "${job_name}" {
     count = ${count}
 
     network {
+      mode = "host"
       port "grpc" {
-        to = 7233
+        to     = 7233
+        static = 7233
       }
       port "http" {
-        to = 8233
+        to     = 8233
+        static = 8233
       }
     }
 
@@ -19,16 +22,26 @@ job "${job_name}" {
       driver = "docker"
 
       config {
-        image = "${docker_image}"
-        ports = ["grpc", "http"]
-        args  = ["temporal-server", "start", "--services", "frontend"]
+        image        = "${docker_image}"
+        network_mode = "host"
       }
 
       env {
-        TEMPORAL_BROADCAST_ADDRESS = "0.0.0.0"
+        BIND_ON_IP                  = "0.0.0.0"
+        TEMPORAL_BROADCAST_ADDRESS  = "$${attr.unique.network.ip-address}"
         TEMPORAL_NAMESPACE         = "${temporal_domain}"
         TEMPORAL_UI_ENABLED        = "${temporal_ui}"
         VAULT_ADDR                 = "${vault_addr}"
+        DB                         = "postgres12"
+        POSTGRES_SEEDS                   = "${temporal_db_host}"
+        DB_PORT                   = "${temporal_db_port}"
+        POSTGRES_USER                   = "${temporal_db_user}"
+        POSTGRES_PWD               = "${temporal_db_password}"
+        DBNAME               = "${temporal_db_name}"
+        VISIBILITY_DBNAME    = "${temporal_visibility_db}"
+        POSTGRES_TLS_ENABLED            = "false"
+        SKIP_SCHEMA_SETUP = "false"
+        SKIP_DB_CREATE = "false"
       }
 
       resources {

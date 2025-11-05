@@ -12,18 +12,15 @@ job "${job_name}" {
       }
     }
 
-    volume "grafana-dashboards" {
-      type   = "host"
-      source = "grafana-dashboards"
-      read_only = false
-    }
-
     task "grafana" {
       driver = "docker"
 
       config {
         image = "${docker_image}"
         ports = ["http"]
+        volumes = [
+          "${dashboard_host_path}:${dashboard_container_path}"
+        ]
       }
 
       env {
@@ -49,12 +46,6 @@ datasources:
     access: proxy
 EOF
       }
-
-      volume_mount {
-        volume      = "grafana-dashboards"
-        destination = "${dashboard_path}"
-      }
-
       resources {
         cpu    = ${cpu}
         memory = ${memory}
