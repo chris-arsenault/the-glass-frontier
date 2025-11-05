@@ -1,0 +1,30 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//The Glass Frontier//Tier1Reminder//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:stage-deploy-tier1-reminder-20251105-0900@the-glass-frontier
+DTSTAMP:20251105T052801Z
+DTSTART:20251105T090000Z
+DTEND:20251105T091000Z
+SUMMARY:Tier 1 Reminder – #tier1-platform summary thread
+DESCRIPTION:Post consolidated reminder in #tier1-platform summarising outstanding SME acknowledgements and linking docs/reports/stage-deploy-distribution-2025-11-05.md.
+END:VEVENT
+BEGIN:VEVENT
+UID:stage-deploy-tier1-reminder-20251105-0905@the-glass-frontier
+DTSTAMP:20251105T052801Z
+DTSTART:20251105T090500Z
+DTEND:20251105T091000Z
+SUMMARY:Tier 1 Reminder – Channel-specific follow-ups
+DESCRIPTION:Post targeted reminder threads in #offline-publishing, #client-overlays, and #hub-contests requesting acknowledgement on stage deploy tag 7 artefacts.
+END:VEVENT
+BEGIN:VEVENT
+UID:stage-deploy-tier1-reminder-20251105-1200@the-glass-frontier
+DTSTAMP:20251105T052801Z
+DTSTART:20251105T120000Z
+DTEND:20251105T121000Z
+SUMMARY:Tier 1 Escalation Checkpoint – #tier1-platform
+DESCRIPTION:If acknowledgements remain pending, escalate in #tier1-platform with the confirmation log and request delegate coverage.
+END:VEVENT
+END:VCALENDAR

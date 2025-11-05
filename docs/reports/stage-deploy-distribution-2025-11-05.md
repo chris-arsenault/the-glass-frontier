@@ -59,10 +59,36 @@ Stage deploy tag 7 is available for hub telemetry rehearsal. Manifest: artifacts
 - Awaiting acknowledgements from all Tier 1 SMEs; keep tracker updated as responses arrive and capture confirmation details in the associated MCP backlog items.
 
 ## Follow-up Plan
-- 2025-11-05T09:00:00Z — Queue reminder thread in `#tier1-platform` summarising outstanding channels and requesting ETA on confirmations.
-- 2025-11-05T09:05:00Z — Post tailored reminders in `#offline-publishing`, `#client-overlays`, and `#hub-contests` with direct asks for acknowledgement plus pointers to artefacts.
-- 2025-11-05T12:00:00Z — If acknowledgements remain pending, escalate in `#tier1-platform` with summary table and request for delegate coverage.
+- 2025-11-05T09:00:00Z — Queue reminder thread in `#tier1-platform` summarising outstanding channels and requesting ETA on confirmations. (Calendar: `artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`)
+- 2025-11-05T09:05:00Z — Post tailored reminders in `#offline-publishing`, `#client-overlays`, and `#hub-contests` with direct asks for acknowledgement plus pointers to artefacts. (Calendar: `artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`)
+- 2025-11-05T12:00:00Z — If acknowledgements remain pending, escalate in `#tier1-platform` with summary table and request for delegate coverage. (Calendar: `artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`)
 - Update Stakeholder Confirmation Log immediately after each response lands, including timestamp, acknowledgement text, and any follow-up actions required by the SME.
+
+## Reminder Drafts
+
+### 2025-11-05T09:00Z — `#tier1-platform`
+```
+Reminder: Stage deploy tag 7 confirmations are pending. Current status — Offline publishing, Client overlay, Hub telemetry: awaiting acknowledgement. Manifest: artifacts/docker/service-image-manifest.json. Summary: docs/reports/stage-deploy-2025-11-05.md. Please drop an ETA or confirmation so we can restart the CI rehearsal shortcut (npm run docker:publish:services + npm run docker:publish:temporal-worker).
+```
+
+### 2025-11-05T09:05Z — Channel threads
+```
+#offline-publishing — Quick ping to confirm the tag 7 manifest/report are connected to your storage replay run. Reminder: artifacts/docker/service-image-manifest.json + docs/reports/stage-deploy-2025-11-05.md. Please acknowledge so we can log the handoff and resume CI rehearsal.
+
+#client-overlays — Checking in on the tag 7 reruns for npm run run:stage-smoke / npm run run:stage-alerts. Manifest: artifacts/docker/service-image-manifest.json. Summary: docs/reports/stage-deploy-2025-11-05.md. Drop confirmation when the assets are staged.
+
+#hub-contests — Following up on the tag 7 telemetry rehearsal. Manifest: artifacts/docker/service-image-manifest.json. Summary: docs/reports/stage-deploy-2025-11-05.md. Please confirm once npm run monitor:contests is queued.
+```
+
+### 2025-11-05T12:00Z — Escalation template (`#tier1-platform`)
+```
+Escalation checkpoint: Tier 1 confirmations for stage deploy tag 7 remain outstanding. Current log:
+- Offline publishing — awaiting acknowledgement in #offline-publishing
+- Client overlay — awaiting acknowledgement in #client-overlays
+- Hub telemetry — awaiting acknowledgement in #hub-contests
+
+Requesting delegate coverage to close out confirmations so we can restart the CI rehearsal shortcut (npm run docker:publish:services + npm run docker:publish:temporal-worker).
+```
 
 ## CI Rehearsal Restart Plan
 1. Collect explicit acknowledgements from `#tier1-platform`, `#offline-publishing`, `#client-overlays`, and `#hub-contests`, then update the confirmation log and their MCP backlog items with timestamps and SME notes.
