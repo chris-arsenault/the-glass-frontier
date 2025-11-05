@@ -115,6 +115,8 @@ function mapTimelineType(type) {
       return "telemetry.contest.workflowFailed";
     case "telemetry.hub.contestExpired":
       return "telemetry.contest.expired";
+    case "telemetry.hub.contestSentiment":
+      return "telemetry.contest.sentiment";
     default:
       return null;
   }
@@ -162,6 +164,29 @@ function parseStructuredEvents(rawContent) {
         }
 
         const payload = entry.payload || {};
+        if (mappedMessage === "telemetry.contest.sentiment") {
+          events.push({
+            message: mappedMessage,
+            hubId: payload.hubId || parsed.hubId || null,
+            roomId: payload.roomId || parsed.roomId || null,
+            contestId: payload.contestId || parsed.contestId || null,
+            contestKey: payload.contestKey || parsed.contestKey || null,
+            actorId: payload.actorId || null,
+            sentiment: payload.sentiment || null,
+            tone: payload.tone || null,
+            phase: payload.phase || null,
+            remainingCooldownMs:
+              typeof payload.remainingCooldownMs === "number"
+                ? payload.remainingCooldownMs
+                : null,
+            cooldownMs:
+              typeof payload.cooldownMs === "number" ? payload.cooldownMs : null,
+            messageLength:
+              typeof payload.messageLength === "number" ? payload.messageLength : null,
+            issuedAt: payload.issuedAt ?? null
+          });
+          return;
+        }
         events.push({
           message: mappedMessage,
           hubId: payload.hubId || parsed.hubId || null,
@@ -304,11 +329,36 @@ function collectNumber(value) {
   return value;
 }
 
+function toTimestampMs(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
 function buildSummary(events, thresholds) {
   const contests = new Map();
   const workflowFailures = [];
   const expiredArmingDurations = [];
   const expiredParticipantCounts = [];
+  const sentimentSamples = [];
+  const sentimentCounts = {
+    positive: 0,
+    neutral: 0,
+    negative: 0,
+    other: 0
+  };
+  const sentimentPhaseCounts = {};
+  const sentimentHotspots = new Map();
+  let cooldownSamples = 0;
+  let negativeDuringCooldown = 0;
+  let maxRemainingCooldownMs = null;
 
   let expiredContests = 0;
 
@@ -333,6 +383,76 @@ function buildSummary(events, thresholds) {
       if (participantCount !== null) {
         expiredParticipantCounts.push(participantCount);
       }
+      return;
+    }
+
+    if (message === "telemetry.contest.sentiment") {
+      const label =
+        typeof event.sentiment === "string" ? event.sentiment.toLowerCase() : "unknown";
+      const normalizedLabel =
+        label === "positive" || label === "negative" || label === "neutral"
+          ? label
+          : "other";
+      sentimentCounts[normalizedLabel] = (sentimentCounts[normalizedLabel] || 0) + 1;
+
+      const phase =
+        typeof event.phase === "string" ? event.phase.toLowerCase() : "unknown";
+      if (phase !== "unknown") {
+        sentimentPhaseCounts[phase] = (sentimentPhaseCounts[phase] || 0) + 1;
+      }
+
+      const remainingCooldownMs = collectNumber(event.remainingCooldownMs);
+      const cooldownMs = collectNumber(event.cooldownMs);
+      const issuedAt =
+        toTimestampMs(event.issuedAt) ?? toTimestampMs(event.timestamp) ?? null;
+
+      const sample = {
+        hubId: event.hubId || null,
+        roomId: event.roomId || null,
+        contestId: event.contestId || null,
+        contestKey: event.contestKey || null,
+        actorId: event.actorId || null,
+        sentiment: label || null,
+        tone: typeof event.tone === "string" ? event.tone : null,
+        phase: phase === "unknown" ? null : phase,
+        remainingCooldownMs,
+        cooldownMs,
+        messageLength: collectNumber(event.messageLength),
+        issuedAt,
+        issuedAtIso: issuedAt ? new Date(issuedAt).toISOString() : null
+      };
+      sentimentSamples.push(sample);
+
+      if (remainingCooldownMs !== null && remainingCooldownMs > 0) {
+        cooldownSamples += 1;
+        if (normalizedLabel === "negative") {
+          negativeDuringCooldown += 1;
+        }
+        if (
+          maxRemainingCooldownMs === null ||
+          remainingCooldownMs > maxRemainingCooldownMs
+        ) {
+          maxRemainingCooldownMs = remainingCooldownMs;
+        }
+      }
+
+      const hotspotKey = `${sample.hubId || "unknown"}:${sample.roomId || "unknown"}`;
+      const hotspot = sentimentHotspots.get(hotspotKey) || {
+        hubId: sample.hubId || null,
+        roomId: sample.roomId || null,
+        totals: {
+          positive: 0,
+          neutral: 0,
+          negative: 0,
+          other: 0,
+          total: 0
+        }
+      };
+      hotspot.totals[normalizedLabel] =
+        (hotspot.totals[normalizedLabel] || 0) + 1;
+      hotspot.totals.total = (hotspot.totals.total || 0) + 1;
+      sentimentHotspots.set(hotspotKey, hotspot);
+
       return;
     }
 
@@ -439,12 +559,56 @@ function buildSummary(events, thresholds) {
   const capacityOverTwo = participantCapacities.filter((count) => count > 2).length;
   const expiredMultiActorCount = expiredParticipantCounts.filter((count) => count > 2).length;
 
+  sentimentSamples.sort((a, b) => {
+    const aIssued = a.issuedAt ?? 0;
+    const bIssued = b.issuedAt ?? 0;
+    return bIssued - aIssued;
+  });
+
+  const sortedHotspots = Array.from(sentimentHotspots.values()).sort((a, b) => {
+    const aNegative = a.totals.negative || 0;
+    const bNegative = b.totals.negative || 0;
+    if (bNegative !== aNegative) {
+      return bNegative - aNegative;
+    }
+    const aTotal = a.totals.total || 0;
+    const bTotal = b.totals.total || 0;
+    if (bTotal !== aTotal) {
+      return bTotal - aTotal;
+    }
+    return `${a.hubId || ""}${a.roomId || ""}`.localeCompare(
+      `${b.hubId || ""}${b.roomId || ""}`
+    );
+  });
+
   return {
     totals: {
       contestsObserved: contests.size,
       resolvedContests,
       workflowFailures: workflowFailures.length,
       expiredContests
+    },
+    sentiment: {
+      samples: sentimentSamples.length,
+      totals: {
+        positive: sentimentCounts.positive || 0,
+        neutral: sentimentCounts.neutral || 0,
+        negative: sentimentCounts.negative || 0,
+        other: sentimentCounts.other || 0,
+        total:
+          (sentimentCounts.positive || 0) +
+          (sentimentCounts.neutral || 0) +
+          (sentimentCounts.negative || 0) +
+          (sentimentCounts.other || 0)
+      },
+      phaseCounts: sentimentPhaseCounts,
+      cooldown: {
+        activeSamples: cooldownSamples,
+        negativeDuringCooldown,
+        maxRemainingCooldownMs
+      },
+      hotspots: sortedHotspots.slice(0, 10),
+      latest: sentimentSamples.slice(0, 25)
     },
     durations: {
       arming: {

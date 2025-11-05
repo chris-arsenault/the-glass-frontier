@@ -22,6 +22,18 @@ function formatTimestamp(value) {
   }
 }
 
+function formatDurationMs(value) {
+  if (!Number.isFinite(value) || value < 0) {
+    return "—";
+  }
+  if (value >= 60000) {
+    const minutes = Math.round(value / 60000);
+    return `${minutes} min`;
+  }
+  const seconds = Math.round(value / 1000);
+  return `${seconds} s`;
+}
+
 function groupAlertsByStatus(alerts) {
   const groups = STATUS_ORDER.reduce((acc, status) => {
     acc[status] = [];
@@ -56,6 +68,9 @@ export function ModerationDashboard() {
   const [cadenceSessions, setCadenceSessions] = useState([]);
   const [cadenceLoading, setCadenceLoading] = useState(false);
   const [cadenceError, setCadenceError] = useState(null);
+  const [sentimentOverview, setSentimentOverview] = useState(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [sentimentError, setSentimentError] = useState(null);
 
   const grouped = useMemo(() => groupAlertsByStatus(alerts), [alerts]);
 
@@ -161,11 +176,32 @@ export function ModerationDashboard() {
     }
   }, [fetchWithAuth]);
 
+  const loadContestSentiment = useCallback(async () => {
+    setSentimentLoading(true);
+    setSentimentError(null);
+    try {
+      const response = await fetchWithAuth("/admin/moderation/contest/sentiment?limit=10", {
+        method: "GET"
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || `Failed to load contest sentiment (${response.status})`);
+      }
+      const payload = await response.json();
+      setSentimentOverview(payload);
+    } catch (sentimentLoadError) {
+      setSentimentError(sentimentLoadError.message);
+    } finally {
+      setSentimentLoading(false);
+    }
+  }, [fetchWithAuth]);
+
   useEffect(() => {
     loadAlerts();
     loadCadence();
     loadContestArtefacts();
-  }, [loadAlerts, loadCadence, loadContestArtefacts]);
+    loadContestSentiment();
+  }, [loadAlerts, loadCadence, loadContestArtefacts, loadContestSentiment]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !isAdmin) {
@@ -368,7 +404,9 @@ export function ModerationDashboard() {
   const handleRefresh = useCallback(() => {
     loadAlerts();
     loadCadence();
-  }, [loadAlerts, loadCadence]);
+    loadContestSentiment();
+    loadContestArtefacts();
+  }, [loadAlerts, loadCadence, loadContestSentiment, loadContestArtefacts]);
 
   const applyCadenceOverride = useCallback(
     async (sessionId, options = {}) => {
@@ -624,6 +662,88 @@ export function ModerationDashboard() {
           )}
         </section>
       </div>
+      <section className="moderation-sentiment" aria-label="Contest sentiment monitor">
+        <h3>Contest Sentiment Monitor</h3>
+        {sentimentError ? (
+          <div className="moderation-error" role="alert">
+            {sentimentError}
+          </div>
+        ) : null}
+        {sentimentLoading ? (
+          <p className="moderation-empty">Loading…</p>
+        ) : sentimentOverview ? (
+          <>
+            <div className="moderation-detail-card">
+              <h4>Sentiment Totals</h4>
+              <div className="moderation-sentiment-totals">
+                <span className="moderation-sentiment-total sentiment-negative">
+                  Negative: {sentimentOverview.totals?.negative ?? 0}
+                </span>
+                <span className="moderation-sentiment-total sentiment-neutral">
+                  Neutral: {sentimentOverview.totals?.neutral ?? 0}
+                </span>
+                <span className="moderation-sentiment-total sentiment-positive">
+                  Positive: {sentimentOverview.totals?.positive ?? 0}
+                </span>
+                <span className="moderation-sentiment-total">
+                  Samples: {sentimentOverview.totals?.total ?? 0}
+                </span>
+              </div>
+              <p className="moderation-sentiment-cooldown">
+                Cooldown spikes:{" "}
+                {sentimentOverview.cooldown?.negativeDuringCooldown ?? 0} /
+                {sentimentOverview.cooldown?.activeSamples ?? 0} active samples • Max remaining{" "}
+                {formatDurationMs(sentimentOverview.cooldown?.maxRemainingCooldownMs ?? null)}
+              </p>
+            </div>
+            {Array.isArray(sentimentOverview.hotspots) && sentimentOverview.hotspots.length > 0 ? (
+              <div className="moderation-detail-card">
+                <h4>Hotspots</h4>
+                <ul className="moderation-sentiment-list">
+                  {sentimentOverview.hotspots.slice(0, 5).map((hotspot) => (
+                    <li key={`${hotspot.hubId || "unknown"}:${hotspot.roomId || "unknown"}`}>
+                      <strong>
+                        {hotspot.hubId || "Unknown hub"} • {hotspot.roomId || "Unknown room"}
+                      </strong>
+                      <span>
+                        Negative: {hotspot.totals?.negative ?? 0} • Total: {hotspot.totals?.total ?? 0}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {Array.isArray(sentimentOverview.samples) && sentimentOverview.samples.length > 0 ? (
+              <div className="moderation-detail-card">
+                <h4>Latest Samples</h4>
+                <ul className="moderation-sentiment-list">
+                  {sentimentOverview.samples.map((sample, index) => (
+                    <li
+                      key={`${sample.contestId || sample.contestKey || "sample"}:${sample.issuedAtIso || index}`}
+                    >
+                      <span className={`moderation-sentiment-badge sentiment-${sample.sentiment || "unknown"}`}>
+                        {sample.sentiment || "unknown"}
+                      </span>
+                      <span>
+                        {sample.hubId || "Unknown hub"} • {sample.roomId || "Unknown room"}
+                      </span>
+                      <span>
+                        {sample.phase || "unknown phase"} • Remaining{" "}
+                        {formatDurationMs(sample.remainingCooldownMs ?? null)}
+                      </span>
+                      <span>{formatTimestamp(sample.issuedAtIso || sample.issuedAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="moderation-empty">No sentiment samples captured yet.</p>
+            )}
+          </>
+        ) : (
+          <p className="moderation-empty">No sentiment samples captured yet.</p>
+        )}
+      </section>
       <section className="moderation-contest-artefacts" aria-label="Contest telemetry artefacts">
         <h3>Contest Telemetry Artefacts</h3>
         {contestArtefacts.length === 0 ? (

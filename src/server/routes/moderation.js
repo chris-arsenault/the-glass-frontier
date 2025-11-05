@@ -254,6 +254,21 @@ function createModerationRouter({ moderationService, sessionMemory, publishingCa
     }
   });
 
+  router.get("/contest/sentiment", (req, res) => {
+    const limit =
+      req.query.limit !== undefined && req.query.limit !== null
+        ? Number(req.query.limit)
+        : undefined;
+    try {
+      const overview = moderationService.getContestSentimentOverview({
+        limit: Number.isFinite(limit) ? limit : undefined
+      });
+      res.json(overview);
+    } catch (error) {
+      res.status(500).json({ error: "contest_sentiment_unavailable", message: error.message });
+    }
+  });
+
   return router;
 }
 

@@ -489,6 +489,70 @@ class ModerationService {
     return clone(result);
   }
 
+  getContestSentimentOverview({ limit = 20 } = {}) {
+    const artefacts = this.listContestArtefacts();
+    const baseResponse = {
+      source: null,
+      generatedAt: this.#nowIso(),
+      totals: {
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+        other: 0,
+        total: 0
+      },
+      phaseCounts: {},
+      cooldown: {
+        activeSamples: 0,
+        negativeDuringCooldown: 0,
+        maxRemainingCooldownMs: null
+      },
+      hotspots: [],
+      samples: []
+    };
+
+    if (artefacts.length === 0) {
+      return baseResponse;
+    }
+
+    const latest = artefacts[0];
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 20;
+
+    try {
+      const summary = this.loadContestSummary(latest.path);
+      const sentiment = summary.summary?.sentiment || {};
+      const totals = sentiment.totals || {};
+      const hotspots = Array.isArray(sentiment.hotspots) ? sentiment.hotspots : [];
+      const latestSamples = Array.isArray(sentiment.latest) ? sentiment.latest : [];
+      return {
+        source: summary.source,
+        generatedAt: summary.generatedAt,
+        totals: {
+          positive: totals.positive || 0,
+          neutral: totals.neutral || 0,
+          negative: totals.negative || 0,
+          other: totals.other || 0,
+          total: totals.total || 0
+        },
+        phaseCounts: sentiment.phaseCounts || {},
+        cooldown: {
+          activeSamples: sentiment.cooldown?.activeSamples || 0,
+          negativeDuringCooldown: sentiment.cooldown?.negativeDuringCooldown || 0,
+          maxRemainingCooldownMs:
+            sentiment.cooldown?.maxRemainingCooldownMs ?? null
+        },
+        hotspots: hotspots.slice(0, 10).map((entry) => clone(entry)),
+        samples: latestSamples.slice(0, safeLimit).map((entry) => clone(entry))
+      };
+    } catch (error) {
+      return {
+        ...baseResponse,
+        source: latest.path,
+        error: error.message
+      };
+    }
+  }
+
   getModerationState(sessionId) {
     return this.sessionMemory.getModerationState(sessionId);
   }

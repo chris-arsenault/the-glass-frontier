@@ -223,6 +223,65 @@ describe("ModerationService", () => {
     expect(summary.summary.durations.resolution.samples).toBe(1);
   });
 
+  test("summarises contest sentiment overview", () => {
+    const timeline = {
+      hubId: "hub-sentiment",
+      roomId: "room-sentiment",
+      contestId: "contest-sentiment",
+      timeline: [
+        {
+          type: "telemetry.hub.contestSentiment",
+          payload: {
+            hubId: "hub-sentiment",
+            roomId: "room-sentiment",
+            contestId: "contest-sentiment",
+            contestKey: "verb.sparringMatch",
+            actorId: "actor-alpha",
+            sentiment: "negative",
+            tone: "frustrated",
+            phase: "cooldown",
+            remainingCooldownMs: 4200,
+            cooldownMs: 6000,
+            messageLength: 64,
+            issuedAt: 1700000000000
+          }
+        },
+        {
+          type: "telemetry.hub.contestSentiment",
+          payload: {
+            hubId: "hub-sentiment",
+            roomId: "room-sentiment",
+            contestId: "contest-sentiment",
+            contestKey: "verb.sparringMatch",
+            actorId: "actor-beta",
+            sentiment: "neutral",
+            tone: "calm",
+            phase: "post-cooldown",
+            remainingCooldownMs: 0,
+            cooldownMs: 6000,
+            messageLength: 24,
+            issuedAt: 1700001000000
+          }
+        }
+      ]
+    };
+
+    const artefactPath = path.join(tempDir, "contest-sentiment.json");
+    fs.writeFileSync(artefactPath, JSON.stringify(timeline, null, 2));
+
+    const overview = moderation.getContestSentimentOverview({ limit: 1 });
+    expect(overview.source).toBe(artefactPath);
+    expect(overview.samples).toHaveLength(1);
+    expect(overview.totals.negative).toBe(1);
+    expect(overview.cooldown.activeSamples).toBe(1);
+    expect(overview.hotspots[0]).toEqual(
+      expect.objectContaining({
+        hubId: "hub-sentiment",
+        roomId: "room-sentiment"
+      })
+    );
+  });
+
   test("aggregates blocking moderation queue items for cadence overview", () => {
     const sessionId = "session-aggregate-1";
     sessionMemory.recordModerationQueue(sessionId, {

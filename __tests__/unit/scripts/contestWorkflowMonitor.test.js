@@ -98,6 +98,62 @@ describe("contestWorkflowMonitor buildSummary", () => {
     expect(summary.participants.timeouts.samples).toBe(2);
     expect(summary.participants.timeouts.multiActorContests).toBe(1);
   });
+
+  test("collects sentiment telemetry samples", () => {
+    const events = [
+      {
+        message: "telemetry.contest.sentiment",
+        hubId: "hub-alpha",
+        roomId: "room-1",
+        contestId: "contest-1",
+        sentiment: "negative",
+        tone: "aggressive",
+        phase: "cooldown",
+        remainingCooldownMs: 3200,
+        cooldownMs: 6000,
+        issuedAt: 1700000000000
+      },
+      {
+        message: "telemetry.contest.sentiment",
+        hubId: "hub-alpha",
+        roomId: "room-1",
+        contestId: "contest-1",
+        sentiment: "positive",
+        tone: "relieved",
+        phase: "post-cooldown",
+        remainingCooldownMs: 0,
+        cooldownMs: 6000,
+        issuedAt: 1700001000000
+      },
+      {
+        message: "telemetry.contest.sentiment",
+        hubId: "hub-beta",
+        roomId: "room-2",
+        contestId: "contest-2",
+        sentiment: "neutral",
+        tone: "calm",
+        phase: "cooldown",
+        remainingCooldownMs: 1800,
+        cooldownMs: 5000,
+        issuedAt: 1699999000000
+      }
+    ];
+
+    const summary = buildSummary(events, DEFAULT_THRESHOLDS);
+    expect(summary.sentiment.samples).toBe(3);
+    expect(summary.sentiment.totals.negative).toBe(1);
+    expect(summary.sentiment.totals.positive).toBe(1);
+    expect(summary.sentiment.totals.neutral).toBe(1);
+    expect(summary.sentiment.cooldown.activeSamples).toBe(2);
+    expect(summary.sentiment.cooldown.negativeDuringCooldown).toBe(1);
+    expect(summary.sentiment.hotspots[0]).toEqual(
+      expect.objectContaining({
+        hubId: "hub-alpha",
+        roomId: "room-1"
+      })
+    );
+    expect(summary.sentiment.latest[0].sentiment).toBe("positive");
+  });
 });
 
 describe("contestWorkflowMonitor parseContestEvents", () => {
@@ -168,16 +224,37 @@ describe("contestWorkflowMonitor parseContestEvents", () => {
             armingDurationMs: 6000,
             participantCount: 1
           }
+        },
+        {
+          type: "telemetry.hub.contestSentiment",
+          payload: {
+            hubId: "hub-timeline",
+            roomId: "room-timeline",
+            contestId: "contest-timeline",
+            contestKey: "contest-key",
+            actorId: "actor-beta",
+            sentiment: "negative",
+            tone: "frustrated",
+            phase: "cooldown",
+            remainingCooldownMs: 4200,
+            cooldownMs: 6000,
+            messageLength: 48,
+            issuedAt: 1700000000000
+          }
         }
       ]
     };
 
     const events = parseContestEvents(JSON.stringify(timeline));
-    expect(events).toHaveLength(4);
+    expect(events).toHaveLength(5);
     expect(events[0].message).toBe("telemetry.contest.armed");
     expect(events[1].participantCapacity).toBe(4);
     expect(events[2].outcomeTier).toBe("success");
     expect(events[3].message).toBe("telemetry.contest.expired");
+    const sentimentEvent = events[4];
+    expect(sentimentEvent.message).toBe("telemetry.contest.sentiment");
+    expect(sentimentEvent.sentiment).toBe("negative");
+    expect(sentimentEvent.remainingCooldownMs).toBe(4200);
   });
 
   test("parses CLI summary artefacts back into telemetry events", () => {
