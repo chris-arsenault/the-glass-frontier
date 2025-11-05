@@ -27,12 +27,34 @@ Stage deploy tag **7** completed on 2025-11-05, rebuilding and publishing the fu
 ## Stakeholder Confirmation Log
 | Stakeholder | Channel | Status | Notes |
 | --- | --- | --- | --- |
-| Offline publishing SME (IMP-OFFLINE-05) | `#offline-publishing` | Pending | Await confirmation that manifest + report are attached to the staging storage replay plan. |
-| Client overlay SME (IMP-CLIENT-06) | `#client-overlays` | Pending | Confirm receipt and readiness to run `npm run run:stage-smoke` / `npm run run:stage-alerts` against tag 7 assets. |
-| Hub telemetry SME (IMP-HUBS-05) | `#hub-contests` | Pending | Confirm the manifest link is sufficient to schedule `npm run monitor:contests` on tag 7. |
-| Platform release coordination | `#tier1-platform` | Pending | Confirm central manifest archive updated; unlock CI rehearsal once downstream SMEs respond. |
+| Offline publishing SME (IMP-OFFLINE-05) | `#offline-publishing` | Drafted | Announcement prepared; ready to request confirmation that manifest + report are attached to the staging storage replay plan. |
+| Client overlay SME (IMP-CLIENT-06) | `#client-overlays` | Drafted | Channel update drafted to prompt reruns of `npm run run:stage-smoke` / `npm run run:stage-alerts` on tag 7 assets. |
+| Hub telemetry SME (IMP-HUBS-05) | `#hub-contests` | Drafted | Copy ready to cue `npm run monitor:contests` on tag 7 once posted. |
+| Platform release coordination | `#tier1-platform` | Drafted | Distribution summary drafted to share manifest, summary, and Terraform snippet with Tier 1 owners. |
+
+## Channel Announcement Templates
+
+### `#tier1-platform`
+```
+Stage deploy tag 7 is complete and live across staging (Nomad: langgraph, api-gateway, hub-gateway, llm-proxy, temporal-worker, minio-lifecycle, platform-tasks). Manifest: artifacts/docker/service-image-manifest.json. Summary: docs/reports/stage-deploy-2025-11-05.md. Terraform glass_docker_tag now "7". Downstream SMEs in #offline-publishing, #client-overlays, and #hub-contests—please confirm receipt of the assets so we can resume the CI rehearsal shortcut once all acknowledgements land.
+```
+
+### `#offline-publishing`
+```
+Stage deploy tag 7 is ready for publishing QA. Manifest: artifacts/docker/service-image-manifest.json. Deploy summary: docs/reports/stage-deploy-2025-11-05.md. Terraform glass_docker_tag is "7". Please confirm the manifest/report are attached to the staging storage replay plan for IMP-OFFLINE-05 so we can log the acknowledgement and unlock the CI rehearsal.
+```
+
+### `#client-overlays`
+```
+Heads-up that stage deploy tag 7 is live. Manifest: artifacts/docker/service-image-manifest.json. Deploy summary: docs/reports/stage-deploy-2025-11-05.md. Terraform glass_docker_tag set to "7". Please confirm readiness to re-run npm run run:stage-smoke and npm run run:stage-alerts (port 4443 fallback) against tag 7 assets and drop the acknowledgement on IMP-CLIENT-06.
+```
+
+### `#hub-contests`
+```
+Stage deploy tag 7 is available for hub telemetry rehearsal. Manifest: artifacts/docker/service-image-manifest.json. Deploy summary: docs/reports/stage-deploy-2025-11-05.md. Terraform glass_docker_tag is "7". Once you queue npm run monitor:contests on the refreshed images, please confirm in-thread so we can capture the acknowledgement for IMP-HUBS-05 and move the CI rehearsal forward.
+```
 
 ## Follow-ups
-- Capture SME acknowledgements (update the table above and the associated MCP backlog items) before restarting the CI rehearsal shortcut.
+- Post the drafted announcements, then capture SME acknowledgements (update the table above and the associated MCP backlog items) before restarting the CI rehearsal shortcut.
 - Mirror the acknowledgement status inside `IMP-PLATFORM-03` and downstream backlog entries once confirmations arrive.
 - After all entries flip to `Confirmed`, rerun the stage CI rehearsal using `npm run docker:publish:temporal-worker` / `npm run docker:publish:services` as appropriate and document results in the next session hand-off.
