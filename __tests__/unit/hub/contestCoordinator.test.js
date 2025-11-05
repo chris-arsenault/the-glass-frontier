@@ -11,6 +11,8 @@ function buildContestEntry({
   targetActorId,
   issuedAt,
   contestKey,
+  role = "challenger",
+  maxParticipants = 2,
   rematch = {
     cooldownMs: 12000,
     offerWindowMs: 90000,
@@ -40,6 +42,7 @@ function buildContestEntry({
         label: "Test Contest",
         type: "pvp",
         checkTemplate: "hub.testContest",
+        maxParticipants,
         roles: {
           initiator: "challenger",
           target: "defender",
@@ -54,7 +57,7 @@ function buildContestEntry({
             verbId: "verb.testContest",
             args: {},
             targetActorId,
-            role: "challenger",
+            role,
             auditRef: `${actorId}-audit`,
             issuedAt
           }
@@ -138,7 +141,73 @@ describe("ContestCoordinator", () => {
       windowMs: 6000
     });
     expect(expired[0].participants).toHaveLength(1);
+    expect(expired[0].outcome).toMatchObject({
+      tier: "timeout",
+      missingParticipants: 1,
+      participantCount: 1,
+      requiredParticipants: 2
+    });
+    expect(expired[0].participants[0].result).toMatchObject({
+      tier: "timeout",
+      momentumDelta: -2
+    });
+    expect(expired[0].sharedComplications).toHaveLength(1);
+    expect(expired[0].sharedComplications[0].severity).toBe("major");
     expect(coordinator.pendingByRoom.size).toBe(0);
+  });
+
+  test("applies timeout payouts for multi-actor arming deficits", () => {
+    const clock = { now: jest.fn() };
+    const coordinator = new ContestCoordinator({ clock });
+    const contestKey = "verb.testContest:actor-alpha::actor-beta";
+
+    clock.now.mockReturnValue(1000);
+    const initiatorEntry = buildContestEntry({
+      actorId: "actor-alpha",
+      targetActorId: "actor-beta",
+      issuedAt: 1000,
+      contestKey,
+      maxParticipants: 3
+    });
+
+    const arming = coordinator.register({ entry: initiatorEntry, issuedAt: 1000 });
+    expect(arming.status).toBe("arming");
+
+    clock.now.mockReturnValue(1400);
+    const supportEntry = buildContestEntry({
+      actorId: "actor-gamma",
+      targetActorId: "actor-beta",
+      issuedAt: 1400,
+      contestKey,
+      maxParticipants: 3
+    });
+
+    const supportRegistration = coordinator.register({ entry: supportEntry, issuedAt: 1400 });
+    expect(supportRegistration.status).toBe("arming");
+
+    clock.now.mockReturnValue(8200);
+    const expired = coordinator.expire({ roomId: "room-test", now: 8200 });
+    expect(expired).toHaveLength(1);
+    expect(expired[0].participants).toHaveLength(2);
+    expect(expired[0].outcome).toMatchObject({
+      tier: "timeout",
+      missingParticipants: 1,
+      participantCount: 2,
+      requiredParticipants: 3
+    });
+    expect(expired[0].sharedComplications).toHaveLength(1);
+    expect(expired[0].sharedComplications[0].severity).toBe("minor");
+    expect(expired[0].sharedComplications[0]).toMatchObject({
+      tag: "contest.timeout.momentum-bleed",
+      appliedTo: expect.arrayContaining(["actor-alpha", "actor-gamma"])
+    });
+    const participantResults = expired[0].participants.map((participant) => participant.result);
+    expect(participantResults).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tier: "timeout", momentumDelta: -1 }),
+        expect.objectContaining({ tier: "timeout", momentumDelta: -1 })
+      ])
+    );
   });
 
   test("enforces rematch cooldown after expiration", () => {

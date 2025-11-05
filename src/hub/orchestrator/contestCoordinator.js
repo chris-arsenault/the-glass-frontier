@@ -36,6 +36,24 @@ function coerceDuration(value) {
   return null;
 }
 
+function normalizeRole(role) {
+  if (!role || typeof role !== "string") {
+    return null;
+  }
+  return role.trim().toLowerCase();
+}
+
+function toParticipantCapacity(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+  const normalized = Math.floor(value);
+  if (!Number.isFinite(normalized) || normalized < 2) {
+    return null;
+  }
+  return normalized;
+}
+
 class ContestCoordinator {
   constructor({ clock = Date } = {}) {
     this.clock = clock;
@@ -447,6 +465,7 @@ class ContestCoordinator {
 
   #serializeExpired(record, expiredAt) {
     const rematch = this.#buildRematchDescriptor(record, expiredAt);
+    const timeoutOutcome = this.#buildTimeoutOutcome(record);
 
     return {
       contestId: null,
@@ -470,17 +489,124 @@ class ContestCoordinator {
       sharedComplicationTags: Array.isArray(record.sharedComplicationTags)
         ? [...record.sharedComplicationTags]
         : [],
-      participants: record.participants.map((participant) => ({
-        actorId: participant.actorId,
-        role: participant.role,
-        verbId: participant.verbId,
-        targetActorId: participant.targetActorId,
-        auditRef: participant.auditRef || null,
-        issuedAt: participant.issuedAt || null
-      })),
-      outcome: null,
-      sharedComplications: [],
+      participants: record.participants.map((participant, index) => {
+        const key =
+          typeof participant?.actorId === "string" && participant.actorId.trim().length > 0
+            ? participant.actorId
+            : `participant-${index}`;
+        const result = timeoutOutcome.participants.get(key) || null;
+        return {
+          actorId: participant.actorId,
+          role: participant.role,
+          verbId: participant.verbId,
+          targetActorId: participant.targetActorId,
+          auditRef: participant.auditRef || null,
+          issuedAt: participant.issuedAt || null,
+          result: result ? clone(result) : null
+        };
+      }),
+      outcome: timeoutOutcome.outcome ? clone(timeoutOutcome.outcome) : null,
+      sharedComplications: timeoutOutcome.sharedComplications.map((entry) => clone(entry)),
       rematch
+    };
+  }
+
+  #buildTimeoutOutcome(record) {
+    const participants = Array.isArray(record?.participants) ? record.participants : [];
+    const resultByKey = new Map();
+    const capacity = toParticipantCapacity(record?.participantCapacity);
+    const readyThreshold = capacity !== null ? Math.max(2, capacity) : 2;
+    const distinctCount = uniqueActors(participants).size;
+    const missingParticipants = Math.max(0, readyThreshold - distinctCount);
+
+    const outcome = {
+      tier: "timeout",
+      summary:
+        missingParticipants > 1
+          ? "The contest fizzles before enough rivals assemble."
+          : "The contest fizzles before opponents engage.",
+      reason: "arming_timeout",
+      missingParticipants,
+      participantCount: distinctCount,
+      requiredParticipants: readyThreshold
+    };
+
+    if (participants.length === 0) {
+      return {
+        outcome,
+        sharedComplications: [],
+        participants: resultByKey
+      };
+    }
+
+    let severity = "minor";
+    if (missingParticipants >= readyThreshold - 1) {
+      severity = "major";
+    } else if (missingParticipants >= Math.ceil(readyThreshold / 2)) {
+      severity = "moderate";
+    }
+
+    const actorIds = participants
+      .map((participant) => participant?.actorId)
+      .filter((actorId) => typeof actorId === "string" && actorId.trim().length > 0);
+
+    const sharedComplications =
+      actorIds.length === 0
+        ? []
+        : [
+            {
+              tag: "contest.timeout.momentum-bleed",
+              summary:
+                missingParticipants > 1
+                  ? "Momentum bleeds away as the crowd watches rivals stall out."
+                  : "Momentum bleeds away when no one steps up before the window closes.",
+              severity,
+              appliedTo: actorIds
+            }
+          ];
+
+    const momentumPenalty = severity === "major" ? -2 : -1;
+
+    participants.forEach((participant, index) => {
+      const key =
+        typeof participant?.actorId === "string" && participant.actorId.trim().length > 0
+          ? participant.actorId
+          : `participant-${index}`;
+      const role = normalizeRole(participant?.role);
+
+      let summary = "Momentum stalls while the skirmish fails to launch.";
+      if (role === "challenger") {
+        summary = "Momentum stalls as your challenge goes unanswered.";
+      } else if (role === "defender" || role === "target") {
+        summary = "You hesitate and the challenge slips away.";
+      }
+
+      const complications =
+        sharedComplications.length === 0
+          ? []
+          : [
+              {
+                tag: sharedComplications[0].tag,
+                summary:
+                  role === "defender" || role === "target"
+                    ? "Hesitation lingers; the crowd notes your non-response."
+                    : "Waiting without an opponent drains the team's momentum."
+              }
+            ];
+
+      resultByKey.set(key, {
+        actorId: typeof participant?.actorId === "string" ? participant.actorId : null,
+        tier: "timeout",
+        summary,
+        momentumDelta: typeof participant?.actorId === "string" ? momentumPenalty : 0,
+        complications
+      });
+    });
+
+    return {
+      outcome,
+      sharedComplications,
+      participants: resultByKey
     };
   }
 
