@@ -82,9 +82,14 @@ test.describe("overlay sentiment refresh", () => {
 
     const sentimentSummary = page.getByTestId("contest-sentiment-summary");
     await expect(sentimentSummary).toBeVisible({ timeout: 5000 });
-    await expect(sentimentSummary).toContainText(/Cooldown sentiment — Elevated/i, {
+    await expect(sentimentSummary).toContainText(/Cooldown sentiment: Elevated\./i, {
       timeout: 5000
     });
-    await expect(sentimentSummary).toContainText(/50% negative/i);
+    await expect(sentimentSummary).toContainText(
+      /50% of cooldown chatter shows frustration \(3\/6\)\./i
+    );
+    await expect(sentimentSummary).toContainText(
+      /Negative cooldown samples signal players struggling to re-enter contests\./i
+    );
   });
 });

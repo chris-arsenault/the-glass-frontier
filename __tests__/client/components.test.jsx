@@ -490,14 +490,22 @@ describe("Client shell components", () => {
     expect(timelineItem).toHaveTextContent(/Rematch cooling/i);
 
     const sentimentSummary = await screen.findByTestId("contest-sentiment-summary");
-    expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment — Elevated/i);
-    expect(sentimentSummary).toHaveTextContent(/40% negative \(2\/5\)/i);
-    expect(sentimentSummary).toHaveTextContent(/Longest cooldown 9s/i);
+    expect(sentimentSummary).toHaveTextContent(/Cooldown sentiment: Elevated\./i);
+    expect(sentimentSummary).toHaveTextContent(/40% of cooldown chatter shows frustration \(2\/5\)\./i);
+    expect(sentimentSummary).toHaveTextContent(
+      /Negative cooldown samples signal players struggling to re-enter contests\./i
+    );
+    expect(sentimentSummary).toHaveTextContent(/Longest cooldown 9s remaining\./i);
 
     const moderationButton = screen.getByTestId("contest-moderation-open");
+    expect(moderationButton).toHaveTextContent(
+      /Review capability policy for Challenge Duel/i
+    );
     fireEvent.click(moderationButton);
     expect(setActiveView).toHaveBeenCalledWith("admin");
-    expect(setFlashMessage).toHaveBeenCalledWith(expect.stringContaining("Opening moderation capability review"));
+    expect(setFlashMessage).toHaveBeenCalledWith(
+      "Opening moderation capability review for Challenge Duel…"
+    );
   });
 
   test("OverlayDock renders sentiment fallback when no samples are available", async () => {
@@ -539,9 +547,73 @@ describe("Client shell components", () => {
     await waitFor(() => expect(fetchWithAuth).toHaveBeenCalled());
 
     const emptyState = await screen.findByTestId("contest-sentiment-empty");
-    expect(emptyState).toHaveTextContent(/Cooldown sentiment data pending new contest completions/i);
+    expect(emptyState).toHaveTextContent(
+      /Cooldown sentiment pending new contest completions\./i
+    );
     expect(emptyState).toHaveTextContent(/Last update/i);
+    expect(emptyState).toHaveTextContent(/Review cadence overrides if telemetry stays quiet\./i);
     expect(screen.queryByTestId("contest-moderation-open")).not.toBeInTheDocument();
+  });
+
+  test("OverlayDock moderation CTA falls back to hub label when no contest timeline", async () => {
+    const fetchWithAuth = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        generatedAt: new Date().toISOString(),
+        cooldown: {
+          frustrationLevel: "elevated",
+          frustrationRatio: 0.6,
+          activeSamples: 5,
+          negativeDuringCooldown: 3,
+          maxRemainingCooldownMs: 4000
+        }
+      })
+    });
+    const setActiveView = jest.fn();
+    const setFlashMessage = jest.fn();
+    const session = buildSessionValue({
+      isAdmin: true,
+      hubContests: [],
+      hubState: {
+        hubId: "hub-glass-frontier",
+        roomId: "room-main",
+        version: 1,
+        state: {},
+        contests: []
+      },
+      sessionOfflineHistory: [],
+      sessionAdminAlerts: [],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      }
+    });
+
+    renderWithSession(
+      session,
+      React.createElement(OverlayDock),
+      {
+        isAdmin: true,
+        fetchWithAuth,
+        setActiveView,
+        setFlashMessage
+      }
+    );
+
+    await waitFor(() => expect(fetchWithAuth).toHaveBeenCalled());
+
+    const moderationButton = await screen.findByTestId("contest-moderation-open");
+    expect(moderationButton).toHaveTextContent(
+      /Review capability policy for Hub Glass Frontier/i
+    );
+
+    fireEvent.click(moderationButton);
+    expect(setActiveView).toHaveBeenCalledWith("admin");
+    expect(setFlashMessage).toHaveBeenCalledWith(
+      "Opening moderation capability review for Hub Glass Frontier…"
+    );
   });
 
   test("OverlayDock refetches contest sentiment when new contest telemetry arrives", async () => {

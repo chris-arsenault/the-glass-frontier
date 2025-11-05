@@ -360,7 +360,8 @@ export function OverlayDock() {
     setPipelineFilter,
     togglePipelineTimeline,
     acknowledgePipelineAlert,
-    hubContests
+    hubContests,
+    hubState
   } = useSessionContext();
   const accountContext = useAccountContext() || {};
   const {
@@ -708,19 +709,33 @@ export function OverlayDock() {
     if (!sentimentSummary || !sentimentHasSamples) {
       return null;
     }
-    const parts = [`Cooldown sentiment — ${titleCase(sentimentLevel || "steady")}`];
-    if (sentimentSummary.percent) {
-      parts.push(
-        `${sentimentSummary.percent} negative (${sentimentSummary.negative}/${sentimentSummary.total})`
-      );
+    const sentences = [];
+    sentences.push(`Cooldown sentiment: ${titleCase(sentimentLevel || "steady")}.`);
+    if (sentimentSummary.total > 0) {
+      if (sentimentSummary.percent) {
+        sentences.push(
+          `${sentimentSummary.percent} of cooldown chatter shows frustration (${sentimentSummary.negative}/${sentimentSummary.total}).`
+        );
+      } else {
+        sentences.push(
+          `${sentimentSummary.negative} of ${sentimentSummary.total} cooldown samples show frustration.`
+        );
+      }
+      if (sentimentSummary.negative > 0) {
+        sentences.push("Negative cooldown samples signal players struggling to re-enter contests.");
+      }
     }
     if (sentimentRemainingLabel) {
-      parts.push(`Longest cooldown ${sentimentRemainingLabel}`);
+      sentences.push(`Longest cooldown ${sentimentRemainingLabel} remaining.`);
     }
     if (sentimentUpdatedLabel) {
-      parts.push(`Updated ${sentimentUpdatedLabel}${sentimentIsStale ? " (stale)" : ""}`);
+      sentences.push(
+        `Updated ${sentimentUpdatedLabel}${sentimentIsStale ? "; refresh recommended." : "."}`
+      );
+    } else if (sentimentIsStale) {
+      sentences.push("Latest telemetry is stale; refresh recommended.");
     }
-    return parts.join(" • ");
+    return sentences.join(" ");
   }, [
     sentimentHasSamples,
     sentimentIsStale,
@@ -733,10 +748,16 @@ export function OverlayDock() {
     if (!sentimentSummary || sentimentHasSamples) {
       return null;
     }
+    const parts = ["Cooldown sentiment pending new contest completions."];
     if (sentimentUpdatedLabel) {
-      return `Cooldown sentiment data pending new contest completions. Last update ${sentimentUpdatedLabel}${sentimentIsStale ? " (stale)" : ""}.`;
+      parts.push(
+        `Last update ${sentimentUpdatedLabel}${sentimentIsStale ? " (stale)" : ""}.`
+      );
+    } else if (sentimentIsStale) {
+      parts.push("Latest telemetry is stale.");
     }
-    return "Cooldown sentiment data pending new contest completions.";
+    parts.push("Review cadence overrides if telemetry stays quiet.");
+    return parts.join(" ");
   }, [sentimentHasSamples, sentimentIsStale, sentimentSummary, sentimentUpdatedLabel]);
   const showContestTimelineCard =
     contestTimelineEntries.length > 0 ||
@@ -745,6 +766,23 @@ export function OverlayDock() {
     Boolean(isAdmin) &&
     sentimentHasSamples &&
     (sentimentLevel === "elevated" || sentimentLevel === "critical");
+  const moderationContextLabel = useMemo(() => {
+    const labeledContest = contestTimelineEntries.find((entry) => entry?.label);
+    if (labeledContest?.label) {
+      return labeledContest.label;
+    }
+    const hubName =
+      typeof hubState?.state?.metadata?.name === "string" && hubState.state.metadata.name.trim()
+        ? hubState.state.metadata.name.trim()
+        : null;
+    if (hubName) {
+      return hubName;
+    }
+    if (hubState?.hubId) {
+      return titleCase(hubState.hubId);
+    }
+    return null;
+  }, [contestTimelineEntries, hubState]);
   const summaryLabel = useMemo(() => {
     const parts = [];
     parts.push(titleCase(pipelineStatus || "unknown"));
@@ -806,13 +844,15 @@ export function OverlayDock() {
       setAccountActiveView("admin");
     }
     if (typeof pushFlashMessage === "function") {
-      pushFlashMessage("Opening moderation capability review…");
+      const context = moderationContextLabel || "current hub";
+      pushFlashMessage(`Opening moderation capability review for ${context}…`);
     }
     emitTelemetry("client.overlay.moderation.opened", {
       source: "contest-sentiment",
-      level: sentimentLevel || "unknown"
+      level: sentimentLevel || "unknown",
+      context: moderationContextLabel || null
     });
-  }, [pushFlashMessage, sentimentLevel, setAccountActiveView]);
+  }, [moderationContextLabel, pushFlashMessage, sentimentLevel, setAccountActiveView]);
   const handleDetailsToggle = useCallback(() => {
     setDetailsExpanded((expanded) => {
       const next = !expanded;
@@ -973,7 +1013,9 @@ export function OverlayDock() {
                 onClick={handleOpenModeration}
                 data-testid="contest-moderation-open"
               >
-                Review capability policy
+                {moderationContextLabel
+                  ? `Review capability policy for ${moderationContextLabel}`
+                  : "Review capability policy"}
               </button>
             ) : null}
           </header>
