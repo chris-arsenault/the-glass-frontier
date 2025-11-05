@@ -759,6 +759,36 @@ export function OverlayDock() {
     parts.push("Review cadence overrides if telemetry stays quiet.");
     return parts.join(" ");
   }, [sentimentHasSamples, sentimentIsStale, sentimentSummary, sentimentUpdatedLabel]);
+  useEffect(() => {
+    if (!isAdmin || typeof fetchWithAuth !== "function") {
+      return undefined;
+    }
+    if (!sentimentSummary || !sentimentHasSamples) {
+      return undefined;
+    }
+    const remainingMs =
+      typeof sentimentSummary.remainingMs === "number" && sentimentSummary.remainingMs > 0
+        ? sentimentSummary.remainingMs
+        : null;
+    const baseDelay =
+      remainingMs !== null
+        ? Math.min(remainingMs + 1000, SENTIMENT_STALE_THRESHOLD_MS)
+        : Math.min(45000, SENTIMENT_STALE_THRESHOLD_MS);
+    const delay = Math.max(
+      SENTIMENT_REFRESH_MIN_DELAY_MS,
+      Math.min(baseDelay, 60000)
+    );
+    const timeout = setTimeout(() => {
+      triggerSentimentRefresh();
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [
+    fetchWithAuth,
+    isAdmin,
+    sentimentHasSamples,
+    sentimentSummary,
+    triggerSentimentRefresh
+  ]);
   const showContestTimelineCard =
     contestTimelineEntries.length > 0 ||
     (isAdmin && (sentimentSummary || sentimentLoading || sentimentError));

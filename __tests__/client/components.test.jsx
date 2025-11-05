@@ -832,6 +832,99 @@ describe("Client shell components", () => {
     }
   });
 
+  test("OverlayDock refreshes contest sentiment during active cooldown windows", async () => {
+    jest.useFakeTimers();
+    const baseTime = new Date("2025-11-05T09:12:00.000Z");
+    jest.setSystemTime(baseTime);
+    const firstPayload = {
+      generatedAt: baseTime.toISOString(),
+      cooldown: {
+        activeSamples: 4,
+        negativeDuringCooldown: 2,
+        maxRemainingCooldownMs: 15000,
+        frustrationRatio: 0.5,
+        frustrationLevel: "elevated"
+      }
+    };
+    const secondPayload = {
+      generatedAt: new Date(baseTime.getTime() + 15000).toISOString(),
+      cooldown: {
+        activeSamples: 5,
+        negativeDuringCooldown: 1,
+        maxRemainingCooldownMs: 9000,
+        frustrationRatio: 0.2,
+        frustrationLevel: "watch"
+      }
+    };
+    const fetchWithAuth = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => firstPayload
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => secondPayload
+      });
+    const accountValue = {
+      isAdmin: true,
+      fetchWithAuth,
+      setActiveView: jest.fn(),
+      setFlashMessage: jest.fn()
+    };
+    const session = buildSessionValue({
+      isAdmin: true,
+      hubContests: [],
+      hubState: {
+        hubId: "hub-1",
+        roomId: "room-1",
+        version: 1,
+        state: { contests: [] },
+        contests: []
+      },
+      sessionOfflineHistory: [],
+      sessionAdminAlerts: [],
+      pipelinePreferences: {
+        filter: "all",
+        timelineExpanded: false,
+        acknowledged: []
+      }
+    });
+    const tree = React.createElement(
+      AccountContext.Provider,
+      { value: accountValue },
+      React.createElement(
+        SessionProvider,
+        { value: session },
+        React.createElement(OverlayDock)
+      )
+    );
+
+    try {
+      await act(async () => {
+        render(tree);
+      });
+      await act(async () => {
+        await flushPromises();
+      });
+
+      await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(1));
+
+      act(() => {
+        jest.advanceTimersByTime(16000);
+      });
+      await act(async () => {
+        await flushPromises();
+      });
+
+      await waitFor(() => expect(fetchWithAuth).toHaveBeenCalledTimes(2));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test("CheckOverlay surfaces pending and resolved check details", () => {
     const session = buildSessionValue({
       activeCheck: {
