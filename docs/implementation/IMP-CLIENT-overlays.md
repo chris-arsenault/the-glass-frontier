@@ -31,3 +31,9 @@ Backlog item: `IMP-CLIENT-07` (MCP ID `64d6a12c-15e6-4064-9e9f-2d4e6b9cfcf0`)
 
 - `npm test -- --runInBand`
   - Extends `__tests__/client/components.test.jsx` to cover contest timelines, sentiment loading, moderation CTA routing, and pipeline stage presentation.
+- Playwright coverage: `tests/e2e/overlay-sentiment.spec.js` verifies the admin sentiment panel auto-refreshes when telemetry becomes stale.
+
+## Offline Terminology Alignment
+
+- Stage chip labels (`Story Consolidation`, `Delta Review`, `Publish`) now mirror Temporal workflow states; see `docs/implementation/IMP-OFFLINE-stage-terminology.md` for the handoff sent to publishing owners.
+- Admins see raw Temporal error strings within the pipeline card; offline owners will provide sanitized templates if required for GA.

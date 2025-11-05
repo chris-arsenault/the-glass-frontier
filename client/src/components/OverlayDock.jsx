@@ -102,8 +102,26 @@ const PIPELINE_STAGE_DEFS = [
   { id: "publish", label: "Publish" }
 ];
 
-const SENTIMENT_STALE_THRESHOLD_MS = 5 * 60 * 1000;
-const SENTIMENT_REFRESH_MIN_DELAY_MS = 5 * 1000;
+function readSentimentTimingOverride(key, fallback) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  const candidate = window[`__GF_${key}`];
+  const numeric = typeof candidate === "number" ? candidate : Number(candidate);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric;
+  }
+  return fallback;
+}
+
+const SENTIMENT_STALE_THRESHOLD_MS = readSentimentTimingOverride(
+  "SENTIMENT_STALE_THRESHOLD_MS",
+  5 * 60 * 1000
+);
+const SENTIMENT_REFRESH_MIN_DELAY_MS = readSentimentTimingOverride(
+  "SENTIMENT_REFRESH_MIN_DELAY_MS",
+  5 * 1000
+);
 
 function formatPercent(value) {
   if (!Number.isFinite(value)) {
