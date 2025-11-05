@@ -1,55 +1,62 @@
-# Backlog Audit – Session 121
+# Backlog Audit – Session 131
 
-Generated: 2025-11-05
+Date: 2025-11-05
 
-## Feature Overview
+Focus: Grooming backlog to keep Tier 1 gameplay, offline publishing, unified web client, and supporting systems aligned with `REQUIREMENTS.md`.
 
-| Feature | Status | Priority | Owner | Notes |
-|---------|--------|----------|-------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | in-progress | 4 | codex | Stage deploy shortcut restored; IMP-OFFLINE-05 queued to replay staging QA, capture drift telemetry, and publish lore bundles for admin review. |
-| IMP-HUBS: Hub Implementation & Load Readiness | in-progress | 5 | codex | Contested PvP telemetry ready for staging reruns; IMP-HUBS-05 will validate live Temporal workflows and moderation hooks post-deploy. |
-| IMP-CLIENT: Unified Web Client Shell | in-progress | 6 | codex | IMP-CLIENT-06 awaiting refreshed LangGraph SSE + admin alert artefacts plus SME confirmation after the next stage deploy. |
-| IMP-PLATFORM: Platform Implementation Foundations | in-progress | 7 | codex | IMP-PLATFORM-03 owns the next stage deploy; downstream MinIO/Search/Observability work parked behind Tier 1 closures. |
-| IMP-MOD: Moderation & Admin Surfaces | in-progress | 8 | codex | Moderation queue integration depends on pipeline + hub staging runs; policy editor remains queued behind Tier 1 outcomes. |
+## IMP-PLATFORM: Platform Implementation Foundations
 
-## Feature Details
+| Item | Status | Priority | Owner | Notes / Next Step |
+|------|--------|----------|-------|-------------------|
+| IMP-PLATFORM-03: Image management | in-progress | P0 | codex | Fire Tier 1 reminders at 09:00Z/09:05Z, log acknowledgements, then rerun CI rehearsal (`npm run docker:publish:services` + temporal worker). |
+| IMP-MINIO-01: MinIO Lifecycle Automation | todo | P2 | codex | Hold until Tier 1 validations complete; prep for Nomad rehearsal + Backblaze checks. |
+| IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | codex | Start after IMP-OFFLINE-05 locks reliable delta feeds and retry telemetry. |
+| IMP-OBS-01: Observability & Incident Dashboards | todo | P3 | codex | Defer until core gameplay + publishing loops stabilize. |
+| IMP-PLATFORM-02: LangGraph Staging DNS & Connectivity | done | P1 | codex | Delivered; no further action. |
+| IMP-IAC-01: Nomad & Vault Operations Modules | done | P2 | codex | Delivered; no further action. |
 
-### IMP-OFFLINE: Post-Session Publishing Pipeline
+## IMP-OFFLINE: Post-Session Publishing Pipeline
 
-| Backlog Item | Status | Priority | Notes |
-|--------------|--------|----------|-------|
-| IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | todo | P1 | Stage deploy run will unblock end-to-end QA; add drift telemetry + lore bundles to unblock IMP-CLIENT-06 and IMP-MOD-03 reviews. |
+| Item | Status | Priority | Owner | Notes / Next Step |
+|------|--------|----------|-------|-------------------|
+| IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | in-progress | P1 | codex | Replay offline QA with tag 7 once Tier 1 acks land, bundle drift rollup + moderation evidence, share with IMP-CLIENT-06. |
+| IMP-OFFLINE-04: Closure Triggered Workflow Orchestration | done | P1 | codex | Delivered; no further action. |
+| IMP-OFFLINE-03: Publishing Cadence & Search Sync | done | P1 | codex | Delivered; no further action. |
+| IMP-OFFLINE-02: Entity Extraction & Delta Queue | done | P1 | codex | Delivered; no further action. |
+| IMP-OFFLINE-01: Story Consolidation Workflow MVP | done | P1 | codex | Delivered; no further action. |
 
-### IMP-HUBS: Hub Implementation & Load Readiness
+## IMP-CLIENT: Unified Web Client Shell
 
-| Backlog Item | Status | Priority | Notes |
-|--------------|--------|----------|-------|
-| IMP-HUBS-05: Hub PvP Contested Interactions | todo | P1 | Stage contest monitor rerun + moderation SME feedback required to close PvP balancing guidance. |
+| Item | Status | Priority | Owner | Notes / Next Step |
+|------|--------|----------|-------|-------------------|
+| IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | in-progress | P1 | codex | Distribute 2025-11-05 stage smoke/alert bundle (port 4443) + drift rollup to SMEs, archive approvals, confirm admin alert fallback auto-disables. |
+| IMP-CLIENT-05: Session Closure Controls & Offline Status | done | P1 | codex | Delivered; no further action. |
+| IMP-CLIENT-04: Account & Session Management UI | done | P1 | codex | Delivered; no further action. |
+| IMP-CLIENT-03: Service Worker & Offline Continuity | done | P1 | codex | Delivered; no further action. |
+| IMP-CLIENT-02: Overlay System & Pacing Ribbon | done | P1 | codex | Delivered; no further action. |
+| IMP-CLIENT-01: Web Client Shell & Chat Canvas | done | P1 | codex | Delivered; no further action. |
+| IMP-AXE-01: Accessibility Automation Pipeline | done | P1 | codex | Delivered; no further action. |
 
-### IMP-CLIENT: Unified Web Client Shell
+## IMP-HUBS: Hub Implementation & Load Readiness
 
-| Backlog Item | Status | Priority | Notes |
-|--------------|--------|----------|-------|
-| IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | todo | P1 | Needs latest stage smoke + alert artefacts and SME signoff linking overlays with offline pipeline telemetry. |
+| Item | Status | Priority | Owner | Notes / Next Step |
+|------|--------|----------|-------|-------------------|
+| IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | codex | Run staging contest monitor on tag 7, gather >3 actor telemetry, circulate moderation feedback, finalize balancing brief. |
+| IMP-HUB-04: Verb Catalog Persistence & Admin Controls | done | P1 | codex | Delivered; no further action. |
+| IMP-HUB-03: Hub Narrative Bridge & Safety Telemetry | done | P1 | codex | Delivered; no further action. |
+| IMP-HUB-02: Hub Orchestrator & Temporal Hooks | done | P1 | codex | Delivered; no further action. |
+| IMP-HUB-01: Hub Gateway & Command Parser Skeleton | done | P1 | codex | Delivered; no further action. |
 
-### IMP-PLATFORM: Platform Implementation Foundations
+## IMP-MOD: Moderation & Admin Surfaces
 
-| Backlog Item | Status | Priority | Notes |
-|--------------|--------|----------|-------|
-| IMP-PLATFORM-03: Image management | in-progress | P0 | Stage tag 7 live; manifest/report plus distribution pack (`docs/reports/stage-deploy-distribution-2025-11-05.md`) published. Await Tier 1 SME acknowledgements before resuming CI rehearsal. |
-| IMP-MINIO-01: MinIO Lifecycle Automation | todo | P2 | Schedule after Tier 1 validations so lifecycle rehearsal can piggyback on the same stage deploy window. |
-| IMP-SEARCH-01: Lore Search Differential Indexing | todo | P2 | Kick off once publishing QA proves stable delta feeds and retry telemetry. |
-| IMP-OBS-01: Observability & Incident Dashboards | todo | P3 | Hold until gameplay/offline/client loops are validated and generating sustained telemetry. |
+| Item | Status | Priority | Owner | Notes / Next Step |
+|------|--------|----------|-------|-------------------|
+| IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | codex | Shadow tag 7 QA + contest runs, archive moderation cadence evidence, document outstanding gaps for SME review. |
+| IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | codex | Begin once pipeline + hubs prove stable; design schema + admin UX ahead of rollout. |
+| IMP-MOD-01: Moderation Dashboard & Live Overrides | done | P2 | codex | Delivered; no further action. |
 
-### IMP-MOD: Moderation & Admin Surfaces
+### WIP + Compliance Checks
 
-| Backlog Item | Status | Priority | Notes |
-|--------------|--------|----------|-------|
-| IMP-MOD-02: Prohibited Capability Registry & Policy Editor | todo | P2 | Start after IMP-OFFLINE-05 / IMP-HUBS-05 finalize so capability events target stable pipelines. |
-| IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | Share staging deploy + QA telemetry with ops dashboards to finalize cadence strip validation. |
-
-## Sanity Checks
-
-- All active backlog items remain linked to features; no orphan PBIs detected.
-- Active WIP (in-progress): 2 items, within the WIP ≤ 10 guideline.
-- Tier 1 focus locks on gameplay loops, offline publishing, and unified client deliverables per REQUIREMENTS.md.
+- Active WIP items (`in-progress`): 5 (within WIP ≤ 10 limit).
+- All open PBIs mapped to their owning feature; no orphaned backlog entries detected.
+- Tier 1 focus remains on gameplay, offline publishing, unified client, and moderation cadence per `REQUIREMENTS.md`.

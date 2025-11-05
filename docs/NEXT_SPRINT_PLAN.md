@@ -1,16 +1,21 @@
-# Next Sprint Plan – Sessions 121–130
+# Next Sprint Plan – Sessions 132–141
 
-Generated: 2025-11-05
+Scope: Prioritize Tier 1 gameplay delivery, offline post-session publishing, and unified client mandates from `REQUIREMENTS.md`, with supporting systems queued behind successful validations.
 
-| Priority | Tier | Focus Area | Key Backlog Items | Immediate Actions | Dependencies / Notes |
-|----------|------|------------|-------------------|-------------------|----------------------|
-| P1 | Tier 1 | Stage deploy + gameplay/offline validation | IMP-PLATFORM-03, IMP-OFFLINE-05, IMP-HUBS-05 | Execute `npm run deploy:stage`, verify Nomad allocations, publish manifest/report + distribution pack, then run offline QA + contest monitors; capture SME receipts. | Requires coordinated staging window; artefacts must satisfy DES-16, DES-17, DES-BENCH-01 tolerances and feed downstream features. |
-| P1 | Tier 1a | Unified web client overlays & admin telemetry | IMP-CLIENT-06 | After Tier 1 deploy, rerun stage smoke/alerts, capture LangGraph SSE + admin alert artefacts, and secure SME confirmations in `docs/reports`. | Depends on Tier 1 telemetry bundles (IMP-OFFLINE-05 drift, IMP-HUBS-05 contests) to validate synchronized overlays. |
-| P2 | Tier 2 | Moderation queue & governance readiness | IMP-MOD-03, IMP-MOD-02 | Shadow Tier 1 rehearsals to capture moderation cadence data, finalize dashboard gap list, and prep policy editor schema/UX for implementation kickoff. | Promoted once Tier 1 validations lock cadence signals; ensure outputs align with REQUIREMENTS.md moderation mandates. |
-| P3 | Tier 3 | Platform hardening & observability runway | IMP-MINIO-01, IMP-SEARCH-01, IMP-OBS-01 | Maintain rehearsal checklists, monitor staging deploy outcomes, and refine IaC/telemetry drafts while Tier 1 stabilises. | Resume only after Tier 1 and Tier 2 deliver consistent data feeds; keep ops stakeholders aligned via backlog updates. |
+| Priority | Focus Area | MCP Item(s) | Desired Outcome | Dependencies / Notes |
+|----------|------------|-------------|-----------------|----------------------|
+| P1 | Platform follow-through | IMP-PLATFORM-03 | Execute Tier 1 reminder sends, capture SME acknowledgements, and restart CI rehearsal to keep tag 7 images current. | Requires Slack env vars; follow schedule (09:00Z/09:05Z pings, 12:00Z escalation) before CI rerun. |
+| P1 | Offline publishing validation | IMP-OFFLINE-05 | Replay offline QA with tag 7, bundle drift + moderation evidence, and publish validation pack to unblock downstream features. | Wait for Tier 1 acks, then coordinate artefact sharing with IMP-CLIENT-06. |
+| P1 | Unified client SME signoff | IMP-CLIENT-06 | Distribute stage smoke/alert bundle (port 4443) and capture SME confirmations covering overlays + admin pipeline. | Archive approvals in docs + MCP; confirm fallback auto-disables once live alerts flow. |
+| P1 | Hub PvP telemetry | IMP-HUBS-05 | Gather >3 actor contest telemetry on tag 7, circulate moderation feedback, and finalize balancing brief. | Stage contest monitor run shares artefacts with IMP-MOD-03. |
+| P1 | Moderation cadence alignment | IMP-MOD-03 | Shadow tag 7 QA/contest runs, archive cadence evidence, and document remaining moderation gaps for SME review. | Depends on IMP-OFFLINE-05 + IMP-HUBS-05 telemetry to validate queue integrations. |
+| P2 | Storage lifecycle readiness | IMP-MINIO-01 | Plan Nomad rehearsal + Backblaze checks for MinIO lifecycle automation once Tier 1 items land. | Blocked on IMP-PLATFORM-03 closure and CI stability. |
+| P2 | Lore search deltas | IMP-SEARCH-01 | Prepare differential indexing flow leveraging stable offline delta feeds. | Requires IMP-OFFLINE-05 completion for reliable telemetry. |
+| P2 | Capability governance | IMP-MOD-02 | Design and stage policy editor backend/UI for Prohibited Capabilities once moderation cadence stabilizes. | Wait for IMP-MOD-03 handoff and pipeline confirmations. |
+| P3 | Observability suite | IMP-OBS-01 | Schedule observability/incident dashboard rollout after Tier 1 loops are production-ready. | Keep deferred until gameplay + pipeline systems demonstrate sustained stability. |
 
-## Supporting Notes
+### Validation Reminders
 
-- Keep WIP centered on IMP-PLATFORM-03 handoff plus IMP-OFFLINE-05 / IMP-HUBS-05 until deploy artefacts land; avoid starting Tier 2/3 execution early.
-- Log every validation run (deploy, offline QA, contest, smoke/alerts) with artefact paths and SME receipts in docs/reports and MCP backlog updates.
-- Cross-check REQUIREMENTS.md mandates—offline publishing cadence, unified client overlays, and moderation governance—before promoting Tier 2 or Tier 3 scope.
+- Link every execution step back to feature commitments in `REQUIREMENTS.md`.
+- Maintain WIP ≤ 10; close PBIs immediately after criteria pass.
+- Update MCP backlog and docs after each milestone to preserve traceability.

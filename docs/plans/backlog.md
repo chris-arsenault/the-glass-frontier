@@ -1,6 +1,6 @@
 # Backlog Snapshot
 
-Updated for Session 121 grooming cycle. Focus stays on Tier 1 gameplay, offline publishing, and unified client delivery; supporting systems follow once those milestones land.
+Updated for Session 131 grooming cycle. Tier 1 focus remains on gameplay validation, offline publishing, unified client overlays, and moderation cadence; supporting systems follow once those milestones land.
 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
@@ -10,10 +10,10 @@ Updated for Session 121 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | todo | P1 | Tag 7 live; 2025-11-05 drift simulation rollup (`artifacts/offline-qa/offline-qa-batch-rollup-2025-11-05T04-53-56-862Z.json`) ready for staging storage replay + validation bundle. |
-| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | in-progress | P1 | Stage smoke/alert harness rerun 2025-11-05 (fallback port 4443); docs updated with new metrics + drift link. Await SME confirmations. |
-| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | todo | P1 | With tag 7 active, run `npm run monitor:contests`, gather Temporal telemetry, and wrap PvP balancing brief for moderation. |
-| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | Piggyback on tag 7 QA/contest runs to capture moderation cadence telemetry and close ops dashboard validation. |
+| IMP-OFFLINE: Post-Session Publishing Pipeline | IMP-OFFLINE-05: Publishing Pipeline QA & Lore Sync | in-progress | P1 | Await Tier 1 acks, then replay offline QA with tag 7, bundle drift + moderation evidence, and share validation pack. |
+| IMP-CLIENT: Unified Web Client Shell | IMP-CLIENT-06: Narrative Overlay & Pipeline Status Integration | in-progress | P1 | Stage smoke/alert harness rerun 2025-11-05 (fallback port 4443); distribute bundle + drift rollup for SME confirmations. |
+| IMP-HUBS: Hub Implementation & Load Readiness | IMP-HUBS-05: Hub PvP Contested Interactions | in-progress | P1 | Execute tag 7 contest monitor runs, capture >3 actor telemetry, and finalize balancing brief with moderation feedback. |
+| IMP-MOD: Moderation & Admin Surfaces | IMP-MOD-03: Moderation Queue & Publishing Sync | in-progress | P1 | Shadow tag 7 QA/contest telemetry, archive cadence evidence, and document remaining moderation gaps. |
 
 ## Tier 2 (P2)
 | Feature | Item | Status | Priority | Notes |
@@ -35,5 +35,5 @@ Updated for Session 121 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 - NAR-CORE: Worldbuilding Foundations
 
 ## Health Checks
-- Active WIP (in-progress): 3 items, within the WIP ≤ 10 limit.
+- Active WIP (in-progress): 5 items, within the WIP ≤ 10 limit.
 - No orphan PBIs; every backlog item remains linked to its owning feature in MCP.
