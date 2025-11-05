@@ -37,7 +37,8 @@
     "deploy:stage": "bash scripts/deploy-stage.sh",
     "docker:build:services": "bash infra/docker/build-services.sh",
     "docker:publish:services": "bash infra/docker/publish-services.sh",
-    "docker:publish:temporal-worker": "node scripts/docker/publishTemporalWorker.js"
+    "docker:publish:temporal-worker": "node scripts/docker/publishTemporalWorker.js",
+    "reminders:tier1": "node scripts/reminders/runTier1Reminders.js"
   },
   "keywords": [
     "glass-frontier",

@@ -58,6 +58,11 @@ Stage deploy tag 7 is available for hub telemetry rehearsal. Manifest: artifacts
 - 2025-11-05T05:19:50Z — Posted staged announcement bundle to `#tier1-platform`, `#offline-publishing`, `#client-overlays`, and `#hub-contests` using the templates below. All posts include manifest, deploy summary, and Terraform tag references plus the relevant action prompts for each SME.
 - Awaiting acknowledgements from all Tier 1 SMEs; keep tracker updated as responses arrive and capture confirmation details in the associated MCP backlog items.
 
+## Automation Support
+- Run `npm run reminders:tier1 -- --preview` to review which reminders are approaching their scheduled windows; the script reads `artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics` and mirrors the messaging templates below.
+- Provide `SLACK_BOT_TOKEN` plus channel IDs via `SLACK_CHANNEL_TIER1_PLATFORM`, `SLACK_CHANNEL_OFFLINE_PUBLISHING`, `SLACK_CHANNEL_CLIENT_OVERLAYS`, and `SLACK_CHANNEL_HUB_CONTESTS`, then execute `npm run reminders:tier1 -- --send` during the reminder window to post automatically.
+- Deliveries are tracked in `artifacts/reminders/stage-deploy-tag7-tier1-reminders-execution.json`; re-run with `--preview` to confirm completion before moving on to acknowledgement logging.
+
 ## Follow-up Plan
 - 2025-11-05T09:00:00Z — Queue reminder thread in `#tier1-platform` summarising outstanding channels and requesting ETA on confirmations. (Calendar: `artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`)
 - 2025-11-05T09:05:00Z — Post tailored reminders in `#offline-publishing`, `#client-overlays`, and `#hub-contests` with direct asks for acknowledgement plus pointers to artefacts. (Calendar: `artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`)

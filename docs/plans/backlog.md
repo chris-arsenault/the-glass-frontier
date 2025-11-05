@@ -5,7 +5,7 @@ Updated for Session 121 grooming cycle. Focus stays on Tier 1 gameplay, offline 
 ## Tier 0 (P0)
 | Feature | Item | Status | Priority | Notes |
 |---------|------|--------|----------|-------|
-| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Stage deploy 2025-11-05 pushed tag 7; manifest `artifacts/docker/service-image-manifest.json`, report `docs/reports/stage-deploy-2025-11-05.md`, and distribution pack `docs/reports/stage-deploy-distribution-2025-11-05.md` published. Reminder calendar (`artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`) and message drafts ready for 09:00Z/09:05Z follow-ups with 12:00Z escalation; awaiting SME acknowledgements before restarting the CI rehearsal shortcut (`npm run docker:publish:services` + `npm run docker:publish:temporal-worker`). |
+| IMP-PLATFORM: Platform Implementation Foundations | IMP-PLATFORM-03: Image management | in-progress | P0 | Stage deploy 2025-11-05 pushed tag 7; manifest `artifacts/docker/service-image-manifest.json`, report `docs/reports/stage-deploy-2025-11-05.md`, and distribution pack `docs/reports/stage-deploy-distribution-2025-11-05.md` published. Reminder calendar (`artifacts/reminders/stage-deploy-tag7-tier1-reminders-2025-11-05.ics`) and automation (`npm run reminders:tier1`) prepared for 09:00Z/09:05Z follow-ups with 12:00Z escalation; awaiting SME acknowledgements before restarting the CI rehearsal shortcut (`npm run docker:publish:services` + `npm run docker:publish:temporal-worker`). |
 
 ## Tier 1 (P1)
 | Feature | Item | Status | Priority | Notes |
