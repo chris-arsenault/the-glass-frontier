@@ -46,7 +46,7 @@ app.get("/healthz", (_req, res) => {
 
 app.post("/v1/chat/completions", async (req, res) => {
   try {
-    await router.proxy({ body: req.body, res });
+    await router.proxy({ req: req, res });
   } catch (error) {
     log("error", "LLM proxy request failed", {
       message: error.message

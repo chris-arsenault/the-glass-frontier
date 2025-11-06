@@ -3,6 +3,7 @@
 const { fetch } = require("undici");
 const { ProviderError } = require("./providerError");
 const { sanitizeBasePayload } = require("../payload");
+const { log } = require("../../../src/utils/logger");
 
 function createOpenAiProvider(options = {}) {
   const httpFetch = options.fetch || fetch;
@@ -21,20 +22,33 @@ function createOpenAiProvider(options = {}) {
           retryable: false
         });
       }
+      // body['stream'] = true;
 
       const target =
         process.env.OPENAI_API_BASE || "https://api.openai.com/v1/chat/completions";
 
       try {
-        return await httpFetch(target, {
+        const r =  await httpFetch(target, {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            authorization: `Bearer ${apiKey}`
+            authorization: `Bearer ${apiKey}`,
+            "accept-encoding": "identity",
           },
           body: JSON.stringify(body),
           signal
         });
+        const summary = {
+          ok: r.ok,
+          status: r.status,
+          statusText: r.statusText,
+          url: r.url,
+          headers: Object.fromEntries(r.headers),
+          bodyUsed: r.bodyUsed,
+        };
+        log("info", typeof r, {"loc": "typeof response_in_provider"})
+        log("info", summary, {"loc": "response_in_provider"})
+        return r;
       } catch (error) {
         throw new ProviderError({
           code: "openai_upstream_unreachable",

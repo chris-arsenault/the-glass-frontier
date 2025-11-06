@@ -113,7 +113,7 @@ class LangGraphLlmClient {
     while (attempt <= this.maxRetries) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-
+      log("info", body);
       try {
         const response = await this.fetch(this.baseUrl, {
           method: "POST",
@@ -125,6 +125,7 @@ class LangGraphLlmClient {
         clearTimeout(timer);
 
         const text = await response.text();
+        log("info", text, {"loc":"got_text"});
         if (!response.ok) {
           const details = text ? text.slice(0, 500) : response.statusText;
           throw new Error(`llm_http_${response.status}: ${details}`);

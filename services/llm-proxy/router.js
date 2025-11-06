@@ -10,6 +10,8 @@ const { ProviderError } = require("./providers/providerError");
 const { sanitizeBasePayload } = require("./payload");
 
 const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+const HOP_BY_HOP = /^(connection|transfer-encoding|keep-alive|proxy-connection|upgrade|trailer)$/i;
+
 
 function normalizeId(id) {
   return typeof id === "string" ? id.trim().toLowerCase() : "";
@@ -79,16 +81,9 @@ function buildRegistry(providers) {
 }
 
 function shouldStream(response) {
-  if (!response || !(response instanceof Response)) {
-    return false;
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("text/event-stream")) {
-    return true;
-  }
-
-  return Boolean(response.headers.get("transfer-encoding")?.includes("chunked"));
+  if (!response || typeof response.headers?.get !== "function") return false;
+  const ct = response.headers.get("content-type") || "";
+  return /^text\/event-stream\b/i.test(ct);
 }
 
 async function drainResponse(response) {
@@ -119,39 +114,84 @@ function sendJson(res, status, payload) {
   }
 }
 
-function pipeResponse(response, res) {
-  if (!response) {
-    sendJson(res, 502, { error: "llm_proxy_invalid_response" });
-    return;
+function pipeResponse(response, req, res) {
+  if (!response) return sendJson(res, 502, { error: "llm_proxy_invalid_response" });
+
+  log("info", typeof res, {"loc": "start pipe"});
+  const response_summary = {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    url: response.url,
+    headers: Object.fromEntries(response.headers),
+    bodyUsed: response.bodyUsed,
+  };
+  log("info", response_summary, {"loc": "start pipe_again"});
+  // Status
+  res.statusCode = response.status;
+
+  // Copy safe headers only
+  for (const [k, v] of response.headers) {
+    if (HOP_BY_HOP.test(k)) continue;
+    // Avoid sending Content-Length for streams
+    if (/^content-length$/i.test(k)) continue;
+
+    log("info", {k: v}, {"loc": "set_headers"})
+    res.setHeader(k, v);
   }
 
-  if (typeof res.status === "function") {
-    res.status(response.status);
-  } else {
-    res.statusCode = response.status;
+  // If you know it is SSE, force canonical headers
+  const ct = response.headers.get("content-type") || "";
+  const isSSE = /^text\/event-stream/i.test(ct);
+  if (isSSE) {
+    log("info", "Setting SSE", {"loc": "set_headers"})
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    // Help reverse proxies
+    res.setHeader("X-Accel-Buffering", "no");
   }
 
-  response.headers.forEach((value, key) => {
-    if (typeof res.setHeader === "function") {
-      res.setHeader(key, value);
-    }
-  });
+  // Abort upstream if client disconnects
+  const abortUpstream = (err) => {
+    try { response.body?.cancel(err); } catch {}
+  };
+  res.on("close", abortUpstream);
+  req.on("aborted", abortUpstream);
+  const summary = {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    url: res.url,
+    // headers: Object.fromEntries(res.headers),
+    bodyUsed: res.bodyUsed,
+  };
+  log("info", summary, {"loc": "after_headers"})
 
+  // No body
   if (!response.body) {
-    if (typeof res.end === "function") {
-      res.end();
-    }
+    log("info", "no_body", {"loc": "no_body_check"})
+    res.end();
     return;
+  } else {
+    log("info", "has_body", {"loc": "no_body_check"})
   }
 
-  const stream = Readable.fromWeb(response.body);
-  if (typeof res.flushHeaders === "function") {
-    res.flushHeaders();
-  }
+  // If upstream sent compressed bytes, pass them through unchanged.
+  // Do NOT gunzip unless you also remove Content-Encoding.
+  // Node will chunk the response; do not set Content-Length.
+  res.flushHeaders?.();
 
-  pipeline(stream, res, (error) => {
-    if (error) {
-      res.destroy(error);
+  const nodeStream = Readable.fromWeb(response.body);
+
+  pipeline(nodeStream, res, (err) => {
+    if (err) {
+      log("error", err, {"loc": "in_pipeline"})
+      // Ensure socket closed and upstream cancelled
+      abortUpstream(err);
+      // Avoid double errors on already closed sockets
+      if (!res.headersSent) res.statusCode = 502;
+      try { res.destroy(err); } catch {}
     }
   });
 }
@@ -168,11 +208,16 @@ function sendBuffered(response, res) {
     res.statusCode = response.status;
   }
 
-  response.headers.forEach((value, key) => {
-    if (typeof res.setHeader === "function") {
-      res.setHeader(key, value);
-    }
-  });
+  for (const [k, v] of response.headers) {
+    if (HOP_BY_HOP.test(k)) continue;
+    if (/^content-length$/i.test(k)) continue; // we will compute it
+    res.setHeader(k, v);
+  }
+
+  if (response.status === 204 || response.status === 304 || !response.body) {
+    res.end();
+    return;
+  }
 
   response
     .arrayBuffer()
@@ -238,7 +283,7 @@ function createRouter(options = {}) {
   const timeoutMs =
     typeof options.timeoutMs === "number"
       ? options.timeoutMs
-      : Number.parseInt(process.env.LLM_PROXY_REQUEST_TIMEOUT_MS || "60000", 10);
+      : Number.parseInt(process.env.LLM_PROXY_REQUEST_TIMEOUT_MS || "600000", 10);
   const logger =
     typeof options.logger === "function"
       ? options.logger
@@ -270,7 +315,8 @@ function createRouter(options = {}) {
     return base;
   }
 
-  async function proxy({ body, res }) {
+  async function proxy({ req, res }) {
+    const body = req.body;
     const requestId = randomUUID();
     const sanitized = sanitizeBasePayload(body);
     const overrideId = body?.provider || process.env.LLM_PROXY_PROVIDER;
@@ -325,14 +371,18 @@ function createRouter(options = {}) {
           });
           continue;
         }
+        log("info", response, {"loc": "response_after"})
+
 
         logger("info", "llm-proxy.provider.success", {
           ...attemptCtx,
-          status: response.status
+          status: response.status,
+          stream: shouldStream(response)
         });
+        log("info", typeof res, {"loc": "res_after_success"})
 
         if (shouldStream(response)) {
-          pipeResponse(response, res);
+          pipeResponse(response, req, res);
         } else {
           sendBuffered(response, res);
         }

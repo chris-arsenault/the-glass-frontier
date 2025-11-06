@@ -3,6 +3,189 @@
 const { clamp } = require("../utils/math");
 const { clone } = require("./sessionMemoryUtils");
 
+function normalizeInventoryItem(raw) {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const id = typeof raw.id === "string" && raw.id.trim().length > 0 ? raw.id.trim() : null;
+  if (!id) {
+    return null;
+  }
+
+  const name =
+    typeof raw.name === "string" && raw.name.trim().length > 0 ? raw.name.trim() : undefined;
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags.map((tag) => String(tag).trim()).filter(Boolean)
+    : undefined;
+  const quantity =
+    typeof raw.quantity === "number" && Number.isFinite(raw.quantity) ? raw.quantity : undefined;
+
+  const item = { ...raw, id };
+
+  if (name !== undefined) {
+    item.name = name;
+  }
+  if (tags !== undefined) {
+    item.tags = Array.from(new Set(tags));
+  }
+  if (quantity !== undefined) {
+    item.quantity = quantity;
+  }
+
+  return item;
+}
+
+function applyInventoryOperations(inventory, delta, summary) {
+  if (!Array.isArray(inventory)) {
+    return false;
+  }
+
+  const byId = new Map(inventory.map((entry) => [entry.id, entry]));
+  let changed = false;
+
+  const additions = Array.isArray(delta?.add) ? delta.add : [];
+  additions.forEach((rawItem) => {
+    const item = normalizeInventoryItem(rawItem);
+    if (!item) {
+      return;
+    }
+
+    const existing = byId.get(item.id);
+    if (existing) {
+      let localChanged = false;
+
+      if (typeof item.quantity === "number") {
+        const currentQty = typeof existing.quantity === "number" ? existing.quantity : 0;
+        const nextQty = currentQty + item.quantity;
+        if (nextQty !== currentQty) {
+          existing.quantity = nextQty;
+          localChanged = true;
+        }
+      }
+
+      if (Array.isArray(item.tags) && item.tags.length > 0) {
+        const existingTags = Array.isArray(existing.tags) ? existing.tags : [];
+        const nextTags = Array.from(new Set([...existingTags, ...item.tags]));
+        if (nextTags.length !== existingTags.length) {
+          existing.tags = nextTags;
+          localChanged = true;
+        }
+      }
+
+      if (localChanged) {
+        summary.updated.push({ id: item.id, mode: "stacked" });
+        changed = true;
+      }
+      return;
+    }
+
+    inventory.push(item);
+    byId.set(item.id, item);
+    summary.added.push(item.id);
+    changed = true;
+  });
+
+  const removals = Array.isArray(delta?.remove) ? delta.remove : [];
+  removals.forEach((rawItem) => {
+    const targetId =
+      typeof rawItem === "string"
+        ? rawItem
+        : typeof rawItem?.id === "string"
+        ? rawItem.id
+        : null;
+    if (!targetId) {
+      return;
+    }
+
+    const existing = byId.get(targetId);
+    if (!existing) {
+      return;
+    }
+
+    if (typeof rawItem?.quantity === "number" && typeof existing.quantity === "number") {
+      const remaining = existing.quantity - rawItem.quantity;
+      if (remaining > 0) {
+        existing.quantity = remaining;
+        summary.updated.push({ id: targetId, mode: "consumed", quantity: remaining });
+        changed = true;
+        return;
+      }
+    }
+
+    const index = inventory.findIndex((entry) => entry.id === targetId);
+    if (index >= 0) {
+      inventory.splice(index, 1);
+      byId.delete(targetId);
+      summary.removed.push(targetId);
+      changed = true;
+    }
+  });
+
+  const updates = Array.isArray(delta?.update) ? delta.update : [];
+  updates.forEach((rawUpdate) => {
+    if (!rawUpdate || typeof rawUpdate !== "object") {
+      return;
+    }
+
+    const targetId = typeof rawUpdate.id === "string" ? rawUpdate.id : null;
+    if (!targetId) {
+      return;
+    }
+
+    const existing = byId.get(targetId);
+    if (!existing) {
+      return;
+    }
+
+    const patch =
+      rawUpdate.patch && typeof rawUpdate.patch === "object" ? rawUpdate.patch : rawUpdate;
+    let localChanged = false;
+
+    if (typeof patch.quantity === "number" && Number.isFinite(patch.quantity)) {
+      if (existing.quantity !== patch.quantity) {
+        existing.quantity = patch.quantity;
+        localChanged = true;
+      }
+    }
+
+    if (typeof patch.name === "string" && patch.name.trim().length > 0) {
+      const trimmed = patch.name.trim();
+      if (existing.name !== trimmed) {
+        existing.name = trimmed;
+        localChanged = true;
+      }
+    }
+
+    if (Array.isArray(patch.tags)) {
+      const nextTags = Array.from(new Set(patch.tags.map((tag) => String(tag).trim()).filter(Boolean)));
+      const currentTags = Array.isArray(existing.tags) ? existing.tags : [];
+      const sameLength = nextTags.length === currentTags.length;
+      const sameValues =
+        sameLength && nextTags.every((tag, index) => tag === currentTags[index]);
+      if (!sameValues) {
+        existing.tags = nextTags;
+        localChanged = true;
+      }
+    }
+
+    if (typeof patch.description === "string") {
+      const trimmed = patch.description.trim();
+      if (existing.description !== trimmed) {
+        existing.description = trimmed;
+        localChanged = true;
+      }
+    }
+
+    if (localChanged) {
+      summary.updated.push({ id: targetId, mode: "patched" });
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
 const narrationMemoryMixin = {
   appendTranscript(sessionId, entry) {
     const session = this.ensureSession(sessionId);
@@ -74,6 +257,7 @@ const narrationMemoryMixin = {
 
     this.applyMomentum(session, envelope);
     this.applyStatAdjustments(session, envelope);
+    this.applyInventoryMutations(session, envelope, sessionId);
 
     const resolved = {
       ...pending,
@@ -133,6 +317,131 @@ const narrationMemoryMixin = {
     });
 
     return session;
+  },
+
+  applyInventoryMutations(session, envelope, sessionId) {
+    if (!session || !envelope || !envelope.inventoryDelta) {
+      return;
+    }
+
+    const summary = {
+      added: [],
+      removed: [],
+      updated: []
+    };
+
+    const timestamp = envelope.timestamp || new Date().toISOString();
+    const actor = envelope.actor || (envelope.source === "gm-response" ? "gm" : "player");
+    const reason =
+      envelope.inventoryDelta?.reason ||
+      envelope.reason ||
+      (envelope.source === "gm-response" ? "gm-inventory-directive" : "player-inventory-request");
+
+    const result = this._mutateShard(
+      session,
+      "inventory",
+      (inventory) => {
+        const changed = applyInventoryOperations(inventory, envelope.inventoryDelta, summary);
+        return { changed };
+      },
+      {
+        actor,
+        reason,
+        action: envelope.inventoryDelta?.action || "inventory-update",
+        capabilityRefs: envelope.capabilityRefs || [],
+        safetyFlags: envelope.safetyFlags || [],
+        metadata: {
+          source: envelope.source || "unknown",
+          requestId: envelope.requestId || null,
+          gmResponseId: envelope.gmResponseId || null,
+          applied: summary
+        },
+        timestamp
+      }
+    );
+
+    if (!result.changed) {
+      return;
+    }
+
+    session.characterRevision += 1;
+
+    const summarySegments = [];
+    if (summary.added.length > 0) {
+      summarySegments.push(`Added ${summary.added.length} item(s): ${summary.added.join(", ")}.`);
+    }
+    if (summary.removed.length > 0) {
+      summarySegments.push(`Removed ${summary.removed.length} item(s): ${summary.removed.join(", ")}.`);
+    }
+    if (summary.updated.length > 0) {
+      summarySegments.push(
+        `Updated ${summary.updated.length} item(s): ${summary.updated
+          .map((entry) => entry.id)
+          .join(", ")}.`
+      );
+    }
+
+    const narrationPayload = envelope.inventoryDelta?.narration;
+    let narrationText = null;
+    let narrationMetadata = {};
+
+    if (typeof narrationPayload === "string") {
+      narrationText = narrationPayload;
+    } else if (narrationPayload && typeof narrationPayload === "object") {
+      narrationText =
+        typeof narrationPayload.content === "string"
+          ? narrationPayload.content
+          : typeof narrationPayload.text === "string"
+          ? narrationPayload.text
+          : null;
+      if (narrationPayload.metadata && typeof narrationPayload.metadata === "object") {
+        narrationMetadata = { ...narrationPayload.metadata };
+      }
+    } else if (summarySegments.length > 0) {
+      narrationText = summarySegments.join(" ");
+    }
+
+    if (narrationText) {
+      this.appendTranscript(sessionId, {
+        role: actor,
+        type: "inventory-update",
+        content: narrationText,
+        metadata: {
+          type: "inventory-update",
+          requestId: envelope.requestId || null,
+          gmResponseId: envelope.gmResponseId || null,
+          applied: summary,
+          ...narrationMetadata
+        },
+        timestamp
+      });
+    }
+  },
+
+  applyPlayerInventoryIntent(sessionId, intentEnvelope) {
+    const session = this.ensureSession(sessionId);
+    const envelope = {
+      ...intentEnvelope,
+      source: intentEnvelope?.source || "player-intent",
+      actor: intentEnvelope?.actor || intentEnvelope?.playerId || "player"
+    };
+
+    this.applyInventoryMutations(session, envelope, sessionId);
+
+    return this.getShard(sessionId, "inventory");
+  },
+
+  applyGmInventoryDirective(sessionId, directiveEnvelope) {
+    const session = this.ensureSession(sessionId);
+    const envelope = {
+      ...directiveEnvelope,
+      source: directiveEnvelope?.source || "gm-response",
+      actor: directiveEnvelope?.actor || "gm"
+    };
+
+    this.applyInventoryMutations(session, envelope, sessionId);
+
+    return this.getShard(sessionId, "inventory");
   },
 
   recordCheckVeto(sessionId, envelope) {
