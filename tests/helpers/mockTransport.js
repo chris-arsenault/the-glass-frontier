@@ -34,6 +34,6 @@ class MockTransport {
   }
 }
 
-module.exports = {
+export {
   MockTransport
 };

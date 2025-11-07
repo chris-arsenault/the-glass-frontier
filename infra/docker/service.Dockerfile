@@ -28,6 +28,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/src ./src
+COPY --from=build /app/lib ./lib
 COPY --from=build /app/services ./services
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/infra/docker/entrypoint.sh ./infra/docker/entrypoint.sh
