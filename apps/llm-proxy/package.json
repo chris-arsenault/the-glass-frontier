@@ -1,0 +1,11 @@
+{
+  "name": "the-glass-frontier-llm-proxy",
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.20.0",
+  "dependencies": {
+    "crypto": "^1.0.1",
+    "express": "^5.1.0",
+    "stream": "^0.0.3",
+    "undici": "^7.16.0"
+  }
+}

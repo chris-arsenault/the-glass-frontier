@@ -1,45 +1,19 @@
 {
   "name": "the-glass-frontier",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.20.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "private": true,
   "type": "module",
-  "description": "Implementation scaffolding for The Glass Frontier narrative engine and client services.",
+  "description": "Root project for The Glass Frontier",
   "scripts": {
-    "start": "npm run start:langgraph",
-    "dev": "npm run dev:langgraph",
-    "start:langgraph": "node _services_bak/langgraph/index.js",
-    "dev:langgraph": "NODE_ENV=development node _services_bak/langgraph/index.js",
-    "start:api-gateway": "node _services_bak/api-gateway/index.js",
-    "dev:api-gateway": "NODE_ENV=development node _services_bak/api-gateway/index.js",
-    "start:hub-gateway": "node _services_bak/hub-gateway/index.js",
-    "dev:hub-gateway": "NODE_ENV=development node _services_bak/hub-gateway/index.js",
-    "start:llm-proxy": "node _services_bak/llm-proxy/index.js",
-    "dev:llm-proxy": "NODE_ENV=development node _services_bak/llm-proxy/index.js",
-    "start:temporal-worker": "node _services_bak/temporal-worker/index.js",
-    "dev:temporal-worker": "NODE_ENV=development node _services_bak/temporal-worker/index.js",
-    "start:client": "vite preview",
-    "dev:client": "vite",
-    "build:client": "vite build",
-    "client:build": "npm run build:client",
-    "test": "npm run test:unit",
-    "test:unit": "jest --runInBand",
-    "test:client": "jest --runInBand __tests__/client",
-    "test:e2e": "playwright test",
-    "test:accessibility": "playwright test tests/e2e/accessibility.spec.js",
-    "bench:check-runner": "node _scripts_bak/benchmarks/checkRunnerBenchmark.js",
-    "monitor:contests": "node _scripts_bak/benchmarks/contestWorkflowMonitor.js",
-    "db:seed:hub-verbs": "node _scripts_bak/seedHubVerbs.js",
-    "storage:lifecycle": "node _scripts_bak/minio/applyLifecycle.js",
-    "run:langgraph-sse-smoke": "node _scripts_bak/langgraphSseSmoke.js",
-    "run:vertical-slice": "node _scripts_bak/runVerticalSlice.js",
-    "run:offline-qa": "node _scripts_bak/runOfflinePublishingQa.js",
-    "run:stage-smoke": "node _scripts_bak/runStageSmoke.js",
-    "run:stage-alerts": "node _scripts_bak/adminAlertStatus.js",
-    "deploy:stage": "bash _scripts_bak/deploy-stage.sh",
-    "docker:build:services": "bash infra/docker/build-services.sh",
-    "docker:publish:services": "bash infra/docker/publish-services.sh",
-    "docker:publish:temporal-worker": "node _scripts_bak/docker/publishTemporalWorker.js",
-    "reminders:tier1": "node _scripts_bak/reminders/runTier1Reminders.js"
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
   },
   "keywords": [
     "glass-frontier",
@@ -49,61 +23,7 @@
   ],
   "author": "Codex",
   "license": "UNLICENSED",
-  "dependencies": {
-    "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.207.0",
-    "@opentelemetry/sdk-metrics": "^2.2.0",
-    "eventsource": "^4.0.0",
-    "express": "^5.1.0",
-    "minio": "^8.0.6",
-    "multicast-dns": "^7.2.5",
-    "pg": "^8.16.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "undici": "^7.16.0",
-    "uuid": "^13.0.0",
-    "ws": "^8.18.3"
-  },
   "devDependencies": {
-    "@axe-core/playwright": "^4.11.0",
-    "@babel/core": "^7.28.5",
-    "@babel/preset-env": "^7.28.5",
-    "@babel/preset-react": "^7.28.5",
-    "@playwright/test": "^1.56.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/user-event": "^14.6.1",
-    "@vitejs/plugin-react": "^5.1.0",
-    "axe-html-reporter": "^2.2.11",
-    "babel-jest": "^30.2.0",
-    "jest": "^30.2.0",
-    "jest-environment-jsdom": "^30.2.0",
-    "pg-mem": "^3.0.5",
-    "source-map": "^0.7.6",
-    "supertest": "^7.1.4",
-    "vite": "~7.1.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "transform": {
-      "^.+\\.[jt]sx?$": "babel-jest"
-    },
-    "moduleFileExtensions": [
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
-    "setupFilesAfterEnv": [
-      "@testing-library/jest-dom"
-    ],
-    "testPathIgnorePatterns": [
-      "<rootDir>/tests/e2e/"
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "src/**/*.jsx",
-      "client/src/**/*.js",
-      "client/src/**/*.jsx"
-    ]
+    "turbo": "^2.6.0"
   }
 }

@@ -1,8 +1,8 @@
 {
-  "name": "the-glass-frontier",
+  "name": "the-glass-frontier-client",
   "version": "0.1.0",
   "private": true,
-  "description": "The Glass Frontier client.",
+  "description": "The Glass Frontier Client.",
   "type": "module",
   "scripts": {
     "start": "vite preview",

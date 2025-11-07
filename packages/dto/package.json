@@ -1,0 +1,6 @@
+{
+  "name": "@glass-frontier/dto",
+  "version": "1.0.0",
+  "main": "dist/index.ts",
+  "type": "module"
+}

@@ -12,3 +12,4 @@ deliveries/
 *.tfstate
 *.tfstate.backup
 artifacts/
+.turbo/
