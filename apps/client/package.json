@@ -16,7 +16,7 @@
     "temporal"
   ],
   "author": "Tsonu",
-  "license": "UNLICENSED",
+  "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -24,7 +24,6 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "vite": "~7.1.0"
   },

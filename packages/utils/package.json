@@ -1,6 +1,13 @@
 {
   "name": "@glass-frontier/utils",
-  "version": "1.0.0",
-  "main": "dist/index.ts",
-  "type": "module"
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "lint": "eslint .",
+    "test": "vitest run"
+  }
 }

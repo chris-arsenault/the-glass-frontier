@@ -1,15 +1,15 @@
 "use strict";
 
 import express from "express";
-import { log  } from "../../_src_bak/utils/logger.js";
-import { createRouter  } from "./router.js";
+import { log  } from "@glass-frontier/utils";
+import { Router  } from "./src/Router";
 
 const port = Number.parseInt(
   process.env.PORT || process.env.LLM_PROXY_PORT || "8082",
   10
 );
 const app = express();
-const router = createRouter();
+const router = new Router();
 
 process.env.SERVICE_NAME = process.env.SERVICE_NAME || "llm-proxy";
 
@@ -44,10 +44,10 @@ app.get("/healthz", (_req, res) => {
   });
 });
 
-app.post("/v1/chat/completions", async (req, res) => {
+app.post("/v1/chat/completions", async (req, res, next) => {
   try {
-    await router.proxy({ req: req, res });
-  } catch (error) {
+    await router.proxy(req, res, next);
+  } catch (error: any) {
     log("error", "LLM proxy request failed", {
       message: error.message
     });

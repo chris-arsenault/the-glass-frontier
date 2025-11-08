@@ -13,3 +13,4 @@ deliveries/
 *.tfstate.backup
 artifacts/
 .turbo/
+tsconfig.tsbuildinfo

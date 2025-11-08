@@ -1,11 +1,7 @@
 'use strict'
 
-import {BaseDTO} from "./BaseDTO";
-import {NarrationEvent} from "./NarrationEvent";
-
-const dtoTypeMap = {
-  "narration.event": NarrationEvent,
-}
+import {BaseDTO, WireRecord} from "./BaseDTO";
+import { dtoTypeMap } from "./typeMap"
 
 class Envelope {
   dtos: BaseDTO[] = [];
@@ -13,23 +9,24 @@ class Envelope {
   queue(o: BaseDTO): void {
     this.dtos.push(o);
   }
-  serialize(): string {
-    let envelope = {}
+
+  serialize():  Record<string, WireRecord[]> {
+    let envelope: Record<string, WireRecord[]> = {}
     this.dtos.forEach((dto: BaseDTO) => {
       if (!envelope[dto.type]) {
         envelope[dto.type] = []
       }
       envelope[dto.type].push(dto.serialize())
     })
-    return JSON.stringify(envelope)
+    return envelope;
   }
-  static deserialize(resBody: string): Envelope {
+
+  static deserialize(resBody:  Record<string, WireRecord[]>): Envelope {
     let e = new Envelope();
-    const j = JSON.parse(resBody);
-    for (const key in j) {
+    for (const key in resBody) {
       const t = dtoTypeMap[key];
-      j[key].forEach(str => {
-        e.queue(t.serialize(str))
+      resBody[key].forEach((r: WireRecord) => {
+        e.queue(t.deserialize(r))
       })
     }
     return e;

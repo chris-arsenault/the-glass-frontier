@@ -1,7 +1,7 @@
 "use strict";
 
 const levels = ["debug", "info", "warn", "error"];
-const levelWeights = levels.reduce((acc, level, index) => {
+const levelWeights = levels.reduce((acc: Record<string, any>, level: string, index: number) => {
   acc[level] = index;
   return acc;
 }, {});
@@ -20,7 +20,9 @@ function isSilent() {
   return process.env.LOG_SILENT === "1";
 }
 
-function log(level, message, metadata = {}) {
+type Loggable = string | number | boolean
+
+function log(level: string, message: string, metadata: Record<string, Loggable> = {}) {
   if (!levels.includes(level)) {
     throw new Error(`Unknown log level: ${level}`);
   }

@@ -1,12 +1,3 @@
-"use strict";
-
-import { createOpenAiProvider  } from "./openai.js";
-import { createAnthropicProvider  } from "./anthropic.js";
-
-function buildDefaultProviders() {
-  return [createOpenAiProvider(), createAnthropicProvider()];
-}
-
-export {
-  buildDefaultProviders
-};
+export * from "./ProviderRegistry"
+export * from "./ProviderError"
+export * from "./BaseProvider"

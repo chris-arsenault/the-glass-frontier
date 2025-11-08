@@ -1,15 +1,11 @@
 "use strict";
 
-function clamp(value, min, max) {
-  if (typeof value !== "number") {
-    return value;
-  }
-
-  if (typeof min === "number" && value < min) {
+function clamp(value: number, min: number, max: number) {
+  if (value < min) {
     return min;
   }
 
-  if (typeof max === "number" && value > max) {
+  if (value > max) {
     return max;
   }
 

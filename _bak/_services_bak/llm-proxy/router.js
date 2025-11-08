@@ -295,16 +295,16 @@ function createRouter(options = {}) {
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         return await provider.execute({
-          body: payload,
-          signal: controller.signal,
-          requestId
+            body: payload,
+            signal: controller.signal,
+            requestId
         });
       } finally {
         clearTimeout(timer);
       }
     }
 
-    return provider.execute({ body: payload, signal: undefined, requestId });
+    return provider.execute({body: payload, signal: undefined, requestId});
   }
 
   function toPayload(provider, sanitized) {

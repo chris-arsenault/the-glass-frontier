@@ -2,10 +2,28 @@
   "name": "the-glass-frontier-llm-proxy",
   "version": "0.1.0",
   "packageManager": "pnpm@10.20.0",
+  "scripts": {
+    "start": "tsc -b --watch & node dist/index.js",
+    "dev": "NODE_ENV=development tsx index.ts",
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "glass-frontier",
+    "narrative-engine",
+    "langgraph"
+  ],
+  "author": "Tsonu",
+  "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "crypto": "^1.0.1",
+    "@glass-frontier/utils": "workspace:*",
     "express": "^5.1.0",
     "stream": "^0.0.3",
     "undici": "^7.16.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "eslint": "^9.39.1"
   }
 }

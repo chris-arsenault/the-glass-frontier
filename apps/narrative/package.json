@@ -7,7 +7,9 @@
   "scripts": {
     "start": " node index.ts",
     "dev": "NODE_ENV=development node index.ts",
-    "build": "tsc"
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "keywords": [
     "glass-frontier",
@@ -15,7 +17,7 @@
     "langgraph"
   ],
   "author": "Tsonu",
-  "license": "UNLICENSED",
+  "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
   },
   "devDependencies": {

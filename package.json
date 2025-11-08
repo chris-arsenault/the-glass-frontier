@@ -22,8 +22,17 @@
     "temporal"
   ],
   "author": "Codex",
-  "license": "UNLICENSED",
+  "license": "Polyform-Noncommercial-1.0.0",
   "devDependencies": {
-    "turbo": "^2.6.0"
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.0",
+    "@vitest/coverage-v8": "^4.0.8",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "turbo": "^2.6.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
   }
 }
