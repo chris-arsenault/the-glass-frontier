@@ -5,8 +5,8 @@
   "description": "The Glass Frontier Narrative Engine.",
   "type": "module",
   "scripts": {
-    "start": " node index.ts",
-    "dev": "NODE_ENV=development node index.ts",
+    "start": "node dist/index.js",
+    "dev": "NODE_ENV=development ts-node src/index.ts",
     "build": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run"
@@ -19,8 +19,14 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
+    "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/check-request-resolver": "workspace:*",
+    "@glass-frontier/dto": "workspace:*",
+    "express": "^4.21.1",
+    "undici": "^6.21.0"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "eslint": "^9.39.1"
   }
 }

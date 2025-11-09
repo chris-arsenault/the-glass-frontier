@@ -1,27 +1,31 @@
-"use strict";
+import type { GraphContext } from "../types.js";
+import type { SessionTelemetry } from "./telemetry.js";
 
-/**
- * Lightweight LangGraph-inspired orchestrator that executes narrative nodes in sequence,
- * capturing telemetry at each transition. Nodes are simple objects with an `id` string
- * and an async `execute(context)` method that returns the updated context.
- */
+export interface GraphNode {
+  readonly id: string;
+  execute(context: GraphContext): Promise<GraphContext> | GraphContext;
+}
+
 class LangGraphOrchestrator {
-  constructor({ nodes, telemetry }) {
+  readonly #nodes: GraphNode[];
+  readonly #telemetry?: SessionTelemetry;
+
+  constructor(options: { nodes: GraphNode[]; telemetry?: SessionTelemetry }) {
+    const { nodes, telemetry } = options;
     if (!Array.isArray(nodes) || nodes.length === 0) {
       throw new Error("LangGraphOrchestrator requires at least one node");
     }
-
-    this.nodes = nodes;
-    this.telemetry = telemetry;
+    this.#nodes = nodes;
+    this.#telemetry = telemetry;
   }
 
-  async run(initialContext) {
+  async run(initialContext: GraphContext): Promise<GraphContext> {
     let context = { ...initialContext };
 
-    for (const node of this.nodes) {
+    for (const node of this.#nodes) {
       const nodeId = node.id || "unknown-node";
 
-      this.telemetry?.recordTransition({
+      this.#telemetry?.recordTransition({
         sessionId: context.sessionId,
         nodeId,
         status: "start",
@@ -32,21 +36,20 @@ class LangGraphOrchestrator {
         // eslint-disable-next-line no-await-in-loop
         context = await node.execute(context);
 
-        this.telemetry?.recordTransition({
+        this.#telemetry?.recordTransition({
           sessionId: context.sessionId,
           nodeId,
           status: "success",
           turnSequence: context.turnSequence
         });
       } catch (error) {
-        this.telemetry?.recordTransition({
+        const message = error instanceof Error ? error.message : "unknown";
+        this.#telemetry?.recordTransition({
           sessionId: context.sessionId,
           nodeId,
           status: "error",
           turnSequence: context.turnSequence,
-          metadata: {
-            message: error.message
-          }
+          metadata: { message }
         });
         throw error;
       }
@@ -56,6 +59,4 @@ class LangGraphOrchestrator {
   }
 }
 
-export {
-  LangGraphOrchestrator
-};
+export { LangGraphOrchestrator };

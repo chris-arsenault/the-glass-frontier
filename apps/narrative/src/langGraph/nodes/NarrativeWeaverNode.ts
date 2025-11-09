@@ -1,12 +1,33 @@
-"use strict";
+import { composeOutcomePrompt } from "../../prompts.js";
+import type { GraphContext } from "../../types.js";
+import type { GraphNode } from "../orchestrator.js";
 
-import { composeOutcomePrompt  } from "../../prompts.js";
-import { NarrationEvent  } from "../../../../_lib_bak/envelopes/index.js";
+class NarrativeEnvelope {
+  #payload: Record<string, unknown>;
 
-function buildFallbackNarration({ sceneFrame, intent, checkRequest, safety }) {
-  const segments = [];
-  const characterName = sceneFrame?.character?.name || "The protagonist";
-  const location = sceneFrame?.location?.locale || "the frontier";
+  constructor(payload: Record<string, unknown>) {
+    this.#payload = payload;
+  }
+
+  serialize() {
+    return this.#payload;
+  }
+}
+
+function buildFallbackNarration({
+  sceneFrame,
+  intent,
+  checkRequest,
+  safety
+}: {
+  sceneFrame?: Record<string, any>;
+  intent?: any;
+  checkRequest?: any;
+  safety?: any;
+}): string {
+  const segments: string[] = [];
+  const characterName = sceneFrame?.character?.name ?? "The protagonist";
+  const location = sceneFrame?.location?.locale ?? "the frontier";
   const atmosphere = sceneFrame?.location?.atmosphere;
 
   segments.push(`The relay at ${location} hums as ${characterName} steadies themselves.`);
@@ -38,12 +59,12 @@ function buildFallbackNarration({ sceneFrame, intent, checkRequest, safety }) {
   return segments.filter(Boolean).join(" ");
 }
 
-function createMarkers({ intent, checkRequest, safety, sceneFrame }) {
-  const markers = [
+function createMarkers({ intent, checkRequest, safety, sceneFrame }: Record<string, any>) {
+  const markers: Array<Record<string, unknown>> = [
     {
       type: "session.marker",
       marker: "narrative-beat",
-      tone: intent?.tone || "neutral"
+      tone: intent?.tone ?? "neutral"
     }
   ];
 
@@ -69,7 +90,7 @@ function createMarkers({ intent, checkRequest, safety, sceneFrame }) {
     markers.push({
       type: "session.marker",
       marker: "safety-escalated",
-      flags: safety.flags || [],
+      flags: safety.flags ?? [],
       severity: safety.severity
     });
   }
@@ -77,16 +98,12 @@ function createMarkers({ intent, checkRequest, safety, sceneFrame }) {
   return markers;
 }
 
-const narrativeWeaverNode = {
-  id: "narrative-weaver",
-  async execute(context) {
-    const prompt = composeOutcomePrompt({
-      checkRequest: context.checkRequest,
-      safety: context.safety
-    });
+class NarrativeWeaverNode implements GraphNode {
+  readonly id = "narrative-weaver";
 
-    const promptPackets = [...(context.promptPackets || [])];
-    let narration = null;
+  async execute(context: GraphContext): Promise<GraphContext> {
+    const prompt = composeOutcomePrompt({ checkRequest: context.checkRequest, safety: context.safety });
+    let narration: string | null = null;
 
     if (context.llm?.generateText) {
       try {
@@ -95,49 +112,29 @@ const narrativeWeaverNode = {
           temperature: 0.8,
           maxTokens: 650,
           metadata: {
-            nodeId: "narrative-weaver",
+            nodeId: this.id,
             sessionId: context.sessionId,
-            checkAuditRef: context.checkRequest?.auditRef || null
+            checkAuditRef: context.checkRequest?.auditRef ?? null
           }
         });
         narration = result.text?.trim() || null;
-        promptPackets.push({
-          type: "narrative-weaver",
-          prompt,
-          provider: result.provider,
-          response: result.raw || result.text || null,
-          usage: result.usage || null
-        });
       } catch (error) {
-        if (typeof context.telemetry?.recordToolError === "function") {
-          context.telemetry.recordToolError({
-            sessionId: context.sessionId,
-            operation: "llm.narrative-weaver",
-            referenceId: context.checkRequest?.auditRef || null,
-            attempt: 0,
-            message: error.message
-          });
-        }
-        promptPackets.push({
-          type: "narrative-weaver",
-          prompt,
-          error: error.message
+        context.telemetry?.recordToolError?.({
+          sessionId: context.sessionId,
+          operation: "llm.narrative-weaver",
+          referenceId: context.checkRequest?.auditRef ?? null,
+          attempt: 0,
+          message: error instanceof Error ? error.message : "unknown"
         });
       }
-    } else {
-      promptPackets.push({
-        type: "narrative-weaver",
-        prompt,
-        provider: "llm-missing"
-      });
     }
 
-    const narrativeEvent = new NarrationEvent({
+    const narrativeEvent = new NarrativeEnvelope({
       type: "session.message",
       id: `narration-${context.sessionId}-${context.turnSequence}`,
       role: "gm",
       content:
-        narration ||
+        narration ??
         buildFallbackNarration({
           sceneFrame: context.sceneFrame,
           intent: context.intent,
@@ -159,8 +156,6 @@ const narrativeWeaverNode = {
       promptPackets
     };
   }
-};
+}
 
-export {
-  narrativeWeaverNode
-};
+export { NarrativeWeaverNode };

@@ -9,5 +9,12 @@
     "dev": "tsc -b -w",
     "lint": "eslint .",
     "test": "vitest run"
-  }
+  },
+  "keywords": [
+    "glass-frontier",
+    "narrative-engine",
+    "langgraph"
+  ],
+  "author": "Tsonu",
+  "license": "Polyform-Noncommercial-1.0.0"
 }
