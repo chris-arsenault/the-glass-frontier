@@ -1,0 +1,39 @@
+import { useEffect } from "react";
+import { CharacterOverview } from "./CharacterOverview";
+import { useUiStore } from "../stores/uiStore";
+
+export function CharacterDrawer() {
+  const isOpen = useUiStore((state) => state.isCharacterDrawerOpen);
+  const close = useUiStore((state) => state.closeCharacterDrawer);
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isOpen) {
+        close();
+      }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [close, isOpen]);
+
+  return (
+    <>
+      <div
+        className={`character-drawer-backdrop ${isOpen ? "open" : ""}`}
+        onClick={close}
+        aria-hidden="true"
+      />
+      <div className={`character-drawer ${isOpen ? "open" : ""}`} aria-hidden={!isOpen}>
+        <button
+          type="button"
+          className="character-drawer-close"
+          onClick={close}
+          aria-label="Close character sheet"
+        >
+          ×
+        </button>
+        <CharacterOverview />
+      </div>
+    </>
+  );
+}
