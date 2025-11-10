@@ -1,6 +1,6 @@
 import type { GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
-import { composeGMSummaryPrompt } from "../prompts/gmSummaryPrompt";
+import { composeGMSummaryPrompt } from "../prompts/prompts";
 
 class GmSummaryNode implements GraphNode {
   readonly id = "gm-summary";

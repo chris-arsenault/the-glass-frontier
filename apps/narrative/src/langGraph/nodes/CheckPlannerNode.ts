@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
-import { composeCheckRulesPrompt } from "../prompts/checkPlannerPrompt";
+import { composeCheckRulesPrompt } from "../prompts/prompts";
 import { SkillCheckResolver } from "@glass-frontier/skill-check-resolver";
 import {
   SkillCheckPlan,

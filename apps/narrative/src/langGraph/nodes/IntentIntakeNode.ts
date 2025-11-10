@@ -2,7 +2,7 @@ import type {GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
 import {Attribute, Intent} from "@glass-frontier/dto";
 import {randomInt} from "node:crypto";
-import {composeIntentPrompt} from "../prompts/intentPrompt";
+import { composeIntentPrompt } from "../prompts/prompts";
 
 function fallbackIntent(text: string) {
   return {

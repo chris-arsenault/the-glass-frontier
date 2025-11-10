@@ -26,6 +26,7 @@
     "@glass-frontier/utils": "workspace:*",
     "@trpc/client": "^11.7.1",
     "@trpc/server": "^11.7.1",
+    "handlebars": "^4.7.8",
     "undici": "^6.21.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import type { GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
-import {composeNarrationPrompt} from "../prompts/narrativeWeaverPrompt";
+import { composeNarrationPrompt } from "../prompts/prompts";
 import {TranscriptEntry} from "@glass-frontier/dto/narrative/TranscriptEntry";
 
 class NarrativeWeaverNode implements GraphNode {
