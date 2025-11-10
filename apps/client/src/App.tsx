@@ -1,22 +1,24 @@
-import { ChatCanvas } from "./components/ChatCanvas.jsx";
-import { SessionProvider } from "./state/SessionContext.jsx";
+import { ChatCanvas } from "./components/ChatCanvas";
+import { ChatComposer } from "./components/ChatComposer";
+import { useSessionStore } from "./stores/sessionStore";
+import { useSessionNarrationConnection } from "./hooks/useSessionNarrationConnection";
 
 export default function App() {
-  const session = {
-                  id: "fake",
-                role:  "gm",
-                content: "weebs",
-                turnSequence: 3,
-                metadata: {},
-                markers: []
-  };
+  const sessionId = useSessionStore((state) => state.sessionId);
+  useSessionNarrationConnection();
+
   return (
-    <SessionProvider value={session}>
+    <div className="app-shell">
+      <header className="app-header">
+        <h1 className="app-title">The Glass Frontier</h1>
+        {sessionId ? <p className="app-session-id">Session {sessionId}</p> : null}
+      </header>
       <div className="app-body">
         <main className="app-main">
           <ChatCanvas />
+          <ChatComposer />
         </main>
       </div>
-    </SessionProvider>
-  )
+    </div>
+  );
 }

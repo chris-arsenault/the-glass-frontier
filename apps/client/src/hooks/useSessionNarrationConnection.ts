@@ -1,49 +1,19 @@
-import {useCallback, useState} from "react";
+import { useEffect } from "react";
+import { useSessionStore } from "../stores/sessionStore";
 
-import { deserializeEnvelope } from "../../../_lib_bak/envelopes/index.js";
+export function useSessionNarrationConnection() {
+  const sessionId = useSessionStore((state) => state.sessionId);
+  const connectionState = useSessionStore((state) => state.connectionState);
+  const transportError = useSessionStore((state) => state.transportError);
+  const hydrateSession = useSessionStore((state) => state.hydrateSession);
 
-export function useSessionNarrationConnection({ sessionId }) {
-  const [messages, setMessages] = useState([]);
+  useEffect(() => {
+    if (!sessionId && connectionState === "idle") {
+      hydrateSession().catch(() => {
+        /* handled by store */
+      });
+    }
+  }, [sessionId, connectionState, hydrateSession]);
 
-  const handleNarrationEnvelope = useCallback(
-    (rawEnvelope) => {
-      let envelope;
-      try {
-        envelope = deserializeEnvelope(rawEnvelope);
-      } catch (error) {
-        console.error("Failed to deserialize envelope:", error);
-        return false;
-      }
-      switch (envelope.type) {
-        case "narrative.event": {
-          setMessages((prev) => {
-            const next = prev
-              .concat({
-                id: envelope.id || envelope.messageId || `${Date.now()}-${prev.length}`,
-                role: envelope.role || "gm",
-                content: envelope.content || "",
-                turnSequence: envelope.turnSequence,
-                metadata: envelope.metadata || {},
-                markers: envelope.markers || []
-              })
-              .slice(-200);
-            persistSessionState(sessionId, {messages: next}).catch(() => {
-            });
-            return next;
-          });
-          break;
-        }
-      }
-    },
-    [sessionId]
-  )
+  return { sessionId, connectionState, transportError };
 }
-
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from './router';
-
-const trpc = createTRPCProxyClient<AppRouter>({
-  links: [
-    httpBatchLink({ url: 'https://your-api.execute-api.us-east-1.amazonaws.com/trpc' }),
-  ],
-});

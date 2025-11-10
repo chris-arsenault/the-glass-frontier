@@ -1,12 +1,25 @@
 import { useEffect, useRef } from "react";
-import {useSessionContext} from "../context/SessionContext.jsx";
+import { useSessionStore } from "../stores/sessionStore";
+
+const formatStatus = (state: string): string => {
+  switch (state) {
+    case "connecting":
+      return "Connecting to the narrative engine...";
+    case "connected":
+      return "Connected to the narrative engine.";
+    case "error":
+      return "Connection interrupted. Please retry.";
+    case "closed":
+      return "Session has been closed.";
+    default:
+      return "Idle.";
+  }
+};
 
 export function ChatCanvas() {
-  const m = useSessionContext();
-  const messages = [m]
-  const connectionState = "WOLLS"
-  const transportError = null;
-
+  const messages = useSessionStore((state) => state.messages);
+  const connectionState = useSessionStore((state) => state.connectionState);
+  const transportError = useSessionStore((state) => state.transportError);
   const streamRef = useRef(null);
 
   useEffect(() => {
@@ -15,7 +28,7 @@ export function ChatCanvas() {
     }
   }, [messages]);
 
-  const statusText = "ASA";
+  const statusText = formatStatus(connectionState);
 
   return (
     <section
@@ -46,26 +59,32 @@ export function ChatCanvas() {
             Awaiting the first story beat. Share an intent to begin.
           </p>
         ) : (
-          messages.map((message, index) => (
-            <article
-              key={message.id || index}
-              className={`chat-entry chat-entry-${message.role}`}
-              data-turn={message.turnSequence ?? index}
-            >
-              <header className="chat-entry-header">
-                <span className="chat-entry-role" aria-hidden="true">
-                  {message.role === "player" ? "Player" : "GM"}
-                </span>
-                <span className="chat-entry-meta">
-                  {new Date(message.metadata.timestamp || Date.now()).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}
-                </span>
-              </header>
-              <p className="chat-entry-content">{message.content}</p>
-            </article>
-          ))
+          messages.map((message, index) => {
+            const timestamp =
+              typeof message.metadata?.timestamp === "number"
+                ? new Date(message.metadata.timestamp)
+                : new Date();
+            const displayRole =
+              message.role === "player" ? "Player" : message.role === "gm" ? "GM" : "System";
+
+            return (
+              <article
+                key={message.id || index}
+                className={`chat-entry chat-entry-${message.role}`}
+                data-turn={index}
+              >
+                <header className="chat-entry-header">
+                  <span className="chat-entry-role" aria-hidden="true">
+                    {displayRole}
+                  </span>
+                  <span className="chat-entry-meta">
+                    {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </header>
+                <p className="chat-entry-content">{message.content}</p>
+              </article>
+            );
+          })
         )}
       </div>
     </section>

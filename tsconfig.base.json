@@ -5,9 +5,14 @@
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
+      "@glass-frontier/dto": ["packages/dto/src/index.ts"],
       "@glass-frontier/dto/*": ["packages/dto/src/*"],
+      "@glass-frontier/utils": ["packages/utils/src/index.ts"],
       "@glass-frontier/utils/*": ["packages/utils/src/*"],
-      "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"]
+      "@glass-frontier/skill-check-resolver": ["packages/skill-check-resolver/src/index.ts"],
+      "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
+      "@glass-frontier/narrative": ["apps/narrative/src/index.ts"],
+      "@glass-frontier/narrative/*": ["apps/narrative/src/*"]
     }
   }
 }

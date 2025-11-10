@@ -1,12 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 const r = p => path.resolve(process.cwd(), p)
 
 const apiTarget = process.env.VITE_API_TARGET || "http://localhost:7000";
-const wsTarget = apiTarget.replace(/^http/, "ws");
 
 const proxyRoutes = [
   "/auth",
@@ -14,7 +12,8 @@ const proxyRoutes = [
   "/sessions",
   "/admin",
   "/offline",
-  "/debug"
+  "/debug",
+  "/trpc"
 ];
 
 const proxy = Object.fromEntries(

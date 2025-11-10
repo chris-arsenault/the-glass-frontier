@@ -44,6 +44,15 @@ importers:
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../../packages/dto
+      '@glass-frontier/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@trpc/client':
+        specifier: ^11.7.1
+        version: 11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3)
+      '@trpc/server':
+        specifier: ^11.7.1
+        version: 11.7.1(typescript@5.9.3)
       react:
         specifier: ^19.2.0
         version: 19.2.0
