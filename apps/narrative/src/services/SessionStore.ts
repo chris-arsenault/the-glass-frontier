@@ -11,12 +11,50 @@ export interface SessionStore {
   addTurn(sessionId: string, turn: Turn): void;
 }
 
+function randomLocation(): LocationProfile {
+  return {
+    locale: "The Frozen Wastes of Hovin Iv",
+    atmosphere: "cold, bright, optimistic"
+  }
+}
+
+function randomCharacter(): Character {
+  return {
+    archetype: "Vibe Knight",
+    attributes: {
+      "vitality" : "rudimentary",
+      "finesse" : "transcendent",
+      "focus" : "standard",
+      "resolve" : "standard",
+      "attunement" : "superior",
+      "ingenuity" : "superior",
+      "presence" : "rudimentary",
+    },
+    id: "random-character",
+    momentum: {
+      current: 0,
+      floor: -2,
+      ceiling: 3
+    },
+    name: "Tsonu",
+    pronouns: "he/him",
+    skills: {
+      trombone: {
+        name: "trombone",
+        tier: "artisan",
+        attribute: "ingenuity",
+        xp: 0
+      }},
+    tags: []
+  }
+}
+
 function buildDefaultState(sessionId: string): SessionState {
   return {
     sessionId,
     turnSequence: 0,
-    character: undefined, //stub these
-    location: undefined,
+    character: randomCharacter(), //stub these
+    location: randomLocation(),
     turns: [],
   };
 }
@@ -25,6 +63,7 @@ class InMemorySessionStore implements SessionStore {
   #sessions = new Map<string, SessionState>();
 
   ensureSession(sessionId: string): SessionState {
+    log("info", `Creating session ${sessionId}.`)
     if (!this.#sessions.has(sessionId)) {
       this.#sessions.set(sessionId, buildDefaultState(sessionId));
     }

@@ -8,5 +8,5 @@
     "lint": {},
     "test": { "dependsOn": ["^build"] },
   },
-  "globalEnv": ["OPENAI_API_KEY"]
+  "globalEnv": ["OPENAI_API_KEY", "VITE_TRPC_URL"]
 }

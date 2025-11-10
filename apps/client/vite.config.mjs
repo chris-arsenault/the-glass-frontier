@@ -7,12 +7,6 @@ const r = p => path.resolve(process.cwd(), p)
 const apiTarget = process.env.VITE_API_TARGET || "http://localhost:7000";
 
 const proxyRoutes = [
-  "/auth",
-  "/accounts",
-  "/sessions",
-  "/admin",
-  "/offline",
-  "/debug",
   "/trpc"
 ];
 
@@ -21,7 +15,8 @@ const proxy = Object.fromEntries(
     route,
     {
       target: apiTarget,
-      changeOrigin: true
+      changeOrigin: true,
+      rewrite: p => p.replace(/^\/trpc/, ''),
     }
   ])
 );

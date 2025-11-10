@@ -36,7 +36,7 @@ class LangGraphLlmClient {
     maxRetries?: number;
     defaultHeaders?: Record<string, string>;
   }) {
-    this.#baseUrl = options?.baseUrl ?? process.env.LANGGRAPH_LLM_ENDPOINT ?? "http://localhost:8082/trpc";
+    this.#baseUrl = options?.baseUrl ?? process.env.LANGGRAPH_LLM_ENDPOINT ?? "http://localhost:8082";
     this.#model = options?.model ?? process.env.LANGGRAPH_LLM_MODEL ?? "gpt-4.1-mini";
     this.#providerId = options?.providerId ?? "llm-proxy";
     this.#timeoutMs = Number.isFinite(options?.timeoutMs) && (options?.timeoutMs ?? 0) > 0 ? (options?.timeoutMs as number) : 45_000;

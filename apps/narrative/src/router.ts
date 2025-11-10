@@ -2,6 +2,7 @@ import { initTRPC } from "@trpc/server";
 import type { Context } from "./context";
 import { z } from "zod";
 import {TranscriptEntry, Turn} from "@glass-frontier/dto";
+import {log} from "@glass-frontier/utils";
 
 const t = initTRPC.context<Context>().create();
 
@@ -10,6 +11,7 @@ export const appRouter = t.router({
   createSession: t.procedure
     .input(z.object({ sessionId: z.string().uuid().optional()}))
     .mutation(({ ctx, input }) => {
+      log("info", `Ensuring session ${input.sessionId}`)
       const id = input.sessionId ?? crypto.randomUUID();
       const session = ctx.sessionStore.ensureSession(id);
       return { session }; // responseMeta sets 201
