@@ -27,12 +27,6 @@ const proxy = Object.fromEntries(
   ])
 );
 
-proxy["/ws"] = {
-  target: wsTarget,
-  ws: true,
-  changeOrigin: true
-};
-
 export default defineConfig({
   plugins: [react()],
   server: {

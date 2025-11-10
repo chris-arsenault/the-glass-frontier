@@ -1,37 +1,42 @@
-import {createHash, randomInt, randomUUID} from "node:crypto";
-import {composeRulesContextPrompt} from "../../prompts.js";
-import type {GraphContext} from "../../types.js";
-import type {GraphNode} from "../orchestrator.js";
-import {RISK_LEVEL_MAP, RiskLevel} from "@glass-frontier/dto";
-import {ATTRIBUTES} from "@glass-frontier/dto/mechanics";
-import {composeCheckRulesPrompt} from "../prompts/checkPlannerPrompt";
-import {CheckRequestResolver} from "@glass-frontier/check-request-resolver";
-import {CheckRequestInput} from "@glass-frontier/check-request-resolver/dist/src/CheckRequest";
+import { randomUUID } from "node:crypto";
+import type { GraphContext } from "../../types.js";
+import type { GraphNode } from "../orchestrator.js";
+import { composeCheckRulesPrompt } from "../prompts/checkPlannerPrompt";
+import { SkillCheckResolver } from "@glass-frontier/skill-check-resolver";
+import {
+  SkillCheckPlan,
+  SkillCheckRequest,
+  RiskLevel,
+} from "@glass-frontier/dto";
 
 function fallbackPlan() {
   return {
-    riskLevel: RISK_LEVEL_MAP[randomInt(0, 4)],
+    riskLevel: 'standard',
     advantage: "none",
     rationale: ["You cant quite recall how to do that."],
     complicationSeeds: ["The universe disagrees with your intent."]
-
   }
 }
-
-
 
 class CheckPlannerNode implements GraphNode {
   readonly id = "check-planner";
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (!context.intent?.requiresCheck || context.safety?.escalate) {
-      return { ...context, checkRequest: null };
+    if (context.failure) {
+      context.telemetry?.recordToolNotRun({
+        sessionId: context.sessionId,
+        operation: "llm.check-planner"
+      });
+      return {...context, failure: true}
+    }
+    if (!context.playerIntent || !context.playerIntent?.requiresCheck || !context.session.character) {
+      return { ...context, skillCheckResult: undefined };
     }
     const fallback = fallbackPlan();
 
     let parsed: Record<string, any> | null = null;
 
-    const prompt = composeCheckRulesPrompt( context.intent, context.session);
+    const prompt = composeCheckRulesPrompt( context.playerIntent, context.session);
     try {
       const result = await context.llm.generateJson({
         prompt,
@@ -47,43 +52,53 @@ class CheckPlannerNode implements GraphNode {
         attempt: 0,
         message: error instanceof Error ? error.message : "unknown"
       });
+      return {...context, failure: true}
     }
 
-    const riskLevel = parsed?.riskLevel ?? fallback.riskLevel;
-    const advantage = parsed?.advantage ?? fallback.advantage;
-    const rationale = parsed?.rationale ?? fallback.rationale;
-    const complicationSeeds = parsed?.riskLevel ?? fallback.riskLevel;
-    const flags = []
+    const riskLevel: RiskLevel = parsed?.riskLevel ?? fallback.riskLevel;
+    const advantage: string = parsed?.advantage ?? fallback.advantage;
+    const rationale: string = parsed?.rationale ?? fallback.rationale;
+    const complicationSeeds: string[] = parsed?.complicationSeeds ?? fallback.complicationSeeds;
+    const flags: string[] = []
     if (advantage != "none") {
       flags.push(advantage)
     }
-    if (context?.intent.creativeSpark) {
+    if (context?.playerIntent.creativeSpark) {
       flags.push("creative-spark")
     }
 
-    const input: CheckRequestInput = {
-      flags: flags;
-      attribute: context?.intent.attribute;
-      skill: context?.intent.attribute;
-      character: context?.session?.character;
-      sessionId: context?.sessionId;
-      riskLevel: riskLevel;
-    }
-    const resolver = new CheckRequestResolver(input);
-    const checkResult = resolver.resolveRequest();
-
-    const checkPlan: CheckPlan = {
+    const skillCheckPlan: SkillCheckPlan = {
       riskLevel,
       advantage,
       rationale,
-      complicationSeeds
+      complicationSeeds,
+      metadata: {
+        timestamp: Date.now(),
+        tags: []
+      }
     }
 
+    const input: SkillCheckRequest = {
+      sessionId: context.sessionId,
+      checkId: randomUUID(),
+      flags: flags,
+      attribute: context.playerIntent.attribute,
+      skill: context.playerIntent.skill,
+      character: context.session.character,
+      riskLevel: riskLevel,
+      metadata: {
+        timestamp: Date.now(),
+        tags: []
+      }
+    }
+
+    const resolver = new SkillCheckResolver(input);
+    const skillCheckResult = resolver.resolveRequest();
 
     return {
       ...context,
-      checkResult,
-      checkPlan
+      skillCheckPlan,
+      skillCheckResult
     };
   }
 }

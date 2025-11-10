@@ -1,8 +1,8 @@
-import type {GraphContext, Intent, SessionState} from "../../types.js";
+import type {GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
-import { composeIntentPrompt } from "../../prompts.js";
-import {Attribute, ATTRIBUTES} from "@glass-frontier/dto";
+import {Attribute, Intent} from "@glass-frontier/dto";
 import {randomInt} from "node:crypto";
+import {composeIntentPrompt} from "../prompts/intentPrompt";
 
 function fallbackIntent(text: string) {
   return {
@@ -10,7 +10,7 @@ function fallbackIntent(text: string) {
     skill: "talk",
     requiresCheck: false,
     creativeSpark: false,
-    attribute: ATTRIBUTES[randomInt(0, ATTRIBUTES.length)],
+    attribute: Attribute.options[0],
     intentSummary: text.slice(0, 120)
   };
 }
@@ -18,15 +18,17 @@ function fallbackIntent(text: string) {
 class IntentIntakeNode implements GraphNode {
   readonly id = "intent-intake";
 
-  existingSkillAttribute(session: SessionState, skill: string) {
-    return session?.character?.skills[skill].attribute;
-  }
-
   async execute(context: GraphContext): Promise<GraphContext> {
-    const message = context.message ?? {};
-    const text = (message.content ?? "").trim();
-    const prompt = composeIntentPrompt({ session: context.session, playerMessage: text });
-    const fallback = fallbackIntent(text);
+    if (context.failure) {
+      context.telemetry?.recordToolNotRun({
+        sessionId: context.sessionId,
+        operation: "llm.intent-intake"
+      });
+      return {...context, failure: true}
+    }
+    const content: string = context.playerMessage.content ?? "";
+    const prompt = composeIntentPrompt({ session: context.session, playerMessage: content });
+    const fallback = fallbackIntent(content);
 
     let parsed: Record<string, any> | null = null;
 
@@ -46,7 +48,7 @@ class IntentIntakeNode implements GraphNode {
         attempt: 0,
         message: error instanceof Error ? error.message : "unknown"
       });
-      return false;
+      return {...context, failure: true}
     }
 
     const tone: string = parsed?.tone ?? fallback.tone;
@@ -56,18 +58,22 @@ class IntentIntakeNode implements GraphNode {
     const attribute: Attribute = context.session?.character?.skills?.[skill].attribute ?? parsed?.attribute ?? fallback.attribute
     const intentSummary: string = parsed?.intentSummary ?? fallback.intentSummary
 
-    const intent: Intent = {
+    const playerIntent: Intent = {
       tone,
-      requiresCheck,
-      creativeSpark,
       skill,
       attribute,
-      intentSummary
+      requiresCheck,
+      creativeSpark,
+      intentSummary,
+      metadata: {
+        timestamp: Date.now(),
+        tags: []
+      }
     };
 
     return {
       ...context,
-      intent,
+      playerIntent,
     };
   }
 }

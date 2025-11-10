@@ -30,6 +30,11 @@ interface ToolErrorPayload {
   message: string;
 }
 
+interface ToolNotRunPayload {
+  sessionId: string;
+  operation: string;
+}
+
 interface CheckResolutionPayload {
   sessionId: string;
   auditRef?: string;
@@ -56,16 +61,6 @@ class SessionTelemetry {
     });
   }
 
-  recordSafetyEvent(payload: SafetyEventPayload): void {
-    log("warn", "telemetry.session.safety", {
-      sessionId: payload.sessionId,
-      auditRef: payload.auditRef ?? "",
-      severity: payload.severity,
-      flags: payload.flags.join(","),
-      reason: payload.reason ?? ""
-    });
-  }
-
   recordToolError(payload: ToolErrorPayload): void {
     log("error", "telemetry.session.tool-error", {
       sessionId: payload.sessionId,
@@ -73,6 +68,13 @@ class SessionTelemetry {
       referenceId: payload.referenceId ?? "",
       attempt: payload.attempt,
       message: payload.message
+    });
+  }
+
+  recordToolNotRun(payload: ToolNotRunPayload): void {
+    log("error", "telemetry.session.tool-not-run", {
+      sessionId: payload.sessionId,
+      operation: payload.operation,
     });
   }
 

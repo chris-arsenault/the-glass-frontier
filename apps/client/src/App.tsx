@@ -1,5 +1,5 @@
 import { ChatCanvas } from "./components/ChatCanvas.jsx";
-import { SessionProvider } from "./context/SessionContext.jsx";
+import { SessionProvider } from "./state/SessionContext.jsx";
 
 export default function App() {
   const session = {

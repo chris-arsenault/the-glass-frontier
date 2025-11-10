@@ -1,32 +1,11 @@
-interface IntentOut {
-  intentSummary: string;          // existing
-  skill?: string;
-  attribute?: string;
-  requiresCheck?: boolean;
-}
+import {Intent, SkillCheckPlan, SkillCheckResult} from "@glass-frontier/dto"
 
-type OutcomeTier = "breakthrough" | "advance" | "stall" | "regress" | "collapse";
-
-interface CheckSnapshot {
-  occurred: boolean;
-  difficulty?: "controlled" | "standard" | "risky" | "desperate";
-  advantage?: "none" | "advantage" | "disadvantage";
-  outcomeTier?: OutcomeTier;
-}
-
-interface SceneSnapshot {
-  locale?: string;
-  keyNPCs?: string[];             // optional
-  keyItems?: string[];            // optional
-}
-
-export function composeGMSummaryPrompt(params: {
-  gmMessage: string;              // the full GM narration just produced
-  intent: IntentOut;              // player intent summary for context
-  check: CheckSnapshot | null;    // mechanics snapshot, if any
-  scene: SceneSnapshot;           // lightweight scene facts
-}): string {
-  const { gmMessage, intent, check, scene } = params;
+export function composeGMSummaryPrompt(
+  gmMessage: string,              // the full GM narration just produced
+  intent: Intent,              // player intent summary for context
+  check?: SkillCheckPlan,    // mechanics snapshot, if any
+  checkResult?: SkillCheckResult
+): string {
 
   return [
     "Summarize the GM narration into a compact game-log entry.",
@@ -37,12 +16,9 @@ export function composeGMSummaryPrompt(params: {
     "## Context",
     `Intent: ${intent.intentSummary}`,
     intent.skill ? `Skill: ${intent.skill} (${intent.attribute ?? "n/a"})` : undefined,
-    check?.occurred
-      ? `Check: difficulty=${check.difficulty}, advantage=${check.advantage}, outcome=${check.outcomeTier}`
+    check
+      ? `Check: difficulty=${check.riskLevel}, advantage=${check.advantage}, outcome=${checkResult?.outcomeTier}`
       : "Check: none",
-    scene.locale ? `Locale: ${scene.locale}` : undefined,
-    scene.keyNPCs?.length ? `NPCs: ${scene.keyNPCs.join(", ")}` : undefined,
-    scene.keyItems?.length ? `Items: ${scene.keyItems.join(", ")}` : undefined,
     "",
     "## Instructions",
     "- Output 1–2 short sentences (≤ 180 chars total if possible).",

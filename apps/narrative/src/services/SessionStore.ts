@@ -1,41 +1,32 @@
 import { randomUUID } from "node:crypto";
-import type {
-  CheckRequestEnvelope,
-  CheckResolution,
-  SessionShard,
-  SessionState,
-  TranscriptEntry
-} from "../types.js";
+import type { SessionState } from "../types.js";
+import {Character, LocationProfile, Turn} from "@glass-frontier/dto";
+import {log} from "@glass-frontier/utils";
 
 export interface SessionStore {
   ensureSession(sessionId?: string, seed?: Partial<SessionState>): SessionState;
   getSessionState(sessionId: string): SessionState;
-  appendTranscript(sessionId: string, entry: TranscriptEntry): SessionState;
-  recordCheckRequest(sessionId: string, request: CheckRequestEnvelope): void;
-  recordCheckResolution(sessionId: string, resolution: CheckResolution): void;
-  recordCheckVeto(sessionId: string, payload: CheckResolution): void;
-  incrementTurn(sessionId: string): void;
+  setLocation(sessionId: string, loc: LocationProfile): void;
+  setCharacter(sessionId: string, char: Character): void;
+  addTurn(sessionId: string, turn: Turn): void;
 }
 
-function buildDefaultState(sessionId: string, seed?: Partial<SessionState>): SessionState {
+function buildDefaultState(sessionId: string): SessionState {
   return {
     sessionId,
-    turnSequence: seed?.turnSequence ?? 0,
-    character: seed?.character,
-    location: seed?.location,
-    momentum: seed?.momentum ?? { current: 0, floor: -2, ceiling: 3 },
-    shards: seed?.shards ?? {},
-    transcript: seed?.transcript ?? [],
-    resolvedChecks: seed?.resolvedChecks ?? []
+    turnSequence: 0,
+    character: undefined, //stub these
+    location: undefined,
+    turns: [],
   };
 }
 
 class InMemorySessionStore implements SessionStore {
   #sessions = new Map<string, SessionState>();
 
-  ensureSession(sessionId: string = randomUUID(), seed?: Partial<SessionState>): SessionState {
+  ensureSession(sessionId: string): SessionState {
     if (!this.#sessions.has(sessionId)) {
-      this.#sessions.set(sessionId, buildDefaultState(sessionId, seed));
+      this.#sessions.set(sessionId, buildDefaultState(sessionId));
     }
     return this.#sessions.get(sessionId)!;
   }
@@ -48,35 +39,23 @@ class InMemorySessionStore implements SessionStore {
     return session;
   }
 
-  appendTranscript(sessionId: string, entry: TranscriptEntry): SessionState {
+  setCharacter(sessionId: string, char: Character): void {
     const session = this.getSessionState(sessionId);
-    session.transcript.push(entry);
-    return session;
+    session.character = char;
   }
 
-  recordCheckRequest(sessionId: string, request: CheckRequestEnvelope): void {
+  setLocation(sessionId: string, loc: LocationProfile): void {
     const session = this.getSessionState(sessionId);
-    session.pendingChecks = [...session.pendingChecks, request];
+    session.location = loc;
   }
 
-  recordCheckResolution(sessionId: string, resolution: CheckResolution): void {
+  addTurn(sessionId: string, turn: Turn): void {
     const session = this.getSessionState(sessionId);
-    session.resolvedChecks = [...session.resolvedChecks, resolution];
-    session.pendingChecks = session.pendingChecks.filter((entry) => entry.id !== resolution.id);
-  }
-
-  recordCheckVeto(sessionId: string, payload: CheckResolution): void {
-    this.recordCheckResolution(sessionId, payload);
-  }
-
-  incrementTurn(sessionId: string): void {
-    const session = this.getSessionState(sessionId);
-    session.turnSequence += 1;
-  }
-
-  upsertShard(sessionId: string, shardId: string, shard: SessionShard): void {
-    const session = this.getSessionState(sessionId);
-    session.shards[shardId] = shard;
+    session.turns.push(turn)
+    session.turnSequence = session.turnSequence + 1;
+    if (session.turnSequence != turn.turnSequence) {
+      log("warn", `Turn sequence desync session: ${session.turnSequence}, turn: ${turn.turnSequence}.`)
+    }
   }
 }
 

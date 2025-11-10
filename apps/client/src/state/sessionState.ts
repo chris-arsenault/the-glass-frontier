@@ -1,9 +1,9 @@
-import {NarrationEvent} from "../../../_lib_bak/envelopes/index.ts";
+import {Turn} from "@glass-frontier/dto";
 
 type SessionState = {
   sessionId: string;
-  narrationEvents: NarrationEvent[];
-  receiveEnvelope: (incoming: (any)) => void;
+  turns: Turn[];
+  receiveTurn: (incoming: (any)) => void;
 }
 
 export { SessionState }

@@ -1,4 +1,5 @@
-import {Intent, SessionState} from "../../types";
+import { SessionState} from "../../types";
+import {Intent} from "@glass-frontier/dto";
 
 export function composeCheckRulesPrompt(
   intent: Intent,

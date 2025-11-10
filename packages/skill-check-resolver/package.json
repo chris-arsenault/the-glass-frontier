@@ -1,5 +1,5 @@
 {
-  "name": "@glass-frontier/check-request-resolver",
+  "name": "@glass-frontier/skill-check-resolver",
   "version": "0.1.0",
   "packageManager": "pnpm@10.20.0",
   "scripts": {
@@ -16,6 +16,7 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "@glass-frontier/utils": "workspace:*"
+    "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/dto": "workspace:*"
   }
 }

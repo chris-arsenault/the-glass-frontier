@@ -38,3 +38,12 @@ export function useSessionNarrationConnection({ sessionId }) {
     [sessionId]
   )
 }
+
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from './router';
+
+const trpc = createTRPCProxyClient<AppRouter>({
+  links: [
+    httpBatchLink({ url: 'https://your-api.execute-api.us-east-1.amazonaws.com/trpc' }),
+  ],
+});

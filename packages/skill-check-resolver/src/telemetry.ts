@@ -1,11 +1,10 @@
 import { log } from "@glass-frontier/utils";
-import {CheckRequest} from "./CheckRequest";
-import {CheckRequestResult} from "./CheckRequestResult";
+import {SkillCheckRequest, SkillCheckResult} from "@glass-frontier/dto";
 
 class CheckRequestTelemetry {
-  request: CheckRequest;
+  request: SkillCheckRequest;
 
-  constructor(request: CheckRequest) {
+  constructor(request: SkillCheckRequest) {
     this.request = request;
   }
 
@@ -17,7 +16,7 @@ class CheckRequestTelemetry {
     });
   }
 
-  recordCheckRun(result: CheckRequestResult): void {
+  recordCheckRun(result: SkillCheckResult): void {
     log("info", "telemetry.check.result", {
       sessionId: this.request.sessionId,
       checkId: this.request.checkId,

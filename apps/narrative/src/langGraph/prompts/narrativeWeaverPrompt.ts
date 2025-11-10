@@ -1,17 +1,17 @@
-import {Intent, SessionState} from "../../types";
-import {OutcomeTier} from "@glass-frontier/dto";
+import { SessionState} from "../../types";
+import {Intent, OutcomeTier, SkillCheckPlan} from "@glass-frontier/dto";
 
 export function composeNarrationPrompt(
   intent: Intent,
-  check:  | null,
   session: SessionState,
-  outcomeTier: OutcomeTier,
-  rawUtterance: string
+  rawUtterance: string,
+  check?: SkillCheckPlan,
+  outcomeTier?: OutcomeTier
 ): string {
   const name = session.character?.name ?? "the character";
   const tags = (session.character?.tags ?? []).slice(0, 3).join(", ") || "untagged";
   const locale = session.location?.locale ?? "an unknown place";
-  const recent = session.recentEvents?.slice(-3).join("; ") || "no prior events noted";
+  const recent = session.turns?.slice(-3).map((t) => {return t.gmSummary + " " + t.playerIntent?.intentSummary}).join("; ") || "no prior events noted";
   const outcomeValue = outcomeTier;
   const utter = rawUtterance.length > 500 ? rawUtterance.slice(0, 500) + "…" : rawUtterance;
 
@@ -46,7 +46,7 @@ export function composeNarrationPrompt(
       ? [
           "## Mechanical Context",
           `A check occurred using **${intent.skill}** (${intent.attribute}).`,
-          `Difficulty: ${check.difficulty}, Advantage: ${check.advantage}, Outcome Tier: ${outcomeTier} (${outcomeValue}).`,
+          `Difficulty: ${check.riskLevel}, Advantage: ${check.advantage}, Outcome Tier: ${outcomeTier} (${outcomeValue}).`,
           "",
           "### Integration Rules",
           "- Blend mechanical transparency through tone, not numbers.",

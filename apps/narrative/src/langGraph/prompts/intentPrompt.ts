@@ -1,5 +1,5 @@
 import { SessionState } from "../../types";
-import { ATTRIBUTES } from "@glass-frontier/dto";
+import { Attribute } from "@glass-frontier/dto";
 
 const PROMPT_HEADER =
   "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.";
@@ -34,7 +34,7 @@ export function composeIntentPrompt({
     "## Decision Rules",
     "- Prefer an existing skill from the *Known skills* list if it fits semantically.",
     "- If no existing skill fits, create a concise new skill name (string).",
-    "- Choose exactly one attribute from this list: " + ATTRIBUTES.join(", ") + ".",
+    "- Choose exactly one attribute from this list: " + Attribute.options.join(", ") + ".",
     "- `requiresCheck` should be **true** only when the player attempts something hard, novel, risky, contested, or dramatically impactful. This should be uncommon on average (~10%).",
     "- Examples of **check-worthy**: high stakes, uncertain outcome, opposition, scarce-resource use, significant world change, cinematic gambit.",
     "- Otherwise set `requiresCheck: false`.",
@@ -45,7 +45,7 @@ export function composeIntentPrompt({
     '  "tone": string,',
     '  "skill": string,              // existing if possible, else new concise name',
     '  "requiresCheck": boolean,',
-    '  "attribute": string,          // one of: ' + ATTRIBUTES.map(a => `"${a}"`).join(", ") + ',',
+    '  "attribute": string,          // one of: ' + Attribute.options.map(a => `"${a}"`).join(", ") + ',',
     '  "intentSummary": string,',
     '  "creativeSpark": boolean      // true if the idea is especially stylish/clever/cinematic',
     '}',

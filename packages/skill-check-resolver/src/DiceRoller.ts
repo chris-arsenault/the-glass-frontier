@@ -1,6 +1,5 @@
-import {RandomUUIDOptions} from "node:crypto";
 import { randomInt } from "node:crypto";
-import {CheckRequest} from "./CheckRequest";
+import {SkillCheckRequest} from "@glass-frontier/dto";
 
 export type AdvantageMode =
   | "advantage"
@@ -16,14 +15,12 @@ class DiceRoller {
 
   flags: string[];
   momentum: number;
-  modifier: number;
 
   result: number;
 
-  constructor(request: CheckRequest) {
+  constructor(request: SkillCheckRequest) {
     this.flags = request.flags;
-    this.momentum = request.momentum;
-    this.modifier = request.modifier;
+    this.momentum = request.character.momentum.current;
     this.advantage = this.shouldApplyAdvantage() && !this.shouldApplyDisadvantage();
     this.disadvantage = !this.shouldApplyAdvantage() && this.shouldApplyDisadvantage();
     this.result = -Infinity;
@@ -33,20 +30,20 @@ class DiceRoller {
      return Array.from({ length: this.numDice + extraDice }, () => randomInt(1, this.dieSize + 1));
   }
 
-  sum(dice: number[]): number {
-    return dice.reduce((a, b) => a + b, this.modifier)
+  sum(dice: number[], modifier: number): number {
+    return dice.reduce((a, b) => a + b, modifier)
   }
 
-  computeResult(): number {
+  computeResult(modifier: number): number {
     if (this.advantage) {
       if (this.mode === "keepDrop") {
         const rolls = this.rollDice(this.extraDice);
         const sorted = [...rolls].sort((a, b) => b - a);
         const kept = sorted.slice(0, this.extraDice);
-        this.result = this.sum(kept);
+        this.result = this.sum(kept, modifier);
       } else {
-        const first = this.sum(this.rollDice());
-        const second = this.sum(this.rollDice());
+        const first = this.sum(this.rollDice(), modifier);
+        const second = this.sum(this.rollDice(), modifier);
         this.result = Math.max(first, second)
       }
     } else if (this.disadvantage) {
@@ -54,14 +51,14 @@ class DiceRoller {
         const rolls = this.rollDice(this.extraDice);
         const sorted = [...rolls].sort((a, b) => b - a).reverse();
         const kept = sorted.slice(0, this.extraDice);
-        this.result = this.sum(kept);
+        this.result = this.sum(kept, modifier);
       } else {
-        const first = this.sum(this.rollDice());
-        const second = this.sum(this.rollDice());
+        const first = this.sum(this.rollDice(), modifier);
+        const second = this.sum(this.rollDice(), modifier);
         this.result = Math.min(first, second)
       }
     } else {
-      this.result = this.sum(this.rollDice())
+      this.result = this.sum(this.rollDice(), modifier)
     }
 
     return this.result;
