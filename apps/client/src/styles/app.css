@@ -253,6 +253,19 @@ body {
   cursor: pointer;
 }
 
+.session-manager-identity,
+.session-manager-preference {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.session-manager-identity-value {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #cbd5f5;
+}
+
 .session-manager-form {
   display: flex;
   flex-direction: column;
@@ -279,6 +292,12 @@ body {
   background: rgba(15, 23, 42, 0.85);
   color: inherit;
   padding: 0.3rem 0.6rem;
+}
+
+.session-manager-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 .session-manager-load {

@@ -3,6 +3,7 @@ import type { TranscriptEntry, Turn } from "@glass-frontier/dto";
 
 import type { ChatMessage, SessionStore } from "../state/sessionState";
 import { trpcClient } from "../lib/trpcClient";
+import { useAuthStore } from "./authStore";
 
 const RECENT_SESSIONS_KEY = "glass-frontier-recent-sessions";
 const MAX_RECENT_SESSIONS = 5;
@@ -29,6 +30,50 @@ const writeRecentSessions = (sessions: string[]) => {
     window.localStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(sessions));
   } catch {
     // ignore storage failures
+  }
+};
+
+const decodeJwtPayload = (token?: string | null): Record<string, unknown> | null => {
+  if (!token) {
+    return null;
+  }
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.length % 4;
+    const padded = padding ? normalized + "=".repeat(4 - padding) : normalized;
+    if (typeof globalThis.atob !== "function") {
+      return null;
+    }
+    const decoded = globalThis.atob(padded);
+    return decoded ? (JSON.parse(decoded) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveLoginIdentity = (): { loginId: string; loginName: string } => {
+  const authState = useAuthStore.getState();
+  const username = authState.username?.trim();
+  if (username) {
+    return { loginId: username, loginName: username };
+  }
+  const payload = decodeJwtPayload(authState.tokens?.idToken);
+  const sub = typeof payload?.sub === "string" ? payload.sub : null;
+  if (sub) {
+    return { loginId: sub, loginName: sub };
+  }
+  throw new Error("Login identity unavailable. Please reauthenticate.");
+};
+
+const tryResolveLoginIdentity = (): { loginId: string | null; loginName: string | null } => {
+  try {
+    return resolveLoginIdentity();
+  } catch {
+    return { loginId: null, loginName: null };
   }
 };
 
@@ -96,6 +141,10 @@ const applyRecentSession = (sessions: string[], sessionId: string): string[] => 
 
 export const useSessionStore = create<SessionStore>()((set, get) => ({
   sessionId: null,
+  sessionRecord: null,
+  loginId: null,
+  loginName: null,
+  preferredCharacterId: null,
   messages: [],
   turnSequence: 0,
   connectionState: "idle",
@@ -107,6 +156,11 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
   character: null,
   location: null,
   recentSessions: readRecentSessions(),
+  setPreferredCharacterId(characterId) {
+    set({
+      preferredCharacterId: characterId && characterId.trim().length > 0 ? characterId.trim() : null
+    });
+  },
   async hydrateSession(desiredSessionId) {
     set((prev) => ({
       ...prev,
@@ -115,20 +169,43 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }));
 
     try {
-      const session = desiredSessionId
-        ? await trpcClient.getSession.query({ sessionId: desiredSessionId })
-        : (await trpcClient.createSession.mutate({})).session;
+      let identity = tryResolveLoginIdentity();
+      let targetSessionId = desiredSessionId ?? null;
+
+      if (!targetSessionId) {
+        if (!identity.loginId) {
+          identity = resolveLoginIdentity();
+        }
+        const created = await trpcClient.createSession.mutate({
+          loginId: identity.loginId,
+          characterId: get().preferredCharacterId ?? undefined
+        });
+        targetSessionId = created.session.id;
+      }
+
+      if (!targetSessionId) {
+        throw new Error("Unable to determine session identifier.");
+      }
+
+      const session = await trpcClient.getSession.query({ sessionId: targetSessionId });
+      if (!session) {
+        throw new Error("Session not found.");
+      }
 
       set((prev) => ({
         ...prev,
         sessionId: session.sessionId,
+        sessionRecord: session.session ?? prev.sessionRecord,
+        loginId: session.session?.loginId ?? identity.loginId ?? prev.loginId,
+        loginName: identity.loginName ?? prev.loginName,
         messages: flattenTurns(session.turns ?? []),
         turnSequence: session.turnSequence ?? session.turns?.length ?? 0,
         connectionState: "connected",
-        sessionStatus: "open",
+        sessionStatus: session.session?.status ?? prev.sessionStatus ?? "open",
         transportError: null,
         character: session.character ?? null,
         location: session.location ?? null,
+        preferredCharacterId: session.character?.id ?? prev.preferredCharacterId,
         recentSessions: applyRecentSession(prev.recentSessions, session.sessionId)
       }));
 
@@ -181,10 +258,18 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         isSending: false,
         messages: flattenTurns(updatedSession.turns ?? []),
         queuedIntents: 0,
+        turnSequence:
+          updatedSession.turnSequence ??
+          updatedSession.turns?.length ??
+          prev.turnSequence,
         connectionState: "connected",
         transportError: null,
+        sessionRecord: updatedSession.session ?? prev.sessionRecord,
+        sessionStatus: updatedSession.session?.status ?? prev.sessionStatus,
+        loginId: updatedSession.session?.loginId ?? prev.loginId,
         character: updatedSession.character ?? prev.character,
         location: updatedSession.location ?? prev.location,
+        preferredCharacterId: updatedSession.character?.id ?? prev.preferredCharacterId,
         recentSessions: applyRecentSession(
           prev.recentSessions,
           updatedSession.sessionId ?? prev.sessionId ?? ""

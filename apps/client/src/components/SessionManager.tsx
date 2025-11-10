@@ -7,6 +7,10 @@ export function SessionManager() {
   const hydrateSession = useSessionStore((state) => state.hydrateSession);
   const currentSession = useSessionStore((state) => state.sessionId);
   const connectionState = useSessionStore((state) => state.connectionState);
+  const preferredCharacterId = useSessionStore((state) => state.preferredCharacterId);
+  const setPreferredCharacterId = useSessionStore((state) => state.setPreferredCharacterId);
+  const loginLabel = useSessionStore((state) => state.loginName ?? state.loginId ?? "Unknown");
+  const character = useSessionStore((state) => state.character);
   const [manualId, setManualId] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +67,31 @@ export function SessionManager() {
         >
           New Session
         </button>
+      </div>
+      <div className="session-manager-identity">
+        <p className="session-manager-label">Login</p>
+        <p className="session-manager-identity-value">{loginLabel}</p>
+      </div>
+      <div className="session-manager-identity">
+        <p className="session-manager-label">Active Character</p>
+        <p className="session-manager-identity-value">
+          {character ? `${character.name} · ${character.archetype}` : "None selected"}
+        </p>
+      </div>
+      <div className="session-manager-preference">
+        <label className="session-manager-label" htmlFor="preferred-character-id">
+          Preferred Character ID
+        </label>
+        <input
+          id="preferred-character-id"
+          name="preferred-character-id"
+          className="session-manager-input"
+          placeholder="character-uuid"
+          value={preferredCharacterId ?? ""}
+          onChange={(event) => setPreferredCharacterId(event.target.value)}
+          disabled={disabled}
+        />
+        <p className="session-manager-hint">Used when creating the next session.</p>
       </div>
 
       <form className="session-manager-form" onSubmit={handleManualLoad}>

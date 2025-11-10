@@ -2,8 +2,10 @@ import {
   Character,
   Intent,
   LocationProfile,
-  MomentumState,
-  SkillCheckPlan, SkillCheckResult, Turn,
+  SessionRecord,
+  SkillCheckPlan,
+  SkillCheckResult,
+  Turn,
   TranscriptEntry
 } from "@glass-frontier/dto";
 
@@ -11,8 +13,9 @@ import {
 export interface SessionState {
   sessionId: string;
   turnSequence: number;
-  character?: Character;
-  location?: LocationProfile;
+  session: SessionRecord;
+  character: Character | null;
+  location: LocationProfile | null;
   turns: Turn[];
 }
 

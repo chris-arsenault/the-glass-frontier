@@ -3,6 +3,7 @@ import type {
   Character,
   Intent,
   LocationProfile,
+  SessionRecord,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry
@@ -22,6 +23,10 @@ export interface ChatMessage {
 
 export interface SessionState {
   sessionId: string | null;
+  sessionRecord: SessionRecord | null;
+  loginId: string | null;
+  loginName: string | null;
+  preferredCharacterId: string | null;
   messages: ChatMessage[];
   turnSequence: number;
   connectionState: ConnectionState;
@@ -38,4 +43,5 @@ export interface SessionState {
 export interface SessionStore extends SessionState {
   hydrateSession(desiredSessionId?: string): Promise<string>;
   sendPlayerMessage(input: { content: string }): Promise<void>;
+  setPreferredCharacterId(characterId: string | null): void;
 }

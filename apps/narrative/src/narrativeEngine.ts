@@ -36,9 +36,10 @@ class NarrativeEngine {
       throw new Error("sessionId is required");
     }
 
-    this.sessionStore.ensureSession(sessionId);
-
-    const session: SessionState = this.sessionStore.getSessionState(sessionId);
+    const session: SessionState | null = this.sessionStore.getSessionState(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
     const turnSequence: number = session.turnSequence + 1;
     let errorResponse: TranscriptEntry | undefined;
 
@@ -75,6 +76,8 @@ class NarrativeEngine {
     const failure: boolean = graphResult?.failure || !!systemMessage;
 
     const turn: Turn = {
+      id: randomUUID(),
+      sessionId,
       playerMessage: playerMessage,
       gmMessage: graphResult?.gmMessage,
       systemMessage: systemMessage,
@@ -86,7 +89,7 @@ class NarrativeEngine {
       failure: failure
     }
 
-    this.sessionStore.addTurn(sessionId, turn);
+    this.sessionStore.addTurn(turn);
 
     log("info", "Narrative engine resolved turn", {
       sessionId,

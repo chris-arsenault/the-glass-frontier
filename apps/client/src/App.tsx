@@ -10,10 +10,12 @@ import { LoginScreen } from "./components/LoginScreen";
 function SessionMeta() {
   const sessionId = useSessionStore((state) => state.sessionId);
   const character = useSessionStore((state) => state.character);
+  const loginLabel = useSessionStore((state) => state.loginName ?? state.loginId);
 
   return (
     <div className="session-meta">
       {sessionId ? <p className="app-session-id">Session {sessionId}</p> : null}
+      {loginLabel ? <p className="app-session-id">Login {loginLabel}</p> : null}
       {character ? (
         <div className="character-pill">
           <span className="character-pill-name">{character.name}</span>
