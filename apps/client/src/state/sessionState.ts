@@ -32,6 +32,7 @@ export interface SessionState {
   sessionStatus: SessionLifecycle;
   character?: Character | null;
   location?: LocationProfile | null;
+  recentSessions: string[];
 }
 
 export interface SessionStore extends SessionState {

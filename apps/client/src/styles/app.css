@@ -11,6 +11,72 @@ body {
   min-height: 100vh;
 }
 
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 50%) #050b18;
+}
+
+.login-card {
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.75);
+}
+
+.login-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.login-subtitle {
+  margin: 0 0 1rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.login-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.login-input {
+  border-radius: 0.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  padding: 0.6rem 0.8rem;
+  color: inherit;
+}
+
+.login-error {
+  margin: 0;
+  color: #f87171;
+  font-size: 0.85rem;
+}
+
+.login-button {
+  margin-top: 0.5rem;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(236, 72, 153, 0.85));
+  color: #0f172a;
+}
+
 .app-shell {
   min-height: 100vh;
   padding: 2rem;
@@ -101,16 +167,23 @@ body {
 }
 
 .app-nav {
-  width: 64px;
+  width: 260px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
   padding: 0.5rem;
   border-radius: 0.75rem;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(15, 23, 42, 0.65);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+  height: fit-content;
+}
+
+.app-nav-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .app-nav-item {
@@ -142,6 +215,120 @@ body {
   background: rgba(96, 165, 250, 0.2);
   border-color: rgba(96, 165, 250, 0.8);
   color: #bfdbfe;
+}
+
+.session-manager {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.75);
+}
+
+.session-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-manager-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #bfdbfe;
+}
+
+.session-manager-new {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.session-manager-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.session-manager-label {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.session-manager-input-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.session-manager-input {
+  flex: 1;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.85);
+  color: inherit;
+  padding: 0.3rem 0.6rem;
+}
+
+.session-manager-load {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+  padding: 0.3rem 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.session-manager-recents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.session-manager-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.session-manager-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.session-manager-recent {
+  width: 100%;
+  text-align: left;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.8);
+  color: inherit;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  word-break: break-all;
+  cursor: pointer;
+}
+
+.session-manager-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #f87171;
 }
 
 .app-body {
@@ -598,13 +785,20 @@ body {
   }
 
   .app-nav {
-    width: auto;
-    flex-direction: row;
-    justify-content: flex-start;
+    width: 100%;
+    flex-direction: column;
   }
 
   .app-nav-item {
     flex: 1;
+  }
+
+  .app-nav-buttons {
+    flex-direction: row;
+  }
+
+  .session-manager {
+    width: 100%;
   }
 
   .chat-composer-controls {

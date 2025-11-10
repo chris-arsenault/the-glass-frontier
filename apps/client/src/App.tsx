@@ -4,6 +4,8 @@ import { useSessionStore } from "./stores/sessionStore";
 import { useSessionNarrationConnection } from "./hooks/useSessionNarrationConnection";
 import { SideNavigation } from "./components/SideNavigation";
 import { CharacterDrawer } from "./components/CharacterDrawer";
+import { useAuthStore } from "./stores/authStore";
+import { LoginScreen } from "./components/LoginScreen";
 
 function SessionMeta() {
   const sessionId = useSessionStore((state) => state.sessionId);
@@ -24,7 +26,12 @@ function SessionMeta() {
 }
 
 export default function App() {
-  useSessionNarrationConnection();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  useSessionNarrationConnection(isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="app-shell">

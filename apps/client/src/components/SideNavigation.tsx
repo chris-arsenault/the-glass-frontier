@@ -1,4 +1,5 @@
 import { useUiStore } from "../stores/uiStore";
+import { SessionManager } from "./SessionManager";
 
 const CharacterIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -15,15 +16,18 @@ export function SideNavigation() {
 
   return (
     <nav className="app-nav" aria-label="Primary">
-      <button
-        type="button"
-        className={`app-nav-item${isOpen ? " active" : ""}`}
-        onClick={toggleDrawer}
-        aria-pressed={isOpen}
-      >
-        <CharacterIcon />
-        <span>Character</span>
-      </button>
+      <div className="app-nav-buttons">
+        <button
+          type="button"
+          className={`app-nav-item${isOpen ? " active" : ""}`}
+          onClick={toggleDrawer}
+          aria-pressed={isOpen}
+        >
+          <CharacterIcon />
+          <span>Character</span>
+        </button>
+      </div>
+      <SessionManager />
     </nav>
   );
 }

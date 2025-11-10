@@ -23,13 +23,16 @@ const proxy = Object.fromEntries(
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    global: "globalThis"
+  },
   server: {
     port: 5173,
     fs: { strict: true, allow: [r('.')] },
     proxy
   },
   build: {
-    outDir: "../dist",
+    outDir: "./dist",
     emptyOutDir: true
   },
   resolve: {

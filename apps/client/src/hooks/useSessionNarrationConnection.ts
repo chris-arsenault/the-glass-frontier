@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useSessionStore } from "../stores/sessionStore";
 
-export function useSessionNarrationConnection() {
+export function useSessionNarrationConnection(enabled = true) {
   const sessionId = useSessionStore((state) => state.sessionId);
   const connectionState = useSessionStore((state) => state.connectionState);
   const transportError = useSessionStore((state) => state.transportError);
@@ -9,6 +9,9 @@ export function useSessionNarrationConnection() {
   const hydratingRef = useRef(false);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (sessionId || connectionState !== "idle" || hydratingRef.current) {
       return;
     }
@@ -20,7 +23,7 @@ export function useSessionNarrationConnection() {
       .finally(() => {
         hydratingRef.current = false;
       });
-  }, [sessionId, connectionState, hydrateSession]);
+  }, [sessionId, connectionState, hydrateSession, enabled]);
 
   return { sessionId, connectionState, transportError };
 }

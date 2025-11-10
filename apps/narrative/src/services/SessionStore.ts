@@ -11,14 +11,14 @@ export interface SessionStore {
   addTurn(sessionId: string, turn: Turn): void;
 }
 
-function randomLocation(): LocationProfile {
+export function randomLocation(): LocationProfile {
   return {
     locale: "The Frozen Wastes of Hovin Iv",
     atmosphere: "cold, bright, optimistic"
   }
 }
 
-function randomCharacter(): Character {
+export function randomCharacter(): Character {
   return {
     archetype: "Vibe Knight",
     attributes: {
@@ -49,7 +49,7 @@ function randomCharacter(): Character {
   }
 }
 
-function buildDefaultState(sessionId: string): SessionState {
+export function buildDefaultState(sessionId: string): SessionState {
   return {
     sessionId,
     turnSequence: 0,

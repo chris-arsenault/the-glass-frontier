@@ -4,6 +4,34 @@ import type { TranscriptEntry, Turn } from "@glass-frontier/dto";
 import type { ChatMessage, SessionStore } from "../state/sessionState";
 import { trpcClient } from "../lib/trpcClient";
 
+const RECENT_SESSIONS_KEY = "glass-frontier-recent-sessions";
+const MAX_RECENT_SESSIONS = 5;
+
+const readRecentSessions = (): string[] => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(RECENT_SESSIONS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeRecentSessions = (sessions: string[]) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(sessions));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 const toChatMessage = (
   entry: TranscriptEntry,
   extras?: Partial<ChatMessage>
@@ -57,6 +85,15 @@ const buildPlayerEntry = (content: string): TranscriptEntry => ({
   }
 });
 
+const applyRecentSession = (sessions: string[], sessionId: string): string[] => {
+  const next = [sessionId, ...sessions.filter((id) => id !== sessionId)].slice(
+    0,
+    MAX_RECENT_SESSIONS
+  );
+  writeRecentSessions(next);
+  return next;
+};
+
 export const useSessionStore = create<SessionStore>()((set, get) => ({
   sessionId: null,
   messages: [],
@@ -69,6 +106,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
   sessionStatus: "open",
   character: null,
   location: null,
+  recentSessions: readRecentSessions(),
   async hydrateSession(desiredSessionId) {
     set((prev) => ({
       ...prev,
@@ -90,7 +128,8 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         sessionStatus: "open",
         transportError: null,
         character: session.character ?? null,
-        location: session.location ?? null
+        location: session.location ?? null,
+        recentSessions: applyRecentSession(prev.recentSessions, session.sessionId)
       }));
 
       return session.sessionId;
@@ -145,7 +184,11 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         connectionState: "connected",
         transportError: null,
         character: updatedSession.character ?? prev.character,
-        location: updatedSession.location ?? prev.location
+        location: updatedSession.location ?? prev.location,
+        recentSessions: applyRecentSession(
+          prev.recentSessions,
+          updatedSession.sessionId ?? prev.sessionId ?? ""
+        )
       }));
     } catch (error) {
       const nextError = error instanceof Error ? error : new Error("Failed to send player intent.");

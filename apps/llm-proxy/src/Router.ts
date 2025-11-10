@@ -111,7 +111,23 @@ class Router {
         }
 
         const responseBody = await this.readBody(llmResponse);
-        console.log(responseBody?.choices?.[0]?.message);
+        if (
+          responseBody &&
+          typeof responseBody === "object" &&
+          "choices" in responseBody &&
+          Array.isArray((responseBody as Record<string, unknown>).choices)
+        ) {
+          const [firstChoice] = (responseBody as { choices: Array<{ message?: unknown }> }).choices;
+          if (firstChoice?.message !== undefined) {
+            const preview =
+              typeof firstChoice.message === "string"
+                ? firstChoice.message
+                : JSON.stringify(firstChoice.message);
+            log("debug", "llm-proxy.provider.preview", {
+              preview
+            });
+          }
+        }
         log("info", "llm-proxy.provider.success", {
           ...attemptCtx,
           status: llmResponse.status

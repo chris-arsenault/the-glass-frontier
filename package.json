@@ -35,5 +35,9 @@
     "turbo": "^2.6.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
   }
 }
