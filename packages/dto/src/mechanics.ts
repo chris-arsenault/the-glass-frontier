@@ -19,6 +19,15 @@ export const RiskLevelMap = z.object({
 });
 export type RiskLevelMap = z.infer<typeof RiskLevelMap>;
 
+export const RISK_LEVEL_MAP = {
+  controlled: 7,
+  standard: 8,
+  risky: 9,
+  desperate: 10,
+} as const
+
+RiskLevelMap.parse(RISK_LEVEL_MAP)
+
 /** Outcome tiers and momentum delta */
 export const OutcomeTier = z.enum(["breakthrough", "advance", "stall", "regress", "collapse"]);
 export type OutcomeTier = z.infer<typeof OutcomeTier>;
@@ -69,6 +78,17 @@ export const AttributeTierModifier = z.object({
 });
 export type AttributeTierModifier = z.infer<typeof AttributeTierModifier>;
 
+export const ATTRIBUTE_TIER_MODIFIER = {
+  rudimentary: -2,
+  standard: 0,
+  advanced: 1,
+  superior: 2,
+  transcendent: 4,
+} as const
+
+AttributeTierModifier.parse(ATTRIBUTE_TIER_MODIFIER)
+
+
 /** Character attributes object: every attribute must have a tier */
 export const CharacterAttributes = z.object({
   vitality: AttributeTier,
@@ -93,6 +113,16 @@ export const SkillTierModifier = z.object({
   legend: z.literal(4),
 });
 export type SkillTierModifier = z.infer<typeof SkillTierModifier>;
+
+export const SKILL_TIER_MODIFIER = {
+  fool: -2,
+  apprentice: 0,
+  artisan: 1,
+  virtuoso: 2,
+  legend: 4,
+} as const
+
+SkillTierModifier.parse(SKILL_TIER_MODIFIER)
 
 
 /** MomentumState */

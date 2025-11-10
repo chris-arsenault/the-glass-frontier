@@ -55,7 +55,7 @@ class IntentIntakeNode implements GraphNode {
     const requiresCheck: boolean = typeof parsed?.requiresCheck === "boolean" ? parsed.requiresCheck : fallback.requiresCheck;
     const creativeSpark: boolean = typeof parsed?.creativeSpark === "boolean" ? parsed.creativeSpark : fallback.creativeSpark;
     const skill: string = parsed.skill ?? fallback.skill;
-    const attribute: Attribute = context.session?.character?.skills?.[skill].attribute ?? parsed?.attribute ?? fallback.attribute
+    const attribute: Attribute = context.session?.character?.skills?.[skill]?.attribute ?? parsed?.attribute ?? fallback.attribute
     const intentSummary: string = parsed?.intentSummary ?? fallback.intentSummary
 
     const playerIntent: Intent = {

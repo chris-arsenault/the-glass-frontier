@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useSessionStore } from "../stores/sessionStore";
+import { SkillCheckBadge } from "./SkillCheckBadge";
 
 const formatStatus = (state: string): string => {
   switch (state) {
@@ -59,29 +60,64 @@ export function ChatCanvas() {
             Awaiting the first story beat. Share an intent to begin.
           </p>
         ) : (
-          messages.map((message, index) => {
+          messages.map((chatMessage, index) => {
+            const {
+              entry,
+              skillCheckPlan,
+              skillCheckResult,
+              skillKey,
+              attributeKey,
+              playerIntent
+            } = chatMessage;
             const timestamp =
-              typeof message.metadata?.timestamp === "number"
-                ? new Date(message.metadata.timestamp)
+              typeof entry.metadata?.timestamp === "number"
+                ? new Date(entry.metadata.timestamp)
                 : new Date();
             const displayRole =
-              message.role === "player" ? "Player" : message.role === "gm" ? "GM" : "System";
+              entry.role === "player" ? "Player" : entry.role === "gm" ? "GM" : "System";
 
             return (
               <article
-                key={message.id || index}
-                className={`chat-entry chat-entry-${message.role}`}
+                key={entry.id || index}
+                className={`chat-entry chat-entry-${entry.role}`}
                 data-turn={index}
               >
                 <header className="chat-entry-header">
-                  <span className="chat-entry-role" aria-hidden="true">
-                    {displayRole}
-                  </span>
-                  <span className="chat-entry-meta">
-                    {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
+                  <div className="chat-entry-heading">
+                    <span className="chat-entry-role" aria-hidden="true">
+                      {displayRole}
+                    </span>
+                    <span className="chat-entry-meta">
+                      {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <div className="chat-entry-aside">
+                    {entry.role === "player" && playerIntent?.tone ? (
+                      <span className="chat-entry-tone">{playerIntent.tone}</span>
+                    ) : null}
+                    {entry.role === "player" && playerIntent?.creativeSpark ? (
+                      <span className="chat-entry-spark" title="Creative Spark awarded">
+                        ★
+                      </span>
+                    ) : null}
+                    {entry.role === "gm" ? (
+                      <SkillCheckBadge
+                        plan={skillCheckPlan}
+                        result={skillCheckResult}
+                        skillKey={skillKey}
+                        attributeKey={attributeKey}
+                      />
+                    ) : null}
+                  </div>
                 </header>
-                <p className="chat-entry-content">{message.content}</p>
+                <p
+                  className="chat-entry-content"
+                  title={
+                    entry.role === "player" ? playerIntent?.intentSummary ?? undefined : undefined
+                  }
+                >
+                  {entry.content}
+                </p>
               </article>
             );
           })

@@ -78,6 +78,7 @@ class Router {
       try {
         log("info", "llm-proxy.provider.start", attemptCtx);
         const preparedPayload = provider.preparePayload(payload);
+        log("info", payload.json())
         const llmResponse = await this.executeProvider(provider, preparedPayload);
 
         if (this.isRetryable(llmResponse)) {
@@ -110,6 +111,7 @@ class Router {
         }
 
         const responseBody = await this.readBody(llmResponse);
+        console.log(responseBody?.choices?.[0]?.message);
         log("info", "llm-proxy.provider.success", {
           ...attemptCtx,
           status: llmResponse.status

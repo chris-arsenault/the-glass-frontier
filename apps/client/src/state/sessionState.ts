@@ -1,11 +1,28 @@
-import type { TranscriptEntry } from "@glass-frontier/dto";
+import type {
+  Attribute,
+  Character,
+  Intent,
+  LocationProfile,
+  SkillCheckPlan,
+  SkillCheckResult,
+  TranscriptEntry
+} from "@glass-frontier/dto";
 
 export type ConnectionState = "idle" | "connecting" | "connected" | "error" | "closed";
 export type SessionLifecycle = "open" | "closed";
 
+export interface ChatMessage {
+  entry: TranscriptEntry;
+  skillCheckPlan?: SkillCheckPlan | null;
+  skillCheckResult?: SkillCheckResult | null;
+  skillKey?: string | null;
+  attributeKey?: Attribute | null;
+  playerIntent?: Intent | null;
+}
+
 export interface SessionState {
   sessionId: string | null;
-  messages: TranscriptEntry[];
+  messages: ChatMessage[];
   turnSequence: number;
   connectionState: ConnectionState;
   transportError: Error | null;
@@ -13,6 +30,8 @@ export interface SessionState {
   isOffline: boolean;
   queuedIntents: number;
   sessionStatus: SessionLifecycle;
+  character?: Character | null;
+  location?: LocationProfile | null;
 }
 
 export interface SessionStore extends SessionState {

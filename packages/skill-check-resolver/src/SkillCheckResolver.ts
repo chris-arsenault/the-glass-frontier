@@ -1,5 +1,5 @@
 import {
-  attributeModifierFromName,
+  attributeModifierFromName, RISK_LEVEL_MAP,
   SkillCheckRequest,
   SkillCheckResult,
   skillModifierFromSkillName, TIER_THRESHOLDS
@@ -13,6 +13,7 @@ import {
   RiskLevelMap,
 } from "@glass-frontier/dto"
 import {CheckRequestTelemetry} from "./telemetry";
+import {MOMENTUM_DELTA} from "../dist/src/mechanics";
 
 
 class SkillCheckResolver {
@@ -36,16 +37,28 @@ class SkillCheckResolver {
 
     try {
       const roller = new DiceRoller(this.request);
+
       const modifier = this.computeModifier()
+      console.log("Modifer")
+      console.log(modifier);
       const dieResult = roller.computeResult(modifier);
-      const margin = dieResult - RiskLevelMap[this.request.riskLevel];
+      console.log("result")
+      console.log(dieResult)
+      const target = RISK_LEVEL_MAP[this.request.riskLevel]
+      console.log("target")
+      console.log(target)
+      const margin = dieResult - target;
+      console.log("margin")
+      console.log(margin)
       const outcomeTier: OutcomeTier = this.determineTier(margin);
       const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier)
+      console.log(this.request.character.momentum)
+      console.log(newMomentum)
 
       const result: SkillCheckResult = {
         advantage: roller.advantage,
         checkId: this.request.checkId,
-        dieSum: roller.result,
+        dieSum: dieResult,
         disadvantage: roller.disadvantage,
         sessionId: this.request.sessionId,
         totalModifier: modifier,
@@ -71,7 +84,7 @@ class SkillCheckResolver {
   }
 
   computeMomentum(current: MomentumState, tier: string): number {
-    const delta = MomentumDelta[tier] ?? 0;
+    const delta = MOMENTUM_DELTA[tier] ?? 0;
     return clamp(current.current + delta, current.floor, current.ceiling);
   }
 

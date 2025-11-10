@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useSessionStore } from "../stores/sessionStore";
+import { LocationOverview } from "./LocationOverview";
 
 export function ChatComposer() {
   const sendPlayerMessage = useSessionStore((state) => state.sendPlayerMessage);
@@ -82,6 +83,7 @@ export function ChatComposer() {
         data-testid="chat-input"
       />
       <div className="chat-composer-controls">
+        <LocationOverview />
         <button
           type="submit"
           className="chat-send-button"

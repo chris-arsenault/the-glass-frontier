@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import {
-  Attribute, AttributeTierModifier, CharacterAttributes, SkillTier,
-  SkillTierModifier, MomentumState, Skill
+  Attribute, CharacterAttributes, SkillTier,
+  MomentumState, Skill, SKILL_TIER_MODIFIER, ATTRIBUTE_TIER_MODIFIER
 } from "./mechanics";
 
 
@@ -21,9 +21,9 @@ export type Character = z.infer<typeof Character>;
 
 export function skillModifierFromSkillName(c: Character, skill: string): number {
   const name: SkillTier = c.skills[skill]?.tier ?? "fool"
-  return SkillTierModifier[name];
+  return SKILL_TIER_MODIFIER[name];
 }
 
 export function attributeModifierFromName(c: Character, attr: Attribute): number {
-  return AttributeTierModifier[c.attributes[attr]]
+  return ATTRIBUTE_TIER_MODIFIER[c.attributes[attr]]
 }

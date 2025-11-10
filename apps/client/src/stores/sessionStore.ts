@@ -1,15 +1,43 @@
 import { create } from "zustand";
 import type { TranscriptEntry, Turn } from "@glass-frontier/dto";
 
-import type { SessionStore } from "../state/sessionState";
+import type { ChatMessage, SessionStore } from "../state/sessionState";
 import { trpcClient } from "../lib/trpcClient";
 
-const flattenTurns = (turns: Turn[]): TranscriptEntry[] =>
+const toChatMessage = (
+  entry: TranscriptEntry,
+  extras?: Partial<ChatMessage>
+): ChatMessage => ({
+  entry,
+  skillCheckPlan: extras?.skillCheckPlan ?? null,
+  skillCheckResult: extras?.skillCheckResult ?? null,
+  skillKey: extras?.skillKey ?? null,
+  attributeKey: extras?.attributeKey ?? null,
+  playerIntent: extras?.playerIntent ?? null
+});
+
+const flattenTurns = (turns: Turn[]): ChatMessage[] =>
   turns.flatMap((turn) => {
-    const entries: TranscriptEntry[] = [turn.playerMessage];
-    if (turn.gmMessage) entries.push(turn.gmMessage);
-    if (turn.systemMessage) entries.push(turn.systemMessage);
-    return entries;
+    const skillKey = turn.playerIntent?.skill ?? null;
+    const attributeKey = turn.playerIntent?.attribute ?? null;
+    const extras = {
+      skillCheckPlan: turn.skillCheckPlan ?? null,
+      skillCheckResult: turn.skillCheckResult ?? null,
+      skillKey,
+      attributeKey,
+      playerIntent: turn.playerIntent ?? null
+    };
+    const turnEntries: ChatMessage[] = [];
+    if (turn.playerMessage) {
+      turnEntries.push(toChatMessage(turn.playerMessage, extras));
+    }
+    if (turn.gmMessage) {
+      turnEntries.push(toChatMessage(turn.gmMessage, extras));
+    }
+    if (turn.systemMessage) {
+      turnEntries.push(toChatMessage(turn.systemMessage, extras));
+    }
+    return turnEntries;
   });
 
 const createMessageId = (): string => {
@@ -39,6 +67,8 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
   isOffline: false,
   queuedIntents: 0,
   sessionStatus: "open",
+  character: null,
+  location: null,
   async hydrateSession(desiredSessionId) {
     set((prev) => ({
       ...prev,
@@ -58,7 +88,9 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         turnSequence: session.turnSequence ?? session.turns?.length ?? 0,
         connectionState: "connected",
         sessionStatus: "open",
-        transportError: null
+        transportError: null,
+        character: session.character ?? null,
+        location: session.location ?? null
       }));
 
       return session.sessionId;
@@ -86,33 +118,34 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     };
 
     const playerEntry = buildPlayerEntry(trimmed);
+    const playerMessage = toChatMessage(playerEntry, { playerIntent: null });
 
     set((prev) => ({
       ...prev,
       isSending: true,
-      messages: prev.messages.concat(playerEntry),
+      messages: prev.messages.concat(playerMessage),
       turnSequence: prev.turnSequence + 1,
       transportError: null
     }));
 
     try {
       const sessionId = await ensureSessionId();
-      const response = await trpcClient.postMessage.mutate({
+      await trpcClient.postMessage.mutate({
         sessionId,
         content: playerEntry
       });
 
-      const responseEntries = [response.gmMessage, response.systemMessage].filter(
-        (entry): entry is TranscriptEntry => Boolean(entry)
-      );
+      const updatedSession = await trpcClient.getSession.query({ sessionId });
 
       set((prev) => ({
         ...prev,
         isSending: false,
-        messages: prev.messages.concat(responseEntries),
+        messages: flattenTurns(updatedSession.turns ?? []),
         queuedIntents: 0,
         connectionState: "connected",
-        transportError: null
+        transportError: null,
+        character: updatedSession.character ?? prev.character,
+        location: updatedSession.location ?? prev.location
       }));
     } catch (error) {
       const nextError = error instanceof Error ? error : new Error("Failed to send player intent.");

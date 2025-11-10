@@ -33,7 +33,9 @@ export const appRouter = t.router({
       const result: Turn = await ctx.engine.handlePlayerMessage(input.sessionId, playerEntry);
       return {
         gmMessage: result.gmMessage,
+        playerIntent: result.playerIntent,
         systemMessage: result.systemMessage,
+        skillCheckPlan: result.skillCheckPlan,
         skillCheckResult: result.skillCheckResult,
       };
     }),
