@@ -1,5 +1,6 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { fetch } from "undici";
+import { createTRPCUntypedClient, httpBatchLink } from "@trpc/client";
+import type { TRPCUntypedClient } from "@trpc/client";
 import { log } from "@glass-frontier/utils";
 
 interface LlmInvokeOptions {
@@ -25,6 +26,7 @@ class LangGraphLlmClient {
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
   readonly #defaultHeaders: Record<string, string>;
+  readonly #client: TRPCUntypedClient<any>;
 
   constructor(options?: {
     baseUrl?: string;
@@ -34,12 +36,20 @@ class LangGraphLlmClient {
     maxRetries?: number;
     defaultHeaders?: Record<string, string>;
   }) {
-    this.#baseUrl = options?.baseUrl ?? process.env.LANGGRAPH_LLM_ENDPOINT ?? "http://localhost:8082/v1/chat/completions";
+    this.#baseUrl = options?.baseUrl ?? process.env.LANGGRAPH_LLM_ENDPOINT ?? "http://localhost:8082/trpc";
     this.#model = options?.model ?? process.env.LANGGRAPH_LLM_MODEL ?? "gpt-4.1-mini";
     this.#providerId = options?.providerId ?? "llm-proxy";
     this.#timeoutMs = Number.isFinite(options?.timeoutMs) && (options?.timeoutMs ?? 0) > 0 ? (options?.timeoutMs as number) : 45_000;
     this.#maxRetries = Number.isFinite(options?.maxRetries) && (options?.maxRetries ?? 0) >= 0 ? (options?.maxRetries as number) : 2;
     this.#defaultHeaders = options?.defaultHeaders ?? { "content-type": "application/json" };
+    this.#client = createTRPCUntypedClient<any>({
+      links: [
+        httpBatchLink({
+          url: this.#baseUrl,
+          headers: () => this.#defaultHeaders
+        })
+      ]
+    });
   }
 
   async generateText(options: LlmInvokeOptions): Promise<{ text: string; raw: unknown; usage: unknown; provider: string; attempts: number }> {
@@ -120,21 +130,11 @@ class LangGraphLlmClient {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
       try {
-        const response = await fetch(this.#baseUrl, {
-          method: "POST",
-          headers: this.#defaultHeaders,
-          body: JSON.stringify(body),
+        const parsed = (await this.#client.mutation("chatCompletion", body, {
           signal: controller.signal
-        });
+        })) as Record<string, unknown>;
 
         clearTimeout(timer);
-        const text = await response.text();
-
-        if (!response.ok) {
-          throw new Error(`llm_http_${response.status}: ${text.slice(0, 200)}`);
-        }
-
-        const parsed = text ? JSON.parse(text) : {};
         const choice = Array.isArray(parsed.choices) ? parsed.choices[0] : undefined;
         const message = choice?.message?.content ?? choice?.delta?.content ?? "";
 

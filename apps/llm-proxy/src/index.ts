@@ -1,23 +1,15 @@
 "use strict";
 
-import express from "express";
-import { log  } from "@glass-frontier/utils";
-import { Router  } from "./src/Router";
+import { createHTTPHandler } from "@trpc/server/adapters/standalone";
+import { initTRPC, TRPCError } from "@trpc/server";
+import http from "node:http";
+import { log } from "@glass-frontier/utils";
+import { Router, chatCompletionInputSchema } from "./Router";
+import { ProviderError } from "./providers";
 
-const port = Number.parseInt(
-  process.env.PORT || process.env.LLM_PROXY_PORT || "8082",
-  10
-);
-const app = express();
-const router = new Router();
-
+const port = Number.parseInt(process.env.PORT || process.env.LLM_PROXY_PORT || "8082", 10);
+const routerService = new Router();
 process.env.SERVICE_NAME = process.env.SERVICE_NAME || "llm-proxy";
-
-app.use(
-  express.json({
-    limit: process.env.LLM_PROXY_BODY_LIMIT || "2mb"
-  })
-);
 
 function resolvePrimaryProvider() {
   const configured = process.env.LLM_PROXY_PROVIDER;
@@ -36,26 +28,47 @@ function resolvePrimaryProvider() {
   return "openai";
 }
 
-app.get("/healthz", (_req, res) => {
-  res.json({
-    status: "ok",
-    service: "llm-proxy",
-    provider: resolvePrimaryProvider()
-  });
+const t = initTRPC.create();
+
+const appRouter = t.router({
+  chatCompletion: t.procedure.input(chatCompletionInputSchema).mutation(async ({ input }) => {
+    try {
+      return await routerService.proxy(input);
+    } catch (error) {
+      if (error instanceof ProviderError) {
+        throw new TRPCError({
+          code: error.retryable ? "BAD_GATEWAY" : "INTERNAL_SERVER_ERROR",
+          message: error.message,
+          cause: error
+        });
+      }
+      throw error;
+    }
+  })
 });
 
-app.post("/v1/chat/completions", async (req, res, next) => {
-  try {
-    await router.proxy(req, res, next);
-  } catch (error: any) {
-    log("error", "LLM proxy request failed", {
-      message: error.message
+const handler = createHTTPHandler({
+  router: appRouter,
+  createContext: () => ({})
+});
+
+const server = http.createServer((req, res) => {
+  if (req.method === "GET" && req.url && req.url.split("?")[0] === "/healthz") {
+    const body = JSON.stringify({
+      status: "ok",
+      service: "llm-proxy",
+      provider: resolvePrimaryProvider()
     });
-    res.status(502).json({ error: "llm_proxy_failed", message: error.message });
+    res.statusCode = 200;
+    res.setHeader("content-type", "application/json");
+    res.end(body);
+    return;
   }
+
+  handler(req, res);
 });
 
-const server = app.listen(port, () => {
+server.listen(port, () => {
   log("info", "LLM proxy listening", { port });
 });
 
@@ -65,3 +78,6 @@ function shutdown() {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+
+export { appRouter };
+export type AppRouter = typeof appRouter;

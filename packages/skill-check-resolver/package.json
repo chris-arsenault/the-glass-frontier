@@ -2,9 +2,19 @@
   "name": "@glass-frontier/skill-check-resolver",
   "version": "0.1.0",
   "packageManager": "pnpm@10.20.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
     "build": "tsc -b",
-    "dev": "tsc -b -w",
     "lint": "eslint .",
     "test": "vitest run"
   },

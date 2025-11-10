@@ -1,10 +1,34 @@
 "use strict";
 
-import { log  } from "@glass-frontier/utils/";
-import { ProviderRegistry, ProviderError, BaseProvider  } from "./providers";
-import { Payload  } from "./Payload.js";
-import {RequestHandler} from "express";
-import {ProxyResponse} from "./ProxyResponse";
+import { log } from "@glass-frontier/utils/";
+import { ProviderRegistry, ProviderError, BaseProvider } from "./providers";
+import { Payload } from "./Payload.js";
+import { Response } from "undici";
+import { z } from "zod";
+
+const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+
+const chatMessageSchema = z.object({
+  role: z.string(),
+  content: z.any(),
+  name: z.string().optional()
+});
+
+const chatCompletionInputSchema = z
+  .object({
+    model: z.string(),
+    messages: z.array(chatMessageSchema).optional(),
+    prompt: z.any().optional(),
+    temperature: z.number().optional(),
+    max_tokens: z.number().optional(),
+    stream: z.boolean().optional(),
+    requestId: z.string().optional(),
+    provider: z.string().optional(),
+    fallbackProviders: z.array(z.string()).optional()
+  })
+  .passthrough();
+
+type ChatCompletionInput = z.infer<typeof chatCompletionInputSchema>;
 
 class Router {
   registry: ProviderRegistry;
@@ -20,10 +44,7 @@ class Router {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
-        return await provider.execute(
-          payload,
-          controller.signal,
-        );
+        return await provider.execute(payload, controller.signal);
       } finally {
         clearTimeout(timer);
       }
@@ -32,18 +53,19 @@ class Router {
     return provider.execute(payload);
   }
 
-  proxy: RequestHandler = async (req, res, next) => {
-    const payload = new Payload(req.body);
-    const proxyResponse = new ProxyResponse(res);
+  async proxy(body: ChatCompletionInput): Promise<unknown> {
+    const payload = new Payload(body);
     const sequence = this.registry.providerOrder();
 
     if (sequence.length === 0) {
-      log("error", "llm-proxy.no_providers_available");
-      proxyResponse.sendJson(503, { error: "llm_proxy_no_providers" });
-      return;
+      throw new ProviderError({
+        code: "llm_proxy_no_providers",
+        status: 503,
+        retryable: false
+      });
     }
 
-    let lastError: ProviderError | undefined = undefined;
+    let lastError: ProviderError | undefined;
 
     for (let index = 0; index < sequence.length; index += 1) {
       const provider = sequence[index];
@@ -55,51 +77,96 @@ class Router {
 
       try {
         log("info", "llm-proxy.provider.start", attemptCtx);
-        const llmResponse = await this.executeProvider(provider, payload);
-        proxyResponse.setLLMResponse(llmResponse);
+        const preparedPayload = provider.preparePayload(payload);
+        const llmResponse = await this.executeProvider(provider, preparedPayload);
 
-        if (proxyResponse.isRetryable()) {
-          log("warn", "llm-proxy.provider.retryable_status", {
-            ...attemptCtx,
-            status: proxyResponse.status
-          });
-          await proxyResponse.drain();
+        if (this.isRetryable(llmResponse)) {
           lastError = new ProviderError({
             code: "llm_proxy_retryable_status",
-            status: proxyResponse.status,
+            status: llmResponse.status,
             retryable: true
+          });
+          await this.drain(llmResponse);
+          log("warn", "llm-proxy.provider.retryable_status", {
+            ...attemptCtx,
+            status: llmResponse.status
           });
           continue;
         }
+
+        if (!llmResponse.ok) {
+          const errorBody = await this.readBody(llmResponse);
+          lastError = new ProviderError({
+            code: "llm_proxy_upstream_failure",
+            status: llmResponse.status,
+            retryable: false,
+            details: { body: errorBody }
+          });
+          log("error", "llm-proxy.provider.failure_status", {
+            ...attemptCtx,
+            status: llmResponse.status
+          });
+          continue;
+        }
+
+        const responseBody = await this.readBody(llmResponse);
         log("info", "llm-proxy.provider.success", {
           ...attemptCtx,
-          status: proxyResponse.status,
-          stream: proxyResponse.shouldStream()
+          status: llmResponse.status
         });
-        proxyResponse.returnToClient(req);
-
-        return;
+        return responseBody;
       } catch (error: any) {
         log("error", "llm-proxy.provider.failure", {
           ...attemptCtx,
           code: "llm_proxy_provider_failure",
           message: error.message
         });
-
-
         lastError = error;
       }
     }
 
-    const status = lastError?.status || 502;
-    proxyResponse.sendJson(status, {
-      error: lastError?.code || "llm_proxy_all_providers_failed",
-      message: lastError?.message || "All upstream providers failed"
-    });
+    throw (
+      lastError ||
+      new ProviderError({
+        code: "llm_proxy_all_providers_failed",
+        status: 502
+      })
+    );
   }
 
+  private async readBody(response: Response): Promise<unknown> {
+    if (response.status === 204 || response.status === 304) {
+      return null;
+    }
+
+    const text = await response.text();
+
+    if (!text) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (_error) {
+      return text;
+    }
+  }
+
+  private async drain(response: Response) {
+    if (!response.body) {
+      return;
+    }
+
+    try {
+      await response.arrayBuffer();
+    } catch (_error) {
+      // Ignore body stream errors while draining.
+    }
+  }
+
+  private isRetryable(response: Response) {
+    return RETRYABLE_STATUS.has(response.status);
+  }
 }
 
-export {
-  Router
-};
+export { Router, chatCompletionInputSchema, type ChatCompletionInput };

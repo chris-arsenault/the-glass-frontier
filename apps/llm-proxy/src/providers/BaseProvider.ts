@@ -13,7 +13,7 @@ abstract class BaseProvider {
   valid: boolean = true;
   headers: Record<string, string> = {};
 
-  abstract preparePayload(payload: Payload): void;
+  abstract preparePayload(payload: Payload): Payload;
 
   async execute(body: Payload, signal?: AbortSignal | undefined): Promise<Response> {
     try {

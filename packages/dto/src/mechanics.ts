@@ -41,7 +41,7 @@ export const TIER_THRESHOLDS = TierThresholds.parse([
   [0,"advance"],
   [-1,"stall"],
   [-3,"regress"],
-  [-Infinity,"collapse"],
+  [-100,"collapse"],
 ]);
 
 /** Attributes */

@@ -6,6 +6,7 @@
     },
     "dev": { "cache": false, "persistent": true, "dependsOn": ["^dev"]  },
     "lint": {},
-    "test": { "dependsOn": ["^build"] }
-  }
+    "test": { "dependsOn": ["^build"] },
+  },
+  "globalEnv": ["OPENAI_API_KEY"]
 }

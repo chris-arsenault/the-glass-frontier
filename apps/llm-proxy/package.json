@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.20.0",
   "scripts": {
     "start": "tsc -b --watch & node dist/index.js",
-    "dev": "NODE_ENV=development tsx index.ts",
+    "dev": "NODE_ENV=development tsx src/index.ts",
     "build": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run"
@@ -18,12 +18,11 @@
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
     "@glass-frontier/utils": "workspace:*",
-    "express": "^5.1.0",
-    "stream": "^0.0.3",
+    "@trpc/server": "^11.7.1",
+    "zod": "^3.23.8",
     "undici": "^7.16.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.5",
     "eslint": "^9.39.1"
   }
 }

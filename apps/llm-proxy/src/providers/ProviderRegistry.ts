@@ -25,11 +25,8 @@ export class ProviderRegistry {
 
   providerOrder(): BaseProvider[] {
     let providers: BaseProvider[] = [];
-    for (let i = 0; i < 3; i++) {
-      const provider = this.get("openai");
-      if (!provider) {
-        continue;
-      }
+    const provider = this.get("openai");
+    if (provider) {
       providers.push(provider)
     }
     return providers;

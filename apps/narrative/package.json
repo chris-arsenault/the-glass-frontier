@@ -5,8 +5,8 @@
   "description": "The Glass Frontier Narrative Engine.",
   "type": "module",
   "scripts": {
-    "start": "node dist/index.js",
-    "dev": "NODE_ENV=development ts-node src/index.ts",
+    "start": "tsc -b && node dist/server.local.js",
+    "dev": "NODE_ENV=development tsx src/server.local.ts",
     "build:local": "TARGET=local tsup",
     "build:lambda": "TARGET=lambda tsup",
     "build": "tsc -b",
