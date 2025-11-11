@@ -26,11 +26,14 @@ const chatCompletionInputSchema = z
     stream: z.boolean().optional(),
     requestId: z.string().optional(),
     provider: z.string().optional(),
-    fallbackProviders: z.array(z.string()).optional()
+    fallbackProviders: z.array(z.string()).optional(),
+    metadata: z.record(z.any()).optional()
   })
   .passthrough();
 
 type ChatCompletionInput = z.infer<typeof chatCompletionInputSchema>;
+
+type InvocationMetadata = Record<string, unknown> | undefined;
 
 type SuccessContext = {
   requestBody: Record<string, unknown>;
@@ -39,7 +42,7 @@ type SuccessContext = {
   playerId?: string;
   requestId: string;
   requestContextId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: InvocationMetadata;
 };
 
 class Router {
@@ -73,7 +76,8 @@ class Router {
     body: ChatCompletionInput,
     context?: { playerId?: string; requestId?: string }
   ): Promise<unknown> {
-    const payload = new Payload(body);
+    const { metadata, payloadBody } = this.extractInvocationParts(body);
+    const payload = new Payload(payloadBody);
     const sequence = this.registry.providerOrder();
 
     if (sequence.length === 0) {
@@ -151,7 +155,6 @@ class Router {
           ...attemptCtx,
           status: llmResponse.status
         });
-        const metadata = this.extractMetadata(preparedPayload.body);
         await this.handleSuccess({
           requestBody: preparedPayload.body ?? {},
           responseBody,
@@ -272,23 +275,29 @@ class Router {
     return undefined;
   }
 
-  private extractMetadata(body?: Record<string, unknown>): Record<string, unknown> | undefined {
-    if (!body || typeof body !== "object") {
-      return undefined;
-    }
-    const candidate = (body as Record<string, unknown>).metadata;
-    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
-      return candidate as Record<string, unknown>;
-    }
-    return undefined;
-  }
-
   private extractNodeId(metadata?: Record<string, unknown>): string | undefined {
     if (!metadata) {
       return undefined;
     }
     const nodeId = metadata.nodeId;
     return typeof nodeId === "string" && nodeId.trim() ? nodeId.trim() : undefined;
+  }
+
+  private extractInvocationParts(body: ChatCompletionInput): {
+    metadata: InvocationMetadata;
+    payloadBody: Record<string, unknown>;
+  } {
+    const metadata = body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
+      ? (body.metadata as Record<string, unknown>)
+      : undefined;
+
+    if (!metadata) {
+      return { metadata: undefined, payloadBody: body as Record<string, unknown> };
+    }
+
+    const payloadBody = { ...body } as Record<string, unknown>;
+    delete payloadBody.metadata;
+    return { metadata, payloadBody };
   }
 
   private cloneForArchive(data: Record<string, unknown>): Record<string, unknown> {

@@ -130,7 +130,8 @@ class LangGraphLlmClient {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
       try {
-        const parsed = (await this.#client.mutation("chatCompletion", body, {
+        const payload = metadata ? { ...body, metadata } : body;
+        const parsed = (await this.#client.mutation("chatCompletion", payload, {
           signal: controller.signal
         })) as Record<string, unknown>;
 
