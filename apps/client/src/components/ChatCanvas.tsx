@@ -10,6 +10,7 @@ import { SkillCheckBadge } from "./SkillCheckBadge";
 export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
+  const isWaitingForGm = useChronicleStore((state) => state.isSending);
   const expandedMessages = useUiStore((state) => state.expandedMessages);
   const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
   const toggleMessageExpansion = useUiStore((state) => state.toggleMessageExpansion);
@@ -207,6 +208,12 @@ export function ChatCanvas() {
           })
         )}
       </div>
+      {isWaitingForGm ? (
+        <div className="chat-loading" role="status" aria-live="polite">
+          <span className="chat-loading-spinner" aria-hidden="true" />
+          <span className="chat-loading-text">GM is composing the next beat…</span>
+        </div>
+      ) : null}
     </section>
   );
 }

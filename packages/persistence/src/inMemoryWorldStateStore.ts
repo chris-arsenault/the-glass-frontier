@@ -1,44 +1,16 @@
 import { randomUUID } from "node:crypto";
-import type { Character, Chronicle, LocationProfile, Login, Turn } from "@glass-frontier/dto";
-import type { ChronicleState } from "../types.js";
-import type { CharacterProgressUpdate } from "./characterProgress.js";
-import { applyCharacterSnapshotProgress } from "./characterProgress.js";
+import type {
+  Character,
+  Chronicle,
+  LocationProfile,
+  Login,
+  Turn
+} from "@glass-frontier/dto";
+import type { WorldStateStore } from "./worldStateStore";
+import type { CharacterProgressPayload, ChronicleSnapshot } from "./types";
+import { applyCharacterSnapshotProgress } from "./characterProgress";
 
-export interface WorldDataStore {
-  ensureChronicle(params: {
-    chronicleId?: string;
-    loginId: string;
-    locationId: string;
-    characterId?: string;
-    title?: string;
-    status?: Chronicle["status"];
-  }): Promise<Chronicle>;
-
-  getChronicleState(chronicleId: string): Promise<ChronicleState | null>;
-
-  upsertLogin(login: Login): Promise<Login>;
-  getLogin(loginId: string): Promise<Login | null>;
-  listLogins(): Promise<Login[]>;
-
-  upsertLocation(location: LocationProfile): Promise<LocationProfile>;
-  getLocation(locationId: string): Promise<LocationProfile | null>;
-  listLocations(): Promise<LocationProfile[]>;
-
-  upsertCharacter(character: Character): Promise<Character>;
-  getCharacter(characterId: string): Promise<Character | null>;
-  listCharactersByLogin(loginId: string): Promise<Character[]>;
-
-  upsertChronicle(chronicle: Chronicle): Promise<Chronicle>;
-  getChronicle(chronicleId: string): Promise<Chronicle | null>;
-  listChroniclesByLogin(loginId: string): Promise<Chronicle[]>;
-
-  addTurn(turn: Turn): Promise<Turn>;
-  listChronicleTurns(chronicleId: string): Promise<Turn[]>;
-
-  applyCharacterProgress(update: CharacterProgressUpdate): Promise<Character | null>;
-}
-
-class InMemoryWorldDataStore implements WorldDataStore {
+export class InMemoryWorldStateStore implements WorldStateStore {
   #logins = new Map<string, Login>();
   #locations = new Map<string, LocationProfile>();
   #characters = new Map<string, Character>();
@@ -63,14 +35,15 @@ class InMemoryWorldDataStore implements WorldDataStore {
       loginId: params.loginId,
       locationId: params.locationId,
       characterId: params.characterId,
-      title: params.title?.trim() && params.title.trim().length > 0 ? params.title.trim() : "Untitled Chronicle",
+      title:
+        params.title?.trim() && params.title.trim().length > 0 ? params.title.trim() : "Untitled Chronicle",
       status: params.status ?? "open",
       metadata: undefined
     };
     return this.upsertChronicle(record);
   }
 
-  async getChronicleState(chronicleId: string): Promise<ChronicleState | null> {
+  async getChronicleState(chronicleId: string): Promise<ChronicleSnapshot | null> {
     const chronicle = await this.getChronicle(chronicleId);
     if (!chronicle) {
       return null;
@@ -160,7 +133,7 @@ class InMemoryWorldDataStore implements WorldDataStore {
     );
   }
 
-  async applyCharacterProgress(update: CharacterProgressUpdate): Promise<Character | null> {
+  async applyCharacterProgress(update: CharacterProgressPayload): Promise<Character | null> {
     if (!update.characterId) {
       return null;
     }
@@ -173,5 +146,3 @@ class InMemoryWorldDataStore implements WorldDataStore {
     return updated;
   }
 }
-
-export { InMemoryWorldDataStore };

@@ -1,23 +1,23 @@
 import { log } from "@glass-frontier/utils";
-import { InMemoryWorldDataStore, type WorldDataStore } from "./services/WorldDataStore";
+import { createWorldStateStore, type WorldStateStore } from "@glass-frontier/persistence";
 import { LangGraphOrchestrator } from "./langGraph/orchestrator";
 import { ChronicleTelemetry } from "./telemetry";
-import {CheckPlannerNode, GmSummaryNode, IntentIntakeNode, NarrativeWeaverNode, UpdateCharacterNode } from "./langGraph/nodes";
+import { CheckPlannerNode, GmSummaryNode, IntentIntakeNode, NarrativeWeaverNode, UpdateCharacterNode } from "./langGraph/nodes";
 import { LangGraphLlmClient } from "./langGraph/llmClient";
-import {GraphContext, ChronicleState} from "./types";
-import {Character, TranscriptEntry, Turn} from "@glass-frontier/dto";
-import {randomUUID} from "node:crypto";
+import { GraphContext, ChronicleState } from "./types";
+import { Character, TranscriptEntry, Turn } from "@glass-frontier/dto";
+import { randomUUID } from "node:crypto";
 
 class NarrativeEngine {
-  readonly worldDataStore: WorldDataStore;
+  readonly worldStateStore: WorldStateStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
 
   constructor(options?: {
-    worldDataStore?: WorldDataStore;
+    worldStateStore?: WorldStateStore;
   }) {
-    this.worldDataStore = options?.worldDataStore ?? new InMemoryWorldDataStore();
+    this.worldStateStore = options?.worldStateStore ?? createWorldStateStore();
     this.telemetry =  new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.graph = new LangGraphOrchestrator(
@@ -26,7 +26,7 @@ class NarrativeEngine {
         new CheckPlannerNode(),
         new NarrativeWeaverNode(),
         new GmSummaryNode(),
-        new UpdateCharacterNode(this.worldDataStore)
+        new UpdateCharacterNode(this.worldStateStore)
       ],
       this.telemetry
     );
@@ -41,7 +41,7 @@ class NarrativeEngine {
       throw new Error("chronicleId is required");
     }
 
-    const chronicleState: ChronicleState | null = await this.worldDataStore.getChronicleState(chronicleId);
+    const chronicleState: ChronicleState | null = await this.worldStateStore.getChronicleState(chronicleId);
     if (!chronicleState) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
@@ -94,7 +94,7 @@ class NarrativeEngine {
       failure: failure
     }
 
-    await this.worldDataStore.addTurn(turn);
+    await this.worldStateStore.addTurn(turn);
 
     log("info", "Narrative engine resolved turn", {
       chronicleId,

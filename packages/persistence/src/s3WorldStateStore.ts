@@ -2,20 +2,24 @@ import { S3Client, GetObjectCommand, PutObjectCommand, paginateListObjectsV2 } f
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import type { Character, Chronicle, LocationProfile, Login, Turn } from "@glass-frontier/dto";
+import type {
+  Character,
+  Chronicle,
+  LocationProfile,
+  Login,
+  Turn
+} from "@glass-frontier/dto";
 import { log } from "@glass-frontier/utils";
+import type { WorldStateStore } from "./worldStateStore";
+import type { CharacterProgressPayload, ChronicleSnapshot } from "./types";
+import { applyCharacterSnapshotProgress } from "./characterProgress";
 
-import type { WorldDataStore } from "./WorldDataStore.js";
-import type { ChronicleState } from "../types.js";
-import type { CharacterProgressUpdate } from "./characterProgress.js";
-import { applyCharacterSnapshotProgress } from "./characterProgress.js";
-
-function isNotFound(error: unknown): boolean {
+const isNotFound = (error: unknown): boolean => {
   const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
   return err?.name === "NoSuchKey" || err?.$metadata?.httpStatusCode === 404;
-}
+};
 
-export class S3WorldDataStore implements WorldDataStore {
+export class S3WorldStateStore implements WorldStateStore {
   #bucket: string;
   #prefix: string;
   #client: S3Client;
@@ -27,23 +31,21 @@ export class S3WorldDataStore implements WorldDataStore {
   #chronicleLoginIndex = new Map<string, string>();
   #characterLoginIndex = new Map<string, string>();
 
-  constructor(options: { bucket: string; prefix?: string; client?: S3Client }) {
+  constructor(options: { bucket: string; prefix?: string | null; client?: S3Client; region?: string }) {
     if (!options.bucket) {
-      throw new Error("S3WorldDataStore requires a bucket name.");
+      throw new Error("S3WorldStateStore requires a bucket name.");
     }
     this.#bucket = options.bucket;
     this.#prefix = options.prefix ? options.prefix.replace(/\/+$/, "") + "/" : "";
     const credentials =
-      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? fromEnv()
-        : undefined;
+      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? fromEnv() : undefined;
     this.#client =
       options.client ??
       new S3Client({
-        region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1",
+        region: options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1",
         credentials
       });
-    log("info", `Using S3 world data store bucket=${this.#bucket} prefix=${this.#prefix || "<root>"}`);
+    log("info", `Using S3 world state store bucket=${this.#bucket} prefix=${this.#prefix || "<root>"}`);
   }
 
   async ensureChronicle(params: {
@@ -74,7 +76,7 @@ export class S3WorldDataStore implements WorldDataStore {
     return this.upsertChronicle(record);
   }
 
-  async getChronicleState(chronicleId: string): Promise<ChronicleState | null> {
+  async getChronicleState(chronicleId: string): Promise<ChronicleSnapshot | null> {
     const chronicle = await this.getChronicle(chronicleId);
     if (!chronicle) {
       return null;
@@ -223,7 +225,7 @@ export class S3WorldDataStore implements WorldDataStore {
       .sort((a, b) => (a.turnSequence ?? 0) - (b.turnSequence ?? 0));
   }
 
-  async applyCharacterProgress(update: CharacterProgressUpdate): Promise<Character | null> {
+  async applyCharacterProgress(update: CharacterProgressPayload): Promise<Character | null> {
     if (!update.characterId) {
       return null;
     }

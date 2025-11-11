@@ -125,15 +125,12 @@ importers:
 
   apps/narrative:
     dependencies:
-      '@aws-sdk/client-s3':
-        specifier: ^3.679.0
-        version: 3.927.0
-      '@aws-sdk/credential-providers':
-        specifier: ^3.679.0
-        version: 3.928.0
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../../packages/dto
+      '@glass-frontier/persistence':
+        specifier: workspace:*
+        version: link:../../packages/persistence
       '@glass-frontier/skill-check-resolver':
         specifier: workspace:*
         version: link:../../packages/skill-check-resolver
@@ -168,6 +165,21 @@ importers:
       zod:
         specifier: ^4.1.12
         version: 4.1.12
+
+  packages/persistence:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.679.0
+        version: 3.927.0
+      '@aws-sdk/credential-providers':
+        specifier: ^3.679.0
+        version: 3.928.0
+      '@glass-frontier/dto':
+        specifier: workspace:*
+        version: link:../dto
+      '@glass-frontier/utils':
+        specifier: workspace:*
+        version: link:../utils
 
   packages/skill-check-resolver:
     dependencies:

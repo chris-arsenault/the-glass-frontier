@@ -1,17 +1,7 @@
-import { SKILL_TIER_SEQUENCE } from "@glass-frontier/dto";
-import type { Attribute, Character, MomentumState, Skill, SkillTier } from "@glass-frontier/dto";
+import { SKILL_TIER_SEQUENCE, type Attribute, type Character, type Skill, type SkillTier } from "@glass-frontier/dto";
+import type { CharacterProgressPayload } from "./types";
 
-export interface CharacterProgressUpdate {
-  characterId: string;
-  momentumDelta?: number;
-  skill?: {
-    name: string;
-    attribute: Attribute;
-    xpAward?: number;
-  };
-}
-
-const clampMomentum = (state: MomentumState, delta: number): number => {
+const clampMomentum = (state: Character["momentum"], delta: number): number => {
   const candidate = state.current + delta;
   if (candidate < state.floor) {
     return state.floor;
@@ -23,7 +13,7 @@ const clampMomentum = (state: MomentumState, delta: number): number => {
 };
 
 const nextTier = (current: SkillTier): SkillTier => {
-  const order = SKILL_TIER_SEQUENCE as SkillTier[];
+  const order = SKILL_TIER_SEQUENCE as ReadonlyArray<SkillTier>;
   const index = order.indexOf(current);
   if (index < 0 || index === order.length - 1) {
     return current;
@@ -73,7 +63,7 @@ const ensureSkillRecord = (
 
 export const applyCharacterSnapshotProgress = (
   character: Character,
-  update: CharacterProgressUpdate
+  update: CharacterProgressPayload
 ): Character => {
   const next: Character = {
     ...character,

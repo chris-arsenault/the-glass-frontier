@@ -856,6 +856,41 @@ body {
   color: #94a3b8;
 }
 
+.chat-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+  color: #cbd5f5;
+  font-size: 0.9rem;
+}
+
+.chat-loading-spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  border: 2px solid rgba(59, 130, 246, 0.25);
+  border-top-color: rgba(236, 72, 153, 0.85);
+  animation: chat-loading-spin 0.85s linear infinite;
+}
+
+.chat-loading-text {
+  letter-spacing: 0.02em;
+}
+
+@keyframes chat-loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .chat-composer {
   margin-top: 1rem;
   display: flex;

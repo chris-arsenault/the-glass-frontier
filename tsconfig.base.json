@@ -11,6 +11,8 @@
       "@glass-frontier/utils/*": ["packages/utils/src/*"],
       "@glass-frontier/skill-check-resolver": ["packages/skill-check-resolver/src/index.ts"],
       "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
+      "@glass-frontier/persistence": ["packages/persistence/src/index.ts"],
+      "@glass-frontier/persistence/*": ["packages/persistence/src/*"],
       "@glass-frontier/narrative": ["apps/narrative/src/index.ts"],
       "@glass-frontier/narrative/*": ["apps/narrative/src/*"]
     }

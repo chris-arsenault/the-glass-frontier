@@ -1,7 +1,7 @@
 import { MOMENTUM_DELTA, type Attribute } from "@glass-frontier/dto";
+import type { WorldStateStore } from "@glass-frontier/persistence";
 import type { GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
-import type { WorldDataStore } from "../../services/WorldDataStore.js";
 
 const XP_REWARDS: Record<string, number> = {
   collapse: 2,
@@ -11,7 +11,7 @@ const XP_REWARDS: Record<string, number> = {
 class UpdateCharacterNode implements GraphNode {
   readonly id = "character-update";
 
-  constructor(private readonly worldDataStore: WorldDataStore) {}
+  constructor(private readonly worldStateStore: WorldStateStore) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
@@ -41,7 +41,7 @@ class UpdateCharacterNode implements GraphNode {
       return context;
     }
 
-    const updatedCharacter = await this.worldDataStore.applyCharacterProgress({
+    const updatedCharacter = await this.worldStateStore.applyCharacterProgress({
       characterId,
       momentumDelta: wantsMomentumUpdate ? momentumDelta : undefined,
       skill: shouldTouchSkill

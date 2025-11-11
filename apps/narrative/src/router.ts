@@ -24,7 +24,7 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const character = await ctx.worldDataStore.getCharacter(input.characterId);
+      const character = await ctx.worldStateStore.getCharacter(input.characterId);
       if (!character) {
         throw new Error("Character not found for chronicle creation.");
       }
@@ -32,7 +32,7 @@ export const appRouter = t.router({
         throw new Error("Character does not belong to the requesting login.");
       }
 
-      const location = await ctx.worldDataStore.upsertLocation({
+      const location = await ctx.worldStateStore.upsertLocation({
         id: randomUUID(),
         locale: input.location.locale,
         atmosphere: input.location.atmosphere,
@@ -40,7 +40,7 @@ export const appRouter = t.router({
         metadata: undefined
       });
 
-      const chronicle = await ctx.worldDataStore.ensureChronicle({
+      const chronicle = await ctx.worldStateStore.ensureChronicle({
         chronicleId: input.chronicleId,
         loginId: input.loginId,
         locationId: location.id,
@@ -55,7 +55,7 @@ export const appRouter = t.router({
   // GET /chronicles/:chronicleId
   getChronicle: t.procedure
     .input(z.object({ chronicleId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => ctx.worldDataStore.getChronicleState(input.chronicleId)),
+    .query(async ({ ctx, input }) => ctx.worldStateStore.getChronicleState(input.chronicleId)),
 
   // POST /chronicles/:chronicleId/messages
   postMessage: t.procedure
@@ -75,19 +75,19 @@ export const appRouter = t.router({
 
   listCharacters: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldDataStore.listCharactersByLogin(input.loginId)),
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
 
   createCharacter: t.procedure
     .input(CharacterSchema)
     .mutation(async ({ ctx, input }) => {
       log("info", `Creating Character ${input.name}`);
-      const character = await ctx.worldDataStore.upsertCharacter(input);
+      const character = await ctx.worldStateStore.upsertCharacter(input);
       return { character };
     }),
 
   listChronicles: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldDataStore.listChroniclesByLogin(input.loginId)),
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
 });
 
 export type AppRouter = typeof appRouter;

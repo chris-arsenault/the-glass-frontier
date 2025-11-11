@@ -20,9 +20,8 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.679.0",
-    "@aws-sdk/credential-providers": "^3.679.0",
     "@glass-frontier/dto": "workspace:*",
+    "@glass-frontier/persistence": "workspace:*",
     "@glass-frontier/skill-check-resolver": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@trpc/client": "^11.7.1",

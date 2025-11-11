@@ -15,6 +15,7 @@
 - `packages/dto`: Shared Zod DTO/type definitions consumed by the client, narrative engine, and proxy for consistent contracts.
 - `packages/skill-check-resolver`: Domain module that encapsulates skill-check math/rules used during narrative resolution.
 - `packages/utils`: Common utility helpers that the other workspaces depend on.
+- `packages/persistence`: Shared world-state persistence layer (in-memory + S3 implementations plus factory) consumed by narrative services.
 
 ### Infrastructure
 - `infrastructure/terraform`: Terraform project that provisions the AWS footprint (API Gateway, Cognito, Lambda builds, S3/CloudFront, etc.) and wires in workspace build artifacts.
