@@ -60,6 +60,8 @@ resource "aws_lambda_function" "llm_proxy" {
       SERVICE_NAME   = "llm-proxy"
       DOMAIN_NAME    = local.api_domain
       OPENAI_API_KEY = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
+      LLM_PROXY_ARCHIVE_BUCKET = aws_s3_bucket.llm_audit.id
+      LLM_PROXY_USAGE_TABLE    = aws_dynamodb_table.llm_usage.name
     }
   }
 

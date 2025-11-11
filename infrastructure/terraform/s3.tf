@@ -64,3 +64,45 @@ resource "aws_s3_bucket_public_access_block" "client_site" {
   ignore_public_acls      = true
   restrict_public_buckets = false
 }
+
+resource "aws_s3_bucket" "llm_audit" {
+  bucket = "${local.name_prefix}-llm-audit"
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = merge(local.tags, { Name = "${local.name_prefix}-llm-audit" })
+}
+
+resource "aws_s3_bucket_public_access_block" "llm_audit" {
+  bucket = aws_s3_bucket.llm_audit.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "llm_audit" {
+  bucket = aws_s3_bucket.llm_audit.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "llm_audit" {
+  bucket = aws_s3_bucket.llm_audit.id
+
+  rule {
+    id     = "expire-after-30-days"
+    status = "Enabled"
+
+    expiration {
+      days = 30
+    }
+  }
+}

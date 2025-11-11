@@ -72,3 +72,43 @@ resource "aws_iam_role_policy_attachment" "narrative_dynamodb" {
   role       = aws_iam_role.narrative_lambda.name
   policy_arn = aws_iam_policy.narrative_dynamodb.arn
 }
+
+data "aws_iam_policy_document" "llm_audit_storage" {
+  statement {
+    actions = ["s3:PutObject", "s3:PutObjectAcl", "s3:GetObject", "s3:ListBucket"]
+    resources = [aws_s3_bucket.llm_audit.arn, "${aws_s3_bucket.llm_audit.arn}/*"]
+  }
+}
+
+resource "aws_iam_policy" "llm_audit_storage" {
+  name        = "${local.name_prefix}-llm-audit-storage"
+  description = "Allow the LLM proxy to archive request/response pairs in S3."
+  policy      = data.aws_iam_policy_document.llm_audit_storage.json
+}
+
+resource "aws_iam_role_policy_attachment" "llm_audit_storage" {
+  role       = aws_iam_role.llm_lambda.name
+  policy_arn = aws_iam_policy.llm_audit_storage.arn
+}
+
+data "aws_iam_policy_document" "llm_usage_table" {
+  statement {
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem"
+    ]
+    resources = [aws_dynamodb_table.llm_usage.arn]
+  }
+}
+
+resource "aws_iam_policy" "llm_usage_table" {
+  name        = "${local.name_prefix}-llm-usage-table"
+  description = "Allow the LLM proxy to record per-player token usage."
+  policy      = data.aws_iam_policy_document.llm_usage_table.json
+}
+
+resource "aws_iam_role_policy_attachment" "llm_usage_table" {
+  role       = aws_iam_role.llm_lambda.name
+  policy_arn = aws_iam_policy.llm_usage_table.arn
+}

@@ -5,6 +5,8 @@ import { ProviderRegistry, ProviderError, BaseProvider } from "./providers";
 import { Payload } from "./Payload.js";
 import { Response } from "undici";
 import { z } from "zod";
+import { AuditArchive } from "./services/AuditArchive";
+import { TokenUsageTracker } from "./services/TokenUsageTracker";
 
 const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 
@@ -30,13 +32,27 @@ const chatCompletionInputSchema = z
 
 type ChatCompletionInput = z.infer<typeof chatCompletionInputSchema>;
 
+type SuccessContext = {
+  requestBody: Record<string, unknown>;
+  responseBody: unknown;
+  providerId: string;
+  playerId?: string;
+  requestId: string;
+  requestContextId?: string;
+  metadata?: Record<string, unknown>;
+};
+
 class Router {
   registry: ProviderRegistry;
   timeoutMs: number;
+  auditArchive: AuditArchive | null;
+  usageTracker: TokenUsageTracker | null;
 
   constructor() {
     this.timeoutMs = Number.parseInt(process.env.LLM_PROXY_REQUEST_TIMEOUT_MS || "60000", 10);
     this.registry = new ProviderRegistry();
+    this.auditArchive = AuditArchive.fromEnv();
+    this.usageTracker = TokenUsageTracker.fromEnv();
   }
 
   async executeProvider(provider: BaseProvider, payload: Payload) {
@@ -53,7 +69,10 @@ class Router {
     return provider.execute(payload);
   }
 
-  async proxy(body: ChatCompletionInput): Promise<unknown> {
+  async proxy(
+    body: ChatCompletionInput,
+    context?: { playerId?: string; requestId?: string }
+  ): Promise<unknown> {
     const payload = new Payload(body);
     const sequence = this.registry.providerOrder();
 
@@ -132,6 +151,16 @@ class Router {
           ...attemptCtx,
           status: llmResponse.status
         });
+        const metadata = this.extractMetadata(preparedPayload.body);
+        await this.handleSuccess({
+          requestBody: preparedPayload.body ?? {},
+          responseBody,
+          providerId: provider.id,
+          playerId: context?.playerId,
+          requestId: payload.requestId,
+          requestContextId: context?.requestId,
+          metadata
+        });
         return responseBody;
       } catch (error: any) {
         log("error", "llm-proxy.provider.failure", {
@@ -184,6 +213,90 @@ class Router {
 
   private isRetryable(response: Response) {
     return RETRYABLE_STATUS.has(response.status);
+  }
+
+  private async handleSuccess(payload: SuccessContext): Promise<void> {
+    const tasks: Array<Promise<unknown>> = [];
+
+    if (this.auditArchive) {
+      const nodeId = this.extractNodeId(payload.metadata);
+      tasks.push(
+        this.auditArchive
+          .record({
+            id: payload.requestId,
+            playerId: payload.playerId,
+            providerId: payload.providerId,
+            request: this.cloneForArchive(payload.requestBody),
+            response: payload.responseBody,
+            requestContextId: payload.requestContextId,
+            nodeId,
+            metadata: payload.metadata
+          })
+          .catch((error) =>
+            log("error", "llm-proxy.audit.failure", {
+              message: error instanceof Error ? error.message : "unknown"
+            })
+          )
+      );
+    }
+
+    if (this.usageTracker) {
+      const usage = this.extractUsage(payload.responseBody);
+      if (usage && payload.playerId) {
+        tasks.push(
+          this.usageTracker
+            .record(payload.playerId, usage)
+            .catch((error) =>
+              log("error", "llm-proxy.usage.failure", {
+                message: error instanceof Error ? error.message : "unknown"
+              })
+            )
+        );
+      } else if (usage && !payload.playerId) {
+        log("warn", "llm-proxy.usage.missing_player", {
+          requestId: payload.requestId,
+          providerId: payload.providerId
+        });
+      }
+    }
+
+    if (tasks.length > 0) {
+      await Promise.all(tasks);
+    }
+  }
+
+  private extractUsage(response: unknown): unknown {
+    if (response && typeof response === "object" && "usage" in response) {
+      return (response as { usage: unknown }).usage;
+    }
+    return undefined;
+  }
+
+  private extractMetadata(body?: Record<string, unknown>): Record<string, unknown> | undefined {
+    if (!body || typeof body !== "object") {
+      return undefined;
+    }
+    const candidate = (body as Record<string, unknown>).metadata;
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      return candidate as Record<string, unknown>;
+    }
+    return undefined;
+  }
+
+  private extractNodeId(metadata?: Record<string, unknown>): string | undefined {
+    if (!metadata) {
+      return undefined;
+    }
+    const nodeId = metadata.nodeId;
+    return typeof nodeId === "string" && nodeId.trim() ? nodeId.trim() : undefined;
+  }
+
+  private cloneForArchive(data: Record<string, unknown>): Record<string, unknown> {
+    try {
+      return JSON.parse(JSON.stringify(data));
+    } catch {
+      return { ...data };
+    }
   }
 }
 

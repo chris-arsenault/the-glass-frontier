@@ -97,6 +97,12 @@ importers:
 
   apps/llm-proxy:
     dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.744.0
+        version: 3.928.0
+      '@aws-sdk/client-s3':
+        specifier: ^3.744.0
+        version: 3.927.0
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils

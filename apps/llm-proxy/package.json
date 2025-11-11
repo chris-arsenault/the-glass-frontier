@@ -17,6 +17,8 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.744.0",
+    "@aws-sdk/client-s3": "^3.744.0",
     "@glass-frontier/utils": "workspace:*",
     "@trpc/server": "^11.7.1",
     "openai": "^4.77.0",
