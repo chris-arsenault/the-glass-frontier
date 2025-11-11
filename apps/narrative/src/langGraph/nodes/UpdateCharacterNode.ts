@@ -1,7 +1,8 @@
 import { MOMENTUM_DELTA, type Attribute } from "@glass-frontier/dto";
-import type { WorldStateStore } from "@glass-frontier/persistence";
+import type { WorldStateStore, LocationGraphStore } from "@glass-frontier/persistence";
 import type { GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
+import { log } from "@glass-frontier/utils";
 
 const XP_REWARDS: Record<string, number> = {
   collapse: 2,
@@ -11,7 +12,10 @@ const XP_REWARDS: Record<string, number> = {
 class UpdateCharacterNode implements GraphNode {
   readonly id = "character-update";
 
-  constructor(private readonly worldStateStore: WorldStateStore) {}
+  constructor(
+    private readonly worldStateStore: WorldStateStore,
+    private readonly locationGraphStore?: LocationGraphStore
+  ) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
@@ -53,18 +57,51 @@ class UpdateCharacterNode implements GraphNode {
         : undefined
     });
 
-    if (!updatedCharacter) {
-      return context;
+    let nextContext: GraphContext = context;
+
+    if (updatedCharacter) {
+      nextContext = {
+        ...nextContext,
+        chronicle: {
+          ...nextContext.chronicle,
+          character: updatedCharacter
+        },
+        updatedCharacter
+      };
     }
 
-    return {
-      ...context,
-      chronicle: {
-        ...context.chronicle,
-        character: updatedCharacter
-      },
-      updatedCharacter
-    };
+    if (this.locationGraphStore && context.locationPlan && context.chronicle.character?.id) {
+      nextContext = await this.#applyLocationPlan(nextContext);
+    }
+
+    return nextContext;
+  }
+
+  async #applyLocationPlan(context: GraphContext): Promise<GraphContext> {
+    if (!this.locationGraphStore || !context.locationPlan || !context.chronicle.character?.id) {
+      return context;
+    }
+    try {
+      await this.locationGraphStore.applyPlan({
+        chronicleId: context.chronicleId,
+        characterId: context.chronicle.character.id,
+        plan: context.locationPlan
+      });
+      const summary = await this.locationGraphStore.summarizeCharacterLocation({
+        chronicleId: context.chronicleId,
+        characterId: context.chronicle.character.id
+      });
+      return {
+        ...context,
+        locationSummary: summary ?? context.locationSummary ?? null
+      };
+    } catch (error) {
+      log("warn", "location-plan.apply.failed", {
+        chronicleId: context.chronicleId,
+        reason: error instanceof Error ? error.message : "unknown"
+      });
+      return context;
+    }
   }
 }
 

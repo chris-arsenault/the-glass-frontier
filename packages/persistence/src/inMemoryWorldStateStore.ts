@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import type {
   Character,
   Chronicle,
-  LocationProfile,
   Login,
   Turn
 } from "@glass-frontier/dto";
@@ -12,7 +11,6 @@ import { applyCharacterSnapshotProgress } from "./characterProgress";
 
 export class InMemoryWorldStateStore implements WorldStateStore {
   #logins = new Map<string, Login>();
-  #locations = new Map<string, LocationProfile>();
   #characters = new Map<string, Character>();
   #chronicles = new Map<string, Chronicle>();
   #turns = new Map<string, Turn[]>();
@@ -49,7 +47,6 @@ export class InMemoryWorldStateStore implements WorldStateStore {
       return null;
     }
     const character = chronicle.characterId ? await this.getCharacter(chronicle.characterId) : null;
-    const location = chronicle.locationId ? await this.getLocation(chronicle.locationId) : null;
     const turns = await this.listChronicleTurns(chronicleId);
     const lastTurn = turns.length ? turns[turns.length - 1] : null;
     const turnSequence = lastTurn?.turnSequence ?? -1;
@@ -58,7 +55,7 @@ export class InMemoryWorldStateStore implements WorldStateStore {
       turnSequence,
       chronicle,
       character,
-      location,
+      location: null,
       turns
     };
   }
@@ -74,19 +71,6 @@ export class InMemoryWorldStateStore implements WorldStateStore {
 
   async listLogins(): Promise<Login[]> {
     return Array.from(this.#logins.values());
-  }
-
-  async upsertLocation(location: LocationProfile): Promise<LocationProfile> {
-    this.#locations.set(location.id, location);
-    return location;
-  }
-
-  async getLocation(locationId: string): Promise<LocationProfile | null> {
-    return this.#locations.get(locationId) ?? null;
-  }
-
-  async listLocations(): Promise<LocationProfile[]> {
-    return Array.from(this.#locations.values());
   }
 
   async upsertCharacter(character: Character): Promise<Character> {

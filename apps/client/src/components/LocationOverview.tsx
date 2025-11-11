@@ -12,11 +12,23 @@ export function LocationOverview() {
     );
   }
 
+  const breadcrumb = location.breadcrumb.map((entry) => entry.name).join(" › ");
+  const status = location.status.join(", ");
+  const tagSnippet = location.tags.slice(0, 3).join(", ");
+  const certaintyLabel =
+    location.certainty === "exact" ? "fixed position" : location.certainty.toUpperCase();
+  const meta = [status, certaintyLabel].filter(Boolean).join(" · ");
+  const detail = location.description || tagSnippet || "Exploring new ground.";
+
   return (
     <div className="location-pill">
-      <div className="location-pill-label">{location.locale ?? "Unknown Locale"}</div>
+      <div className="location-pill-label">Location</div>
       <div className="location-pill-value">
-        {location.atmosphere ?? "Atmospheric details unavailable."}
+        <span className="location-pill-path" title={breadcrumb}>
+          {breadcrumb}
+        </span>
+        <span>{detail}</span>
+        {meta ? <span className="location-pill-meta">{meta}</span> : null}
       </div>
     </div>
   );

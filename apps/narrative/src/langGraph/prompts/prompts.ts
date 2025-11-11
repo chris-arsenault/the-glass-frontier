@@ -37,7 +37,7 @@ export function composeCheckRulesPrompt(intent: Intent, chronicle: ChronicleStat
     characterName: chronicle?.character?.name ?? "Unknown",
     characterTags: charTags,
     skillsLine,
-    locale: chronicle?.location?.locale ?? "Unknown locale",
+    locale: describeLocation(chronicle),
     momentum: chronicle?.character?.momentum.current ?? 0
   });
 }
@@ -80,7 +80,7 @@ export function composeIntentPrompt({
     characterName: chronicle?.character?.name ?? "Unknown",
     characterTags: charTags,
     skillsLine,
-    locale: chronicle?.location?.locale ?? "Unknown locale",
+    locale: describeLocation(chronicle),
     attributeList: Attribute.options.join(", "),
     attributeQuotedList: Attribute.options.map((attr) => `"${attr}"`).join(", ")
   });
@@ -95,7 +95,7 @@ export function composeNarrationPrompt(
 ): string {
   const characterName = chronicle.character?.name ?? "the character";
   const characterTags = (chronicle.character?.tags ?? []).slice(0, 3).join(", ") || "untagged";
-  const locale = chronicle.location?.locale ?? "an unknown place";
+  const locale = describeLocation(chronicle);
   const recentEvents =
     chronicle.turns
       ?.slice(-3)
@@ -129,4 +129,16 @@ export function composeNarrationPrompt(
     complicationSeeds: shouldUseComplications ? check?.complicationSeeds ?? [] : [],
     playerMessage: rawUtterance
   });
+}
+
+function describeLocation(chronicle: ChronicleState): string {
+  const summary = chronicle.location;
+  if (!summary) {
+    return "an unknown place";
+  }
+  if (summary.description) {
+    return summary.description;
+  }
+  const path = summary.breadcrumb.map((entry) => entry.name).join(" → ");
+  return path || "an unknown place";
 }

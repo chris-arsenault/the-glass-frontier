@@ -5,7 +5,6 @@ import { Readable } from "node:stream";
 import type {
   Character,
   Chronicle,
-  LocationProfile,
   Login,
   Turn
 } from "@glass-frontier/dto";
@@ -27,7 +26,6 @@ export class S3WorldStateStore implements WorldStateStore {
   #index: WorldIndexRepository;
 
   #logins = new Map<string, Login>();
-  #locations = new Map<string, LocationProfile>();
   #characters = new Map<string, Character>();
   #chronicles = new Map<string, Chronicle>();
   #chronicleLoginIndex = new Map<string, string>();
@@ -94,7 +92,6 @@ export class S3WorldStateStore implements WorldStateStore {
       return null;
     }
     const character = chronicle.characterId ? await this.getCharacter(chronicle.characterId) : null;
-    const location = chronicle.locationId ? await this.getLocation(chronicle.locationId) : null;
     const turns = await this.listChronicleTurns(chronicleId);
     const lastTurn = turns.length ? turns[turns.length - 1] : null;
     const turnSequence = lastTurn?.turnSequence ?? -1;
@@ -103,7 +100,7 @@ export class S3WorldStateStore implements WorldStateStore {
       turnSequence,
       chronicle,
       character,
-      location,
+      location: null,
       turns
     };
   }
@@ -128,28 +125,6 @@ export class S3WorldStateStore implements WorldStateStore {
     const keys = await this.#listKeys(`${this.#prefix}logins/`);
     const records = await Promise.all(keys.map((key) => this.#readJson<Login>(key)));
     return records.filter((login): login is Login => Boolean(login));
-  }
-
-  async upsertLocation(location: LocationProfile): Promise<LocationProfile> {
-    this.#locations.set(location.id, location);
-    await this.#writeJson(this.#locationKey(location.id), location);
-    return location;
-  }
-
-  async getLocation(locationId: string): Promise<LocationProfile | null> {
-    const cached = this.#locations.get(locationId);
-    if (cached) return cached;
-    const record = await this.#readJson<LocationProfile>(this.#locationKey(locationId));
-    if (record) {
-      this.#locations.set(locationId, record);
-    }
-    return record;
-  }
-
-  async listLocations(): Promise<LocationProfile[]> {
-    const keys = await this.#listKeys(`${this.#prefix}locations/`);
-    const records = await Promise.all(keys.map((key) => this.#readJson<LocationProfile>(key)));
-    return records.filter((loc): loc is LocationProfile => Boolean(loc));
   }
 
   async upsertCharacter(character: Character): Promise<Character> {
@@ -393,10 +368,6 @@ export class S3WorldStateStore implements WorldStateStore {
 
   #loginKey(loginId: string): string {
     return `${this.#prefix}logins/${loginId}.json`;
-  }
-
-  #locationKey(locationId: string): string {
-    return `${this.#prefix}locations/${locationId}.json`;
   }
 
   #characterKey(loginId: string, characterId: string): string {

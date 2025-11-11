@@ -1,16 +1,29 @@
 import { formatTurnJobId, log } from "@glass-frontier/utils";
-import { createWorldStateStore, type WorldStateStore } from "@glass-frontier/persistence";
+import {
+  createWorldStateStore,
+  createLocationGraphStore,
+  type WorldStateStore,
+  type LocationGraphStore
+} from "@glass-frontier/persistence";
 import { LangGraphOrchestrator } from "./langGraph/orchestrator";
 import { ChronicleTelemetry } from "./telemetry";
-import { CheckPlannerNode, GmSummaryNode, IntentIntakeNode, NarrativeWeaverNode, UpdateCharacterNode } from "./langGraph/nodes";
+import {
+  CheckPlannerNode,
+  GmSummaryNode,
+  IntentIntakeNode,
+  LocationDeltaNode,
+  NarrativeWeaverNode,
+  UpdateCharacterNode
+} from "./langGraph/nodes";
 import { LangGraphLlmClient } from "./langGraph/llmClient";
 import { GraphContext, ChronicleState } from "./types";
-import { Character, TranscriptEntry, Turn } from "@glass-frontier/dto";
+import { Character, TranscriptEntry, Turn, LocationSummary } from "@glass-frontier/dto";
 import { randomUUID } from "node:crypto";
 import { TurnProgressEmitter, type TurnProgressPublisher } from "./progressEmitter";
 
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStore;
+  readonly locationGraphStore: LocationGraphStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
@@ -18,9 +31,16 @@ class NarrativeEngine {
 
   constructor(options?: {
     worldStateStore?: WorldStateStore;
+    locationGraphStore?: LocationGraphStore;
     progressEmitter?: TurnProgressPublisher;
   }) {
     this.worldStateStore = options?.worldStateStore ?? createWorldStateStore();
+    this.locationGraphStore =
+      options?.locationGraphStore ??
+      createLocationGraphStore({
+        bucket: process.env.NARRATIVE_S3_BUCKET,
+        prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined
+      });
     this.telemetry =  new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.progressEmitter = options?.progressEmitter ?? createProgressEmitterFromEnv();
@@ -29,8 +49,9 @@ class NarrativeEngine {
         new IntentIntakeNode(),
         new CheckPlannerNode(),
         new NarrativeWeaverNode(),
+        new LocationDeltaNode(this.locationGraphStore),
         new GmSummaryNode(),
-        new UpdateCharacterNode(this.worldStateStore)
+        new UpdateCharacterNode(this.worldStateStore, this.locationGraphStore)
       ],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
@@ -41,7 +62,7 @@ class NarrativeEngine {
     chronicleId: string,
     playerMessage: TranscriptEntry,
     options?: { authorizationHeader?: string }
-  ): Promise<{ turn: Turn; updatedCharacter: Character | null }> {
+  ): Promise<{ turn: Turn; updatedCharacter: Character | null; locationSummary: LocationSummary | null }> {
     if (!chronicleId) {
       throw new Error("chronicleId is required");
     }
@@ -109,7 +130,9 @@ class NarrativeEngine {
 
     const updatedCharacter = graphResult?.updatedCharacter ?? chronicleState.character ?? null;
 
-    return { turn, updatedCharacter };
+    const locationSummary = graphResult?.locationSummary ?? null;
+
+    return { turn, updatedCharacter, locationSummary };
   }
 
   private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {

@@ -1,7 +1,6 @@
 import type {
   Character,
   Chronicle,
-  LocationProfile,
   Login,
   Turn
 } from "@glass-frontier/dto";
@@ -22,10 +21,6 @@ export interface WorldStateStore {
   upsertLogin(login: Login): Promise<Login>;
   getLogin(loginId: string): Promise<Login | null>;
   listLogins(): Promise<Login[]>;
-
-  upsertLocation(location: LocationProfile): Promise<LocationProfile>;
-  getLocation(locationId: string): Promise<LocationProfile | null>;
-  listLocations(): Promise<LocationProfile[]>;
 
   upsertCharacter(character: Character): Promise<Character>;
   getCharacter(characterId: string): Promise<Character | null>;

@@ -61,6 +61,7 @@ resource "aws_lambda_function" "narrative" {
       LLM_PROXY_URL       = "https://${local.api_domain}/llm"
       DOMAIN_NAME         = local.cloudfront_domain
       TURN_PROGRESS_QUEUE_URL = aws_sqs_queue.turn_progress.url
+      LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
     }
   }
 

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type {
   Character,
   Chronicle,
-  LocationProfile,
+  LocationSummary,
   TranscriptEntry,
   Turn,
   TurnProgressEvent
@@ -307,7 +307,7 @@ const createBaseState = () => ({
   queuedIntents: 0,
   chronicleStatus: "open" as const,
   character: null as Character | null,
-  location: null as LocationProfile | null,
+  location: null as LocationSummary | null,
   recentChronicles: readRecentChronicles(),
   availableCharacters: [] as Character[],
   availableChronicles: [] as Chronicle[],
@@ -561,7 +561,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { turn, character } = await trpcClient.postMessage.mutate({
+      const { turn, character, location } = await trpcClient.postMessage.mutate({
         chronicleId,
         content: playerEntry
       });
@@ -624,6 +624,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             prev.recentChronicles,
             prev.chronicleId ?? chronicleId
           ),
+          location: location ?? prev.location,
           pendingTurnJobId:
             prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
           pendingPlayerMessageId:

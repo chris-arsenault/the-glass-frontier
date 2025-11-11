@@ -2,7 +2,7 @@ import type {
   Attribute,
   Character,
   Chronicle,
-  LocationProfile,
+  LocationSummary,
   Turn
 } from "@glass-frontier/dto";
 
@@ -11,7 +11,7 @@ export interface ChronicleSnapshot {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character | null;
-  location: LocationProfile | null;
+  location: LocationSummary | null;
   turns: Turn[];
 }
 

@@ -32,18 +32,20 @@ export const appRouter = t.router({
         throw new Error("Character does not belong to the requesting login.");
       }
 
-      const location = await ctx.worldStateStore.upsertLocation({
-        id: randomUUID(),
-        locale: input.location.locale,
-        atmosphere: input.location.atmosphere,
-        description: undefined,
-        metadata: undefined
+      const chronicleId = input.chronicleId ?? randomUUID();
+      const rootPlace = await ctx.locationGraphStore.ensureChronicleRoot({
+        chronicleId,
+        name: input.location.locale,
+        description: input.location.atmosphere,
+        tags: deriveLocationTags(input.location.atmosphere),
+        characterId: input.characterId,
+        kind: "locale"
       });
 
       const chronicle = await ctx.worldStateStore.ensureChronicle({
-        chronicleId: input.chronicleId,
+        chronicleId,
         loginId: input.loginId,
-        locationId: location.id,
+        locationId: rootPlace.id,
         characterId: input.characterId,
         title: input.title,
         status: input.status
@@ -55,7 +57,7 @@ export const appRouter = t.router({
   // GET /chronicles/:chronicleId
   getChronicle: t.procedure
     .input(z.object({ chronicleId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.getChronicleState(input.chronicleId)),
+    .query(async ({ ctx, input }) => augmentChronicleSnapshot(ctx, input.chronicleId)),
 
   // POST /chronicles/:chronicleId/messages
   postMessage: t.procedure
@@ -70,7 +72,11 @@ export const appRouter = t.router({
       const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
         authorizationHeader: ctx.authorizationHeader
       });
-      return { turn: result.turn, character: result.updatedCharacter };
+      return {
+        turn: result.turn,
+        character: result.updatedCharacter,
+        location: result.locationSummary
+      };
     }),
 
   listCharacters: t.procedure
@@ -89,5 +95,32 @@ export const appRouter = t.router({
     .input(z.object({ loginId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
 });
+
+async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {
+  const snapshot = await ctx.worldStateStore.getChronicleState(chronicleId);
+  if (!snapshot) {
+    return null;
+  }
+  const characterId = snapshot.chronicle.characterId ?? snapshot.character?.id ?? null;
+  if (characterId) {
+    snapshot.location =
+      (await ctx.locationGraphStore.summarizeCharacterLocation({
+        chronicleId,
+        characterId
+      })) ?? null;
+  }
+  return snapshot;
+}
+
+function deriveLocationTags(atmosphere: string): string[] {
+  if (!atmosphere) {
+    return [];
+  }
+  return atmosphere
+    .split(/[,.]/)
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length > 1)
+    .slice(0, 6);
+}
 
 export type AppRouter = typeof appRouter;

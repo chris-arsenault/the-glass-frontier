@@ -2,7 +2,8 @@ import {
   Character,
   Chronicle,
   Intent,
-  LocationProfile,
+  LocationSummary,
+  LocationPlan,
   SkillCheckPlan,
   SkillCheckResult,
   Turn,
@@ -14,7 +15,7 @@ export interface ChronicleState {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character | null;
-  location: LocationProfile | null;
+  location: LocationSummary | null;
   turns: Turn[];
 }
 
@@ -39,6 +40,8 @@ export interface GraphContext {
   gmMessage?: TranscriptEntry;
   gmSummary?: string;
   updatedCharacter?: Character | null;
+  locationPlan?: LocationPlan | null;
+  locationSummary?: LocationSummary | null;
 }
 
 

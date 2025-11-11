@@ -89,6 +89,30 @@ resource "aws_iam_role_policy_attachment" "narrative_dynamodb" {
   policy_arn = aws_iam_policy.narrative_dynamodb.arn
 }
 
+data "aws_iam_policy_document" "location_graph_index" {
+  statement {
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:Query",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:DeleteItem"
+    ]
+    resources = [aws_dynamodb_table.location_graph_index.arn]
+  }
+}
+
+resource "aws_iam_policy" "location_graph_index" {
+  name        = "${local.name_prefix}-location-graph-index"
+  description = "Allow the narrative lambda to manage location graph indexes."
+  policy      = data.aws_iam_policy_document.location_graph_index.json
+}
+
+resource "aws_iam_role_policy_attachment" "location_graph_index" {
+  role       = aws_iam_role.narrative_lambda.name
+  policy_arn = aws_iam_policy.location_graph_index.arn
+}
+
 data "aws_iam_policy_document" "llm_audit_storage" {
   statement {
     actions = ["s3:PutObject", "s3:PutObjectAcl", "s3:GetObject", "s3:ListBucket"]

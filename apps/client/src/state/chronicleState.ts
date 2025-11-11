@@ -3,7 +3,7 @@ import type {
   Character,
   Chronicle,
   Intent,
-  LocationProfile,
+  LocationSummary,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -64,7 +64,7 @@ export interface ChronicleState {
   queuedIntents: number;
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
-  location?: LocationProfile | null;
+  location?: LocationSummary | null;
   recentChronicles: string[];
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
