@@ -33,7 +33,7 @@ export const handler = async (
   return awsLambdaRequestHandler({
     router: appRouter,
     // You can pass event/context into your own context factory if needed.
-    createContext: () => createContext(),
+    createContext: ({ event }) => createContext({ authorizationHeader: getAuthorizationHeader(event) }),
     batching: { enabled: true },
     // Add CORS on ALL non-OPTIONS responses.
     responseMeta() {
@@ -50,3 +50,8 @@ export const handler = async (
     // endpoint: "/trpc",
   })(event, context);
 };
+
+function getAuthorizationHeader(event: APIGatewayProxyEventV2): string | undefined {
+  const header = event.headers?.authorization ?? event.headers?.Authorization;
+  return Array.isArray(header) ? header[0] : header;
+}

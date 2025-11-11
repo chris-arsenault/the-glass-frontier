@@ -11,7 +11,13 @@ resource "aws_apigatewayv2_api" "http_api" {
     allow_credentials = true # set false if you want wildcard origins
   }
 
-  tags          = local.tags
+  tags = local.tags
+}
+
+resource "aws_cloudwatch_log_group" "http_api_access" {
+  name              = "/aws/apigateway/${local.name_prefix}-http-api-access"
+  retention_in_days = 14
+  tags              = local.tags
 }
 
 resource "aws_apigatewayv2_authorizer" "cognito" {
@@ -77,6 +83,28 @@ resource "aws_apigatewayv2_stage" "default" {
     throttling_burst_limit = 100
     throttling_rate_limit  = 50
   }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.http_api_access.arn
+    format = jsonencode({
+      requestId         = "$context.requestId"
+      routeKey          = "$context.routeKey"
+      status            = "$context.status"
+      integrationStatus = "$context.integrationStatus"
+      integrationError  = "$context.integrationErrorMessage"
+      authorizerError   = "$context.authorizer.error"
+      errorMessage      = "$context.error.message"
+      requestTime       = "$context.requestTime"
+      path              = "$context.path"
+      protocol          = "$context.protocol"
+      responseLatency   = "$context.responseLatency"
+      ip                = "$context.identity.sourceIp"
+      userAgent         = "$context.identity.userAgent"
+      responseLength    = "$context.responseLength"
+    })
+  }
+
+  depends_on = [aws_cloudwatch_log_group.http_api_access]
 
   tags = local.tags
 }

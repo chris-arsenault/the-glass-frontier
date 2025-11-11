@@ -20,10 +20,11 @@ const engine = new NarrativeEngine({ sessionStore });
 export type Context = {
   sessionStore: SessionStore;
   engine: NarrativeEngine;
+  authorizationHeader?: string;
 };
 
-export async function createContext(): Promise<Context> {
-  return { sessionStore, engine };
+export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
+  return { sessionStore, engine, authorizationHeader: options?.authorizationHeader };
 }
 
 // export type Context = Awaited<ReturnType<typeof createContext>>;

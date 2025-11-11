@@ -7,7 +7,7 @@
   "scripts": {
     "start": "TARGET=local tsup && node dist/server.local.js",
     "dev": "NODE_ENV=development tsx src/server_local.ts",
-    "build": "TARGET=lambda tsup",
+    "build": "TARGET=lambda tsup && pnpm copy:templates",
     "lint": "eslint .",
     "test": "vitest run",
     "copy:templates": "node ./scripts/copy-templates.mjs"

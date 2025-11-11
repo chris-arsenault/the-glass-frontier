@@ -1,11 +1,11 @@
 {
-  "name": "the-glass-frontier-llm-proxy",
+  "name": "@glass-frontier/llm-proxy",
   "version": "0.1.0",
   "packageManager": "pnpm@10.20.0",
   "scripts": {
-    "start": "tsc -b --watch & node dist/index.js",
-    "dev": "NODE_ENV=development tsx src/index.ts",
-    "build": "tsc -b",
+    "start": "TARGET=local tsup && node dist/server.local.js",
+    "dev": "NODE_ENV=development tsx src/server_local.ts",
+    "build": "TARGET=lambda tsup",
     "lint": "eslint .",
     "test": "vitest run"
   },
@@ -20,8 +20,9 @@
     "@glass-frontier/utils": "workspace:*",
     "@trpc/server": "^11.7.1",
     "openai": "^4.77.0",
-    "zod": "^3.23.8",
-    "undici": "^7.16.0"
+    "tsup": "^8.5.0",
+    "undici": "^7.16.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.138",

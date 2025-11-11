@@ -10,6 +10,14 @@ resource "aws_cloudwatch_log_group" "llm" {
   tags              = local.tags
 }
 
+data "aws_secretsmanager_secret" "openai_api_key" {
+  name = "openai-api-key"
+}
+
+data "aws_secretsmanager_secret_version" "openai_api_key" {
+  secret_id = data.aws_secretsmanager_secret.openai_api_key.id
+}
+
 resource "aws_lambda_function" "narrative" {
   function_name    = "${local.name_prefix}-narrative"
   role             = aws_iam_role.narrative_lambda.arn
@@ -25,8 +33,8 @@ resource "aws_lambda_function" "narrative" {
       NODE_ENV            = var.environment
       NARRATIVE_S3_BUCKET = aws_s3_bucket.narrative_data.id
       NARRATIVE_S3_PREFIX = "${var.environment}/sessions/"
-      LLM_PROXY_URL       = aws_apigatewayv2_api.http_api.api_endpoint
-      DOMAIN_NAME = local.cloudfront_domain
+      LLM_PROXY_URL       = "https://${local.api_domain}/llm"
+      DOMAIN_NAME         = local.cloudfront_domain
     }
   }
 
@@ -39,7 +47,7 @@ resource "aws_lambda_function" "llm_proxy" {
   function_name    = "${local.name_prefix}-llm-proxy"
   role             = aws_iam_role.llm_lambda.arn
   runtime          = var.lambda_node_version
-  handler          = "server.lambda.handler"
+  handler          = "handler.handler"
   filename         = data.archive_file.llm_lambda.output_path
   source_code_hash = data.archive_file.llm_lambda.output_base64sha256
   timeout          = 30
@@ -47,9 +55,10 @@ resource "aws_lambda_function" "llm_proxy" {
 
   environment {
     variables = {
-      NODE_ENV     = var.environment
-      SERVICE_NAME = "llm-proxy"
-      DOMAIN_NAME = local.api_domain
+      NODE_ENV       = var.environment
+      SERVICE_NAME   = "llm-proxy"
+      DOMAIN_NAME    = local.api_domain
+      OPENAI_API_KEY = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     }
   }
 

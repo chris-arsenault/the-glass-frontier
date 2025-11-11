@@ -41,7 +41,9 @@ export const appRouter = t.router({
     }))
     .mutation(async ({ ctx, input }) => {
       const playerEntry = { ...input.content, role: "player" as const };
-      const result: Turn = await ctx.engine.handlePlayerMessage(input.sessionId, playerEntry);
+      const result: Turn = await ctx.engine.handlePlayerMessage(input.sessionId, playerEntry, {
+        authorizationHeader: ctx.authorizationHeader
+      });
       return {
         gmMessage: result.gmMessage,
         playerIntent: result.playerIntent,

@@ -11,15 +11,15 @@ import {randomUUID} from "node:crypto";
 class NarrativeEngine {
   readonly sessionStore: SessionStore;
   readonly telemetry: SessionTelemetry;
-  readonly llm: LangGraphLlmClient;
   readonly graph: LangGraphOrchestrator;
+  readonly defaultLlm: LangGraphLlmClient;
 
   constructor(options?: {
     sessionStore?: SessionStore;
   }) {
     this.sessionStore = options?.sessionStore ?? new InMemorySessionStore();
     this.telemetry =  new SessionTelemetry();
-    this.llm = new LangGraphLlmClient();
+    this.defaultLlm = new LangGraphLlmClient();
     this.graph = new LangGraphOrchestrator(
       [
         new IntentIntakeNode(),
@@ -31,7 +31,7 @@ class NarrativeEngine {
     );
   }
 
-  async handlePlayerMessage(sessionId: string, playerMessage: TranscriptEntry ): Promise<Turn> {
+  async handlePlayerMessage(sessionId: string, playerMessage: TranscriptEntry, options?: { authorizationHeader?: string }): Promise<Turn> {
     if (!sessionId) {
       throw new Error("sessionId is required");
     }
@@ -45,14 +45,14 @@ class NarrativeEngine {
 
     let graphResult;
     const graphInput: GraphContext = {
-        sessionId,
-        turnSequence,
-        session,
-        playerMessage,
-        llm: this.llm,
-        telemetry: this.telemetry,
-        failure: false
-      }
+      sessionId,
+      turnSequence,
+      session,
+      playerMessage,
+      llm: this.createLlmClient(options?.authorizationHeader),
+      telemetry: this.telemetry,
+      failure: false
+    };
     try {
       graphResult = await this.graph.run(graphInput);
     } catch (error) {
@@ -97,6 +97,19 @@ class NarrativeEngine {
     });
 
     return turn;
+}
+
+  private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
+    if (!authorizationHeader) {
+      return this.defaultLlm;
+    }
+
+    return new LangGraphLlmClient({
+      defaultHeaders: {
+        "content-type": "application/json",
+        authorization: authorizationHeader
+      }
+    });
   }
 }
 
