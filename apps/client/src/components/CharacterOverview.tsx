@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useSessionStore } from "../stores/sessionStore";
+import { MomentumIndicator } from "./MomentumIndicator";
 
 const tierOrder: Record<string, number> = {
   legend: 5,
@@ -15,6 +16,7 @@ interface CharacterOverviewProps {
 
 export function CharacterOverview({ showEmptyState = true }: CharacterOverviewProps) {
   const character = useSessionStore((state) => state.character);
+  const momentumTrend = useSessionStore((state) => state.momentumTrend);
 
   const topSkills = useMemo(() => {
     if (!character?.skills) {
@@ -51,7 +53,9 @@ export function CharacterOverview({ showEmptyState = true }: CharacterOverviewPr
             {character.archetype} · {character.pronouns}
           </p>
         </div>
-        <div className="session-chip">Momentum {character.momentum.current}</div>
+        <div className="session-chip">
+          Momentum <MomentumIndicator momentum={character.momentum} trend={momentumTrend} />
+        </div>
       </header>
 
       <div className="panel-grid">

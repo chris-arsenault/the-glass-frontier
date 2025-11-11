@@ -1,19 +1,17 @@
 import {
-  attributeModifierFromName, RISK_LEVEL_MAP,
+  attributeModifierFromName,
+  MOMENTUM_DELTA,
+  RISK_LEVEL_MAP,
   SkillCheckRequest,
   SkillCheckResult,
-  skillModifierFromSkillName, TIER_THRESHOLDS
+  skillModifierFromSkillName,
+  TIER_THRESHOLDS,
+  MomentumState,
+  OutcomeTier
 } from "@glass-frontier/dto";
 import {DiceRoller} from "./DiceRoller";
 import {clamp} from "@glass-frontier/utils";
-
-import {
-  MomentumDelta, MomentumState,
-  OutcomeTier,
-  RiskLevelMap,
-} from "@glass-frontier/dto"
 import {CheckRequestTelemetry} from "./telemetry";
-import {MOMENTUM_DELTA} from "../dist/src/mechanics";
 
 
 class SkillCheckResolver {

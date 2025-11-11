@@ -2,10 +2,10 @@ import { log } from "@glass-frontier/utils";
 import { InMemorySessionStore, type SessionStore } from "./services/SessionStore";
 import { LangGraphOrchestrator } from "./langGraph/orchestrator";
 import { SessionTelemetry } from "./telemetry";
-import {CheckPlannerNode, GmSummaryNode, IntentIntakeNode, NarrativeWeaverNode } from "./langGraph/nodes";
+import {CheckPlannerNode, GmSummaryNode, IntentIntakeNode, NarrativeWeaverNode, UpdateCharacterNode } from "./langGraph/nodes";
 import { LangGraphLlmClient } from "./langGraph/llmClient";
 import {GraphContext, SessionState} from "./types";
-import {TranscriptEntry, Turn} from "@glass-frontier/dto";
+import {Character, TranscriptEntry, Turn} from "@glass-frontier/dto";
 import {randomUUID} from "node:crypto";
 
 class NarrativeEngine {
@@ -25,13 +25,18 @@ class NarrativeEngine {
         new IntentIntakeNode(),
         new CheckPlannerNode(),
         new NarrativeWeaverNode(),
-        new GmSummaryNode()
+        new GmSummaryNode(),
+        new UpdateCharacterNode(this.sessionStore)
       ],
       this.telemetry
     );
   }
 
-  async handlePlayerMessage(sessionId: string, playerMessage: TranscriptEntry, options?: { authorizationHeader?: string }): Promise<Turn> {
+  async handlePlayerMessage(
+    sessionId: string,
+    playerMessage: TranscriptEntry,
+    options?: { authorizationHeader?: string }
+  ): Promise<{ turn: Turn; updatedCharacter: Character | null }> {
     if (!sessionId) {
       throw new Error("sessionId is required");
     }
@@ -96,8 +101,10 @@ class NarrativeEngine {
       checkIssued: Boolean(graphResult?.skillCheckPlan),
     });
 
-    return turn;
-}
+    const updatedCharacter = graphResult?.updatedCharacter ?? session.character ?? null;
+
+    return { turn, updatedCharacter };
+  }
 
   private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
     if (!authorizationHeader) {

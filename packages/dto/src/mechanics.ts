@@ -41,6 +41,14 @@ export const MomentumDelta = z.object({
 });
 export type MomentumDelta = z.infer<typeof MomentumDelta>;
 
+export const MOMENTUM_DELTA: MomentumDelta = MomentumDelta.parse({
+  breakthrough: 2,
+  advance: 1,
+  stall: 0,
+  regress: -1,
+  collapse: -2
+});
+
 /** Tier thresholds: array of [number, OutcomeTier] tuples */
 export const TierThresholds = z.array(z.tuple([z.number(), OutcomeTier]));
 export type TierThreshold = z.infer<typeof TierThresholds>[number];
@@ -104,6 +112,14 @@ export type CharacterAttributes = z.infer<typeof CharacterAttributes>;
 /** Skill tier + modifier map */
 export const SkillTier = z.enum(["fool", "apprentice", "artisan", "virtuoso", "legend"]);
 export type SkillTier = z.infer<typeof SkillTier>;
+
+export const SKILL_TIER_SEQUENCE = [
+  "fool",
+  "apprentice",
+  "artisan",
+  "virtuoso",
+  "legend"
+] as const satisfies readonly SkillTier[];
 
 export const SkillTierModifier = z.object({
   fool: z.literal(-2),

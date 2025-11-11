@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUiStore } from "../stores/uiStore";
+import { MomentumIndicator } from "./MomentumIndicator";
 
 export function SessionManager() {
   const availableCharacters = useSessionStore((state) => state.availableCharacters);
@@ -17,6 +18,8 @@ export function SessionManager() {
   const currentSession = useSessionStore((state) => state.sessionId);
   const directoryStatus = useSessionStore((state) => state.directoryStatus);
   const directoryError = useSessionStore((state) => state.directoryError);
+  const activeCharacterId = useSessionStore((state) => state.character?.id ?? null);
+  const momentumTrend = useSessionStore((state) => state.momentumTrend);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveSession = useSessionStore((state) => state.clearActiveSession);
   const [sessionTitle, setSessionTitle] = useState("");
@@ -217,7 +220,11 @@ export function SessionManager() {
                     {character.name} · {character.archetype}
                   </p>
                   <p className="session-card-meta">
-                    {character.pronouns} · Momentum {character.momentum.current}
+                    {character.pronouns} · Momentum{" "}
+                    <MomentumIndicator
+                      momentum={character.momentum}
+                      trend={character.id === activeCharacterId ? momentumTrend : null}
+                    />
                   </p>
                 </div>
                 <div className="session-manager-actions">

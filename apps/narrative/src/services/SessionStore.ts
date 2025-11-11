@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Character, LocationProfile, Login, SessionRecord, Turn } from "@glass-frontier/dto";
 import type { SessionState } from "../types.js";
+import type { CharacterProgressUpdate } from "./characterProgress.js";
+import { applyCharacterSnapshotProgress } from "./characterProgress.js";
 
 export interface SessionStore {
   ensureSession(params: {
@@ -32,6 +34,8 @@ export interface SessionStore {
 
   addTurn(turn: Turn): Promise<Turn>;
   listTurns(sessionId: string): Promise<Turn[]>;
+
+  applyCharacterProgress(update: CharacterProgressUpdate): Promise<Character | null>;
 }
 
 class InMemorySessionStore implements SessionStore {
@@ -154,6 +158,19 @@ class InMemorySessionStore implements SessionStore {
     return Array.from(this.#turns.get(sessionId) ?? []).sort(
       (a, b) => (a.turnSequence ?? 0) - (b.turnSequence ?? 0)
     );
+  }
+
+  async applyCharacterProgress(update: CharacterProgressUpdate): Promise<Character | null> {
+    if (!update.characterId) {
+      return null;
+    }
+    const character = await this.getCharacter(update.characterId);
+    if (!character || (!update.momentumDelta && !update.skill)) {
+      return character;
+    }
+    const updated = applyCharacterSnapshotProgress(character, update);
+    await this.upsertCharacter(updated);
+    return updated;
   }
 }
 

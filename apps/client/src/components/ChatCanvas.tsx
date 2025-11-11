@@ -92,7 +92,8 @@ export function ChatCanvas() {
               skillCheckResult,
               skillKey,
               attributeKey,
-              playerIntent
+              playerIntent,
+              skillProgress
             } = chatMessage;
             const timestamp =
               typeof entry.metadata?.timestamp === "number"
@@ -155,19 +156,35 @@ export function ChatCanvas() {
                   }
                 >
                   {entry.role === "gm" ? (
-                    isExpanded(entry.id) ? (
-                      <div className="chat-entry-content">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {entry.content ?? ""}
-                        </ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="chat-entry-summary">
-                        {chatMessage.gmSummary ??
-                          playerIntent?.intentSummary ??
-                          "GM summary unavailable."}
-                      </p>
-                    )
+                    <>
+                      {isExpanded(entry.id) ? (
+                        <div className="chat-entry-content">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {entry.content ?? ""}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="chat-entry-summary">
+                          {chatMessage.gmSummary ??
+                            playerIntent?.intentSummary ??
+                            "GM summary unavailable."}
+                        </p>
+                      )}
+                      {skillProgress?.length ? (
+                        <div className="skill-progress-badges" aria-live="polite">
+                          {skillProgress.map((badge, badgeIndex) => (
+                            <span
+                              key={`${entry.id ?? index}-progress-${badge.skill}-${badgeIndex}`}
+                              className={`skill-progress-badge skill-progress-badge-${badge.type}`}
+                            >
+                              {badge.type === "skill-gain"
+                                ? `New Skill · ${badge.skill}${badge.attribute ? ` (${badge.attribute})` : ""}`
+                                : `Tier Up · ${badge.skill} → ${badge.tier}`}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </>
                   ) : entry.role === "player" ? (
                     isExpanded(entry.id) ? (
                       <p

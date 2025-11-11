@@ -7,11 +7,13 @@ import { LoginScreen } from "./components/LoginScreen";
 import { useLoginResources } from "./hooks/useLoginResources";
 import { CreateCharacterModal } from "./components/CreateCharacterModal";
 import { useSessionStore } from "./stores/sessionStore";
-import {SessionHeader} from "./components/SessionHeader";
+import { SessionHeader } from "./components/SessionHeader";
+import { MomentumIndicator } from "./components/MomentumIndicator";
 
 function SessionMeta() {
   const character = useSessionStore((state) => state.character);
   const loginLabel = useSessionStore((state) => state.loginName ?? state.loginId);
+  const momentumTrend = useSessionStore((state) => state.momentumTrend);
 
   return (
     <div className="session-meta">
@@ -20,7 +22,9 @@ function SessionMeta() {
         <div className="character-pill">
           <span className="character-pill-name">{character.name}</span>
           <span className="character-pill-detail">{character.archetype}</span>
-          <span className="character-pill-momentum">Momentum {character.momentum.current}</span>
+          <span className="character-pill-momentum">
+            Momentum <MomentumIndicator momentum={character.momentum} trend={momentumTrend} />
+          </span>
         </div>
       ) : null}
     </div>

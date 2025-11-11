@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { initTRPC } from "@trpc/server";
 import type { Context } from "./context";
 import { z } from "zod";
-import { Character as CharacterSchema, TranscriptEntry, Turn } from "@glass-frontier/dto";
+import { Character as CharacterSchema, TranscriptEntry } from "@glass-frontier/dto";
 import { log } from "@glass-frontier/utils";
 
 const t = initTRPC.context<Context>().create();
@@ -67,10 +67,10 @@ export const appRouter = t.router({
     )
     .mutation(async ({ ctx, input }) => {
       const playerEntry = { ...input.content, role: "player" as const };
-      const result: Turn = await ctx.engine.handlePlayerMessage(input.sessionId, playerEntry, {
+      const result = await ctx.engine.handlePlayerMessage(input.sessionId, playerEntry, {
         authorizationHeader: ctx.authorizationHeader
       });
-      return { turn: result };
+      return { turn: result.turn, character: result.updatedCharacter };
     }),
 
   listCharacters: t.procedure

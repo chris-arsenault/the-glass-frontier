@@ -6,6 +6,7 @@ import type {
   SessionRecord,
   SkillCheckPlan,
   SkillCheckResult,
+  SkillTier,
   TranscriptEntry
 } from "@glass-frontier/dto";
 
@@ -21,6 +22,31 @@ export interface ChatMessage {
   attributeKey?: Attribute | null;
   playerIntent?: Intent | null;
   gmSummary?: string | null;
+  skillProgress?: SkillProgressBadge[] | null;
+}
+
+export type SkillProgressBadge =
+  | {
+      type: "skill-gain";
+      skill: string;
+      tier: SkillTier;
+      attribute?: Attribute | null;
+    }
+  | {
+      type: "skill-tier-up";
+      skill: string;
+      tier: SkillTier;
+    };
+
+export type MomentumDirection = "up" | "down" | "flat";
+
+export interface MomentumTrend {
+  direction: MomentumDirection;
+  delta: number;
+  previous: number;
+  current: number;
+  floor: number;
+  ceiling: number;
 }
 
 export interface SessionState {
@@ -44,6 +70,7 @@ export interface SessionState {
   availableSessions: SessionRecord[];
   directoryStatus: DirectoryStatus;
   directoryError: Error | null;
+  momentumTrend: MomentumTrend | null;
 }
 
 export interface SessionStore extends SessionState {

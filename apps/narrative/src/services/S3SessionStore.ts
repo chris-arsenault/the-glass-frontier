@@ -7,6 +7,8 @@ import { log } from "@glass-frontier/utils";
 
 import type { SessionStore } from "./SessionStore.js";
 import type { SessionState } from "../types.js";
+import type { CharacterProgressUpdate } from "./characterProgress.js";
+import { applyCharacterSnapshotProgress } from "./characterProgress.js";
 
 function isNotFound(error: unknown): boolean {
   const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
@@ -215,6 +217,19 @@ export class S3SessionStore implements SessionStore {
     return turns
       .filter((turn): turn is Turn => Boolean(turn))
       .sort((a, b) => (a.turnSequence ?? 0) - (b.turnSequence ?? 0));
+  }
+
+  async applyCharacterProgress(update: CharacterProgressUpdate): Promise<Character | null> {
+    if (!update.characterId) {
+      return null;
+    }
+    const character = await this.getCharacter(update.characterId);
+    if (!character || (!update.momentumDelta && !update.skill)) {
+      return character;
+    }
+    const next = applyCharacterSnapshotProgress(character, update);
+    await this.upsertCharacter(next);
+    return next;
   }
 
   async #resolveSessionLogin(sessionId: string): Promise<string | null> {

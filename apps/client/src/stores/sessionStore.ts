@@ -10,8 +10,10 @@ import type {
 import type {
   ChatMessage,
   CharacterCreationDraft,
+  MomentumTrend,
   SessionCreationDetails,
-  SessionStore
+  SessionStore,
+  SkillProgressBadge
 } from "../state/sessionState";
 import { trpcClient } from "../lib/trpcClient";
 import { useAuthStore } from "./authStore";
@@ -105,7 +107,8 @@ const toChatMessage = (
   skillKey: extras?.skillKey ?? null,
   attributeKey: extras?.attributeKey ?? null,
   playerIntent: extras?.playerIntent ?? null,
-  gmSummary: extras?.gmSummary ?? null
+  gmSummary: extras?.gmSummary ?? null,
+  skillProgress: extras?.skillProgress ?? null
 });
 
 const flattenTurns = (turns: Turn[]): ChatMessage[] =>
@@ -118,7 +121,8 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
       skillKey,
       attributeKey,
       playerIntent: turn.playerIntent ?? null,
-      gmSummary: turn.gmSummary ?? null
+      gmSummary: turn.gmSummary ?? null,
+      skillProgress: null
     };
     const turnEntries: ChatMessage[] = [];
     if (turn.playerMessage) {
@@ -166,6 +170,43 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
 
 const DEFAULT_MOMENTUM = { current: 0, floor: -2, ceiling: 3 };
 
+const deriveSkillProgressBadges = (
+  previous: Character | null,
+  next: Character | null
+): SkillProgressBadge[] => {
+  if (!previous || !next) {
+    return [];
+  }
+  const badges: SkillProgressBadge[] = [];
+  for (const [name, skill] of Object.entries(next.skills ?? {})) {
+    const prior = previous.skills?.[name];
+    if (!prior) {
+      badges.push({ type: "skill-gain", skill: name, tier: skill.tier, attribute: skill.attribute });
+    } else if (prior.tier !== skill.tier) {
+      badges.push({ type: "skill-tier-up", skill: name, tier: skill.tier });
+    }
+  }
+  return badges;
+};
+
+const deriveMomentumTrend = (
+  previous: Character | null,
+  next: Character | null
+): MomentumTrend | null => {
+  if (!previous || !next) {
+    return null;
+  }
+  const delta = next.momentum.current - previous.momentum.current;
+  return {
+    direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat",
+    delta,
+    previous: previous.momentum.current,
+    current: next.momentum.current,
+    floor: next.momentum.floor,
+    ceiling: next.momentum.ceiling
+  };
+};
+
 const createBaseState = () => ({
   sessionId: null as string | null,
   sessionRecord: null as SessionRecord | null,
@@ -187,6 +228,7 @@ const createBaseState = () => ({
   availableSessions: [] as SessionRecord[],
   directoryStatus: "idle" as const,
   directoryError: null as Error | null,
+  momentumTrend: null as MomentumTrend | null,
 });
 
 export const useSessionStore = create<SessionStore>()((set, get) => ({
@@ -263,11 +305,12 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         messages: flattenTurns(session.turns ?? []),
         turnSequence: session.turnSequence ?? session.turns?.length ?? 0,
         connectionState: "connected",
-        sessionStatus: session.session?.status ?? "open",
-        character: session.character ?? null,
-        location: session.location ?? null,
-        transportError: null,
-        recentSessions: applyRecentSession(prev.recentSessions, session.sessionId),
+      sessionStatus: session.session?.status ?? "open",
+      character: session.character ?? null,
+      location: session.location ?? null,
+      transportError: null,
+      momentumTrend: prev.sessionId === session.sessionId ? prev.momentumTrend : null,
+      recentSessions: applyRecentSession(prev.recentSessions, session.sessionId),
         availableSessions:
           session.session && prev.availableSessions
             ? mergeSessionRecord(prev.availableSessions, session.session)
@@ -381,7 +424,8 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
       queuedIntents: 0,
       sessionStatus: "open",
       character: null,
-      location: null
+      location: null,
+      momentumTrend: null
     }));
   },
 
@@ -420,19 +464,28 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }));
 
     try {
-      const { turn } = await trpcClient.postMessage.mutate({
+      const { turn, character } = await trpcClient.postMessage.mutate({
         sessionId,
         content: playerEntry
       });
 
       set((prev) => {
+        const nextCharacter = character ?? prev.character;
+        const skillBadges = character
+          ? deriveSkillProgressBadges(prev.character, character)
+          : [];
+        const nextMomentumTrend = character
+          ? deriveMomentumTrend(prev.character, character) ?? prev.momentumTrend
+          : prev.momentumTrend;
+
         const extras = {
           skillCheckPlan: turn.skillCheckPlan ?? null,
           skillCheckResult: turn.skillCheckResult ?? null,
           skillKey: turn.playerIntent?.skill ?? null,
           attributeKey: turn.playerIntent?.attribute ?? null,
           playerIntent: turn.playerIntent ?? null,
-          gmSummary: turn.gmSummary ?? null
+          gmSummary: turn.gmSummary ?? null,
+          skillProgress: skillBadges.length > 0 ? skillBadges : null
         };
 
         const nextMessages = prev.messages
@@ -461,6 +514,11 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
           turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
           connectionState: "connected",
           transportError: null,
+          character: nextCharacter,
+          availableCharacters: character
+            ? mergeCharacterRecord(prev.availableCharacters, character)
+            : prev.availableCharacters,
+          momentumTrend: nextMomentumTrend,
           recentSessions: applyRecentSession(
             prev.recentSessions,
             prev.sessionId ?? sessionId

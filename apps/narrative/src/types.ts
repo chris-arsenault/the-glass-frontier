@@ -39,6 +39,7 @@ export interface GraphContext {
   skillCheckPlan?: SkillCheckPlan;
   gmMessage?: TranscriptEntry;
   gmSummary?: string;
+  updatedCharacter?: Character | null;
 }
 
 
