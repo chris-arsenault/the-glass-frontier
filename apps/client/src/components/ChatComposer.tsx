@@ -10,14 +10,16 @@ export function ChatComposer() {
   const queuedIntents = useSessionStore((state) => state.queuedIntents);
   const connectionState = useSessionStore((state) => state.connectionState);
   const sessionStatus = useSessionStore((state) => state.sessionStatus);
+  const hasSession = useSessionStore((state) => Boolean(state.sessionId));
   const [draft, setDraft] = useState("");
 
-  const sessionIsClosed = sessionStatus === "closed" || connectionState === "closed";
+  const sessionUnavailable =
+    !hasSession || sessionStatus === "closed" || connectionState === "closed";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = draft.trim();
-    if (trimmed.length === 0 || sessionIsClosed) {
+    if (trimmed.length === 0 || sessionUnavailable) {
       return;
     }
 
@@ -30,7 +32,9 @@ export function ChatComposer() {
   };
 
   const queuedCount = Math.max(queuedIntents, 0);
-  const buttonLabel = sessionIsClosed
+  const buttonLabel = !hasSession
+    ? "Select a session"
+    : sessionStatus === "closed" || connectionState === "closed"
     ? "Session closed"
     : isOffline
     ? queuedCount > 0
@@ -47,7 +51,16 @@ export function ChatComposer() {
       aria-label="Send a narrative intent"
       data-testid="chat-composer"
     >
-      {isOffline ? (
+      {!hasSession ? (
+        <p
+          className="chat-closed-banner"
+          role="status"
+          aria-live="assertive"
+          data-testid="chat-closed-banner"
+        >
+          Select or create a session to send new intents.
+        </p>
+      ) : isOffline ? (
         <p
           className="chat-offline-banner"
           role="status"
@@ -57,7 +70,7 @@ export function ChatComposer() {
           Connection degraded — intents will queue and send once online.
           {queuedCount > 0 ? ` ${queuedCount} pending.` : ""}
         </p>
-      ) : sessionIsClosed ? (
+      ) : sessionUnavailable ? (
         <p
           className="chat-closed-banner"
           role="status"
@@ -81,13 +94,14 @@ export function ChatComposer() {
         required
         aria-required="true"
         data-testid="chat-input"
+        disabled={sessionUnavailable}
       />
       <div className="chat-composer-controls">
-        <LocationOverview />
+        {hasSession ? <LocationOverview /> : null}
         <button
           type="submit"
           className="chat-send-button"
-          disabled={isSending || sessionIsClosed}
+          disabled={isSending || sessionUnavailable}
           data-testid="chat-submit"
         >
           {buttonLabel}

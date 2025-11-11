@@ -21,6 +21,7 @@ export function ChatCanvas() {
   const messages = useSessionStore((state) => state.messages);
   const connectionState = useSessionStore((state) => state.connectionState);
   const transportError = useSessionStore((state) => state.transportError);
+  const hasSession = useSessionStore((state) => Boolean(state.sessionId));
   const streamRef = useRef(null);
 
   useEffect(() => {
@@ -55,7 +56,11 @@ export function ChatCanvas() {
         tabIndex={0}
         data-testid="chat-log"
       >
-        {messages.length === 0 ? (
+        {!hasSession ? (
+          <p className="chat-empty" data-testid="chat-empty">
+            Select or create a session to begin storytelling.
+          </p>
+        ) : messages.length === 0 ? (
           <p className="chat-empty" data-testid="chat-empty">
             Awaiting the first story beat. Share an intent to begin.
           </p>

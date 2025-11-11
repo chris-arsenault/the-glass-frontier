@@ -36,7 +36,7 @@ class NarrativeEngine {
       throw new Error("sessionId is required");
     }
 
-    const session: SessionState | null = this.sessionStore.getSessionState(sessionId);
+    const session: SessionState | null = await this.sessionStore.getSessionState(sessionId);
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
     }
@@ -89,7 +89,7 @@ class NarrativeEngine {
       failure: failure
     }
 
-    this.sessionStore.addTurn(turn);
+    await this.sessionStore.addTurn(turn);
 
     log("info", "Narrative engine resolved turn", {
       sessionId,

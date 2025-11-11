@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import type { Context } from "./context";
 import { z } from "zod";
-import { TranscriptEntry, Turn } from "@glass-frontier/dto";
+import { Character as CharacterSchema, TranscriptEntry, Turn } from "@glass-frontier/dto";
 import { log } from "@glass-frontier/utils";
 
 const t = initTRPC.context<Context>().create();
@@ -17,8 +17,8 @@ export const appRouter = t.router({
         status: z.enum(["open", "closed"]).optional()
       })
     )
-    .mutation(({ ctx, input }) => {
-      const session = ctx.sessionStore.ensureSession({
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.sessionStore.ensureSession({
         sessionId: input.sessionId,
         loginId: input.loginId,
         characterId: input.characterId,
@@ -31,7 +31,7 @@ export const appRouter = t.router({
   // GET /sessions/:sessionId
   getSession: t.procedure
     .input(z.object({ sessionId: z.string().uuid() }))
-    .query(({ ctx, input }) => ctx.sessionStore.getSessionState(input.sessionId)),
+    .query(async ({ ctx, input }) => ctx.sessionStore.getSessionState(input.sessionId)),
 
   // POST /sessions/:sessionId/messages
   postMessage: t.procedure
@@ -50,6 +50,22 @@ export const appRouter = t.router({
         skillCheckResult: result.skillCheckResult,
       };
     }),
+
+  listCharacters: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.sessionStore.listCharactersByLogin(input.loginId)),
+
+  createCharacter: t.procedure
+    .input(CharacterSchema)
+    .mutation(async ({ ctx, input }) => {
+      log("info", `Creating Character ${input.name}`);
+      const character = await ctx.sessionStore.upsertCharacter(input);
+      return { character };
+    }),
+
+  listSessions: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.sessionStore.listSessionsByLogin(input.loginId)),
 });
 
 export type AppRouter = typeof appRouter;

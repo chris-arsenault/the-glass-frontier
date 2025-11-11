@@ -12,8 +12,20 @@ export const appRouter = t.router({
       return await routerService.proxy(input);
     } catch (error) {
       if (error instanceof ProviderError) {
+        const status = error.status ?? 500;
+        let code: "BAD_REQUEST" | "BAD_GATEWAY" | "INTERNAL_SERVER_ERROR" | "FORBIDDEN" =
+          "INTERNAL_SERVER_ERROR";
+        if (status >= 500) {
+          code = error.retryable ? "BAD_GATEWAY" : "INTERNAL_SERVER_ERROR";
+        } else if (status === 400) {
+          code = "BAD_REQUEST";
+        } else if (status === 401 || status === 403) {
+          code = "FORBIDDEN";
+        } else {
+          code = "BAD_REQUEST";
+        }
         throw new TRPCError({
-          code: error.retryable ? "BAD_GATEWAY" : "INTERNAL_SERVER_ERROR",
+          code,
           message: error.message,
           cause: error
         });

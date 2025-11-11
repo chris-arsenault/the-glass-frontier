@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { createTRPCUntypedClient, httpBatchLink } from "@trpc/client";
+import { TRPCClientError, createTRPCUntypedClient, httpBatchLink } from "@trpc/client";
 import type { TRPCUntypedClient } from "@trpc/client";
 import { log } from "@glass-frontier/utils";
 
@@ -37,7 +37,7 @@ class LangGraphLlmClient {
     defaultHeaders?: Record<string, string>;
   }) {
     this.#baseUrl = options?.baseUrl ?? process.env.LLM_PROXY_URL ?? "http://localhost:8082";
-    this.#model = options?.model ?? "gpt-5-nano";
+    this.#model = options?.model ?? "gpt-4.1-mini";
     this.#providerId = options?.providerId ?? "llm-proxy";
     this.#timeoutMs = Number.isFinite(options?.timeoutMs) && (options?.timeoutMs ?? 0) > 0 ? (options?.timeoutMs as number) : 45_000;
     this.#maxRetries = Number.isFinite(options?.maxRetries) && (options?.maxRetries ?? 0) >= 0 ? (options?.maxRetries as number) : 2;
@@ -63,7 +63,6 @@ class LangGraphLlmClient {
     const payload = this.#buildPayload(options);
     payload.response_format = { type: "json_object" };
     const { output, raw, usage, attempts } = await this.#execute({ body: payload, metadata: options.metadata });
-
     if (typeof output === "string") {
       const trimmed = output.trim();
       try {
@@ -153,6 +152,14 @@ class LangGraphLlmClient {
           message: error instanceof Error ? error.message : "unknown",
           context: metadata ? JSON.stringify(metadata).slice(0, 200) : "{}"
         });
+
+        if (error instanceof TRPCClientError && error.data?.httpStatus === 400) {
+          const causeMessage =
+            (error.cause as Error | undefined)?.message ?? error.message ?? "Downstream bad request.";
+          throw new Error(
+            `llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500)
+          );
+        }
 
         if (attempt === this.#maxRetries) {
           throw error;

@@ -19,6 +19,7 @@
   "dependencies": {
     "@glass-frontier/utils": "workspace:*",
     "@trpc/server": "^11.7.1",
+    "openai": "^4.77.0",
     "zod": "^3.23.8",
     "undici": "^7.16.0"
   },

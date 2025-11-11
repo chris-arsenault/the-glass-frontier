@@ -11,6 +11,7 @@ import type {
 
 export type ConnectionState = "idle" | "connecting" | "connected" | "error" | "closed";
 export type SessionLifecycle = "open" | "closed";
+export type DirectoryStatus = "idle" | "loading" | "ready" | "error";
 
 export interface ChatMessage {
   entry: TranscriptEntry;
@@ -38,10 +39,27 @@ export interface SessionState {
   character?: Character | null;
   location?: LocationProfile | null;
   recentSessions: string[];
+  availableCharacters: Character[];
+  availableSessions: SessionRecord[];
+  directoryStatus: DirectoryStatus;
+  directoryError: Error | null;
 }
 
 export interface SessionStore extends SessionState {
-  hydrateSession(desiredSessionId?: string): Promise<string>;
+  hydrateSession(sessionId: string): Promise<string>;
   sendPlayerMessage(input: { content: string }): Promise<void>;
   setPreferredCharacterId(characterId: string | null): void;
+  refreshLoginResources(): Promise<void>;
+  createSessionForCharacter(characterId?: string | null): Promise<string>;
+  createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
+  clearActiveSession(): void;
+  resetStore(): void;
+}
+
+export interface CharacterCreationDraft {
+  name: string;
+  archetype: string;
+  pronouns: string;
+  attributes: Character["attributes"];
+  skills: Character["skills"];
 }

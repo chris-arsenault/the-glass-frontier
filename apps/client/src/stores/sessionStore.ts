@@ -1,7 +1,17 @@
 import { create } from "zustand";
-import type { TranscriptEntry, Turn } from "@glass-frontier/dto";
+import type {
+  Character,
+  LocationProfile,
+  SessionRecord,
+  TranscriptEntry,
+  Turn
+} from "@glass-frontier/dto";
 
-import type { ChatMessage, SessionStore } from "../state/sessionState";
+import type {
+  ChatMessage,
+  CharacterCreationDraft,
+  SessionStore
+} from "../state/sessionState";
 import { trpcClient } from "../lib/trpcClient";
 import { useAuthStore } from "./authStore";
 
@@ -77,6 +87,13 @@ const tryResolveLoginIdentity = (): { loginId: string | null; loginName: string 
   }
 };
 
+const generateId = () => {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 const toChatMessage = (
   entry: TranscriptEntry,
   extras?: Partial<ChatMessage>
@@ -113,12 +130,7 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
     return turnEntries;
   });
 
-const createMessageId = (): string => {
-  if (typeof globalThis !== "undefined" && globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
+const createMessageId = (): string => generateId();
 
 const buildPlayerEntry = (content: string): TranscriptEntry => ({
   id: createMessageId(),
@@ -139,55 +151,104 @@ const applyRecentSession = (sessions: string[], sessionId: string): string[] => 
   return next;
 };
 
-export const useSessionStore = create<SessionStore>()((set, get) => ({
-  sessionId: null,
-  sessionRecord: null,
-  loginId: null,
-  loginName: null,
-  preferredCharacterId: null,
-  messages: [],
+const mergeSessionRecord = (list: SessionRecord[], session: SessionRecord) => {
+  const filtered = list.filter((existing) => existing.id !== session.id);
+  return [session, ...filtered];
+};
+
+const mergeCharacterRecord = (list: Character[], character: Character) => {
+  const filtered = list.filter((existing) => existing.id !== character.id);
+  return [character, ...filtered];
+};
+
+const DEFAULT_LOCATION_ID = "at-home";
+const DEFAULT_MOMENTUM = { current: 0, floor: -2, ceiling: 3 };
+
+const createBaseState = () => ({
+  sessionId: null as string | null,
+  sessionRecord: null as SessionRecord | null,
+  loginId: null as string | null,
+  loginName: null as string | null,
+  preferredCharacterId: null as string | null,
+  messages: [] as ChatMessage[],
   turnSequence: 0,
-  connectionState: "idle",
-  transportError: null,
+  connectionState: "idle" as const,
+  transportError: null as Error | null,
   isSending: false,
   isOffline: false,
   queuedIntents: 0,
-  sessionStatus: "open",
-  character: null,
-  location: null,
+  sessionStatus: "open" as const,
+  character: null as Character | null,
+  location: null as LocationProfile | null,
   recentSessions: readRecentSessions(),
+  availableCharacters: [] as Character[],
+  availableSessions: [] as SessionRecord[],
+  directoryStatus: "idle" as const,
+  directoryError: null as Error | null
+});
+
+export const useSessionStore = create<SessionStore>()((set, get) => ({
+  ...createBaseState(),
+
   setPreferredCharacterId(characterId) {
-    set({
-      preferredCharacterId: characterId && characterId.trim().length > 0 ? characterId.trim() : null
-    });
-  },
-  async hydrateSession(desiredSessionId) {
     set((prev) => ({
       ...prev,
-      connectionState: prev.connectionState === "connected" ? prev.connectionState : "connecting",
+      preferredCharacterId: characterId && characterId.trim().length > 0 ? characterId.trim() : null
+    }));
+  },
+
+  async refreshLoginResources() {
+    const identity = resolveLoginIdentity();
+    set((prev) => ({
+      ...prev,
+      loginId: identity.loginId,
+      loginName: identity.loginName,
+      directoryStatus: "loading",
+      directoryError: null
+    }));
+
+    try {
+      const [characters, sessions] = await Promise.all([
+        trpcClient.listCharacters.query({ loginId: identity.loginId }),
+        trpcClient.listSessions.query({ loginId: identity.loginId })
+      ]);
+
+      set((prev) => ({
+        ...prev,
+        loginId: identity.loginId,
+        loginName: identity.loginName,
+        directoryStatus: "ready",
+        availableCharacters: characters ?? [],
+        availableSessions: sessions ?? [],
+        directoryError: null,
+        preferredCharacterId:
+          prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error("Failed to load character directory.");
+      set((prev) => ({
+        ...prev,
+        directoryStatus: "error",
+        directoryError: nextError
+      }));
+      throw nextError;
+    }
+  },
+
+  async hydrateSession(sessionId) {
+    if (!sessionId) {
+      throw new Error("Session id is required.");
+    }
+
+    set((prev) => ({
+      ...prev,
+      connectionState: prev.sessionId === sessionId ? prev.connectionState : "connecting",
       transportError: null
     }));
 
     try {
-      let identity = tryResolveLoginIdentity();
-      let targetSessionId = desiredSessionId ?? null;
-
-      if (!targetSessionId) {
-        if (!identity.loginId) {
-          identity = resolveLoginIdentity();
-        }
-        const created = await trpcClient.createSession.mutate({
-          loginId: identity.loginId,
-          characterId: get().preferredCharacterId ?? undefined
-        });
-        targetSessionId = created.session.id;
-      }
-
-      if (!targetSessionId) {
-        throw new Error("Unable to determine session identifier.");
-      }
-
-      const session = await trpcClient.getSession.query({ sessionId: targetSessionId });
+      const session = await trpcClient.getSession.query({ sessionId });
       if (!session) {
         throw new Error("Session not found.");
       }
@@ -196,22 +257,27 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         ...prev,
         sessionId: session.sessionId,
         sessionRecord: session.session ?? prev.sessionRecord,
-        loginId: session.session?.loginId ?? identity.loginId ?? prev.loginId,
-        loginName: identity.loginName ?? prev.loginName,
+        loginId: session.session?.loginId ?? prev.loginId,
         messages: flattenTurns(session.turns ?? []),
         turnSequence: session.turnSequence ?? session.turns?.length ?? 0,
         connectionState: "connected",
-        sessionStatus: session.session?.status ?? prev.sessionStatus ?? "open",
-        transportError: null,
+        sessionStatus: session.session?.status ?? "open",
         character: session.character ?? null,
         location: session.location ?? null,
-        preferredCharacterId: session.character?.id ?? prev.preferredCharacterId,
-        recentSessions: applyRecentSession(prev.recentSessions, session.sessionId)
+        transportError: null,
+        recentSessions: applyRecentSession(prev.recentSessions, session.sessionId),
+        availableSessions:
+          session.session && prev.availableSessions
+            ? mergeSessionRecord(prev.availableSessions, session.session)
+            : prev.availableSessions
       }));
 
       return session.sessionId;
     } catch (error) {
-      const nextError = error instanceof Error ? error : new Error("Failed to connect to the narrative engine.");
+      const nextError =
+        error instanceof Error
+          ? error
+          : new Error("Failed to connect to the narrative engine.");
       set((prev) => ({
         ...prev,
         connectionState: "error",
@@ -220,18 +286,109 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
       throw nextError;
     }
   },
+
+  async createSessionForCharacter(characterId) {
+    const identity = resolveLoginIdentity();
+    try {
+      const result = await trpcClient.createSession.mutate({
+        loginId: identity.loginId,
+        characterId: characterId ?? undefined
+      });
+      set((prev) => ({
+        ...prev,
+        availableSessions: mergeSessionRecord(prev.availableSessions, result.session),
+        preferredCharacterId: characterId ?? prev.preferredCharacterId ?? null
+      }));
+      return get().hydrateSession(result.session.id);
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error("Failed to create session.");
+      set((prev) => ({
+        ...prev,
+        transportError: nextError
+      }));
+      throw nextError;
+    }
+  },
+
+  async createCharacterProfile(draft) {
+    const identity = resolveLoginIdentity();
+    const character: Character = {
+      id: generateId(),
+      loginId: identity.loginId,
+      locationId: DEFAULT_LOCATION_ID,
+      name: draft.name,
+      archetype: draft.archetype,
+      pronouns: draft.pronouns,
+      tags: [],
+      momentum: DEFAULT_MOMENTUM,
+      attributes: draft.attributes,
+      skills: Object.entries(draft.skills).reduce<Character["skills"]>((acc, [name, skill]) => {
+        acc[name] = { ...skill, xp: 0 };
+        return acc;
+      }, {})
+    };
+
+    try {
+      const { character: stored } = await trpcClient.createCharacter.mutate(character);
+      set((prev) => ({
+        ...prev,
+        availableCharacters: mergeCharacterRecord(prev.availableCharacters, stored),
+        preferredCharacterId: stored.id,
+        directoryStatus: prev.directoryStatus === "idle" ? "ready" : prev.directoryStatus,
+        directoryError: null
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error("Failed to create character.");
+      set((prev) => ({
+        ...prev,
+        directoryError: nextError,
+        directoryStatus: prev.directoryStatus === "idle" ? "error" : prev.directoryStatus
+      }));
+      throw nextError;
+    }
+  },
+
+  clearActiveSession() {
+    set((prev) => ({
+      ...prev,
+      sessionId: null,
+      sessionRecord: null,
+      messages: [],
+      turnSequence: 0,
+      connectionState: "idle",
+      transportError: null,
+      isSending: false,
+      queuedIntents: 0,
+      sessionStatus: "open",
+      character: null,
+      location: null
+    }));
+  },
+
+  resetStore() {
+    set((prev) => ({
+      ...prev,
+      ...createBaseState()
+    }));
+  },
+
   async sendPlayerMessage({ content }) {
     const trimmed = content.trim();
     if (!trimmed) {
       return;
     }
 
-    const ensureSessionId = async (): Promise<string> => {
-      if (get().sessionId) {
-        return get().sessionId as string;
-      }
-      return get().hydrateSession();
-    };
+    const sessionId = get().sessionId;
+    if (!sessionId) {
+      const error = new Error("Select or create a session before sending intents.");
+      set((prev) => ({
+        ...prev,
+        transportError: error
+      }));
+      throw error;
+    }
 
     const playerEntry = buildPlayerEntry(trimmed);
     const playerMessage = toChatMessage(playerEntry, { playerIntent: null });
@@ -245,7 +402,6 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }));
 
     try {
-      const sessionId = await ensureSessionId();
       await trpcClient.postMessage.mutate({
         sessionId,
         content: playerEntry
@@ -273,7 +429,11 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         recentSessions: applyRecentSession(
           prev.recentSessions,
           updatedSession.sessionId ?? prev.sessionId ?? ""
-        )
+        ),
+        availableSessions:
+          updatedSession.session && prev.availableSessions
+            ? mergeSessionRecord(prev.availableSessions, updatedSession.session)
+            : prev.availableSessions
       }));
     } catch (error) {
       const nextError = error instanceof Error ? error : new Error("Failed to send player intent.");

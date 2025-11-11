@@ -1,13 +1,25 @@
 "use strict";
 
 class ProviderError extends Error {
-  code: string
-  status: number
-  retryable: boolean
-  details: Record<string, any>
+  code: string;
+  status: number;
+  retryable: boolean;
+  details: Record<string, any>;
 
-  constructor({ code = "", status = 502, retryable = false, details = {} } = {}) {
-    super(code || "provider_error");
+  constructor({
+    code = "",
+    status = 502,
+    retryable = false,
+    details = {},
+    message
+  }: {
+    code?: string;
+    status?: number;
+    retryable?: boolean;
+    details?: Record<string, any>;
+    message?: string;
+  } = {}) {
+    super(message || code || "provider_error");
     this.name = "ProviderError";
     this.code = code || "provider_error";
     this.status = status;
