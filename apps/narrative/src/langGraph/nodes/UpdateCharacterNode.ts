@@ -1,7 +1,7 @@
 import { MOMENTUM_DELTA, type Attribute } from "@glass-frontier/dto";
 import type { GraphContext } from "../../types.js";
 import type { GraphNode } from "../orchestrator.js";
-import type { SessionStore } from "../../services/SessionStore.js";
+import type { WorldDataStore } from "../../services/WorldDataStore.js";
 
 const XP_REWARDS: Record<string, number> = {
   collapse: 2,
@@ -11,14 +11,14 @@ const XP_REWARDS: Record<string, number> = {
 class UpdateCharacterNode implements GraphNode {
   readonly id = "character-update";
 
-  constructor(private readonly sessionStore: SessionStore) {}
+  constructor(private readonly worldDataStore: WorldDataStore) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
       return context;
     }
 
-    const characterId = context.session.character?.id;
+    const characterId = context.chronicle.character?.id;
     const intent = context.playerIntent;
     const checkResult = context.skillCheckResult;
 
@@ -32,7 +32,7 @@ class UpdateCharacterNode implements GraphNode {
     const momentumDelta = outcomeTier ? MOMENTUM_DELTA[outcomeTier] ?? 0 : 0;
     const xpAward = outcomeTier ? XP_REWARDS[outcomeTier] ?? 0 : 0;
 
-    const skillMissing = Boolean(skillName && !context.session.character?.skills?.[skillName]);
+    const skillMissing = Boolean(skillName && !context.chronicle.character?.skills?.[skillName]);
     const needsSkillXp = xpAward > 0;
     const wantsMomentumUpdate = momentumDelta !== 0;
     const shouldTouchSkill = skillName && skillAttribute && (skillMissing || needsSkillXp);
@@ -41,7 +41,7 @@ class UpdateCharacterNode implements GraphNode {
       return context;
     }
 
-    const updatedCharacter = await this.sessionStore.applyCharacterProgress({
+    const updatedCharacter = await this.worldDataStore.applyCharacterProgress({
       characterId,
       momentumDelta: wantsMomentumUpdate ? momentumDelta : undefined,
       skill: shouldTouchSkill
@@ -59,8 +59,8 @@ class UpdateCharacterNode implements GraphNode {
 
     return {
       ...context,
-      session: {
-        ...context.session,
+      chronicle: {
+        ...context.chronicle,
         character: updatedCharacter
       },
       updatedCharacter

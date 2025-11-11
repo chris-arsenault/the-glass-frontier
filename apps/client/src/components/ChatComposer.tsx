@@ -1,25 +1,25 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 import { LocationOverview } from "./LocationOverview";
 
 export function ChatComposer() {
-  const sendPlayerMessage = useSessionStore((state) => state.sendPlayerMessage);
-  const isSending = useSessionStore((state) => state.isSending);
-  const isOffline = useSessionStore((state) => state.isOffline);
-  const queuedIntents = useSessionStore((state) => state.queuedIntents);
-  const connectionState = useSessionStore((state) => state.connectionState);
-  const sessionStatus = useSessionStore((state) => state.sessionStatus);
-  const hasSession = useSessionStore((state) => Boolean(state.sessionId));
+  const sendPlayerMessage = useChronicleStore((state) => state.sendPlayerMessage);
+  const isSending = useChronicleStore((state) => state.isSending);
+  const isOffline = useChronicleStore((state) => state.isOffline);
+  const queuedIntents = useChronicleStore((state) => state.queuedIntents);
+  const connectionState = useChronicleStore((state) => state.connectionState);
+  const chronicleStatus = useChronicleStore((state) => state.chronicleStatus);
+  const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
   const [draft, setDraft] = useState("");
 
-  const sessionUnavailable =
-    !hasSession || sessionStatus === "closed" || connectionState === "closed";
+  const chronicleUnavailable =
+    !hasChronicle || chronicleStatus === "closed" || connectionState === "closed";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = draft.trim();
-    if (trimmed.length === 0 || sessionUnavailable) {
+    if (trimmed.length === 0 || chronicleUnavailable) {
       return;
     }
 
@@ -32,10 +32,10 @@ export function ChatComposer() {
   };
 
   const queuedCount = Math.max(queuedIntents, 0);
-  const buttonLabel = !hasSession
-    ? "Select a session"
-    : sessionStatus === "closed" || connectionState === "closed"
-    ? "Session closed"
+  const buttonLabel = !hasChronicle
+    ? "Select a chronicle"
+    : chronicleStatus === "closed" || connectionState === "closed"
+    ? "Chronicle closed"
     : isOffline
     ? queuedCount > 0
       ? "Queue Intent"
@@ -51,14 +51,14 @@ export function ChatComposer() {
       aria-label="Send a narrative intent"
       data-testid="chat-composer"
     >
-      {!hasSession ? (
+      {!hasChronicle ? (
         <p
           className="chat-closed-banner"
           role="status"
           aria-live="assertive"
           data-testid="chat-closed-banner"
         >
-          Select or create a session to send new intents.
+          Select or create a chronicle to send new intents.
         </p>
       ) : isOffline ? (
         <p
@@ -70,14 +70,14 @@ export function ChatComposer() {
           Connection degraded — intents will queue and send once online.
           {queuedCount > 0 ? ` ${queuedCount} pending.` : ""}
         </p>
-      ) : sessionUnavailable ? (
+      ) : chronicleUnavailable ? (
         <p
           className="chat-closed-banner"
           role="status"
           aria-live="assertive"
           data-testid="chat-closed-banner"
         >
-          Session closed. Offline reconciliation in progress. Messaging disabled.
+          Chronicle closed. Offline reconciliation in progress. Messaging disabled.
         </p>
       ) : null}
       <label htmlFor="chat-input" className="visually-hidden">
@@ -94,14 +94,14 @@ export function ChatComposer() {
         required
         aria-required="true"
         data-testid="chat-input"
-        disabled={sessionUnavailable}
+        disabled={chronicleUnavailable}
       />
       <div className="chat-composer-controls">
-        {hasSession ? <LocationOverview /> : null}
+        {hasChronicle ? <LocationOverview /> : null}
         <button
           type="submit"
           className="chat-send-button"
-          disabled={isSending || sessionUnavailable}
+          disabled={isSending || chronicleUnavailable}
           data-testid="chat-submit"
         >
           {buttonLabel}

@@ -1,19 +1,18 @@
 import {
   Character,
+  Chronicle,
   Intent,
   LocationProfile,
-  SessionRecord,
   SkillCheckPlan,
   SkillCheckResult,
   Turn,
   TranscriptEntry
 } from "@glass-frontier/dto";
 
-
-export interface SessionState {
-  sessionId: string;
+export interface ChronicleState {
+  chronicleId: string;
   turnSequence: number;
-  session: SessionRecord;
+  chronicle: Chronicle;
   character: Character | null;
   location: LocationProfile | null;
   turns: Turn[];
@@ -21,9 +20,9 @@ export interface SessionState {
 
 export interface GraphContext {
   //inputs
-  sessionId: string;
+  chronicleId: string;
   turnSequence: number;
-  session: SessionState;
+  chronicle: ChronicleState;
   playerMessage: TranscriptEntry;
 
   //operations
@@ -49,6 +48,6 @@ export interface LangGraphLlmLike {
 }
 
 export interface TelemetryLike {
-  recordToolError(entry: { sessionId: string; operation: string; referenceId?: string | null; attempt: number; message: string }): void;
-  recordToolNotRun(entry: { sessionId: string; operation: string }): void;
+  recordToolError(entry: { chronicleId: string; operation: string; referenceId?: string | null; attempt: number; message: string }): void;
+  recordToolNotRun(entry: { chronicleId: string; operation: string }): void;
 }

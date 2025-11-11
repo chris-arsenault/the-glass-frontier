@@ -5,9 +5,9 @@ import type {
   AttributeTier as AttributeTierValue,
   SkillTier as SkillTierValue
 } from "@glass-frontier/dto";
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 import { useUiStore } from "../stores/uiStore";
-import type { CharacterCreationDraft } from "../state/sessionState";
+import type { CharacterCreationDraft } from "../state/chronicleState";
 
 type SkillDraft = {
   id: string;
@@ -36,8 +36,8 @@ const createSkillDraft = (): SkillDraft => ({
 export function CreateCharacterModal() {
   const isOpen = useUiStore((state) => state.isCreateCharacterModalOpen);
   const close = useUiStore((state) => state.closeCreateCharacterModal);
-  const createCharacter = useSessionStore((state) => state.createCharacterProfile);
-  const loginId = useSessionStore((state) => state.loginId);
+  const createCharacter = useChronicleStore((state) => state.createCharacterProfile);
+  const loginId = useChronicleStore((state) => state.loginId);
 
   const [name, setName] = useState("");
   const [archetype, setArchetype] = useState("");

@@ -1,7 +1,7 @@
 import { log } from "@glass-frontier/utils";
 
 interface TransitionPayload {
-  sessionId: string;
+  chronicleId: string;
   nodeId: string;
   status: "start" | "success" | "error";
   turnSequence: number;
@@ -9,13 +9,13 @@ interface TransitionPayload {
 }
 
 interface CheckDispatchPayload {
-  sessionId: string;
+  chronicleId: string;
   auditRef: string;
   checkId: string;
 }
 
 interface SafetyEventPayload {
-  sessionId: string;
+  chronicleId: string;
   auditRef?: string;
   severity: string;
   flags: string[];
@@ -23,7 +23,7 @@ interface SafetyEventPayload {
 }
 
 interface ToolErrorPayload {
-  sessionId: string;
+  chronicleId: string;
   operation: string;
   referenceId?: string;
   attempt: number;
@@ -31,21 +31,21 @@ interface ToolErrorPayload {
 }
 
 interface ToolNotRunPayload {
-  sessionId: string;
+  chronicleId: string;
   operation: string;
 }
 
 interface CheckResolutionPayload {
-  sessionId: string;
+  chronicleId: string;
   auditRef?: string;
   checkId: string;
   result: string;
 }
 
-class SessionTelemetry {
+class ChronicleTelemetry {
   recordTransition(payload: TransitionPayload): void {
-    log("info", "telemetry.session.transition", {
-      sessionId: payload.sessionId,
+    log("info", "telemetry.chronicle.transition", {
+      chronicleId: payload.chronicleId,
       nodeId: payload.nodeId,
       status: payload.status,
       turnSequence: payload.turnSequence,
@@ -54,16 +54,16 @@ class SessionTelemetry {
   }
 
   recordCheckDispatch(payload: CheckDispatchPayload): void {
-    log("info", "telemetry.session.check-dispatch", {
-      sessionId: payload.sessionId,
+    log("info", "telemetry.chronicle.check-dispatch", {
+      chronicleId: payload.chronicleId,
       auditRef: payload.auditRef,
       checkId: payload.checkId
     });
   }
 
   recordToolError(payload: ToolErrorPayload): void {
-    log("error", "telemetry.session.tool-error", {
-      sessionId: payload.sessionId,
+    log("error", "telemetry.chronicle.tool-error", {
+      chronicleId: payload.chronicleId,
       operation: payload.operation,
       referenceId: payload.referenceId ?? "",
       attempt: payload.attempt,
@@ -72,15 +72,15 @@ class SessionTelemetry {
   }
 
   recordToolNotRun(payload: ToolNotRunPayload): void {
-    log("error", "telemetry.session.tool-not-run", {
-      sessionId: payload.sessionId,
+    log("error", "telemetry.chronicle.tool-not-run", {
+      chronicleId: payload.chronicleId,
       operation: payload.operation,
     });
   }
 
   recordCheckResolution(payload: CheckResolutionPayload): void {
-    log("info", "telemetry.session.check-resolution", {
-      sessionId: payload.sessionId,
+    log("info", "telemetry.chronicle.check-resolution", {
+      chronicleId: payload.chronicleId,
       auditRef: payload.auditRef ?? "",
       checkId: payload.checkId,
       result: payload.result
@@ -88,4 +88,4 @@ class SessionTelemetry {
   }
 }
 
-export { SessionTelemetry };
+export { ChronicleTelemetry };

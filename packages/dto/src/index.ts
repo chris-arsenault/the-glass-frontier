@@ -2,7 +2,7 @@ export * from "./Login";
 export * from "./Character";
 export * from "./LocationProfile";
 export * from "./mechanics";
-export * from "./narrative/Session";
+export * from "./narrative/Chronicle";
 export * from "./narrative/Intent";
 export * from "./narrative/SkillCheck";
 export * from "./narrative/TranscriptEntry";

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 import { MomentumIndicator } from "./MomentumIndicator";
 
 const tierOrder: Record<string, number> = {
@@ -15,8 +15,8 @@ interface CharacterOverviewProps {
 }
 
 export function CharacterOverview({ showEmptyState = true }: CharacterOverviewProps) {
-  const character = useSessionStore((state) => state.character);
-  const momentumTrend = useSessionStore((state) => state.momentumTrend);
+  const character = useChronicleStore((state) => state.character);
+  const momentumTrend = useChronicleStore((state) => state.momentumTrend);
 
   const topSkills = useMemo(() => {
     if (!character?.skills) {

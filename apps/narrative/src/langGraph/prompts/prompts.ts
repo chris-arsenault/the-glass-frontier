@@ -5,7 +5,7 @@ import Handlebars from "handlebars";
 
 import { Attribute } from "@glass-frontier/dto";
 import type { Intent, OutcomeTier, SkillCheckPlan, SkillCheckResult } from "@glass-frontier/dto";
-import type { SessionState } from "../../types";
+import type { ChronicleState } from "../../types";
 
 type TemplateName = "checkPlanner" | "gmSummary" | "intent" | "narrativeWeaver";
 
@@ -26,19 +26,19 @@ function renderTemplate(name: TemplateName, data: Record<string, unknown>): stri
   return template(data);
 }
 
-export function composeCheckRulesPrompt(intent: Intent, session: SessionState): string {
-  const charTags = (session?.character?.tags ?? []).slice(0, 3).join(", ") || "No tags";
-  const skillsLine = Object.keys(session?.character?.skills ?? {}).join(", ") || "None";
+export function composeCheckRulesPrompt(intent: Intent, chronicle: ChronicleState): string {
+  const charTags = (chronicle?.character?.tags ?? []).slice(0, 3).join(", ") || "No tags";
+  const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(", ") || "None";
 
   return renderTemplate("checkPlanner", {
     intentSummary: intent.intentSummary,
     skill: intent.skill,
     attribute: intent.attribute,
-    characterName: session?.character?.name ?? "Unknown",
+    characterName: chronicle?.character?.name ?? "Unknown",
     characterTags: charTags,
     skillsLine,
-    locale: session?.location?.locale ?? "Unknown locale",
-    momentum: session?.character?.momentum.current ?? 0
+    locale: chronicle?.location?.locale ?? "Unknown locale",
+    momentum: chronicle?.character?.momentum.current ?? 0
   });
 }
 
@@ -64,23 +64,23 @@ export function composeGMSummaryPrompt(
 }
 
 export function composeIntentPrompt({
-  session,
+  chronicle,
   playerMessage
 }: {
-  session: SessionState;
+  chronicle: ChronicleState;
   playerMessage: string;
 }): string {
-  const charTags = (session?.character?.tags ?? []).slice(0, 3).join(", ") || "No tags";
-  const skillsLine = Object.keys(session?.character?.skills ?? {}).join(", ") || "None";
+  const charTags = (chronicle?.character?.tags ?? []).slice(0, 3).join(", ") || "No tags";
+  const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(", ") || "None";
 
   return renderTemplate("intent", {
     promptHeader:
       "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.",
     playerMessage,
-    characterName: session?.character?.name ?? "Unknown",
+    characterName: chronicle?.character?.name ?? "Unknown",
     characterTags: charTags,
     skillsLine,
-    locale: session?.location?.locale ?? "Unknown locale",
+    locale: chronicle?.location?.locale ?? "Unknown locale",
     attributeList: Attribute.options.join(", "),
     attributeQuotedList: Attribute.options.map((attr) => `"${attr}"`).join(", ")
   });
@@ -88,16 +88,16 @@ export function composeIntentPrompt({
 
 export function composeNarrationPrompt(
   intent: Intent,
-  session: SessionState,
+  chronicle: ChronicleState,
   rawUtterance: string,
   check?: SkillCheckPlan,
   outcomeTier?: OutcomeTier
 ): string {
-  const characterName = session.character?.name ?? "the character";
-  const characterTags = (session.character?.tags ?? []).slice(0, 3).join(", ") || "untagged";
-  const locale = session.location?.locale ?? "an unknown place";
+  const characterName = chronicle.character?.name ?? "the character";
+  const characterTags = (chronicle.character?.tags ?? []).slice(0, 3).join(", ") || "untagged";
+  const locale = chronicle.location?.locale ?? "an unknown place";
   const recentEvents =
-    session.turns
+    chronicle.turns
       ?.slice(-3)
       .map((turn) => `${turn.gmSummary ?? ""} ${turn.playerIntent?.intentSummary ?? ""}`.trim())
       .filter(Boolean)

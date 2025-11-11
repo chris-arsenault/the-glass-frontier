@@ -1,15 +1,15 @@
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 import { useUiStore } from "../stores/uiStore";
 import { SkillCheckBadge } from "./SkillCheckBadge";
 
 
 
 export function ChatCanvas() {
-  const messages = useSessionStore((state) => state.messages);
-  const hasSession = useSessionStore((state) => Boolean(state.sessionId));
+  const messages = useChronicleStore((state) => state.messages);
+  const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
   const expandedMessages = useUiStore((state) => state.expandedMessages);
   const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
   const toggleMessageExpansion = useUiStore((state) => state.toggleMessageExpansion);
@@ -76,9 +76,9 @@ export function ChatCanvas() {
         tabIndex={0}
         data-testid="chat-log"
       >
-        {!hasSession ? (
+        {!hasChronicle ? (
           <p className="chat-empty" data-testid="chat-empty">
-            Select or create a session to begin storytelling.
+            Select or create a chronicle to begin storytelling.
           </p>
         ) : messages.length === 0 ? (
           <p className="chat-empty" data-testid="chat-empty">

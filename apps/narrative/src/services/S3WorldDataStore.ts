@@ -2,11 +2,11 @@ import { S3Client, GetObjectCommand, PutObjectCommand, paginateListObjectsV2 } f
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import type { Character, LocationProfile, Login, SessionRecord, Turn } from "@glass-frontier/dto";
+import type { Character, Chronicle, LocationProfile, Login, Turn } from "@glass-frontier/dto";
 import { log } from "@glass-frontier/utils";
 
-import type { SessionStore } from "./SessionStore.js";
-import type { SessionState } from "../types.js";
+import type { WorldDataStore } from "./WorldDataStore.js";
+import type { ChronicleState } from "../types.js";
 import type { CharacterProgressUpdate } from "./characterProgress.js";
 import { applyCharacterSnapshotProgress } from "./characterProgress.js";
 
@@ -15,66 +15,21 @@ function isNotFound(error: unknown): boolean {
   return err?.name === "NoSuchKey" || err?.$metadata?.httpStatusCode === 404;
 }
 
-export class S3SessionStore implements SessionStore {
+export class S3WorldDataStore implements WorldDataStore {
   #bucket: string;
   #prefix: string;
   #client: S3Client;
 
   #logins = new Map<string, Login>();
-  async ensureSession(params: {
-    sessionId?: string;
-    loginId: string;
-    locationId: string;
-    characterId?: string;
-    title?: string;
-    status?: SessionRecord["status"];
-  }): Promise<SessionRecord> {
-    const sessionId = params.sessionId ?? randomUUID();
-    const existing = await this.getSession(sessionId);
-    if (existing) {
-      return existing;
-    }
-    const record: SessionRecord = {
-      id: sessionId,
-      loginId: params.loginId,
-      locationId: params.locationId,
-      characterId: params.characterId,
-      title: params.title?.trim() && params.title.trim().length > 0 ? params.title.trim() : "Untitled Session",
-      status: params.status ?? "open",
-      metadata: undefined
-    };
-    return this.upsertSession(record);
-  }
-
-  async getSessionState(sessionId: string): Promise<SessionState | null> {
-    const session = await this.getSession(sessionId);
-    if (!session) {
-      return null;
-    }
-    const character = session.characterId ? await this.getCharacter(session.characterId) : null;
-    const location = session.locationId ? await this.getLocation(session.locationId) : null;
-    const turns = await this.listTurns(sessionId);
-    const lastTurn = turns.length ? turns[turns.length - 1] : null;
-    const turnSequence = lastTurn?.turnSequence ?? -1;
-    return {
-      sessionId: session.id,
-      turnSequence,
-      session,
-      character,
-      location,
-      turns
-    };
-  }
-
   #locations = new Map<string, LocationProfile>();
   #characters = new Map<string, Character>();
-  #sessions = new Map<string, SessionRecord>();
-  #sessionLoginIndex = new Map<string, string>();
+  #chronicles = new Map<string, Chronicle>();
+  #chronicleLoginIndex = new Map<string, string>();
   #characterLoginIndex = new Map<string, string>();
 
   constructor(options: { bucket: string; prefix?: string; client?: S3Client }) {
     if (!options.bucket) {
-      throw new Error("S3SessionStore requires a bucket name.");
+      throw new Error("S3WorldDataStore requires a bucket name.");
     }
     this.#bucket = options.bucket;
     this.#prefix = options.prefix ? options.prefix.replace(/\/+$/, "") + "/" : "";
@@ -86,9 +41,57 @@ export class S3SessionStore implements SessionStore {
       options.client ??
       new S3Client({
         region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1",
-      credentials
+        credentials
       });
-    log("info", `Using S3 session store bucket=${this.#bucket} prefix=${this.#prefix || "<root>"}`);
+    log("info", `Using S3 world data store bucket=${this.#bucket} prefix=${this.#prefix || "<root>"}`);
+  }
+
+  async ensureChronicle(params: {
+    chronicleId?: string;
+    loginId: string;
+    locationId: string;
+    characterId?: string;
+    title?: string;
+    status?: Chronicle["status"];
+  }): Promise<Chronicle> {
+    const chronicleId = params.chronicleId ?? randomUUID();
+    const existing = await this.getChronicle(chronicleId);
+    if (existing) {
+      return existing;
+    }
+    const record: Chronicle = {
+      id: chronicleId,
+      loginId: params.loginId,
+      locationId: params.locationId,
+      characterId: params.characterId,
+      title:
+        params.title?.trim() && params.title.trim().length > 0
+          ? params.title.trim()
+          : "Untitled Chronicle",
+      status: params.status ?? "open",
+      metadata: undefined
+    };
+    return this.upsertChronicle(record);
+  }
+
+  async getChronicleState(chronicleId: string): Promise<ChronicleState | null> {
+    const chronicle = await this.getChronicle(chronicleId);
+    if (!chronicle) {
+      return null;
+    }
+    const character = chronicle.characterId ? await this.getCharacter(chronicle.characterId) : null;
+    const location = chronicle.locationId ? await this.getLocation(chronicle.locationId) : null;
+    const turns = await this.listChronicleTurns(chronicleId);
+    const lastTurn = turns.length ? turns[turns.length - 1] : null;
+    const turnSequence = lastTurn?.turnSequence ?? -1;
+    return {
+      chronicleId: chronicle.id,
+      turnSequence,
+      chronicle,
+      character,
+      location,
+      turns
+    };
   }
 
   async upsertLogin(login: Login): Promise<Login> {
@@ -166,53 +169,54 @@ export class S3SessionStore implements SessionStore {
     return records.filter((character): character is Character => Boolean(character));
   }
 
-  async upsertSession(session: SessionRecord): Promise<SessionRecord> {
-    this.#sessions.set(session.id, session);
-    this.#sessionLoginIndex.set(session.id, session.loginId);
+  async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
+    this.#chronicles.set(chronicle.id, chronicle);
+    this.#chronicleLoginIndex.set(chronicle.id, chronicle.loginId);
     await Promise.all([
-      this.#writeJson(this.#sessionKey(session.loginId, session.id), session),
-      this.#writeJson(this.#sessionIndexKey(session.id), { loginId: session.loginId })
+      this.#writeJson(this.#chronicleKey(chronicle.loginId, chronicle.id), chronicle),
+      this.#writeJson(this.#chronicleIndexKey(chronicle.id), { loginId: chronicle.loginId })
     ]);
-    return session;
+    return chronicle;
   }
 
-  async getSession(sessionId: string): Promise<SessionRecord | null> {
-    const cached = this.#sessions.get(sessionId);
+  async getChronicle(chronicleId: string): Promise<Chronicle | null> {
+    const cached = this.#chronicles.get(chronicleId);
     if (cached) return cached;
 
-    const loginId = await this.#resolveSessionLogin(sessionId);
+    const loginId = await this.#resolveChronicleLogin(chronicleId);
     if (!loginId) return null;
 
-    const record = await this.#readJson<SessionRecord>(this.#sessionKey(loginId, sessionId));
+    const record = await this.#readJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
     if (record) {
-      this.#sessions.set(sessionId, record);
-      this.#sessionLoginIndex.set(sessionId, loginId);
+      this.#chronicles.set(chronicleId, record);
+      this.#chronicleLoginIndex.set(chronicleId, loginId);
     }
     return record;
   }
 
-  async listSessionsByLogin(loginId: string): Promise<SessionRecord[]> {
-    const keys = await this.#listKeys(`${this.#prefix}sessions/${loginId}/`, true);
-    const records = await Promise.all(keys.map((key) => this.#readJson<SessionRecord>(key)));
-    return records.filter((session): session is SessionRecord => Boolean(session));
+  async listChroniclesByLogin(loginId: string): Promise<Chronicle[]> {
+    const keys = await this.#listKeys(`${this.#prefix}chronicles/${loginId}/`, true);
+    const records = await Promise.all(keys.map((key) => this.#readJson<Chronicle>(key)));
+    return records.filter((chronicle): chronicle is Chronicle => Boolean(chronicle));
   }
 
   async addTurn(turn: Turn): Promise<Turn> {
-    const session = await this.getSession(turn.sessionId);
-    if (!session) {
-      throw new Error(`Session ${turn.sessionId} not found for turn ${turn.id}`);
+    const chronicleId = turn.chronicleId;
+    const chronicle = chronicleId ? await this.getChronicle(chronicleId) : null;
+    if (!chronicle || !chronicleId) {
+      throw new Error(`Chronicle ${chronicleId ?? "<unknown>"} not found for turn ${turn.id}`);
     }
-    const key = this.#turnKey(session.loginId, session.id, turn.id);
+    const key = this.#turnKey(chronicle.loginId, chronicle.id, turn.id);
     await this.#writeJson(key, turn);
     return turn;
   }
 
-  async listTurns(sessionId: string): Promise<Turn[]> {
-    const session = await this.getSession(sessionId);
-    if (!session) {
+  async listChronicleTurns(chronicleId: string): Promise<Turn[]> {
+    const chronicle = await this.getChronicle(chronicleId);
+    if (!chronicle) {
       return [];
     }
-    const keys = await this.#listKeys(this.#turnPrefix(session.loginId, session.id));
+    const keys = await this.#listKeys(this.#turnPrefix(chronicle.loginId, chronicle.id));
     const turns = await Promise.all(keys.map((key) => this.#readJson<Turn>(key)));
     return turns
       .filter((turn): turn is Turn => Boolean(turn))
@@ -232,13 +236,13 @@ export class S3SessionStore implements SessionStore {
     return next;
   }
 
-  async #resolveSessionLogin(sessionId: string): Promise<string | null> {
-    if (this.#sessionLoginIndex.has(sessionId)) {
-      return this.#sessionLoginIndex.get(sessionId)!;
+  async #resolveChronicleLogin(chronicleId: string): Promise<string | null> {
+    if (this.#chronicleLoginIndex.has(chronicleId)) {
+      return this.#chronicleLoginIndex.get(chronicleId)!;
     }
-    const pointer = await this.#readJson<{ loginId: string }>(this.#sessionIndexKey(sessionId));
+    const pointer = await this.#readJson<{ loginId: string }>(this.#chronicleIndexKey(chronicleId));
     if (pointer?.loginId) {
-      this.#sessionLoginIndex.set(sessionId, pointer.loginId);
+      this.#chronicleLoginIndex.set(chronicleId, pointer.loginId);
       return pointer.loginId;
     }
     return null;
@@ -351,19 +355,19 @@ export class S3SessionStore implements SessionStore {
     return `${this.#prefix}characters/index/${characterId}.json`;
   }
 
-  #sessionKey(loginId: string, sessionId: string): string {
-    return `${this.#prefix}sessions/${loginId}/${sessionId}.json`;
+  #chronicleKey(loginId: string, chronicleId: string): string {
+    return `${this.#prefix}chronicles/${loginId}/${chronicleId}.json`;
   }
 
-  #sessionIndexKey(sessionId: string): string {
-    return `${this.#prefix}sessions/index/${sessionId}.json`;
+  #chronicleIndexKey(chronicleId: string): string {
+    return `${this.#prefix}chronicles/index/${chronicleId}.json`;
   }
 
-  #turnPrefix(loginId: string, sessionId: string): string {
-    return `${this.#prefix}sessions/${loginId}/${sessionId}/turns/`;
+  #turnPrefix(loginId: string, chronicleId: string): string {
+    return `${this.#prefix}chronicles/${loginId}/${chronicleId}/turns/`;
   }
 
-  #turnKey(loginId: string, sessionId: string, turnId: string): string {
-    return `${this.#turnPrefix(loginId, sessionId)}${turnId}.json`;
+  #turnKey(loginId: string, chronicleId: string, turnId: string): string {
+    return `${this.#turnPrefix(loginId, chronicleId)}${turnId}.json`;
   }
 }

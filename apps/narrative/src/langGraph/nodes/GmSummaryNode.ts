@@ -8,7 +8,7 @@ class GmSummaryNode implements GraphNode {
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure || !context.gmMessage || !context.playerIntent) {
       context.telemetry?.recordToolNotRun({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.gm-summary"
       });
       return {...context, failure: true}
@@ -26,12 +26,12 @@ class GmSummaryNode implements GraphNode {
         prompt,
         temperature: 0.35,
         maxTokens: 220,
-        metadata: { nodeId: this.id, sessionId: context.sessionId }
+        metadata: { nodeId: this.id, chronicleId: context.chronicleId }
       });
       summary = result.text?.trim() || "";
     } catch (error: any) {
       context.telemetry?.recordToolError?.({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.gm-summary",
         referenceId: null,
         attempt: 0,

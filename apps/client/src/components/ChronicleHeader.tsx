@@ -1,4 +1,4 @@
-import {useSessionStore} from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 
 const formatStatus = (state: string): string => {
   switch (state) {
@@ -9,22 +9,22 @@ const formatStatus = (state: string): string => {
     case "error":
       return "Connection interrupted. Please retry.";
     case "closed":
-      return "Session has been closed.";
+      return "Chronicle has been closed.";
     default:
       return "Idle.";
   }
 };
 
-export function SessionHeader() {
-  const transportError = useSessionStore((state) => state.transportError);
-  const sessionRecord = useSessionStore((state) => state.sessionRecord);
-  const connectionState = useSessionStore((state) => state.connectionState);
+export function ChronicleHeader() {
+  const transportError = useChronicleStore((state) => state.transportError);
+  const chronicleRecord = useChronicleStore((state) => state.chronicleRecord);
+  const connectionState = useChronicleStore((state) => state.connectionState);
   const statusText = formatStatus(connectionState);
   return (
     <>
       <header className="chat-header">
         <h2 className="chat-title">
-          {sessionRecord?.title?.trim() ? sessionRecord.title : "Unknown Session"}
+          {chronicleRecord?.title?.trim() ? chronicleRecord.title : "Unknown Chronicle"}
         </h2>
       </header>
       <div className="chat-status" role="status" aria-live="polite" data-testid="chat-status">

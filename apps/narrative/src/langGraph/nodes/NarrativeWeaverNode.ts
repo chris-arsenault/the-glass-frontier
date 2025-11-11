@@ -9,13 +9,19 @@ class NarrativeWeaverNode implements GraphNode {
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure || !context.playerIntent ) {
         context.telemetry?.recordToolNotRun({
-          sessionId: context.sessionId,
+          chronicleId: context.chronicleId,
           operation: "llm.narrative-weaver"
         });
         return {...context, failure: true}
     }
 
-    const prompt = composeNarrationPrompt(context.playerIntent, context.session, context.playerMessage.content, context.skillCheckPlan, context.skillCheckResult?.outcomeTier)
+    const prompt = composeNarrationPrompt(
+      context.playerIntent,
+      context.chronicle,
+      context.playerMessage.content,
+      context.skillCheckPlan,
+      context.skillCheckResult?.outcomeTier
+    );
     let narration: string;
 
     try {
@@ -25,13 +31,13 @@ class NarrativeWeaverNode implements GraphNode {
         maxTokens: 650,
         metadata: {
           nodeId: this.id,
-          sessionId: context.sessionId,
+          chronicleId: context.chronicleId,
         }
       });
       narration = result.text?.trim() || "";
     } catch (error) {
       context.telemetry?.recordToolError?.({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.narrative-weaver",
         attempt: 0,
         message: error instanceof Error ? error.message : "unknown"
@@ -40,7 +46,7 @@ class NarrativeWeaverNode implements GraphNode {
     }
 
     const gmMessage: TranscriptEntry = {
-      id: `narration-${context.sessionId}-${context.turnSequence}`,
+      id: `narration-${context.chronicleId}-${context.turnSequence}`,
       role: 'gm',
       content:  narration,
       metadata: {

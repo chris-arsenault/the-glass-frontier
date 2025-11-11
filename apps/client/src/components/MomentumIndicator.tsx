@@ -1,5 +1,5 @@
 import type { MomentumState } from "@glass-frontier/dto";
-import type { MomentumTrend } from "../state/sessionState";
+import type { MomentumTrend } from "../state/chronicleState";
 
 interface MomentumIndicatorProps {
   momentum: MomentumState;

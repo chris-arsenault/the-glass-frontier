@@ -5,7 +5,7 @@ import { SkillCheckPlan, SkillCheckResult } from "./SkillCheck";
 
 export const TurnSchema = z.object({
   id: z.string().min(1),
-  sessionId: z.string().min(1),
+  chronicleId: z.string().min(1),
   playerMessage: TranscriptEntry,
   gmMessage: TranscriptEntry.optional(),
   systemMessage: TranscriptEntry.optional(),

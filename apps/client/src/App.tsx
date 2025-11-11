@@ -6,14 +6,14 @@ import { useAuthStore } from "./stores/authStore";
 import { LoginScreen } from "./components/LoginScreen";
 import { useLoginResources } from "./hooks/useLoginResources";
 import { CreateCharacterModal } from "./components/CreateCharacterModal";
-import { useSessionStore } from "./stores/sessionStore";
-import { SessionHeader } from "./components/SessionHeader";
+import { useChronicleStore } from "./stores/chronicleStore";
+import { ChronicleHeader } from "./components/ChronicleHeader";
 import { MomentumIndicator } from "./components/MomentumIndicator";
 
 function SessionMeta() {
-  const character = useSessionStore((state) => state.character);
-  const loginLabel = useSessionStore((state) => state.loginName ?? state.loginId);
-  const momentumTrend = useSessionStore((state) => state.momentumTrend);
+  const character = useChronicleStore((state) => state.character);
+  const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId);
+  const momentumTrend = useChronicleStore((state) => state.momentumTrend);
 
   return (
     <div className="session-meta">
@@ -48,7 +48,7 @@ export default function App() {
             <div className="app-body">
               <main className="app-main">
                 <div className="session-bar">
-                  <SessionHeader />
+                  <ChronicleHeader />
                   <SessionMeta />
                 </div>
                 <ChatCanvas />

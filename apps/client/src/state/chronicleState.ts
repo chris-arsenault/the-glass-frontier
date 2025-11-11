@@ -1,9 +1,9 @@
 import type {
   Attribute,
   Character,
+  Chronicle,
   Intent,
   LocationProfile,
-  SessionRecord,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -11,7 +11,7 @@ import type {
 } from "@glass-frontier/dto";
 
 export type ConnectionState = "idle" | "connecting" | "connected" | "error" | "closed";
-export type SessionLifecycle = "open" | "closed";
+export type ChronicleLifecycle = "open" | "closed";
 export type DirectoryStatus = "idle" | "loading" | "ready" | "error";
 
 export interface ChatMessage {
@@ -49,9 +49,9 @@ export interface MomentumTrend {
   ceiling: number;
 }
 
-export interface SessionState {
-  sessionId: string | null;
-  sessionRecord: SessionRecord | null;
+export interface ChronicleState {
+  chronicleId: string | null;
+  chronicleRecord: Chronicle | null;
   loginId: string | null;
   loginName: string | null;
   preferredCharacterId: string | null;
@@ -62,25 +62,25 @@ export interface SessionState {
   isSending: boolean;
   isOffline: boolean;
   queuedIntents: number;
-  sessionStatus: SessionLifecycle;
+  chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
   location?: LocationProfile | null;
-  recentSessions: string[];
+  recentChronicles: string[];
   availableCharacters: Character[];
-  availableSessions: SessionRecord[];
+  availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;
   directoryError: Error | null;
   momentumTrend: MomentumTrend | null;
 }
 
-export interface SessionStore extends SessionState {
-  hydrateSession(sessionId: string): Promise<string>;
+export interface ChronicleStore extends ChronicleState {
+  hydrateChronicle(chronicleId: string): Promise<string>;
   sendPlayerMessage(input: { content: string }): Promise<void>;
   setPreferredCharacterId(characterId: string | null): void;
   refreshLoginResources(): Promise<void>;
-  createSessionForCharacter(details: SessionCreationDetails): Promise<string>;
+  createChronicleForCharacter(details: ChronicleCreationDetails): Promise<string>;
   createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
-  clearActiveSession(): void;
+  clearActiveChronicle(): void;
   resetStore(): void;
 }
 
@@ -92,7 +92,7 @@ export interface CharacterCreationDraft {
   skills: Character["skills"];
 }
 
-export interface SessionCreationDetails {
+export interface ChronicleCreationDetails {
   characterId?: string | null;
   title: string;
   locationName: string;

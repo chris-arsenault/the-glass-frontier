@@ -1,7 +1,7 @@
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 
 export function LocationOverview() {
-  const location = useSessionStore((state) => state.location);
+  const location = useChronicleStore((state) => state.location);
 
   if (!location) {
     return (

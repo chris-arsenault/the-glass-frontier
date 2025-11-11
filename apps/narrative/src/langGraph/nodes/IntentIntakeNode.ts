@@ -21,13 +21,13 @@ class IntentIntakeNode implements GraphNode {
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
       context.telemetry?.recordToolNotRun({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.intent-intake"
       });
       return {...context, failure: true}
     }
     const content: string = context.playerMessage.content ?? "";
-    const prompt = composeIntentPrompt({ session: context.session, playerMessage: content });
+    const prompt = composeIntentPrompt({ chronicle: context.chronicle, playerMessage: content });
     const fallback = fallbackIntent(content);
 
     let parsed: Record<string, any> | null = null;
@@ -37,12 +37,12 @@ class IntentIntakeNode implements GraphNode {
         prompt,
         temperature: 0.1,
         maxTokens: 500,
-        metadata: { nodeId: this.id, sessionId: context.sessionId }
+        metadata: { nodeId: this.id, chronicleId: context.chronicleId }
       });
       parsed = result.json;
     } catch (error) {
       context.telemetry?.recordToolError?.({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.intent-intake",
         referenceId: null,
         attempt: 0,
@@ -55,7 +55,7 @@ class IntentIntakeNode implements GraphNode {
     const requiresCheck: boolean = typeof parsed?.requiresCheck === "boolean" ? parsed.requiresCheck : fallback.requiresCheck;
     const creativeSpark: boolean = typeof parsed?.creativeSpark === "boolean" ? parsed.creativeSpark : fallback.creativeSpark;
     const skill: string = parsed.skill ?? fallback.skill;
-    const attribute: Attribute = context.session?.character?.skills?.[skill]?.attribute ?? parsed?.attribute ?? fallback.attribute
+    const attribute: Attribute = context.chronicle?.character?.skills?.[skill]?.attribute ?? parsed?.attribute ?? fallback.attribute
     const intentSummary: string = parsed?.intentSummary ?? fallback.intentSummary
 
     const playerIntent: Intent = {

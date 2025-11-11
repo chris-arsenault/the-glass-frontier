@@ -1,5 +1,5 @@
 import type { GraphContext } from "../types.js";
-import type { SessionTelemetry } from "../telemetry";
+import type { ChronicleTelemetry } from "../telemetry";
 
 export interface GraphNode {
   readonly id: string;
@@ -8,9 +8,9 @@ export interface GraphNode {
 
 class LangGraphOrchestrator {
   readonly #nodes: GraphNode[];
-  readonly #telemetry?: SessionTelemetry;
+  readonly #telemetry?: ChronicleTelemetry;
 
-  constructor(nodes: GraphNode[], telemetry: SessionTelemetry) {
+  constructor(nodes: GraphNode[], telemetry: ChronicleTelemetry) {
     if (!Array.isArray(nodes) || nodes.length === 0) {
       throw new Error("LangGraphOrchestrator requires at least one node");
     }
@@ -25,7 +25,7 @@ class LangGraphOrchestrator {
       const nodeId = node.id || "unknown-node";
 
       this.#telemetry?.recordTransition({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         nodeId,
         status: "start",
         turnSequence: context.turnSequence
@@ -36,7 +36,7 @@ class LangGraphOrchestrator {
         context = await node.execute(context);
         if (context.failure) {
           this.#telemetry?.recordTransition({
-            sessionId: context.sessionId,
+            chronicleId: context.chronicleId,
             nodeId,
             status: "error",
             turnSequence: context.turnSequence,
@@ -45,7 +45,7 @@ class LangGraphOrchestrator {
         }
 
         this.#telemetry?.recordTransition({
-          sessionId: context.sessionId,
+          chronicleId: context.chronicleId,
           nodeId,
           status: "success",
           turnSequence: context.turnSequence
@@ -53,7 +53,7 @@ class LangGraphOrchestrator {
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown";
         this.#telemetry?.recordTransition({
-          sessionId: context.sessionId,
+          chronicleId: context.chronicleId,
           nodeId,
           status: "error",
           turnSequence: context.turnSequence,

@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type {
   Character,
+  Chronicle,
   LocationProfile,
-  SessionRecord,
   TranscriptEntry,
   Turn
 } from "@glass-frontier/dto";
@@ -10,23 +10,23 @@ import type {
 import type {
   ChatMessage,
   CharacterCreationDraft,
+  ChronicleCreationDetails,
+  ChronicleStore,
   MomentumTrend,
-  SessionCreationDetails,
-  SessionStore,
   SkillProgressBadge
-} from "../state/sessionState";
+} from "../state/chronicleState";
 import { trpcClient } from "../lib/trpcClient";
 import { useAuthStore } from "./authStore";
 
-const RECENT_SESSIONS_KEY = "glass-frontier-recent-sessions";
-const MAX_RECENT_SESSIONS = 5;
+const RECENT_CHRONICLES_KEY = "glass-frontier-recent-chronicles";
+const MAX_RECENT_CHRONICLES = 5;
 
-const readRecentSessions = (): string[] => {
+const readRecentChronicles = (): string[] => {
   if (typeof window === "undefined") {
     return [];
   }
   try {
-    const raw = window.localStorage.getItem(RECENT_SESSIONS_KEY);
+    const raw = window.localStorage.getItem(RECENT_CHRONICLES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
@@ -35,12 +35,12 @@ const readRecentSessions = (): string[] => {
   }
 };
 
-const writeRecentSessions = (sessions: string[]) => {
+const writeRecentChronicles = (chronicles: string[]) => {
   if (typeof window === "undefined") {
     return;
   }
   try {
-    window.localStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(sessions));
+    window.localStorage.setItem(RECENT_CHRONICLES_KEY, JSON.stringify(chronicles));
   } catch {
     // ignore storage failures
   }
@@ -149,18 +149,18 @@ const buildPlayerEntry = (content: string): TranscriptEntry => ({
   }
 });
 
-const applyRecentSession = (sessions: string[], sessionId: string): string[] => {
-  const next = [sessionId, ...sessions.filter((id) => id !== sessionId)].slice(
+const applyRecentChronicle = (chronicles: string[], chronicleId: string): string[] => {
+  const next = [chronicleId, ...chronicles.filter((id) => id !== chronicleId)].slice(
     0,
-    MAX_RECENT_SESSIONS
+    MAX_RECENT_CHRONICLES
   );
-  writeRecentSessions(next);
+  writeRecentChronicles(next);
   return next;
 };
 
-const mergeSessionRecord = (list: SessionRecord[], session: SessionRecord) => {
-  const filtered = list.filter((existing) => existing.id !== session.id);
-  return [session, ...filtered];
+const mergeChronicleRecord = (list: Chronicle[], chronicle: Chronicle) => {
+  const filtered = list.filter((existing) => existing.id !== chronicle.id);
+  return [chronicle, ...filtered];
 };
 
 const mergeCharacterRecord = (list: Character[], character: Character) => {
@@ -208,8 +208,8 @@ const deriveMomentumTrend = (
 };
 
 const createBaseState = () => ({
-  sessionId: null as string | null,
-  sessionRecord: null as SessionRecord | null,
+  chronicleId: null as string | null,
+  chronicleRecord: null as Chronicle | null,
   loginId: null as string | null,
   loginName: null as string | null,
   preferredCharacterId: null as string | null,
@@ -220,18 +220,18 @@ const createBaseState = () => ({
   isSending: false,
   isOffline: false,
   queuedIntents: 0,
-  sessionStatus: "open" as const,
+  chronicleStatus: "open" as const,
   character: null as Character | null,
   location: null as LocationProfile | null,
-  recentSessions: readRecentSessions(),
+  recentChronicles: readRecentChronicles(),
   availableCharacters: [] as Character[],
-  availableSessions: [] as SessionRecord[],
+  availableChronicles: [] as Chronicle[],
   directoryStatus: "idle" as const,
   directoryError: null as Error | null,
-  momentumTrend: null as MomentumTrend | null,
+  momentumTrend: null as MomentumTrend | null
 });
 
-export const useSessionStore = create<SessionStore>()((set, get) => ({
+export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   ...createBaseState(),
 
   setPreferredCharacterId(characterId) {
@@ -252,9 +252,9 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }));
 
     try {
-      const [characters, sessions] = await Promise.all([
+      const [characters, chronicles] = await Promise.all([
         trpcClient.listCharacters.query({ loginId: identity.loginId }),
-        trpcClient.listSessions.query({ loginId: identity.loginId })
+        trpcClient.listChronicles.query({ loginId: identity.loginId })
       ]);
 
       set((prev) => ({
@@ -263,7 +263,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         loginName: identity.loginName,
         directoryStatus: "ready",
         availableCharacters: characters ?? [],
-        availableSessions: sessions ?? [],
+        availableChronicles: chronicles ?? [],
         directoryError: null,
         preferredCharacterId:
           prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId
@@ -280,49 +280,51 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }
   },
 
-  async hydrateSession(sessionId) {
-    if (!sessionId) {
-      throw new Error("Session id is required.");
+  async hydrateChronicle(chronicleId) {
+    if (!chronicleId) {
+      throw new Error("Chronicle id is required.");
     }
 
     set((prev) => ({
       ...prev,
-      connectionState: prev.sessionId === sessionId ? prev.connectionState : "connecting",
+      connectionState: prev.chronicleId === chronicleId ? prev.connectionState : "connecting",
       transportError: null
     }));
 
     try {
-      const session = await trpcClient.getSession.query({ sessionId });
-      if (!session) {
-        throw new Error("Session not found.");
+      const chronicleState = await trpcClient.getChronicle.query({ chronicleId });
+      if (!chronicleState) {
+        throw new Error("Chronicle not found.");
       }
 
       set((prev) => ({
         ...prev,
-        sessionId: session.sessionId,
-        sessionRecord: session.session ?? prev.sessionRecord,
-        loginId: session.session?.loginId ?? prev.loginId,
-        messages: flattenTurns(session.turns ?? []),
-        turnSequence: session.turnSequence ?? session.turns?.length ?? 0,
+        chronicleId: chronicleState.chronicleId,
+        chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
+        loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
+        messages: flattenTurns(chronicleState.turns ?? []),
+        turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
         connectionState: "connected",
-      sessionStatus: session.session?.status ?? "open",
-      character: session.character ?? null,
-      location: session.location ?? null,
-      transportError: null,
-      momentumTrend: prev.sessionId === session.sessionId ? prev.momentumTrend : null,
-      recentSessions: applyRecentSession(prev.recentSessions, session.sessionId),
-        availableSessions:
-          session.session && prev.availableSessions
-            ? mergeSessionRecord(prev.availableSessions, session.session)
-            : prev.availableSessions,
+        chronicleStatus: chronicleState.chronicle?.status ?? "open",
+        character: chronicleState.character ?? null,
+        location: chronicleState.location ?? null,
+        transportError: null,
+        momentumTrend:
+          prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
+        recentChronicles: applyRecentChronicle(
+          prev.recentChronicles,
+          chronicleState.chronicleId
+        ),
+        availableChronicles:
+          chronicleState.chronicle && prev.availableChronicles
+            ? mergeChronicleRecord(prev.availableChronicles, chronicleState.chronicle)
+            : prev.availableChronicles
       }));
 
-      return session.sessionId;
+      return chronicleState.chronicleId;
     } catch (error) {
       const nextError =
-        error instanceof Error
-          ? error
-          : new Error("Failed to connect to the narrative engine.");
+        error instanceof Error ? error : new Error("Failed to connect to the narrative engine.");
       set((prev) => ({
         ...prev,
         connectionState: "error",
@@ -332,7 +334,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }
   },
 
-  async createSessionForCharacter(details: SessionCreationDetails) {
+  async createChronicleForCharacter(details: ChronicleCreationDetails) {
     const identity = resolveLoginIdentity();
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const title = details.title?.trim() ?? "";
@@ -340,14 +342,14 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     const locationAtmosphere = details.locationAtmosphere?.trim() ?? "";
 
     if (!targetCharacterId) {
-      throw new Error("Select a character before starting a session.");
+      throw new Error("Select a character before starting a chronicle.");
     }
     if (!title || !locationName || !locationAtmosphere) {
-      throw new Error("Session title, location name, and atmosphere are required.");
+      throw new Error("Chronicle title, location name, and atmosphere are required.");
     }
 
     try {
-      const result = await trpcClient.createSession.mutate({
+      const result = await trpcClient.createChronicle.mutate({
         loginId: identity.loginId,
         characterId: targetCharacterId,
         title,
@@ -358,13 +360,13 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
       });
       set((prev) => ({
         ...prev,
-        availableSessions: mergeSessionRecord(prev.availableSessions, result.session),
+        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
         preferredCharacterId: targetCharacterId
       }));
-      return get().hydrateSession(result.session.id);
+      return get().hydrateChronicle(result.chronicle.id);
     } catch (error) {
       const nextError =
-        error instanceof Error ? error : new Error("Failed to create session.");
+        error instanceof Error ? error : new Error("Failed to create chronicle.");
       set((prev) => ({
         ...prev,
         transportError: nextError
@@ -411,18 +413,18 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }
   },
 
-  clearActiveSession() {
+  clearActiveChronicle() {
     set((prev) => ({
       ...prev,
-      sessionId: null,
-      sessionRecord: null,
+      chronicleId: null,
+      chronicleRecord: null,
       messages: [],
       turnSequence: 0,
       connectionState: "idle",
       transportError: null,
       isSending: false,
       queuedIntents: 0,
-      sessionStatus: "open",
+      chronicleStatus: "open",
       character: null,
       location: null,
       momentumTrend: null
@@ -442,9 +444,9 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
       return;
     }
 
-    const sessionId = get().sessionId;
-    if (!sessionId) {
-      const error = new Error("Select or create a session before sending intents.");
+    const chronicleId = get().chronicleId;
+    if (!chronicleId) {
+      const error = new Error("Select or create a chronicle before sending intents.");
       set((prev) => ({
         ...prev,
         transportError: error
@@ -465,7 +467,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
 
     try {
       const { turn, character } = await trpcClient.postMessage.mutate({
-        sessionId,
+        chronicleId,
         content: playerEntry
       });
 
@@ -519,9 +521,9 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
           momentumTrend: nextMomentumTrend,
-          recentSessions: applyRecentSession(
-            prev.recentSessions,
-            prev.sessionId ?? sessionId
+          recentChronicles: applyRecentChronicle(
+            prev.recentChronicles,
+            prev.chronicleId ?? chronicleId
           )
         };
       });

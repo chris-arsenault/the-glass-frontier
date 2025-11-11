@@ -1,52 +1,52 @@
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 import { useUiStore } from "../stores/uiStore";
 import { MomentumIndicator } from "./MomentumIndicator";
 
 export function SessionManager() {
-  const availableCharacters = useSessionStore((state) => state.availableCharacters);
-  const availableSessions = useSessionStore((state) => state.availableSessions);
-  const preferredCharacterId = useSessionStore((state) => state.preferredCharacterId);
-  const setPreferredCharacterId = useSessionStore((state) => state.setPreferredCharacterId);
-  const hydrateSession = useSessionStore((state) => state.hydrateSession);
-  const createSessionForCharacter = useSessionStore((state) => state.createSessionForCharacter);
-  const refreshDirectory = useSessionStore((state) => state.refreshLoginResources);
-  const recentSessions = useSessionStore((state) => state.recentSessions);
-  const connectionState = useSessionStore((state) => state.connectionState);
-  const loginLabel = useSessionStore((state) => state.loginName ?? state.loginId ?? "Unknown");
-  const currentSession = useSessionStore((state) => state.sessionId);
-  const directoryStatus = useSessionStore((state) => state.directoryStatus);
-  const directoryError = useSessionStore((state) => state.directoryError);
-  const activeCharacterId = useSessionStore((state) => state.character?.id ?? null);
-  const momentumTrend = useSessionStore((state) => state.momentumTrend);
+  const availableCharacters = useChronicleStore((state) => state.availableCharacters);
+  const availableChronicles = useChronicleStore((state) => state.availableChronicles);
+  const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
+  const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
+  const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
+  const createChronicleForCharacter = useChronicleStore((state) => state.createChronicleForCharacter);
+  const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
+  const recentChronicles = useChronicleStore((state) => state.recentChronicles);
+  const connectionState = useChronicleStore((state) => state.connectionState);
+  const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId ?? "Unknown");
+  const currentChronicleId = useChronicleStore((state) => state.chronicleId);
+  const directoryStatus = useChronicleStore((state) => state.directoryStatus);
+  const directoryError = useChronicleStore((state) => state.directoryError);
+  const activeCharacterId = useChronicleStore((state) => state.character?.id ?? null);
+  const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
-  const clearActiveSession = useSessionStore((state) => state.clearActiveSession);
-  const [sessionTitle, setSessionTitle] = useState("");
+  const clearActiveChronicle = useChronicleStore((state) => state.clearActiveChronicle);
+  const [chronicleTitle, setChronicleTitle] = useState("");
   const [locationName, setLocationName] = useState("");
   const [locationAtmosphere, setLocationAtmosphere] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const disabled = connectionState === "connecting" || isWorking || directoryStatus === "loading";
-  const canSubmitNewSession =
-    sessionTitle.trim().length > 0 &&
+  const canSubmitNewChronicle =
+    chronicleTitle.trim().length > 0 &&
     locationName.trim().length > 0 &&
     locationAtmosphere.trim().length > 0;
 
-  const displaySessions = useMemo(
-    () => recentSessions.filter((id) => id && id !== currentSession),
-    [recentSessions, currentSession]
+  const displayChronicles = useMemo(
+    () => recentChronicles.filter((id) => id && id !== currentChronicleId),
+    [recentChronicles, currentChronicleId]
   );
-  const sessionTitleById = useMemo(() => {
+  const chronicleTitleById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const session of availableSessions) {
-      if (session.id) {
-        map.set(session.id, session.title);
+    for (const chronicle of availableChronicles) {
+      if (chronicle.id) {
+        map.set(chronicle.id, chronicle.title);
       }
     }
     return map;
-  }, [availableSessions]);
+  }, [availableChronicles]);
   const characterNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const character of availableCharacters) {
@@ -54,60 +54,60 @@ export function SessionManager() {
     }
     return map;
   }, [availableCharacters]);
-  const handleLoad = async (sessionId: string) => {
-    if (!sessionId) return;
+  const handleLoad = async (chronicleId: string) => {
+    if (!chronicleId) return;
     setError(null);
     setIsWorking(true);
     try {
-      await hydrateSession(sessionId);
+      await hydrateChronicle(chronicleId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load session.");
+      setError(err instanceof Error ? err.message : "Unable to load chronicle.");
     } finally {
       setIsWorking(false);
     }
   };
 
-  const handleCreateSession = async (characterId?: string | null) => {
-    const trimmedTitle = sessionTitle.trim();
+  const handleCreateChronicle = async (characterId?: string | null) => {
+    const trimmedTitle = chronicleTitle.trim();
     const trimmedLocationName = locationName.trim();
     const trimmedAtmosphere = locationAtmosphere.trim();
     const targetCharacterId = characterId ?? preferredCharacterId;
 
     if (!trimmedTitle || !trimmedLocationName || !trimmedAtmosphere) {
-      setError("Session title, location name, and atmosphere are required.");
+      setError("Chronicle title, location name, and atmosphere are required.");
       return;
     }
     if (!targetCharacterId) {
-      setError("Select a character before starting a session.");
+      setError("Select a character before starting a chronicle.");
       return;
     }
 
     setError(null);
     setIsWorking(true);
     try {
-      await createSessionForCharacter({
+      await createChronicleForCharacter({
         characterId: targetCharacterId,
         title: trimmedTitle,
         locationName: trimmedLocationName,
         locationAtmosphere: trimmedAtmosphere
       });
-      setSessionTitle("");
+      setChronicleTitle("");
       setLocationName("");
       setLocationAtmosphere("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create session.");
+      setError(err instanceof Error ? err.message : "Unable to create chronicle.");
     } finally {
       setIsWorking(false);
     }
   };
 
-  const handleNewSessionSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleNewChronicleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await handleCreateSession();
+    await handleCreateChronicle();
   };
 
   return (
-    <section className="session-manager" aria-label="Session management">
+    <section className="session-manager" aria-label="Chronicle management">
       <div className="session-manager-header">
         <h3>Control</h3>
         <div className="session-manager-header-actions">
@@ -149,20 +149,20 @@ export function SessionManager() {
 
       <div className="session-manager-section">
         <div className="session-manager-section-header">
-          <h4>New Session</h4>
+          <h4>New Chronicle</h4>
           <p className="session-manager-hint">All fields required before starting.</p>
         </div>
-        <form className="session-manager-form" onSubmit={handleNewSessionSubmit}>
-          <label className="session-manager-label" htmlFor="session-title">
-            Session Title
+        <form className="session-manager-form" onSubmit={handleNewChronicleSubmit}>
+          <label className="session-manager-label" htmlFor="chronicle-title">
+            Chronicle Title
           </label>
           <input
-            id="session-title"
-            name="session-title"
+            id="chronicle-title"
+            name="chronicle-title"
             className="session-manager-input"
             placeholder="The Shattered Observatory"
-            value={sessionTitle}
-            onChange={(event) => setSessionTitle(event.target.value)}
+            value={chronicleTitle}
+            onChange={(event) => setChronicleTitle(event.target.value)}
             disabled={disabled}
             required
           />
@@ -195,9 +195,9 @@ export function SessionManager() {
           <button
             type="submit"
             className="session-manager-new"
-            disabled={disabled || !preferredCharacterId || !canSubmitNewSession}
+            disabled={disabled || !preferredCharacterId || !canSubmitNewChronicle}
           >
-            Start Session
+            Start Chronicle
           </button>
         </form>
       </div>
@@ -206,7 +206,7 @@ export function SessionManager() {
         <div className="session-manager-section-header">
           <h4>Characters</h4>
           <p className="session-manager-hint">
-            Select a character before starting a new session.
+            Select a character before starting a new chronicle.
           </p>
         </div>
         {availableCharacters.length === 0 ? (
@@ -242,11 +242,11 @@ export function SessionManager() {
                     className="chip-button"
                     onClick={() => {
                       setPreferredCharacterId(character.id);
-                      handleCreateSession(character.id);
+                      handleCreateChronicle(character.id);
                     }}
-                    disabled={disabled || !canSubmitNewSession}
+                    disabled={disabled || !canSubmitNewChronicle}
                   >
-                    Start Session
+                    Start Chronicle
                   </button>
                 </div>
               </li>
@@ -257,21 +257,21 @@ export function SessionManager() {
 
       <div className="session-manager-section">
         <div className="session-manager-section-header">
-          <h4>Sessions</h4>
+          <h4>Chronicles</h4>
           <button
             type="button"
             className="chip-button"
-            onClick={clearActiveSession}
-            disabled={!currentSession}
+            onClick={clearActiveChronicle}
+            disabled={!currentChronicleId}
           >
             Clear Active
           </button>
         </div>
-        {availableSessions.length === 0 ? (
-          <p className="session-manager-empty">No sessions on record.</p>
+        {availableChronicles.length === 0 ? (
+          <p className="session-manager-empty">No chronicles on record.</p>
         ) : (
           <ul className="session-manager-card-list">
-            {availableSessions.map((session) => (
+            {availableChronicles.map((session) => (
               <li key={session.id} className="session-manager-card">
                 <div>
                   <p className="session-card-title">{session.title}</p>
@@ -301,12 +301,12 @@ export function SessionManager() {
 
       <div className="session-manager-recents">
         <p className="session-manager-label">Recent</p>
-        {displaySessions.length === 0 ? (
-          <p className="session-manager-empty">No previous sessions</p>
+        {displayChronicles.length === 0 ? (
+          <p className="session-manager-empty">No previous chronicles</p>
         ) : (
           <ul className="session-manager-list">
-            {displaySessions.map((id) => {
-              const label = sessionTitleById.get(id);
+            {displayChronicles.map((id) => {
+              const label = chronicleTitleById.get(id);
               return (
                 <li key={id}>
                   <button
@@ -315,7 +315,7 @@ export function SessionManager() {
                     onClick={() => handleLoad(id)}
                     disabled={disabled}
                   >
-                    {label ?? "Unknown Session"}
+                    {label ?? "Unknown Chronicle"}
                   </button>
                 </li>
               );

@@ -1,24 +1,24 @@
 import { log } from "@glass-frontier/utils";
-import { InMemorySessionStore, type SessionStore } from "./services/SessionStore";
+import { InMemoryWorldDataStore, type WorldDataStore } from "./services/WorldDataStore";
 import { LangGraphOrchestrator } from "./langGraph/orchestrator";
-import { SessionTelemetry } from "./telemetry";
+import { ChronicleTelemetry } from "./telemetry";
 import {CheckPlannerNode, GmSummaryNode, IntentIntakeNode, NarrativeWeaverNode, UpdateCharacterNode } from "./langGraph/nodes";
 import { LangGraphLlmClient } from "./langGraph/llmClient";
-import {GraphContext, SessionState} from "./types";
+import {GraphContext, ChronicleState} from "./types";
 import {Character, TranscriptEntry, Turn} from "@glass-frontier/dto";
 import {randomUUID} from "node:crypto";
 
 class NarrativeEngine {
-  readonly sessionStore: SessionStore;
-  readonly telemetry: SessionTelemetry;
+  readonly worldDataStore: WorldDataStore;
+  readonly telemetry: ChronicleTelemetry;
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
 
   constructor(options?: {
-    sessionStore?: SessionStore;
+    worldDataStore?: WorldDataStore;
   }) {
-    this.sessionStore = options?.sessionStore ?? new InMemorySessionStore();
-    this.telemetry =  new SessionTelemetry();
+    this.worldDataStore = options?.worldDataStore ?? new InMemoryWorldDataStore();
+    this.telemetry =  new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.graph = new LangGraphOrchestrator(
       [
@@ -26,33 +26,33 @@ class NarrativeEngine {
         new CheckPlannerNode(),
         new NarrativeWeaverNode(),
         new GmSummaryNode(),
-        new UpdateCharacterNode(this.sessionStore)
+        new UpdateCharacterNode(this.worldDataStore)
       ],
       this.telemetry
     );
   }
 
   async handlePlayerMessage(
-    sessionId: string,
+    chronicleId: string,
     playerMessage: TranscriptEntry,
     options?: { authorizationHeader?: string }
   ): Promise<{ turn: Turn; updatedCharacter: Character | null }> {
-    if (!sessionId) {
-      throw new Error("sessionId is required");
+    if (!chronicleId) {
+      throw new Error("chronicleId is required");
     }
 
-    const session: SessionState | null = await this.sessionStore.getSessionState(sessionId);
-    if (!session) {
-      throw new Error(`Session ${sessionId} not found`);
+    const chronicleState: ChronicleState | null = await this.worldDataStore.getChronicleState(chronicleId);
+    if (!chronicleState) {
+      throw new Error(`Chronicle ${chronicleId} not found`);
     }
-    const turnSequence: number = session.turnSequence + 1;
+    const turnSequence: number = chronicleState.turnSequence + 1;
     let errorResponse: TranscriptEntry | undefined;
 
     let graphResult;
     const graphInput: GraphContext = {
-      sessionId,
+      chronicleId,
       turnSequence,
-      session,
+      chronicle: chronicleState,
       playerMessage,
       llm: this.createLlmClient(options?.authorizationHeader),
       telemetry: this.telemetry,
@@ -63,7 +63,7 @@ class NarrativeEngine {
     } catch (error) {
       const errorMessage: string = error instanceof Error ? error.message : "unknown"
       log("error", "Narrative engine failed during graph execution", {
-        sessionId,
+        chronicleId,
         message: errorMessage
       });
       errorResponse = {
@@ -82,7 +82,7 @@ class NarrativeEngine {
 
     const turn: Turn = {
       id: randomUUID(),
-      sessionId,
+      chronicleId,
       playerMessage: playerMessage,
       gmMessage: graphResult?.gmMessage,
       systemMessage: systemMessage,
@@ -94,14 +94,14 @@ class NarrativeEngine {
       failure: failure
     }
 
-    await this.sessionStore.addTurn(turn);
+    await this.worldDataStore.addTurn(turn);
 
     log("info", "Narrative engine resolved turn", {
-      sessionId,
+      chronicleId,
       checkIssued: Boolean(graphResult?.skillCheckPlan),
     });
 
-    const updatedCharacter = graphResult?.updatedCharacter ?? session.character ?? null;
+    const updatedCharacter = graphResult?.updatedCharacter ?? chronicleState.character ?? null;
 
     return { turn, updatedCharacter };
   }

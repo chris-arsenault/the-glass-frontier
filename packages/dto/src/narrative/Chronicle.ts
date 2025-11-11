@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Metadata } from "../Metadata";
 
-export const SessionRecord = z.object({
+export const Chronicle = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   loginId: z.string().min(1),
@@ -11,4 +11,4 @@ export const SessionRecord = z.object({
   metadata: Metadata.optional()
 });
 
-export type SessionRecord = z.infer<typeof SessionRecord>;
+export type Chronicle = z.infer<typeof Chronicle>;

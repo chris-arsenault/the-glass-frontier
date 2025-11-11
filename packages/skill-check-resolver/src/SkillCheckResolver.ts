@@ -58,7 +58,7 @@ class SkillCheckResolver {
         checkId: this.request.checkId,
         dieSum: dieResult,
         disadvantage: roller.disadvantage,
-        sessionId: this.request.sessionId,
+        chronicleId: this.request.chronicleId,
         totalModifier: modifier,
         margin: margin,
         outcomeTier: outcomeTier,

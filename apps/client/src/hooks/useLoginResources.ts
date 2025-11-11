@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useSessionStore } from "../stores/sessionStore";
+import { useChronicleStore } from "../stores/chronicleStore";
 
 export function useLoginResources(isAuthenticated: boolean) {
-  const refresh = useSessionStore((state) => state.refreshLoginResources);
-  const resetStore = useSessionStore((state) => state.resetStore);
-  const directoryStatus = useSessionStore((state) => state.directoryStatus);
+  const refresh = useChronicleStore((state) => state.refreshLoginResources);
+  const resetStore = useChronicleStore((state) => state.resetStore);
+  const directoryStatus = useChronicleStore((state) => state.directoryStatus);
 
   useEffect(() => {
     if (!isAuthenticated) {

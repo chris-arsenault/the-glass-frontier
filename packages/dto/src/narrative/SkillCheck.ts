@@ -5,7 +5,7 @@ import {Metadata} from "../Metadata";
 
 /** SkillCheckResult */
 export const SkillCheckResult = z.object({
-  sessionId: z.string().min(1),
+  chronicleId: z.string().min(1),
   checkId: z.string().min(1),
   totalModifier: z.number(),
   advantage: z.boolean(),
@@ -30,7 +30,7 @@ export type SkillCheckPlan = z.infer<typeof SkillCheckPlan>;
 
 /** SkillCheckRequest */
 export const SkillCheckRequest = z.object({
-  sessionId: z.string().min(1),
+  chronicleId: z.string().min(1),
   checkId: z.string().min(1),
   flags: z.array(z.string()),
   attribute: Attribute,

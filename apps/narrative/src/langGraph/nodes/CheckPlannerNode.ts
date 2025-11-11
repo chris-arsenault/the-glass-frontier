@@ -24,30 +24,30 @@ class CheckPlannerNode implements GraphNode {
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
       context.telemetry?.recordToolNotRun({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.check-planner"
       });
       return {...context, failure: true}
     }
-    if (!context.playerIntent || !context.playerIntent?.requiresCheck || !context.session.character) {
+    if (!context.playerIntent || !context.playerIntent?.requiresCheck || !context.chronicle.character) {
       return { ...context, skillCheckResult: undefined };
     }
     const fallback = fallbackPlan();
 
     let parsed: Record<string, any> | null = null;
 
-    const prompt = composeCheckRulesPrompt( context.playerIntent, context.session);
+    const prompt = composeCheckRulesPrompt(context.playerIntent, context.chronicle);
     try {
       const result = await context.llm.generateJson({
         prompt,
         temperature: 0.25,
         maxTokens: 700,
-        metadata: { nodeId: this.id, sessionId: context.sessionId }
+        metadata: { nodeId: this.id, chronicleId: context.chronicleId }
       });
       parsed = result.json;
     } catch (error) {
       context.telemetry?.recordToolError?.({
-        sessionId: context.sessionId,
+        chronicleId: context.chronicleId,
         operation: "llm.check-planner",
         attempt: 0,
         message: error instanceof Error ? error.message : "unknown"
@@ -79,12 +79,12 @@ class CheckPlannerNode implements GraphNode {
     }
 
     const input: SkillCheckRequest = {
-      sessionId: context.sessionId,
+      chronicleId: context.chronicleId,
       checkId: randomUUID(),
       flags: flags,
       attribute: context.playerIntent.attribute,
       skill: context.playerIntent.skill,
-      character: context.session.character,
+      character: context.chronicle.character,
       riskLevel: riskLevel,
       metadata: {
         timestamp: Date.now(),

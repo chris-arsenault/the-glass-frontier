@@ -10,7 +10,7 @@ class CheckRequestTelemetry {
 
   recordCheckInvalid(): void {
     log("error", "telemetry.check.valid", {
-      sessionId: this.request.sessionId,
+      chronicleId: this.request.chronicleId,
       checkId: this.request.checkId,
       valid: false
     });
@@ -18,7 +18,7 @@ class CheckRequestTelemetry {
 
   recordCheckRun(result: SkillCheckResult): void {
     log("info", "telemetry.check.result", {
-      sessionId: this.request.sessionId,
+      chronicleId: this.request.chronicleId,
       checkId: this.request.checkId,
       outcome: result.outcomeTier
     });
@@ -26,7 +26,7 @@ class CheckRequestTelemetry {
 
   recordCheckError(error: any): void {
     log("error", "telemetry.check.error", {
-      sessionId: this.request.sessionId,
+      chronicleId: this.request.chronicleId,
       checkId: this.request.checkId,
       error: error?.message
     });
