@@ -48,3 +48,27 @@ resource "aws_iam_role_policy_attachment" "narrative_s3" {
   role       = aws_iam_role.narrative_lambda.name
   policy_arn = aws_iam_policy.narrative_s3.arn
 }
+
+data "aws_iam_policy_document" "narrative_dynamodb" {
+  statement {
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:Query",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:DeleteItem"
+    ]
+    resources = [aws_dynamodb_table.world_index.arn]
+  }
+}
+
+resource "aws_iam_policy" "narrative_dynamodb" {
+  name        = "${local.name_prefix}-narrative-dynamodb"
+  description = "Allow the narrative lambda to query/write world index pointers."
+  policy      = data.aws_iam_policy_document.narrative_dynamodb.json
+}
+
+resource "aws_iam_role_policy_attachment" "narrative_dynamodb" {
+  role       = aws_iam_role.narrative_lambda.name
+  policy_arn = aws_iam_policy.narrative_dynamodb.arn
+}

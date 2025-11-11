@@ -13,6 +13,7 @@ import { log } from "@glass-frontier/utils";
 import type { WorldStateStore } from "./worldStateStore";
 import type { CharacterProgressPayload, ChronicleSnapshot } from "./types";
 import { applyCharacterSnapshotProgress } from "./characterProgress";
+import { WorldIndexRepository } from "./worldIndexRepository";
 
 const isNotFound = (error: unknown): boolean => {
   const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
@@ -23,6 +24,7 @@ export class S3WorldStateStore implements WorldStateStore {
   #bucket: string;
   #prefix: string;
   #client: S3Client;
+  #index: WorldIndexRepository;
 
   #logins = new Map<string, Login>();
   #locations = new Map<string, LocationProfile>();
@@ -31,12 +33,22 @@ export class S3WorldStateStore implements WorldStateStore {
   #chronicleLoginIndex = new Map<string, string>();
   #characterLoginIndex = new Map<string, string>();
 
-  constructor(options: { bucket: string; prefix?: string | null; client?: S3Client; region?: string }) {
+  constructor(options: {
+    bucket: string;
+    prefix?: string | null;
+    client?: S3Client;
+    region?: string;
+    worldIndex: WorldIndexRepository;
+  }) {
     if (!options.bucket) {
       throw new Error("S3WorldStateStore requires a bucket name.");
     }
+    if (!options.worldIndex) {
+      throw new Error("S3WorldStateStore requires a world index repository.");
+    }
     this.#bucket = options.bucket;
     this.#prefix = options.prefix ? options.prefix.replace(/\/+$/, "") + "/" : "";
+    this.#index = options.worldIndex;
     const credentials =
       process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? fromEnv() : undefined;
     this.#client =
@@ -143,10 +155,8 @@ export class S3WorldStateStore implements WorldStateStore {
   async upsertCharacter(character: Character): Promise<Character> {
     this.#characters.set(character.id, character);
     this.#characterLoginIndex.set(character.id, character.loginId);
-    await Promise.all([
-      this.#writeJson(this.#characterKey(character.loginId, character.id), character),
-      this.#writeJson(this.#characterIndexKey(character.id), { loginId: character.loginId })
-    ]);
+    await this.#writeJson(this.#characterKey(character.loginId, character.id), character);
+    await this.#index.linkCharacterToLogin(character.id, character.loginId);
     return character;
   }
 
@@ -166,18 +176,36 @@ export class S3WorldStateStore implements WorldStateStore {
   }
 
   async listCharactersByLogin(loginId: string): Promise<Character[]> {
-    const keys = await this.#listKeys(`${this.#prefix}characters/${loginId}/`);
-    const records = await Promise.all(keys.map((key) => this.#readJson<Character>(key)));
+    const characterIds = await this.#index.listCharactersByLogin(loginId);
+    if (characterIds.length === 0) {
+      return [];
+    }
+    const records = await Promise.all(
+      characterIds.map(async (characterId) => {
+        const cached = this.#characters.get(characterId);
+        if (cached) return cached;
+        const record = await this.#readJson<Character>(this.#characterKey(loginId, characterId));
+        if (record) {
+          this.#characters.set(characterId, record);
+          this.#characterLoginIndex.set(characterId, loginId);
+        }
+        return record;
+      })
+    );
     return records.filter((character): character is Character => Boolean(character));
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
     this.#chronicles.set(chronicle.id, chronicle);
     this.#chronicleLoginIndex.set(chronicle.id, chronicle.loginId);
-    await Promise.all([
-      this.#writeJson(this.#chronicleKey(chronicle.loginId, chronicle.id), chronicle),
-      this.#writeJson(this.#chronicleIndexKey(chronicle.id), { loginId: chronicle.loginId })
-    ]);
+    await this.#writeJson(this.#chronicleKey(chronicle.loginId, chronicle.id), chronicle);
+    await this.#index.linkChronicleToLogin(chronicle.id, chronicle.loginId);
+    if (chronicle.characterId) {
+      await this.#index.linkChronicleToCharacter(chronicle.id, chronicle.characterId);
+    }
+    if (chronicle.locationId) {
+      await this.#index.linkChronicleToLocation(chronicle.id, chronicle.locationId);
+    }
     return chronicle;
   }
 
@@ -197,8 +225,22 @@ export class S3WorldStateStore implements WorldStateStore {
   }
 
   async listChroniclesByLogin(loginId: string): Promise<Chronicle[]> {
-    const keys = await this.#listKeys(`${this.#prefix}chronicles/${loginId}/`, true);
-    const records = await Promise.all(keys.map((key) => this.#readJson<Chronicle>(key)));
+    const chronicleIds = await this.#index.listChroniclesByLogin(loginId);
+    if (chronicleIds.length === 0) {
+      return [];
+    }
+    const records = await Promise.all(
+      chronicleIds.map(async (chronicleId) => {
+        const cached = this.#chronicles.get(chronicleId);
+        if (cached) return cached;
+        const record = await this.#readJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
+        if (record) {
+          this.#chronicles.set(chronicleId, record);
+          this.#chronicleLoginIndex.set(chronicleId, loginId);
+        }
+        return record;
+      })
+    );
     return records.filter((chronicle): chronicle is Chronicle => Boolean(chronicle));
   }
 
@@ -210,19 +252,27 @@ export class S3WorldStateStore implements WorldStateStore {
     }
     const key = this.#turnKey(chronicle.loginId, chronicle.id, turn.id);
     await this.#writeJson(key, turn);
+    await this.#index.recordChronicleTurn(chronicle.id, turn.id, turn.turnSequence ?? 0);
     return turn;
   }
 
   async listChronicleTurns(chronicleId: string): Promise<Turn[]> {
-    const chronicle = await this.getChronicle(chronicleId);
-    if (!chronicle) {
+    const loginId = await this.#resolveChronicleLogin(chronicleId);
+    if (!loginId) {
       return [];
     }
-    const keys = await this.#listKeys(this.#turnPrefix(chronicle.loginId, chronicle.id));
-    const turns = await Promise.all(keys.map((key) => this.#readJson<Turn>(key)));
-    return turns
-      .filter((turn): turn is Turn => Boolean(turn))
-      .sort((a, b) => (a.turnSequence ?? 0) - (b.turnSequence ?? 0));
+    const pointers = await this.#index.listChronicleTurns(chronicleId);
+    if (pointers.length === 0) {
+      return [];
+    }
+    const turns: Turn[] = [];
+    for (const pointer of pointers) {
+      const record = await this.#readJson<Turn>(this.#turnKey(loginId, chronicleId, pointer.turnId));
+      if (record) {
+        turns.push(record);
+      }
+    }
+    return turns;
   }
 
   async applyCharacterProgress(update: CharacterProgressPayload): Promise<Character | null> {
@@ -242,10 +292,10 @@ export class S3WorldStateStore implements WorldStateStore {
     if (this.#chronicleLoginIndex.has(chronicleId)) {
       return this.#chronicleLoginIndex.get(chronicleId)!;
     }
-    const pointer = await this.#readJson<{ loginId: string }>(this.#chronicleIndexKey(chronicleId));
-    if (pointer?.loginId) {
-      this.#chronicleLoginIndex.set(chronicleId, pointer.loginId);
-      return pointer.loginId;
+    const loginId = await this.#index.getChronicleLogin(chronicleId);
+    if (loginId) {
+      this.#chronicleLoginIndex.set(chronicleId, loginId);
+      return loginId;
     }
     return null;
   }
@@ -254,10 +304,10 @@ export class S3WorldStateStore implements WorldStateStore {
     if (this.#characterLoginIndex.has(characterId)) {
       return this.#characterLoginIndex.get(characterId)!;
     }
-    const pointer = await this.#readJson<{ loginId: string }>(this.#characterIndexKey(characterId));
-    if (pointer?.loginId) {
-      this.#characterLoginIndex.set(characterId, pointer.loginId);
-      return pointer.loginId;
+    const loginId = await this.#index.getCharacterLogin(characterId);
+    if (loginId) {
+      this.#characterLoginIndex.set(characterId, loginId);
+      return loginId;
     }
     return null;
   }
@@ -353,16 +403,8 @@ export class S3WorldStateStore implements WorldStateStore {
     return `${this.#prefix}characters/${loginId}/${characterId}.json`;
   }
 
-  #characterIndexKey(characterId: string): string {
-    return `${this.#prefix}characters/index/${characterId}.json`;
-  }
-
   #chronicleKey(loginId: string, chronicleId: string): string {
     return `${this.#prefix}chronicles/${loginId}/${chronicleId}.json`;
-  }
-
-  #chronicleIndexKey(chronicleId: string): string {
-    return `${this.#prefix}chronicles/index/${chronicleId}.json`;
   }
 
   #turnPrefix(loginId: string, chronicleId: string): string {

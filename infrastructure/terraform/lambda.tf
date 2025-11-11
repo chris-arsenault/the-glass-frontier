@@ -33,6 +33,7 @@ resource "aws_lambda_function" "narrative" {
       NODE_ENV            = var.environment
       NARRATIVE_S3_BUCKET = aws_s3_bucket.narrative_data.id
       NARRATIVE_S3_PREFIX = "${var.environment}/"
+      NARRATIVE_DDB_TABLE = aws_dynamodb_table.world_index.name
       LLM_PROXY_URL       = "https://${local.api_domain}/llm"
       DOMAIN_NAME         = local.cloudfront_domain
     }
