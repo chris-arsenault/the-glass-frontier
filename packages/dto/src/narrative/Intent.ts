@@ -1,6 +1,6 @@
-import {Attribute} from "../mechanics";
-import {Metadata} from "../Metadata";
-import { z } from "zod"
+import { Attribute } from '../mechanics';
+import { Metadata } from '../Metadata';
+import { z } from 'zod';
 
 export const Intent = z.object({
   tone: z.string(),
@@ -9,6 +9,6 @@ export const Intent = z.object({
   requiresCheck: z.boolean(),
   intentSummary: z.string(),
   creativeSpark: z.boolean(),
-  metadata: Metadata
+  metadata: Metadata,
 });
 export type Intent = z.infer<typeof Intent>;

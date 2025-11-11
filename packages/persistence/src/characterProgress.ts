@@ -1,7 +1,13 @@
-import { SKILL_TIER_SEQUENCE, type Attribute, type Character, type Skill, type SkillTier } from "@glass-frontier/dto";
-import type { CharacterProgressPayload } from "./types";
+import {
+  SKILL_TIER_SEQUENCE,
+  type Attribute,
+  type Character,
+  type Skill,
+  type SkillTier,
+} from '@glass-frontier/dto';
+import type { CharacterProgressPayload } from './types';
 
-const clampMomentum = (state: Character["momentum"], delta: number): number => {
+const clampMomentum = (state: Character['momentum'], delta: number): number => {
   const candidate = state.current + delta;
   if (candidate < state.floor) {
     return state.floor;
@@ -54,8 +60,8 @@ const ensureSkillRecord = (
   const created: Skill = {
     name,
     attribute,
-    tier: "fool",
-    xp: 0
+    tier: 'fool',
+    xp: 0,
   };
   skillMap[name] = created;
   return created;
@@ -68,10 +74,10 @@ export const applyCharacterSnapshotProgress = (
   const next: Character = {
     ...character,
     momentum: { ...character.momentum },
-    skills: { ...character.skills }
+    skills: { ...character.skills },
   };
 
-  if (typeof update.momentumDelta === "number" && update.momentumDelta !== 0) {
+  if (typeof update.momentumDelta === 'number' && update.momentumDelta !== 0) {
     next.momentum.current = clampMomentum(next.momentum, update.momentumDelta);
   }
 
@@ -80,7 +86,9 @@ export const applyCharacterSnapshotProgress = (
     const baseline = ensureSkillRecord(next.skills, name, update.skill.attribute);
     const xpAward = update.skill.xpAward ?? 0;
     const normalizedBaseline =
-      baseline.attribute === update.skill.attribute ? baseline : { ...baseline, attribute: update.skill.attribute };
+      baseline.attribute === update.skill.attribute
+        ? baseline
+        : { ...baseline, attribute: update.skill.attribute };
     const normalized = normalizeSkill(normalizedBaseline, xpAward);
     next.skills[name] = normalized;
   }

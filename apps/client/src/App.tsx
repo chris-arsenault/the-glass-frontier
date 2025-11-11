@@ -1,16 +1,16 @@
-import { ChatCanvas } from "./components/ChatCanvas";
-import { ChatComposer } from "./components/ChatComposer";
-import { SideNavigation } from "./components/SideNavigation";
-import { CharacterDrawer } from "./components/CharacterDrawer";
-import { useAuthStore } from "./stores/authStore";
-import { LoginScreen } from "./components/LoginScreen";
-import { useLoginResources } from "./hooks/useLoginResources";
-import { useProgressStreamConnection } from "./hooks/useProgressStreamConnection";
-import { CreateCharacterModal } from "./components/CreateCharacterModal";
-import { useChronicleStore } from "./stores/chronicleStore";
-import { ChronicleHeader } from "./components/ChronicleHeader";
-import { MomentumIndicator } from "./components/MomentumIndicator";
-import { TemplateDrawer } from "./components/TemplateDrawer";
+import { ChatCanvas } from './components/ChatCanvas';
+import { ChatComposer } from './components/ChatComposer';
+import { SideNavigation } from './components/SideNavigation';
+import { CharacterDrawer } from './components/CharacterDrawer';
+import { useAuthStore } from './stores/authStore';
+import { LoginScreen } from './components/LoginScreen';
+import { useLoginResources } from './hooks/useLoginResources';
+import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
+import { CreateCharacterModal } from './components/CreateCharacterModal';
+import { useChronicleStore } from './stores/chronicleStore';
+import { ChronicleHeader } from './components/ChronicleHeader';
+import { MomentumIndicator } from './components/MomentumIndicator';
+import { TemplateDrawer } from './components/TemplateDrawer';
 
 function SessionMeta() {
   const character = useChronicleStore((state) => state.character);

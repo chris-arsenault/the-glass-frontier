@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Metadata } from "../Metadata";
+import { z } from 'zod';
+import { Metadata } from '../Metadata';
 
 export const Chronicle = z.object({
   id: z.string().min(1),
@@ -7,8 +7,8 @@ export const Chronicle = z.object({
   loginId: z.string().min(1),
   locationId: z.string().min(1),
   characterId: z.string().min(1).optional(),
-  status: z.enum(["open", "closed"]).default("open"),
-  metadata: Metadata.optional()
+  status: z.enum(['open', 'closed']).default('open'),
+  metadata: Metadata.optional(),
 });
 
 export type Chronicle = z.infer<typeof Chronicle>;

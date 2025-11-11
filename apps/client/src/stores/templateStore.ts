@@ -1,6 +1,6 @@
-import { create } from "zustand";
-import type { PromptTemplateId } from "@glass-frontier/dto";
-import { trpcClient } from "../lib/trpcClient";
+import { create } from 'zustand';
+import type { PromptTemplateId } from '@glass-frontier/dto';
+import { trpcClient } from '../lib/trpcClient';
 
 type TemplateSummary = Awaited<ReturnType<typeof trpcClient.listPromptTemplates.query>>[number];
 type TemplateDetail = Awaited<ReturnType<typeof trpcClient.getPromptTemplate.query>>;
@@ -33,7 +33,7 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
   summaries: {},
   selectedTemplateId: null,
   detail: null,
-  draft: "",
+  draft: '',
   isLoading: false,
   isSaving: false,
   error: null,
@@ -50,32 +50,36 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
         isLoading: false,
         error: null,
         selectedTemplateId:
-          prev.selectedTemplateId && summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
+          prev.selectedTemplateId &&
+          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
             ? prev.selectedTemplateId
             : null,
         detail:
-          prev.selectedTemplateId && summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
+          prev.selectedTemplateId &&
+          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
             ? prev.detail
             : null,
         draft:
-          prev.selectedTemplateId && summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
+          prev.selectedTemplateId &&
+          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
             ? prev.draft
-            : "",
+            : '',
         isDirty:
-          prev.selectedTemplateId && summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
+          prev.selectedTemplateId &&
+          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
             ? prev.isDirty
-            : false
+            : false,
       }));
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : "Failed to load templates."
+        error: error instanceof Error ? error.message : 'Failed to load templates.',
       });
     }
   },
   async selectTemplate(templateId, loginId) {
     if (!templateId || !loginId) {
-      set({ selectedTemplateId: templateId ?? null, detail: null, draft: "", isDirty: false });
+      set({ selectedTemplateId: templateId ?? null, detail: null, draft: '', isDirty: false });
       return;
     }
     set({ isLoading: true, error: null, selectedTemplateId: templateId });
@@ -83,15 +87,15 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
       const detail = await trpcClient.getPromptTemplate.query({ loginId, templateId });
       set({
         detail,
-        draft: detail?.editable ?? "",
+        draft: detail?.editable ?? '',
         isDirty: false,
         isLoading: false,
-        error: null
+        error: null,
       });
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : "Unable to load template."
+        error: error instanceof Error ? error.message : 'Unable to load template.',
       });
     }
   },
@@ -112,7 +116,7 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
       const next = await trpcClient.savePromptTemplate.mutate({
         loginId,
         templateId: selectedTemplateId,
-        editable: draft
+        editable: draft,
       });
       set((prev) => ({
         detail: next,
@@ -129,14 +133,14 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
             activeVariantId: next.activeVariantId,
             updatedAt: next.updatedAt,
             supportsVariants: next.supportsVariants,
-            hasOverride: next.hasOverride
-          }
-        }
+            hasOverride: next.hasOverride,
+          },
+        },
       }));
     } catch (error) {
       set({
         isSaving: false,
-        error: error instanceof Error ? error.message : "Failed to save template."
+        error: error instanceof Error ? error.message : 'Failed to save template.',
       });
       throw error;
     }
@@ -150,7 +154,7 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
     try {
       const next = await trpcClient.revertPromptTemplate.mutate({
         loginId,
-        templateId: selectedTemplateId
+        templateId: selectedTemplateId,
       });
       set((prev) => ({
         detail: next,
@@ -167,14 +171,14 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
             activeVariantId: next.activeVariantId,
             updatedAt: next.updatedAt,
             supportsVariants: next.supportsVariants,
-            hasOverride: next.hasOverride
-          }
-        }
+            hasOverride: next.hasOverride,
+          },
+        },
       }));
     } catch (error) {
       set({
         isSaving: false,
-        error: error instanceof Error ? error.message : "Failed to revert template."
+        error: error instanceof Error ? error.message : 'Failed to revert template.',
       });
       throw error;
     }
@@ -183,9 +187,9 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
     set({
       selectedTemplateId: null,
       detail: null,
-      draft: "",
+      draft: '',
       isDirty: false,
-      error: null
+      error: null,
     });
-  }
+  },
 }));

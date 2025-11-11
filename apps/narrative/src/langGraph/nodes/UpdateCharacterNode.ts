@@ -1,16 +1,16 @@
-import { MOMENTUM_DELTA, type Attribute } from "@glass-frontier/dto";
-import type { WorldStateStore, LocationGraphStore } from "@glass-frontier/persistence";
-import type { GraphContext } from "../../types.js";
-import type { GraphNode } from "../orchestrator.js";
-import { log } from "@glass-frontier/utils";
+import { MOMENTUM_DELTA, type Attribute } from '@glass-frontier/dto';
+import type { WorldStateStore, LocationGraphStore } from '@glass-frontier/persistence';
+import type { GraphContext } from '../../types.js';
+import type { GraphNode } from '../orchestrator.js';
+import { log } from '@glass-frontier/utils';
 
 const XP_REWARDS: Record<string, number> = {
   collapse: 2,
-  regress: 1
+  regress: 1,
 };
 
 class UpdateCharacterNode implements GraphNode {
-  readonly id = "character-update";
+  readonly id = 'character-update';
 
   constructor(
     private readonly worldStateStore: WorldStateStore,
@@ -33,8 +33,8 @@ class UpdateCharacterNode implements GraphNode {
     const skillName = intent.skill;
     const skillAttribute: Attribute | undefined = intent.attribute;
     const outcomeTier = checkResult?.outcomeTier;
-    const momentumDelta = outcomeTier ? MOMENTUM_DELTA[outcomeTier] ?? 0 : 0;
-    const xpAward = outcomeTier ? XP_REWARDS[outcomeTier] ?? 0 : 0;
+    const momentumDelta = outcomeTier ? (MOMENTUM_DELTA[outcomeTier] ?? 0) : 0;
+    const xpAward = outcomeTier ? (XP_REWARDS[outcomeTier] ?? 0) : 0;
 
     const skillMissing = Boolean(skillName && !context.chronicle.character?.skills?.[skillName]);
     const needsSkillXp = xpAward > 0;
@@ -52,9 +52,9 @@ class UpdateCharacterNode implements GraphNode {
         ? {
             name: skillName!,
             attribute: skillAttribute,
-            xpAward
+            xpAward,
           }
-        : undefined
+        : undefined,
     });
 
     let nextContext: GraphContext = context;
@@ -64,9 +64,9 @@ class UpdateCharacterNode implements GraphNode {
         ...nextContext,
         chronicle: {
           ...nextContext.chronicle,
-          character: updatedCharacter
+          character: updatedCharacter,
         },
-        updatedCharacter
+        updatedCharacter,
       };
     }
 
@@ -82,23 +82,28 @@ class UpdateCharacterNode implements GraphNode {
       return context;
     }
     try {
+      const locationId = context.chronicle.chronicle.locationId;
+      if (!locationId) {
+        return context;
+      }
       await this.locationGraphStore.applyPlan({
-        chronicleId: context.chronicleId,
+        locationId,
         characterId: context.chronicle.character.id,
-        plan: context.locationPlan
+        plan: context.locationPlan,
       });
       const summary = await this.locationGraphStore.summarizeCharacterLocation({
-        chronicleId: context.chronicleId,
-        characterId: context.chronicle.character.id
+        locationId,
+        characterId: context.chronicle.character.id,
       });
       return {
         ...context,
-        locationSummary: summary ?? context.locationSummary ?? null
+        locationSummary: summary ?? context.locationSummary ?? null,
       };
     } catch (error) {
-      log("warn", "location-plan.apply.failed", {
+      log('warn', 'location-plan.apply.failed', {
         chronicleId: context.chronicleId,
-        reason: error instanceof Error ? error.message : "unknown"
+        locationId: context.chronicle.chronicle.locationId,
+        reason: error instanceof Error ? error.message : 'unknown',
       });
       return context;
     }

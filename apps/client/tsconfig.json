@@ -10,8 +10,5 @@
     "jsx": "react"
   },
   "include": ["src"],
-  "references": [
-    { "path": "../../packages/dto" },
-    { "path": "../narrative" }
-  ]
+  "references": [{ "path": "../../packages/dto" }, { "path": "../narrative" }]
 }

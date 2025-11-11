@@ -1,11 +1,8 @@
-import type { SQSHandler } from "aws-lambda";
-import {
-  ApiGatewayManagementApi,
-  GoneException
-} from "@aws-sdk/client-apigatewaymanagementapi";
-import { log } from "@glass-frontier/utils";
-import { TurnProgressEventSchema } from "@glass-frontier/dto";
-import { ConnectionRepository } from "../services/ConnectionRepository";
+import type { SQSHandler } from 'aws-lambda';
+import { ApiGatewayManagementApi, GoneException } from '@aws-sdk/client-apigatewaymanagementapi';
+import { log } from '@glass-frontier/utils';
+import { TurnProgressEventSchema } from '@glass-frontier/dto';
+import { ConnectionRepository } from '../services/ConnectionRepository';
 
 const repository = new ConnectionRepository();
 const clientCache = new Map<string, ApiGatewayManagementApi>();
@@ -21,23 +18,23 @@ const resolveClient = (endpoint: string): ApiGatewayManagementApi => {
 };
 
 const serialize = (value: unknown): Uint8Array =>
-  typeof value === "string" ? Buffer.from(value) : Buffer.from(JSON.stringify(value));
+  typeof value === 'string' ? Buffer.from(value) : Buffer.from(JSON.stringify(value));
 
 export const handler: SQSHandler = async (event) => {
   for (const record of event.Records) {
     let payload: unknown;
     try {
-      payload = JSON.parse(record.body || "{}");
+      payload = JSON.parse(record.body || '{}');
     } catch {
-      log("error", "Progress event payload is not JSON", { messageId: record.messageId });
+      log('error', 'Progress event payload is not JSON', { messageId: record.messageId });
       continue;
     }
 
     const parsed = TurnProgressEventSchema.safeParse(payload);
     if (!parsed.success) {
-      log("error", "Progress event failed validation", {
+      log('error', 'Progress event failed validation', {
         messageId: record.messageId,
-        reason: parsed.error.message
+        reason: parsed.error.message,
       });
       continue;
     }
@@ -57,16 +54,16 @@ export const handler: SQSHandler = async (event) => {
         try {
           await client.postToConnection({
             ConnectionId: target.connectionId,
-            Data: data
+            Data: data,
           });
         } catch (error) {
-          if (error instanceof GoneException || (error as any)?.name === "GoneException") {
+          if (error instanceof GoneException || (error as any)?.name === 'GoneException') {
             await repository.purgeConnection(target.connectionId);
             return;
           }
-          log("error", "Failed to push progress event", {
+          log('error', 'Failed to push progress event', {
             connectionId: target.connectionId,
-            reason: error instanceof Error ? error.message : "unknown"
+            reason: error instanceof Error ? error.message : 'unknown',
           });
         }
       })

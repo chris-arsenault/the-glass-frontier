@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useAuthStore } from "../stores/authStore";
+import { useState } from 'react';
+import { useAuthStore } from '../stores/authStore';
 
 export function LoginScreen() {
   const login = useAuthStore((state) => state.login);
@@ -8,10 +8,10 @@ export function LoginScreen() {
   const storedUsername = useAuthStore((state) => state.username);
   const error = useAuthStore((state) => state.error);
   const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -75,7 +75,7 @@ export function LoginScreen() {
             </p>
           ) : null}
           <button type="submit" className="login-button" disabled={isAuthenticating}>
-            {isAuthenticating ? "Updating…" : "Save Password"}
+            {isAuthenticating ? 'Updating…' : 'Save Password'}
           </button>
         </form>
       ) : (
@@ -114,7 +114,7 @@ export function LoginScreen() {
             </p>
           ) : null}
           <button type="submit" className="login-button" disabled={isAuthenticating}>
-            {isAuthenticating ? "Signing in…" : "Sign In"}
+            {isAuthenticating ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
       )}

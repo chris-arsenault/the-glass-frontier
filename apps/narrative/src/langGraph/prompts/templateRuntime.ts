@@ -1,6 +1,6 @@
-import Handlebars from "handlebars";
-import type { PromptTemplateId } from "@glass-frontier/dto";
-import type { PromptTemplateManager } from "@glass-frontier/persistence";
+import Handlebars from 'handlebars';
+import type { PromptTemplateId } from '@glass-frontier/dto';
+import type { PromptTemplateManager } from '@glass-frontier/persistence';
 
 export class PromptTemplateRuntime {
   #loginId: string;

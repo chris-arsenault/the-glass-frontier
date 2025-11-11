@@ -7,12 +7,12 @@ import type {
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
-  TranscriptEntry
-} from "@glass-frontier/dto";
+  TranscriptEntry,
+} from '@glass-frontier/dto';
 
-export type ConnectionState = "idle" | "connecting" | "connected" | "error" | "closed";
-export type ChronicleLifecycle = "open" | "closed";
-export type DirectoryStatus = "idle" | "loading" | "ready" | "error";
+export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
+export type ChronicleLifecycle = 'open' | 'closed';
+export type DirectoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface ChatMessage {
   entry: TranscriptEntry;
@@ -27,18 +27,18 @@ export interface ChatMessage {
 
 export type SkillProgressBadge =
   | {
-      type: "skill-gain";
+      type: 'skill-gain';
       skill: string;
       tier: SkillTier;
       attribute?: Attribute | null;
     }
   | {
-      type: "skill-tier-up";
+      type: 'skill-tier-up';
       skill: string;
       tier: SkillTier;
     };
 
-export type MomentumDirection = "up" | "down" | "flat";
+export type MomentumDirection = 'up' | 'down' | 'flat';
 
 export interface MomentumTrend {
   direction: MomentumDirection;
@@ -90,8 +90,8 @@ export interface CharacterCreationDraft {
   name: string;
   archetype: string;
   pronouns: string;
-  attributes: Character["attributes"];
-  skills: Character["skills"];
+  attributes: Character['attributes'];
+  skills: Character['skills'];
 }
 
 export interface ChronicleCreationDetails {

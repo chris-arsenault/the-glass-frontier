@@ -5,7 +5,7 @@ declare global {
 }
 
 const runtimeConfig =
-  typeof window !== "undefined" && window.__GLASS_FRONTIER_CONFIG__
+  typeof window !== 'undefined' && window.__GLASS_FRONTIER_CONFIG__
     ? window.__GLASS_FRONTIER_CONFIG__
     : {};
 

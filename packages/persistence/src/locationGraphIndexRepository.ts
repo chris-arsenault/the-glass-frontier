@@ -1,124 +1,74 @@
-import {
-  DynamoDBClient,
-  PutItemCommand,
-  QueryCommand,
-  type AttributeValue
-} from "@aws-sdk/client-dynamodb";
-import type { LocationEdgeKind } from "@glass-frontier/dto";
+import type { AttributeValue, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import type { LocationEdgeKind } from '@glass-frontier/dto';
+import { HybridIndexRepository } from './hybridIndexRepository';
 
-const pkChronicle = (chronicleId: string) => `CHRONICLE#${chronicleId}`;
+const pkLocation = (locationId: string) => `LOCATION#${locationId}`;
 const pkPlace = (placeId: string) => `PLACE#${placeId}`;
 
 const skPlace = (placeId: string) => `PLACE#${placeId}`;
-const skEdge = (src: string, kind: LocationEdgeKind, dst: string) =>
-  `EDGE#${src}#${kind}#${dst}`;
+const skEdge = (src: string, kind: LocationEdgeKind, dst: string) => `EDGE#${src}#${kind}#${dst}`;
 
 const decodePlaceId = (value: string | undefined): string | null => {
-  if (!value || !value.startsWith("PLACE#")) {
+  if (!value || !value.startsWith('PLACE#')) {
     return null;
   }
-  return value.slice("PLACE#".length);
+  return value.slice('PLACE#'.length);
 };
 
 const decodeEdge = (
   value: string | undefined
 ): { src: string; kind: LocationEdgeKind; dst: string } | null => {
-  if (!value || !value.startsWith("EDGE#")) {
+  if (!value || !value.startsWith('EDGE#')) {
     return null;
   }
-  const [, src, kind, dst] = value.split("#");
+  const [, src, kind, dst] = value.split('#');
   if (!src || !kind || !dst) {
     return null;
   }
   return { src, kind: kind as LocationEdgeKind, dst };
 };
 
-export class LocationGraphIndexRepository {
-  #client: DynamoDBClient;
-  #tableName: string;
-
+export class LocationGraphIndexRepository extends HybridIndexRepository {
   constructor(options: { client: DynamoDBClient; tableName: string }) {
-    if (!options.tableName) {
-      throw new Error("LocationGraphIndexRepository requires a DynamoDB table name.");
-    }
-    this.#client = options.client;
-    this.#tableName = options.tableName;
+    super({ tableName: options.tableName, client: options.client });
   }
 
-  async registerPlace(chronicleId: string, placeId: string): Promise<void> {
-    await this.#put(pkChronicle(chronicleId), skPlace(placeId), {
-      entityType: { S: "place" },
-      placeId: { S: placeId }
+  async registerPlace(locationId: string, placeId: string): Promise<void> {
+    await this.put(pkLocation(locationId), skPlace(placeId), {
+      entityType: { S: 'place' },
+      placeId: { S: placeId },
     });
   }
 
   async registerEdge(
-    chronicleId: string,
+    locationId: string,
     edge: { src: string; kind: LocationEdgeKind; dst: string }
   ): Promise<void> {
     const attributes: Record<string, AttributeValue> = {
-      entityType: { S: "edge" },
+      entityType: { S: 'edge' },
       src: { S: edge.src },
       dst: { S: edge.dst },
-      kind: { S: edge.kind }
+      kind: { S: edge.kind },
     };
     await Promise.all([
-      this.#put(pkChronicle(chronicleId), skEdge(edge.src, edge.kind, edge.dst), attributes),
-      this.#put(pkPlace(edge.src), skEdge(edge.src, edge.kind, edge.dst), attributes)
+      this.put(pkLocation(locationId), skEdge(edge.src, edge.kind, edge.dst), attributes),
+      this.put(pkPlace(edge.src), skEdge(edge.src, edge.kind, edge.dst), attributes),
     ]);
   }
 
-  async listChroniclePlaceIds(chronicleId: string): Promise<string[]> {
-    const items = await this.#query(pkChronicle(chronicleId));
-    return items
-      .map((item) => decodePlaceId(item.sk?.S))
-      .filter((id): id is string => Boolean(id));
+  async listLocationPlaceIds(locationId: string): Promise<string[]> {
+    return this.listByPrefix(pkLocation(locationId), 'PLACE#', (item) => decodePlaceId(item.sk?.S));
   }
 
-  async listChronicleEdges(
-    chronicleId: string
+  async listLocationEdges(
+    locationId: string
   ): Promise<Array<{ src: string; kind: LocationEdgeKind; dst: string }>> {
-    const items = await this.#query(pkChronicle(chronicleId));
-    return items
-      .map((item) => decodeEdge(item.sk?.S))
-      .filter((edge): edge is { src: string; kind: LocationEdgeKind; dst: string } => Boolean(edge));
+    return this.listByPrefix(pkLocation(locationId), 'EDGE#', (item) => decodeEdge(item.sk?.S));
   }
 
   async listEdgesFromPlace(
     placeId: string
   ): Promise<Array<{ src: string; kind: LocationEdgeKind; dst: string }>> {
-    const items = await this.#query(pkPlace(placeId));
-    return items
-      .map((item) => decodeEdge(item.sk?.S))
-      .filter((edge): edge is { src: string; kind: LocationEdgeKind; dst: string } => Boolean(edge));
-  }
-
-  async #put(
-    pk: string,
-    sk: string,
-    attributes: Record<string, AttributeValue>
-  ): Promise<void> {
-    await this.#client.send(
-      new PutItemCommand({
-        TableName: this.#tableName,
-        Item: {
-          pk: { S: pk },
-          sk: { S: sk },
-          ...attributes
-        }
-      })
-    );
-  }
-
-  async #query(pk: string) {
-    const result = await this.#client.send(
-      new QueryCommand({
-        TableName: this.#tableName,
-        KeyConditionExpression: "#pk = :pk",
-        ExpressionAttributeNames: { "#pk": "pk" },
-        ExpressionAttributeValues: { ":pk": { S: pk } }
-      })
-    );
-    return result.Items ?? [];
+    return this.listByPrefix(pkPlace(placeId), 'EDGE#', (item) => decodeEdge(item.sk?.S));
   }
 }

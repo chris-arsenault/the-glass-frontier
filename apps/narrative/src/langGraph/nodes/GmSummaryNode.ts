@@ -1,17 +1,17 @@
-import type { GraphContext } from "../../types.js";
-import type { GraphNode } from "../orchestrator.js";
-import { composeGMSummaryPrompt } from "../prompts/prompts";
+import type { GraphContext } from '../../types.js';
+import type { GraphNode } from '../orchestrator.js';
+import { composeGMSummaryPrompt } from '../prompts/prompts';
 
 class GmSummaryNode implements GraphNode {
-  readonly id = "gm-summary";
+  readonly id = 'gm-summary';
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure || !context.gmMessage || !context.playerIntent) {
       context.telemetry?.recordToolNotRun({
         chronicleId: context.chronicleId,
-        operation: "llm.gm-summary"
+        operation: 'llm.gm-summary',
       });
-      return {...context, failure: true}
+      return { ...context, failure: true };
     }
     const prompt = await composeGMSummaryPrompt(
       context.templates,
@@ -21,31 +21,30 @@ class GmSummaryNode implements GraphNode {
       context.skillCheckResult
     );
 
-    let summary: string = "";
+    let summary: string = '';
 
     try {
       const result = await context.llm.generateText({
         prompt,
         temperature: 0.35,
         maxTokens: 220,
-        metadata: { nodeId: this.id, chronicleId: context.chronicleId }
+        metadata: { nodeId: this.id, chronicleId: context.chronicleId },
       });
-      summary = result.text?.trim() || "";
+      summary = result.text?.trim() || '';
     } catch (error: any) {
       context.telemetry?.recordToolError?.({
         chronicleId: context.chronicleId,
-        operation: "llm.gm-summary",
+        operation: 'llm.gm-summary',
         referenceId: null,
         attempt: 0,
-        message: error instanceof Error ? error.message : "unknown"
+        message: error instanceof Error ? error.message : 'unknown',
       });
-      return {...context, failure: true}
+      return { ...context, failure: true };
     }
-
 
     return {
       ...context,
-      gmSummary: summary
+      gmSummary: summary,
     };
   }
 }

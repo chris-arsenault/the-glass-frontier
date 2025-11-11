@@ -3,12 +3,11 @@ import type {
   LocationPlan,
   LocationPlanEdge,
   LocationPlanOp,
-  LocationPlanPlace
-} from "@glass-frontier/dto";
-import type { LocationEdgeKind } from "@glass-frontier/dto";
+  LocationPlanPlace,
+} from '@glass-frontier/dto';
+import type { LocationEdgeKind } from '@glass-frontier/dto';
 
 export interface PlanMutationAdapter {
-  chronicleId: string;
   createPlace(place: LocationPlanPlace): Promise<string>;
   createEdge(edge: LocationPlanEdge): Promise<void>;
   setCanonicalParent(childId: string, parentId: string): Promise<void>;
@@ -21,9 +20,11 @@ export interface PlanExecutionResult {
   note?: string;
 }
 
-const isContainment = (edge: LocationPlanEdge): edge is LocationPlanEdge & {
-  kind: Extract<LocationEdgeKind, "CONTAINS">;
-} => edge.kind === "CONTAINS";
+const isContainment = (
+  edge: LocationPlanEdge
+): edge is LocationPlanEdge & {
+  kind: Extract<LocationEdgeKind, 'CONTAINS'>;
+} => edge.kind === 'CONTAINS';
 
 export async function executeLocationPlan(
   plan: LocationPlan,
@@ -45,23 +46,23 @@ export async function executeLocationPlan(
     anchorPlaceId,
     status,
     certainty,
-    note
+    note,
   };
 
   async function handleOp(op: LocationPlanOp): Promise<void> {
     switch (op.op) {
-      case "NO_CHANGE":
+      case 'NO_CHANGE':
         return;
-      case "CREATE_PLACE": {
+      case 'CREATE_PLACE': {
         const realId = await adapter.createPlace(op.place);
         tempToReal.set(op.place.temp_id, realId);
         return;
       }
-      case "CREATE_EDGE": {
+      case 'CREATE_EDGE': {
         const edge = {
           src: resolveId(op.edge.src),
           dst: resolveId(op.edge.dst),
-          kind: op.edge.kind
+          kind: op.edge.kind,
         };
         await adapter.createEdge(edge);
         if (isContainment(edge)) {
@@ -69,18 +70,18 @@ export async function executeLocationPlan(
         }
         return;
       }
-      case "MOVE":
-      case "ENTER": {
+      case 'MOVE':
+      case 'ENTER': {
         anchorPlaceId = resolveId(op.dst_place_id);
         return;
       }
-      case "EXIT":
+      case 'EXIT':
         return;
-      case "SET_STATUS": {
+      case 'SET_STATUS': {
         status = dedupe([...(status ?? []), ...op.status]);
         return;
       }
-      case "SET_CERTAINTY":
+      case 'SET_CERTAINTY':
         certainty = op.certainty;
         note = op.note;
         return;

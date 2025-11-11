@@ -1,29 +1,14 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, paginateListObjectsV2 } from "@aws-sdk/client-s3";
-import { fromEnv } from "@aws-sdk/credential-providers";
-import { randomUUID } from "node:crypto";
-import { Readable } from "node:stream";
-import type {
-  Character,
-  Chronicle,
-  Login,
-  Player,
-  Turn
-} from "@glass-frontier/dto";
-import { log } from "@glass-frontier/utils";
-import type { WorldStateStore } from "./worldStateStore";
-import type { CharacterProgressPayload, ChronicleSnapshot } from "./types";
-import { applyCharacterSnapshotProgress } from "./characterProgress";
-import { WorldIndexRepository } from "./worldIndexRepository";
+import type { S3Client } from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
+import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
+import { HybridObjectStore } from './hybridObjectStore';
+import type { WorldStateStore } from './worldStateStore';
+import type { CharacterProgressPayload, ChronicleSnapshot } from './types';
+import { applyCharacterSnapshotProgress } from './characterProgress';
+import { WorldIndexRepository } from './worldIndexRepository';
 
-const isNotFound = (error: unknown): boolean => {
-  const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-  return err?.name === "NoSuchKey" || err?.$metadata?.httpStatusCode === 404;
-};
-
-export class S3WorldStateStore implements WorldStateStore {
-  #bucket: string;
-  #prefix: string;
-  #client: S3Client;
+export class S3WorldStateStore extends HybridObjectStore implements WorldStateStore {
   #index: WorldIndexRepository;
 
   #logins = new Map<string, Login>();
@@ -40,24 +25,20 @@ export class S3WorldStateStore implements WorldStateStore {
     region?: string;
     worldIndex: WorldIndexRepository;
   }) {
-    if (!options.bucket) {
-      throw new Error("S3WorldStateStore requires a bucket name.");
-    }
+    super({
+      bucket: options.bucket,
+      prefix: options.prefix,
+      client: options.client,
+      region: options.region,
+    });
     if (!options.worldIndex) {
-      throw new Error("S3WorldStateStore requires a world index repository.");
+      throw new Error('S3WorldStateStore requires a world index repository.');
     }
-    this.#bucket = options.bucket;
-    this.#prefix = options.prefix ? options.prefix.replace(/\/+$/, "") + "/" : "";
     this.#index = options.worldIndex;
-    const credentials =
-      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? fromEnv() : undefined;
-    this.#client =
-      options.client ??
-      new S3Client({
-        region: options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1",
-        credentials
-      });
-    log("info", `Using S3 world state store bucket=${this.#bucket} prefix=${this.#prefix || "<root>"}`);
+    log(
+      'info',
+      `Using S3 world state store bucket=${options.bucket} prefix=${options.prefix ? options.prefix.replace(/\/+$/, '') || '<root>' : '<root>'}`
+    );
   }
 
   async ensureChronicle(params: {
@@ -66,7 +47,7 @@ export class S3WorldStateStore implements WorldStateStore {
     locationId: string;
     characterId?: string;
     title?: string;
-    status?: Chronicle["status"];
+    status?: Chronicle['status'];
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
@@ -81,9 +62,9 @@ export class S3WorldStateStore implements WorldStateStore {
       title:
         params.title?.trim() && params.title.trim().length > 0
           ? params.title.trim()
-          : "Untitled Chronicle",
-      status: params.status ?? "open",
-      metadata: undefined
+          : 'Untitled Chronicle',
+      status: params.status ?? 'open',
+      metadata: undefined,
     };
     return this.upsertChronicle(record);
   }
@@ -103,20 +84,20 @@ export class S3WorldStateStore implements WorldStateStore {
       chronicle,
       character,
       location: null,
-      turns
+      turns,
     };
   }
 
   async upsertLogin(login: Login): Promise<Login> {
     this.#logins.set(login.id, login);
-    await this.#writeJson(this.#loginKey(login.id), login);
+    await this.setJson(this.#loginKey(login.id), login);
     return login;
   }
 
   async getLogin(loginId: string): Promise<Login | null> {
     const cached = this.#logins.get(loginId);
     if (cached) return cached;
-    const record = await this.#readJson<Login>(this.#loginKey(loginId));
+    const record = await this.getJson<Login>(this.#loginKey(loginId));
     if (record) {
       this.#logins.set(loginId, record);
     }
@@ -124,15 +105,15 @@ export class S3WorldStateStore implements WorldStateStore {
   }
 
   async listLogins(): Promise<Login[]> {
-    const keys = await this.#listKeys(`${this.#prefix}logins/`);
-    const records = await Promise.all(keys.map((key) => this.#readJson<Login>(key)));
+    const keys = await this.list('logins/', { suffix: '.json' });
+    const records = await Promise.all(keys.map((key) => this.getJson<Login>(key)));
     return records.filter((login): login is Login => Boolean(login));
   }
 
   async upsertCharacter(character: Character): Promise<Character> {
     this.#characters.set(character.id, character);
     this.#characterLoginIndex.set(character.id, character.loginId);
-    await this.#writeJson(this.#characterKey(character.loginId, character.id), character);
+    await this.setJson(this.#characterKey(character.loginId, character.id), character);
     await this.#index.linkCharacterToLogin(character.id, character.loginId);
     return character;
   }
@@ -144,7 +125,7 @@ export class S3WorldStateStore implements WorldStateStore {
     const loginId = await this.#resolveCharacterLogin(characterId);
     if (!loginId) return null;
 
-    const record = await this.#readJson<Character>(this.#characterKey(loginId, characterId));
+    const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
     if (record) {
       this.#characters.set(characterId, record);
       this.#characterLoginIndex.set(characterId, loginId);
@@ -161,7 +142,7 @@ export class S3WorldStateStore implements WorldStateStore {
       characterIds.map(async (characterId) => {
         const cached = this.#characters.get(characterId);
         if (cached) return cached;
-        const record = await this.#readJson<Character>(this.#characterKey(loginId, characterId));
+        const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
         if (record) {
           this.#characters.set(characterId, record);
           this.#characterLoginIndex.set(characterId, loginId);
@@ -174,14 +155,14 @@ export class S3WorldStateStore implements WorldStateStore {
 
   async upsertPlayer(player: Player): Promise<Player> {
     this.#players.set(player.loginId, player);
-    await this.#writeJson(this.#playerKey(player.loginId), player);
+    await this.setJson(this.#playerKey(player.loginId), player);
     return player;
   }
 
   async getPlayer(loginId: string): Promise<Player | null> {
     const cached = this.#players.get(loginId);
     if (cached) return cached;
-    const record = await this.#readJson<Player>(this.#playerKey(loginId));
+    const record = await this.getJson<Player>(this.#playerKey(loginId));
     if (record) {
       this.#players.set(loginId, record);
     }
@@ -191,7 +172,7 @@ export class S3WorldStateStore implements WorldStateStore {
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
     this.#chronicles.set(chronicle.id, chronicle);
     this.#chronicleLoginIndex.set(chronicle.id, chronicle.loginId);
-    await this.#writeJson(this.#chronicleKey(chronicle.loginId, chronicle.id), chronicle);
+    await this.setJson(this.#chronicleKey(chronicle.loginId, chronicle.id), chronicle);
     await this.#index.linkChronicleToLogin(chronicle.id, chronicle.loginId);
     if (chronicle.characterId) {
       await this.#index.linkChronicleToCharacter(chronicle.id, chronicle.characterId);
@@ -209,7 +190,7 @@ export class S3WorldStateStore implements WorldStateStore {
     const loginId = await this.#resolveChronicleLogin(chronicleId);
     if (!loginId) return null;
 
-    const record = await this.#readJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
+    const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
     if (record) {
       this.#chronicles.set(chronicleId, record);
       this.#chronicleLoginIndex.set(chronicleId, loginId);
@@ -226,7 +207,7 @@ export class S3WorldStateStore implements WorldStateStore {
       chronicleIds.map(async (chronicleId) => {
         const cached = this.#chronicles.get(chronicleId);
         if (cached) return cached;
-        const record = await this.#readJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
+        const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
         if (record) {
           this.#chronicles.set(chronicleId, record);
           this.#chronicleLoginIndex.set(chronicleId, loginId);
@@ -241,10 +222,10 @@ export class S3WorldStateStore implements WorldStateStore {
     const chronicleId = turn.chronicleId;
     const chronicle = chronicleId ? await this.getChronicle(chronicleId) : null;
     if (!chronicle || !chronicleId) {
-      throw new Error(`Chronicle ${chronicleId ?? "<unknown>"} not found for turn ${turn.id}`);
+      throw new Error(`Chronicle ${chronicleId ?? '<unknown>'} not found for turn ${turn.id}`);
     }
     const key = this.#turnKey(chronicle.loginId, chronicle.id, turn.id);
-    await this.#writeJson(key, turn);
+    await this.setJson(key, turn);
     await this.#index.recordChronicleTurn(chronicle.id, turn.id, turn.turnSequence ?? 0);
     return turn;
   }
@@ -260,7 +241,7 @@ export class S3WorldStateStore implements WorldStateStore {
     }
     const turns: Turn[] = [];
     for (const pointer of pointers) {
-      const record = await this.#readJson<Turn>(this.#turnKey(loginId, chronicleId, pointer.turnId));
+      const record = await this.getJson<Turn>(this.#turnKey(loginId, chronicleId, pointer.turnId));
       if (record) {
         turns.push(record);
       }
@@ -305,103 +286,24 @@ export class S3WorldStateStore implements WorldStateStore {
     return null;
   }
 
-  async #listKeys(prefix: string, shallow = false): Promise<string[]> {
-    const results: string[] = [];
-    const paginator = paginateListObjectsV2(
-      { client: this.#client },
-      {
-        Bucket: this.#bucket,
-        Prefix: prefix,
-        Delimiter: shallow ? "/" : undefined
-      }
-    );
-
-    for await (const page of paginator) {
-      for (const obj of page.Contents ?? []) {
-        if (obj.Key?.endsWith(".json")) results.push(obj.Key);
-      }
-    }
-    return results;
-  }
-
-  async #readJson<T>(key: string): Promise<T | null> {
-    try {
-      const output = await this.#client.send(
-        new GetObjectCommand({
-          Bucket: this.#bucket,
-          Key: key
-        })
-      );
-      const text = await this.#readBody(output.Body);
-      if (!text) {
-        return null;
-      }
-      return JSON.parse(text) as T;
-    } catch (error) {
-      if (isNotFound(error)) {
-        return null;
-      }
-      throw error;
-    }
-  }
-
-  async #readBody(body: unknown): Promise<string | null> {
-    if (!body) {
-      return null;
-    }
-    if (typeof body === "string") {
-      return body;
-    }
-    if (Buffer.isBuffer(body)) {
-      return body.toString("utf-8");
-    }
-    if (typeof (body as any).transformToString === "function") {
-      return (body as any).transformToString("utf-8");
-    }
-    if (typeof (body as any).arrayBuffer === "function") {
-      const arrayBuffer = await (body as any).arrayBuffer();
-      return Buffer.from(arrayBuffer).toString("utf-8");
-    }
-    if (body instanceof Readable) {
-      return new Promise<string>((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        body.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-        body.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
-        body.on("error", reject);
-      });
-    }
-    return null;
-  }
-
-  async #writeJson(key: string, payload: unknown): Promise<void> {
-    await this.#client.send(
-      new PutObjectCommand({
-        Bucket: this.#bucket,
-        Key: key,
-        Body: JSON.stringify(payload, null, 2),
-        ContentType: "application/json"
-      })
-    );
-  }
-
   #loginKey(loginId: string): string {
-    return `${this.#prefix}logins/${loginId}.json`;
+    return `logins/${loginId}.json`;
   }
 
   #characterKey(loginId: string, characterId: string): string {
-    return `${this.#prefix}characters/${loginId}/${characterId}.json`;
+    return `characters/${loginId}/${characterId}.json`;
   }
 
   #chronicleKey(loginId: string, chronicleId: string): string {
-    return `${this.#prefix}chronicles/${loginId}/${chronicleId}.json`;
+    return `chronicles/${loginId}/${chronicleId}.json`;
   }
 
   #playerKey(loginId: string): string {
-    return `${this.#prefix}players/${loginId}.json`;
+    return `players/${loginId}.json`;
   }
 
   #turnPrefix(loginId: string, chronicleId: string): string {
-    return `${this.#prefix}chronicles/${loginId}/${chronicleId}/turns/`;
+    return `chronicles/${loginId}/${chronicleId}/turns/`;
   }
 
   #turnKey(loginId: string, chronicleId: string, turnId: string): string {

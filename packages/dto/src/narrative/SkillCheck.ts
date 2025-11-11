@@ -1,7 +1,7 @@
-import { z } from "zod";
-import {Attribute, OutcomeTier, RiskLevel} from "../mechanics";
-import {Character} from "../Character";
-import {Metadata} from "../Metadata";
+import { z } from 'zod';
+import { Attribute, OutcomeTier, RiskLevel } from '../mechanics';
+import { Character } from '../Character';
+import { Metadata } from '../Metadata';
 
 /** SkillCheckResult */
 export const SkillCheckResult = z.object({

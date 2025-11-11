@@ -3,23 +3,23 @@ import type {
   LocationPlan,
   LocationPlace,
   LocationState,
-  LocationSummary
-} from "@glass-frontier/dto";
+  LocationSummary,
+} from '@glass-frontier/dto';
 
 export interface LocationGraphStore {
-  ensureChronicleRoot(input: {
-    chronicleId: string;
+  ensureLocation(input: {
+    locationId?: string;
     name: string;
     description?: string;
     tags?: string[];
-    characterId: string;
+    characterId?: string;
     kind?: string;
   }): Promise<LocationPlace>;
 
-  getChronicleGraph(chronicleId: string): Promise<LocationGraphSnapshot>;
+  getLocationGraph(locationId: string): Promise<LocationGraphSnapshot>;
 
   applyPlan(input: {
-    chronicleId: string;
+    locationId: string;
     characterId: string;
     plan: LocationPlan;
   }): Promise<LocationState | null>;
@@ -27,7 +27,7 @@ export interface LocationGraphStore {
   getLocationState(characterId: string): Promise<LocationState | null>;
 
   summarizeCharacterLocation(input: {
-    chronicleId: string;
+    locationId: string;
     characterId: string;
   }): Promise<LocationSummary | null>;
 }

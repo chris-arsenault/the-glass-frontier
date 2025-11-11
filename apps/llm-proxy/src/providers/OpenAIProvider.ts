@@ -1,50 +1,50 @@
-"use strict";
+'use strict';
 
-import OpenAI, { APIError } from "openai";
+import OpenAI, { APIError } from 'openai';
 import type {
   ChatCompletionCreateParams,
-  ChatCompletionMessageParam
-} from "openai/resources/chat/completions";
-import { Response } from "undici";
+  ChatCompletionMessageParam,
+} from 'openai/resources/chat/completions';
+import { Response } from 'undici';
 
-import { ProviderError } from "./ProviderError";
-import { Payload } from "../Payload";
-import { BaseProvider } from "./BaseProvider";
+import { ProviderError } from './ProviderError';
+import { Payload } from '../Payload';
+import { BaseProvider } from './BaseProvider';
 
 type ModelAdapter = (request: Record<string, any>, body: Record<string, any>) => void;
 
 const MODEL_ADAPTERS: Record<string, ModelAdapter> = {
-  "gpt-5-nano": (req, body) => {
+  'gpt-5-nano': (req, body) => {
     const tokens =
-      typeof body.max_completion_tokens === "number"
+      typeof body.max_completion_tokens === 'number'
         ? body.max_completion_tokens
-        : typeof body.max_tokens === "number"
-        ? body.max_tokens
-        : undefined;
+        : typeof body.max_tokens === 'number'
+          ? body.max_tokens
+          : undefined;
     if (tokens !== undefined) {
       req.max_completion_tokens = tokens;
     }
     delete req.max_tokens;
     delete req.temperature;
   },
-  "gpt-4.1-mini": (req, body) => {
+  'gpt-4.1-mini': (req, body) => {
     const tokens =
-      typeof body.max_completion_tokens === "number"
+      typeof body.max_completion_tokens === 'number'
         ? body.max_completion_tokens
-        : typeof body.max_tokens === "number"
-        ? body.max_tokens
-        : undefined;
+        : typeof body.max_tokens === 'number'
+          ? body.max_tokens
+          : undefined;
     if (tokens !== undefined) {
       req.max_completion_tokens = tokens;
       delete req.max_tokens;
     }
-  }
+  },
 };
 
 const DEFAULT_ADAPTER: ModelAdapter = (req, body) => {
-  if (typeof body.max_tokens === "number") {
+  if (typeof body.max_tokens === 'number') {
     req.max_tokens = body.max_tokens;
-  } else if (typeof body.max_completion_tokens === "number") {
+  } else if (typeof body.max_completion_tokens === 'number') {
     req.max_tokens = body.max_completion_tokens;
   }
 };
@@ -54,26 +54,26 @@ class OpenAIProvider extends BaseProvider {
 
   constructor() {
     super();
-    this.id = "openai";
-    this.aliases = ["oai", "gpt", "gpt-4o", "gpt4", "openai-chat"];
+    this.id = 'openai';
+    this.aliases = ['oai', 'gpt', 'gpt-4o', 'gpt4', 'openai-chat'];
     this.supportsStreaming = true;
 
-    this.target = process.env.OPENAI_API_BASE || "https://api.openai.com/v1/chat/completions";
-    this.apiKey = process.env.OPENAI_API_KEY || "";
+    this.target = process.env.OPENAI_API_BASE || 'https://api.openai.com/v1/chat/completions';
+    this.apiKey = process.env.OPENAI_API_KEY || '';
 
     if (!this.apiKey) {
       this.valid = false;
     }
 
     this.headers = {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       authorization: `Bearer ${this.apiKey}`,
-      "accept-encoding": "identity"
+      'accept-encoding': 'identity',
     };
 
     this.#client = new OpenAI({
       apiKey: this.apiKey || undefined,
-      baseURL: process.env.OPENAI_CLIENT_BASE || process.env.OPENAI_API_BASE
+      baseURL: process.env.OPENAI_CLIENT_BASE || process.env.OPENAI_API_BASE,
     });
   }
 
@@ -82,7 +82,7 @@ class OpenAIProvider extends BaseProvider {
     const body = sanitized.body;
 
     if (!body.messages && body.prompt) {
-      body.messages = [{ role: "user", content: body.prompt }];
+      body.messages = [{ role: 'user', content: body.prompt }];
       delete body.prompt;
     }
 
@@ -91,14 +91,15 @@ class OpenAIProvider extends BaseProvider {
 
   async execute(payload: Payload, signal?: AbortSignal): Promise<Response> {
     const body = payload.body ?? {};
-    const messages = body.messages ?? (body.prompt ? [{ role: "user", content: body.prompt }] : undefined);
+    const messages =
+      body.messages ?? (body.prompt ? [{ role: 'user', content: body.prompt }] : undefined);
 
     if (!messages || messages.length === 0) {
       throw new ProviderError({
-        code: "openai_missing_messages",
+        code: 'openai_missing_messages',
         status: 400,
         retryable: false,
-        message: "OpenAI chat completions require at least one message."
+        message: 'OpenAI chat completions require at least one message.',
       });
     }
 
@@ -106,30 +107,30 @@ class OpenAIProvider extends BaseProvider {
       const completion = await this.#client.chat.completions.create(
         this.#buildRequest(body, messages),
         {
-          signal
+          signal,
         }
       );
 
       return new Response(JSON.stringify(completion), {
         status: 200,
-        headers: { "content-type": "application/json" }
+        headers: { 'content-type': 'application/json' },
       });
     } catch (error: any) {
       if (error instanceof APIError && error.status) {
         throw new ProviderError({
-          code: error.error?.type ?? "openai_error",
+          code: error.error?.type ?? 'openai_error',
           status: error.status,
           retryable: error.status >= 500,
           details: error.error ?? {},
-          message: error.error?.message ?? error.message
+          message: error.error?.message ?? error.message,
         });
       }
 
       throw new ProviderError({
-        code: "openai_sdk_failure",
+        code: 'openai_sdk_failure',
         status: 502,
         retryable: true,
-        details: { message: error instanceof Error ? error.message : "unknown" }
+        details: { message: error instanceof Error ? error.message : 'unknown' },
       });
     }
   }
@@ -141,10 +142,10 @@ class OpenAIProvider extends BaseProvider {
     const request: Record<string, any> = {
       model: body.model,
       messages: messages as ChatCompletionMessageParam[],
-      stream: false
+      stream: false,
     };
 
-    if (typeof body.temperature === "number") {
+    if (typeof body.temperature === 'number') {
       request.temperature = body.temperature;
     }
 

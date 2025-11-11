@@ -1,25 +1,23 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-import { log } from "@glass-frontier/utils";
-import { ConnectionRepository } from "../services/ConnectionRepository";
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { log } from '@glass-frontier/utils';
+import { ConnectionRepository } from '../services/ConnectionRepository';
 
 const repository = new ConnectionRepository();
 
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
+export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   const connectionId = event.requestContext.connectionId;
   if (!connectionId) {
-    return { statusCode: 200, body: "ok" };
+    return { statusCode: 200, body: 'ok' };
   }
 
   try {
     await repository.purgeConnection(connectionId);
   } catch (error) {
-    log("warn", "Failed to cleanup WebSocket connection", {
+    log('warn', 'Failed to cleanup WebSocket connection', {
       connectionId,
-      reason: error instanceof Error ? error.message : "unknown"
+      reason: error instanceof Error ? error.message : 'unknown',
     });
   }
 
-  return { statusCode: 200, body: "ok" };
+  return { statusCode: 200, body: 'ok' };
 };

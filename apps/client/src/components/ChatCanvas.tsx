@@ -1,11 +1,9 @@
-import { useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { useChronicleStore } from "../stores/chronicleStore";
-import { useUiStore } from "../stores/uiStore";
-import { SkillCheckBadge } from "./SkillCheckBadge";
-
-
+import { useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useChronicleStore } from '../stores/chronicleStore';
+import { useUiStore } from '../stores/uiStore';
+import { SkillCheckBadge } from './SkillCheckBadge';
 
 export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);
@@ -29,8 +27,8 @@ export function ChatCanvas() {
       return;
     }
 
-    const playerEntries = messages.filter((msg) => msg.entry.role === "player");
-    const gmEntries = messages.filter((msg) => msg.entry.role === "gm");
+    const playerEntries = messages.filter((msg) => msg.entry.role === 'player');
+    const gmEntries = messages.filter((msg) => msg.entry.role === 'gm');
 
     setExpandedMessages((prev) => {
       const next = { ...prev };
@@ -64,11 +62,7 @@ export function ChatCanvas() {
   const isExpanded = (entryId: string) => expandedMessages[entryId] ?? false;
 
   return (
-    <section
-      className="chat-canvas"
-      aria-label="Narrative transcript"
-      data-testid="chat-canvas"
-    >
+    <section className="chat-canvas" aria-label="Narrative transcript" data-testid="chat-canvas">
       <div
         ref={streamRef}
         className="chat-stream"
@@ -94,14 +88,14 @@ export function ChatCanvas() {
               skillKey,
               attributeKey,
               playerIntent,
-              skillProgress
+              skillProgress,
             } = chatMessage;
             const timestamp =
-              typeof entry.metadata?.timestamp === "number"
+              typeof entry.metadata?.timestamp === 'number'
                 ? new Date(entry.metadata.timestamp)
                 : new Date();
             const displayRole =
-              entry.role === "player" ? "Player" : entry.role === "gm" ? "GM" : "System";
+              entry.role === 'player' ? 'Player' : entry.role === 'gm' ? 'GM' : 'System';
 
             return (
               <article
@@ -115,19 +109,19 @@ export function ChatCanvas() {
                       {displayRole}
                     </span>
                     <span className="chat-entry-meta">
-                      {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   <div className="chat-entry-aside">
-                    {entry.role === "player" && playerIntent?.tone ? (
+                    {entry.role === 'player' && playerIntent?.tone ? (
                       <span className="chat-entry-tone">{playerIntent.tone}</span>
                     ) : null}
-                    {entry.role === "player" && playerIntent?.creativeSpark ? (
+                    {entry.role === 'player' && playerIntent?.creativeSpark ? (
                       <span className="chat-entry-spark" title="Creative Spark awarded">
                         ★
                       </span>
                     ) : null}
-                    {entry.role === "gm" ? (
+                    {entry.role === 'gm' ? (
                       <SkillCheckBadge
                         plan={skillCheckPlan}
                         result={skillCheckResult}
@@ -139,16 +133,18 @@ export function ChatCanvas() {
                 </header>
                 <div
                   className={`chat-entry-body${
-                    entry.role !== "system" ? " chat-entry-toggleable" : ""
+                    entry.role !== 'system' ? ' chat-entry-toggleable' : ''
                   }`}
-                  role={entry.role !== "system" ? "button" : undefined}
-                  aria-expanded={entry.role !== "system" ? isExpanded(entry.id) : undefined}
-                  tabIndex={entry.role !== "system" ? 0 : undefined}
-                  onClick={entry.role !== "system" ? () => toggleMessageExpansion(entry.id) : undefined}
+                  role={entry.role !== 'system' ? 'button' : undefined}
+                  aria-expanded={entry.role !== 'system' ? isExpanded(entry.id) : undefined}
+                  tabIndex={entry.role !== 'system' ? 0 : undefined}
+                  onClick={
+                    entry.role !== 'system' ? () => toggleMessageExpansion(entry.id) : undefined
+                  }
                   onKeyDown={
-                    entry.role !== "system"
+                    entry.role !== 'system'
                       ? (event) => {
-                          if (event.key === "Enter" || event.key === " ") {
+                          if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
                             toggleMessageExpansion(entry.id);
                           }
@@ -156,19 +152,19 @@ export function ChatCanvas() {
                       : undefined
                   }
                 >
-                  {entry.role === "gm" ? (
+                  {entry.role === 'gm' ? (
                     <>
                       {isExpanded(entry.id) ? (
                         <div className="chat-entry-content">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {entry.content ?? ""}
+                            {entry.content ?? ''}
                           </ReactMarkdown>
                         </div>
                       ) : (
                         <p className="chat-entry-summary">
                           {chatMessage.gmSummary ??
                             playerIntent?.intentSummary ??
-                            "GM summary unavailable."}
+                            'GM summary unavailable.'}
                         </p>
                       )}
                       {skillProgress?.length ? (
@@ -178,15 +174,15 @@ export function ChatCanvas() {
                               key={`${entry.id ?? index}-progress-${badge.skill}-${badgeIndex}`}
                               className={`skill-progress-badge skill-progress-badge-${badge.type}`}
                             >
-                              {badge.type === "skill-gain"
-                                ? `New Skill · ${badge.skill}${badge.attribute ? ` (${badge.attribute})` : ""}`
+                              {badge.type === 'skill-gain'
+                                ? `New Skill · ${badge.skill}${badge.attribute ? ` (${badge.attribute})` : ''}`
                                 : `Tier Up · ${badge.skill} → ${badge.tier}`}
                             </span>
                           ))}
                         </div>
                       ) : null}
                     </>
-                  ) : entry.role === "player" ? (
+                  ) : entry.role === 'player' ? (
                     isExpanded(entry.id) ? (
                       <p
                         className="chat-entry-content"

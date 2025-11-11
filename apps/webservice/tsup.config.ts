@@ -1,16 +1,16 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: {
-    connect: "src/lambdas/connect.ts",
-    disconnect: "src/lambdas/disconnect.ts",
-    subscribe: "src/lambdas/subscribe.ts",
-    dispatcher: "src/lambdas/dispatcher.ts"
+    connect: 'src/lambdas/connect.ts',
+    disconnect: 'src/lambdas/disconnect.ts',
+    subscribe: 'src/lambdas/subscribe.ts',
+    dispatcher: 'src/lambdas/dispatcher.ts',
   },
-  outDir: "dist",
-  format: "cjs",
-  platform: "node",
-  target: "node22",
+  outDir: 'dist',
+  format: 'cjs',
+  platform: 'node',
+  target: 'node22',
   bundle: true,
   splitting: false,
   minify: true,
@@ -19,5 +19,5 @@ export default defineConfig({
   clean: true,
   noExternal: [/.*/],
   metafile: true,
-  outExtension: () => ({ js: ".js" })
+  outExtension: () => ({ js: '.js' }),
 });

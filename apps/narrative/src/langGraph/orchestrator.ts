@@ -1,7 +1,7 @@
-import type { GraphContext } from "../types.js";
-import type { ChronicleTelemetry } from "../telemetry";
-import type { TurnProgressPublisher, TurnProgressStatus } from "../progressEmitter";
-import { log } from "@glass-frontier/utils";
+import type { GraphContext } from '../types.js';
+import type { ChronicleTelemetry } from '../telemetry';
+import type { TurnProgressPublisher, TurnProgressStatus } from '../progressEmitter';
+import { log } from '@glass-frontier/utils';
 
 export interface GraphNode {
   readonly id: string;
@@ -19,7 +19,7 @@ class LangGraphOrchestrator {
     options?: { progressEmitter?: TurnProgressPublisher }
   ) {
     if (!Array.isArray(nodes) || nodes.length === 0) {
-      throw new Error("LangGraphOrchestrator requires at least one node");
+      throw new Error('LangGraphOrchestrator requires at least one node');
     }
     this.#nodes = nodes;
     this.#telemetry = telemetry;
@@ -33,43 +33,42 @@ class LangGraphOrchestrator {
 
     for (let index = 0; index < this.#nodes.length; index += 1) {
       const node = this.#nodes[index];
-      const nodeId = node.id || "unknown-node";
+      const nodeId = node.id || 'unknown-node';
       const step = index + 1;
 
       this.#telemetry?.recordTransition({
         chronicleId: context.chronicleId,
         nodeId,
-        status: "start",
-        turnSequence: context.turnSequence
+        status: 'start',
+        turnSequence: context.turnSequence,
       });
       await this.emitProgress(jobId, {
         chronicleId: context.chronicleId,
         turnSequence: context.turnSequence,
         nodeId,
-        status: "start",
+        status: 'start',
         step,
         total,
-        context
+        context,
       });
 
       try {
-        // eslint-disable-next-line no-await-in-loop
         context = await node.execute(context);
         if (context.failure) {
           this.#telemetry?.recordTransition({
             chronicleId: context.chronicleId,
             nodeId,
-            status: "error",
+            status: 'error',
             turnSequence: context.turnSequence,
           });
           await this.emitProgress(jobId, {
             chronicleId: context.chronicleId,
             nodeId,
-            status: "error",
+            status: 'error',
             turnSequence: context.turnSequence,
             step,
             total,
-            context
+            context,
           });
           return context;
         }
@@ -77,35 +76,35 @@ class LangGraphOrchestrator {
         this.#telemetry?.recordTransition({
           chronicleId: context.chronicleId,
           nodeId,
-          status: "success",
-          turnSequence: context.turnSequence
+          status: 'success',
+          turnSequence: context.turnSequence,
         });
         await this.emitProgress(jobId, {
           chronicleId: context.chronicleId,
           nodeId,
-          status: "success",
+          status: 'success',
           turnSequence: context.turnSequence,
           step,
           total,
-          context
+          context,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "unknown";
+        const message = error instanceof Error ? error.message : 'unknown';
         this.#telemetry?.recordTransition({
           chronicleId: context.chronicleId,
           nodeId,
-          status: "error",
+          status: 'error',
           turnSequence: context.turnSequence,
-          metadata: { message }
+          metadata: { message },
         });
         await this.emitProgress(jobId, {
           chronicleId: context.chronicleId,
           nodeId,
-          status: "error",
+          status: 'error',
           turnSequence: context.turnSequence,
           step,
           total,
-          context
+          context,
         });
         throw error;
       }
@@ -132,13 +131,13 @@ class LangGraphOrchestrator {
     try {
       await this.#progressEmitter.publish({
         ...update,
-        jobId
+        jobId,
       });
     } catch (error) {
-      log("warn", "Failed to publish turn progress", {
+      log('warn', 'Failed to publish turn progress', {
         jobId,
         nodeId: update.nodeId,
-        reason: error instanceof Error ? error.message : "unknown"
+        reason: error instanceof Error ? error.message : 'unknown',
       });
     }
   }

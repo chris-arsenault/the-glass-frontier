@@ -1,9 +1,9 @@
-import { useEffect } from "react";
-import type { PromptTemplateId } from "@glass-frontier/dto";
-import { useShallow } from "zustand/react/shallow";
-import { useUiStore } from "../stores/uiStore";
-import { useTemplateStore } from "../stores/templateStore";
-import { useChronicleStore } from "../stores/chronicleStore";
+import { useEffect } from 'react';
+import type { PromptTemplateId } from '@glass-frontier/dto';
+import { useShallow } from 'zustand/react/shallow';
+import { useUiStore } from '../stores/uiStore';
+import { useTemplateStore } from '../stores/templateStore';
+import { useChronicleStore } from '../stores/chronicleStore';
 
 export function TemplateDrawer() {
   const isOpen = useUiStore((state) => state.isTemplateDrawerOpen);
@@ -23,7 +23,7 @@ export function TemplateDrawer() {
     updateDraft,
     saveTemplate,
     revertTemplate,
-    reset
+    reset,
   } = useTemplateStore(
     useShallow((state) => ({
       summaries: state.summaries,
@@ -39,18 +39,18 @@ export function TemplateDrawer() {
       updateDraft: state.updateDraft,
       saveTemplate: state.saveTemplate,
       revertTemplate: state.revertTemplate,
-      reset: state.reset
+      reset: state.reset,
     }))
   );
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
+      if (event.key === 'Escape' && isOpen) {
         close();
       }
     };
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
   }, [isOpen, close]);
 
   useEffect(() => {
@@ -81,17 +81,22 @@ export function TemplateDrawer() {
   };
 
   const templateList = Object.values(summaries).sort((a, b) => a.label.localeCompare(b.label));
-  const activeSource = detail?.activeSource === "player" ? "Player Override" : "System Default";
+  const activeSource = detail?.activeSource === 'player' ? 'Player Override' : 'System Default';
 
   return (
     <>
       <div
-        className={`template-drawer-backdrop ${isOpen ? "open" : ""}`}
+        className={`template-drawer-backdrop ${isOpen ? 'open' : ''}`}
         onClick={close}
         aria-hidden="true"
       />
-      <div className={`template-drawer ${isOpen ? "open" : ""}`} aria-hidden={!isOpen}>
-        <button type="button" className="template-drawer-close" onClick={close} aria-label="Close template editor">
+      <div className={`template-drawer ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen}>
+        <button
+          type="button"
+          className="template-drawer-close"
+          onClick={close}
+          aria-label="Close template editor"
+        >
           ×
         </button>
         <div className="template-drawer-layout">
@@ -101,7 +106,9 @@ export function TemplateDrawer() {
               <p className="template-list-subtitle">Customize the narrative rules per node.</p>
             </header>
             <div className="template-list-body" role="tablist" aria-label="Templates">
-              {isLoading && templateList.length === 0 ? <p className="template-empty">Loading templates…</p> : null}
+              {isLoading && templateList.length === 0 ? (
+                <p className="template-empty">Loading templates…</p>
+              ) : null}
               {!isLoading && templateList.length === 0 ? (
                 <p className="template-empty">No templates available.</p>
               ) : null}
@@ -109,15 +116,20 @@ export function TemplateDrawer() {
                 <button
                   key={entry.nodeId}
                   type="button"
-                  className={`template-list-item${selectedTemplateId === entry.nodeId ? " active" : ""}`}
+                  className={`template-list-item${selectedTemplateId === entry.nodeId ? ' active' : ''}`}
                   onClick={() => handleSelect(entry.nodeId)}
                 >
                   <span className="template-list-label">{entry.label}</span>
-                  <span className="template-list-meta">{entry.activeSource === "player" ? "Override" : "Default"}</span>
+                  <span className="template-list-meta">
+                    {entry.activeSource === 'player' ? 'Override' : 'Default'}
+                  </span>
                 </button>
               ))}
             </div>
-            <div className="template-note">Variant library support is coming soon; overrides currently track a single custom copy.</div>
+            <div className="template-note">
+              Variant library support is coming soon; overrides currently track a single custom
+              copy.
+            </div>
           </aside>
           <section className="template-editor">
             {detail ? (
@@ -128,8 +140,14 @@ export function TemplateDrawer() {
                     <p className="template-editor-description">{detail.description}</p>
                   </div>
                   <div className="template-editor-status">
-                    <span className={`template-badge ${detail.activeSource === "player" ? "badge-override" : ""}`}>{activeSource}</span>
-                    <span className="template-updated">Updated {new Date(detail.updatedAt).toLocaleString()}</span>
+                    <span
+                      className={`template-badge ${detail.activeSource === 'player' ? 'badge-override' : ''}`}
+                    >
+                      {activeSource}
+                    </span>
+                    <span className="template-updated">
+                      Updated {new Date(detail.updatedAt).toLocaleString()}
+                    </span>
                   </div>
                 </header>
                 <label className="template-editor-label" htmlFor="template-rules">
@@ -149,7 +167,7 @@ export function TemplateDrawer() {
                     type="button"
                     className="template-button secondary"
                     onClick={handleRevert}
-                    disabled={isSaving || (!isDirty && detail.activeSource === "official")}
+                    disabled={isSaving || (!isDirty && detail.activeSource === 'official')}
                   >
                     Revert to Default
                   </button>
@@ -159,13 +177,17 @@ export function TemplateDrawer() {
                     onClick={handleSave}
                     disabled={!isDirty || isSaving}
                   >
-                    {isSaving ? "Saving…" : "Save Custom Template"}
+                    {isSaving ? 'Saving…' : 'Save Custom Template'}
                   </button>
                 </div>
               </>
             ) : (
               <div className="template-placeholder">
-                {isLoading ? <p>Loading template details…</p> : <p>Select a template to edit its rules.</p>}
+                {isLoading ? (
+                  <p>Loading template details…</p>
+                ) : (
+                  <p>Select a template to edit its rules.</p>
+                )}
               </div>
             )}
           </section>

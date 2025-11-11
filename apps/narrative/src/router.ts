@@ -1,9 +1,14 @@
-import { randomUUID } from "node:crypto";
-import { initTRPC } from "@trpc/server";
-import type { Context } from "./context";
-import { z } from "zod";
-import { Character as CharacterSchema, TranscriptEntry, PromptTemplateIds, type PromptTemplateId } from "@glass-frontier/dto";
-import { log } from "@glass-frontier/utils";
+import { randomUUID } from 'node:crypto';
+import { initTRPC } from '@trpc/server';
+import type { Context } from './context';
+import { z } from 'zod';
+import {
+  Character as CharacterSchema,
+  TranscriptEntry,
+  PromptTemplateIds,
+  type PromptTemplateId,
+} from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
 
 const t = initTRPC.context<Context>().create();
 const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
@@ -14,44 +19,45 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.string().uuid().optional(),
+        locationId: z.string().uuid().optional(),
         loginId: z.string().min(1),
         characterId: z.string().min(1),
         title: z.string().min(1),
         location: z.object({
           locale: z.string().min(1),
-          atmosphere: z.string().min(1)
+          atmosphere: z.string().min(1),
         }),
-        status: z.enum(["open", "closed"]).optional()
+        status: z.enum(['open', 'closed']).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const character = await ctx.worldStateStore.getCharacter(input.characterId);
       if (!character) {
-        throw new Error("Character not found for chronicle creation.");
+        throw new Error('Character not found for chronicle creation.');
       }
       if (character.loginId !== input.loginId) {
-        throw new Error("Character does not belong to the requesting login.");
+        throw new Error('Character does not belong to the requesting login.');
       }
 
       const chronicleId = input.chronicleId ?? randomUUID();
-      const rootPlace = await ctx.locationGraphStore.ensureChronicleRoot({
-        chronicleId,
+      const locationRoot = await ctx.locationGraphStore.ensureLocation({
+        locationId: input.locationId,
         name: input.location.locale,
         description: input.location.atmosphere,
         tags: deriveLocationTags(input.location.atmosphere),
         characterId: input.characterId,
-        kind: "locale"
+        kind: 'locale',
       });
 
       const chronicle = await ctx.worldStateStore.ensureChronicle({
         chronicleId,
         loginId: input.loginId,
-        locationId: rootPlace.id,
+        locationId: locationRoot.locationId,
         characterId: input.characterId,
         title: input.title,
-        status: input.status
+        status: input.status,
       });
-      log("info", `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
+      log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
       return { chronicle }; // responseMeta sets 201
     }),
 
@@ -65,18 +71,18 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.string().uuid(),
-        content: TranscriptEntry // tighten to your DTO schema
+        content: TranscriptEntry, // tighten to your DTO schema
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const playerEntry = { ...input.content, role: "player" as const };
+      const playerEntry = { ...input.content, role: 'player' as const };
       const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
-        authorizationHeader: ctx.authorizationHeader
+        authorizationHeader: ctx.authorizationHeader,
       });
       return {
         turn: result.turn,
         character: result.updatedCharacter,
-        location: result.locationSummary
+        location: result.locationSummary,
       };
     }),
 
@@ -84,13 +90,11 @@ export const appRouter = t.router({
     .input(z.object({ loginId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
 
-  createCharacter: t.procedure
-    .input(CharacterSchema)
-    .mutation(async ({ ctx, input }) => {
-      log("info", `Creating Character ${input.name}`);
-      const character = await ctx.worldStateStore.upsertCharacter(input);
-      return { character };
-    }),
+  createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
+    log('info', `Creating Character ${input.name}`);
+    const character = await ctx.worldStateStore.upsertCharacter(input);
+    return { character };
+  }),
 
   listChronicles: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
@@ -104,10 +108,12 @@ export const appRouter = t.router({
     .input(
       z.object({
         loginId: z.string().min(1),
-        templateId: templateIdSchema
+        templateId: templateIdSchema,
       })
     )
-    .query(async ({ ctx, input }) => ctx.templateManager.getTemplate(input.loginId, input.templateId)),
+    .query(async ({ ctx, input }) =>
+      ctx.templateManager.getTemplate(input.loginId, input.templateId)
+    ),
 
   savePromptTemplate: t.procedure
     .input(
@@ -115,7 +121,7 @@ export const appRouter = t.router({
         loginId: z.string().min(1),
         templateId: templateIdSchema,
         editable: z.string().min(1),
-        label: z.string().max(64).optional()
+        label: z.string().max(64).optional(),
       })
     )
     .mutation(async ({ ctx, input }) =>
@@ -123,7 +129,7 @@ export const appRouter = t.router({
         loginId: input.loginId,
         templateId: input.templateId,
         editable: input.editable,
-        label: input.label
+        label: input.label,
       })
     ),
 
@@ -131,12 +137,12 @@ export const appRouter = t.router({
     .input(
       z.object({
         loginId: z.string().min(1),
-        templateId: templateIdSchema
+        templateId: templateIdSchema,
       })
     )
     .mutation(async ({ ctx, input }) =>
       ctx.templateManager.revertTemplate({ loginId: input.loginId, templateId: input.templateId })
-    )
+    ),
 });
 
 async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {
@@ -145,11 +151,12 @@ async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {
     return null;
   }
   const characterId = snapshot.chronicle.characterId ?? snapshot.character?.id ?? null;
-  if (characterId) {
+  const locationId = snapshot.chronicle.locationId;
+  if (characterId && locationId) {
     snapshot.location =
       (await ctx.locationGraphStore.summarizeCharacterLocation({
-        chronicleId,
-        characterId
+        locationId,
+        characterId,
       })) ?? null;
   }
   return snapshot;

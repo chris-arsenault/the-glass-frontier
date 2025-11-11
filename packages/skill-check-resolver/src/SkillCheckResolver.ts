@@ -7,12 +7,11 @@ import {
   skillModifierFromSkillName,
   TIER_THRESHOLDS,
   MomentumState,
-  OutcomeTier
-} from "@glass-frontier/dto";
-import {DiceRoller} from "./DiceRoller";
-import {clamp} from "@glass-frontier/utils";
-import {CheckRequestTelemetry} from "./telemetry";
-
+  OutcomeTier,
+} from '@glass-frontier/dto';
+import { DiceRoller } from './DiceRoller';
+import { clamp } from '@glass-frontier/utils';
+import { CheckRequestTelemetry } from './telemetry';
 
 class SkillCheckResolver {
   request: SkillCheckRequest;
@@ -36,22 +35,22 @@ class SkillCheckResolver {
     try {
       const roller = new DiceRoller(this.request);
 
-      const modifier = this.computeModifier()
-      console.log("Modifer")
+      const modifier = this.computeModifier();
+      console.log('Modifer');
       console.log(modifier);
       const dieResult = roller.computeResult(modifier);
-      console.log("result")
-      console.log(dieResult)
-      const target = RISK_LEVEL_MAP[this.request.riskLevel]
-      console.log("target")
-      console.log(target)
+      console.log('result');
+      console.log(dieResult);
+      const target = RISK_LEVEL_MAP[this.request.riskLevel];
+      console.log('target');
+      console.log(target);
       const margin = dieResult - target;
-      console.log("margin")
-      console.log(margin)
+      console.log('margin');
+      console.log(margin);
       const outcomeTier: OutcomeTier = this.determineTier(margin);
-      const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier)
-      console.log(this.request.character.momentum)
-      console.log(newMomentum)
+      const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier);
+      console.log(this.request.character.momentum);
+      console.log(newMomentum);
 
       const result: SkillCheckResult = {
         advantage: roller.advantage,
@@ -65,8 +64,8 @@ class SkillCheckResolver {
         newMomentum: newMomentum,
         metadata: {
           timestamp: Date.now(),
-          tags: []
-        }
+          tags: [],
+        },
       };
       this.telemetry.recordCheckRun(result);
       return result;
@@ -77,7 +76,10 @@ class SkillCheckResolver {
 
   computeModifier(): number {
     const skillModifier = skillModifierFromSkillName(this.request.character, this.request.skill);
-    const attributeModifier = attributeModifierFromName(this.request.character, this.request.attribute);
+    const attributeModifier = attributeModifierFromName(
+      this.request.character,
+      this.request.attribute
+    );
     return skillModifier + attributeModifier + this.request.character.momentum.current;
   }
 
@@ -90,8 +92,8 @@ class SkillCheckResolver {
     for (const [threshold, tier] of TIER_THRESHOLDS) {
       if (margin >= threshold) return tier;
     }
-    return "collapse"; // fallback (should never hit)
+    return 'collapse'; // fallback (should never hit)
   }
 }
 
-export { SkillCheckResolver }
+export { SkillCheckResolver };

@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { Attribute, AttributeTier, SkillTier } from "@glass-frontier/dto";
+import { useEffect, useMemo, useState } from 'react';
+import { Attribute, AttributeTier, SkillTier } from '@glass-frontier/dto';
 import type {
   Attribute as AttributeName,
   AttributeTier as AttributeTierValue,
-  SkillTier as SkillTierValue
-} from "@glass-frontier/dto";
-import { useChronicleStore } from "../stores/chronicleStore";
-import { useUiStore } from "../stores/uiStore";
-import type { CharacterCreationDraft } from "../state/chronicleState";
+  SkillTier as SkillTierValue,
+} from '@glass-frontier/dto';
+import { useChronicleStore } from '../stores/chronicleStore';
+import { useUiStore } from '../stores/uiStore';
+import type { CharacterCreationDraft } from '../state/chronicleState';
 
 type SkillDraft = {
   id: string;
@@ -17,20 +17,20 @@ type SkillDraft = {
 };
 
 const createDefaultAttributes = (): Record<AttributeName, AttributeTierValue> => ({
-  vitality: "standard",
-  finesse: "standard",
-  focus: "standard",
-  resolve: "standard",
-  attunement: "standard",
-  ingenuity: "standard",
-  presence: "standard"
+  vitality: 'standard',
+  finesse: 'standard',
+  focus: 'standard',
+  resolve: 'standard',
+  attunement: 'standard',
+  ingenuity: 'standard',
+  presence: 'standard',
 });
 
 const createSkillDraft = (): SkillDraft => ({
-  id: typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}`,
-  name: "",
-  tier: "apprentice",
-  attribute: "focus"
+  id: typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}`,
+  name: '',
+  tier: 'apprentice',
+  attribute: 'focus',
 });
 
 export function CreateCharacterModal() {
@@ -39,20 +39,19 @@ export function CreateCharacterModal() {
   const createCharacter = useChronicleStore((state) => state.createCharacterProfile);
   const loginId = useChronicleStore((state) => state.loginId);
 
-  const [name, setName] = useState("");
-  const [archetype, setArchetype] = useState("");
-  const [pronouns, setPronouns] = useState("");
-  const [attributes, setAttributes] = useState<Record<AttributeName, AttributeTierValue>>(
-    createDefaultAttributes
-  );
+  const [name, setName] = useState('');
+  const [archetype, setArchetype] = useState('');
+  const [pronouns, setPronouns] = useState('');
+  const [attributes, setAttributes] =
+    useState<Record<AttributeName, AttributeTierValue>>(createDefaultAttributes);
   const [skills, setSkills] = useState<SkillDraft[]>([createSkillDraft()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
-    setName("");
-    setArchetype("");
-    setPronouns("");
+    setName('');
+    setArchetype('');
+    setPronouns('');
     setAttributes(createDefaultAttributes());
     setSkills([createSkillDraft()]);
     setError(null);
@@ -68,13 +67,13 @@ export function CreateCharacterModal() {
   const attributeTierOptions = useMemo(() => AttributeTier.options, []);
   const skillTierOptions = useMemo(() => SkillTier.options, []);
 
-  const handleSkillChange = (id: string, field: keyof Omit<SkillDraft, "id">, value: string) => {
+  const handleSkillChange = (id: string, field: keyof Omit<SkillDraft, 'id'>, value: string) => {
     setSkills((prev) =>
       prev.map((skill) =>
         skill.id === id
           ? {
               ...skill,
-              [field]: value as SkillDraft[typeof field]
+              [field]: value as SkillDraft[typeof field],
             }
           : skill
       )
@@ -88,7 +87,7 @@ export function CreateCharacterModal() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!loginId) {
-      setError("Login context unavailable. Please refresh.");
+      setError('Login context unavailable. Please refresh.');
       return;
     }
     setIsSubmitting(true);
@@ -97,18 +96,18 @@ export function CreateCharacterModal() {
       name,
       archetype,
       pronouns,
-      attributes: attributes as CharacterCreationDraft["attributes"],
+      attributes: attributes as CharacterCreationDraft['attributes'],
       skills: skills
         .filter((skill) => skill.name.trim().length > 0)
-        .reduce<CharacterCreationDraft["skills"]>((acc, skill) => {
+        .reduce<CharacterCreationDraft['skills']>((acc, skill) => {
           acc[skill.name.trim()] = {
             name: skill.name.trim(),
             tier: skill.tier as SkillTierValue,
             attribute: skill.attribute as AttributeName,
-            xp: 0
+            xp: 0,
           };
           return acc;
-        }, {})
+        }, {}),
     };
 
     try {
@@ -116,7 +115,7 @@ export function CreateCharacterModal() {
       resetForm();
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create character.");
+      setError(err instanceof Error ? err.message : 'Unable to create character.');
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +180,7 @@ export function CreateCharacterModal() {
                     onChange={(event) =>
                       setAttributes((prev) => ({
                         ...prev,
-                        [attribute as AttributeName]: event.target.value as AttributeTierValue
+                        [attribute as AttributeName]: event.target.value as AttributeTierValue,
                       }))
                     }
                   >
@@ -210,11 +209,11 @@ export function CreateCharacterModal() {
                     type="text"
                     value={skill.name}
                     placeholder="Skill name"
-                    onChange={(event) => handleSkillChange(skill.id, "name", event.target.value)}
+                    onChange={(event) => handleSkillChange(skill.id, 'name', event.target.value)}
                   />
                   <select
                     value={skill.tier}
-                    onChange={(event) => handleSkillChange(skill.id, "tier", event.target.value)}
+                    onChange={(event) => handleSkillChange(skill.id, 'tier', event.target.value)}
                   >
                     {skillTierOptions.map((tier) => (
                       <option key={tier} value={tier}>
@@ -225,7 +224,7 @@ export function CreateCharacterModal() {
                   <select
                     value={skill.attribute}
                     onChange={(event) =>
-                      handleSkillChange(skill.id, "attribute", event.target.value)
+                      handleSkillChange(skill.id, 'attribute', event.target.value)
                     }
                   >
                     {attributeOptions.map((attribute) => (
@@ -255,7 +254,7 @@ export function CreateCharacterModal() {
               Cancel
             </button>
             <button type="submit" className="modal-primary" disabled={isSubmitting || !loginId}>
-              {isSubmitting ? "Creating..." : "Create Character"}
+              {isSubmitting ? 'Creating...' : 'Create Character'}
             </button>
           </footer>
         </form>

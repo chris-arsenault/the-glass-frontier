@@ -1,13 +1,13 @@
-"use strict";
+'use strict';
 
-const levels = ["debug", "info", "warn", "error"];
+const levels = ['debug', 'info', 'warn', 'error'];
 const levelWeights = levels.reduce((acc: Record<string, any>, level: string, index: number) => {
   acc[level] = index;
   return acc;
 }, {});
 
 function resolveThreshold() {
-  const envLevel = process.env.LOG_LEVEL ? process.env.LOG_LEVEL.toLowerCase() : "info";
+  const envLevel = process.env.LOG_LEVEL ? process.env.LOG_LEVEL.toLowerCase() : 'info';
 
   if (!Object.prototype.hasOwnProperty.call(levelWeights, envLevel)) {
     return levelWeights.info;
@@ -17,10 +17,10 @@ function resolveThreshold() {
 }
 
 function isSilent() {
-  return process.env.LOG_SILENT === "1";
+  return process.env.LOG_SILENT === '1';
 }
 
-type Loggable = string | number | boolean
+type Loggable = string | number | boolean;
 
 function log(level: string, message: string, metadata: Record<string, Loggable> = {}) {
   if (!levels.includes(level)) {
@@ -42,7 +42,7 @@ function log(level: string, message: string, metadata: Record<string, Loggable> 
     level,
     timestamp,
     message,
-    ...metadata
+    ...metadata,
   };
 
   // Using stdout keeps the skeleton lightweight while staying observable-friendly.
@@ -50,6 +50,4 @@ function log(level: string, message: string, metadata: Record<string, Loggable> 
   console.log(JSON.stringify(payload));
 }
 
-export {
-  log
-};
+export { log };

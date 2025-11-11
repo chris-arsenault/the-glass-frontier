@@ -9,7 +9,5 @@
     "declarationMap": false
   },
   "include": ["src"],
-  "references": [
-    { "path": "../../packages/utils" }
-  ]
+  "references": [{ "path": "../../packages/utils" }]
 }

@@ -1,11 +1,11 @@
-import type { Attribute, SkillCheckPlan, SkillCheckResult } from "@glass-frontier/dto";
+import type { Attribute, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/dto';
 
 const MOMENTUM_DELTA: Record<string, number> = {
   breakthrough: 2,
   advance: 1,
   stall: 0,
   regress: -1,
-  collapse: -2
+  collapse: -2,
 };
 
 interface SkillCheckBadgeProps {
@@ -15,20 +15,23 @@ interface SkillCheckBadgeProps {
   attributeKey?: Attribute | null;
 }
 
-const formatAdvantage = (plan?: SkillCheckPlan | null, result?: SkillCheckResult | null): string => {
+const formatAdvantage = (
+  plan?: SkillCheckPlan | null,
+  result?: SkillCheckResult | null
+): string => {
   if (plan?.advantage) {
-    if (plan.advantage === "none") {
-      return "Standard";
+    if (plan.advantage === 'none') {
+      return 'Standard';
     }
     return plan.advantage[0].toUpperCase() + plan.advantage.slice(1);
   }
-  if (result?.advantage) return "Advantage";
-  if (result?.disadvantage) return "Disadvantage";
-  return "Standard";
+  if (result?.advantage) return 'Advantage';
+  if (result?.disadvantage) return 'Disadvantage';
+  return 'Standard';
 };
 
 const formatMomentumDelta = (result?: SkillCheckResult | null): string => {
-  if (!result) return "0";
+  if (!result) return '0';
   const delta = MOMENTUM_DELTA[result.outcomeTier] ?? 0;
   return delta >= 0 ? `+${delta}` : `${delta}`;
 };
@@ -39,8 +42,8 @@ export function SkillCheckBadge({ plan, result, skillKey, attributeKey }: SkillC
   }
 
   const advantageText = formatAdvantage(plan, result);
-  const skillText = skillKey ?? "Unknown skill";
-  const attributeText = attributeKey ?? "Unknown attribute";
+  const skillText = skillKey ?? 'Unknown skill';
+  const attributeText = attributeKey ?? 'Unknown attribute';
   const momentumDelta = formatMomentumDelta(result);
 
   return (
@@ -55,11 +58,7 @@ export function SkillCheckBadge({ plan, result, skillKey, attributeKey }: SkillC
             d="M5 8.6V15.4L12 20L19 15.4V8.6L12 4L5 8.6ZM12 2L3 7.5V16.5L12 22L21 16.5V7.5L12 2Z"
             fill="currentColor"
           />
-          <path
-            d="M12 6L17 9.3V14.7L12 18L7 14.7V9.3L12 6Z"
-            fill="currentColor"
-            opacity="0.7"
-          />
+          <path d="M12 6L17 9.3V14.7L12 18L7 14.7V9.3L12 6Z" fill="currentColor" opacity="0.7" />
         </svg>
       </button>
       <div className="skill-check-tooltip" role="tooltip">

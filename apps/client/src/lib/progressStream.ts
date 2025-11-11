@@ -1,12 +1,12 @@
-import type { TurnProgressEvent } from "@glass-frontier/dto";
-import { getConfigValue } from "../utils/runtimeConfig";
+import type { TurnProgressEvent } from '@glass-frontier/dto';
+import { getConfigValue } from '../utils/runtimeConfig';
 
 const listeners = new Set<(event: TurnProgressEvent) => void>();
 
 const resolveEndpoint = (): string | null => {
-  const explicit = getConfigValue("VITE_PROGRESS_WS_URL") ?? import.meta.env.VITE_PROGRESS_WS_URL;
+  const explicit = getConfigValue('VITE_PROGRESS_WS_URL') ?? import.meta.env.VITE_PROGRESS_WS_URL;
   if (explicit && explicit.length > 0) {
-    return explicit.replace(/\/$/, "");
+    return explicit.replace(/\/$/, '');
   }
   return null;
 };
@@ -21,16 +21,19 @@ class ProgressStream {
   private activeSubscriptions = new Set<string>();
 
   connect(token: string) {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return;
     }
     if (!this.endpoint) {
-      console.warn("VITE_PROGRESS_WS_URL is not configured; skipping progress stream connection.");
+      console.warn('VITE_PROGRESS_WS_URL is not configured; skipping progress stream connection.');
       return;
     }
     this.token = token;
     this.manualClose = false;
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.socket &&
+      (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
     this.openSocket();
@@ -39,7 +42,7 @@ class ProgressStream {
   disconnect() {
     this.manualClose = true;
     this.token = null;
-    if (typeof window !== "undefined" && this.reconnectTimer) {
+    if (typeof window !== 'undefined' && this.reconnectTimer) {
       window.clearTimeout(this.reconnectTimer);
     }
     this.reconnectTimer = null;
@@ -85,7 +88,7 @@ class ProgressStream {
   }
 
   private openSocket() {
-    if (typeof window === "undefined" || !this.endpoint || !this.token) {
+    if (typeof window === 'undefined' || !this.endpoint || !this.token) {
       return;
     }
     const url = `${this.endpoint}?token=${encodeURIComponent(this.token)}`;
@@ -101,7 +104,7 @@ class ProgressStream {
         const data = JSON.parse(event.data);
         listeners.forEach((listener) => listener(data));
       } catch (error) {
-        console.warn("Failed to parse WS payload", error);
+        console.warn('Failed to parse WS payload', error);
       }
     };
 
@@ -123,14 +126,11 @@ class ProgressStream {
       this.pendingSubscriptions.add(jobId);
       return;
     }
-    this.socket.send(JSON.stringify({ action: "subscribe", jobId }));
+    this.socket.send(JSON.stringify({ action: 'subscribe', jobId }));
   }
 
   private flushSubscriptions() {
-    const jobs = new Set<string>([
-      ...this.activeSubscriptions,
-      ...this.pendingSubscriptions
-    ]);
+    const jobs = new Set<string>([...this.activeSubscriptions, ...this.pendingSubscriptions]);
     jobs.forEach((jobId) => {
       this.sendSubscribe(jobId);
       this.activeSubscriptions.add(jobId);
@@ -139,7 +139,7 @@ class ProgressStream {
   }
 
   private scheduleReconnect() {
-    if (this.reconnectTimer || typeof window === "undefined") {
+    if (this.reconnectTimer || typeof window === 'undefined') {
       return;
     }
     this.reconnectTimer = window.setTimeout(() => {

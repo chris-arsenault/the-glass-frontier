@@ -1,5 +1,5 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { randomUUID } from "node:crypto";
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
 
 type ArchiveRecord = {
   id: string;
@@ -43,9 +43,9 @@ class AuditArchive {
         request: entry.request,
         response: entry.response,
         nodeId: entry.nodeId ?? null,
-        metadata: entry.metadata ?? null
+        metadata: entry.metadata ?? null,
       },
-      (_key, value) => (typeof value === "bigint" ? Number(value) : value)
+      (_key, value) => (typeof value === 'bigint' ? Number(value) : value)
     );
 
     await this.#client.send(
@@ -53,28 +53,28 @@ class AuditArchive {
         Bucket: this.#bucket,
         Key: key,
         Body: body,
-        ContentType: "application/json"
+        ContentType: 'application/json',
       })
     );
   }
 
   #buildKey(timestamp: Date, id: string, nodeId?: string): string {
     const year = timestamp.getUTCFullYear();
-    const month = String(timestamp.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(timestamp.getUTCDate()).padStart(2, "0");
+    const month = String(timestamp.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(timestamp.getUTCDate()).padStart(2, '0');
     const segment = this.#sanitizeNodeId(nodeId);
     return `${segment}/${year}/${month}/${day}/${id}.json`;
   }
 
   #sanitizeNodeId(value?: string): string {
     if (!value) {
-      return "unknown-node";
+      return 'unknown-node';
     }
     const trimmed = value.trim();
     if (!trimmed) {
-      return "unknown-node";
+      return 'unknown-node';
     }
-    return trimmed.replace(/[^A-Za-z0-9-_]+/g, "-").slice(0, 64) || "unknown-node";
+    return trimmed.replace(/[^A-Za-z0-9-_]+/g, '-').slice(0, 64) || 'unknown-node';
   }
 }
 

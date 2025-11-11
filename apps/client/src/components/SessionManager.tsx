@@ -1,8 +1,8 @@
-import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
-import { useChronicleStore } from "../stores/chronicleStore";
-import { useUiStore } from "../stores/uiStore";
-import { MomentumIndicator } from "./MomentumIndicator";
+import type { FormEvent } from 'react';
+import { useMemo, useState } from 'react';
+import { useChronicleStore } from '../stores/chronicleStore';
+import { useUiStore } from '../stores/uiStore';
+import { MomentumIndicator } from './MomentumIndicator';
 
 export function SessionManager() {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
@@ -10,11 +10,13 @@ export function SessionManager() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
-  const createChronicleForCharacter = useChronicleStore((state) => state.createChronicleForCharacter);
+  const createChronicleForCharacter = useChronicleStore(
+    (state) => state.createChronicleForCharacter
+  );
   const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
   const recentChronicles = useChronicleStore((state) => state.recentChronicles);
   const connectionState = useChronicleStore((state) => state.connectionState);
-  const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId ?? "Unknown");
+  const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId ?? 'Unknown');
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
   const directoryError = useChronicleStore((state) => state.directoryError);
@@ -22,13 +24,13 @@ export function SessionManager() {
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveChronicle = useChronicleStore((state) => state.clearActiveChronicle);
-  const [chronicleTitle, setChronicleTitle] = useState("");
-  const [locationName, setLocationName] = useState("");
-  const [locationAtmosphere, setLocationAtmosphere] = useState("");
+  const [chronicleTitle, setChronicleTitle] = useState('');
+  const [locationName, setLocationName] = useState('');
+  const [locationAtmosphere, setLocationAtmosphere] = useState('');
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const disabled = connectionState === "connecting" || isWorking || directoryStatus === "loading";
+  const disabled = connectionState === 'connecting' || isWorking || directoryStatus === 'loading';
   const canSubmitNewChronicle =
     chronicleTitle.trim().length > 0 &&
     locationName.trim().length > 0 &&
@@ -61,7 +63,7 @@ export function SessionManager() {
     try {
       await hydrateChronicle(chronicleId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load chronicle.");
+      setError(err instanceof Error ? err.message : 'Unable to load chronicle.');
     } finally {
       setIsWorking(false);
     }
@@ -74,11 +76,11 @@ export function SessionManager() {
     const targetCharacterId = characterId ?? preferredCharacterId;
 
     if (!trimmedTitle || !trimmedLocationName || !trimmedAtmosphere) {
-      setError("Chronicle title, location name, and atmosphere are required.");
+      setError('Chronicle title, location name, and atmosphere are required.');
       return;
     }
     if (!targetCharacterId) {
-      setError("Select a character before starting a chronicle.");
+      setError('Select a character before starting a chronicle.');
       return;
     }
 
@@ -89,13 +91,13 @@ export function SessionManager() {
         characterId: targetCharacterId,
         title: trimmedTitle,
         locationName: trimmedLocationName,
-        locationAtmosphere: trimmedAtmosphere
+        locationAtmosphere: trimmedAtmosphere,
       });
-      setChronicleTitle("");
-      setLocationName("");
-      setLocationAtmosphere("");
+      setChronicleTitle('');
+      setLocationName('');
+      setLocationAtmosphere('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create chronicle.");
+      setError(err instanceof Error ? err.message : 'Unable to create chronicle.');
     } finally {
       setIsWorking(false);
     }
@@ -115,15 +117,11 @@ export function SessionManager() {
             type="button"
             className="session-manager-new"
             onClick={() => refreshDirectory().catch(() => undefined)}
-            disabled={directoryStatus === "loading"}
+            disabled={directoryStatus === 'loading'}
           >
             Refresh
           </button>
-          <button
-            type="button"
-            className="session-manager-new"
-            onClick={openCreateCharacterModal}
-          >
+          <button type="button" className="session-manager-new" onClick={openCreateCharacterModal}>
             New Character
           </button>
         </div>
@@ -137,13 +135,13 @@ export function SessionManager() {
       <div className="session-manager-status">
         <span className="session-manager-label">Directory</span>
         <span className={`status-chip status-${directoryStatus}`}>
-          {directoryStatus === "loading"
-            ? "Loading…"
-            : directoryStatus === "ready"
-            ? "Ready"
-            : directoryStatus === "error"
-            ? "Error"
-            : "Idle"}
+          {directoryStatus === 'loading'
+            ? 'Loading…'
+            : directoryStatus === 'ready'
+              ? 'Ready'
+              : directoryStatus === 'error'
+                ? 'Error'
+                : 'Idle'}
         </span>
       </div>
 
@@ -220,7 +218,7 @@ export function SessionManager() {
                     {character.name} · {character.archetype}
                   </p>
                   <p className="session-card-meta">
-                    {character.pronouns} · Momentum{" "}
+                    {character.pronouns} · Momentum{' '}
                     <MomentumIndicator
                       momentum={character.momentum}
                       trend={character.id === activeCharacterId ? momentumTrend : null}
@@ -231,11 +229,11 @@ export function SessionManager() {
                   <button
                     type="button"
                     className={`chip-button${
-                      preferredCharacterId === character.id ? " chip-button-active" : ""
+                      preferredCharacterId === character.id ? ' chip-button-active' : ''
                     }`}
                     onClick={() => setPreferredCharacterId(character.id)}
                   >
-                    {preferredCharacterId === character.id ? "Selected" : "Select"}
+                    {preferredCharacterId === character.id ? 'Selected' : 'Select'}
                   </button>
                   <button
                     type="button"
@@ -276,10 +274,10 @@ export function SessionManager() {
                 <div>
                   <p className="session-card-title">{session.title}</p>
                   <p className="session-card-meta">
-                    Character{" "}
+                    Character{' '}
                     {session.characterId
-                      ? characterNameById.get(session.characterId) ?? "Unassigned"
-                      : "Unassigned"}{" "}
+                      ? (characterNameById.get(session.characterId) ?? 'Unassigned')
+                      : 'Unassigned'}{' '}
                     · {session.status}
                   </p>
                 </div>
@@ -315,7 +313,7 @@ export function SessionManager() {
                     onClick={() => handleLoad(id)}
                     disabled={disabled}
                   >
-                    {label ?? "Unknown Chronicle"}
+                    {label ?? 'Unknown Chronicle'}
                   </button>
                 </li>
               );
@@ -324,9 +322,7 @@ export function SessionManager() {
         )}
       </div>
 
-      {directoryError ? (
-        <p className="session-manager-error">{directoryError.message}</p>
-      ) : null}
+      {directoryError ? <p className="session-manager-error">{directoryError.message}</p> : null}
       {error ? <p className="session-manager-error">{error}</p> : null}
     </section>
   );

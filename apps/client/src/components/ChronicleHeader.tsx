@@ -1,17 +1,17 @@
-import { useChronicleStore } from "../stores/chronicleStore";
+import { useChronicleStore } from '../stores/chronicleStore';
 
 const formatStatus = (state: string): string => {
   switch (state) {
-    case "connecting":
-      return "Connecting to the narrative engine...";
-    case "connected":
-      return "Connected to the narrative engine.";
-    case "error":
-      return "Connection interrupted. Please retry.";
-    case "closed":
-      return "Chronicle has been closed.";
+    case 'connecting':
+      return 'Connecting to the narrative engine...';
+    case 'connected':
+      return 'Connected to the narrative engine.';
+    case 'error':
+      return 'Connection interrupted. Please retry.';
+    case 'closed':
+      return 'Chronicle has been closed.';
     default:
-      return "Idle.";
+      return 'Idle.';
   }
 };
 
@@ -24,7 +24,7 @@ export function ChronicleHeader() {
     <>
       <header className="chat-header">
         <h2 className="chat-title">
-          {chronicleRecord?.title?.trim() ? chronicleRecord.title : "Unknown Chronicle"}
+          {chronicleRecord?.title?.trim() ? chronicleRecord.title : 'Unknown Chronicle'}
         </h2>
       </header>
       <div className="chat-status" role="status" aria-live="polite" data-testid="chat-status">
@@ -32,11 +32,11 @@ export function ChronicleHeader() {
       </div>
       {transportError ? (
         <p className="chat-error" role="alert" data-testid="chat-error">
-          {typeof transportError.message === "string"
+          {typeof transportError.message === 'string'
             ? transportError.message
-            : "An unexpected connection issue occurred."}
+            : 'An unexpected connection issue occurred.'}
         </p>
       ) : null}
-      </>
+    </>
   );
 }

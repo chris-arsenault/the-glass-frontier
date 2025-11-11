@@ -1,11 +1,5 @@
-import type {
-  Character,
-  Chronicle,
-  Login,
-  Player,
-  Turn
-} from "@glass-frontier/dto";
-import type { CharacterProgressPayload, ChronicleSnapshot } from "./types";
+import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
+import type { CharacterProgressPayload, ChronicleSnapshot } from './types';
 
 export interface WorldStateStore {
   ensureChronicle(params: {
@@ -14,7 +8,7 @@ export interface WorldStateStore {
     locationId: string;
     characterId?: string;
     title?: string;
-    status?: Chronicle["status"];
+    status?: Chronicle['status'];
   }): Promise<Chronicle>;
 
   getChronicleState(chronicleId: string): Promise<ChronicleSnapshot | null>;

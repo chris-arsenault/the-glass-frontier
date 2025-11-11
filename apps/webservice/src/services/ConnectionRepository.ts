@@ -1,13 +1,13 @@
-import { DynamoDBClient, type WriteRequest } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, type WriteRequest } from '@aws-sdk/client-dynamodb';
 import {
   BatchWriteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
-  QueryCommand
-} from "@aws-sdk/lib-dynamodb";
-import { log } from "@glass-frontier/utils";
-import { websocketConfig } from "./env";
+  QueryCommand,
+} from '@aws-sdk/lib-dynamodb';
+import { log } from '@glass-frontier/utils';
+import { websocketConfig } from './env';
 
 const connectionKey = (id: string) => `CONNECTION#${id}`;
 const jobKey = (id: string) => `JOB#${id}`;
@@ -38,10 +38,10 @@ export class ConnectionRepository {
         TableName: this.tableName,
         Item: {
           pk: connectionKey(metadata.connectionId),
-          sk: "META",
+          sk: 'META',
           ...metadata,
-          ttl: this.ttlFromNow(this.connectionTtlSeconds)
-        }
+          ttl: this.ttlFromNow(this.connectionTtlSeconds),
+        },
       })
     );
   }
@@ -49,7 +49,7 @@ export class ConnectionRepository {
   async subscribe(jobId: string, connectionId: string): Promise<void> {
     const meta = await this.getConnection(connectionId);
     if (!meta) {
-      throw new Error("Connection not registered");
+      throw new Error('Connection not registered');
     }
     const ttl = this.ttlFromNow(this.subscriptionTtlSeconds);
     const writes: WriteRequest[] = [
@@ -62,9 +62,9 @@ export class ConnectionRepository {
             connectionId,
             domainName: meta.domainName,
             stage: meta.stage,
-            ttl
-          }
-        }
+            ttl,
+          },
+        },
       },
       {
         PutRequest: {
@@ -73,10 +73,10 @@ export class ConnectionRepository {
             sk: jobKey(jobId),
             jobId,
             connectionId,
-            ttl
-          }
-        }
-      }
+            ttl,
+          },
+        },
+      },
     ];
 
     await this.batchWrite(writes);
@@ -86,20 +86,20 @@ export class ConnectionRepository {
     const response = await client.send(
       new QueryCommand({
         TableName: this.tableName,
-        KeyConditionExpression: "pk = :pk",
+        KeyConditionExpression: 'pk = :pk',
         ExpressionAttributeValues: {
-          ":pk": jobKey(jobId)
+          ':pk': jobKey(jobId),
         },
-        ConsistentRead: true
+        ConsistentRead: true,
       })
     );
 
     const items = response.Items ?? [];
     const deduped = new Map<string, JobTarget>();
     for (const item of items) {
-      const connectionId = typeof item.connectionId === "string" ? item.connectionId : null;
-      const domainName = typeof item.domainName === "string" ? item.domainName : null;
-      const stage = typeof item.stage === "string" ? item.stage : null;
+      const connectionId = typeof item.connectionId === 'string' ? item.connectionId : null;
+      const domainName = typeof item.domainName === 'string' ? item.domainName : null;
+      const stage = typeof item.stage === 'string' ? item.stage : null;
       if (!connectionId || !domainName || !stage) {
         continue;
       }
@@ -114,8 +114,8 @@ export class ConnectionRepository {
     const response = await client.send(
       new QueryCommand({
         TableName: this.tableName,
-        KeyConditionExpression: "pk = :pk",
-        ExpressionAttributeValues: { ":pk": pk }
+        KeyConditionExpression: 'pk = :pk',
+        ExpressionAttributeValues: { ':pk': pk },
       })
     );
 
@@ -123,16 +123,16 @@ export class ConnectionRepository {
     const deletes: WriteRequest[] = [];
 
     if (items.length === 0) {
-      deletes.push({ DeleteRequest: { Key: { pk, sk: "META" } } });
+      deletes.push({ DeleteRequest: { Key: { pk, sk: 'META' } } });
     }
 
     for (const item of items) {
-      const sk = typeof item.sk === "string" ? item.sk : undefined;
+      const sk = typeof item.sk === 'string' ? item.sk : undefined;
       if (!sk) {
         continue;
       }
       deletes.push({ DeleteRequest: { Key: { pk, sk } } });
-      if (sk.startsWith("JOB#")) {
+      if (sk.startsWith('JOB#')) {
         deletes.push({ DeleteRequest: { Key: { pk: sk, sk: pk } } });
       }
     }
@@ -144,7 +144,7 @@ export class ConnectionRepository {
     const result = await client.send(
       new GetCommand({
         TableName: this.tableName,
-        Key: { pk: connectionKey(connectionId), sk: "META" }
+        Key: { pk: connectionKey(connectionId), sk: 'META' },
       })
     );
 
@@ -153,12 +153,8 @@ export class ConnectionRepository {
     }
 
     const { userId, domainName, stage } = result.Item;
-    if (
-      typeof userId !== "string" ||
-      typeof domainName !== "string" ||
-      typeof stage !== "string"
-    ) {
-      log("warn", "Connection metadata missing fields", { connectionId });
+    if (typeof userId !== 'string' || typeof domainName !== 'string' || typeof stage !== 'string') {
+      log('warn', 'Connection metadata missing fields', { connectionId });
       return null;
     }
 
@@ -166,7 +162,7 @@ export class ConnectionRepository {
       connectionId,
       userId,
       domainName,
-      stage
+      stage,
     };
   }
 
@@ -181,18 +177,19 @@ export class ConnectionRepository {
 
     for (let i = 0; i < requests.length; i += 25) {
       let pending: Record<string, WriteRequest[]> | undefined = {
-        [this.tableName]: requests.slice(i, i + 25)
+        [this.tableName]: requests.slice(i, i + 25),
       };
 
       while (pending && Object.keys(pending).length > 0) {
         const response = await client.send(
           new BatchWriteCommand({
-            RequestItems: pending
+            RequestItems: pending,
           })
         );
 
         const unprocessed = response.UnprocessedItems?.[this.tableName];
-        pending = unprocessed && unprocessed.length > 0 ? { [this.tableName]: unprocessed } : undefined;
+        pending =
+          unprocessed && unprocessed.length > 0 ? { [this.tableName]: unprocessed } : undefined;
       }
     }
   }

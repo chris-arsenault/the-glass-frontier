@@ -1,7 +1,7 @@
-import { OpenAIProvider } from "./OpenAIProvider";
-import { AnthropicProvider } from "./AnthropicProvider";
-import { BaseProvider } from "./BaseProvider";
-import { ProviderError } from "./ProviderError";
+import { OpenAIProvider } from './OpenAIProvider';
+import { AnthropicProvider } from './AnthropicProvider';
+import { BaseProvider } from './BaseProvider';
+import { ProviderError } from './ProviderError';
 
 type ProviderMap = Map<string, BaseProvider>;
 
@@ -13,10 +13,10 @@ export class ProviderRegistry {
 
     if (available.length === 0) {
       throw new ProviderError({
-        code: "no_providers_configured",
+        code: 'no_providers_configured',
         status: 503,
         retryable: false,
-        details: { attempted: ["openai", "anthropic"] }
+        details: { attempted: ['openai', 'anthropic'] },
       });
     }
 
@@ -24,14 +24,13 @@ export class ProviderRegistry {
   }
 
   providerOrder(): BaseProvider[] {
-    let providers: BaseProvider[] = [];
-    const provider = this.get("openai");
+    const providers: BaseProvider[] = [];
+    const provider = this.get('openai');
     if (provider) {
-      providers.push(provider)
+      providers.push(provider);
     }
     return providers;
   }
-
 
   get(idOrAlias: string): BaseProvider | undefined {
     const key = this.normalizeId(idOrAlias);
@@ -67,10 +66,10 @@ export class ProviderRegistry {
       // Collision checks
       if (map.has(id)) {
         throw new ProviderError({
-          code: "duplicate_provider_id",
+          code: 'duplicate_provider_id',
           status: 500,
           retryable: false,
-          details: { id }
+          details: { id },
         });
       }
       map.set(id, provider);
@@ -82,10 +81,10 @@ export class ProviderRegistry {
         const existing = map.get(a);
         if (existing && existing !== provider) {
           throw new ProviderError({
-            code: "duplicate_provider_alias",
+            code: 'duplicate_provider_alias',
             status: 500,
             retryable: false,
-            details: { alias: a, existing: existing.id, incoming: provider.id }
+            details: { alias: a, existing: existing.id, incoming: provider.id },
           });
         }
         map.set(a, provider);
@@ -96,6 +95,6 @@ export class ProviderRegistry {
   }
 
   private normalizeId(id?: string): string {
-    return (id ?? "").trim().toLowerCase();
+    return (id ?? '').trim().toLowerCase();
   }
 }

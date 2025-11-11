@@ -1,7 +1,7 @@
-import type { FormEvent } from "react";
-import { useState } from "react";
-import { useChronicleStore } from "../stores/chronicleStore";
-import { LocationOverview } from "./LocationOverview";
+import type { FormEvent } from 'react';
+import { useState } from 'react';
+import { useChronicleStore } from '../stores/chronicleStore';
+import { LocationOverview } from './LocationOverview';
 
 export function ChatComposer() {
   const sendPlayerMessage = useChronicleStore((state) => state.sendPlayerMessage);
@@ -11,10 +11,10 @@ export function ChatComposer() {
   const connectionState = useChronicleStore((state) => state.connectionState);
   const chronicleStatus = useChronicleStore((state) => state.chronicleStatus);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState('');
 
   const chronicleUnavailable =
-    !hasChronicle || chronicleStatus === "closed" || connectionState === "closed";
+    !hasChronicle || chronicleStatus === 'closed' || connectionState === 'closed';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -23,7 +23,7 @@ export function ChatComposer() {
       return;
     }
 
-    setDraft("");
+    setDraft('');
     try {
       await sendPlayerMessage({ content: trimmed });
     } catch {
@@ -33,16 +33,16 @@ export function ChatComposer() {
 
   const queuedCount = Math.max(queuedIntents, 0);
   const buttonLabel = !hasChronicle
-    ? "Select a chronicle"
-    : chronicleStatus === "closed" || connectionState === "closed"
-    ? "Chronicle closed"
-    : isOffline
-    ? queuedCount > 0
-      ? "Queue Intent"
-      : "Queue Intent"
-    : isSending
-    ? "Sending..."
-    : "Send to GM";
+    ? 'Select a chronicle'
+    : chronicleStatus === 'closed' || connectionState === 'closed'
+      ? 'Chronicle closed'
+      : isOffline
+        ? queuedCount > 0
+          ? 'Queue Intent'
+          : 'Queue Intent'
+        : isSending
+          ? 'Sending...'
+          : 'Send to GM';
 
   return (
     <form
@@ -68,7 +68,7 @@ export function ChatComposer() {
           data-testid="chat-offline-banner"
         >
           Connection degraded — intents will queue and send once online.
-          {queuedCount > 0 ? ` ${queuedCount} pending.` : ""}
+          {queuedCount > 0 ? ` ${queuedCount} pending.` : ''}
         </p>
       ) : chronicleUnavailable ? (
         <p

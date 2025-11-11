@@ -1,9 +1,9 @@
-import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-import { TurnProgressEvent, TurnProgressPayload } from "@glass-frontier/dto";
-import { log } from "@glass-frontier/utils";
-import type { GraphContext } from "./types";
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { TurnProgressEvent, TurnProgressPayload } from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
+import type { GraphContext } from './types';
 
-export type TurnProgressStatus = "start" | "success" | "error";
+export type TurnProgressStatus = 'start' | 'success' | 'error';
 
 export interface TurnProgressUpdate {
   jobId: string;
@@ -27,15 +27,18 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => ({
   gmMessage: context.gmMessage,
   systemMessage: context.systemMessage,
   gmSummary: context.gmSummary,
-  failure: context.failure
+  failure: context.failure,
 });
 
 export class TurnProgressEmitter implements TurnProgressPublisher {
   private readonly client: SQSClient;
 
-  constructor(private readonly queueUrl: string, client?: SQSClient) {
+  constructor(
+    private readonly queueUrl: string,
+    client?: SQSClient
+  ) {
     if (!queueUrl) {
-      throw new Error("TURN_PROGRESS_QUEUE_URL is required to emit progress events");
+      throw new Error('TURN_PROGRESS_QUEUE_URL is required to emit progress events');
     }
     this.client = client ?? new SQSClient({});
   }
@@ -49,20 +52,25 @@ export class TurnProgressEmitter implements TurnProgressPublisher {
       step: update.step,
       total: update.total,
       status: update.status,
-      payload: update.status === "success" ? buildPayload(update.context) : update.status === "error" ? buildPayload(update.context) : undefined
+      payload:
+        update.status === 'success'
+          ? buildPayload(update.context)
+          : update.status === 'error'
+            ? buildPayload(update.context)
+            : undefined,
     };
 
     try {
       await this.client.send(
         new SendMessageCommand({
           QueueUrl: this.queueUrl,
-          MessageBody: JSON.stringify(event)
+          MessageBody: JSON.stringify(event),
         })
       );
     } catch (error) {
-      log("error", "Failed to enqueue turn progress", {
+      log('error', 'Failed to enqueue turn progress', {
         jobId: update.jobId,
-        reason: error instanceof Error ? error.message : "unknown"
+        reason: error instanceof Error ? error.message : 'unknown',
       });
     }
   }

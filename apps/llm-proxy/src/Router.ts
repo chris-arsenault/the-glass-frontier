@@ -1,19 +1,19 @@
-"use strict";
+'use strict';
 
-import { log } from "@glass-frontier/utils/";
-import { ProviderRegistry, ProviderError, BaseProvider } from "./providers";
-import { Payload } from "./Payload.js";
-import { Response } from "undici";
-import { z } from "zod";
-import { AuditArchive } from "./services/AuditArchive";
-import { TokenUsageTracker } from "./services/TokenUsageTracker";
+import { log } from '@glass-frontier/utils/';
+import { ProviderRegistry, ProviderError, BaseProvider } from './providers';
+import { Payload } from './Payload.js';
+import { Response } from 'undici';
+import { z } from 'zod';
+import { AuditArchive } from './services/AuditArchive';
+import { TokenUsageTracker } from './services/TokenUsageTracker';
 
 const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 
 const chatMessageSchema = z.object({
   role: z.string(),
   content: z.any(),
-  name: z.string().optional()
+  name: z.string().optional(),
 });
 
 const chatCompletionInputSchema = z
@@ -27,7 +27,7 @@ const chatCompletionInputSchema = z
     requestId: z.string().optional(),
     provider: z.string().optional(),
     fallbackProviders: z.array(z.string()).optional(),
-    metadata: z.record(z.any()).optional()
+    metadata: z.record(z.any()).optional(),
   })
   .passthrough();
 
@@ -52,7 +52,7 @@ class Router {
   usageTracker: TokenUsageTracker | null;
 
   constructor() {
-    this.timeoutMs = Number.parseInt(process.env.LLM_PROXY_REQUEST_TIMEOUT_MS || "60000", 10);
+    this.timeoutMs = Number.parseInt(process.env.LLM_PROXY_REQUEST_TIMEOUT_MS || '60000', 10);
     this.registry = new ProviderRegistry();
     this.auditArchive = AuditArchive.fromEnv();
     this.usageTracker = TokenUsageTracker.fromEnv();
@@ -82,9 +82,9 @@ class Router {
 
     if (sequence.length === 0) {
       throw new ProviderError({
-        code: "llm_proxy_no_providers",
+        code: 'llm_proxy_no_providers',
         status: 503,
-        retryable: false
+        retryable: false,
       });
     }
 
@@ -95,25 +95,25 @@ class Router {
       const attempt = index + 1;
       const attemptCtx = {
         providerId: provider.id,
-        attempt
+        attempt,
       };
 
       try {
-        log("info", "llm-proxy.provider.start", attemptCtx);
+        log('info', 'llm-proxy.provider.start', attemptCtx);
         const preparedPayload = provider.preparePayload(payload);
-        log("info", payload.json())
+        log('info', payload.json());
         const llmResponse = await this.executeProvider(provider, preparedPayload);
 
         if (this.isRetryable(llmResponse)) {
           lastError = new ProviderError({
-            code: "llm_proxy_retryable_status",
+            code: 'llm_proxy_retryable_status',
             status: llmResponse.status,
-            retryable: true
+            retryable: true,
           });
           await this.drain(llmResponse);
-          log("warn", "llm-proxy.provider.retryable_status", {
+          log('warn', 'llm-proxy.provider.retryable_status', {
             ...attemptCtx,
-            status: llmResponse.status
+            status: llmResponse.status,
           });
           continue;
         }
@@ -121,14 +121,14 @@ class Router {
         if (!llmResponse.ok) {
           const errorBody = await this.readBody(llmResponse);
           lastError = new ProviderError({
-            code: "llm_proxy_upstream_failure",
+            code: 'llm_proxy_upstream_failure',
             status: llmResponse.status,
             retryable: false,
-            details: { body: errorBody }
+            details: { body: errorBody },
           });
-          log("error", "llm-proxy.provider.failure_status", {
+          log('error', 'llm-proxy.provider.failure_status', {
             ...attemptCtx,
-            status: llmResponse.status
+            status: llmResponse.status,
           });
           continue;
         }
@@ -136,24 +136,24 @@ class Router {
         const responseBody = await this.readBody(llmResponse);
         if (
           responseBody &&
-          typeof responseBody === "object" &&
-          "choices" in responseBody &&
+          typeof responseBody === 'object' &&
+          'choices' in responseBody &&
           Array.isArray((responseBody as Record<string, unknown>).choices)
         ) {
           const [firstChoice] = (responseBody as { choices: Array<{ message?: unknown }> }).choices;
           if (firstChoice?.message !== undefined) {
             const preview =
-              typeof firstChoice.message === "string"
+              typeof firstChoice.message === 'string'
                 ? firstChoice.message
                 : JSON.stringify(firstChoice.message);
-            log("debug", "llm-proxy.provider.preview", {
-              preview
+            log('debug', 'llm-proxy.provider.preview', {
+              preview,
             });
           }
         }
-        log("info", "llm-proxy.provider.success", {
+        log('info', 'llm-proxy.provider.success', {
           ...attemptCtx,
-          status: llmResponse.status
+          status: llmResponse.status,
         });
         await this.handleSuccess({
           requestBody: preparedPayload.body ?? {},
@@ -162,14 +162,14 @@ class Router {
           playerId: context?.playerId,
           requestId: payload.requestId,
           requestContextId: context?.requestId,
-          metadata
+          metadata,
         });
         return responseBody;
       } catch (error: any) {
-        log("error", "llm-proxy.provider.failure", {
+        log('error', 'llm-proxy.provider.failure', {
           ...attemptCtx,
-          code: "llm_proxy_provider_failure",
-          message: error.message
+          code: 'llm_proxy_provider_failure',
+          message: error.message,
         });
         lastError = error;
       }
@@ -178,8 +178,8 @@ class Router {
     throw (
       lastError ||
       new ProviderError({
-        code: "llm_proxy_all_providers_failed",
-        status: 502
+        code: 'llm_proxy_all_providers_failed',
+        status: 502,
       })
     );
   }
@@ -233,11 +233,11 @@ class Router {
             response: payload.responseBody,
             requestContextId: payload.requestContextId,
             nodeId,
-            metadata: payload.metadata
+            metadata: payload.metadata,
           })
           .catch((error) =>
-            log("error", "llm-proxy.audit.failure", {
-              message: error instanceof Error ? error.message : "unknown"
+            log('error', 'llm-proxy.audit.failure', {
+              message: error instanceof Error ? error.message : 'unknown',
             })
           )
       );
@@ -247,18 +247,16 @@ class Router {
       const usage = this.extractUsage(payload.responseBody);
       if (usage && payload.playerId) {
         tasks.push(
-          this.usageTracker
-            .record(payload.playerId, usage)
-            .catch((error) =>
-              log("error", "llm-proxy.usage.failure", {
-                message: error instanceof Error ? error.message : "unknown"
-              })
-            )
+          this.usageTracker.record(payload.playerId, usage).catch((error) =>
+            log('error', 'llm-proxy.usage.failure', {
+              message: error instanceof Error ? error.message : 'unknown',
+            })
+          )
         );
       } else if (usage && !payload.playerId) {
-        log("warn", "llm-proxy.usage.missing_player", {
+        log('warn', 'llm-proxy.usage.missing_player', {
           requestId: payload.requestId,
-          providerId: payload.providerId
+          providerId: payload.providerId,
         });
       }
     }
@@ -269,7 +267,7 @@ class Router {
   }
 
   private extractUsage(response: unknown): unknown {
-    if (response && typeof response === "object" && "usage" in response) {
+    if (response && typeof response === 'object' && 'usage' in response) {
       return (response as { usage: unknown }).usage;
     }
     return undefined;
@@ -280,16 +278,17 @@ class Router {
       return undefined;
     }
     const nodeId = metadata.nodeId;
-    return typeof nodeId === "string" && nodeId.trim() ? nodeId.trim() : undefined;
+    return typeof nodeId === 'string' && nodeId.trim() ? nodeId.trim() : undefined;
   }
 
   private extractInvocationParts(body: ChatCompletionInput): {
     metadata: InvocationMetadata;
     payloadBody: Record<string, unknown>;
   } {
-    const metadata = body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
-      ? (body.metadata as Record<string, unknown>)
-      : undefined;
+    const metadata =
+      body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
+        ? (body.metadata as Record<string, unknown>)
+        : undefined;
 
     if (!metadata) {
       return { metadata: undefined, payloadBody: body as Record<string, unknown> };

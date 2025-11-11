@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useChronicleStore } from "../stores/chronicleStore";
+import { useEffect } from 'react';
+import { useChronicleStore } from '../stores/chronicleStore';
 
 export function useLoginResources(isAuthenticated: boolean) {
   const refresh = useChronicleStore((state) => state.refreshLoginResources);
@@ -11,7 +11,7 @@ export function useLoginResources(isAuthenticated: boolean) {
       resetStore();
       return;
     }
-    if (directoryStatus === "loading" || directoryStatus === "ready") {
+    if (directoryStatus === 'loading' || directoryStatus === 'ready') {
       return;
     }
     refresh().catch(() => {

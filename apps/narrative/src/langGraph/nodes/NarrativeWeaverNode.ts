@@ -1,18 +1,18 @@
-import type { GraphContext } from "../../types.js";
-import type { GraphNode } from "../orchestrator.js";
-import { composeNarrationPrompt } from "../prompts/prompts";
-import {TranscriptEntry} from "@glass-frontier/dto/narrative/TranscriptEntry";
+import type { GraphContext } from '../../types.js';
+import type { GraphNode } from '../orchestrator.js';
+import { composeNarrationPrompt } from '../prompts/prompts';
+import { TranscriptEntry } from '@glass-frontier/dto/narrative/TranscriptEntry';
 
 class NarrativeWeaverNode implements GraphNode {
-  readonly id = "narrative-weaver";
+  readonly id = 'narrative-weaver';
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (context.failure || !context.playerIntent ) {
-        context.telemetry?.recordToolNotRun({
-          chronicleId: context.chronicleId,
-          operation: "llm.narrative-weaver"
-        });
-        return {...context, failure: true}
+    if (context.failure || !context.playerIntent) {
+      context.telemetry?.recordToolNotRun({
+        chronicleId: context.chronicleId,
+        operation: 'llm.narrative-weaver',
+      });
+      return { ...context, failure: true };
     }
 
     const prompt = await composeNarrationPrompt(
@@ -33,28 +33,28 @@ class NarrativeWeaverNode implements GraphNode {
         metadata: {
           nodeId: this.id,
           chronicleId: context.chronicleId,
-        }
+        },
       });
-      narration = result.text?.trim() || "";
+      narration = result.text?.trim() || '';
     } catch (error) {
       context.telemetry?.recordToolError?.({
         chronicleId: context.chronicleId,
-        operation: "llm.narrative-weaver",
+        operation: 'llm.narrative-weaver',
         attempt: 0,
-        message: error instanceof Error ? error.message : "unknown"
+        message: error instanceof Error ? error.message : 'unknown',
       });
-      return {...context, failure: true}
+      return { ...context, failure: true };
     }
 
     const gmMessage: TranscriptEntry = {
       id: `narration-${context.chronicleId}-${context.turnSequence}`,
       role: 'gm',
-      content:  narration,
+      content: narration,
       metadata: {
         timestamp: Date.now(),
-        tags: []
-      }
-    }
+        tags: [],
+      },
+    };
 
     return {
       ...context,

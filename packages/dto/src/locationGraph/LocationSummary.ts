@@ -1,10 +1,10 @@
-import { z } from "zod";
-import { LocationCertainty } from "./LocationState";
+import { z } from 'zod';
+import { LocationCertainty } from './LocationState';
 
 export const LocationBreadcrumbEntry = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  kind: z.string().min(1)
+  kind: z.string().min(1),
 });
 
 export const LocationSummary = z.object({
@@ -13,7 +13,7 @@ export const LocationSummary = z.object({
   tags: z.array(z.string()).default([]),
   status: z.array(z.string()).default([]),
   certainty: LocationCertainty,
-  description: z.string().optional()
+  description: z.string().optional(),
 });
 
 export type LocationSummary = z.infer<typeof LocationSummary>;

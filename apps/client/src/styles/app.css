@@ -1,6 +1,12 @@
 :root {
   color-scheme: dark;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   line-height: 1.5;
   background-color: #0f172a;
   color: #e2e8f0;
@@ -80,8 +86,7 @@ body {
 .app-shell {
   min-height: 100vh;
   padding: 2rem;
-  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.2), transparent 45%)
-    #050b18;
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.2), transparent 45%) #050b18;
   display: flex;
   justify-content: center;
   width: 100%;
@@ -95,7 +100,9 @@ body {
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.9));
-  box-shadow: 0 40px 120px rgba(2, 6, 23, 0.6), inset 0 0 0 1px rgba(94, 234, 212, 0.05);
+  box-shadow:
+    0 40px 120px rgba(2, 6, 23, 0.6),
+    inset 0 0 0 1px rgba(94, 234, 212, 0.05);
   padding: 1.5rem 2rem;
   display: flex;
 }
@@ -534,7 +541,9 @@ body {
   flex-direction: column;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
   z-index: 40;
 }
 
@@ -1054,7 +1063,9 @@ body {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
-  transition: opacity 140ms ease, transform 140ms ease;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
   z-index: 5;
 }
 
@@ -1305,10 +1316,11 @@ body {
 }
 
 .character-drawer::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
+  background:
+    repeating-linear-gradient(
       0deg,
       rgba(59, 130, 246, 0.05),
       rgba(59, 130, 246, 0.05) 1px,
@@ -1548,7 +1560,7 @@ body {
   background: rgba(15, 23, 42, 0.7);
   padding: 0.75rem;
   color: inherit;
-  font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', monospace;
   font-size: 0.9rem;
   resize: vertical;
 }
@@ -1976,7 +1988,9 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
 .overlay-contest-moderation-button:focus-visible,
@@ -2108,7 +2122,9 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
 .overlay-pipeline-details-toggle:focus-visible,
@@ -2159,7 +2175,10 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .overlay-pipeline-filter:focus-visible,
@@ -2489,7 +2508,7 @@ body {
 }
 
 .overlay-form-label textarea {
-  font-family: "JetBrains Mono", "Source Code Pro", menlo, monospace;
+  font-family: 'JetBrains Mono', 'Source Code Pro', menlo, monospace;
   font-size: 0.85rem;
 }
 
@@ -3364,7 +3383,7 @@ body {
   padding: 1rem;
 }
 
-.session-card[data-selected="true"] {
+.session-card[data-selected='true'] {
   border-color: rgba(96, 165, 250, 0.7);
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
 }
@@ -3543,9 +3562,9 @@ body {
     min-width: 260px;
   }
 
-.session-dashboard {
-  padding: 1.5rem;
-}
+  .session-dashboard {
+    padding: 1.5rem;
+  }
 }
 
 .moderation-cadence {

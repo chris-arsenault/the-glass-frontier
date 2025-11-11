@@ -1,17 +1,17 @@
-"use strict";
+'use strict';
 
-import {randomUUID} from "crypto";
+import { randomUUID } from 'crypto';
 
 class Payload {
-  body: Record<string, any>
+  body: Record<string, any>;
   requestId: string;
 
   constructor(body: Record<string, any>) {
-    this.body = body
+    this.body = body;
     this.requestId = body.requestId || randomUUID();
   }
 
-  sanitizePayload(): Payload{
+  sanitizePayload(): Payload {
     const clone = { ...this.body };
     delete clone.provider;
     delete clone.fallbackProviders;
@@ -24,10 +24,8 @@ class Payload {
   }
 
   json(): string {
-    return JSON.stringify(this.body)
+    return JSON.stringify(this.body);
   }
 }
 
-export {
-  Payload
-};
+export { Payload };

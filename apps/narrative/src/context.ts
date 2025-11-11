@@ -4,25 +4,25 @@ import {
   createLocationGraphStore,
   type WorldStateStore,
   type LocationGraphStore,
-  PromptTemplateManager
-} from "@glass-frontier/persistence";
-import { NarrativeEngine } from "./narrativeEngine";
+  PromptTemplateManager,
+} from '@glass-frontier/persistence';
+import { NarrativeEngine } from './narrativeEngine';
 
 const worldStateStore = createWorldStateStore({
   bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined
+  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
 });
 const locationGraphStore = createLocationGraphStore({
   bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined
+  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
 });
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
 if (!templateBucket) {
-  throw new Error("PROMPT_TEMPLATE_BUCKET must be configured for the narrative service");
+  throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
 }
 const templateManager = new PromptTemplateManager({
   bucket: templateBucket,
-  worldStateStore
+  worldStateStore,
 });
 const engine = new NarrativeEngine({ worldStateStore, locationGraphStore, templateManager });
 
@@ -40,7 +40,7 @@ export async function createContext(options?: { authorizationHeader?: string }):
     locationGraphStore,
     engine,
     templateManager,
-    authorizationHeader: options?.authorizationHeader
+    authorizationHeader: options?.authorizationHeader,
   };
 }
 

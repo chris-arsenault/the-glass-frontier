@@ -1,15 +1,15 @@
-"use strict";
+'use strict';
 
-import {Payload} from "../Payload";
-import {fetch, Response} from "undici";
-import {ProviderError} from "./ProviderError";
+import { Payload } from '../Payload';
+import { fetch, Response } from 'undici';
+import { ProviderError } from './ProviderError';
 
 abstract class BaseProvider {
-  id: string = "";
+  id: string = '';
   aliases: string[] = [];
   supportsStreaming: boolean = false;
-  target: string = "";
-  apiKey: string = "";
+  target: string = '';
+  apiKey: string = '';
   valid: boolean = true;
   headers: Record<string, string> = {};
 
@@ -18,17 +18,17 @@ abstract class BaseProvider {
   async execute(body: Payload, signal?: AbortSignal | undefined): Promise<Response> {
     try {
       return fetch(this.target, {
-        method: "POST",
+        method: 'POST',
         headers: this.headers,
         body: body.json(),
-        signal
+        signal,
       });
     } catch (error: any) {
       throw new ProviderError({
-        code: "openai_upstream_unreachable",
+        code: 'openai_upstream_unreachable',
         status: 502,
         retryable: true,
-        details: error.message
+        details: error.message,
       });
     }
   }
@@ -38,6 +38,4 @@ abstract class BaseProvider {
   }
 }
 
-export {
-  BaseProvider
-};
+export { BaseProvider };

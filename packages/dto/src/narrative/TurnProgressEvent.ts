@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { Intent } from "./Intent";
-import { SkillCheckPlan, SkillCheckResult } from "./SkillCheck";
-import { TranscriptEntry } from "./TranscriptEntry";
+import { z } from 'zod';
+import { Intent } from './Intent';
+import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
+import { TranscriptEntry } from './TranscriptEntry';
 
 export const TurnProgressPayloadSchema = z.object({
   playerIntent: Intent.optional(),
@@ -10,7 +10,7 @@ export const TurnProgressPayloadSchema = z.object({
   gmMessage: TranscriptEntry.optional(),
   systemMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
-  failure: z.boolean().optional()
+  failure: z.boolean().optional(),
 });
 
 export const TurnProgressEventSchema = z.object({
@@ -20,8 +20,8 @@ export const TurnProgressEventSchema = z.object({
   nodeId: z.string().min(1),
   step: z.number().int().nonnegative(),
   total: z.number().int().positive(),
-  status: z.enum(["start", "success", "error"]),
-  payload: TurnProgressPayloadSchema.optional()
+  status: z.enum(['start', 'success', 'error']),
+  payload: TurnProgressPayloadSchema.optional(),
 });
 
 export type TurnProgressPayload = z.infer<typeof TurnProgressPayloadSchema>;

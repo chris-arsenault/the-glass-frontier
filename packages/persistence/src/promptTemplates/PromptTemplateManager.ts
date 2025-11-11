@@ -1,17 +1,22 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { randomUUID } from "node:crypto";
-import { Readable } from "node:stream";
-import type { WorldStateStore } from "@glass-frontier/persistence";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
+import type { WorldStateStore } from '@glass-frontier/persistence';
 import {
   PROMPT_TEMPLATE_DESCRIPTORS,
   PromptTemplateDescriptor,
   PromptTemplateId,
   type Player,
   type PlayerTemplateSlot,
-  type PlayerTemplateVariant
-} from "@glass-frontier/dto";
+  type PlayerTemplateVariant,
+} from '@glass-frontier/dto';
 
-type VariantSource = "official" | "player";
+type VariantSource = 'official' | 'player';
 
 export type TemplateVariantView = {
   variantId: string;
@@ -43,7 +48,7 @@ type TemplateSlice = {
   suffix: string;
 };
 
-const OFFICIAL_VARIANT_ID = "official";
+const OFFICIAL_VARIANT_ID = 'official';
 
 export class PromptTemplateManager {
   #bucket: string;
@@ -61,13 +66,14 @@ export class PromptTemplateManager {
     region?: string;
   }) {
     if (!options.bucket) {
-      throw new Error("PromptTemplateManager requires a template bucket.");
+      throw new Error('PromptTemplateManager requires a template bucket.');
     }
     this.#bucket = options.bucket;
-    this.#playerPrefix = this.#normalizePrefix(options.playerPrefix ?? "players");
+    this.#playerPrefix = this.#normalizePrefix(options.playerPrefix ?? 'players');
     this.#worldState = options.worldStateStore;
     this.#client = new S3Client({
-      region: options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1"
+      region:
+        options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
     });
   }
 
@@ -84,13 +90,18 @@ export class PromptTemplateManager {
     const editable = await this.#loadEditableBlock(summary.activeVariantId, summary.activeSource, {
       loginId,
       templateId,
-      player
+      player,
     });
-    const variants = await this.#materializeVariants(loginId, templateId, player, summary.activeVariantId);
+    const variants = await this.#materializeVariants(
+      loginId,
+      templateId,
+      player,
+      summary.activeVariantId
+    );
     return {
       ...summary,
       editable,
-      variants
+      variants,
     };
   }
 
@@ -108,7 +119,10 @@ export class PromptTemplateManager {
 
     const slot = player.templateOverrides?.[options.templateId];
     const activeVariantId = slot?.activeVariantId ?? slot?.variants?.[0]?.variantId ?? randomUUID();
-    const variantLabel = options.label?.trim() && options.label.trim().length > 0 ? options.label.trim() : slot?.variants?.[0]?.label ?? "Custom Variant";
+    const variantLabel =
+      options.label?.trim() && options.label.trim().length > 0
+        ? options.label.trim()
+        : (slot?.variants?.[0]?.label ?? 'Custom Variant');
     const objectKey = this.#playerObjectKey(options.loginId, options.templateId, activeVariantId);
 
     await this.#client.send(
@@ -116,7 +130,7 @@ export class PromptTemplateManager {
         Bucket: this.#bucket,
         Key: objectKey,
         Body: fullBody,
-        ContentType: "text/x-handlebars-template; charset=utf-8"
+        ContentType: 'text/x-handlebars-template; charset=utf-8',
       })
     );
 
@@ -124,11 +138,11 @@ export class PromptTemplateManager {
       variantId: activeVariantId,
       label: variantLabel,
       objectKey,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     const nextOverrides = {
-      ...(player.templateOverrides ?? {})
+      ...(player.templateOverrides ?? {}),
     };
 
     const existingVariants = slot?.variants ?? [];
@@ -137,8 +151,8 @@ export class PromptTemplateManager {
       activeVariantId,
       variants: [
         nextVariant,
-        ...existingVariants.filter((variant) => variant.variantId !== activeVariantId)
-      ]
+        ...existingVariants.filter((variant) => variant.variantId !== activeVariantId),
+      ],
     } satisfies PlayerTemplateSlot;
 
     player.templateOverrides = nextOverrides;
@@ -148,7 +162,10 @@ export class PromptTemplateManager {
     return this.getTemplate(options.loginId, options.templateId);
   }
 
-  async revertTemplate(options: { loginId: string; templateId: PromptTemplateId }): Promise<TemplateDetail> {
+  async revertTemplate(options: {
+    loginId: string;
+    templateId: PromptTemplateId;
+  }): Promise<TemplateDetail> {
     const player = await this.#ensurePlayer(options.loginId);
     const slot = player.templateOverrides?.[options.templateId];
     if (slot?.variants?.length) {
@@ -157,7 +174,7 @@ export class PromptTemplateManager {
           this.#client.send(
             new DeleteObjectCommand({
               Bucket: this.#bucket,
-              Key: variant.objectKey
+              Key: variant.objectKey,
             })
           )
         )
@@ -171,7 +188,10 @@ export class PromptTemplateManager {
     return this.getTemplate(options.loginId, options.templateId);
   }
 
-  async resolveTemplate(loginId: string, templateId: PromptTemplateId): Promise<{ body: string; variantId: string }> {
+  async resolveTemplate(
+    loginId: string,
+    templateId: PromptTemplateId
+  ): Promise<{ body: string; variantId: string }> {
     const player = await this.#ensurePlayer(loginId);
     const slot = player.templateOverrides?.[templateId];
     if (!slot || !slot.activeVariantId) {
@@ -216,7 +236,7 @@ export class PromptTemplateManager {
     }
     const blank: Player = {
       loginId,
-      templateOverrides: {}
+      templateOverrides: {},
     };
     await this.#worldState.upsertPlayer(blank);
     return blank;
@@ -227,10 +247,11 @@ export class PromptTemplateManager {
     const slot = player.templateOverrides?.[templateId];
     const hasOverride = Boolean(slot?.variants?.length);
     const activeVariantId = slot?.activeVariantId ?? OFFICIAL_VARIANT_ID;
-    const activeSource: VariantSource = slot?.activeVariantId ? "player" : "official";
+    const activeSource: VariantSource = slot?.activeVariantId ? 'player' : 'official';
     const updatedAt = slot?.activeVariantId
-      ? slot?.variants?.find((variant) => variant.variantId === slot.activeVariantId)?.updatedAt ?? Date.now()
-      : this.#officialCache.get(templateId)?.updatedAt ?? Date.now();
+      ? (slot?.variants?.find((variant) => variant.variantId === slot.activeVariantId)?.updatedAt ??
+        Date.now())
+      : (this.#officialCache.get(templateId)?.updatedAt ?? Date.now());
 
     return {
       nodeId: templateId,
@@ -240,7 +261,7 @@ export class PromptTemplateManager {
       activeVariantId,
       updatedAt,
       supportsVariants: descriptor.supportsVariants,
-      hasOverride
+      hasOverride,
     };
   }
 
@@ -253,19 +274,19 @@ export class PromptTemplateManager {
     const descriptor = this.#descriptor(templateId);
     const officialEntry: TemplateVariantView = {
       variantId: OFFICIAL_VARIANT_ID,
-      label: "System Default",
-      source: "official",
+      label: 'System Default',
+      source: 'official',
       updatedAt: this.#officialCache.get(templateId)?.updatedAt ?? Date.now(),
-      isActive: activeVariantId === OFFICIAL_VARIANT_ID
+      isActive: activeVariantId === OFFICIAL_VARIANT_ID,
     };
 
     const overrides = player.templateOverrides?.[templateId]?.variants ?? [];
     const overrideViews: TemplateVariantView[] = overrides.map((variant) => ({
       variantId: variant.variantId,
       label: variant.label,
-      source: "player",
+      source: 'player',
       updatedAt: variant.updatedAt,
-      isActive: variant.variantId === activeVariantId
+      isActive: variant.variantId === activeVariantId,
     }));
 
     if (!this.#officialCache.has(templateId)) {
@@ -280,7 +301,7 @@ export class PromptTemplateManager {
     source: VariantSource,
     context: { loginId: string; templateId: PromptTemplateId; player: Player }
   ): Promise<string> {
-    if (source === "official") {
+    if (source === 'official') {
       const slice = await this.#getOfficialSlice(context.templateId);
       return slice.editable.trimEnd();
     }
@@ -302,7 +323,9 @@ export class PromptTemplateManager {
     return slice.editable.trimEnd();
   }
 
-  async #getOfficialTemplate(templateId: PromptTemplateId): Promise<{ body: string; updatedAt: number }> {
+  async #getOfficialTemplate(
+    templateId: PromptTemplateId
+  ): Promise<{ body: string; updatedAt: number }> {
     const cached = this.#officialCache.get(templateId);
     if (cached) {
       return cached;
@@ -331,7 +354,7 @@ export class PromptTemplateManager {
       throw new Error(`Unable to locate editable start token for template ${descriptor.id}`);
     }
     const afterToken = startIndex + descriptor.editableStartToken.length;
-    const newlineAfterToken = body.indexOf("\n", afterToken);
+    const newlineAfterToken = body.indexOf('\n', afterToken);
     const editableStart = newlineAfterToken === -1 ? afterToken : newlineAfterToken + 1;
 
     const endIndex = body.indexOf(descriptor.editableEndToken, editableStart);
@@ -342,9 +365,9 @@ export class PromptTemplateManager {
     let suffixStart = endIndex;
     while (suffixStart > editableStart) {
       const char = body.charAt(suffixStart - 1);
-      if (char === "\n" || char === "\r") {
+      if (char === '\n' || char === '\r') {
         suffixStart -= 1;
-      } else if (char === " " || char === "\t") {
+      } else if (char === ' ' || char === '\t') {
         suffixStart -= 1;
       } else {
         break;
@@ -354,7 +377,7 @@ export class PromptTemplateManager {
     return {
       prefix: body.slice(0, editableStart),
       editable: body.slice(editableStart, suffixStart),
-      suffix: body.slice(suffixStart)
+      suffix: body.slice(suffixStart),
     };
   }
 
@@ -362,7 +385,7 @@ export class PromptTemplateManager {
     const output = await this.#client.send(
       new GetObjectCommand({
         Bucket: this.#bucket,
-        Key: key
+        Key: key,
       })
     );
     return this.#readBody(output.Body);
@@ -370,30 +393,30 @@ export class PromptTemplateManager {
 
   async #readBody(body: unknown): Promise<string> {
     if (!body) {
-      throw new Error("Template body stream missing");
+      throw new Error('Template body stream missing');
     }
-    if (typeof body === "string") {
+    if (typeof body === 'string') {
       return body;
     }
     if (Buffer.isBuffer(body)) {
-      return body.toString("utf-8");
+      return body.toString('utf-8');
     }
-    if (typeof (body as any).transformToString === "function") {
-      return (body as any).transformToString("utf-8");
+    if (typeof (body as any).transformToString === 'function') {
+      return (body as any).transformToString('utf-8');
     }
-    if (typeof (body as any).arrayBuffer === "function") {
+    if (typeof (body as any).arrayBuffer === 'function') {
       const buffer = await (body as any).arrayBuffer();
-      return Buffer.from(buffer).toString("utf-8");
+      return Buffer.from(buffer).toString('utf-8');
     }
     if (body instanceof Readable) {
       return await new Promise<string>((resolve, reject) => {
         const chunks: Buffer[] = [];
-        body.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-        body.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
-        body.on("error", reject);
+        body.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+        body.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+        body.on('error', reject);
       });
     }
-    throw new Error("Unsupported template body type");
+    throw new Error('Unsupported template body type');
   }
 
   #descriptor(templateId: PromptTemplateId): PromptTemplateDescriptor {
@@ -405,13 +428,13 @@ export class PromptTemplateManager {
   }
 
   #normalizePrefix(prefix: string): string {
-    return prefix.replace(/\/+$/, "") + "/";
+    return prefix.replace(/\/+$/, '') + '/';
   }
 
   #normalizeEditable(editable: string): string {
-    const trimmed = editable.replace(/\s+$/u, "");
+    const trimmed = editable.replace(/\s+$/u, '');
     if (!trimmed) {
-      return "";
+      return '';
     }
     return `${trimmed}\n\n`;
   }

@@ -1,4 +1,4 @@
-import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
 
 type UsageRecord = Record<string, number>;
 
@@ -19,7 +19,11 @@ class TokenUsageTracker {
     return new TokenUsageTracker(tableName);
   }
 
-  async record(playerId: string | undefined, usage: unknown, timestamp = new Date()): Promise<void> {
+  async record(
+    playerId: string | undefined,
+    usage: unknown,
+    timestamp = new Date()
+  ): Promise<void> {
     if (!playerId) {
       return;
     }
@@ -30,19 +34,19 @@ class TokenUsageTracker {
 
     const period = this.#usagePeriod(timestamp);
     const setParts = [
-      "#updatedAt = :updated_at",
-      "#requestTotal = if_not_exists(#requestTotal, :zero) + :one"
+      '#updatedAt = :updated_at',
+      '#requestTotal = if_not_exists(#requestTotal, :zero) + :one',
     ];
 
     const names: Record<string, string> = {
-      "#updatedAt": "updated_at",
-      "#requestTotal": "total_requests"
+      '#updatedAt': 'updated_at',
+      '#requestTotal': 'total_requests',
     };
 
     const values: Record<string, AttributeValue> = {
-      ":updated_at": { S: timestamp.toISOString() },
-      ":zero": { N: "0" },
-      ":one": { N: "1" }
+      ':updated_at': { S: timestamp.toISOString() },
+      ':zero': { N: '0' },
+      ':one': { N: '1' },
     };
 
     const addParts: string[] = [];
@@ -56,9 +60,9 @@ class TokenUsageTracker {
       addParts.push(`${attrAlias} ${valueAlias}`);
     }
 
-    const expressionSegments = [`SET ${setParts.join(", ")}`];
+    const expressionSegments = [`SET ${setParts.join(', ')}`];
     if (addParts.length > 0) {
-      expressionSegments.push(`ADD ${addParts.join(", ")}`);
+      expressionSegments.push(`ADD ${addParts.join(', ')}`);
     }
 
     await this.#client.send(
@@ -66,23 +70,23 @@ class TokenUsageTracker {
         TableName: this.#tableName,
         Key: {
           player_id: { S: playerId },
-          usage_period: { S: period }
+          usage_period: { S: period },
         },
-        UpdateExpression: expressionSegments.join(" "),
+        UpdateExpression: expressionSegments.join(' '),
         ExpressionAttributeNames: names,
-        ExpressionAttributeValues: values
+        ExpressionAttributeValues: values,
       })
     );
   }
 
   #usagePeriod(date: Date): string {
     const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
   }
 
   #flattenUsage(candidate: unknown): UsageRecord {
-    if (!candidate || typeof candidate !== "object") {
+    if (!candidate || typeof candidate !== 'object') {
       return {};
     }
     const summary: UsageRecord = {};
@@ -91,8 +95,8 @@ class TokenUsageTracker {
   }
 
   #walkUsage(value: unknown, summary: UsageRecord, path: string[]): void {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      const key = path.join("_");
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const key = path.join('_');
       if (key) {
         summary[key] = (summary[key] ?? 0) + value;
       }
@@ -106,7 +110,7 @@ class TokenUsageTracker {
       return;
     }
 
-    if (value && typeof value === "object") {
+    if (value && typeof value === 'object') {
       for (const [key, nested] of Object.entries(value)) {
         this.#walkUsage(nested, summary, [...path, key]);
       }
@@ -114,8 +118,8 @@ class TokenUsageTracker {
   }
 
   #metricAttributeName(raw: string): string {
-    const safe = raw.replace(/[^A-Za-z0-9_]+/g, "_").slice(0, 80);
-    return `metric_${safe || "unknown"}`;
+    const safe = raw.replace(/[^A-Za-z0-9_]+/g, '_').slice(0, 80);
+    return `metric_${safe || 'unknown'}`;
   }
 }
 

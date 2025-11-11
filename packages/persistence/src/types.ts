@@ -1,10 +1,4 @@
-import type {
-  Attribute,
-  Character,
-  Chronicle,
-  LocationSummary,
-  Turn
-} from "@glass-frontier/dto";
+import type { Attribute, Character, Chronicle, LocationSummary, Turn } from '@glass-frontier/dto';
 
 export interface ChronicleSnapshot {
   chronicleId: string;

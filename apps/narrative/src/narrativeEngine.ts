@@ -1,27 +1,27 @@
-import { formatTurnJobId, log } from "@glass-frontier/utils";
+import { formatTurnJobId, log } from '@glass-frontier/utils';
 import {
   createWorldStateStore,
   createLocationGraphStore,
   type WorldStateStore,
   type LocationGraphStore,
-  PromptTemplateManager
-} from "@glass-frontier/persistence";
-import { LangGraphOrchestrator } from "./langGraph/orchestrator";
-import { ChronicleTelemetry } from "./telemetry";
+  PromptTemplateManager,
+} from '@glass-frontier/persistence';
+import { LangGraphOrchestrator } from './langGraph/orchestrator';
+import { ChronicleTelemetry } from './telemetry';
 import {
   CheckPlannerNode,
   GmSummaryNode,
   IntentIntakeNode,
   LocationDeltaNode,
   NarrativeWeaverNode,
-  UpdateCharacterNode
-} from "./langGraph/nodes";
-import { LangGraphLlmClient } from "./langGraph/llmClient";
-import { GraphContext, ChronicleState } from "./types";
-import { Character, TranscriptEntry, Turn, LocationSummary } from "@glass-frontier/dto";
-import { randomUUID } from "node:crypto";
-import { TurnProgressEmitter, type TurnProgressPublisher } from "./progressEmitter";
-import { PromptTemplateRuntime } from "./langGraph/prompts/templateRuntime";
+  UpdateCharacterNode,
+} from './langGraph/nodes';
+import { LangGraphLlmClient } from './langGraph/llmClient';
+import { GraphContext, ChronicleState } from './types';
+import { Character, TranscriptEntry, Turn, LocationSummary } from '@glass-frontier/dto';
+import { randomUUID } from 'node:crypto';
+import { TurnProgressEmitter, type TurnProgressPublisher } from './progressEmitter';
+import { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStore;
@@ -43,13 +43,13 @@ class NarrativeEngine {
       options?.locationGraphStore ??
       createLocationGraphStore({
         bucket: process.env.NARRATIVE_S3_BUCKET,
-        prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined
+        prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
       });
     if (!options?.templateManager) {
-      throw new Error("NarrativeEngine requires a prompt template manager instance");
+      throw new Error('NarrativeEngine requires a prompt template manager instance');
     }
     this.templateManager = options.templateManager;
-    this.telemetry =  new ChronicleTelemetry();
+    this.telemetry = new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.progressEmitter = options?.progressEmitter ?? createProgressEmitterFromEnv();
     this.graph = new LangGraphOrchestrator(
@@ -59,7 +59,7 @@ class NarrativeEngine {
         new NarrativeWeaverNode(),
         new LocationDeltaNode(this.locationGraphStore),
         new GmSummaryNode(),
-        new UpdateCharacterNode(this.worldStateStore, this.locationGraphStore)
+        new UpdateCharacterNode(this.worldStateStore, this.locationGraphStore),
       ],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
@@ -70,25 +70,30 @@ class NarrativeEngine {
     chronicleId: string,
     playerMessage: TranscriptEntry,
     options?: { authorizationHeader?: string }
-  ): Promise<{ turn: Turn; updatedCharacter: Character | null; locationSummary: LocationSummary | null }> {
+  ): Promise<{
+    turn: Turn;
+    updatedCharacter: Character | null;
+    locationSummary: LocationSummary | null;
+  }> {
     if (!chronicleId) {
-      throw new Error("chronicleId is required");
+      throw new Error('chronicleId is required');
     }
 
-    const chronicleState: ChronicleState | null = await this.worldStateStore.getChronicleState(chronicleId);
+    const chronicleState: ChronicleState | null =
+      await this.worldStateStore.getChronicleState(chronicleId);
     if (!chronicleState) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
     const turnSequence: number = chronicleState.turnSequence + 1;
     const loginId = chronicleState.chronicle?.loginId;
     if (!loginId) {
-      throw new Error("Chronicle state missing login identifier for template resolution");
+      throw new Error('Chronicle state missing login identifier for template resolution');
     }
     const jobId = formatTurnJobId(chronicleId, turnSequence);
     let errorResponse: TranscriptEntry | undefined;
     const templateRuntime = new PromptTemplateRuntime({
       loginId,
-      manager: this.templateManager
+      manager: this.templateManager,
     });
 
     let graphResult;
@@ -100,28 +105,28 @@ class NarrativeEngine {
       llm: this.createLlmClient(options?.authorizationHeader),
       telemetry: this.telemetry,
       templates: templateRuntime,
-      failure: false
+      failure: false,
     };
     try {
       graphResult = await this.graph.run(graphInput, { jobId });
     } catch (error) {
-      const errorMessage: string = error instanceof Error ? error.message : "unknown"
-      log("error", "Narrative engine failed during graph execution", {
+      const errorMessage: string = error instanceof Error ? error.message : 'unknown';
+      log('error', 'Narrative engine failed during graph execution', {
         chronicleId,
-        message: errorMessage
+        message: errorMessage,
       });
       errorResponse = {
         id: randomUUID(),
         content: errorMessage,
-        role: "system",
+        role: 'system',
         metadata: {
           timestamp: Date.now(),
-          tags: ["system-failure"]
-        }
-      }
+          tags: ['system-failure'],
+        },
+      };
     }
 
-    const systemMessage =  graphResult?.systemMessage || errorResponse;
+    const systemMessage = graphResult?.systemMessage || errorResponse;
     const failure: boolean = graphResult?.failure || !!systemMessage;
 
     const turn: Turn = {
@@ -135,12 +140,12 @@ class NarrativeEngine {
       skillCheckPlan: graphResult?.skillCheckPlan,
       skillCheckResult: graphResult?.skillCheckResult,
       turnSequence: turnSequence,
-      failure: failure
-    }
+      failure: failure,
+    };
 
     await this.worldStateStore.addTurn(turn);
 
-    log("info", "Narrative engine resolved turn", {
+    log('info', 'Narrative engine resolved turn', {
       chronicleId,
       checkIssued: Boolean(graphResult?.skillCheckPlan),
     });
@@ -159,9 +164,9 @@ class NarrativeEngine {
 
     return new LangGraphLlmClient({
       defaultHeaders: {
-        "content-type": "application/json",
-        authorization: authorizationHeader
-      }
+        'content-type': 'application/json',
+        authorization: authorizationHeader,
+      },
     });
   }
 }
@@ -174,8 +179,8 @@ function createProgressEmitterFromEnv(): TurnProgressPublisher | undefined {
   try {
     return new TurnProgressEmitter(queueUrl);
   } catch (error) {
-    log("warn", "Failed to initialize progress emitter", {
-      reason: error instanceof Error ? error.message : "unknown"
+    log('warn', 'Failed to initialize progress emitter', {
+      reason: error instanceof Error ? error.message : 'unknown',
     });
     return undefined;
   }

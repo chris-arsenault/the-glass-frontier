@@ -1,7 +1,7 @@
-import { setTimeout as delay } from "node:timers/promises";
-import { TRPCClientError, createTRPCUntypedClient, httpBatchLink } from "@trpc/client";
-import type { TRPCUntypedClient } from "@trpc/client";
-import { log } from "@glass-frontier/utils";
+import { setTimeout as delay } from 'node:timers/promises';
+import { TRPCClientError, createTRPCUntypedClient, httpBatchLink } from '@trpc/client';
+import type { TRPCUntypedClient } from '@trpc/client';
+import { log } from '@glass-frontier/utils';
 
 interface LlmInvokeOptions {
   prompt?: string;
@@ -36,35 +36,56 @@ class LangGraphLlmClient {
     maxRetries?: number;
     defaultHeaders?: Record<string, string>;
   }) {
-    const resolvedBaseUrl = options?.baseUrl ?? process.env.LLM_PROXY_URL ?? "http://localhost:8082";
+    const resolvedBaseUrl =
+      options?.baseUrl ?? process.env.LLM_PROXY_URL ?? 'http://localhost:8082';
     this.#baseUrl = this.#normalizeBaseUrl(resolvedBaseUrl);
-    this.#model = options?.model ?? "gpt-4.1-mini";
-    this.#providerId = options?.providerId ?? "llm-proxy";
-    this.#timeoutMs = Number.isFinite(options?.timeoutMs) && (options?.timeoutMs ?? 0) > 0 ? (options?.timeoutMs as number) : 45_000;
-    this.#maxRetries = Number.isFinite(options?.maxRetries) && (options?.maxRetries ?? 0) >= 0 ? (options?.maxRetries as number) : 2;
-    this.#defaultHeaders = options?.defaultHeaders ?? { "content-type": "application/json" };
+    this.#model = options?.model ?? 'gpt-4.1-mini';
+    this.#providerId = options?.providerId ?? 'llm-proxy';
+    this.#timeoutMs =
+      Number.isFinite(options?.timeoutMs) && (options?.timeoutMs ?? 0) > 0
+        ? (options?.timeoutMs as number)
+        : 45_000;
+    this.#maxRetries =
+      Number.isFinite(options?.maxRetries) && (options?.maxRetries ?? 0) >= 0
+        ? (options?.maxRetries as number)
+        : 2;
+    this.#defaultHeaders = options?.defaultHeaders ?? { 'content-type': 'application/json' };
     this.#client = createTRPCUntypedClient<any>({
       links: [
         httpBatchLink({
           url: this.#baseUrl,
-          headers: () => this.#defaultHeaders
-        })
-      ]
+          headers: () => this.#defaultHeaders,
+        }),
+      ],
     });
   }
 
-  async generateText(options: LlmInvokeOptions): Promise<{ text: string; raw: unknown; usage: unknown; provider: string; attempts: number }> {
+  async generateText(
+    options: LlmInvokeOptions
+  ): Promise<{ text: string; raw: unknown; usage: unknown; provider: string; attempts: number }> {
     const payload = this.#buildPayload(options);
-    const { output, raw, usage, attempts } = await this.#execute({ body: payload, metadata: options.metadata });
-    const text = Array.isArray(output) ? output.join("") : String(output ?? "");
+    const { output, raw, usage, attempts } = await this.#execute({
+      body: payload,
+      metadata: options.metadata,
+    });
+    const text = Array.isArray(output) ? output.join('') : String(output ?? '');
     return { text, raw, usage, provider: this.#providerId, attempts };
   }
 
-  async generateJson(options: LlmInvokeOptions): Promise<{ json: Record<string, unknown>; raw: unknown; usage: unknown; provider: string; attempts: number }> {
+  async generateJson(options: LlmInvokeOptions): Promise<{
+    json: Record<string, unknown>;
+    raw: unknown;
+    usage: unknown;
+    provider: string;
+    attempts: number;
+  }> {
     const payload = this.#buildPayload(options);
-    payload.response_format = { type: "json_object" };
-    const { output, raw, usage, attempts } = await this.#execute({ body: payload, metadata: options.metadata });
-    if (typeof output === "string") {
+    payload.response_format = { type: 'json_object' };
+    const { output, raw, usage, attempts } = await this.#execute({
+      body: payload,
+      metadata: options.metadata,
+    });
+    if (typeof output === 'string') {
       const trimmed = output.trim();
       try {
         return {
@@ -72,39 +93,47 @@ class LangGraphLlmClient {
           raw,
           usage,
           provider: this.#providerId,
-          attempts
+          attempts,
         };
       } catch (error) {
-        throw new Error(`llm_json_parse_failed: ${error instanceof Error ? error.message : "unknown"}`);
+        throw new Error(
+          `llm_json_parse_failed: ${error instanceof Error ? error.message : 'unknown'}`
+        );
       }
     }
 
-    if (output && typeof output === "object") {
+    if (output && typeof output === 'object') {
       return {
         json: output as Record<string, unknown>,
         raw,
         usage,
         provider: this.#providerId,
-        attempts
+        attempts,
       };
     }
 
     return { json: {}, raw, usage, provider: this.#providerId, attempts };
   }
 
-  #buildPayload({ prompt, system, messages, temperature = 0.7, maxTokens = 450 }: LlmInvokeOptions): Record<string, unknown> {
+  #buildPayload({
+    prompt,
+    system,
+    messages,
+    temperature = 0.7,
+    maxTokens = 450,
+  }: LlmInvokeOptions): Record<string, unknown> {
     const sequence = Array.isArray(messages) ? [...messages] : [];
 
     if (system) {
-      sequence.unshift({ role: "system", content: system });
+      sequence.unshift({ role: 'system', content: system });
     }
 
     if (prompt) {
-      sequence.push({ role: "user", content: prompt });
+      sequence.push({ role: 'user', content: prompt });
     }
 
     if (sequence.length === 0) {
-      throw new Error("llm_payload_requires_prompt_or_messages");
+      throw new Error('llm_payload_requires_prompt_or_messages');
     }
 
     return {
@@ -112,13 +141,13 @@ class LangGraphLlmClient {
       messages: sequence,
       temperature,
       max_tokens: maxTokens,
-      stream: false
+      stream: false,
     };
   }
 
   async #execute({
     body,
-    metadata
+    metadata,
   }: {
     body: Record<string, unknown>;
     metadata?: Record<string, unknown>;
@@ -131,36 +160,36 @@ class LangGraphLlmClient {
       const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
       try {
         const payload = metadata ? { ...body, metadata } : body;
-        const parsed = (await this.#client.mutation("chatCompletion", payload, {
-          signal: controller.signal
+        const parsed = (await this.#client.mutation('chatCompletion', payload, {
+          signal: controller.signal,
         })) as Record<string, unknown>;
 
         clearTimeout(timer);
         const choice = Array.isArray(parsed.choices) ? parsed.choices[0] : undefined;
-        const message = choice?.message?.content ?? choice?.delta?.content ?? "";
+        const message = choice?.message?.content ?? choice?.delta?.content ?? '';
 
         return {
           output: message,
           raw: parsed,
           usage: parsed.usage ?? null,
-          attempts: attempt + 1
+          attempts: attempt + 1,
         };
       } catch (error) {
         clearTimeout(timer);
         lastError = error;
-        log("error", "narrative.llm.invoke_failed", {
+        log('error', 'narrative.llm.invoke_failed', {
           provider: this.#providerId,
           attempt,
-          message: error instanceof Error ? error.message : "unknown",
-          context: metadata ? JSON.stringify(metadata).slice(0, 200) : "{}"
+          message: error instanceof Error ? error.message : 'unknown',
+          context: metadata ? JSON.stringify(metadata).slice(0, 200) : '{}',
         });
 
         if (error instanceof TRPCClientError && error.data?.httpStatus === 400) {
           const causeMessage =
-            (error.cause as Error | undefined)?.message ?? error.message ?? "Downstream bad request.";
-          throw new Error(
-            `llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500)
-          );
+            (error.cause as Error | undefined)?.message ??
+            error.message ??
+            'Downstream bad request.';
+          throw new Error(`llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500));
         }
 
         if (attempt === this.#maxRetries) {
@@ -172,11 +201,11 @@ class LangGraphLlmClient {
       }
     }
 
-    throw lastError instanceof Error ? lastError : new Error("llm_invoke_failed");
+    throw lastError instanceof Error ? lastError : new Error('llm_invoke_failed');
   }
 
   #normalizeBaseUrl(url: string): string {
-    return url.replace(/\/+$/, "");
+    return url.replace(/\/+$/, '');
   }
 }
 

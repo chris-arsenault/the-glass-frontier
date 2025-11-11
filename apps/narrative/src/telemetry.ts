@@ -1,9 +1,9 @@
-import { log } from "@glass-frontier/utils";
+import { log } from '@glass-frontier/utils';
 
 interface TransitionPayload {
   chronicleId: string;
   nodeId: string;
-  status: "start" | "success" | "error";
+  status: 'start' | 'success' | 'error';
   turnSequence: number;
   metadata?: Record<string, unknown>;
 }
@@ -44,46 +44,46 @@ interface CheckResolutionPayload {
 
 class ChronicleTelemetry {
   recordTransition(payload: TransitionPayload): void {
-    log("info", "telemetry.chronicle.transition", {
+    log('info', 'telemetry.chronicle.transition', {
       chronicleId: payload.chronicleId,
       nodeId: payload.nodeId,
       status: payload.status,
       turnSequence: payload.turnSequence,
-      metadata: payload.metadata ? JSON.stringify(payload.metadata).slice(0, 200) : ""
+      metadata: payload.metadata ? JSON.stringify(payload.metadata).slice(0, 200) : '',
     });
   }
 
   recordCheckDispatch(payload: CheckDispatchPayload): void {
-    log("info", "telemetry.chronicle.check-dispatch", {
+    log('info', 'telemetry.chronicle.check-dispatch', {
       chronicleId: payload.chronicleId,
       auditRef: payload.auditRef,
-      checkId: payload.checkId
+      checkId: payload.checkId,
     });
   }
 
   recordToolError(payload: ToolErrorPayload): void {
-    log("error", "telemetry.chronicle.tool-error", {
+    log('error', 'telemetry.chronicle.tool-error', {
       chronicleId: payload.chronicleId,
       operation: payload.operation,
-      referenceId: payload.referenceId ?? "",
+      referenceId: payload.referenceId ?? '',
       attempt: payload.attempt,
-      message: payload.message
+      message: payload.message,
     });
   }
 
   recordToolNotRun(payload: ToolNotRunPayload): void {
-    log("error", "telemetry.chronicle.tool-not-run", {
+    log('error', 'telemetry.chronicle.tool-not-run', {
       chronicleId: payload.chronicleId,
       operation: payload.operation,
     });
   }
 
   recordCheckResolution(payload: CheckResolutionPayload): void {
-    log("info", "telemetry.chronicle.check-resolution", {
+    log('info', 'telemetry.chronicle.check-resolution', {
       chronicleId: payload.chronicleId,
-      auditRef: payload.auditRef ?? "",
+      auditRef: payload.auditRef ?? '',
       checkId: payload.checkId,
-      result: payload.result
+      result: payload.result,
     });
   }
 }

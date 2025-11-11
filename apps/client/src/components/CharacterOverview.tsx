@@ -1,13 +1,13 @@
-import { useMemo } from "react";
-import { useChronicleStore } from "../stores/chronicleStore";
-import { MomentumIndicator } from "./MomentumIndicator";
+import { useMemo } from 'react';
+import { useChronicleStore } from '../stores/chronicleStore';
+import { MomentumIndicator } from './MomentumIndicator';
 
 const tierOrder: Record<string, number> = {
   legend: 5,
   virtuoso: 4,
   artisan: 3,
   apprentice: 2,
-  fool: 1
+  fool: 1,
 };
 
 interface CharacterOverviewProps {

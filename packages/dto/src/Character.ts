@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 import {
   Attribute,
@@ -7,8 +7,8 @@ import {
   MomentumState,
   Skill,
   SKILL_TIER_MODIFIER,
-  ATTRIBUTE_TIER_MODIFIER
-} from "./mechanics";
+  ATTRIBUTE_TIER_MODIFIER,
+} from './mechanics';
 
 /** Character */
 export const Character = z.object({
@@ -20,12 +20,12 @@ export const Character = z.object({
   tags: z.array(z.string()),
   momentum: MomentumState,
   skills: z.record(z.string(), Skill),
-  attributes: CharacterAttributes
+  attributes: CharacterAttributes,
 });
 export type Character = z.infer<typeof Character>;
 
 export function skillModifierFromSkillName(c: Character, skill: string): number {
-  const name: SkillTier = c.skills[skill]?.tier ?? "fool";
+  const name: SkillTier = c.skills[skill]?.tier ?? 'fool';
   return SKILL_TIER_MODIFIER[name];
 }
 

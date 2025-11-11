@@ -7,9 +7,9 @@ import {
   SkillCheckPlan,
   SkillCheckResult,
   Turn,
-  TranscriptEntry
-} from "@glass-frontier/dto";
-import type { PromptTemplateRuntime } from "./langGraph/prompts/templateRuntime";
+  TranscriptEntry,
+} from '@glass-frontier/dto';
+import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 
 export interface ChronicleState {
   chronicleId: string;
@@ -46,13 +46,22 @@ export interface GraphContext {
   locationSummary?: LocationSummary | null;
 }
 
-
 export interface LangGraphLlmLike {
-  generateText(input: Record<string, unknown>): Promise<{ text: string; provider?: string; raw?: unknown; usage?: unknown }>;
-  generateJson(input: Record<string, unknown>): Promise<{ json: Record<string, unknown>; provider?: string; raw?: unknown; usage?: unknown }>;
+  generateText(
+    input: Record<string, unknown>
+  ): Promise<{ text: string; provider?: string; raw?: unknown; usage?: unknown }>;
+  generateJson(
+    input: Record<string, unknown>
+  ): Promise<{ json: Record<string, unknown>; provider?: string; raw?: unknown; usage?: unknown }>;
 }
 
 export interface TelemetryLike {
-  recordToolError(entry: { chronicleId: string; operation: string; referenceId?: string | null; attempt: number; message: string }): void;
+  recordToolError(entry: {
+    chronicleId: string;
+    operation: string;
+    referenceId?: string | null;
+    attempt: number;
+    message: string;
+  }): void;
   recordToolNotRun(entry: { chronicleId: string; operation: string }): void;
 }

@@ -1,5 +1,5 @@
-import { useUiStore } from "../stores/uiStore";
-import { SessionManager } from "./SessionManager";
+import { useUiStore } from '../stores/uiStore';
+import { SessionManager } from './SessionManager';
 
 const CharacterIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -16,10 +16,7 @@ const TemplateIcon = () => (
       fill="currentColor"
       d="M6 4h9l3 3v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm8 0v3h3"
     />
-    <path
-      fill="currentColor"
-      d="M8 9h8v2H8zm0 4h8v2H8zm0 4h4v2H8z"
-    />
+    <path fill="currentColor" d="M8 9h8v2H8zm0 4h8v2H8zm0 4h4v2H8z" />
   </svg>
 );
 
@@ -34,7 +31,7 @@ export function SideNavigation() {
       <div className="app-nav-buttons">
         <button
           type="button"
-          className={`app-nav-item${isOpen ? " active" : ""}`}
+          className={`app-nav-item${isOpen ? ' active' : ''}`}
           onClick={toggleDrawer}
           aria-pressed={isOpen}
         >
@@ -43,7 +40,7 @@ export function SideNavigation() {
         </button>
         <button
           type="button"
-          className={`app-nav-item${isTemplateDrawerOpen ? " active" : ""}`}
+          className={`app-nav-item${isTemplateDrawerOpen ? ' active' : ''}`}
           onClick={toggleTemplateDrawer}
           aria-pressed={isTemplateDrawerOpen}
         >

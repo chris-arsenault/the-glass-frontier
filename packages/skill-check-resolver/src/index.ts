@@ -1,1 +1,1 @@
-export * from './SkillCheckResolver'
+export * from './SkillCheckResolver';

@@ -1,22 +1,14 @@
-Summarize the GM narration into a compact game-log entry.
-
-## Source (GM prose)
-"""{{gmMessage}}"""
-
-## Context
-Intent: {{intentSummary}}
+Summarize the GM narration into a compact game-log entry. ## Source (GM prose) """{{gmMessage}}"""
+## Context Intent:
+{{intentSummary}}
 {{#if skillLine}}Skill: {{skillLine}}{{/if}}
 {{#if hasCheck}}
-Check: difficulty={{checkDifficulty}}, advantage={{checkAdvantage}}, outcome={{checkOutcome}}
+  Check: difficulty={{checkDifficulty}}, advantage={{checkAdvantage}}, outcome={{checkOutcome}}
 {{else}}
-Check: none
+  Check: none
 {{/if}}
 
-## Instructions
-- Output 1–2 short sentences (≤ 180 chars total if possible).
-- Capture: what changed, who was involved, where it happened.
-- If a check occurred, append a brief postfix like: (advance) or (collapse).
-- No mechanics jargon, no numbers, no quotes, no lists.
-
-## Output
-Return only the summary line.
+## Instructions - Output 1–2 short sentences (≤ 180 chars total if possible). - Capture: what
+changed, who was involved, where it happened. - If a check occurred, append a brief postfix like:
+(advance) or (collapse). - No mechanics jargon, no numbers, no quotes, no lists. ## Output Return
+only the summary line.

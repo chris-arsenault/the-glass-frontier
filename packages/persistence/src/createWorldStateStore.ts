@@ -1,8 +1,8 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import type { S3Client } from "@aws-sdk/client-s3";
-import { S3WorldStateStore } from "./s3WorldStateStore";
-import type { WorldStateStore } from "./worldStateStore";
-import { WorldIndexRepository } from "./worldIndexRepository";
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { S3WorldStateStore } from './s3WorldStateStore';
+import type { WorldStateStore } from './worldStateStore';
+import { WorldIndexRepository } from './worldIndexRepository';
 
 export interface CreateWorldStateStoreOptions {
   bucket?: string | null;
@@ -16,26 +16,26 @@ export interface CreateWorldStateStoreOptions {
 export function createWorldStateStore(options?: CreateWorldStateStoreOptions): WorldStateStore {
   const bucket = options?.bucket ?? process.env.NARRATIVE_S3_BUCKET ?? null;
   if (!bucket) {
-    throw new Error("World state store requires NARRATIVE_S3_BUCKET to be configured.");
+    throw new Error('World state store requires NARRATIVE_S3_BUCKET to be configured.');
   }
 
   const tableName = options?.worldIndexTable ?? process.env.NARRATIVE_DDB_TABLE ?? null;
   if (!tableName) {
-    throw new Error("World state store requires NARRATIVE_DDB_TABLE to be configured.");
+    throw new Error('World state store requires NARRATIVE_DDB_TABLE to be configured.');
   }
 
   const region =
-    options?.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
+    options?.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
 
   const dynamoClient =
     options?.dynamoClient ??
     new DynamoDBClient({
-      region
+      region,
     });
 
   const worldIndex = new WorldIndexRepository({
     client: dynamoClient,
-    tableName
+    tableName,
   });
 
   return new S3WorldStateStore({
@@ -43,6 +43,6 @@ export function createWorldStateStore(options?: CreateWorldStateStoreOptions): W
     prefix: options?.prefix ?? process.env.NARRATIVE_S3_PREFIX ?? undefined,
     client: options?.client,
     region,
-    worldIndex
+    worldIndex,
   });
 }
