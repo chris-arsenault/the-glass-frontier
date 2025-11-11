@@ -1,21 +1,20 @@
 import { ChatCanvas } from "./components/ChatCanvas";
 import { ChatComposer } from "./components/ChatComposer";
-import { useSessionStore } from "./stores/sessionStore";
 import { SideNavigation } from "./components/SideNavigation";
 import { CharacterDrawer } from "./components/CharacterDrawer";
 import { useAuthStore } from "./stores/authStore";
 import { LoginScreen } from "./components/LoginScreen";
 import { useLoginResources } from "./hooks/useLoginResources";
 import { CreateCharacterModal } from "./components/CreateCharacterModal";
+import { useSessionStore } from "./stores/sessionStore";
+import {SessionHeader} from "./components/SessionHeader";
 
 function SessionMeta() {
-  const sessionId = useSessionStore((state) => state.sessionId);
   const character = useSessionStore((state) => state.character);
   const loginLabel = useSessionStore((state) => state.loginName ?? state.loginId);
 
   return (
     <div className="session-meta">
-      {sessionId ? <p className="app-session-id">Session {sessionId}</p> : null}
       {loginLabel ? <p className="app-session-id">Login {loginLabel}</p> : null}
       {character ? (
         <div className="character-pill">
@@ -42,12 +41,12 @@ export default function App() {
         <div className="app-layout">
           <SideNavigation />
           <div className="app-content">
-            <header className="app-header">
-              <h1 className="app-title">The Glass Frontier</h1>
-              <SessionMeta />
-            </header>
             <div className="app-body">
               <main className="app-main">
+                <div className="session-bar">
+                  <SessionHeader />
+                  <SessionMeta />
+                </div>
                 <ChatCanvas />
                 <ChatComposer />
               </main>

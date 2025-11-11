@@ -20,6 +20,7 @@ export interface ChatMessage {
   skillKey?: string | null;
   attributeKey?: Attribute | null;
   playerIntent?: Intent | null;
+  gmSummary?: string | null;
 }
 
 export interface SessionState {
@@ -50,7 +51,7 @@ export interface SessionStore extends SessionState {
   sendPlayerMessage(input: { content: string }): Promise<void>;
   setPreferredCharacterId(characterId: string | null): void;
   refreshLoginResources(): Promise<void>;
-  createSessionForCharacter(characterId?: string | null): Promise<string>;
+  createSessionForCharacter(details: SessionCreationDetails): Promise<string>;
   createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
   clearActiveSession(): void;
   resetStore(): void;
@@ -62,4 +63,11 @@ export interface CharacterCreationDraft {
   pronouns: string;
   attributes: Character["attributes"];
   skills: Character["skills"];
+}
+
+export interface SessionCreationDetails {
+  characterId?: string | null;
+  title: string;
+  locationName: string;
+  locationAtmosphere: string;
 }

@@ -1,27 +1,19 @@
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useSessionStore } from "../stores/sessionStore";
+import { useUiStore } from "../stores/uiStore";
 import { SkillCheckBadge } from "./SkillCheckBadge";
 
-const formatStatus = (state: string): string => {
-  switch (state) {
-    case "connecting":
-      return "Connecting to the narrative engine...";
-    case "connected":
-      return "Connected to the narrative engine.";
-    case "error":
-      return "Connection interrupted. Please retry.";
-    case "closed":
-      return "Session has been closed.";
-    default:
-      return "Idle.";
-  }
-};
+
 
 export function ChatCanvas() {
   const messages = useSessionStore((state) => state.messages);
-  const connectionState = useSessionStore((state) => state.connectionState);
-  const transportError = useSessionStore((state) => state.transportError);
   const hasSession = useSessionStore((state) => Boolean(state.sessionId));
+  const expandedMessages = useUiStore((state) => state.expandedMessages);
+  const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
+  const toggleMessageExpansion = useUiStore((state) => state.toggleMessageExpansion);
+  const resetExpandedMessages = useUiStore((state) => state.resetExpandedMessages);
   const streamRef = useRef(null);
 
   useEffect(() => {
@@ -30,7 +22,45 @@ export function ChatCanvas() {
     }
   }, [messages]);
 
-  const statusText = formatStatus(connectionState);
+  useEffect(() => {
+    if (messages.length === 0) {
+      resetExpandedMessages();
+      return;
+    }
+
+    const playerEntries = messages.filter((msg) => msg.entry.role === "player");
+    const gmEntries = messages.filter((msg) => msg.entry.role === "gm");
+
+    setExpandedMessages((prev) => {
+      const next = { ...prev };
+
+      const applyRules = (entries: typeof messages) => {
+        const ids = entries.map((msg) => msg.entry.id).filter(Boolean);
+        const latestId = ids[ids.length - 1];
+        const penultimateId = ids[ids.length - 2];
+
+        ids.forEach((id) => {
+          if (id && !(id in next)) {
+            next[id] = false;
+          }
+        });
+
+        if (penultimateId) {
+          next[penultimateId] = false;
+        }
+        if (latestId) {
+          next[latestId] = true;
+        }
+      };
+
+      applyRules(playerEntries);
+      applyRules(gmEntries);
+
+      return next;
+    });
+  }, [messages, resetExpandedMessages, setExpandedMessages]);
+
+  const isExpanded = (entryId: string) => expandedMessages[entryId] ?? false;
 
   return (
     <section
@@ -38,16 +68,6 @@ export function ChatCanvas() {
       aria-label="Narrative transcript"
       data-testid="chat-canvas"
     >
-      <div className="chat-status" role="status" aria-live="polite" data-testid="chat-status">
-        {statusText}
-      </div>
-      {transportError ? (
-        <p className="chat-error" role="alert" data-testid="chat-error">
-          {typeof transportError.message === "string"
-            ? transportError.message
-            : "An unexpected connection issue occurred."}
-        </p>
-      ) : null}
       <div
         ref={streamRef}
         className="chat-stream"
@@ -115,14 +135,56 @@ export function ChatCanvas() {
                     ) : null}
                   </div>
                 </header>
-                <p
-                  className="chat-entry-content"
-                  title={
-                    entry.role === "player" ? playerIntent?.intentSummary ?? undefined : undefined
+                <div
+                  className={`chat-entry-body${
+                    entry.role !== "system" ? " chat-entry-toggleable" : ""
+                  }`}
+                  role={entry.role !== "system" ? "button" : undefined}
+                  aria-expanded={entry.role !== "system" ? isExpanded(entry.id) : undefined}
+                  tabIndex={entry.role !== "system" ? 0 : undefined}
+                  onClick={entry.role !== "system" ? () => toggleMessageExpansion(entry.id) : undefined}
+                  onKeyDown={
+                    entry.role !== "system"
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleMessageExpansion(entry.id);
+                          }
+                        }
+                      : undefined
                   }
                 >
-                  {entry.content}
-                </p>
+                  {entry.role === "gm" ? (
+                    isExpanded(entry.id) ? (
+                      <div className="chat-entry-content">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {entry.content ?? ""}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="chat-entry-summary">
+                        {chatMessage.gmSummary ??
+                          playerIntent?.intentSummary ??
+                          "GM summary unavailable."}
+                      </p>
+                    )
+                  ) : entry.role === "player" ? (
+                    isExpanded(entry.id) ? (
+                      <p
+                        className="chat-entry-content"
+                        title={playerIntent?.intentSummary ?? undefined}
+                      >
+                        {entry.content}
+                      </p>
+                    ) : (
+                      <p className="chat-entry-summary">
+                        {playerIntent?.intentSummary ?? entry.content}
+                      </p>
+                    )
+                  ) : (
+                    <p className="chat-entry-content">{entry.content}</p>
+                  )}
+                </div>
               </article>
             );
           })

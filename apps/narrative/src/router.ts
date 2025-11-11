@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { initTRPC } from "@trpc/server";
 import type { Context } from "./context";
 import { z } from "zod";
@@ -13,15 +14,38 @@ export const appRouter = t.router({
       z.object({
         sessionId: z.string().uuid().optional(),
         loginId: z.string().min(1),
-        characterId: z.string().min(1).optional(),
+        characterId: z.string().min(1),
+        title: z.string().min(1),
+        location: z.object({
+          locale: z.string().min(1),
+          atmosphere: z.string().min(1)
+        }),
         status: z.enum(["open", "closed"]).optional()
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const character = await ctx.sessionStore.getCharacter(input.characterId);
+      if (!character) {
+        throw new Error("Character not found for session creation.");
+      }
+      if (character.loginId !== input.loginId) {
+        throw new Error("Character does not belong to the requesting login.");
+      }
+
+      const location = await ctx.sessionStore.upsertLocation({
+        id: randomUUID(),
+        locale: input.location.locale,
+        atmosphere: input.location.atmosphere,
+        description: undefined,
+        metadata: undefined
+      });
+
       const session = await ctx.sessionStore.ensureSession({
         sessionId: input.sessionId,
         loginId: input.loginId,
+        locationId: location.id,
         characterId: input.characterId,
+        title: input.title,
         status: input.status
       });
       log("info", `Ensuring session ${session.id} for login ${session.loginId}`);
@@ -35,22 +59,18 @@ export const appRouter = t.router({
 
   // POST /sessions/:sessionId/messages
   postMessage: t.procedure
-    .input(z.object({
-      sessionId: z.string().uuid(),
-      content: TranscriptEntry, // tighten to your DTO schema
-    }))
+    .input(
+      z.object({
+        sessionId: z.string().uuid(),
+        content: TranscriptEntry // tighten to your DTO schema
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const playerEntry = { ...input.content, role: "player" as const };
       const result: Turn = await ctx.engine.handlePlayerMessage(input.sessionId, playerEntry, {
         authorizationHeader: ctx.authorizationHeader
       });
-      return {
-        gmMessage: result.gmMessage,
-        playerIntent: result.playerIntent,
-        systemMessage: result.systemMessage,
-        skillCheckPlan: result.skillCheckPlan,
-        skillCheckResult: result.skillCheckResult,
-      };
+      return { turn: result };
     }),
 
   listCharacters: t.procedure

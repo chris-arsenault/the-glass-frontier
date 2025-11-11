@@ -22,7 +22,9 @@ export class S3SessionStore implements SessionStore {
   async ensureSession(params: {
     sessionId?: string;
     loginId: string;
+    locationId: string;
     characterId?: string;
+    title?: string;
     status?: SessionRecord["status"];
   }): Promise<SessionRecord> {
     const sessionId = params.sessionId ?? randomUUID();
@@ -33,7 +35,9 @@ export class S3SessionStore implements SessionStore {
     const record: SessionRecord = {
       id: sessionId,
       loginId: params.loginId,
+      locationId: params.locationId,
       characterId: params.characterId,
+      title: params.title?.trim() && params.title.trim().length > 0 ? params.title.trim() : "Untitled Session",
       status: params.status ?? "open",
       metadata: undefined
     };
@@ -46,7 +50,7 @@ export class S3SessionStore implements SessionStore {
       return null;
     }
     const character = session.characterId ? await this.getCharacter(session.characterId) : null;
-    const location = character?.locationId ? await this.getLocation(character.locationId) : null;
+    const location = session.locationId ? await this.getLocation(session.locationId) : null;
     const turns = await this.listTurns(sessionId);
     const lastTurn = turns.length ? turns[turns.length - 1] : null;
     const turnSequence = lastTurn?.turnSequence ?? -1;

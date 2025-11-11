@@ -14,7 +14,6 @@ import {
 export const Character = z.object({
   id: z.string().min(1),
   loginId: z.string().min(1),
-  locationId: z.string().min(1),
   name: z.string().min(1),
   archetype: z.string().min(1),
   pronouns: z.string().min(1),

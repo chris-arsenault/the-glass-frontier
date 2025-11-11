@@ -10,6 +10,7 @@ import type {
 import type {
   ChatMessage,
   CharacterCreationDraft,
+  SessionCreationDetails,
   SessionStore
 } from "../state/sessionState";
 import { trpcClient } from "../lib/trpcClient";
@@ -103,7 +104,8 @@ const toChatMessage = (
   skillCheckResult: extras?.skillCheckResult ?? null,
   skillKey: extras?.skillKey ?? null,
   attributeKey: extras?.attributeKey ?? null,
-  playerIntent: extras?.playerIntent ?? null
+  playerIntent: extras?.playerIntent ?? null,
+  gmSummary: extras?.gmSummary ?? null
 });
 
 const flattenTurns = (turns: Turn[]): ChatMessage[] =>
@@ -115,7 +117,8 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
       skillCheckResult: turn.skillCheckResult ?? null,
       skillKey,
       attributeKey,
-      playerIntent: turn.playerIntent ?? null
+      playerIntent: turn.playerIntent ?? null,
+      gmSummary: turn.gmSummary ?? null
     };
     const turnEntries: ChatMessage[] = [];
     if (turn.playerMessage) {
@@ -161,7 +164,6 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
   return [character, ...filtered];
 };
 
-const DEFAULT_LOCATION_ID = "at-home";
 const DEFAULT_MOMENTUM = { current: 0, floor: -2, ceiling: 3 };
 
 const createBaseState = () => ({
@@ -184,7 +186,7 @@ const createBaseState = () => ({
   availableCharacters: [] as Character[],
   availableSessions: [] as SessionRecord[],
   directoryStatus: "idle" as const,
-  directoryError: null as Error | null
+  directoryError: null as Error | null,
 });
 
 export const useSessionStore = create<SessionStore>()((set, get) => ({
@@ -269,7 +271,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         availableSessions:
           session.session && prev.availableSessions
             ? mergeSessionRecord(prev.availableSessions, session.session)
-            : prev.availableSessions
+            : prev.availableSessions,
       }));
 
       return session.sessionId;
@@ -287,17 +289,34 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }
   },
 
-  async createSessionForCharacter(characterId) {
+  async createSessionForCharacter(details: SessionCreationDetails) {
     const identity = resolveLoginIdentity();
+    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
+    const title = details.title?.trim() ?? "";
+    const locationName = details.locationName?.trim() ?? "";
+    const locationAtmosphere = details.locationAtmosphere?.trim() ?? "";
+
+    if (!targetCharacterId) {
+      throw new Error("Select a character before starting a session.");
+    }
+    if (!title || !locationName || !locationAtmosphere) {
+      throw new Error("Session title, location name, and atmosphere are required.");
+    }
+
     try {
       const result = await trpcClient.createSession.mutate({
         loginId: identity.loginId,
-        characterId: characterId ?? undefined
+        characterId: targetCharacterId,
+        title,
+        location: {
+          locale: locationName,
+          atmosphere: locationAtmosphere
+        }
       });
       set((prev) => ({
         ...prev,
         availableSessions: mergeSessionRecord(prev.availableSessions, result.session),
-        preferredCharacterId: characterId ?? prev.preferredCharacterId ?? null
+        preferredCharacterId: targetCharacterId
       }));
       return get().hydrateSession(result.session.id);
     } catch (error) {
@@ -316,7 +335,6 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     const character: Character = {
       id: generateId(),
       loginId: identity.loginId,
-      locationId: DEFAULT_LOCATION_ID,
       name: draft.name,
       archetype: draft.archetype,
       pronouns: draft.pronouns,
@@ -402,39 +420,53 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
     }));
 
     try {
-      await trpcClient.postMessage.mutate({
+      const { turn } = await trpcClient.postMessage.mutate({
         sessionId,
         content: playerEntry
       });
 
-      const updatedSession = await trpcClient.getSession.query({ sessionId });
+      set((prev) => {
+        const extras = {
+          skillCheckPlan: turn.skillCheckPlan ?? null,
+          skillCheckResult: turn.skillCheckResult ?? null,
+          skillKey: turn.playerIntent?.skill ?? null,
+          attributeKey: turn.playerIntent?.attribute ?? null,
+          playerIntent: turn.playerIntent ?? null,
+          gmSummary: turn.gmSummary ?? null
+        };
 
-      set((prev) => ({
-        ...prev,
-        isSending: false,
-        messages: flattenTurns(updatedSession.turns ?? []),
-        queuedIntents: 0,
-        turnSequence:
-          updatedSession.turnSequence ??
-          updatedSession.turns?.length ??
-          prev.turnSequence,
-        connectionState: "connected",
-        transportError: null,
-        sessionRecord: updatedSession.session ?? prev.sessionRecord,
-        sessionStatus: updatedSession.session?.status ?? prev.sessionStatus,
-        loginId: updatedSession.session?.loginId ?? prev.loginId,
-        character: updatedSession.character ?? prev.character,
-        location: updatedSession.location ?? prev.location,
-        preferredCharacterId: updatedSession.character?.id ?? prev.preferredCharacterId,
-        recentSessions: applyRecentSession(
-          prev.recentSessions,
-          updatedSession.sessionId ?? prev.sessionId ?? ""
-        ),
-        availableSessions:
-          updatedSession.session && prev.availableSessions
-            ? mergeSessionRecord(prev.availableSessions, updatedSession.session)
-            : prev.availableSessions
-      }));
+        const nextMessages = prev.messages
+          .map((message) =>
+            message.entry.id === turn.playerMessage.id
+              ? {
+                  ...message,
+                  skillCheckPlan: extras.skillCheckPlan,
+                  skillCheckResult: extras.skillCheckResult,
+                  skillKey: extras.skillKey,
+                  attributeKey: extras.attributeKey,
+                  playerIntent: extras.playerIntent
+                }
+              : message
+          )
+          .concat(
+            turn.gmMessage ? [toChatMessage(turn.gmMessage, extras)] : [],
+            turn.systemMessage ? [toChatMessage(turn.systemMessage, extras)] : []
+          );
+
+        return {
+          ...prev,
+          isSending: false,
+          messages: nextMessages,
+          queuedIntents: 0,
+          turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
+          connectionState: "connected",
+          transportError: null,
+          recentSessions: applyRecentSession(
+            prev.recentSessions,
+            prev.sessionId ?? sessionId
+          )
+        };
+      });
     } catch (error) {
       const nextError = error instanceof Error ? error : new Error("Failed to send player intent.");
       set((prev) => ({

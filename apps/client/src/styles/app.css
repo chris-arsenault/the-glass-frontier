@@ -133,6 +133,16 @@ body {
   color: #94a3b8;
 }
 
+.session-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
 .session-meta {
   display: flex;
   flex-direction: column;
@@ -664,6 +674,8 @@ body {
   padding: 1rem;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
   min-height: 0;
+  max-height: max(16rem, calc(100vh - 26rem));
+  overflow: hidden;
 }
 
 .chat-status {
@@ -729,6 +741,21 @@ body {
 .chat-entry-content {
   margin: 0.5rem 0 0;
   font-size: 1rem;
+}
+
+.chat-entry-body {
+  cursor: default;
+}
+
+.chat-entry-toggleable {
+  cursor: pointer;
+}
+
+.chat-entry-summary {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  color: #94a3b8;
+  font-style: italic;
 }
 
 .chat-entry-tone {

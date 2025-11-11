@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+type ExpandedMessages = Record<string, boolean>;
+
 type UiState = {
   isCharacterDrawerOpen: boolean;
   toggleCharacterDrawer: () => void;
@@ -7,6 +9,14 @@ type UiState = {
   isCreateCharacterModalOpen: boolean;
   openCreateCharacterModal: () => void;
   closeCreateCharacterModal: () => void;
+  expandedMessages: ExpandedMessages;
+  setExpandedMessages: (
+    next:
+      | ExpandedMessages
+      | ((prev: ExpandedMessages) => ExpandedMessages)
+  ) => void;
+  toggleMessageExpansion: (entryId: string) => void;
+  resetExpandedMessages: () => void;
 };
 
 export const useUiStore = create<UiState>((set) => ({
@@ -18,5 +28,19 @@ export const useUiStore = create<UiState>((set) => ({
   closeCharacterDrawer: () => set({ isCharacterDrawerOpen: false }),
   isCreateCharacterModalOpen: false,
   openCreateCharacterModal: () => set({ isCreateCharacterModalOpen: true }),
-  closeCreateCharacterModal: () => set({ isCreateCharacterModalOpen: false })
+  closeCreateCharacterModal: () => set({ isCreateCharacterModalOpen: false }),
+  expandedMessages: {},
+  setExpandedMessages: (next) =>
+    set((state) => ({
+      expandedMessages:
+        typeof next === "function" ? (next as (prev: ExpandedMessages) => ExpandedMessages)(state.expandedMessages) : next
+    })),
+  toggleMessageExpansion: (entryId) =>
+    set((state) => ({
+      expandedMessages: {
+        ...state.expandedMessages,
+        [entryId]: !(state.expandedMessages[entryId] ?? false)
+      }
+    })),
+  resetExpandedMessages: () => set({ expandedMessages: {} })
 }));

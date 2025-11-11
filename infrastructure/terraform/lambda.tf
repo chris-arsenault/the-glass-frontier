@@ -32,7 +32,7 @@ resource "aws_lambda_function" "narrative" {
     variables = {
       NODE_ENV            = var.environment
       NARRATIVE_S3_BUCKET = aws_s3_bucket.narrative_data.id
-      NARRATIVE_S3_PREFIX = "${var.environment}/sessions/"
+      NARRATIVE_S3_PREFIX = "${var.environment}/"
       LLM_PROXY_URL       = "https://${local.api_domain}/llm"
       DOMAIN_NAME         = local.cloudfront_domain
     }

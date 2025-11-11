@@ -19,24 +19,44 @@ export function SessionManager() {
   const directoryError = useSessionStore((state) => state.directoryError);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveSession = useSessionStore((state) => state.clearActiveSession);
-  const [manualId, setManualId] = useState("");
+  const [sessionTitle, setSessionTitle] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [locationAtmosphere, setLocationAtmosphere] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const disabled = connectionState === "connecting" || isWorking || directoryStatus === "loading";
+  const canSubmitNewSession =
+    sessionTitle.trim().length > 0 &&
+    locationName.trim().length > 0 &&
+    locationAtmosphere.trim().length > 0;
 
   const displaySessions = useMemo(
     () => recentSessions.filter((id) => id && id !== currentSession),
     [recentSessions, currentSession]
   );
-
+  const sessionTitleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const session of availableSessions) {
+      if (session.id) {
+        map.set(session.id, session.title);
+      }
+    }
+    return map;
+  }, [availableSessions]);
+  const characterNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const character of availableCharacters) {
+      map.set(character.id, character.name);
+    }
+    return map;
+  }, [availableCharacters]);
   const handleLoad = async (sessionId: string) => {
     if (!sessionId) return;
     setError(null);
     setIsWorking(true);
     try {
       await hydrateSession(sessionId);
-      setManualId("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load session.");
     } finally {
@@ -44,22 +64,43 @@ export function SessionManager() {
     }
   };
 
-  const handleManualLoad = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!manualId.trim()) return;
-    await handleLoad(manualId.trim());
-  };
-
   const handleCreateSession = async (characterId?: string | null) => {
+    const trimmedTitle = sessionTitle.trim();
+    const trimmedLocationName = locationName.trim();
+    const trimmedAtmosphere = locationAtmosphere.trim();
+    const targetCharacterId = characterId ?? preferredCharacterId;
+
+    if (!trimmedTitle || !trimmedLocationName || !trimmedAtmosphere) {
+      setError("Session title, location name, and atmosphere are required.");
+      return;
+    }
+    if (!targetCharacterId) {
+      setError("Select a character before starting a session.");
+      return;
+    }
+
     setError(null);
     setIsWorking(true);
     try {
-      await createSessionForCharacter(characterId ?? preferredCharacterId);
+      await createSessionForCharacter({
+        characterId: targetCharacterId,
+        title: trimmedTitle,
+        locationName: trimmedLocationName,
+        locationAtmosphere: trimmedAtmosphere
+      });
+      setSessionTitle("");
+      setLocationName("");
+      setLocationAtmosphere("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create session.");
     } finally {
       setIsWorking(false);
     }
+  };
+
+  const handleNewSessionSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await handleCreateSession();
   };
 
   return (
@@ -81,14 +122,6 @@ export function SessionManager() {
             onClick={openCreateCharacterModal}
           >
             New Character
-          </button>
-          <button
-            type="button"
-            className="session-manager-new"
-            onClick={() => handleCreateSession()}
-            disabled={!preferredCharacterId || disabled}
-          >
-            New Session
           </button>
         </div>
       </div>
@@ -113,6 +146,61 @@ export function SessionManager() {
 
       <div className="session-manager-section">
         <div className="session-manager-section-header">
+          <h4>New Session</h4>
+          <p className="session-manager-hint">All fields required before starting.</p>
+        </div>
+        <form className="session-manager-form" onSubmit={handleNewSessionSubmit}>
+          <label className="session-manager-label" htmlFor="session-title">
+            Session Title
+          </label>
+          <input
+            id="session-title"
+            name="session-title"
+            className="session-manager-input"
+            placeholder="The Shattered Observatory"
+            value={sessionTitle}
+            onChange={(event) => setSessionTitle(event.target.value)}
+            disabled={disabled}
+            required
+          />
+          <label className="session-manager-label" htmlFor="location-name">
+            Location Name
+          </label>
+          <input
+            id="location-name"
+            name="location-name"
+            className="session-manager-input"
+            placeholder="Farsight Plateau"
+            value={locationName}
+            onChange={(event) => setLocationName(event.target.value)}
+            disabled={disabled}
+            required
+          />
+          <label className="session-manager-label" htmlFor="location-atmosphere">
+            Location Atmosphere
+          </label>
+          <input
+            id="location-atmosphere"
+            name="location-atmosphere"
+            className="session-manager-input"
+            placeholder="Crackling auroras frame the silent ruins."
+            value={locationAtmosphere}
+            onChange={(event) => setLocationAtmosphere(event.target.value)}
+            disabled={disabled}
+            required
+          />
+          <button
+            type="submit"
+            className="session-manager-new"
+            disabled={disabled || !preferredCharacterId || !canSubmitNewSession}
+          >
+            Start Session
+          </button>
+        </form>
+      </div>
+
+      <div className="session-manager-section">
+        <div className="session-manager-section-header">
           <h4>Characters</h4>
           <p className="session-manager-hint">
             Select a character before starting a new session.
@@ -131,7 +219,6 @@ export function SessionManager() {
                   <p className="session-card-meta">
                     {character.pronouns} · Momentum {character.momentum.current}
                   </p>
-                  <p className="session-card-meta">Location {character.locationId}</p>
                 </div>
                 <div className="session-manager-actions">
                   <button
@@ -150,7 +237,7 @@ export function SessionManager() {
                       setPreferredCharacterId(character.id);
                       handleCreateSession(character.id);
                     }}
-                    disabled={disabled}
+                    disabled={disabled || !canSubmitNewSession}
                   >
                     Start Session
                   </button>
@@ -180,9 +267,13 @@ export function SessionManager() {
             {availableSessions.map((session) => (
               <li key={session.id} className="session-manager-card">
                 <div>
-                  <p className="session-card-title">{session.id}</p>
+                  <p className="session-card-title">{session.title}</p>
                   <p className="session-card-meta">
-                    Character {session.characterId ?? "Unassigned"} · {session.status}
+                    Character{" "}
+                    {session.characterId
+                      ? characterNameById.get(session.characterId) ?? "Unassigned"
+                      : "Unassigned"}{" "}
+                    · {session.status}
                   </p>
                 </div>
                 <div className="session-manager-actions">
@@ -201,45 +292,27 @@ export function SessionManager() {
         )}
       </div>
 
-      <form className="session-manager-form" onSubmit={handleManualLoad}>
-        <label className="session-manager-label" htmlFor="manual-session-id">
-          Load by ID
-        </label>
-        <div className="session-manager-input-row">
-          <input
-            id="manual-session-id"
-            name="manual-session-id"
-            className="session-manager-input"
-            placeholder="session-uuid"
-            value={manualId}
-            onChange={(event) => setManualId(event.target.value)}
-            disabled={disabled}
-            autoComplete="off"
-          />
-          <button type="submit" className="session-manager-load" disabled={disabled || !manualId}>
-            Load
-          </button>
-        </div>
-      </form>
-
       <div className="session-manager-recents">
         <p className="session-manager-label">Recent</p>
         {displaySessions.length === 0 ? (
           <p className="session-manager-empty">No previous sessions</p>
         ) : (
           <ul className="session-manager-list">
-            {displaySessions.map((id) => (
-              <li key={id}>
-                <button
-                  type="button"
-                  className="session-manager-recent"
-                  onClick={() => handleLoad(id)}
-                  disabled={disabled}
-                >
-                  {id}
-                </button>
-              </li>
-            ))}
+            {displaySessions.map((id) => {
+              const label = sessionTitleById.get(id);
+              return (
+                <li key={id}>
+                  <button
+                    type="button"
+                    className="session-manager-recent"
+                    onClick={() => handleLoad(id)}
+                    disabled={disabled}
+                  >
+                    {label ?? "Unknown Session"}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
