@@ -1,17 +1,30 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { cognitoConfig } from "./env";
 
-const issuer = `https://cognito-idp.${cognitoConfig.region}.amazonaws.com/${cognitoConfig.userPoolId}`;
-const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+export const AUTH_DISABLED_ERROR = "COGNITO_AUTH_DISABLED";
+
+let cachedIssuer: string | null = null;
+let jwks:
+  | ReturnType<typeof createRemoteJWKSet>
+  | null = null;
 
 export interface AuthorizedIdentity extends JWTPayload {
   sub: string;
 }
 
 export async function verifyJwt(token: string): Promise<AuthorizedIdentity> {
+  if (!cognitoConfig) {
+    throw new Error(AUTH_DISABLED_ERROR);
+  }
+
+  if (!jwks || !cachedIssuer) {
+    cachedIssuer = `https://cognito-idp.${cognitoConfig.region}.amazonaws.com/${cognitoConfig.userPoolId}`;
+    jwks = createRemoteJWKSet(new URL(`${cachedIssuer}/.well-known/jwks.json`));
+  }
+
   const audience = cognitoConfig.appClientId ? [cognitoConfig.appClientId] : undefined;
   const verification = await jwtVerify(token, jwks, {
-    issuer,
+    issuer: cachedIssuer,
     audience
   });
 

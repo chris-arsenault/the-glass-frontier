@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { log } from "@glass-frontier/utils";
-import { verifyJwt } from "../services/JwtAuthorizer";
+import { verifyJwt, AUTH_DISABLED_ERROR } from "../services/JwtAuthorizer";
 import { ConnectionRepository } from "../services/ConnectionRepository";
 
 const repository = new ConnectionRepository();
@@ -38,9 +38,13 @@ export const handler = async (
 
     return { statusCode: 200, body: "ok" };
   } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown";
     log("warn", "WebSocket connect failed", {
-      reason: error instanceof Error ? error.message : "unknown"
+      reason
     });
+    if (reason === AUTH_DISABLED_ERROR) {
+      return { statusCode: 503, body: "websocket auth disabled" };
+    }
     return unauthorized();
   }
 };

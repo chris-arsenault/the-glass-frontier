@@ -39,3 +39,5 @@ export const LocationPlan = z.object({
 
 export type LocationPlan = z.infer<typeof LocationPlan>;
 export type LocationPlanOp = z.infer<typeof LocationPlanOp>;
+export type LocationPlanPlace = z.infer<typeof LocationPlanPlace>;
+export type LocationPlanEdge = z.infer<typeof LocationPlanEdge>;

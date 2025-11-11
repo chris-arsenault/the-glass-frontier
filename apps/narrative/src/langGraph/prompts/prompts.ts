@@ -7,7 +7,7 @@ import { Attribute } from "@glass-frontier/dto";
 import type { Intent, OutcomeTier, SkillCheckPlan, SkillCheckResult } from "@glass-frontier/dto";
 import type { ChronicleState } from "../../types";
 
-type TemplateName = "checkPlanner" | "gmSummary" | "intent" | "narrativeWeaver";
+type TemplateName = "checkPlanner" | "gmSummary" | "intent" | "narrativeWeaver" | "locationDelta";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,4 +141,31 @@ function describeLocation(chronicle: ChronicleState): string {
   }
   const path = summary.breadcrumb.map((entry) => entry.name).join(" → ");
   return path || "an unknown place";
+}
+
+export function composeLocationDeltaPrompt(input: {
+  current: string;
+  parent: string | null;
+  children: string[];
+  adjacent: string[];
+  links: string[];
+  playerIntent: string;
+  gmResponse: string;
+}): string {
+  return renderTemplate("locationDelta", {
+    current: input.current,
+    parent: input.parent,
+    children: input.children,
+    adjacent: input.adjacent,
+    links: input.links,
+    player_intent: truncateSnippet(input.playerIntent),
+    gm_response: truncateSnippet(input.gmResponse)
+  });
+}
+
+function truncateSnippet(value: string, max = 400): string {
+  if (!value) {
+    return "";
+  }
+  return value.length > max ? `${value.slice(0, max)}…` : value;
 }

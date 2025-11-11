@@ -17,10 +17,16 @@ export const websocketConfig = {
   subscriptionTtlSeconds: parsePositiveInt(process.env.SUBSCRIPTION_TTL_SECONDS, 900)
 };
 
-export const cognitoConfig = {
-  userPoolId: requireEnv("COGNITO_USER_POOL_ID"),
-  appClientId: process.env.COGNITO_APP_CLIENT_ID ?? "",
-  region: process.env.AWS_REGION || "us-east-1"
-};
+export const cognitoConfig = (() => {
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  if (!userPoolId) {
+    return null;
+  }
+  return {
+    userPoolId,
+    appClientId: process.env.COGNITO_APP_CLIENT_ID ?? "",
+    region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1"
+  };
+})();
 
 export { requireEnv };
