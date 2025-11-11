@@ -36,17 +36,9 @@ class SkillCheckResolver {
       const roller = new DiceRoller(this.request);
 
       const modifier = this.computeModifier();
-      console.log('Modifer');
-      console.log(modifier);
       const dieResult = roller.computeResult(modifier);
-      console.log('result');
-      console.log(dieResult);
       const target = RISK_LEVEL_MAP[this.request.riskLevel];
-      console.log('target');
-      console.log(target);
       const margin = dieResult - target;
-      console.log('margin');
-      console.log(margin);
       const outcomeTier: OutcomeTier = this.determineTier(margin);
       const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier);
       console.log(this.request.character.momentum);

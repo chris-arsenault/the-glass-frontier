@@ -22,11 +22,19 @@ class UpdateCharacterNode implements GraphNode {
       return context;
     }
 
+    const characterUpdateContext = await this.#applySkillUpdates(context);
+    const locationUpdateContext = await this.#applyLocationPlan(characterUpdateContext);
+
+    return locationUpdateContext;
+  }
+
+  async #applySkillUpdates(context: GraphContext): Promise<GraphContext> {
+
     const characterId = context.chronicle.character?.id;
     const intent = context.playerIntent;
     const checkResult = context.skillCheckResult;
 
-    if (!characterId || !intent) {
+    if (!characterId || !intent || !intent.requiresCheck) {
       return context;
     }
 
@@ -68,13 +76,9 @@ class UpdateCharacterNode implements GraphNode {
         },
         updatedCharacter,
       };
-    }
 
-    if (this.locationGraphStore && context.locationPlan && context.chronicle.character?.id) {
-      nextContext = await this.#applyLocationPlan(nextContext);
     }
-
-    return nextContext;
+      return nextContext;
   }
 
   async #applyLocationPlan(context: GraphContext): Promise<GraphContext> {

@@ -13,7 +13,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "clear:persistence": "tsx scripts/clear-persistence.ts"
   },
   "keywords": [
     "glass-frontier",
@@ -24,6 +25,8 @@
   "author": "Codex",
   "license": "Polyform-Noncommercial-1.0.0",
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.928.0",
+    "@aws-sdk/client-s3": "^3.928.0",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.0",
     "@vitest/coverage-v8": "^4.0.8",

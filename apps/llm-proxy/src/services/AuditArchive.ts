@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
+import {log} from "@glass-frontier/utils";
 
 type ArchiveRecord = {
   id: string;
@@ -56,6 +57,7 @@ class AuditArchive {
         ContentType: 'application/json',
       })
     );
+    log("info", `Wrote ${id} to audit log.`)
   }
 
   #buildKey(timestamp: Date, id: string, nodeId?: string): string {

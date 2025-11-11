@@ -1,4 +1,5 @@
 import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
+import {log} from "@glass-frontier/utils";
 
 type UsageRecord = Record<string, number>;
 
@@ -77,6 +78,7 @@ class TokenUsageTracker {
         ExpressionAttributeValues: values,
       })
     );
+    log("info", `Updated ${playerId} usage data.`);
   }
 
   #usagePeriod(date: Date): string {

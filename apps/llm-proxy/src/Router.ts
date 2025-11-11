@@ -220,6 +220,7 @@ class Router {
 
   private async handleSuccess(payload: SuccessContext): Promise<void> {
     const tasks: Array<Promise<unknown>> = [];
+    log("info", `Recording LLM Audit s3: ${!!this.auditArchive}, dynamo: ${!!this.usageTracker} `)
 
     if (this.auditArchive) {
       const nodeId = this.extractNodeId(payload.metadata);
