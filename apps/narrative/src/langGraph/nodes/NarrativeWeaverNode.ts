@@ -15,10 +15,11 @@ class NarrativeWeaverNode implements GraphNode {
         return {...context, failure: true}
     }
 
-    const prompt = composeNarrationPrompt(
+    const prompt = await composeNarrationPrompt(
       context.playerIntent,
       context.chronicle,
       context.playerMessage.content,
+      context.templates,
       context.skillCheckPlan,
       context.skillCheckResult?.outcomeTier
     );

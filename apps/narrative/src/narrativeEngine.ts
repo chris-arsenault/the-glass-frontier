@@ -3,7 +3,8 @@ import {
   createWorldStateStore,
   createLocationGraphStore,
   type WorldStateStore,
-  type LocationGraphStore
+  type LocationGraphStore,
+  PromptTemplateManager
 } from "@glass-frontier/persistence";
 import { LangGraphOrchestrator } from "./langGraph/orchestrator";
 import { ChronicleTelemetry } from "./telemetry";
@@ -20,6 +21,7 @@ import { GraphContext, ChronicleState } from "./types";
 import { Character, TranscriptEntry, Turn, LocationSummary } from "@glass-frontier/dto";
 import { randomUUID } from "node:crypto";
 import { TurnProgressEmitter, type TurnProgressPublisher } from "./progressEmitter";
+import { PromptTemplateRuntime } from "./langGraph/prompts/templateRuntime";
 
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStore;
@@ -28,11 +30,13 @@ class NarrativeEngine {
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
   readonly progressEmitter?: TurnProgressPublisher;
+  readonly templateManager: PromptTemplateManager;
 
   constructor(options?: {
     worldStateStore?: WorldStateStore;
     locationGraphStore?: LocationGraphStore;
     progressEmitter?: TurnProgressPublisher;
+    templateManager: PromptTemplateManager;
   }) {
     this.worldStateStore = options?.worldStateStore ?? createWorldStateStore();
     this.locationGraphStore =
@@ -41,6 +45,10 @@ class NarrativeEngine {
         bucket: process.env.NARRATIVE_S3_BUCKET,
         prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined
       });
+    if (!options?.templateManager) {
+      throw new Error("NarrativeEngine requires a prompt template manager instance");
+    }
+    this.templateManager = options.templateManager;
     this.telemetry =  new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.progressEmitter = options?.progressEmitter ?? createProgressEmitterFromEnv();
@@ -72,8 +80,16 @@ class NarrativeEngine {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
     const turnSequence: number = chronicleState.turnSequence + 1;
+    const loginId = chronicleState.chronicle?.loginId;
+    if (!loginId) {
+      throw new Error("Chronicle state missing login identifier for template resolution");
+    }
     const jobId = formatTurnJobId(chronicleId, turnSequence);
     let errorResponse: TranscriptEntry | undefined;
+    const templateRuntime = new PromptTemplateRuntime({
+      loginId,
+      manager: this.templateManager
+    });
 
     let graphResult;
     const graphInput: GraphContext = {
@@ -83,6 +99,7 @@ class NarrativeEngine {
       playerMessage,
       llm: this.createLlmClient(options?.authorizationHeader),
       telemetry: this.telemetry,
+      templates: templateRuntime,
       failure: false
     };
     try {

@@ -13,7 +13,9 @@ class GmSummaryNode implements GraphNode {
       });
       return {...context, failure: true}
     }
-    const prompt = composeGMSummaryPrompt(context.gmMessage.content,
+    const prompt = await composeGMSummaryPrompt(
+      context.templates,
+      context.gmMessage.content,
       context.playerIntent,
       context.skillCheckPlan,
       context.skillCheckResult

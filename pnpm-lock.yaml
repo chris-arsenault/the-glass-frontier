@@ -172,7 +172,7 @@ importers:
         specifier: ^8.5.0
         version: 8.5.0(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.3)
 
-  apps/wbservice:
+  apps/webservice:
     dependencies:
       '@aws-sdk/client-apigatewaymanagementapi':
         specifier: ^3.744.0

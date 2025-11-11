@@ -2,10 +2,11 @@ import { randomUUID } from "node:crypto";
 import { initTRPC } from "@trpc/server";
 import type { Context } from "./context";
 import { z } from "zod";
-import { Character as CharacterSchema, TranscriptEntry } from "@glass-frontier/dto";
+import { Character as CharacterSchema, TranscriptEntry, PromptTemplateIds, type PromptTemplateId } from "@glass-frontier/dto";
 import { log } from "@glass-frontier/utils";
 
 const t = initTRPC.context<Context>().create();
+const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
 
 export const appRouter = t.router({
   // POST /chronicles
@@ -94,6 +95,48 @@ export const appRouter = t.router({
   listChronicles: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
+
+  listPromptTemplates: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.loginId)),
+
+  getPromptTemplate: t.procedure
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        templateId: templateIdSchema
+      })
+    )
+    .query(async ({ ctx, input }) => ctx.templateManager.getTemplate(input.loginId, input.templateId)),
+
+  savePromptTemplate: t.procedure
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        templateId: templateIdSchema,
+        editable: z.string().min(1),
+        label: z.string().max(64).optional()
+      })
+    )
+    .mutation(async ({ ctx, input }) =>
+      ctx.templateManager.saveTemplate({
+        loginId: input.loginId,
+        templateId: input.templateId,
+        editable: input.editable,
+        label: input.label
+      })
+    ),
+
+  revertPromptTemplate: t.procedure
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        templateId: templateIdSchema
+      })
+    )
+    .mutation(async ({ ctx, input }) =>
+      ctx.templateManager.revertTemplate({ loginId: input.loginId, templateId: input.templateId })
+    )
 });
 
 async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {

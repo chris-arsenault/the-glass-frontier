@@ -9,6 +9,7 @@ import {
   Turn,
   TranscriptEntry
 } from "@glass-frontier/dto";
+import type { PromptTemplateRuntime } from "./langGraph/prompts/templateRuntime";
 
 export interface ChronicleState {
   chronicleId: string;
@@ -29,6 +30,7 @@ export interface GraphContext {
   //operations
   llm: LangGraphLlmLike;
   telemetry: TelemetryLike;
+  templates: PromptTemplateRuntime;
   failure: boolean;
   systemMessage?: TranscriptEntry;
 

@@ -2,6 +2,7 @@ import type {
   Character,
   Chronicle,
   Login,
+  Player,
   Turn
 } from "@glass-frontier/dto";
 import type { CharacterProgressPayload, ChronicleSnapshot } from "./types";
@@ -25,6 +26,9 @@ export interface WorldStateStore {
   upsertCharacter(character: Character): Promise<Character>;
   getCharacter(characterId: string): Promise<Character | null>;
   listCharactersByLogin(loginId: string): Promise<Character[]>;
+
+  upsertPlayer(player: Player): Promise<Player>;
+  getPlayer(loginId: string): Promise<Player | null>;
 
   upsertChronicle(chronicle: Chronicle): Promise<Chronicle>;
   getChronicle(chronicleId: string): Promise<Chronicle | null>;

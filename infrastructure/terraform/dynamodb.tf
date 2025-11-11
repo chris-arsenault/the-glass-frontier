@@ -58,7 +58,7 @@ resource "aws_dynamodb_table" "location_graph_index" {
   tags = local.tags
 }
 
-resource "aws_dynamodb_table" "wbservice_connections" {
+resource "aws_dynamodb_table" "webservice_connections" {
   name         = "${local.name_prefix}-ws-connections"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "pk"

@@ -89,7 +89,7 @@ export class LocationDeltaNode implements GraphNode {
       MAX_NEIGHBORS
     );
 
-    const prompt = composeLocationDeltaPrompt({
+    const prompt = await composeLocationDeltaPrompt(context.templates, {
       current: anchorPlace.name,
       parent: parentPlace?.name ?? null,
       children: childNames,

@@ -21,8 +21,8 @@ resource "aws_iam_role" "llm_lambda" {
   tags               = local.tags
 }
 
-resource "aws_iam_role" "wbservice_lambda" {
-  name               = "${local.name_prefix}-wbservice-lambda"
+resource "aws_iam_role" "webservice_lambda" {
+  name               = "${local.name_prefix}-webservice-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
   tags               = local.tags
 }
@@ -37,13 +37,13 @@ resource "aws_iam_role_policy_attachment" "llm_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "wbservice_logs" {
-  role       = aws_iam_role.wbservice_lambda.name
+resource "aws_iam_role_policy_attachment" "webservice_logs" {
+  role       = aws_iam_role.webservice_lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "wbservice_sqs" {
-  role       = aws_iam_role.wbservice_lambda.name
+resource "aws_iam_role_policy_attachment" "webservice_sqs" {
+  role       = aws_iam_role.webservice_lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
@@ -63,6 +63,24 @@ resource "aws_iam_policy" "narrative_s3" {
 resource "aws_iam_role_policy_attachment" "narrative_s3" {
   role       = aws_iam_role.narrative_lambda.name
   policy_arn = aws_iam_policy.narrative_s3.arn
+}
+
+data "aws_iam_policy_document" "prompt_templates" {
+  statement {
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+    resources = [aws_s3_bucket.prompt_templates.arn, "${aws_s3_bucket.prompt_templates.arn}/*"]
+  }
+}
+
+resource "aws_iam_policy" "prompt_templates" {
+  name        = "${local.name_prefix}-prompt-templates"
+  description = "Allow the narrative lambda to manage prompt templates."
+  policy      = data.aws_iam_policy_document.prompt_templates.json
+}
+
+resource "aws_iam_role_policy_attachment" "prompt_templates" {
+  role       = aws_iam_role.narrative_lambda.name
+  policy_arn = aws_iam_policy.prompt_templates.arn
 }
 
 data "aws_iam_policy_document" "narrative_dynamodb" {
@@ -153,7 +171,7 @@ resource "aws_iam_role_policy_attachment" "llm_usage_table" {
   policy_arn = aws_iam_policy.llm_usage_table.arn
 }
 
-data "aws_iam_policy_document" "wbservice_dynamodb" {
+data "aws_iam_policy_document" "webservice_dynamodb" {
   statement {
     actions = [
       "dynamodb:GetItem",
@@ -164,39 +182,39 @@ data "aws_iam_policy_document" "wbservice_dynamodb" {
       "dynamodb:UpdateItem"
     ]
     resources = [
-      aws_dynamodb_table.wbservice_connections.arn,
-      "${aws_dynamodb_table.wbservice_connections.arn}/index/*"
+      aws_dynamodb_table.webservice_connections.arn,
+      "${aws_dynamodb_table.webservice_connections.arn}/index/*"
     ]
   }
 }
 
-resource "aws_iam_policy" "wbservice_dynamodb" {
-  name        = "${local.name_prefix}-wbservice-dynamodb"
+resource "aws_iam_policy" "webservice_dynamodb" {
+  name        = "${local.name_prefix}-webservice-dynamodb"
   description = "Allow the WebSocket service to manage connection mappings."
-  policy      = data.aws_iam_policy_document.wbservice_dynamodb.json
+  policy      = data.aws_iam_policy_document.webservice_dynamodb.json
 }
 
-resource "aws_iam_role_policy_attachment" "wbservice_dynamodb" {
-  role       = aws_iam_role.wbservice_lambda.name
-  policy_arn = aws_iam_policy.wbservice_dynamodb.arn
+resource "aws_iam_role_policy_attachment" "webservice_dynamodb" {
+  role       = aws_iam_role.webservice_lambda.name
+  policy_arn = aws_iam_policy.webservice_dynamodb.arn
 }
 
-data "aws_iam_policy_document" "wbservice_manage_connections" {
+data "aws_iam_policy_document" "webservice_manage_connections" {
   statement {
     actions   = ["execute-api:ManageConnections"]
     resources = ["arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${aws_apigatewayv2_api.progress_ws.id}/*"]
   }
 }
 
-resource "aws_iam_policy" "wbservice_manage_connections" {
-  name        = "${local.name_prefix}-wbservice-manage-connections"
+resource "aws_iam_policy" "webservice_manage_connections" {
+  name        = "${local.name_prefix}-webservice-manage-connections"
   description = "Allow the WebSocket dispatcher to push updates to clients."
-  policy      = data.aws_iam_policy_document.wbservice_manage_connections.json
+  policy      = data.aws_iam_policy_document.webservice_manage_connections.json
 }
 
-resource "aws_iam_role_policy_attachment" "wbservice_manage_connections" {
-  role       = aws_iam_role.wbservice_lambda.name
-  policy_arn = aws_iam_policy.wbservice_manage_connections.arn
+resource "aws_iam_role_policy_attachment" "webservice_manage_connections" {
+  role       = aws_iam_role.webservice_lambda.name
+  policy_arn = aws_iam_policy.webservice_manage_connections.arn
 }
 
 data "aws_caller_identity" "current" {}

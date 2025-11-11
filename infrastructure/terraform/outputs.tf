@@ -28,6 +28,11 @@ output "narrative_data_bucket" {
   description = "S3 bucket used for session persistence."
 }
 
+output "prompt_template_bucket" {
+  value       = aws_s3_bucket.prompt_templates.id
+  description = "S3 bucket containing official prompt templates and player overrides."
+}
+
 output "tf_state_bucket" {
   value       = aws_s3_bucket.tf_state.id
   description = "S3 bucket created for Terraform state."

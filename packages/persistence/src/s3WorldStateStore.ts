@@ -6,6 +6,7 @@ import type {
   Character,
   Chronicle,
   Login,
+  Player,
   Turn
 } from "@glass-frontier/dto";
 import { log } from "@glass-frontier/utils";
@@ -30,6 +31,7 @@ export class S3WorldStateStore implements WorldStateStore {
   #chronicles = new Map<string, Chronicle>();
   #chronicleLoginIndex = new Map<string, string>();
   #characterLoginIndex = new Map<string, string>();
+  #players = new Map<string, Player>();
 
   constructor(options: {
     bucket: string;
@@ -168,6 +170,22 @@ export class S3WorldStateStore implements WorldStateStore {
       })
     );
     return records.filter((character): character is Character => Boolean(character));
+  }
+
+  async upsertPlayer(player: Player): Promise<Player> {
+    this.#players.set(player.loginId, player);
+    await this.#writeJson(this.#playerKey(player.loginId), player);
+    return player;
+  }
+
+  async getPlayer(loginId: string): Promise<Player | null> {
+    const cached = this.#players.get(loginId);
+    if (cached) return cached;
+    const record = await this.#readJson<Player>(this.#playerKey(loginId));
+    if (record) {
+      this.#players.set(loginId, record);
+    }
+    return record;
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
@@ -376,6 +394,10 @@ export class S3WorldStateStore implements WorldStateStore {
 
   #chronicleKey(loginId: string, chronicleId: string): string {
     return `${this.#prefix}chronicles/${loginId}/${chronicleId}.json`;
+  }
+
+  #playerKey(loginId: string): string {
+    return `${this.#prefix}players/${loginId}.json`;
   }
 
   #turnPrefix(loginId: string, chronicleId: string): string {

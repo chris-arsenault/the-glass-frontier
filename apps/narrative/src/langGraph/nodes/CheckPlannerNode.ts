@@ -36,7 +36,7 @@ class CheckPlannerNode implements GraphNode {
 
     let parsed: Record<string, any> | null = null;
 
-    const prompt = composeCheckRulesPrompt(context.playerIntent, context.chronicle);
+    const prompt = await composeCheckRulesPrompt(context.playerIntent, context.chronicle, context.templates);
     try {
       const result = await context.llm.generateJson({
         prompt,

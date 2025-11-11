@@ -13,3 +13,5 @@ export * from "./narrative/SkillCheck";
 export * from "./narrative/TranscriptEntry";
 export * from "./narrative/Turn";
 export * from "./narrative/TurnProgressEvent";
+export * from "./Player";
+export * from "./templates";

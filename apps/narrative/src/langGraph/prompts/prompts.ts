@@ -1,36 +1,25 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import Handlebars from "handlebars";
-
-import { Attribute } from "@glass-frontier/dto";
-import type { Intent, OutcomeTier, SkillCheckPlan, SkillCheckResult } from "@glass-frontier/dto";
+import { Attribute, type Intent, type OutcomeTier, type SkillCheckPlan, type SkillCheckResult } from "@glass-frontier/dto";
 import type { ChronicleState } from "../../types";
+import type { PromptTemplateRuntime } from "./templateRuntime";
+import type { PromptTemplateId } from "@glass-frontier/dto";
 
-type TemplateName = "checkPlanner" | "gmSummary" | "intent" | "narrativeWeaver" | "locationDelta";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const templatesDir = path.join(__dirname, "templates");
-
-const templateCache = new Map<TemplateName, Handlebars.TemplateDelegate>();
-
-function renderTemplate(name: TemplateName, data: Record<string, unknown>): string {
-  let template = templateCache.get(name);
-  if (!template) {
-    const filePath = path.join(templatesDir, `${name}.hbs`);
-    const source = readFileSync(filePath, "utf8");
-    template = Handlebars.compile(source, { noEscape: true });
-    templateCache.set(name, template);
-  }
-  return template(data);
+async function renderTemplate(
+  templates: PromptTemplateRuntime,
+  templateId: PromptTemplateId,
+  data: Record<string, unknown>
+): Promise<string> {
+  return templates.render(templateId, data);
 }
 
-export function composeCheckRulesPrompt(intent: Intent, chronicle: ChronicleState): string {
+export function composeCheckRulesPrompt(
+  intent: Intent,
+  chronicle: ChronicleState,
+  templates: PromptTemplateRuntime
+): Promise<string> {
   const charTags = (chronicle?.character?.tags ?? []).slice(0, 3).join(", ") || "No tags";
   const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(", ") || "None";
 
-  return renderTemplate("checkPlanner", {
+  return renderTemplate(templates, "check-planner", {
     intentSummary: intent.intentSummary,
     skill: intent.skill,
     attribute: intent.attribute,
@@ -43,16 +32,17 @@ export function composeCheckRulesPrompt(intent: Intent, chronicle: ChronicleStat
 }
 
 export function composeGMSummaryPrompt(
+  templates: PromptTemplateRuntime,
   gmMessage: string,
   intent: Intent,
   check?: SkillCheckPlan,
   checkResult?: SkillCheckResult
-): string {
+): Promise<string> {
   const skillLine = intent.skill
     ? `${intent.skill}${intent.attribute ? ` (${intent.attribute})` : ""}`
     : null;
 
-  return renderTemplate("gmSummary", {
+  return renderTemplate(templates, "gm-summary", {
     gmMessage,
     intentSummary: intent.intentSummary,
     skillLine,
@@ -65,15 +55,17 @@ export function composeGMSummaryPrompt(
 
 export function composeIntentPrompt({
   chronicle,
-  playerMessage
+  playerMessage,
+  templates
 }: {
   chronicle: ChronicleState;
   playerMessage: string;
-}): string {
+  templates: PromptTemplateRuntime;
+}): Promise<string> {
   const charTags = (chronicle?.character?.tags ?? []).slice(0, 3).join(", ") || "No tags";
   const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(", ") || "None";
 
-  return renderTemplate("intent", {
+  return renderTemplate(templates, "intent-intake", {
     promptHeader:
       "You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.",
     playerMessage,
@@ -90,9 +82,10 @@ export function composeNarrationPrompt(
   intent: Intent,
   chronicle: ChronicleState,
   rawUtterance: string,
+  templates: PromptTemplateRuntime,
   check?: SkillCheckPlan,
   outcomeTier?: OutcomeTier
-): string {
+): Promise<string> {
   const characterName = chronicle.character?.name ?? "the character";
   const characterTags = (chronicle.character?.tags ?? []).slice(0, 3).join(", ") || "untagged";
   const locale = describeLocation(chronicle);
@@ -109,7 +102,7 @@ export function composeNarrationPrompt(
     Boolean(outcomeTier && ["regress", "collapse"].includes(outcomeTier)) &&
     Boolean(check?.complicationSeeds?.length);
 
-  return renderTemplate("narrativeWeaver", {
+  return renderTemplate(templates, "narrative-weaver", {
     characterName,
     characterTags,
     locale,
@@ -143,7 +136,9 @@ function describeLocation(chronicle: ChronicleState): string {
   return path || "an unknown place";
 }
 
-export function composeLocationDeltaPrompt(input: {
+export function composeLocationDeltaPrompt(
+  templates: PromptTemplateRuntime,
+  input: {
   current: string;
   parent: string | null;
   children: string[];
@@ -151,8 +146,8 @@ export function composeLocationDeltaPrompt(input: {
   links: string[];
   playerIntent: string;
   gmResponse: string;
-}): string {
-  return renderTemplate("locationDelta", {
+}): Promise<string> {
+  return renderTemplate(templates, "location-delta", {
     current: input.current,
     parent: input.parent,
     children: input.children,

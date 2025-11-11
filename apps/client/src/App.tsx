@@ -10,6 +10,7 @@ import { CreateCharacterModal } from "./components/CreateCharacterModal";
 import { useChronicleStore } from "./stores/chronicleStore";
 import { ChronicleHeader } from "./components/ChronicleHeader";
 import { MomentumIndicator } from "./components/MomentumIndicator";
+import { TemplateDrawer } from "./components/TemplateDrawer";
 
 function SessionMeta() {
   const character = useChronicleStore((state) => state.character);
@@ -61,6 +62,7 @@ export default function App() {
         </div>
       </div>
       <CharacterDrawer />
+      <TemplateDrawer />
       <CreateCharacterModal />
     </div>
   );

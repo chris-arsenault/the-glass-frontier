@@ -27,7 +27,11 @@ class IntentIntakeNode implements GraphNode {
       return {...context, failure: true}
     }
     const content: string = context.playerMessage.content ?? "";
-    const prompt = composeIntentPrompt({ chronicle: context.chronicle, playerMessage: content });
+    const prompt = await composeIntentPrompt({
+      chronicle: context.chronicle,
+      playerMessage: content,
+      templates: context.templates
+    });
     const fallback = fallbackIntent(content);
 
     let parsed: Record<string, any> | null = null;

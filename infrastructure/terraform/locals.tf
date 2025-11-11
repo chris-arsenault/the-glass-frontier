@@ -4,10 +4,11 @@ locals {
   client_build_dir     = "${local.client_source_dir}/dist"
   narrative_source_dir = "${path.module}/../../apps/narrative"
   narrative_dist_dir   = "${local.narrative_source_dir}/dist"
+  prompt_template_source_dir = "${local.narrative_source_dir}/src/langGraph/prompts/templates"
   llm_source_dir       = "${path.module}/../../apps/llm-proxy"
   llm_dist_dir         = "${local.llm_source_dir}/dist"
-  wbservice_source_dir = "${path.module}/../../apps/wbservice"
-  wbservice_dist_dir   = "${local.wbservice_source_dir}/dist"
+  webservice_source_dir = "${path.module}/../../apps/webservice"
+  webservice_dist_dir   = "${local.webservice_source_dir}/dist"
   artifacts_dir        = "${path.module}/artifacts"
 
   client_source_files = distinct(
@@ -32,6 +33,8 @@ locals {
     )
   )
 
+  prompt_template_source_files = distinct(tolist(fileset(local.prompt_template_source_dir, "*.hbs")))
+
   llm_source_files = distinct(
     concat(
       tolist(fileset(local.llm_source_dir, "src/**")),
@@ -42,9 +45,9 @@ locals {
     )
   )
 
-  wbservice_source_files = distinct(
+  webservice_source_files = distinct(
     concat(
-      tolist(fileset(local.wbservice_source_dir, "src/**")),
+      tolist(fileset(local.webservice_source_dir, "src/**")),
       [
         "package.json",
         "tsconfig.json"
@@ -55,7 +58,7 @@ locals {
   client_source_hash    = sha1(join("", [for file in local.client_source_files : filesha1("${local.client_source_dir}/${file}") if file != ""]))
   narrative_source_hash = sha1(join("", [for file in local.narrative_source_files : filesha1("${local.narrative_source_dir}/${file}") if file != ""]))
   llm_source_hash       = sha1(join("", [for file in local.llm_source_files : filesha1("${local.llm_source_dir}/${file}") if file != ""]))
-  wbservice_source_hash = sha1(join("", [for file in local.wbservice_source_files : filesha1("${local.wbservice_source_dir}/${file}") if file != ""]))
+  webservice_source_hash = sha1(join("", [for file in local.webservice_source_files : filesha1("${local.webservice_source_dir}/${file}") if file != ""]))
 
   apex_domain       = trimsuffix(var.client_domain_name, ".")
   client_subdomain  = var.environment == "prod" ? "" : var.environment
