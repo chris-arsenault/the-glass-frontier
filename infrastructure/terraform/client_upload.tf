@@ -33,6 +33,7 @@ locals {
   client_runtime_config = jsonencode({
     VITE_API_TARGET             = "https://${local.api_domain}"
     VITE_TRPC_URL               = "https://${local.api_domain}/trpc"
+    VITE_PROGRESS_WS_URL        = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
     VITE_COGNITO_USER_POOL_ID   = aws_cognito_user_pool.this.id
     VITE_COGNITO_CLIENT_ID      = aws_cognito_user_pool_client.this.id
     VITE_COGNITO_DOMAIN         = local.cognito_domain

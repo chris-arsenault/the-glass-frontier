@@ -19,3 +19,11 @@ data "archive_file" "llm_lambda" {
 
   depends_on  = [null_resource.artifacts_dir]
 }
+
+data "archive_file" "wbservice_lambda" {
+  type        = "zip"
+  source_dir  = local.wbservice_dist_dir
+  output_path = "${local.artifacts_dir}/wbservice.zip"
+
+  depends_on  = [null_resource.artifacts_dir]
+}

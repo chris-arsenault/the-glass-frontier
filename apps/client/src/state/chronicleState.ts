@@ -71,6 +71,8 @@ export interface ChronicleState {
   directoryStatus: DirectoryStatus;
   directoryError: Error | null;
   momentumTrend: MomentumTrend | null;
+  pendingTurnJobId: string | null;
+  pendingPlayerMessageId: string | null;
 }
 
 export interface ChronicleStore extends ChronicleState {

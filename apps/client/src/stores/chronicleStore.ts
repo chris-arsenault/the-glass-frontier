@@ -4,10 +4,12 @@ import type {
   Chronicle,
   LocationProfile,
   TranscriptEntry,
-  Turn
+  Turn,
+  TurnProgressEvent
 } from "@glass-frontier/dto";
 
 import type {
+  ChronicleState,
   ChatMessage,
   CharacterCreationDraft,
   ChronicleCreationDetails,
@@ -17,6 +19,8 @@ import type {
 } from "../state/chronicleState";
 import { trpcClient } from "../lib/trpcClient";
 import { useAuthStore } from "./authStore";
+import { progressStream } from "../lib/progressStream";
+import { formatTurnJobId } from "@glass-frontier/utils";
 
 const RECENT_CHRONICLES_KEY = "glass-frontier-recent-chronicles";
 const MAX_RECENT_CHRONICLES = 5;
@@ -110,6 +114,29 @@ const toChatMessage = (
   gmSummary: extras?.gmSummary ?? null,
   skillProgress: extras?.skillProgress ?? null
 });
+
+const upsertChatEntry = (
+  messages: ChatMessage[],
+  entry: TranscriptEntry,
+  extras?: Partial<ChatMessage>
+): ChatMessage[] => {
+  const index = messages.findIndex((message) => message.entry.id === entry.id);
+  if (index >= 0) {
+    const updated = [...messages];
+    updated[index] = {
+      ...updated[index],
+      entry,
+      skillCheckPlan: extras?.skillCheckPlan ?? updated[index].skillCheckPlan,
+      skillCheckResult: extras?.skillCheckResult ?? updated[index].skillCheckResult,
+      skillKey: extras?.skillKey ?? updated[index].skillKey,
+      attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
+      playerIntent: extras?.playerIntent ?? updated[index].playerIntent,
+      gmSummary: extras?.gmSummary ?? updated[index].gmSummary
+    };
+    return updated;
+  }
+  return messages.concat([toChatMessage(entry, extras)]);
+};
 
 const flattenTurns = (turns: Turn[]): ChatMessage[] =>
   turns.flatMap((turn) => {
@@ -207,6 +234,64 @@ const deriveMomentumTrend = (
   };
 };
 
+const applyTurnProgressEvent = (
+  state: ChronicleState,
+  event: TurnProgressEvent
+): ChronicleState => {
+  if (
+    !event.payload ||
+    !state.chronicleId ||
+    event.chronicleId !== state.chronicleId ||
+    (state.pendingTurnJobId && event.jobId !== state.pendingTurnJobId)
+  ) {
+    return state;
+  }
+
+  const payload = event.payload;
+  let nextMessages = state.messages;
+
+  if (
+    state.pendingPlayerMessageId &&
+    (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
+  ) {
+    nextMessages = nextMessages.map((message) =>
+      message.entry.id === state.pendingPlayerMessageId
+        ? {
+            ...message,
+            playerIntent: payload.playerIntent ?? message.playerIntent,
+            skillKey: payload.playerIntent?.skill ?? message.skillKey,
+            attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+            skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
+            skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult
+          }
+        : message
+    );
+  }
+
+  const extras: Partial<ChatMessage> = {
+    skillCheckPlan: payload.skillCheckPlan ?? null,
+    skillCheckResult: payload.skillCheckResult ?? null,
+    skillKey: payload.playerIntent?.skill ?? null,
+    attributeKey: payload.playerIntent?.attribute ?? null,
+    playerIntent: payload.playerIntent ?? null,
+    gmSummary: payload.gmSummary ?? null,
+    skillProgress: null
+  };
+
+  if (payload.gmMessage) {
+    nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, extras);
+  }
+
+  if (payload.systemMessage) {
+    nextMessages = upsertChatEntry(nextMessages, payload.systemMessage, extras);
+  }
+
+  return {
+    ...state,
+    messages: nextMessages
+  };
+};
+
 const createBaseState = () => ({
   chronicleId: null as string | null,
   chronicleRecord: null as Chronicle | null,
@@ -228,7 +313,9 @@ const createBaseState = () => ({
   availableChronicles: [] as Chronicle[],
   directoryStatus: "idle" as const,
   directoryError: null as Error | null,
-  momentumTrend: null as MomentumTrend | null
+  momentumTrend: null as MomentumTrend | null,
+  pendingTurnJobId: null as string | null,
+  pendingPlayerMessageId: null as string | null
 });
 
 export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
@@ -427,7 +514,9 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       chronicleStatus: "open",
       character: null,
       location: null,
-      momentumTrend: null
+      momentumTrend: null,
+      pendingTurnJobId: null,
+      pendingPlayerMessageId: null
     }));
   },
 
@@ -456,20 +545,27 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
     const playerEntry = buildPlayerEntry(trimmed);
     const playerMessage = toChatMessage(playerEntry, { playerIntent: null });
+    const nextTurnSequence = get().turnSequence + 1;
+    const jobId = formatTurnJobId(chronicleId, nextTurnSequence);
 
     set((prev) => ({
       ...prev,
       isSending: true,
       messages: prev.messages.concat(playerMessage),
-      turnSequence: prev.turnSequence + 1,
-      transportError: null
+      turnSequence: nextTurnSequence,
+      transportError: null,
+      pendingTurnJobId: jobId,
+      pendingPlayerMessageId: playerEntry.id
     }));
+
+    progressStream.subscribe(jobId);
 
     try {
       const { turn, character } = await trpcClient.postMessage.mutate({
         chronicleId,
         content: playerEntry
       });
+      progressStream.markComplete(jobId);
 
       set((prev) => {
         const nextCharacter = character ?? prev.character;
@@ -490,23 +586,26 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           skillProgress: skillBadges.length > 0 ? skillBadges : null
         };
 
-        const nextMessages = prev.messages
-          .map((message) =>
-            message.entry.id === turn.playerMessage.id
-              ? {
-                  ...message,
-                  skillCheckPlan: extras.skillCheckPlan,
-                  skillCheckResult: extras.skillCheckResult,
-                  skillKey: extras.skillKey,
-                  attributeKey: extras.attributeKey,
-                  playerIntent: extras.playerIntent
-                }
-              : message
-          )
-          .concat(
-            turn.gmMessage ? [toChatMessage(turn.gmMessage, extras)] : [],
-            turn.systemMessage ? [toChatMessage(turn.systemMessage, extras)] : []
-          );
+        const updatedMessages = prev.messages.map((message) =>
+          message.entry.id === turn.playerMessage.id
+            ? {
+                ...message,
+                skillCheckPlan: extras.skillCheckPlan,
+                skillCheckResult: extras.skillCheckResult,
+                skillKey: extras.skillKey,
+                attributeKey: extras.attributeKey,
+                playerIntent: extras.playerIntent
+              }
+            : message
+        );
+
+        let nextMessages = updatedMessages;
+        if (turn.gmMessage) {
+          nextMessages = upsertChatEntry(nextMessages, turn.gmMessage, extras);
+        }
+        if (turn.systemMessage) {
+          nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, extras);
+        }
 
         return {
           ...prev,
@@ -524,18 +623,31 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           recentChronicles: applyRecentChronicle(
             prev.recentChronicles,
             prev.chronicleId ?? chronicleId
-          )
+          ),
+          pendingTurnJobId:
+            prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+          pendingPlayerMessageId:
+            prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId
         };
       });
     } catch (error) {
+      progressStream.markComplete(jobId);
       const nextError = error instanceof Error ? error : new Error("Failed to send player intent.");
       set((prev) => ({
         ...prev,
         isSending: false,
         connectionState: "error",
-        transportError: nextError
+        transportError: nextError,
+        pendingTurnJobId:
+          prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+        pendingPlayerMessageId:
+          prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId
       }));
       throw nextError;
     }
   }
 }));
+
+progressStream.onEvent((event) => {
+  useChronicleStore.setState((prev) => applyTurnProgressEvent(prev, event));
+});

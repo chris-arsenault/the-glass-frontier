@@ -37,3 +37,8 @@ output "tf_locks_table" {
   value       = aws_dynamodb_table.tf_locks.name
   description = "DynamoDB table for Terraform state locking."
 }
+
+output "progress_websocket_url" {
+  value       = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
+  description = "WebSocket endpoint that streams GM turn progress."
+}

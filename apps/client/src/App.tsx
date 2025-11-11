@@ -5,6 +5,7 @@ import { CharacterDrawer } from "./components/CharacterDrawer";
 import { useAuthStore } from "./stores/authStore";
 import { LoginScreen } from "./components/LoginScreen";
 import { useLoginResources } from "./hooks/useLoginResources";
+import { useProgressStreamConnection } from "./hooks/useProgressStreamConnection";
 import { CreateCharacterModal } from "./components/CreateCharacterModal";
 import { useChronicleStore } from "./stores/chronicleStore";
 import { ChronicleHeader } from "./components/ChronicleHeader";
@@ -34,6 +35,7 @@ function SessionMeta() {
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   useLoginResources(isAuthenticated);
+  useProgressStreamConnection(isAuthenticated);
 
   if (!isAuthenticated) {
     return <LoginScreen />;
