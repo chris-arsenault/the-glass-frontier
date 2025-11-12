@@ -60,18 +60,13 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
       return existing;
     }
 
-    const place: LocationPlace = {
+    const place = await this.#createPlaceRecord(locationId, {
       id: locationId,
-      locationId,
       name: input.name,
       kind: input.kind ?? 'locale',
       tags: input.tags ?? [],
       description: input.description,
-      createdAt: Date.now(),
-    };
-
-    await this.#writePlace(place);
-    await this.#index.registerPlace(locationId, place.id);
+    });
 
     if (input.characterId) {
       await this.#writeState({
@@ -195,14 +190,134 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
     };
   }
 
+  async listLocationRoots(
+    input?: { search?: string; limit?: number }
+  ): Promise<LocationPlace[]> {
+    const keys = await this.list('location-graph/places/', { suffix: '.json' });
+    const matches: LocationPlace[] = [];
+    const search = input?.search?.trim().toLowerCase() ?? null;
+    const limit = input?.limit ?? 50;
+    for (const key of keys) {
+      const record = await this.getJson<LocationPlace>(key);
+      if (!record) continue;
+      if (record.id !== record.locationId) continue;
+      if (search && !record.name.toLowerCase().includes(search)) {
+        continue;
+      }
+      matches.push(record);
+      if (!search && matches.length >= limit) {
+        break;
+      }
+    }
+    matches.sort((a, b) => a.name.localeCompare(b.name));
+    return matches.slice(0, limit);
+  }
+
+  async getPlace(placeId: string): Promise<LocationPlace | null> {
+    return this.#getPlace(placeId);
+  }
+
+  async createPlace(input: {
+    parentId?: string | null;
+    locationId?: string;
+    name: string;
+    kind: string;
+    tags?: string[];
+    description?: string;
+  }): Promise<LocationPlace> {
+    const parent = input.parentId ? await this.#getPlace(input.parentId) : null;
+    if (input.parentId && !parent) {
+      throw new Error(`Parent place ${input.parentId} not found.`);
+    }
+    const locationId = parent?.locationId ?? input.locationId ?? randomUUID();
+    const record = await this.#createPlaceRecord(locationId, {
+      name: input.name,
+      kind: input.kind,
+      tags: input.tags,
+      description: input.description,
+      canonicalParentId: parent?.id,
+      id: parent ? undefined : locationId,
+    });
+    if (parent) {
+      await this.#createEdge(locationId, {
+        src: parent.id,
+        dst: record.id,
+        kind: 'CONTAINS',
+      });
+    }
+    return record;
+  }
+
+  async createLocationChain(input: {
+    parentId?: string | null;
+    segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
+  }): Promise<{ anchor: LocationPlace; created: LocationPlace[] }> {
+    if (!input.segments.length) {
+      throw new Error('segments_required');
+    }
+    const parent = input.parentId ? await this.#getPlace(input.parentId) : null;
+    if (input.parentId && !parent) {
+      throw new Error(`Parent place ${input.parentId} not found.`);
+    }
+    let locationId = parent?.locationId ?? randomUUID();
+    const created: LocationPlace[] = [];
+    let currentParent = parent;
+    for (let index = 0; index < input.segments.length; index += 1) {
+      const segment = input.segments[index];
+      const isRootSegment = !parent && index === 0;
+      const record = await this.#createPlaceRecord(locationId, {
+        id: isRootSegment ? locationId : undefined,
+        name: segment.name,
+        kind: segment.kind,
+        tags: segment.tags,
+        description: segment.description,
+        canonicalParentId: currentParent?.id,
+      });
+      if (currentParent) {
+        await this.#createEdge(locationId, {
+          src: currentParent.id,
+          dst: record.id,
+          kind: 'CONTAINS',
+        });
+      }
+      created.push(record);
+      currentParent = record;
+    }
+    const anchor = currentParent ?? parent;
+    if (!anchor) {
+      throw new Error('anchor_not_created');
+    }
+    return { anchor, created };
+  }
+
   async #createPlace(locationId: string, place: LocationPlanPlace): Promise<LocationPlace> {
-    const record: LocationPlace = {
-      id: randomUUID(),
-      locationId,
+    return this.#createPlaceRecord(locationId, {
       name: place.name,
       kind: place.kind,
-      tags: place.tags ?? [],
+      tags: place.tags,
       description: place.description,
+    });
+  }
+
+  async #createPlaceRecord(
+    locationId: string,
+    input: {
+      id?: string;
+      name: string;
+      kind: string;
+      tags?: string[];
+      description?: string;
+      canonicalParentId?: string;
+    }
+  ): Promise<LocationPlace> {
+    const record: LocationPlace = {
+      id: input.id ?? randomUUID(),
+      locationId,
+      name: input.name,
+      kind: input.kind,
+      tags: input.tags ?? [],
+      description: input.description,
+      canonicalParentId: input.canonicalParentId,
       createdAt: Date.now(),
     };
     await this.#writePlace(record);

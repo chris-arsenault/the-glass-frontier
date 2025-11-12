@@ -49,6 +49,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     characterId?: string;
     title?: string;
     status?: Chronicle['status'];
+    seedText?: string | null;
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
@@ -65,6 +66,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
           ? params.title.trim()
           : 'Untitled Chronicle',
       status: params.status ?? 'open',
+      seedText: params.seedText?.trim() ? params.seedText.trim() : undefined,
       metadata: undefined,
     };
     return this.upsertChronicle(record);

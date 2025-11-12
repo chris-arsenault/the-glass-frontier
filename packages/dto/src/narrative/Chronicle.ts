@@ -8,6 +8,7 @@ export const Chronicle = z.object({
   locationId: z.string().min(1),
   characterId: z.string().min(1).optional(),
   status: z.enum(['open', 'closed']).default('open'),
+  seedText: z.string().optional(),
   metadata: Metadata.optional(),
 });
 

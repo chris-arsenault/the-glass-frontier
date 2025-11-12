@@ -15,6 +15,7 @@ import type {
   ChatMessage,
   CharacterCreationDraft,
   ChronicleCreationDetails,
+  ChronicleSeedCreationDetails,
   ChronicleStore,
   MomentumTrend,
   SkillProgressBadge,
@@ -185,6 +186,18 @@ const applyRecentChronicle = (chronicles: string[], chronicleId: string): string
   );
   writeRecentChronicles(next);
   return next;
+};
+
+const deriveTitleFromSeed = (seedText: string): string => {
+  const words = seedText
+    .split(/\s+/)
+    .filter((word) => word.trim().length > 0)
+    .slice(0, 6);
+  if (!words.length) {
+    return 'New Chronicle';
+  }
+  const base = words.join(' ');
+  return base.length > 64 ? `${base.slice(0, 61)}…` : base;
 };
 
 const isUnequipEntry = (entry: PendingEquip): entry is PendingEquip & { unequip: true } =>
@@ -515,6 +528,48 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         ...prev,
         directoryError: nextError,
         directoryStatus: prev.directoryStatus === 'idle' ? 'error' : prev.directoryStatus,
+      }));
+      throw nextError;
+    }
+  },
+
+  async createChronicleFromSeed(details: ChronicleSeedCreationDetails) {
+    const identity = resolveLoginIdentity();
+    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
+    const trimmedSeed = details.seedText?.trim() ?? '';
+    if (!targetCharacterId) {
+      throw new Error('Select a character before starting a chronicle.');
+    }
+    if (!details.locationId) {
+      throw new Error('Select a location before creating a chronicle.');
+    }
+    if (!trimmedSeed) {
+      throw new Error('Provide a seed prompt before creating a chronicle.');
+    }
+
+    try {
+      const title = details.title?.trim()
+        ? details.title.trim()
+        : deriveTitleFromSeed(trimmedSeed);
+      const result = await trpcClient.createChronicle.mutate({
+        loginId: identity.loginId,
+        characterId: targetCharacterId,
+        title,
+        locationId: details.locationId,
+        status: 'open',
+        seedText: trimmedSeed,
+      });
+      set((prev) => ({
+        ...prev,
+        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
+        preferredCharacterId: targetCharacterId,
+      }));
+      return get().hydrateChronicle(result.chronicle.id);
+    } catch (error) {
+      const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
       }));
       throw nextError;
     }

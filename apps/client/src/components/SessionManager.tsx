@@ -1,5 +1,5 @@
-import type { FormEvent } from 'react';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChronicleStore } from '../stores/chronicleStore';
 import { useUiStore } from '../stores/uiStore';
 import { MomentumIndicator } from './MomentumIndicator';
@@ -10,9 +10,6 @@ export function SessionManager() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
-  const createChronicleForCharacter = useChronicleStore(
-    (state) => state.createChronicleForCharacter
-  );
   const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
   const recentChronicles = useChronicleStore((state) => state.recentChronicles);
   const connectionState = useChronicleStore((state) => state.connectionState);
@@ -24,17 +21,11 @@ export function SessionManager() {
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveChronicle = useChronicleStore((state) => state.clearActiveChronicle);
-  const [chronicleTitle, setChronicleTitle] = useState('');
-  const [locationName, setLocationName] = useState('');
-  const [locationAtmosphere, setLocationAtmosphere] = useState('');
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const disabled = connectionState === 'connecting' || isWorking || directoryStatus === 'loading';
-  const canSubmitNewChronicle =
-    chronicleTitle.trim().length > 0 &&
-    locationName.trim().length > 0 &&
-    locationAtmosphere.trim().length > 0;
 
   const displayChronicles = useMemo(
     () => recentChronicles.filter((id) => id && id !== currentChronicleId),
@@ -69,43 +60,15 @@ export function SessionManager() {
     }
   };
 
-  const handleCreateChronicle = async (characterId?: string | null) => {
-    const trimmedTitle = chronicleTitle.trim();
-    const trimmedLocationName = locationName.trim();
-    const trimmedAtmosphere = locationAtmosphere.trim();
-    const targetCharacterId = characterId ?? preferredCharacterId;
-
-    if (!trimmedTitle || !trimmedLocationName || !trimmedAtmosphere) {
-      setError('Chronicle title, location name, and atmosphere are required.');
-      return;
-    }
-    if (!targetCharacterId) {
+  const handleOpenWizard = (characterId?: string) => {
+    const targetId = characterId ?? preferredCharacterId;
+    if (!targetId) {
       setError('Select a character before starting a chronicle.');
       return;
     }
-
+    setPreferredCharacterId(targetId);
     setError(null);
-    setIsWorking(true);
-    try {
-      await createChronicleForCharacter({
-        characterId: targetCharacterId,
-        title: trimmedTitle,
-        locationName: trimmedLocationName,
-        locationAtmosphere: trimmedAtmosphere,
-      });
-      setChronicleTitle('');
-      setLocationName('');
-      setLocationAtmosphere('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create chronicle.');
-    } finally {
-      setIsWorking(false);
-    }
-  };
-
-  const handleNewChronicleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await handleCreateChronicle();
+    navigate('/chronicles/start');
   };
 
   return (
@@ -148,56 +111,16 @@ export function SessionManager() {
       <div className="session-manager-section">
         <div className="session-manager-section-header">
           <h4>New Chronicle</h4>
-          <p className="session-manager-hint">All fields required before starting.</p>
+          <p className="session-manager-hint">Launch the guided start wizard.</p>
         </div>
-        <form className="session-manager-form" onSubmit={handleNewChronicleSubmit}>
-          <label className="session-manager-label" htmlFor="chronicle-title">
-            Chronicle Title
-          </label>
-          <input
-            id="chronicle-title"
-            name="chronicle-title"
-            className="session-manager-input"
-            placeholder="The Shattered Observatory"
-            value={chronicleTitle}
-            onChange={(event) => setChronicleTitle(event.target.value)}
-            disabled={disabled}
-            required
-          />
-          <label className="session-manager-label" htmlFor="location-name">
-            Location Name
-          </label>
-          <input
-            id="location-name"
-            name="location-name"
-            className="session-manager-input"
-            placeholder="Farsight Plateau"
-            value={locationName}
-            onChange={(event) => setLocationName(event.target.value)}
-            disabled={disabled}
-            required
-          />
-          <label className="session-manager-label" htmlFor="location-atmosphere">
-            Location Atmosphere
-          </label>
-          <input
-            id="location-atmosphere"
-            name="location-atmosphere"
-            className="session-manager-input"
-            placeholder="Crackling auroras frame the silent ruins."
-            value={locationAtmosphere}
-            onChange={(event) => setLocationAtmosphere(event.target.value)}
-            disabled={disabled}
-            required
-          />
-          <button
-            type="submit"
-            className="session-manager-new"
-            disabled={disabled || !preferredCharacterId || !canSubmitNewChronicle}
-          >
-            Start Chronicle
-          </button>
-        </form>
+        <button
+          type="button"
+          className="session-manager-new"
+          onClick={() => handleOpenWizard()}
+          disabled={disabled}
+        >
+          Open Start Wizard
+        </button>
       </div>
 
       <div className="session-manager-section">
@@ -238,13 +161,10 @@ export function SessionManager() {
                   <button
                     type="button"
                     className="chip-button"
-                    onClick={() => {
-                      setPreferredCharacterId(character.id);
-                      handleCreateChronicle(character.id);
-                    }}
-                    disabled={disabled || !canSubmitNewChronicle}
+                    onClick={() => handleOpenWizard(character.id)}
+                    disabled={disabled}
                   >
-                    Start Chronicle
+                    Start Wizard
                   </button>
                 </div>
               </li>

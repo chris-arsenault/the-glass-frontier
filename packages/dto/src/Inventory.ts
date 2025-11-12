@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { Attribute } from './mechanics';
 
+const LocationStackEntry = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().min(1),
+  kind: z.string().min(1),
+});
+export type LocationStackEntry = z.infer<typeof LocationStackEntry>;
+
 export const Slot = z.enum(['outfit', 'headgear', 'armament', 'module']);
 export type Slot = z.infer<typeof Slot>;
 
@@ -39,6 +46,10 @@ export const DataShard = z.discriminatedUnion('kind', [
     id: z.string().min(1),
     name: z.string().min(1),
     seed: z.string().min(1),
+    locationId: z.string().min(1).optional(),
+    locationStack: z.array(LocationStackEntry).optional(),
+    toneChips: z.array(z.string()).optional(),
+    toneNotes: z.string().optional(),
   }),
 ]);
 export type DataShard = z.infer<typeof DataShard>;

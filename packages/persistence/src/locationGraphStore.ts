@@ -30,4 +30,22 @@ export interface LocationGraphStore {
     locationId: string;
     characterId: string;
   }): Promise<LocationSummary | null>;
+
+  listLocationRoots(input?: { search?: string; limit?: number }): Promise<LocationPlace[]>;
+
+  getPlace(placeId: string): Promise<LocationPlace | null>;
+
+  createPlace(input: {
+    parentId?: string | null;
+    locationId?: string;
+    name: string;
+    kind: string;
+    tags?: string[];
+    description?: string;
+  }): Promise<LocationPlace>;
+
+  createLocationChain(input: {
+    parentId?: string | null;
+    segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
+  }): Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
 }

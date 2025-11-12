@@ -85,6 +85,7 @@ export interface ChronicleStore extends ChronicleState {
   setPreferredCharacterId(characterId: string | null): void;
   refreshLoginResources(): Promise<void>;
   createChronicleForCharacter(details: ChronicleCreationDetails): Promise<string>;
+  createChronicleFromSeed(details: ChronicleSeedCreationDetails): Promise<string>;
   createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
   queueEquipChange(entry: PendingEquip): void;
   clearPendingEquipQueue(): void;
@@ -105,4 +106,11 @@ export interface ChronicleCreationDetails {
   title: string;
   locationName: string;
   locationAtmosphere: string;
+}
+
+export interface ChronicleSeedCreationDetails {
+  characterId?: string | null;
+  locationId: string;
+  title?: string | null;
+  seedText: string;
 }

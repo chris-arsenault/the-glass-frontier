@@ -9,6 +9,7 @@ import {
   PromptTemplateManager,
 } from '@glass-frontier/persistence';
 import { NarrativeEngine } from './narrativeEngine';
+import { ChronicleSeedService } from './services/chronicleSeedService';
 
 const worldStateStore = createWorldStateStore({
   bucket: process.env.NARRATIVE_S3_BUCKET,
@@ -30,6 +31,10 @@ const templateManager = new PromptTemplateManager({
   bucket: templateBucket,
   worldStateStore,
 });
+const seedService = new ChronicleSeedService({
+  templateManager,
+  locationGraphStore,
+});
 const engine = new NarrativeEngine({
   worldStateStore,
   locationGraphStore,
@@ -43,6 +48,7 @@ export type Context = {
   imbuedRegistryStore: ImbuedRegistryStore;
   engine: NarrativeEngine;
   templateManager: PromptTemplateManager;
+  seedService: ChronicleSeedService;
   authorizationHeader?: string;
 };
 
@@ -53,6 +59,7 @@ export async function createContext(options?: { authorizationHeader?: string }):
     imbuedRegistryStore,
     engine,
     templateManager,
+    seedService,
     authorizationHeader: options?.authorizationHeader,
   };
 }

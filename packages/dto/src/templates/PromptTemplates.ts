@@ -7,6 +7,7 @@ export const PromptTemplateIds = [
   'location-delta',
   'gm-summary',
   'inventory-arbiter',
+  'chronicle-seed',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -76,6 +77,15 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/inventory-arbiter.hbs',
     editableStartToken: '## Rules',
     editableEndToken: '## Output Schema',
+    supportsVariants: true,
+  },
+  'chronicle-seed': {
+    id: 'chronicle-seed',
+    label: 'Chronicle Seeds',
+    description: 'Generates short chronicle hooks based on a location and tone prompt.',
+    officialObjectKey: 'official/chronicle-seed.hbs',
+    editableStartToken: '## Guidance',
+    editableEndToken: '## Output Requirements',
     supportsVariants: true,
   },
 };

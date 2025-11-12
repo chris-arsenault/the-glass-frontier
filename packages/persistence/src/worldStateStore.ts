@@ -9,6 +9,7 @@ export interface WorldStateStore {
     characterId?: string;
     title?: string;
     status?: Chronicle['status'];
+    seedText?: string | null;
   }): Promise<Chronicle>;
 
   getChronicleState(chronicleId: string): Promise<ChronicleSnapshot | null>;

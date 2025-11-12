@@ -8,6 +8,7 @@ export * from './locationGraph/LocationPlan';
 export * from './locationGraph/GraphSnapshot';
 export * from './mechanics';
 export * from './narrative/Chronicle';
+export * from './narrative/ChronicleSeed';
 export * from './narrative/Intent';
 export * from './narrative/SkillCheck';
 export * from './narrative/TranscriptEntry';
