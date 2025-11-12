@@ -6,39 +6,21 @@ class GmSummaryNode implements GraphNode {
   readonly id = 'gm-summary';
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (context.failure || !context.gmMessage || !context.playerIntent) {
-      context.telemetry?.recordToolNotRun({
-        chronicleId: context.chronicleId,
-        operation: 'llm.gm-summary',
-      });
+    if (!this.#canSummarize(context)) {
+      this.#recordSkip(context);
       return { ...context, failure: true };
     }
-    const prompt = await composeGMSummaryPrompt(
-      context.templates,
-      context.gmMessage.content,
-      context.playerIntent,
-      context.skillCheckPlan,
-      context.skillCheckResult
-    );
 
-    let summary = '';
+    const prompt = await composeGMSummaryPrompt({
+      check: context.skillCheckPlan,
+      checkResult: context.skillCheckResult,
+      gmMessage: context.gmMessage.content,
+      intent: context.playerIntent,
+      templates: context.templates,
+    });
 
-    try {
-      const result = await context.llm.generateText({
-        maxTokens: 220,
-        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
-        prompt,
-        temperature: 0.35,
-      });
-      summary = result.text?.trim() || '';
-    } catch (error: any) {
-      context.telemetry?.recordToolError?.({
-        attempt: 0,
-        chronicleId: context.chronicleId,
-        message: error instanceof Error ? error.message : 'unknown',
-        operation: 'llm.gm-summary',
-        referenceId: null,
-      });
+    const summary = await this.#summarize(context, prompt);
+    if (summary === null) {
       return { ...context, failure: true };
     }
 
@@ -46,6 +28,38 @@ class GmSummaryNode implements GraphNode {
       ...context,
       gmSummary: summary,
     };
+  }
+
+  #canSummarize(context: GraphContext): boolean {
+    return Boolean(!context.failure && context.gmMessage && context.playerIntent);
+  }
+
+  #recordSkip(context: GraphContext): void {
+    context.telemetry?.recordToolNotRun({
+      chronicleId: context.chronicleId,
+      operation: 'llm.gm-summary',
+    });
+  }
+
+  async #summarize(context: GraphContext, prompt: string): Promise<string | null> {
+    try {
+      const result = await context.llm.generateText({
+        maxTokens: 220,
+        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
+        prompt,
+        temperature: 0.35,
+      });
+      return (result.text ?? '').trim();
+    } catch (error: unknown) {
+      context.telemetry?.recordToolError?.({
+        attempt: 0,
+        chronicleId: context.chronicleId,
+        message: error instanceof Error ? error.message : 'unknown',
+        operation: 'llm.gm-summary',
+        referenceId: null,
+      });
+      return null;
+    }
   }
 }
 

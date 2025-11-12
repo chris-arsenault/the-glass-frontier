@@ -188,9 +188,10 @@ export class ConnectionRepository {
           })
         );
 
-        const unprocessed = response.UnprocessedItems?.[this.tableName];
+        const unprocessedItems: WriteRequest[] =
+          response.UnprocessedItems?.[this.tableName] ?? [];
         pending =
-          unprocessed && unprocessed.length > 0 ? { [this.tableName]: unprocessed } : undefined;
+          unprocessedItems.length > 0 ? { [this.tableName]: unprocessedItems } : undefined;
       }
     }
   }

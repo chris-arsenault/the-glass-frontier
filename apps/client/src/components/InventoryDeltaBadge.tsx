@@ -1,17 +1,17 @@
 import type { InventoryDelta } from '@glass-frontier/dto';
 
 const slotLabels: Record<string, string> = {
-  outfit: 'Outfit',
-  headgear: 'Headgear',
   armament: 'Armament',
+  headgear: 'Headgear',
   module: 'Module',
+  outfit: 'Outfit',
 };
 
 const bucketLabels: Record<string, string> = {
-  relics: 'Relics',
-  imbued_items: 'Imbued',
-  data_shards: 'Data Shards',
   consumables: 'Consumables',
+  data_shards: 'Data Shards',
+  imbued_items: 'Imbued',
+  relics: 'Relics',
   supplies: 'Supplies',
 };
 
@@ -36,12 +36,12 @@ const formatRows = (delta: InventoryDelta): Row[] => {
   return delta.ops
     .map((op, index) => {
       const base: Row = {
+        amount: op.amount ?? null,
+        bucket: op.bucket ? bucketLabels[op.bucket] ?? op.bucket : null,
         id: `${op.op}-${index}`,
+        name: op.name ?? null,
         op: op.op,
         slot: op.slot ? slotLabels[op.slot] ?? op.slot : null,
-        bucket: op.bucket ? bucketLabels[op.bucket] ?? op.bucket : null,
-        name: op.name ?? null,
-        amount: op.amount ?? null,
       };
       if (op.op === 'add' || op.op === 'remove') {
         if (op.hook) {

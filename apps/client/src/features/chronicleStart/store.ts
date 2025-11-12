@@ -1,15 +1,15 @@
-import { create } from 'zustand';
 import type { ChronicleSeed, LocationBreadcrumbEntry } from '@glass-frontier/dto';
+import { create } from 'zustand';
 
 export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'create';
 
-export interface SelectedLocationSummary {
+export type SelectedLocationSummary = {
   id: string;
   name: string;
   breadcrumb: LocationBreadcrumbEntry[];
 }
 
-export interface ChronicleStartState {
+export type ChronicleStartState = {
   step: ChronicleWizardStep;
   selectedLocation: SelectedLocationSummary | null;
   toneChips: string[];
@@ -21,39 +21,60 @@ export interface ChronicleStartState {
   listViewFallback: boolean;
 }
 
-interface ChronicleStartActions {
-  reset(): void;
-  setStep(step: ChronicleWizardStep): void;
-  setSelectedLocation(selection: SelectedLocationSummary | null): void;
-  toggleToneChip(chip: string): void;
-  setToneNotes(notes: string): void;
-  setSeeds(seeds: ChronicleSeed[]): void;
-  chooseSeed(seedId: string | null): void;
-  setCustomSeed(details: { title: string; text: string }): void;
-  setListViewFallback(enabled: boolean): void;
+type ChronicleStartActions = {
+  reset: () => void;
+  setStep: (step: ChronicleWizardStep) => void;
+  setSelectedLocation: (selection: SelectedLocationSummary | null) => void;
+  toggleToneChip: (chip: string) => void;
+  setToneNotes: (notes: string) => void;
+  setSeeds: (seeds: ChronicleSeed[]) => void;
+  chooseSeed: (seedId: string | null) => void;
+  setCustomSeed: (details: { title: string; text: string }) => void;
+  setListViewFallback: (enabled: boolean) => void;
 }
 
 const initialState: ChronicleStartState = {
-  step: 'location',
-  selectedLocation: null,
-  toneChips: [],
-  toneNotes: '',
-  seeds: [],
   chosenSeedId: null,
   customSeedText: '',
   customSeedTitle: '',
   listViewFallback: false,
+  seeds: [],
+  selectedLocation: null,
+  step: 'location',
+  toneChips: [],
+  toneNotes: '',
 };
 
 export const useChronicleStartStore = create<ChronicleStartState & ChronicleStartActions>((set) => ({
   ...initialState,
+  chooseSeed: (seedId) =>
+    set((state) => ({
+      chosenSeedId: seedId,
+      customSeedText: seedId ? state.customSeedText : '',
+      customSeedTitle: seedId ? state.customSeedTitle : '',
+    })),
   reset: () => set(initialState),
-  setStep: (step) => set({ step }),
+  setCustomSeed: ({ text, title }) =>
+    set({
+      chosenSeedId: null,
+      customSeedText: text,
+      customSeedTitle: title,
+    }),
+  setListViewFallback: (enabled) => set({ listViewFallback: enabled }),
+  setSeeds: (seeds) =>
+    set({
+      chosenSeedId: seeds.length ? seeds[0].id : null,
+      customSeedText: '',
+      customSeedTitle: '',
+      seeds,
+    }),
   setSelectedLocation: (selection) =>
     set((state) => ({
       selectedLocation: selection,
       step: selection ? state.step : 'location',
     })),
+  setStep: (step) => set({ step }),
+  setToneNotes: (toneNotes) => set({ toneNotes }),
   toggleToneChip: (chip) =>
     set((state) => {
       const exists = state.toneChips.includes(chip);
@@ -62,25 +83,4 @@ export const useChronicleStartStore = create<ChronicleStartState & ChronicleStar
         : [...state.toneChips, chip].slice(0, 8);
       return { toneChips: next };
     }),
-  setToneNotes: (toneNotes) => set({ toneNotes }),
-  setSeeds: (seeds) =>
-    set({
-      seeds,
-      chosenSeedId: seeds.length ? seeds[0].id : null,
-      customSeedText: '',
-      customSeedTitle: '',
-    }),
-  chooseSeed: (seedId) =>
-    set((state) => ({
-      chosenSeedId: seedId,
-      customSeedText: seedId ? state.customSeedText : '',
-      customSeedTitle: seedId ? state.customSeedTitle : '',
-    })),
-  setCustomSeed: ({ title, text }) =>
-    set({
-      customSeedTitle: title,
-      customSeedText: text,
-      chosenSeedId: null,
-    }),
-  setListViewFallback: (enabled) => set({ listViewFallback: enabled }),
 }));

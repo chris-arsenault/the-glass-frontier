@@ -111,39 +111,62 @@ export class ChronicleSeedService {
   }
 
   #normalizeSeeds(payload: unknown, requested: number, place: LocationPlace): ChronicleSeed[] {
-    const container = (payload ?? {}) as Record<string, unknown>;
-    const entries = Array.isArray(container.seeds) ? (container.seeds as unknown[]) : [];
-    const result: ChronicleSeed[] = [];
-    for (const entry of entries) {
-      if (result.length >= requested) {
+    const normalized: ChronicleSeed[] = [];
+    for (const entry of this.#extractSeedEntries(payload)) {
+      if (normalized.length >= requested) {
         break;
       }
-      if (!entry || typeof entry !== 'object') {
+      const seed = this.#coerceSeedEntry(entry);
+      if (!seed) {
         continue;
       }
-      const title = typeof (entry as any).title === 'string' ? (entry as any).title.trim() : '';
-      const teaser = typeof (entry as any).teaser === 'string' ? (entry as any).teaser.trim() : '';
-      const tags = Array.isArray((entry as any).tags)
-        ? (entry as any).tags
-          .map((tag: unknown) => (typeof tag === 'string' ? tag.trim().toLowerCase() : ''))
-          .filter((tag: string) => tag.length > 0)
-          .slice(0, 4)
-        : [];
-      if (!title || !teaser) {
-        continue;
-      }
-      result.push({
+      normalized.push({
         id: randomUUID(),
-        tags,
-        teaser: teaser.slice(0, 280),
-        title: title.slice(0, 80),
+        tags: seed.tags,
+        teaser: seed.teaser.slice(0, 280),
+        title: seed.title.slice(0, 80),
       });
     }
+    return this.#fillSeedShortfall(normalized, requested, place);
+  }
 
-    while (result.length < requested) {
-      result.push(this.#fallbackSeed(place, result.length + 1));
+  #extractSeedEntries(payload: unknown): unknown[] {
+    if (!payload || typeof payload !== 'object') {
+      return [];
     }
-    return result;
+    const record = payload as Record<string, unknown>;
+    return Array.isArray(record.seeds) ? record.seeds : [];
+  }
+
+  #coerceSeedEntry(entry: unknown): { title: string; teaser: string; tags: string[] } | null {
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+    const record = entry as Record<string, unknown>;
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const teaser = typeof record.teaser === 'string' ? record.teaser.trim() : '';
+    const tags = Array.isArray(record.tags)
+      ? (record.tags as unknown[])
+        .map((tag) => (typeof tag === 'string' ? tag.trim().toLowerCase() : ''))
+        .filter((tag): tag is string => Boolean(tag))
+        .slice(0, 4)
+      : [];
+    if (!title || !teaser) {
+      return null;
+    }
+    return { tags, teaser, title };
+  }
+
+  #fillSeedShortfall(
+    seeds: ChronicleSeed[],
+    requested: number,
+    place: LocationPlace
+  ): ChronicleSeed[] {
+    const output = [...seeds];
+    while (output.length < requested) {
+      output.push(this.#fallbackSeed(place, output.length + 1));
+    }
+    return output;
   }
 
   #fallbackSeed(place: LocationPlace, index: number): ChronicleSeed {

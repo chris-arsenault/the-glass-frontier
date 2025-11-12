@@ -1,4 +1,5 @@
 import type { TurnProgressEvent } from '@glass-frontier/dto';
+
 import { getConfigValue } from '../utils/runtimeConfig';
 
 const listeners = new Set<(event: TurnProgressEvent) => void>();
@@ -14,11 +15,11 @@ const resolveEndpoint = (): string | null => {
 class ProgressStream {
   private socket: WebSocket | null = null;
   private reconnectTimer: number | null = null;
-  private endpoint: string | null = resolveEndpoint();
+  private readonly endpoint: string | null = resolveEndpoint();
   private token: string | null = null;
   private manualClose = false;
-  private pendingSubscriptions = new Set<string>();
-  private activeSubscriptions = new Set<string>();
+  private readonly pendingSubscriptions = new Set<string>();
+  private readonly activeSubscriptions = new Set<string>();
 
   connect(token: string) {
     if (typeof window === 'undefined') {

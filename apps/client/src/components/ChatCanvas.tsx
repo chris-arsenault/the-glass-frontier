@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
 import { useChronicleStore } from '../stores/chronicleStore';
 import { useUiStore } from '../stores/uiStore';
-import { SkillCheckBadge } from './SkillCheckBadge';
 import { InventoryDeltaBadge } from './InventoryDeltaBadge';
+import { SkillCheckBadge } from './SkillCheckBadge';
 
 export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);
@@ -83,12 +84,12 @@ export function ChatCanvas() {
         ) : (
           messages.map((chatMessage, index) => {
             const {
+              attributeKey,
               entry,
+              playerIntent,
               skillCheckPlan,
               skillCheckResult,
               skillKey,
-              attributeKey,
-              playerIntent,
               skillProgress,
             } = chatMessage;
             const timestamp =
@@ -148,11 +149,11 @@ export function ChatCanvas() {
                   onKeyDown={
                     entry.role !== 'system'
                       ? (event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            toggleMessageExpansion(entry.id);
-                          }
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          toggleMessageExpansion(entry.id);
                         }
+                      }
                       : undefined
                   }
                 >

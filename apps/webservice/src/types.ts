@@ -7,11 +7,17 @@ export const parseSubscribeMessage = (payload: unknown): SubscribeMessage | null
   if (!payload || typeof payload !== 'object') {
     return null;
   }
-  const action = 'action' in payload ? (payload as any).action : null;
-  if (action !== 'subscribe') {
+
+  const record = payload as Record<string, unknown>;
+  const actionValue = record.action;
+  if (actionValue !== 'subscribe') {
     return null;
   }
+
   const jobId =
-    typeof (payload as any).jobId === 'string' ? (payload as any).jobId.trim() : undefined;
-  return { action, jobId };
+    typeof record.jobId === 'string' && record.jobId.trim().length > 0
+      ? record.jobId.trim()
+      : undefined;
+
+  return { action: 'subscribe', jobId };
 };

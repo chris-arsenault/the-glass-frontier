@@ -74,56 +74,73 @@ class UpdateCharacterNode implements GraphNode {
   }
 
   async #applySkillUpdates(context: GraphContext): Promise<GraphContext> {
+    const progress = this.#evaluateSkillProgress(context);
+    if (!progress) {
+      return context;
+    }
+    const updatedCharacter = await this.worldStateStore.applyCharacterProgress(progress);
+    if (!updatedCharacter) {
+      return context;
+    }
+    return {
+      ...context,
+      chronicle: {
+        ...context.chronicle,
+        character: updatedCharacter,
+      },
+      updatedCharacter,
+    };
+  }
 
+  #evaluateSkillProgress(
+    context: GraphContext
+  ): { characterId: string; momentumDelta?: number; skill?: { attribute: Attribute; name: string; xpAward: number } } | null {
     const characterId = context.chronicle.character?.id;
     const intent = context.playerIntent;
-    const checkResult = context.skillCheckResult;
-
     if (!characterId || !intent || !intent.requiresCheck) {
-      return context;
+      return null;
     }
-
-    const skillName = intent.skill;
-    const skillAttribute: Attribute | undefined = intent.attribute;
-    const outcomeTier = checkResult?.outcomeTier;
-    const momentumDelta = outcomeTier ? (MOMENTUM_DELTA[outcomeTier] ?? 0) : 0;
-    const xpAward = outcomeTier ? (XP_REWARDS[outcomeTier] ?? 0) : 0;
-
-    const skillMissing = Boolean(skillName && !context.chronicle.character?.skills?.[skillName]);
-    const needsSkillXp = xpAward > 0;
-    const wantsMomentumUpdate = momentumDelta !== 0;
-    const shouldTouchSkill = skillName && skillAttribute && (skillMissing || needsSkillXp);
-
-    if (!shouldTouchSkill && !wantsMomentumUpdate) {
-      return context;
+    const { momentumDelta, xpAward } = this.#calculateProgressDeltas(context);
+    const skillUpdate = this.#buildSkillUpdate(context, intent, xpAward);
+    if (!skillUpdate && momentumDelta === 0) {
+      return null;
     }
-
-    const updatedCharacter = await this.worldStateStore.applyCharacterProgress({
+    return {
       characterId,
-      momentumDelta: wantsMomentumUpdate ? momentumDelta : undefined,
-      skill: shouldTouchSkill
-        ? {
-          attribute: skillAttribute,
-          name: skillName,
-          xpAward,
-        }
-        : undefined,
-    });
+      momentumDelta: momentumDelta !== 0 ? momentumDelta : undefined,
+      skill: skillUpdate,
+    };
+  }
 
-    let nextContext: GraphContext = context;
-
-    if (updatedCharacter) {
-      nextContext = {
-        ...nextContext,
-        chronicle: {
-          ...nextContext.chronicle,
-          character: updatedCharacter,
-        },
-        updatedCharacter,
-      };
-
+  #calculateProgressDeltas(context: GraphContext): { momentumDelta: number; xpAward: number } {
+    const outcomeTier = context.skillCheckResult?.outcomeTier;
+    if (!outcomeTier) {
+      return { momentumDelta: 0, xpAward: 0 };
     }
-    return nextContext;
+    return {
+      momentumDelta: MOMENTUM_DELTA[outcomeTier] ?? 0,
+      xpAward: XP_REWARDS[outcomeTier] ?? 0,
+    };
+  }
+
+  #buildSkillUpdate(
+    context: GraphContext,
+    intent: NonNullable<GraphContext['playerIntent']>,
+    xpAward: number
+  ): { attribute: Attribute; name: string; xpAward: number } | undefined {
+    if (!intent.skill || !intent.attribute) {
+      return undefined;
+    }
+    const currentSkill = context.chronicle.character?.skills?.[intent.skill];
+    const needsUnlock = !currentSkill;
+    if (!needsUnlock && xpAward === 0) {
+      return undefined;
+    }
+    return {
+      attribute: intent.attribute,
+      name: intent.skill,
+      xpAward,
+    };
   }
 
   async #applyLocationPlan(context: GraphContext): Promise<GraphContext> {

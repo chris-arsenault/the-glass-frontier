@@ -22,6 +22,15 @@ const decisionSchema = z.object({
 const MAX_CHILDREN = 25;
 const MAX_NEIGHBORS = 25;
 
+type PlanContext = {
+  anchorPlace: LocationPlace;
+  parentPlace: LocationPlace | null;
+  placeByName: Map<string, LocationPlace>;
+  characterId: string;
+  graph: LocationGraphSnapshot;
+  chronicleId: string;
+};
+
 export class LocationDeltaNode implements GraphNode {
   readonly id = 'location-delta';
   readonly #graphStore: LocationGraphStore;
@@ -51,42 +60,77 @@ export class LocationDeltaNode implements GraphNode {
   }
 
   async #buildPlan(context: GraphContext) {
-    const chronicleId = context.chronicleId;
+    const planContext = await this.#resolvePlanContext(context);
+    if (!planContext) {
+      return null;
+    }
+
+    const promptInput = this.#buildPromptInput(context, planContext);
+    const prompt = await composeLocationDeltaPrompt(context.templates, promptInput);
+    const decision = await this.#requestDecision(context, promptInput.currentId, prompt);
+    if (!decision) {
+      return null;
+    }
+
+    return this.#decisionToPlan({
+      ...planContext,
+      decision,
+    });
+  }
+
+  async #resolvePlanContext(context: GraphContext): Promise<PlanContext | null> {
     const locationId = context.chronicle.chronicle.locationId;
     const characterId = context.chronicle.character?.id;
     if (!characterId || !locationId) {
       return null;
     }
-
     const [graph, priorState] = await Promise.all([
       this.#graphStore.getLocationGraph(locationId),
       this.#graphStore.getLocationState(characterId),
     ]);
-
     if (!priorState || priorState.locationId !== locationId) {
       return null;
     }
-
-    const anchorPlace = graph.places.find((place) => place.id === priorState.anchorPlaceId) ?? null;
+    const anchorPlace = graph.places.find((place) => place.id === priorState.anchorPlaceId);
     if (!anchorPlace) {
       return null;
     }
-
     const placeById = new Map(graph.places.map((place) => [place.id, place]));
     const placeByName = new Map<string, LocationPlace>();
     for (const place of graph.places) {
       placeByName.set(normalizeName(place.name), place);
     }
-
     const parentPlace = anchorPlace.canonicalParentId
-      ? (placeById.get(anchorPlace.canonicalParentId) ?? null)
+      ? placeById.get(anchorPlace.canonicalParentId) ?? null
       : null;
+    return {
+      anchorPlace,
+      characterId,
+      chronicleId: context.chronicleId,
+      graph,
+      parentPlace,
+      placeByName,
+    };
+  }
 
+  #buildPromptInput(
+    context: GraphContext,
+    planContext: PlanContext
+  ): {
+      adjacent: string[];
+      children: string[];
+      current: string;
+      currentId: string;
+      gmResponse: string;
+      links: string[];
+      parent: string | null;
+      playerIntent: string;
+    } {
+    const { anchorPlace, graph, parentPlace } = planContext;
     const childNames = graph.places
       .filter((place) => place.canonicalParentId === anchorPlace.id)
       .slice(0, MAX_CHILDREN)
       .map((place) => place.name);
-
     const adjacentNames = collectNeighborNames(graph, anchorPlace.id, ['ADJACENT_TO']).slice(
       0,
       MAX_NEIGHBORS
@@ -95,20 +139,26 @@ export class LocationDeltaNode implements GraphNode {
       0,
       MAX_NEIGHBORS
     );
-
-    const prompt = await composeLocationDeltaPrompt(context.templates, {
+    return {
       adjacent: adjacentNames,
       children: childNames,
       current: anchorPlace.name,
+      currentId: anchorPlace.id,
       gmResponse: context.gmMessage?.content ?? '',
       links: linkNames,
       parent: parentPlace?.name ?? null,
       playerIntent: context.playerMessage?.content ?? '',
-    });
+    };
+  }
 
+  async #requestDecision(
+    context: GraphContext,
+    locationId: string,
+    prompt: string
+  ): Promise<z.infer<typeof decisionSchema> | null> {
     const llmResult = await context.llm.generateText({
       maxTokens: 400,
-      metadata: { chronicleId, nodeId: this.id },
+      metadata: { chronicleId: context.chronicleId, nodeId: this.id },
       prompt,
       temperature: 0.1,
     });
@@ -116,36 +166,24 @@ export class LocationDeltaNode implements GraphNode {
     if (!raw) {
       return null;
     }
-
-    let decision: z.infer<typeof decisionSchema>;
     try {
-      decision = decisionSchema.parse(JSON.parse(extractJsonLine(raw)));
+      return decisionSchema.parse(JSON.parse(extractJsonLine(raw)));
     } catch (error) {
       log('warn', 'location-delta-node.invalid-json', {
-        chronicleId,
+        chronicleId: context.chronicleId,
         locationId,
         payload: raw,
         reason: error instanceof Error ? error.message : 'unknown',
       });
       return null;
     }
-
-    return this.#decisionToPlan({
-      anchorPlace,
-      characterId,
-      decision,
-      parentPlace,
-      placeByName,
-    });
   }
 
-  #decisionToPlan(input: {
-    decision: z.infer<typeof decisionSchema>;
-    anchorPlace: LocationPlace;
-    parentPlace: LocationPlace | null;
-    placeByName: Map<string, LocationPlace>;
-    characterId: string;
-  }): LocationPlan | null {
+  #decisionToPlan(
+    input: PlanContext & {
+      decision: z.infer<typeof decisionSchema>;
+    }
+  ): LocationPlan | null {
     const { anchorPlace, characterId, decision, parentPlace, placeByName } = input;
 
     if (decision.action === 'no_change') {

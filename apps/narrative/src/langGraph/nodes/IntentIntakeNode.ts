@@ -1,43 +1,66 @@
 import type { Intent } from '@glass-frontier/dto';
 import { Attribute } from '@glass-frontier/dto';
-import { randomInt } from 'node:crypto';
+import { z } from 'zod';
 
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeIntentPrompt } from '../prompts/prompts';
 
-function fallbackIntent(text: string) {
-  return {
-    attribute: Attribute.options[0],
-    creativeSpark: false,
-    intentSummary: text.slice(0, 120),
-    requiresCheck: false,
-    skill: 'talk',
-    tone: 'narrative',
-  };
-}
+const IntentResponseSchema = z.object({
+  attribute: z.string().optional(),
+  creativeSpark: z.boolean().optional(),
+  intentSummary: z.string().optional(),
+  requiresCheck: z.boolean().optional(),
+  skill: z.string().optional(),
+  tone: z.string().optional(),
+});
+
+type IntentResponse = z.infer<typeof IntentResponseSchema>;
+
+const DEFAULT_SKILL = 'talk';
+const DEFAULT_TONE = 'narrative';
+const DEFAULT_ATTRIBUTE = Attribute.options[0];
 
 class IntentIntakeNode implements GraphNode {
   readonly id = 'intent-intake';
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
-      context.telemetry?.recordToolNotRun({
-        chronicleId: context.chronicleId,
-        operation: 'llm.intent-intake',
-      });
+      this.#recordSkip(context);
       return { ...context, failure: true };
     }
-    const content: string = context.playerMessage.content ?? '';
+
+    const content = context.playerMessage.content ?? '';
     const prompt = await composeIntentPrompt({
       chronicle: context.chronicle,
       playerMessage: content,
       templates: context.templates,
     });
-    const fallback = fallbackIntent(content);
 
-    let parsed: Record<string, any> | null = null;
+    const response = await this.#requestIntent(context, prompt);
+    if (!response) {
+      return { ...context, failure: true };
+    }
 
+    const playerIntent = this.#buildIntent(context, response, content);
+
+    return {
+      ...context,
+      playerIntent,
+    };
+  }
+
+  #recordSkip(context: GraphContext): void {
+    context.telemetry?.recordToolNotRun({
+      chronicleId: context.chronicleId,
+      operation: 'llm.intent-intake',
+    });
+  }
+
+  async #requestIntent(
+    context: GraphContext,
+    prompt: string
+  ): Promise<IntentResponse | null> {
     try {
       const result = await context.llm.generateJson({
         maxTokens: 500,
@@ -45,7 +68,8 @@ class IntentIntakeNode implements GraphNode {
         prompt,
         temperature: 0.1,
       });
-      parsed = result.json;
+      const parsed = IntentResponseSchema.safeParse(result.json);
+      return parsed.success ? parsed.data : {};
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
@@ -54,22 +78,19 @@ class IntentIntakeNode implements GraphNode {
         operation: 'llm.intent-intake',
         referenceId: null,
       });
-      return { ...context, failure: true };
+      return null;
     }
+  }
 
-    const tone: string = parsed?.tone ?? fallback.tone;
-    const requiresCheck: boolean =
-      typeof parsed?.requiresCheck === 'boolean' ? parsed.requiresCheck : fallback.requiresCheck;
-    const creativeSpark: boolean =
-      typeof parsed?.creativeSpark === 'boolean' ? parsed.creativeSpark : fallback.creativeSpark;
-    const skill: string = parsed.skill ?? fallback.skill;
-    const attribute: Attribute =
-      context.chronicle?.character?.skills?.[skill]?.attribute ??
-      parsed?.attribute ??
-      fallback.attribute;
-    const intentSummary: string = parsed?.intentSummary ?? fallback.intentSummary;
+  #buildIntent(context: GraphContext, response: IntentResponse, message: string): Intent {
+    const tone = this.#normalizeString(response.tone) ?? DEFAULT_TONE;
+    const skill = this.#normalizeString(response.skill) ?? DEFAULT_SKILL;
+    const requiresCheck = response.requiresCheck ?? false;
+    const creativeSpark = response.creativeSpark ?? false;
+    const intentSummary = this.#deriveSummary(response.intentSummary, message);
+    const attribute = this.#deriveAttribute(context, skill, response.attribute);
 
-    const playerIntent: Intent = {
+    return {
       attribute,
       creativeSpark,
       intentSummary,
@@ -81,11 +102,37 @@ class IntentIntakeNode implements GraphNode {
       skill,
       tone,
     };
+  }
 
-    return {
-      ...context,
-      playerIntent,
-    };
+  #deriveSummary(override: string | undefined, message: string): string {
+    const normalized = this.#normalizeString(override);
+    if (normalized) {
+      return normalized;
+    }
+    const trimmed = message.trim();
+    if (!trimmed) {
+      return 'No intent provided.';
+    }
+    return trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed;
+  }
+
+  #deriveAttribute(context: GraphContext, skill: string, override?: string): string {
+    const skillAttribute = context.chronicle.character?.skills?.[skill]?.attribute;
+    if (skillAttribute) {
+      return skillAttribute;
+    }
+    if (override && Attribute.safeParse(override).success) {
+      return override;
+    }
+    return DEFAULT_ATTRIBUTE;
+  }
+
+  #normalizeString(value?: string | null): string | null {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length ? trimmed : null;
+    }
+    return null;
   }
 }
 

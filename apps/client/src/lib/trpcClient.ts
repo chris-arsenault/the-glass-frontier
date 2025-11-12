@@ -1,5 +1,6 @@
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '@glass-frontier/narrative';
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+
 import { getAuthHeaders } from '../stores/authStore';
 import { getConfigValue } from '../utils/runtimeConfig';
 
@@ -20,10 +21,10 @@ const resolveTrpcUrl = (): string => {
 export const trpcClient = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: resolveTrpcUrl(),
       headers() {
         return getAuthHeaders();
       },
+      url: resolveTrpcUrl(),
     }),
   ],
 });

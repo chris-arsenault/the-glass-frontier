@@ -1,7 +1,18 @@
 import { log } from '@glass-frontier/utils';
 import { TRPCClientError, createTRPCUntypedClient, httpBatchLink } from '@trpc/client';
 import type { TRPCUntypedClient } from '@trpc/client';
+import type { AnyRouter } from '@trpc/server';
+import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
+
+const DEFAULT_MODEL = 'gpt-4.1-mini';
+const DEFAULT_PROVIDER = 'llm-proxy';
+const DEFAULT_BASE_URL = 'http://localhost:8082';
+const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 40;
+const METADATA_MAX_CHARS = 200;
+const DEFAULT_HEADERS: Record<string, string> = { 'content-type': 'application/json' };
 
 type LlmInvokeOptions = {
   prompt?: string;
@@ -10,14 +21,67 @@ type LlmInvokeOptions = {
   temperature?: number;
   maxTokens?: number;
   metadata?: Record<string, unknown>;
-}
+};
 
 type ExecuteResult = {
   output: unknown;
-  raw: unknown;
+  raw: ChatCompletionResponse;
   usage: unknown;
   attempts: number;
-}
+};
+
+type ChatCompletionMessage = {
+  content?: string | string[] | null;
+};
+
+type ChatCompletionChoice = {
+  delta?: ChatCompletionMessage | null;
+  message?: ChatCompletionMessage | null;
+};
+
+type ChatCompletionResponse = {
+  choices: ChatCompletionChoice[];
+  usage: Record<string, unknown> | null;
+};
+
+type LlmClientOptions = {
+  baseUrl?: string;
+  model?: string;
+  providerId?: string;
+  timeoutMs?: number;
+  maxRetries?: number;
+  defaultHeaders?: Record<string, string>;
+};
+
+const resolveBaseUrl = (value?: string): string => {
+  const candidate = value ?? process.env.LLM_PROXY_URL ?? DEFAULT_BASE_URL;
+  return candidate.replace(/\/+$/, '');
+};
+
+const resolveModel = (value?: string): string => value ?? DEFAULT_MODEL;
+
+const resolveProviderId = (value?: string): string => value ?? DEFAULT_PROVIDER;
+
+const resolveTimeout = (value?: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+  return DEFAULT_TIMEOUT_MS;
+};
+
+const resolveMaxRetries = (value?: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+  return DEFAULT_MAX_RETRIES;
+};
+
+const resolveHeaders = (headers?: Record<string, string>): Record<string, string> => {
+  if (headers && Object.keys(headers).length > 0) {
+    return { ...headers };
+  }
+  return { ...DEFAULT_HEADERS };
+};
 
 class LangGraphLlmClient {
   readonly #baseUrl: string;
@@ -26,31 +90,16 @@ class LangGraphLlmClient {
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
   readonly #defaultHeaders: Record<string, string>;
-  readonly #client: TRPCUntypedClient<any>;
+  readonly #client: TRPCUntypedClient<AnyRouter>;
 
-  constructor(options?: {
-    baseUrl?: string;
-    model?: string;
-    providerId?: string;
-    timeoutMs?: number;
-    maxRetries?: number;
-    defaultHeaders?: Record<string, string>;
-  }) {
-    const resolvedBaseUrl =
-      options?.baseUrl ?? process.env.LLM_PROXY_URL ?? 'http://localhost:8082';
-    this.#baseUrl = this.#normalizeBaseUrl(resolvedBaseUrl);
-    this.#model = options?.model ?? 'gpt-4.1-mini';
-    this.#providerId = options?.providerId ?? 'llm-proxy';
-    this.#timeoutMs =
-      Number.isFinite(options?.timeoutMs) && (options?.timeoutMs ?? 0) > 0
-        ? (options?.timeoutMs as number)
-        : 45_000;
-    this.#maxRetries =
-      Number.isFinite(options?.maxRetries) && (options?.maxRetries ?? 0) >= 0
-        ? (options?.maxRetries as number)
-        : 2;
-    this.#defaultHeaders = options?.defaultHeaders ?? { 'content-type': 'application/json' };
-    this.#client = createTRPCUntypedClient<any>({
+  constructor(options?: LlmClientOptions) {
+    this.#baseUrl = resolveBaseUrl(options?.baseUrl);
+    this.#model = resolveModel(options?.model);
+    this.#providerId = resolveProviderId(options?.providerId);
+    this.#timeoutMs = resolveTimeout(options?.timeoutMs);
+    this.#maxRetries = resolveMaxRetries(options?.maxRetries);
+    this.#defaultHeaders = resolveHeaders(options?.defaultHeaders);
+    this.#client = createTRPCUntypedClient<AnyRouter>({
       links: [
         httpBatchLink({
           headers: () => this.#defaultHeaders,
@@ -79,8 +128,7 @@ class LangGraphLlmClient {
     provider: string;
     attempts: number;
   }> {
-    const payload = this.#buildPayload(options);
-    payload.response_format = { type: 'json_object' };
+    const payload = { ...this.#buildPayload(options), response_format: { type: 'json_object' } };
     const { attempts, output, raw, usage } = await this.#execute({
       body: payload,
       metadata: options.metadata,
@@ -88,9 +136,10 @@ class LangGraphLlmClient {
     if (typeof output === 'string') {
       const trimmed = output.trim();
       try {
+        const parsed = this.#coerceRecord(JSON.parse(trimmed)) ?? {};
         return {
           attempts,
-          json: JSON.parse(trimmed),
+          json: parsed,
           provider: this.#providerId,
           raw,
           usage,
@@ -102,10 +151,11 @@ class LangGraphLlmClient {
       }
     }
 
-    if (output && typeof output === 'object') {
+    const coerced = this.#coerceRecord(output);
+    if (coerced) {
       return {
         attempts,
-        json: output as Record<string, unknown>,
+        json: coerced,
         provider: this.#providerId,
         raw,
         usage,
@@ -159,14 +209,10 @@ class LangGraphLlmClient {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
       try {
-        const payload = metadata ? { ...body, metadata } : body;
-        const parsed = (await this.#client.mutation('chatCompletion', payload, {
-          signal: controller.signal,
-        })) as Record<string, unknown>;
-
-        clearTimeout(timer);
-        const choice = Array.isArray(parsed.choices) ? parsed.choices[0] : undefined;
-        const message = choice?.message?.content ?? choice?.delta?.content ?? '';
+        const mergedBody = this.#mergeMetadata(body, metadata);
+        const response = await this.#invokeMutation(mergedBody, controller.signal);
+        const parsed = this.#parseResponse(response);
+        const message = this.#extractMessage(parsed.choices[0]);
 
         return {
           attempts: attempt + 1,
@@ -175,37 +221,135 @@ class LangGraphLlmClient {
           usage: parsed.usage ?? null,
         };
       } catch (error) {
-        clearTimeout(timer);
         lastError = error;
-        log('error', 'narrative.llm.invoke_failed', {
-          attempt,
-          context: metadata ? JSON.stringify(metadata).slice(0, 200) : '{}',
-          message: error instanceof Error ? error.message : 'unknown',
-          provider: this.#providerId,
-        });
+        this.#logError(error, attempt, metadata);
 
-        if (error instanceof TRPCClientError && error.data?.httpStatus === 400) {
-          const causeMessage =
-            (error.cause)?.message ??
-            error.message ??
-            'Downstream bad request.';
-          throw new Error(`llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500));
+        if (this.#isBadRequest(error)) {
+          throw this.#createBadRequestError(error);
         }
 
         if (attempt === this.#maxRetries) {
-          throw error;
+          throw this.#toError(error);
         }
 
-        await delay(40 * (attempt + 1));
-        attempt += 1;
+        await delay(this.#retryDelay(attempt));
+      } finally {
+        clearTimeout(timer);
       }
+
+      attempt += 1;
     }
 
-    throw lastError instanceof Error ? lastError : new Error('llm_invoke_failed');
+    throw this.#toError(lastError ?? new Error('llm_invoke_failed'));
   }
 
-  #normalizeBaseUrl(url: string): string {
-    return url.replace(/\/+$/, '');
+  #mergeMetadata(
+    body: Record<string, unknown>,
+    metadata?: Record<string, unknown>
+  ): Record<string, unknown> {
+    return metadata ? { ...body, metadata } : body;
+  }
+
+  async #invokeMutation(payload: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
+    return this.#client.mutation('chatCompletion', payload, { signal });
+  }
+
+  #parseResponse(payload: unknown): ChatCompletionResponse {
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('llm_invalid_response');
+    }
+    const record = payload as Record<string, unknown>;
+    const choicesValue = record.choices;
+    const choices = Array.isArray(choicesValue)
+      ? choicesValue.filter((choice): choice is ChatCompletionChoice => this.#isChoice(choice))
+      : [];
+    const usage = this.#coerceRecord(record.usage);
+    return { choices, usage };
+  }
+
+  #isChoice(value: unknown): value is ChatCompletionChoice {
+    return Boolean(value && typeof value === 'object');
+  }
+
+  #extractMessage(choice?: ChatCompletionChoice): string {
+    if (!choice) {
+      return '';
+    }
+    const raw = choice.message?.content ?? choice.delta?.content ?? '';
+    if (Array.isArray(raw)) {
+      return raw.map((segment) => this.#stringifySegment(segment)).join('');
+    }
+    return this.#stringifySegment(raw);
+  }
+
+  #stringifySegment(segment: unknown): string {
+    if (typeof segment === 'string') {
+      return segment;
+    }
+    if (segment && typeof segment === 'object' && 'text' in (segment as Record<string, unknown>)) {
+      const value = (segment as Record<string, unknown>).text;
+      return typeof value === 'string' ? value : '';
+    }
+    return '';
+  }
+
+  #coerceRecord(value: unknown): Record<string, unknown> | null {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return null;
+  }
+
+  #logError(error: unknown, attempt: number, metadata?: Record<string, unknown>): void {
+    log('error', 'narrative.llm.invoke_failed', {
+      attempt,
+      context: metadata ? this.#stringifyMetadata(metadata) : '{}',
+      message: this.#toError(error).message,
+      provider: this.#providerId,
+    });
+  }
+
+  #stringifyMetadata(metadata: Record<string, unknown>): string {
+    try {
+      return JSON.stringify(metadata).slice(0, METADATA_MAX_CHARS);
+    } catch {
+      return '{}';
+    }
+  }
+
+  #isBadRequest(error: unknown): error is TRPCClientError<AnyRouter> {
+    return error instanceof TRPCClientError && this.#extractHttpStatus(error) === 400;
+  }
+
+  #createBadRequestError(error: TRPCClientError<AnyRouter>): Error {
+    const causeMessage = this.#extractCauseMessage(error);
+    return new Error(`llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500));
+  }
+
+  #toError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    return new Error(typeof error === 'string' ? error : 'llm_invoke_failed');
+  }
+
+  #retryDelay(attempt: number): number {
+    return RETRY_DELAY_MS * (attempt + 1);
+  }
+
+  #extractHttpStatus(error: TRPCClientError<AnyRouter>): number | null {
+    const status = (error as { data?: { httpStatus?: unknown } }).data?.httpStatus;
+    return typeof status === 'number' ? status : null;
+  }
+
+  #extractCauseMessage(error: TRPCClientError<AnyRouter>): string {
+    const cause =
+      (error.cause as { message?: unknown } | undefined)?.message ??
+      (error as { cause?: { message?: unknown } }).cause?.message;
+    if (typeof cause === 'string' && cause.trim()) {
+      return cause;
+    }
+    return error.message || 'Downstream bad request.';
   }
 }
 

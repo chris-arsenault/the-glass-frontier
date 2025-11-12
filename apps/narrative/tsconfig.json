@@ -8,7 +8,7 @@
     "declarationDir": "dist",
     "declarationMap": false
   },
-  "include": ["src"],
+  "include": ["src", "scripts/**/*.mjs", "tsup.config.ts"],
   "references": [
     { "path": "../../packages/skill-check-resolver" },
     { "path": "../../packages/dto" },

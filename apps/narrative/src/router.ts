@@ -6,7 +6,8 @@ import {
   TranscriptEntry,
   PromptTemplateIds,
   type PromptTemplateId,
-  PendingEquip
+  PendingEquip,
+  type Character,
 } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { initTRPC } from '@trpc/server';
@@ -34,6 +35,27 @@ const toneSchema = z.object({
   toneNotes: z.string().max(240).optional(),
 });
 
+const createChronicleInputSchema = z
+  .object({
+    characterId: z.string().min(1),
+    chronicleId: z.string().uuid().optional(),
+    location: locationDetailsSchema.optional(),
+    locationId: z.string().uuid().optional(),
+    loginId: z.string().min(1),
+    seedText: z.string().max(400).optional(),
+    status: z.enum(['open', 'closed']).optional(),
+    title: z.string().min(1),
+  })
+  .refine(
+    (payload) => Boolean(payload.locationId) || Boolean(payload.location),
+    {
+      message: 'Provide locationId or location details.',
+      path: ['locationId'],
+    }
+  );
+
+type CreateChronicleInput = z.infer<typeof createChronicleInputSchema>;
+
 export const appRouter = t.router({
   createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
     log('info', `Creating Character ${input.name}`);
@@ -42,82 +64,8 @@ export const appRouter = t.router({
   }),
   // POST /chronicles
   createChronicle: t.procedure
-    .input(
-      z
-        .object({
-          characterId: z.string().min(1),
-          chronicleId: z.string().uuid().optional(),
-          location: locationDetailsSchema.optional(),
-          locationId: z.string().uuid().optional(),
-          loginId: z.string().min(1),
-          seedText: z.string().max(400).optional(),
-          status: z.enum(['open', 'closed']).optional(),
-          title: z.string().min(1),
-        })
-        .refine(
-          (payload) => Boolean(payload.locationId) || Boolean(payload.location),
-          {
-            message: 'Provide locationId or location details.',
-            path: ['locationId'],
-          }
-        )
-    )
-    .mutation(async ({ ctx, input }) => {
-      const character = await ctx.worldStateStore.getCharacter(input.characterId);
-      if (!character) {
-        throw new Error('Character not found for chronicle creation.');
-      }
-      if (character.loginId !== input.loginId) {
-        throw new Error('Character does not belong to the requesting login.');
-      }
-
-      const chronicleId = input.chronicleId ?? randomUUID();
-      const existingPlace = input.locationId
-        ? await ctx.locationGraphStore.getPlace(input.locationId)
-        : null;
-      if (input.locationId && !existingPlace && !input.location) {
-        throw new Error('Selected location was not found.');
-      }
-
-      const localeName =
-        input.location?.locale ?? existingPlace?.name ?? 'Uncatalogued Locale';
-      const localeDescription =
-        input.location?.atmosphere ??
-        existingPlace?.description ??
-        'Atmosphere undisclosed.';
-
-      const locationRoot = await ctx.locationGraphStore.ensureLocation({
-        characterId: input.characterId,
-        description: localeDescription,
-        kind: existingPlace?.kind ?? 'locale',
-        locationId: existingPlace?.locationId ?? input.locationId,
-        name: localeName,
-        tags: deriveLocationTags(localeDescription),
-      });
-
-      const chronicle = await ctx.worldStateStore.ensureChronicle({
-        characterId: input.characterId,
-        chronicleId,
-        locationId: locationRoot.locationId,
-        loginId: input.loginId,
-        seedText: input.seedText,
-        status: input.status,
-        title: input.title,
-      });
-
-      if (existingPlace && input.characterId) {
-        await ctx.locationGraphStore.applyPlan({
-          characterId: input.characterId,
-          locationId: existingPlace.locationId,
-          plan: {
-            character_id: input.characterId,
-            ops: [{ dst_place_id: existingPlace.id, op: 'MOVE' }],
-          },
-        });
-      }
-      log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
-      return { chronicle }; // responseMeta sets 201
-    }),
+    .input(createChronicleInputSchema)
+    .mutation(async ({ ctx, input }) => createChronicleHandler(ctx, input)),
 
   createLocationChain: t.procedure
     .input(
@@ -306,6 +254,124 @@ export const appRouter = t.router({
       })
     ),
 });
+
+async function createChronicleHandler(ctx: Context, input: CreateChronicleInput) {
+  const character = await requireCharacter(ctx, input.characterId);
+  ensureCharacterOwnership(character, input.loginId);
+
+  const chronicleId = input.chronicleId ?? randomUUID();
+  const existingPlace = await resolveExistingPlace(ctx, input.locationId);
+  ensureLocationSelection(existingPlace, input);
+  const localeDetails = resolveLocaleDetails(input, existingPlace);
+
+  const locationRoot = await ctx.locationGraphStore.ensureLocation({
+    characterId: input.characterId,
+    description: localeDetails.description,
+    kind: localeDetails.kind,
+    locationId: existingPlace?.locationId ?? input.locationId,
+    name: localeDetails.name,
+    tags: deriveLocationTags(localeDetails.description),
+  });
+
+  const chronicle = await ctx.worldStateStore.ensureChronicle({
+    characterId: input.characterId,
+    chronicleId,
+    locationId: locationRoot.locationId,
+    loginId: input.loginId,
+    seedText: input.seedText,
+    status: input.status,
+    title: input.title,
+  });
+
+  await maybeMoveCharacterToExistingPlace(ctx, input.characterId, existingPlace);
+  log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
+  return { chronicle };
+}
+
+async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {
+  const character = await ctx.worldStateStore.getCharacter(characterId);
+  if (!character) {
+    throw new Error('Character not found for chronicle creation.');
+  }
+  return character;
+}
+
+function ensureCharacterOwnership(character: Character, loginId: string): void {
+  if (character.loginId !== loginId) {
+    throw new Error('Character does not belong to the requesting login.');
+  }
+}
+
+async function resolveExistingPlace(ctx: Context, locationId?: string) {
+  if (!locationId) {
+    return null;
+  }
+  return ctx.locationGraphStore.getPlace(locationId);
+}
+
+function ensureLocationSelection(
+  existingPlace: LocationPlace | null,
+  input: CreateChronicleInput
+): void {
+  if (input.locationId && !existingPlace && !input.location) {
+    throw new Error('Selected location was not found.');
+  }
+}
+
+function resolveLocaleDetails(
+  input: CreateChronicleInput,
+  existingPlace: LocationPlace | null
+): { description: string; kind: string; name: string } {
+  return {
+    description: resolveLocaleDescription(input, existingPlace),
+    kind: existingPlace?.kind ?? 'locale',
+    name: resolveLocaleName(input, existingPlace),
+  };
+}
+
+function resolveLocaleDescription(
+  input: CreateChronicleInput,
+  existingPlace: LocationPlace | null
+): string {
+  if (input.location?.atmosphere) {
+    return input.location.atmosphere;
+  }
+  if (existingPlace?.description) {
+    return existingPlace.description;
+  }
+  return 'Atmosphere undisclosed.';
+}
+
+function resolveLocaleName(
+  input: CreateChronicleInput,
+  existingPlace: LocationPlace | null
+): string {
+  if (input.location?.locale) {
+    return input.location.locale;
+  }
+  if (existingPlace?.name) {
+    return existingPlace.name;
+  }
+  return 'Uncatalogued Locale';
+}
+
+async function maybeMoveCharacterToExistingPlace(
+  ctx: Context,
+  characterId: string,
+  place: LocationPlace | null
+): Promise<void> {
+  if (!place) {
+    return;
+  }
+  await ctx.locationGraphStore.applyPlan({
+    characterId,
+    locationId: place.locationId,
+    plan: {
+      character_id: characterId,
+      ops: [{ dst_place_id: place.id, op: 'MOVE' }],
+    },
+  });
+}
 
 async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {
   const snapshot = await ctx.worldStateStore.getChronicleState(chronicleId);

@@ -8,35 +8,50 @@ class NarrativeWeaverNode implements GraphNode {
   readonly id = 'narrative-weaver';
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (context.failure || !context.playerIntent) {
-      context.telemetry?.recordToolNotRun({
-        chronicleId: context.chronicleId,
-        operation: 'llm.narrative-weaver',
-      });
+    if (!this.#canWeave(context)) {
+      this.#recordSkip(context);
       return { ...context, failure: true };
     }
 
-    const prompt = await composeNarrationPrompt(
-      context.playerIntent,
-      context.chronicle,
-      context.playerMessage.content,
-      context.templates,
-      context.skillCheckPlan,
-      context.skillCheckResult?.outcomeTier
-    );
-    let narration: string;
+    const prompt = await composeNarrationPrompt({
+      check: context.skillCheckPlan,
+      chronicle: context.chronicle,
+      intent: context.playerIntent,
+      outcomeTier: context.skillCheckResult?.outcomeTier,
+      rawUtterance: context.playerMessage.content,
+      templates: context.templates,
+    });
+    const narration = await this.#generateNarration(context, prompt);
+    if (!narration) {
+      return { ...context, failure: true };
+    }
 
+    return {
+      ...context,
+      gmMessage: this.#toTranscript(context, narration),
+    };
+  }
+
+  #canWeave(context: GraphContext): boolean {
+    return Boolean(!context.failure && context.playerIntent);
+  }
+
+  #recordSkip(context: GraphContext): void {
+    context.telemetry?.recordToolNotRun({
+      chronicleId: context.chronicleId,
+      operation: 'llm.narrative-weaver',
+    });
+  }
+
+  async #generateNarration(context: GraphContext, prompt: string): Promise<string | null> {
     try {
       const result = await context.llm.generateText({
         maxTokens: 650,
-        metadata: {
-          chronicleId: context.chronicleId,
-          nodeId: this.id,
-        },
+        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
         temperature: 0.8,
       });
-      narration = result.text?.trim() || '';
+      return (result.text ?? '').trim();
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
@@ -44,10 +59,12 @@ class NarrativeWeaverNode implements GraphNode {
         message: error instanceof Error ? error.message : 'unknown',
         operation: 'llm.narrative-weaver',
       });
-      return { ...context, failure: true };
+      return null;
     }
+  }
 
-    const gmMessage: TranscriptEntry = {
+  #toTranscript(context: GraphContext, narration: string): TranscriptEntry {
+    return {
       content: narration,
       id: `narration-${context.chronicleId}-${context.turnSequence}`,
       metadata: {
@@ -55,11 +72,6 @@ class NarrativeWeaverNode implements GraphNode {
         timestamp: Date.now(),
       },
       role: 'gm',
-    };
-
-    return {
-      ...context,
-      gmMessage,
     };
   }
 }

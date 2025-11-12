@@ -19,7 +19,7 @@ export default [
   // base JS rules
   js.configs.recommended,
 
-  // base TS rules (type-aware without per-project lists)
+  // base TS rules plus type-aware overlays
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

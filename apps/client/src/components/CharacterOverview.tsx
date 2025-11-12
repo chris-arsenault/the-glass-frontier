@@ -1,27 +1,28 @@
-import { useMemo } from 'react';
 import { createEmptyInventory, type PendingEquip, type Slot } from '@glass-frontier/dto';
+import { useMemo } from 'react';
+
 import { useChronicleStore } from '../stores/chronicleStore';
 import { MomentumIndicator } from './MomentumIndicator';
 
 const tierOrder: Record<string, number> = {
+  apprentice: 2,
+  artisan: 3,
+  fool: 1,
   legend: 5,
   virtuoso: 4,
-  artisan: 3,
-  apprentice: 2,
-  fool: 1,
 };
 
 const slotLabels: Record<Slot, string> = {
-  outfit: 'Outfit',
-  headgear: 'Headgear',
   armament: 'Armament',
+  headgear: 'Headgear',
   module: 'Module',
+  outfit: 'Outfit',
 };
 
 const isUnequipEntry = (entry: PendingEquip): entry is PendingEquip & { unequip: true } =>
   'unequip' in entry && entry.unequip === true;
 
-interface CharacterOverviewProps {
+type CharacterOverviewProps = {
   showEmptyState?: boolean;
 }
 
@@ -223,7 +224,7 @@ export function CharacterOverview({ showEmptyState = true }: CharacterOverviewPr
                   <button
                     type="button"
                     className={`inventory-equip-button${isQueued ? ' queued' : ''}`}
-                    onClick={() => queueEquipChange({ slot: item.slot, itemId: item.id })}
+                    onClick={() => queueEquipChange({ itemId: item.id, slot: item.slot })}
                   >
                     {isQueued ? 'Queued' : 'Equip'}
                   </button>

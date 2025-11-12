@@ -1,14 +1,14 @@
 import type { Attribute, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/dto';
 
 const MOMENTUM_DELTA: Record<string, number> = {
-  breakthrough: 2,
   advance: 1,
-  stall: 0,
-  regress: -1,
+  breakthrough: 2,
   collapse: -2,
+  regress: -1,
+  stall: 0,
 };
 
-interface SkillCheckBadgeProps {
+type SkillCheckBadgeProps = {
   plan?: SkillCheckPlan | null;
   result?: SkillCheckResult | null;
   skillKey?: string | null;
@@ -25,18 +25,18 @@ const formatAdvantage = (
     }
     return plan.advantage[0].toUpperCase() + plan.advantage.slice(1);
   }
-  if (result?.advantage) return 'Advantage';
-  if (result?.disadvantage) return 'Disadvantage';
+  if (result?.advantage) {return 'Advantage';}
+  if (result?.disadvantage) {return 'Disadvantage';}
   return 'Standard';
 };
 
 const formatMomentumDelta = (result?: SkillCheckResult | null): string => {
-  if (!result) return '0';
+  if (!result) {return '0';}
   const delta = MOMENTUM_DELTA[result.outcomeTier] ?? 0;
   return delta >= 0 ? `+${delta}` : `${delta}`;
 };
 
-export function SkillCheckBadge({ plan, result, skillKey, attributeKey }: SkillCheckBadgeProps) {
+export function SkillCheckBadge({ attributeKey, plan, result, skillKey }: SkillCheckBadgeProps) {
   if (!result) {
     return null;
   }

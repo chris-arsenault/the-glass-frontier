@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import type {
   Character,
   Chronicle,
@@ -9,7 +8,11 @@ import type {
   PendingEquip,
 } from '@glass-frontier/dto';
 import { createEmptyInventory } from '@glass-frontier/dto';
+import { formatTurnJobId } from '@glass-frontier/utils';
+import { create } from 'zustand';
 
+import { progressStream } from '../lib/progressStream';
+import { trpcClient } from '../lib/trpcClient';
 import type {
   ChronicleState,
   ChatMessage,
@@ -20,10 +23,7 @@ import type {
   MomentumTrend,
   SkillProgressBadge,
 } from '../state/chronicleState';
-import { trpcClient } from '../lib/trpcClient';
 import { useAuthStore } from './authStore';
-import { progressStream } from '../lib/progressStream';
-import { formatTurnJobId } from '@glass-frontier/utils';
 
 const decodeJwtPayload = (token?: string | null): Record<string, unknown> | null => {
   if (!token) {
@@ -77,15 +77,15 @@ const generateId = () => {
 };
 
 const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): ChatMessage => ({
+  attributeKey: extras?.attributeKey ?? null,
   entry,
+  gmSummary: extras?.gmSummary ?? null,
+  inventoryDelta: extras?.inventoryDelta ?? null,
+  playerIntent: extras?.playerIntent ?? null,
   skillCheckPlan: extras?.skillCheckPlan ?? null,
   skillCheckResult: extras?.skillCheckResult ?? null,
   skillKey: extras?.skillKey ?? null,
-  attributeKey: extras?.attributeKey ?? null,
-  playerIntent: extras?.playerIntent ?? null,
-  gmSummary: extras?.gmSummary ?? null,
   skillProgress: extras?.skillProgress ?? null,
-  inventoryDelta: extras?.inventoryDelta ?? null,
 });
 
 const upsertChatEntry = (
@@ -98,14 +98,14 @@ const upsertChatEntry = (
     const updated = [...messages];
     updated[index] = {
       ...updated[index],
+      attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
       entry,
+      gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
+      inventoryDelta: extras?.inventoryDelta ?? updated[index].inventoryDelta,
+      playerIntent: extras?.playerIntent ?? updated[index].playerIntent,
       skillCheckPlan: extras?.skillCheckPlan ?? updated[index].skillCheckPlan,
       skillCheckResult: extras?.skillCheckResult ?? updated[index].skillCheckResult,
       skillKey: extras?.skillKey ?? updated[index].skillKey,
-      attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
-      playerIntent: extras?.playerIntent ?? updated[index].playerIntent,
-      gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
-      inventoryDelta: extras?.inventoryDelta ?? updated[index].inventoryDelta,
     };
     return updated;
   }
@@ -117,14 +117,14 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
     const skillKey = turn.playerIntent?.skill ?? null;
     const attributeKey = turn.playerIntent?.attribute ?? null;
     const extras = {
+      attributeKey,
+      gmSummary: turn.gmSummary ?? null,
+      inventoryDelta: turn.inventoryDelta ?? null,
+      playerIntent: turn.playerIntent ?? null,
       skillCheckPlan: turn.skillCheckPlan ?? null,
       skillCheckResult: turn.skillCheckResult ?? null,
       skillKey,
-      attributeKey,
-      playerIntent: turn.playerIntent ?? null,
-      gmSummary: turn.gmSummary ?? null,
       skillProgress: null,
-      inventoryDelta: turn.inventoryDelta ?? null,
     };
     const turnEntries: ChatMessage[] = [];
     if (turn.playerMessage) {
@@ -142,33 +142,33 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
 const createMessageId = (): string => generateId();
 
 const buildPlayerEntry = (content: string): TranscriptEntry => ({
-  id: createMessageId(),
-  role: 'player',
   content,
+  id: createMessageId(),
   metadata: {
-    timestamp: Date.now(),
     tags: [],
+    timestamp: Date.now(),
   },
+  role: 'player',
 });
 
 const createSeedChatMessage = (seedText: string): ChatMessage => ({
+  attributeKey: null,
   entry: {
-    id: createMessageId(),
-    role: 'gm',
     content: seedText,
+    id: createMessageId(),
     metadata: {
-      timestamp: Date.now(),
       tags: ['chronicle-seed'],
+      timestamp: Date.now(),
     },
+    role: 'gm',
   },
+  gmSummary: 'Chronicle seed',
+  inventoryDelta: null,
+  playerIntent: null,
   skillCheckPlan: null,
   skillCheckResult: null,
   skillKey: null,
-  attributeKey: null,
-  playerIntent: null,
-  gmSummary: 'Chronicle seed',
   skillProgress: null,
-  inventoryDelta: null,
 });
 
 const deriveTitleFromSeed = (seedText: string): string => {
@@ -206,7 +206,7 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
   return [character, ...filtered];
 };
 
-const DEFAULT_MOMENTUM = { current: 0, floor: -2, ceiling: 3 };
+const DEFAULT_MOMENTUM = { ceiling: 3, current: 0, floor: -2 };
 
 const deriveSkillProgressBadges = (
   previous: Character | null,
@@ -220,13 +220,13 @@ const deriveSkillProgressBadges = (
     const prior = previous.skills?.[name];
     if (!prior) {
       badges.push({
-        type: 'skill-gain',
+        attribute: skill.attribute,
         skill: name,
         tier: skill.tier,
-        attribute: skill.attribute,
+        type: 'skill-gain',
       });
     } else if (prior.tier !== skill.tier) {
-      badges.push({ type: 'skill-tier-up', skill: name, tier: skill.tier });
+      badges.push({ skill: name, tier: skill.tier, type: 'skill-tier-up' });
     }
   }
   return badges;
@@ -241,12 +241,12 @@ const deriveMomentumTrend = (
   }
   const delta = next.momentum.current - previous.momentum.current;
   return {
-    direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat',
-    delta,
-    previous: previous.momentum.current,
-    current: next.momentum.current,
-    floor: next.momentum.floor,
     ceiling: next.momentum.ceiling,
+    current: next.momentum.current,
+    delta,
+    direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat',
+    floor: next.momentum.floor,
+    previous: previous.momentum.current,
   };
 };
 
@@ -273,27 +273,27 @@ const applyTurnProgressEvent = (
     nextMessages = nextMessages.map((message) =>
       message.entry.id === state.pendingPlayerMessageId
         ? {
-            ...message,
-            playerIntent: payload.playerIntent ?? message.playerIntent,
-            skillKey: payload.playerIntent?.skill ?? message.skillKey,
-            attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
-            skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
-            skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
-            inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
-          }
+          ...message,
+          attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+          inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
+          playerIntent: payload.playerIntent ?? message.playerIntent,
+          skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
+          skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
+          skillKey: payload.playerIntent?.skill ?? message.skillKey,
+        }
         : message
     );
   }
 
   const extras: Partial<ChatMessage> = {
+    attributeKey: payload.playerIntent?.attribute ?? null,
+    gmSummary: payload.gmSummary ?? null,
+    inventoryDelta: payload.inventoryDelta ?? null,
+    playerIntent: payload.playerIntent ?? null,
     skillCheckPlan: payload.skillCheckPlan ?? null,
     skillCheckResult: payload.skillCheckResult ?? null,
     skillKey: payload.playerIntent?.skill ?? null,
-    attributeKey: payload.playerIntent?.attribute ?? null,
-    playerIntent: payload.playerIntent ?? null,
-    gmSummary: payload.gmSummary ?? null,
     skillProgress: null,
-    inventoryDelta: payload.inventoryDelta ?? null,
   };
 
   if (payload.gmMessage) {
@@ -311,77 +311,208 @@ const applyTurnProgressEvent = (
 };
 
 const createBaseState = () => ({
-  chronicleId: null as string | null,
-  chronicleRecord: null as Chronicle | null,
-  loginId: null as string | null,
-  loginName: null as string | null,
-  preferredCharacterId: null as string | null,
-  messages: [] as ChatMessage[],
-  turnSequence: 0,
-  connectionState: 'idle' as const,
-  transportError: null as Error | null,
-  isSending: false,
-  isOffline: false,
-  queuedIntents: 0,
-  chronicleStatus: 'open' as const,
-  character: null as Character | null,
-  location: null as LocationSummary | null,
-  recentChronicles: [],
   availableCharacters: [] as Character[],
   availableChronicles: [] as Chronicle[],
-  directoryStatus: 'idle' as const,
+  character: null as Character | null,
+  chronicleId: null as string | null,
+  chronicleRecord: null as Chronicle | null,
+  chronicleStatus: 'open' as const,
+  connectionState: 'idle' as const,
   directoryError: null as Error | null,
+  directoryStatus: 'idle' as const,
+  isOffline: false,
+  isSending: false,
+  location: null as LocationSummary | null,
+  loginId: null as string | null,
+  loginName: null as string | null,
+  messages: [] as ChatMessage[],
   momentumTrend: null as MomentumTrend | null,
-  pendingTurnJobId: null as string | null,
-  pendingPlayerMessageId: null as string | null,
   pendingEquip: [] as PendingEquip[],
+  pendingPlayerMessageId: null as string | null,
+  pendingTurnJobId: null as string | null,
+  preferredCharacterId: null as string | null,
+  queuedIntents: 0,
+  recentChronicles: [],
+  transportError: null as Error | null,
+  turnSequence: 0,
 });
 
 export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   ...createBaseState(),
 
-  setPreferredCharacterId(characterId) {
+  clearActiveChronicle() {
     set((prev) => ({
       ...prev,
-      preferredCharacterId:
-        characterId && characterId.trim().length > 0 ? characterId.trim() : null,
+      character: null,
+      chronicleId: null,
+      chronicleRecord: null,
+      chronicleStatus: 'open',
+      connectionState: 'idle',
+      isSending: false,
+      location: null,
+      messages: [],
+      momentumTrend: null,
+      pendingEquip: [],
+      pendingPlayerMessageId: null,
+      pendingTurnJobId: null,
+      queuedIntents: 0,
+      transportError: null,
+      turnSequence: 0,
     }));
   },
 
-  async refreshLoginResources() {
-    const identity = resolveLoginIdentity();
+  clearPendingEquipQueue() {
     set((prev) => ({
       ...prev,
-      loginId: identity.loginId,
-      loginName: identity.loginName,
-      directoryStatus: 'loading',
-      directoryError: null,
+      pendingEquip: [],
     }));
+  },
+
+  async createCharacterProfile(draft) {
+    const identity = resolveLoginIdentity();
+    const character: Character = {
+      archetype: draft.archetype,
+      attributes: draft.attributes,
+      id: generateId(),
+      inventory: createEmptyInventory(),
+      loginId: identity.loginId,
+      momentum: DEFAULT_MOMENTUM,
+      name: draft.name,
+      pronouns: draft.pronouns,
+      skills: Object.entries(draft.skills).reduce<Character['skills']>((acc, [name, skill]) => {
+        acc[name] = { ...skill, xp: 0 };
+        return acc;
+      }, {}),
+      tags: [],
+    };
 
     try {
-      const [characters, chronicles] = await Promise.all([
-        trpcClient.listCharacters.query({ loginId: identity.loginId }),
-        trpcClient.listChronicles.query({ loginId: identity.loginId }),
-      ]);
-
+      const { character: stored } = await trpcClient.createCharacter.mutate(character);
       set((prev) => ({
         ...prev,
-        loginId: identity.loginId,
-        loginName: identity.loginName,
-        directoryStatus: 'ready',
-        availableCharacters: characters ?? [],
-        availableChronicles: chronicles ?? [],
+        availableCharacters: mergeCharacterRecord(prev.availableCharacters, stored),
         directoryError: null,
-        preferredCharacterId:
-          prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId,
+        directoryStatus: prev.directoryStatus === 'idle' ? 'ready' : prev.directoryStatus,
+        preferredCharacterId: stored.id,
       }));
     } catch (error) {
-      const nextError =
-        error instanceof Error ? error : new Error('Failed to load character directory.');
+      const nextError = error instanceof Error ? error : new Error('Failed to create character.');
       set((prev) => ({
         ...prev,
-        directoryStatus: 'error',
         directoryError: nextError,
+        directoryStatus: prev.directoryStatus === 'idle' ? 'error' : prev.directoryStatus,
+      }));
+      throw nextError;
+    }
+  },
+
+  async createChronicleForCharacter(details: ChronicleCreationDetails) {
+    const identity = resolveLoginIdentity();
+    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
+    const title = details.title?.trim() ?? '';
+    const locationName = details.locationName?.trim() ?? '';
+    const locationAtmosphere = details.locationAtmosphere?.trim() ?? '';
+
+    if (!targetCharacterId) {
+      throw new Error('Select a character before starting a chronicle.');
+    }
+    if (!title || !locationName || !locationAtmosphere) {
+      throw new Error('Chronicle title, location name, and atmosphere are required.');
+    }
+
+    try {
+      const result = await trpcClient.createChronicle.mutate({
+        characterId: targetCharacterId,
+        location: {
+          atmosphere: locationAtmosphere,
+          locale: locationName,
+        },
+        loginId: identity.loginId,
+        title,
+      });
+      set((prev) => ({
+        ...prev,
+        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
+        preferredCharacterId: targetCharacterId,
+      }));
+      return get().hydrateChronicle(result.chronicle.id);
+    } catch (error) {
+      const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+  },
+
+  async createChronicleFromSeed(details: ChronicleSeedCreationDetails) {
+    const identity = resolveLoginIdentity();
+    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
+    const trimmedSeed = details.seedText?.trim() ?? '';
+    if (!targetCharacterId) {
+      throw new Error('Select a character before starting a chronicle.');
+    }
+    if (!details.locationId) {
+      throw new Error('Select a location before creating a chronicle.');
+    }
+    if (!trimmedSeed) {
+      throw new Error('Provide a seed prompt before creating a chronicle.');
+    }
+
+    try {
+      const title = details.title?.trim()
+        ? details.title.trim()
+        : deriveTitleFromSeed(trimmedSeed);
+      const result = await trpcClient.createChronicle.mutate({
+        characterId: targetCharacterId,
+        locationId: details.locationId,
+        loginId: identity.loginId,
+        seedText: trimmedSeed,
+        status: 'open',
+        title,
+      });
+      set((prev) => ({
+        ...prev,
+        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
+        preferredCharacterId: targetCharacterId,
+      }));
+      return get().hydrateChronicle(result.chronicle.id);
+    } catch (error) {
+      const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+  },
+
+  async deleteChronicle(chronicleId) {
+    if (!chronicleId) {
+      throw new Error('Chronicle id is required.');
+    }
+    const identity = resolveLoginIdentity();
+    const isActive = get().chronicleId === chronicleId;
+    try {
+      await trpcClient.deleteChronicle.mutate({
+        chronicleId,
+        loginId: identity.loginId,
+      });
+      set((prev) => ({
+        ...prev,
+        availableChronicles: prev.availableChronicles.filter((entry) => entry.id !== chronicleId),
+        recentChronicles: prev.recentChronicles.filter((id) => id !== chronicleId),
+      }));
+      if (isActive) {
+        get().clearActiveChronicle();
+      }
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to delete chronicle.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
       }));
       throw nextError;
     }
@@ -414,22 +545,22 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }
       set((prev) => ({
         ...prev,
-        chronicleId: chronicleState.chronicleId,
-        chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
-        loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
-        messages: messageHistory,
-        turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
-        connectionState: 'connected',
-        chronicleStatus: chronicleState.chronicle?.status ?? 'open',
-        character: chronicleState.character ?? null,
-        location: chronicleState.location ?? null,
-        transportError: null,
-        momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         availableChronicles:
           chronicleState.chronicle && prev.availableChronicles
             ? mergeChronicleRecord(prev.availableChronicles, chronicleState.chronicle)
             : prev.availableChronicles,
+        character: chronicleState.character ?? null,
+        chronicleId: chronicleState.chronicleId,
+        chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
+        chronicleStatus: chronicleState.chronicle?.status ?? 'open',
+        connectionState: 'connected',
+        location: chronicleState.location ?? null,
+        loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
+        messages: messageHistory,
+        momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         pendingEquip: [],
+        transportError: null,
+        turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
       }));
 
       return chronicleState.chronicleId;
@@ -439,156 +570,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       set((prev) => ({
         ...prev,
         connectionState: 'error',
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
-  },
-
-  async createChronicleForCharacter(details: ChronicleCreationDetails) {
-    const identity = resolveLoginIdentity();
-    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
-    const title = details.title?.trim() ?? '';
-    const locationName = details.locationName?.trim() ?? '';
-    const locationAtmosphere = details.locationAtmosphere?.trim() ?? '';
-
-    if (!targetCharacterId) {
-      throw new Error('Select a character before starting a chronicle.');
-    }
-    if (!title || !locationName || !locationAtmosphere) {
-      throw new Error('Chronicle title, location name, and atmosphere are required.');
-    }
-
-    try {
-      const result = await trpcClient.createChronicle.mutate({
-        loginId: identity.loginId,
-        characterId: targetCharacterId,
-        title,
-        location: {
-          locale: locationName,
-          atmosphere: locationAtmosphere,
-        },
-      });
-      set((prev) => ({
-        ...prev,
-        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
-        preferredCharacterId: targetCharacterId,
-      }));
-      return get().hydrateChronicle(result.chronicle.id);
-    } catch (error) {
-      const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
-      set((prev) => ({
-        ...prev,
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
-  },
-
-  async createCharacterProfile(draft) {
-    const identity = resolveLoginIdentity();
-    const character: Character = {
-      id: generateId(),
-      loginId: identity.loginId,
-      name: draft.name,
-      archetype: draft.archetype,
-      pronouns: draft.pronouns,
-      tags: [],
-      momentum: DEFAULT_MOMENTUM,
-      attributes: draft.attributes,
-      skills: Object.entries(draft.skills).reduce<Character['skills']>((acc, [name, skill]) => {
-        acc[name] = { ...skill, xp: 0 };
-        return acc;
-      }, {}),
-      inventory: createEmptyInventory(),
-    };
-
-    try {
-      const { character: stored } = await trpcClient.createCharacter.mutate(character);
-      set((prev) => ({
-        ...prev,
-        availableCharacters: mergeCharacterRecord(prev.availableCharacters, stored),
-        preferredCharacterId: stored.id,
-        directoryStatus: prev.directoryStatus === 'idle' ? 'ready' : prev.directoryStatus,
-        directoryError: null,
-      }));
-    } catch (error) {
-      const nextError = error instanceof Error ? error : new Error('Failed to create character.');
-      set((prev) => ({
-        ...prev,
-        directoryError: nextError,
-        directoryStatus: prev.directoryStatus === 'idle' ? 'error' : prev.directoryStatus,
-      }));
-      throw nextError;
-    }
-  },
-
-  async deleteChronicle(chronicleId) {
-    if (!chronicleId) {
-      throw new Error('Chronicle id is required.');
-    }
-    const identity = resolveLoginIdentity();
-    const isActive = get().chronicleId === chronicleId;
-    try {
-      await trpcClient.deleteChronicle.mutate({
-        loginId: identity.loginId,
-        chronicleId,
-      });
-      set((prev) => ({
-        ...prev,
-        availableChronicles: prev.availableChronicles.filter((entry) => entry.id !== chronicleId),
-        recentChronicles: prev.recentChronicles.filter((id) => id !== chronicleId),
-      }));
-      if (isActive) {
-        get().clearActiveChronicle();
-      }
-    } catch (error) {
-      const nextError =
-        error instanceof Error ? error : new Error('Failed to delete chronicle.');
-      set((prev) => ({
-        ...prev,
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
-  },
-
-  async createChronicleFromSeed(details: ChronicleSeedCreationDetails) {
-    const identity = resolveLoginIdentity();
-    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
-    const trimmedSeed = details.seedText?.trim() ?? '';
-    if (!targetCharacterId) {
-      throw new Error('Select a character before starting a chronicle.');
-    }
-    if (!details.locationId) {
-      throw new Error('Select a location before creating a chronicle.');
-    }
-    if (!trimmedSeed) {
-      throw new Error('Provide a seed prompt before creating a chronicle.');
-    }
-
-    try {
-      const title = details.title?.trim()
-        ? details.title.trim()
-        : deriveTitleFromSeed(trimmedSeed);
-      const result = await trpcClient.createChronicle.mutate({
-        loginId: identity.loginId,
-        characterId: targetCharacterId,
-        title,
-        locationId: details.locationId,
-        status: 'open',
-        seedText: trimmedSeed,
-      });
-      set((prev) => ({
-        ...prev,
-        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
-        preferredCharacterId: targetCharacterId,
-      }));
-      return get().hydrateChronicle(result.chronicle.id);
-    } catch (error) {
-      const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
-      set((prev) => ({
-        ...prev,
         transportError: nextError,
       }));
       throw nextError;
@@ -620,32 +601,43 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     });
   },
 
-  clearPendingEquipQueue() {
+  async refreshLoginResources() {
+    const identity = resolveLoginIdentity();
     set((prev) => ({
       ...prev,
-      pendingEquip: [],
+      directoryError: null,
+      directoryStatus: 'loading',
+      loginId: identity.loginId,
+      loginName: identity.loginName,
     }));
-  },
 
-  clearActiveChronicle() {
-    set((prev) => ({
-      ...prev,
-      chronicleId: null,
-      chronicleRecord: null,
-      messages: [],
-      turnSequence: 0,
-      connectionState: 'idle',
-      transportError: null,
-      isSending: false,
-      queuedIntents: 0,
-      chronicleStatus: 'open',
-      character: null,
-      location: null,
-      momentumTrend: null,
-      pendingTurnJobId: null,
-      pendingPlayerMessageId: null,
-      pendingEquip: [],
-    }));
+    try {
+      const [characters, chronicles] = await Promise.all([
+        trpcClient.listCharacters.query({ loginId: identity.loginId }),
+        trpcClient.listChronicles.query({ loginId: identity.loginId }),
+      ]);
+
+      set((prev) => ({
+        ...prev,
+        availableCharacters: characters ?? [],
+        availableChronicles: chronicles ?? [],
+        directoryError: null,
+        directoryStatus: 'ready',
+        loginId: identity.loginId,
+        loginName: identity.loginName,
+        preferredCharacterId:
+          prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId,
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to load character directory.');
+      set((prev) => ({
+        ...prev,
+        directoryError: nextError,
+        directoryStatus: 'error',
+      }));
+      throw nextError;
+    }
   },
 
   resetStore() {
@@ -681,16 +673,16 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       ...prev,
       isSending: true,
       messages: prev.messages.concat(playerMessage),
-      turnSequence: nextTurnSequence,
-      transportError: null,
-      pendingTurnJobId: jobId,
       pendingPlayerMessageId: playerEntry.id,
+      pendingTurnJobId: jobId,
+      transportError: null,
+      turnSequence: nextTurnSequence,
     }));
 
     progressStream.subscribe(jobId);
 
     try {
-      const { turn, character, location } = await trpcClient.postMessage.mutate({
+      const { character, location, turn } = await trpcClient.postMessage.mutate({
         chronicleId,
         content: playerEntry,
         pendingEquip: pendingEquipQueue,
@@ -705,27 +697,27 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           : prev.momentumTrend;
 
         const extras = {
+          attributeKey: turn.playerIntent?.attribute ?? null,
+          gmSummary: turn.gmSummary ?? null,
+          inventoryDelta: turn.inventoryDelta ?? null,
+          playerIntent: turn.playerIntent ?? null,
           skillCheckPlan: turn.skillCheckPlan ?? null,
           skillCheckResult: turn.skillCheckResult ?? null,
           skillKey: turn.playerIntent?.skill ?? null,
-          attributeKey: turn.playerIntent?.attribute ?? null,
-          playerIntent: turn.playerIntent ?? null,
-          gmSummary: turn.gmSummary ?? null,
           skillProgress: skillBadges.length > 0 ? skillBadges : null,
-          inventoryDelta: turn.inventoryDelta ?? null,
         };
 
         const updatedMessages = prev.messages.map((message) =>
           message.entry.id === turn.playerMessage.id
             ? {
-                ...message,
-                skillCheckPlan: extras.skillCheckPlan,
-                skillCheckResult: extras.skillCheckResult,
-                skillKey: extras.skillKey,
-                attributeKey: extras.attributeKey,
-                playerIntent: extras.playerIntent,
-                inventoryDelta: extras.inventoryDelta,
-              }
+              ...message,
+              attributeKey: extras.attributeKey,
+              inventoryDelta: extras.inventoryDelta,
+              playerIntent: extras.playerIntent,
+              skillCheckPlan: extras.skillCheckPlan,
+              skillCheckResult: extras.skillCheckResult,
+              skillKey: extras.skillKey,
+            }
             : message
         );
 
@@ -739,24 +731,24 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
         return {
           ...prev,
-          isSending: false,
-          messages: nextMessages,
-          queuedIntents: 0,
-          turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
-          connectionState: 'connected',
-          transportError: null,
-          character: nextCharacter,
           availableCharacters: character
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
-          momentumTrend: nextMomentumTrend,
+          character: nextCharacter,
+          connectionState: 'connected',
+          isSending: false,
           location: location ?? prev.location,
-          pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
-          pendingPlayerMessageId:
-            prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
+          messages: nextMessages,
+          momentumTrend: nextMomentumTrend,
           pendingEquip: prev.pendingEquip.filter(
             (entry) => !pendingEquipQueue.some((sent) => isSameEquipEntry(entry, sent))
           ),
+          pendingPlayerMessageId:
+            prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
+          pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+          queuedIntents: 0,
+          transportError: null,
+          turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
         };
       });
     } catch (error) {
@@ -764,15 +756,23 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       const nextError = error instanceof Error ? error : new Error('Failed to send player intent.');
       set((prev) => ({
         ...prev,
-        isSending: false,
         connectionState: 'error',
-        transportError: nextError,
-        pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+        isSending: false,
         pendingPlayerMessageId:
           prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
+        pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+        transportError: nextError,
       }));
       throw nextError;
     }
+  },
+
+  setPreferredCharacterId(characterId) {
+    set((prev) => ({
+      ...prev,
+      preferredCharacterId:
+        characterId && characterId.trim().length > 0 ? characterId.trim() : null,
+    }));
   },
 }));
 

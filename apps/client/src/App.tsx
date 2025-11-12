@@ -1,18 +1,19 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+import { CharacterDrawer } from './components/CharacterDrawer';
 import { ChatCanvas } from './components/ChatCanvas';
 import { ChatComposer } from './components/ChatComposer';
-import { SideNavigation } from './components/SideNavigation';
-import { CharacterDrawer } from './components/CharacterDrawer';
-import { useAuthStore } from './stores/authStore';
-import { LoginScreen } from './components/LoginScreen';
-import { useLoginResources } from './hooks/useLoginResources';
-import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
-import { CreateCharacterModal } from './components/CreateCharacterModal';
-import { useChronicleStore } from './stores/chronicleStore';
 import { ChronicleHeader } from './components/ChronicleHeader';
+import { CreateCharacterModal } from './components/CreateCharacterModal';
+import { LoginScreen } from './components/LoginScreen';
 import { MomentumIndicator } from './components/MomentumIndicator';
+import { SideNavigation } from './components/SideNavigation';
 import { TemplateDrawer } from './components/TemplateDrawer';
 import { ChronicleStartWizard } from './features/chronicleStart/ChronicleStartWizard';
+import { useLoginResources } from './hooks/useLoginResources';
+import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
+import { useAuthStore } from './stores/authStore';
+import { useChronicleStore } from './stores/chronicleStore';
 
 function SessionMeta() {
   const character = useChronicleStore((state) => state.character);

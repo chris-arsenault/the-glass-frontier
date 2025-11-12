@@ -7,7 +7,7 @@
     "declaration": true,
     "declarationDir": "dist",
     "declarationMap": false,
-    "jsx": "react"
+    "jsx": "react-jsx"
   },
   "include": ["src"],
   "references": [{ "path": "../../packages/dto" }, { "path": "../narrative" }]

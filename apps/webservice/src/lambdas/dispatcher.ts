@@ -8,6 +8,17 @@ import { ConnectionRepository } from '../services/ConnectionRepository';
 const repository = new ConnectionRepository();
 const clientCache = new Map<string, ApiGatewayManagementApi>();
 
+const isGoneError = (error: unknown): boolean => {
+  if (error instanceof GoneException) {
+    return true;
+  }
+  if (typeof error === 'object' && error !== null && 'name' in error) {
+    const name = (error as { name?: unknown }).name;
+    return name === 'GoneException';
+  }
+  return false;
+};
+
 const resolveClient = (endpoint: string): ApiGatewayManagementApi => {
   const cached = clientCache.get(endpoint);
   if (cached) {
@@ -57,8 +68,8 @@ export const handler: SQSHandler = async (event) => {
             ConnectionId: target.connectionId,
             Data: data,
           });
-        } catch (error) {
-          if (error instanceof GoneException || (error)?.name === 'GoneException') {
+        } catch (error: unknown) {
+          if (isGoneError(error)) {
             await repository.purgeConnection(target.connectionId);
             return;
           }

@@ -8,6 +8,6 @@
     "declarationDir": "dist",
     "declarationMap": false
   },
-  "include": ["src"],
+  "include": ["src", "tsup.config.ts"],
   "references": [{ "path": "../../packages/utils" }, { "path": "../../packages/dto" }]
 }

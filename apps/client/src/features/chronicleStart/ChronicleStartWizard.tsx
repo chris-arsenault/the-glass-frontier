@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
 import type {
   LocationGraphSnapshot,
   LocationBreadcrumbEntry,
@@ -6,11 +5,13 @@ import type {
   ChronicleSeed,
   DataShard,
 } from '@glass-frontier/dto';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+
 import { trpcClient } from '../../lib/trpcClient';
-import { useChronicleStartStore, type SelectedLocationSummary } from './store';
-import { useChronicleStore } from '../../stores/chronicleStore';
 import type { ChronicleSeedCreationDetails } from '../../state/chronicleState';
+import { useChronicleStore } from '../../stores/chronicleStore';
+import { useChronicleStartStore, type SelectedLocationSummary } from './store';
 
 const toneOptions = [
   'gritty',
@@ -23,7 +24,7 @@ const toneOptions = [
   'epic',
 ];
 
-interface LocationInspectorState {
+type LocationInspectorState = {
   place: LocationPlace | null;
   breadcrumb: LocationBreadcrumbEntry[];
 }
@@ -65,8 +66,8 @@ export function ChronicleStartWizard() {
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [selectedRootId, setSelectedRootId] = useState<string | null>(null);
   const [inspector, setInspector] = useState<LocationInspectorState>({
-    place: null,
     breadcrumb: [],
+    place: null,
   });
   const listViewFallback = useChronicleStartStore((state) => state.listViewFallback);
   const setListViewFallback = useChronicleStartStore((state) => state.setListViewFallback);
@@ -153,14 +154,14 @@ export function ChronicleStartWizard() {
     setActivePlaceId(placeId);
     try {
       const details = await trpcClient.getLocationPlace.query({ placeId });
-      setInspector({ place: details.place, breadcrumb: details.breadcrumb });
+      setInspector({ breadcrumb: details.breadcrumb, place: details.place });
       setSelectedLocation({
+        breadcrumb: details.breadcrumb,
         id: details.place.id,
         name: details.place.name,
-        breadcrumb: details.breadcrumb,
       });
     } catch (error) {
-      setInspector({ place: null, breadcrumb: [] });
+      setInspector({ breadcrumb: [], place: null });
       setSelectedLocation(null);
       setGraphError(error instanceof Error ? error.message : 'Failed to load location details.');
     }
@@ -176,70 +177,70 @@ export function ChronicleStartWizard() {
 
   const currentStepComponent = useMemo(() => {
     switch (step) {
-      case 'location':
-        return (
-            <LocationStep
-              roots={roots}
-            isLoadingRoots={isLoadingRoots}
-            rootError={rootError}
-            selectedRootId={selectedRootId}
-            onSelectRoot={handleRootSelection}
-            graph={graph}
-            graphError={graphError}
-            isGraphLoading={isGraphLoading}
-            activePlaceId={activePlaceId}
-            onSelectPlace={handlePlaceSelection}
-            inspector={inspector}
-            listViewFallback={listViewFallback}
-            setListViewFallback={setListViewFallback}
-            onOpenSubModal={() => setSubModalOpen(true)}
-            onOpenChainModal={(parent) => {
-              setChainModalParent(parent ?? null);
-              setChainModalOpen(true);
-            }}
-          />
-        );
-      case 'tone':
-        return (
-          <ToneStep
-            toneNotes={toneNotes}
-            toneChips={toneChips}
-            onToggleChip={toggleToneChip}
-            onUpdateNotes={setToneNotes}
-          />
-        );
-      case 'seeds':
-        return (
-          <SeedStep
-            loginId={loginId}
-            locationId={selectedLocation?.id ?? null}
-            tone={{ toneChips, toneNotes }}
-            seeds={seeds}
-            selectedSeedId={selectedSeedId}
-            seedStatus={seedStatus}
-            setSeedStatus={setSeedStatus}
-            onSelectSeed={chooseSeed}
-            onSeedsLoaded={setSeeds}
-            customSeedTitle={customSeedTitle}
-            customSeedText={customSeedText}
-            onCustomSeedChange={setCustomSeed}
-          />
-        );
-      case 'create':
-        return (
-          <CreateStep
-            selectedLocation={selectedLocation}
-            selectedSeed={selectedSeed}
-            customSeedTitle={customSeedTitle}
-            customSeedText={customSeedText}
-            tone={{ toneChips, toneNotes }}
-            preferredCharacterName={selectedCharacterName}
-            customTitle={customTitle}
-            setCustomTitle={setCustomTitle}
-          />
-        );
-      default:
-        return null;
+    case 'location':
+      return (
+        <LocationStep
+          roots={roots}
+          isLoadingRoots={isLoadingRoots}
+          rootError={rootError}
+          selectedRootId={selectedRootId}
+          onSelectRoot={handleRootSelection}
+          graph={graph}
+          graphError={graphError}
+          isGraphLoading={isGraphLoading}
+          activePlaceId={activePlaceId}
+          onSelectPlace={handlePlaceSelection}
+          inspector={inspector}
+          listViewFallback={listViewFallback}
+          setListViewFallback={setListViewFallback}
+          onOpenSubModal={() => setSubModalOpen(true)}
+          onOpenChainModal={(parent) => {
+            setChainModalParent(parent ?? null);
+            setChainModalOpen(true);
+          }}
+        />
+      );
+    case 'tone':
+      return (
+        <ToneStep
+          toneNotes={toneNotes}
+          toneChips={toneChips}
+          onToggleChip={toggleToneChip}
+          onUpdateNotes={setToneNotes}
+        />
+      );
+    case 'seeds':
+      return (
+        <SeedStep
+          loginId={loginId}
+          locationId={selectedLocation?.id ?? null}
+          tone={{ toneChips, toneNotes }}
+          seeds={seeds}
+          selectedSeedId={selectedSeedId}
+          seedStatus={seedStatus}
+          setSeedStatus={setSeedStatus}
+          onSelectSeed={chooseSeed}
+          onSeedsLoaded={setSeeds}
+          customSeedTitle={customSeedTitle}
+          customSeedText={customSeedText}
+          onCustomSeedChange={setCustomSeed}
+        />
+      );
+    case 'create':
+      return (
+        <CreateStep
+          selectedLocation={selectedLocation}
+          selectedSeed={selectedSeed}
+          customSeedTitle={customSeedTitle}
+          customSeedText={customSeedText}
+          tone={{ toneChips, toneNotes }}
+          preferredCharacterName={selectedCharacterName}
+          customTitle={customTitle}
+          setCustomTitle={setCustomTitle}
+        />
+      );
+    default:
+      return null;
     }
   }, [
     step,
@@ -387,9 +388,9 @@ export function ChronicleStartWizard() {
             return trpcClient.getLocationPlace.query({ placeId }).then((details) => {
               handlePlaceSelection(placeId).catch(() => undefined);
               setSelectedLocation({
+                breadcrumb: details.breadcrumb,
                 id: placeId,
                 name: details.place.name,
-                breadcrumb: details.breadcrumb,
               });
               setStep('tone');
               setShardMessage(null);
@@ -436,10 +437,10 @@ export function ChronicleStartWizard() {
       return null;
     }
     const segments = pending.map((entry) => ({
-      name: entry.name,
-      kind: entry.kind,
-      tags: [],
       description: undefined,
+      kind: entry.kind,
+      name: entry.name,
+      tags: [],
     }));
     const result = await trpcClient.createLocationChain.mutate({
       parentId,
@@ -513,9 +514,9 @@ export function ChronicleStartWizard() {
   );
 }
 
-interface StepperProps {
+type StepperProps = {
   currentStep: ChronicleWizardStep;
-  onNavigate(step: ChronicleWizardStep): void;
+  onNavigate: (step: ChronicleWizardStep) => void;
 }
 
 const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'create'];
@@ -544,40 +545,40 @@ function Stepper({ currentStep, onNavigate }: StepperProps) {
   );
 }
 
-interface LocationStepProps {
+type LocationStepProps = {
   roots: LocationPlace[];
   isLoadingRoots: boolean;
   rootError: string | null;
   selectedRootId: string | null;
-  onSelectRoot(locationId: string): void;
+  onSelectRoot: (locationId: string) => void;
   graph: LocationGraphSnapshot | null;
   graphError: string | null;
   isGraphLoading: boolean;
   activePlaceId: string | null;
-  onSelectPlace(placeId: string): void;
+  onSelectPlace: (placeId: string) => void;
   inspector: LocationInspectorState;
   listViewFallback: boolean;
-  setListViewFallback(enabled: boolean): void;
-  onOpenSubModal(): void;
-  onOpenChainModal(parent?: LocationPlace | null): void;
+  setListViewFallback: (enabled: boolean) => void;
+  onOpenSubModal: () => void;
+  onOpenChainModal: (parent?: LocationPlace | null) => void;
 }
 
 function LocationStep({
-  roots,
-  isLoadingRoots,
-  rootError,
-  selectedRootId,
-  onSelectRoot,
+  activePlaceId,
   graph,
   graphError,
-  isGraphLoading,
-  activePlaceId,
-  onSelectPlace,
   inspector,
+  isGraphLoading,
+  isLoadingRoots,
   listViewFallback,
-  setListViewFallback,
-  onOpenSubModal,
   onOpenChainModal,
+  onOpenSubModal,
+  onSelectPlace,
+  onSelectRoot,
+  rootError,
+  roots,
+  selectedRootId,
+  setListViewFallback,
 }: LocationStepProps) {
   const [search, setSearch] = useState('');
 
@@ -697,14 +698,14 @@ function LocationStep({
   );
 }
 
-interface ToneStepProps {
+type ToneStepProps = {
   toneChips: string[];
   toneNotes: string;
-  onToggleChip(chip: string): void;
-  onUpdateNotes(value: string): void;
+  onToggleChip: (chip: string) => void;
+  onUpdateNotes: (value: string) => void;
 }
 
-function ToneStep({ toneChips, toneNotes, onToggleChip, onUpdateNotes }: ToneStepProps) {
+function ToneStep({ onToggleChip, onUpdateNotes, toneChips, toneNotes }: ToneStepProps) {
   return (
     <div className="tone-step">
       <p>Select tone chips or enter a short note (optional).</p>
@@ -733,34 +734,34 @@ function ToneStep({ toneChips, toneNotes, onToggleChip, onUpdateNotes }: ToneSte
   );
 }
 
-interface SeedStepProps {
+type SeedStepProps = {
   loginId: string;
   locationId: string | null;
   tone: { toneChips: string[]; toneNotes: string };
   seeds: ChronicleSeed[];
   selectedSeedId: string | null;
   seedStatus: SeedStatus;
-  setSeedStatus(state: SeedStatus): void;
-  onSelectSeed(seedId: string | null): void;
-  onSeedsLoaded(seeds: ChronicleSeed[]): void;
+  setSeedStatus: (state: SeedStatus) => void;
+  onSelectSeed: (seedId: string | null) => void;
+  onSeedsLoaded: (seeds: ChronicleSeed[]) => void;
   customSeedTitle: string;
   customSeedText: string;
-  onCustomSeedChange(details: { title: string; text: string }): void;
+  onCustomSeedChange: (details: { title: string; text: string }) => void;
 }
 
 function SeedStep({
-  loginId,
-  locationId,
-  tone,
-  seeds,
-  selectedSeedId,
-  seedStatus,
-  setSeedStatus,
-  onSelectSeed,
-  onSeedsLoaded,
-  customSeedTitle,
   customSeedText,
+  customSeedTitle,
+  locationId,
+  loginId,
   onCustomSeedChange,
+  onSeedsLoaded,
+  onSelectSeed,
+  seeds,
+  seedStatus,
+  selectedSeedId,
+  setSeedStatus,
+  tone,
 }: SeedStepProps) {
   const [error, setError] = useState<string | null>(null);
   const hasSelection = Boolean(selectedSeedId);
@@ -774,11 +775,11 @@ function SeedStep({
     setError(null);
     try {
       const result = await trpcClient.generateChronicleSeeds.mutate({
-        loginId,
+        count: 3,
         locationId,
+        loginId,
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
-        count: 3,
       });
       onSeedsLoaded(result ?? []);
     } catch (err) {
@@ -831,7 +832,7 @@ function SeedStep({
   );
 }
 
-interface CreateStepProps {
+type CreateStepProps = {
   selectedLocation: SelectedLocationSummary | null;
   selectedSeed: ChronicleSeed | null;
   customSeedTitle: string;
@@ -839,18 +840,18 @@ interface CreateStepProps {
   tone: { toneChips: string[]; toneNotes: string };
   preferredCharacterName: string | null;
   customTitle: string;
-  setCustomTitle(value: string): void;
+  setCustomTitle: (value: string) => void;
 }
 
 function CreateStep({
+  customSeedText,
+  customSeedTitle,
+  customTitle,
+  preferredCharacterName,
   selectedLocation,
   selectedSeed,
-  customSeedTitle,
-  customSeedText,
-  tone,
-  preferredCharacterName,
-  customTitle,
   setCustomTitle,
+  tone,
 }: CreateStepProps) {
   return (
     <div className="create-step">
@@ -907,13 +908,13 @@ function CreateStep({
   );
 }
 
-interface AddLocationModalProps {
+type AddLocationModalProps = {
   parent: LocationPlace;
-  onClose(): void;
-  onCreated(placeId: string): void;
+  onClose: () => void;
+  onCreated: (placeId: string) => void;
 }
 
-function AddLocationModal({ parent, onClose, onCreated }: AddLocationModalProps) {
+function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState('locale');
   const [tags, setTags] = useState('');
@@ -930,14 +931,14 @@ function AddLocationModal({ parent, onClose, onCreated }: AddLocationModalProps)
     setError(null);
     try {
       const created = await trpcClient.createLocationPlace.mutate({
-        parentId: parent.id,
-        name: name.trim(),
+        description: description.trim() || undefined,
         kind: kind.trim() || 'locale',
+        name: name.trim(),
+        parentId: parent.id,
         tags: tags
           .split(',')
           .map((tag) => tag.trim())
           .filter(Boolean),
-        description: description.trim() || undefined,
       });
       onCreated(created.place.id);
     } catch (err) {
@@ -982,15 +983,15 @@ function AddLocationModal({ parent, onClose, onCreated }: AddLocationModalProps)
   );
 }
 
-interface ChainLocationModalProps {
+type ChainLocationModalProps = {
   parent: LocationPlace | null;
-  onClose(): void;
-  onCreated(placeId: string): void;
+  onClose: () => void;
+  onCreated: (placeId: string) => void;
 }
 
-function ChainLocationModal({ parent, onClose, onCreated }: ChainLocationModalProps) {
+function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalProps) {
   const [segments, setSegments] = useState([
-    { name: '', kind: 'locale', tags: '', description: '' },
+    { description: '', kind: 'locale', name: '', tags: '' },
   ]);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -1002,7 +1003,7 @@ function ChainLocationModal({ parent, onClose, onCreated }: ChainLocationModalPr
   };
 
   const handleAddRow = () => {
-    setSegments((prev) => [...prev, { name: '', kind: 'locale', tags: '', description: '' }]);
+    setSegments((prev) => [...prev, { description: '', kind: 'locale', name: '', tags: '' }]);
   };
 
   const handleRemoveRow = (index: number) => {
@@ -1020,13 +1021,13 @@ function ChainLocationModal({ parent, onClose, onCreated }: ChainLocationModalPr
       const result = await trpcClient.createLocationChain.mutate({
         parentId: parent?.id,
         segments: segments.map((segment) => ({
-          name: segment.name.trim(),
+          description: segment.description.trim() || undefined,
           kind: segment.kind.trim() || 'locale',
+          name: segment.name.trim(),
           tags: segment.tags
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean),
-          description: segment.description.trim() || undefined,
         })),
       });
       onCreated(result.anchor.id);

@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
 import { Attribute, AttributeTier, SkillTier } from '@glass-frontier/dto';
 import type {
   Attribute as AttributeName,
   AttributeTier as AttributeTierValue,
   SkillTier as SkillTierValue,
 } from '@glass-frontier/dto';
+import { useEffect, useMemo, useState } from 'react';
+
+import type { CharacterCreationDraft } from '../state/chronicleState';
 import { useChronicleStore } from '../stores/chronicleStore';
 import { useUiStore } from '../stores/uiStore';
-import type { CharacterCreationDraft } from '../state/chronicleState';
 
 type SkillDraft = {
   id: string;
@@ -17,20 +18,20 @@ type SkillDraft = {
 };
 
 const createDefaultAttributes = (): Record<AttributeName, AttributeTierValue> => ({
-  vitality: 'standard',
+  attunement: 'standard',
   finesse: 'standard',
   focus: 'standard',
-  resolve: 'standard',
-  attunement: 'standard',
   ingenuity: 'standard',
   presence: 'standard',
+  resolve: 'standard',
+  vitality: 'standard',
 });
 
 const createSkillDraft = (): SkillDraft => ({
+  attribute: 'focus',
   id: typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}`,
   name: '',
   tier: 'apprentice',
-  attribute: 'focus',
 });
 
 export function CreateCharacterModal() {
@@ -72,9 +73,9 @@ export function CreateCharacterModal() {
       prev.map((skill) =>
         skill.id === id
           ? {
-              ...skill,
-              [field]: value as SkillDraft[typeof field],
-            }
+            ...skill,
+            [field]: value,
+          }
           : skill
       )
     );
@@ -93,17 +94,17 @@ export function CreateCharacterModal() {
     setIsSubmitting(true);
     setError(null);
     const draft: CharacterCreationDraft = {
-      name,
       archetype,
-      pronouns,
       attributes: attributes as CharacterCreationDraft['attributes'],
+      name,
+      pronouns,
       skills: skills
         .filter((skill) => skill.name.trim().length > 0)
         .reduce<CharacterCreationDraft['skills']>((acc, skill) => {
           acc[skill.name.trim()] = {
+            attribute: skill.attribute as AttributeName,
             name: skill.name.trim(),
             tier: skill.tier as SkillTierValue,
-            attribute: skill.attribute as AttributeName,
             xp: 0,
           };
           return acc;

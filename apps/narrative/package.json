@@ -28,12 +28,13 @@
     "@glass-frontier/utils": "workspace:*",
     "@trpc/client": "^11.7.1",
     "@trpc/server": "^11.7.1",
-    "handlebars": "^4.7.8"
+    "handlebars": "^4.7.8",
+    "tsup": "^8.5.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.138",
     "@types/express": "^4.17.21",
-    "eslint": "^9.39.1",
-    "tsup": "^8.5.0"
+    "eslint": "^9.39.1"
   }
 }

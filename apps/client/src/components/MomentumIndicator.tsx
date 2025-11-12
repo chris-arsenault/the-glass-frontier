@@ -1,7 +1,8 @@
 import type { MomentumState } from '@glass-frontier/dto';
+
 import type { MomentumTrend } from '../state/chronicleState';
 
-interface MomentumIndicatorProps {
+type MomentumIndicatorProps = {
   momentum: MomentumState;
   trend: MomentumTrend | null;
   label?: string;
@@ -10,12 +11,12 @@ interface MomentumIndicatorProps {
 type MomentumDirection = MomentumTrend['direction']; // convenience alias
 
 const SYMBOLS: Record<MomentumDirection, string> = {
-  up: '↑',
   down: '↓',
   flat: '→',
+  up: '↑',
 };
 
-export function MomentumIndicator({ momentum, trend, label }: MomentumIndicatorProps) {
+export function MomentumIndicator({ label, momentum, trend }: MomentumIndicatorProps) {
   const direction = trend?.direction ?? 'flat';
   const symbol = SYMBOLS[direction];
   const title = `${label ?? 'Momentum'} ${momentum.current} (floor ${momentum.floor}, ceiling ${momentum.ceiling})`;

@@ -2,16 +2,16 @@ import { useChronicleStore } from '../stores/chronicleStore';
 
 const formatStatus = (state: string): string => {
   switch (state) {
-    case 'connecting':
-      return 'Connecting to the narrative engine...';
-    case 'connected':
-      return 'Connected to the narrative engine.';
-    case 'error':
-      return 'Connection interrupted. Please retry.';
-    case 'closed':
-      return 'Chronicle has been closed.';
-    default:
-      return 'Idle.';
+  case 'connecting':
+    return 'Connecting to the narrative engine...';
+  case 'connected':
+    return 'Connected to the narrative engine.';
+  case 'error':
+    return 'Connection interrupted. Please retry.';
+  case 'closed':
+    return 'Chronicle has been closed.';
+  default:
+    return 'Idle.';
   }
 };
 

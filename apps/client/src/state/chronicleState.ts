@@ -16,7 +16,7 @@ export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'c
 export type ChronicleLifecycle = 'open' | 'closed';
 export type DirectoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-export interface ChatMessage {
+export type ChatMessage = {
   entry: TranscriptEntry;
   skillCheckPlan?: SkillCheckPlan | null;
   skillCheckResult?: SkillCheckResult | null;
@@ -43,7 +43,7 @@ export type SkillProgressBadge =
 
 export type MomentumDirection = 'up' | 'down' | 'flat';
 
-export interface MomentumTrend {
+export type MomentumTrend = {
   direction: MomentumDirection;
   delta: number;
   previous: number;
@@ -52,7 +52,7 @@ export interface MomentumTrend {
   ceiling: number;
 }
 
-export interface ChronicleState {
+export type ChronicleState = {
   chronicleId: string | null;
   chronicleRecord: Chronicle | null;
   loginId: string | null;
@@ -78,22 +78,22 @@ export interface ChronicleState {
   pendingEquip: PendingEquip[];
 }
 
-export interface ChronicleStore extends ChronicleState {
-  hydrateChronicle(chronicleId: string): Promise<string>;
-  sendPlayerMessage(input: { content: string }): Promise<void>;
-  setPreferredCharacterId(characterId: string | null): void;
-  refreshLoginResources(): Promise<void>;
-  createChronicleForCharacter(details: ChronicleCreationDetails): Promise<string>;
-  createChronicleFromSeed(details: ChronicleSeedCreationDetails): Promise<string>;
-  createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
-  deleteChronicle(chronicleId: string): Promise<void>;
-  queueEquipChange(entry: PendingEquip): void;
-  clearPendingEquipQueue(): void;
-  clearActiveChronicle(): void;
-  resetStore(): void;
-}
+export type ChronicleStore = {
+  hydrateChronicle: (chronicleId: string) => Promise<string>;
+  sendPlayerMessage: (input: { content: string }) => Promise<void>;
+  setPreferredCharacterId: (characterId: string | null) => void;
+  refreshLoginResources: () => Promise<void>;
+  createChronicleForCharacter: (details: ChronicleCreationDetails) => Promise<string>;
+  createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
+  createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
+  deleteChronicle: (chronicleId: string) => Promise<void>;
+  queueEquipChange: (entry: PendingEquip) => void;
+  clearPendingEquipQueue: () => void;
+  clearActiveChronicle: () => void;
+  resetStore: () => void;
+} & ChronicleState
 
-export interface CharacterCreationDraft {
+export type CharacterCreationDraft = {
   name: string;
   archetype: string;
   pronouns: string;
@@ -101,14 +101,14 @@ export interface CharacterCreationDraft {
   skills: Character['skills'];
 }
 
-export interface ChronicleCreationDetails {
+export type ChronicleCreationDetails = {
   characterId?: string | null;
   title: string;
   locationName: string;
   locationAtmosphere: string;
 }
 
-export interface ChronicleSeedCreationDetails {
+export type ChronicleSeedCreationDetails = {
   characterId?: string | null;
   locationId: string;
   title?: string | null;

@@ -13,6 +13,27 @@ import type { PromptTemplateId } from '@glass-frontier/dto';
 import type { ChronicleState } from '../../types';
 import type { PromptTemplateRuntime } from './templateRuntime';
 
+type GmSummaryPromptOptions = {
+  templates: PromptTemplateRuntime;
+  gmMessage: string;
+  intent: Intent;
+  check?: SkillCheckPlan;
+  checkResult?: SkillCheckResult;
+};
+
+type NarrationPromptOptions = {
+  check?: SkillCheckPlan;
+  chronicle: ChronicleState;
+  intent: Intent;
+  outcomeTier?: OutcomeTier;
+  rawUtterance: string;
+  templates: PromptTemplateRuntime;
+};
+
+const ATTRIBUTE_LIST = Attribute.options.join(', ');
+const ATTRIBUTE_QUOTED_LIST = Attribute.options.map((attr) => `"${attr}"`).join(', ');
+const COMPLICATION_OUTCOMES = new Set<OutcomeTier>(['regress', 'collapse']);
+
 async function renderTemplate(
   templates: PromptTemplateRuntime,
   templateId: PromptTemplateId,
@@ -26,41 +47,11 @@ export function composeCheckRulesPrompt(
   chronicle: ChronicleState,
   templates: PromptTemplateRuntime
 ): Promise<string> {
-  const charTags = (chronicle?.character?.tags ?? []).slice(0, 3).join(', ') || 'No tags';
-  const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(', ') || 'None';
-
-  return renderTemplate(templates, 'check-planner', {
-    attribute: intent.attribute,
-    characterName: chronicle?.character?.name ?? 'Unknown',
-    characterTags: charTags,
-    intentSummary: intent.intentSummary,
-    locale: describeLocation(chronicle),
-    momentum: chronicle?.character?.momentum.current ?? 0,
-    skill: intent.skill,
-    skillsLine,
-  });
+  return renderTemplate(templates, 'check-planner', buildCheckPlannerPayload(intent, chronicle));
 }
 
-export function composeGMSummaryPrompt(
-  templates: PromptTemplateRuntime,
-  gmMessage: string,
-  intent: Intent,
-  check?: SkillCheckPlan,
-  checkResult?: SkillCheckResult
-): Promise<string> {
-  const skillLine = intent.skill
-    ? `${intent.skill}${intent.attribute ? ` (${intent.attribute})` : ''}`
-    : null;
-
-  return renderTemplate(templates, 'gm-summary', {
-    checkAdvantage: check?.advantage,
-    checkDifficulty: check?.riskLevel,
-    checkOutcome: checkResult?.outcomeTier ?? 'none',
-    gmMessage,
-    hasCheck: Boolean(check),
-    intentSummary: intent.intentSummary,
-    skillLine,
-  });
+export function composeGMSummaryPrompt(options: GmSummaryPromptOptions): Promise<string> {
+  return renderTemplate(options.templates, 'gm-summary', buildGmSummaryPayload(options));
 }
 
 export function composeIntentPrompt({
@@ -72,12 +63,12 @@ export function composeIntentPrompt({
   playerMessage: string;
   templates: PromptTemplateRuntime;
 }): Promise<string> {
-  const charTags = (chronicle?.character?.tags ?? []).slice(0, 3).join(', ') || 'No tags';
-  const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(', ') || 'None';
+  const charTags = summarizeTags(chronicle?.character?.tags, 'No tags');
+  const skillsLine = summarizeSkills(chronicle?.character?.skills);
 
   return renderTemplate(templates, 'intent-intake', {
-    attributeList: Attribute.options.join(', '),
-    attributeQuotedList: Attribute.options.map((attr) => `"${attr}"`).join(', '),
+    attributeList: ATTRIBUTE_LIST,
+    attributeQuotedList: ATTRIBUTE_QUOTED_LIST,
     characterName: chronicle?.character?.name ?? 'Unknown',
     characterTags: charTags,
     locale: describeLocation(chronicle),
@@ -88,59 +79,98 @@ export function composeIntentPrompt({
   });
 }
 
-export function composeNarrationPrompt(
-  intent: Intent,
-  chronicle: ChronicleState,
-  rawUtterance: string,
-  templates: PromptTemplateRuntime,
-  check?: SkillCheckPlan,
-  outcomeTier?: OutcomeTier
-): Promise<string> {
-  const characterName = chronicle.character?.name ?? 'the character';
-  const characterTags = (chronicle.character?.tags ?? []).slice(0, 3).join(', ') || 'untagged';
-  const locale = describeLocation(chronicle);
-  const recentEventLines: string[] = [];
-  if (chronicle.turns?.length) {
-    chronicle.turns
-      .slice(-10)
-      .forEach((turn) => {
-        const snippet = `${turn.gmSummary ?? ''} - ${turn.playerIntent?.intentSummary ?? ''}`.trim();
-        if (snippet) {
-          recentEventLines.push(snippet);
-        }
-      });
-  }
-  const recentEvents =
-    recentEventLines.join('; ') || chronicle.chronicle?.seedText || 'no prior events noted';
-  const playerUtterance =
-    rawUtterance.length > 500 ? `${rawUtterance.slice(0, 500)}…` : rawUtterance;
+export function composeNarrationPrompt(options: NarrationPromptOptions): Promise<string> {
+  return renderTemplate(
+    options.templates,
+    'narrative-weaver',
+    buildNarrationPayload(options)
+  );
+}
 
-  const hasMechanicalContext = Boolean(check && intent.requiresCheck);
-  const shouldUseComplications =
-    Boolean(outcomeTier && ['regress', 'collapse'].includes(outcomeTier)) &&
-    Boolean(check?.complicationSeeds?.length);
+function buildCheckPlannerPayload(intent: Intent, chronicle: ChronicleState) {
+  return {
+    attribute: intent.attribute,
+    characterName: resolveCharacterName(chronicle),
+    characterTags: summarizeTags(chronicle?.character?.tags, 'No tags'),
+    intentSummary: intent.intentSummary,
+    locale: describeLocation(chronicle),
+    momentum: resolveMomentum(chronicle),
+    skill: intent.skill,
+    skillsLine: summarizeSkills(chronicle?.character?.skills),
+  };
+}
 
-  return renderTemplate(templates, 'narrative-weaver', {
-    characterName,
-    characterTags,
+function buildGmSummaryPayload({
+  check,
+  checkResult,
+  gmMessage,
+  intent,
+}: GmSummaryPromptOptions) {
+  return {
     checkAdvantage: check?.advantage,
     checkDifficulty: check?.riskLevel,
-    chronicleSeed: chronicle.chronicle?.seedText ?? null,
-    complicationSeeds: shouldUseComplications ? (check?.complicationSeeds ?? []) : [],
+    checkOutcome: checkResult?.outcomeTier ?? 'none',
+    gmMessage,
+    hasCheck: Boolean(check),
+    intentSummary: intent.intentSummary,
+    skillLine: buildSkillLine(intent),
+  };
+}
+
+function buildNarrationPayload(options: NarrationPromptOptions) {
+  return {
+    ...buildNarrationBase(options),
+    ...buildNarrationMechanics(options),
+  };
+}
+
+function buildNarrationBase({
+  chronicle,
+  intent,
+  rawUtterance,
+}: NarrationPromptOptions) {
+  return {
+    characterName: chronicle.character?.name ?? 'the character',
+    characterTags: summarizeTags(chronicle.character?.tags, 'untagged'),
+    locale: describeLocation(chronicle),
+    playerMessage: rawUtterance,
+    playerUtterance: truncateText(rawUtterance, 500),
+    recentEvents: buildRecentEventsSummary(chronicle),
+    tone: intent.tone,
+  };
+}
+
+function buildNarrationMechanics(options: NarrationPromptOptions) {
+  const useComplications = shouldUseComplications(options.check, options.outcomeTier);
+  return {
+    ...buildNarrationCheckData(options, useComplications),
+    ...buildNarrationIntentData(options),
+  };
+}
+
+function buildNarrationCheckData(
+  options: NarrationPromptOptions,
+  useComplications: boolean
+) {
+  return {
+    checkAdvantage: options.check?.advantage,
+    checkDifficulty: options.check?.riskLevel,
+    chronicleSeed: options.chronicle.chronicle?.seedText ?? null,
+    complicationSeeds: useComplications ? options.check?.complicationSeeds ?? [] : [],
+    outcomeTier: options.outcomeTier ?? 'stall',
+    outcomeValue: options.outcomeTier ?? 'stall',
+    shouldUseComplications: useComplications,
+  };
+}
+
+function buildNarrationIntentData({ check, intent }: NarrationPromptOptions) {
+  return {
     creativeSpark: intent.creativeSpark,
-    hasMechanicalContext,
+    hasMechanicalContext: Boolean(check && intent.requiresCheck),
     intentAttribute: intent.attribute,
     intentSkill: intent.skill,
     intentSummary: intent.intentSummary,
-    locale,
-    outcomeTier: outcomeTier ?? 'stall',
-    outcomeValue: outcomeTier ?? 'stall',
-    playerMessage: rawUtterance,
-    playerUtterance,
-    recentEvents,
-    shouldUseComplications,
-    tone: intent.tone,
-  });
+  };
 }
 
 function describeLocation(chronicle: ChronicleState): string {
@@ -153,6 +183,61 @@ function describeLocation(chronicle: ChronicleState): string {
   }
   const path = summary.breadcrumb.map((entry) => entry.name).join(' → ');
   return path || 'an unknown place';
+}
+
+function summarizeTags(tags?: string[] | null, fallback: string = 'No tags'): string {
+  if (!tags?.length) {
+    return fallback;
+  }
+  return tags.slice(0, 3).join(', ');
+}
+
+function summarizeSkills(skills?: Record<string, unknown> | null): string {
+  const names = skills ? Object.keys(skills) : [];
+  return names.length ? names.join(', ') : 'None';
+}
+
+function buildSkillLine(intent: Intent): string | null {
+  if (!intent.skill) {
+    return null;
+  }
+  return intent.attribute ? `${intent.skill} (${intent.attribute})` : intent.skill;
+}
+
+function resolveCharacterName(chronicle: ChronicleState): string {
+  return chronicle?.character?.name ?? 'Unknown';
+}
+
+function resolveMomentum(chronicle: ChronicleState): number {
+  return chronicle?.character?.momentum.current ?? 0;
+}
+
+function buildRecentEventsSummary(chronicle: ChronicleState): string {
+  if (!chronicle.turns?.length) {
+    return chronicle.chronicle?.seedText ?? 'no prior events noted';
+  }
+  const snippets = chronicle.turns
+    .slice(-10)
+    .map((turn) => `${turn.gmSummary ?? ''} - ${turn.playerIntent?.intentSummary ?? ''}`.trim())
+    .filter((snippet) => snippet.length > 0);
+  if (!snippets.length) {
+    return chronicle.chronicle?.seedText ?? 'no prior events noted';
+  }
+  return snippets.join('; ');
+}
+
+function truncateText(value: string, limit: number): string {
+  if (value.length <= limit) {
+    return value;
+  }
+  return `${value.slice(0, limit - 1)}…`;
+}
+
+function shouldUseComplications(check?: SkillCheckPlan, outcome?: OutcomeTier): boolean {
+  if (!check?.complicationSeeds?.length || !outcome) {
+    return false;
+  }
+  return COMPLICATION_OUTCOMES.has(outcome);
 }
 
 export function composeLocationDeltaPrompt(

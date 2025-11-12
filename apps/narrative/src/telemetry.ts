@@ -14,14 +14,6 @@ type CheckDispatchPayload = {
   checkId: string;
 }
 
-type SafetyEventPayload = {
-  chronicleId: string;
-  auditRef?: string;
-  severity: string;
-  flags: string[];
-  reason?: string;
-}
-
 type ToolErrorPayload = {
   chronicleId: string;
   operation: string;

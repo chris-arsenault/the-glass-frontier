@@ -1,45 +1,46 @@
-import { useEffect } from 'react';
 import type { PromptTemplateId } from '@glass-frontier/dto';
+import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useUiStore } from '../stores/uiStore';
-import { useTemplateStore } from '../stores/templateStore';
+
 import { useChronicleStore } from '../stores/chronicleStore';
+import { useTemplateStore } from '../stores/templateStore';
+import { useUiStore } from '../stores/uiStore';
 
 export function TemplateDrawer() {
   const isOpen = useUiStore((state) => state.isTemplateDrawerOpen);
   const close = useUiStore((state) => state.closeTemplateDrawer);
   const loginId = useChronicleStore((state) => state.loginId);
   const {
-    summaries,
-    selectedTemplateId,
     detail,
     draft,
+    error,
+    isDirty,
     isLoading,
     isSaving,
-    isDirty,
-    error,
     loadSummaries,
-    selectTemplate,
-    updateDraft,
-    saveTemplate,
-    revertTemplate,
     reset,
+    revertTemplate,
+    saveTemplate,
+    selectedTemplateId,
+    selectTemplate,
+    summaries,
+    updateDraft,
   } = useTemplateStore(
     useShallow((state) => ({
-      summaries: state.summaries,
-      selectedTemplateId: state.selectedTemplateId,
       detail: state.detail,
       draft: state.draft,
+      error: state.error,
+      isDirty: state.isDirty,
       isLoading: state.isLoading,
       isSaving: state.isSaving,
-      isDirty: state.isDirty,
-      error: state.error,
       loadSummaries: state.loadSummaries,
-      selectTemplate: state.selectTemplate,
-      updateDraft: state.updateDraft,
-      saveTemplate: state.saveTemplate,
-      revertTemplate: state.revertTemplate,
       reset: state.reset,
+      revertTemplate: state.revertTemplate,
+      saveTemplate: state.saveTemplate,
+      selectedTemplateId: state.selectedTemplateId,
+      selectTemplate: state.selectTemplate,
+      summaries: state.summaries,
+      updateDraft: state.updateDraft,
     }))
   );
 

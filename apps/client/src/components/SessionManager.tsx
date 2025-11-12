@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useChronicleStore } from '../stores/chronicleStore';
 import { useUiStore } from '../stores/uiStore';
 import { MomentumIndicator } from './MomentumIndicator';
@@ -44,7 +45,7 @@ export function SessionManager() {
     return map;
   }, [availableCharacters]);
   const handleLoad = async (chronicleId: string) => {
-    if (!chronicleId) return;
+    if (!chronicleId) {return;}
     setError(null);
     setIsWorking(true);
     try {
@@ -68,7 +69,7 @@ export function SessionManager() {
   };
 
   const handleDeleteChronicle = async (chronicleId: string) => {
-    if (!chronicleId) return;
+    if (!chronicleId) {return;}
     const confirmed = window.confirm('Delete this chronicle? This cannot be undone.');
     if (!confirmed) {
       return;

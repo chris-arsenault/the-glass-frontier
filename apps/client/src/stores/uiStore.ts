@@ -21,28 +21,25 @@ type UiState = {
 };
 
 export const useUiStore = create<UiState>((set) => ({
-  isCharacterDrawerOpen: false,
-  toggleCharacterDrawer: () =>
-    set((state) => ({
-      isCharacterDrawerOpen: !state.isCharacterDrawerOpen,
-    })),
   closeCharacterDrawer: () => set({ isCharacterDrawerOpen: false }),
-  isTemplateDrawerOpen: false,
-  toggleTemplateDrawer: () =>
-    set((state) => ({
-      isTemplateDrawerOpen: !state.isTemplateDrawerOpen,
-    })),
-  closeTemplateDrawer: () => set({ isTemplateDrawerOpen: false }),
-  isCreateCharacterModalOpen: false,
-  openCreateCharacterModal: () => set({ isCreateCharacterModalOpen: true }),
   closeCreateCharacterModal: () => set({ isCreateCharacterModalOpen: false }),
+  closeTemplateDrawer: () => set({ isTemplateDrawerOpen: false }),
   expandedMessages: {},
+  isCharacterDrawerOpen: false,
+  isCreateCharacterModalOpen: false,
+  isTemplateDrawerOpen: false,
+  openCreateCharacterModal: () => set({ isCreateCharacterModalOpen: true }),
+  resetExpandedMessages: () => set({ expandedMessages: {} }),
   setExpandedMessages: (next) =>
     set((state) => ({
       expandedMessages:
         typeof next === 'function'
           ? (next as (prev: ExpandedMessages) => ExpandedMessages)(state.expandedMessages)
           : next,
+    })),
+  toggleCharacterDrawer: () =>
+    set((state) => ({
+      isCharacterDrawerOpen: !state.isCharacterDrawerOpen,
     })),
   toggleMessageExpansion: (entryId) =>
     set((state) => ({
@@ -51,5 +48,8 @@ export const useUiStore = create<UiState>((set) => ({
         [entryId]: !(state.expandedMessages[entryId] ?? false),
       },
     })),
-  resetExpandedMessages: () => set({ expandedMessages: {} }),
+  toggleTemplateDrawer: () =>
+    set((state) => ({
+      isTemplateDrawerOpen: !state.isTemplateDrawerOpen,
+    })),
 }));
