@@ -1,13 +1,14 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { log } from '@glass-frontier/utils';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+
 import { ConnectionRepository } from '../services/ConnectionRepository';
 import { parseSubscribeMessage } from '../types';
 
 const repository = new ConnectionRepository();
 
 const badRequest = (message: string): APIGatewayProxyResultV2 => ({
-  statusCode: 400,
   body: message,
+  statusCode: 400,
 });
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
@@ -24,12 +25,12 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     }
 
     await repository.subscribe(message.jobId, connectionId);
-    return { statusCode: 200, body: 'ok' };
+    return { body: 'ok', statusCode: 200 };
   } catch (error) {
     log('error', 'Failed to subscribe connection', {
       connectionId,
       reason: error instanceof Error ? error.message : 'unknown',
     });
-    return { statusCode: 500, body: 'subscription failure' };
+    return { body: 'subscription failure', statusCode: 500 };
   }
 };

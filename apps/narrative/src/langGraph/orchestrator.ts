@@ -1,11 +1,12 @@
-import type { GraphContext } from '../types.js';
-import type { ChronicleTelemetry } from '../telemetry';
-import type { TurnProgressPublisher, TurnProgressStatus } from '../progressEmitter';
 import { log } from '@glass-frontier/utils';
 
-export interface GraphNode {
+import type { TurnProgressPublisher, TurnProgressStatus } from '../progressEmitter';
+import type { ChronicleTelemetry } from '../telemetry';
+import type { GraphContext } from '../types.js';
+
+export type GraphNode = {
   readonly id: string;
-  execute(context: GraphContext): Promise<GraphContext> | GraphContext;
+  execute: (context: GraphContext) => Promise<GraphContext> | GraphContext;
 }
 
 class LangGraphOrchestrator {
@@ -44,12 +45,12 @@ class LangGraphOrchestrator {
       });
       await this.emitProgress(jobId, {
         chronicleId: context.chronicleId,
-        turnSequence: context.turnSequence,
+        context,
         nodeId,
         status: 'start',
         step,
         total,
-        context,
+        turnSequence: context.turnSequence,
       });
 
       try {
@@ -63,12 +64,12 @@ class LangGraphOrchestrator {
           });
           await this.emitProgress(jobId, {
             chronicleId: context.chronicleId,
+            context,
             nodeId,
             status: 'error',
-            turnSequence: context.turnSequence,
             step,
             total,
-            context,
+            turnSequence: context.turnSequence,
           });
           return context;
         }
@@ -81,30 +82,30 @@ class LangGraphOrchestrator {
         });
         await this.emitProgress(jobId, {
           chronicleId: context.chronicleId,
+          context,
           nodeId,
           status: 'success',
-          turnSequence: context.turnSequence,
           step,
           total,
-          context,
+          turnSequence: context.turnSequence,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown';
         this.#telemetry?.recordTransition({
           chronicleId: context.chronicleId,
+          metadata: { message },
           nodeId,
           status: 'error',
           turnSequence: context.turnSequence,
-          metadata: { message },
         });
         await this.emitProgress(jobId, {
           chronicleId: context.chronicleId,
+          context,
           nodeId,
           status: 'error',
-          turnSequence: context.turnSequence,
           step,
           total,
-          context,
+          turnSequence: context.turnSequence,
         });
         throw error;
       }

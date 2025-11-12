@@ -1,9 +1,9 @@
-import { setTimeout as delay } from 'node:timers/promises';
+import { log } from '@glass-frontier/utils';
 import { TRPCClientError, createTRPCUntypedClient, httpBatchLink } from '@trpc/client';
 import type { TRPCUntypedClient } from '@trpc/client';
-import { log } from '@glass-frontier/utils';
+import { setTimeout as delay } from 'node:timers/promises';
 
-interface LlmInvokeOptions {
+type LlmInvokeOptions = {
   prompt?: string;
   system?: string;
   messages?: Array<{ role: string; content: string }>;
@@ -12,7 +12,7 @@ interface LlmInvokeOptions {
   metadata?: Record<string, unknown>;
 }
 
-interface ExecuteResult {
+type ExecuteResult = {
   output: unknown;
   raw: unknown;
   usage: unknown;
@@ -53,8 +53,8 @@ class LangGraphLlmClient {
     this.#client = createTRPCUntypedClient<any>({
       links: [
         httpBatchLink({
-          url: this.#baseUrl,
           headers: () => this.#defaultHeaders,
+          url: this.#baseUrl,
         }),
       ],
     });
@@ -64,12 +64,12 @@ class LangGraphLlmClient {
     options: LlmInvokeOptions
   ): Promise<{ text: string; raw: unknown; usage: unknown; provider: string; attempts: number }> {
     const payload = this.#buildPayload(options);
-    const { output, raw, usage, attempts } = await this.#execute({
+    const { attempts, output, raw, usage } = await this.#execute({
       body: payload,
       metadata: options.metadata,
     });
     const text = Array.isArray(output) ? output.join('') : String(output ?? '');
-    return { text, raw, usage, provider: this.#providerId, attempts };
+    return { attempts, provider: this.#providerId, raw, text, usage };
   }
 
   async generateJson(options: LlmInvokeOptions): Promise<{
@@ -81,7 +81,7 @@ class LangGraphLlmClient {
   }> {
     const payload = this.#buildPayload(options);
     payload.response_format = { type: 'json_object' };
-    const { output, raw, usage, attempts } = await this.#execute({
+    const { attempts, output, raw, usage } = await this.#execute({
       body: payload,
       metadata: options.metadata,
     });
@@ -89,11 +89,11 @@ class LangGraphLlmClient {
       const trimmed = output.trim();
       try {
         return {
+          attempts,
           json: JSON.parse(trimmed),
+          provider: this.#providerId,
           raw,
           usage,
-          provider: this.#providerId,
-          attempts,
         };
       } catch (error) {
         throw new Error(
@@ -104,32 +104,32 @@ class LangGraphLlmClient {
 
     if (output && typeof output === 'object') {
       return {
+        attempts,
         json: output as Record<string, unknown>,
+        provider: this.#providerId,
         raw,
         usage,
-        provider: this.#providerId,
-        attempts,
       };
     }
 
-    return { json: {}, raw, usage, provider: this.#providerId, attempts };
+    return { attempts, json: {}, provider: this.#providerId, raw, usage };
   }
 
   #buildPayload({
+    maxTokens = 450,
+    messages,
     prompt,
     system,
-    messages,
     temperature = 0.7,
-    maxTokens = 450,
   }: LlmInvokeOptions): Record<string, unknown> {
     const sequence = Array.isArray(messages) ? [...messages] : [];
 
     if (system) {
-      sequence.unshift({ role: 'system', content: system });
+      sequence.unshift({ content: system, role: 'system' });
     }
 
     if (prompt) {
-      sequence.push({ role: 'user', content: prompt });
+      sequence.push({ content: prompt, role: 'user' });
     }
 
     if (sequence.length === 0) {
@@ -137,11 +137,11 @@ class LangGraphLlmClient {
     }
 
     return {
-      model: this.#model,
-      messages: sequence,
-      temperature,
       max_tokens: maxTokens,
+      messages: sequence,
+      model: this.#model,
       stream: false,
+      temperature,
     };
   }
 
@@ -169,24 +169,24 @@ class LangGraphLlmClient {
         const message = choice?.message?.content ?? choice?.delta?.content ?? '';
 
         return {
+          attempts: attempt + 1,
           output: message,
           raw: parsed,
           usage: parsed.usage ?? null,
-          attempts: attempt + 1,
         };
       } catch (error) {
         clearTimeout(timer);
         lastError = error;
         log('error', 'narrative.llm.invoke_failed', {
-          provider: this.#providerId,
           attempt,
-          message: error instanceof Error ? error.message : 'unknown',
           context: metadata ? JSON.stringify(metadata).slice(0, 200) : '{}',
+          message: error instanceof Error ? error.message : 'unknown',
+          provider: this.#providerId,
         });
 
         if (error instanceof TRPCClientError && error.data?.httpStatus === 400) {
           const causeMessage =
-            (error.cause as Error | undefined)?.message ??
+            (error.cause)?.message ??
             error.message ??
             'Downstream bad request.';
           throw new Error(`llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500));

@@ -1,6 +1,6 @@
 import { log } from '@glass-frontier/utils';
 
-interface TransitionPayload {
+type TransitionPayload = {
   chronicleId: string;
   nodeId: string;
   status: 'start' | 'success' | 'error';
@@ -8,13 +8,13 @@ interface TransitionPayload {
   metadata?: Record<string, unknown>;
 }
 
-interface CheckDispatchPayload {
+type CheckDispatchPayload = {
   chronicleId: string;
   auditRef: string;
   checkId: string;
 }
 
-interface SafetyEventPayload {
+type SafetyEventPayload = {
   chronicleId: string;
   auditRef?: string;
   severity: string;
@@ -22,7 +22,7 @@ interface SafetyEventPayload {
   reason?: string;
 }
 
-interface ToolErrorPayload {
+type ToolErrorPayload = {
   chronicleId: string;
   operation: string;
   referenceId?: string;
@@ -30,12 +30,12 @@ interface ToolErrorPayload {
   message: string;
 }
 
-interface ToolNotRunPayload {
+type ToolNotRunPayload = {
   chronicleId: string;
   operation: string;
 }
 
-interface CheckResolutionPayload {
+type CheckResolutionPayload = {
   chronicleId: string;
   auditRef?: string;
   checkId: string;
@@ -46,28 +46,28 @@ class ChronicleTelemetry {
   recordTransition(payload: TransitionPayload): void {
     log('info', 'telemetry.chronicle.transition', {
       chronicleId: payload.chronicleId,
+      metadata: payload.metadata ? JSON.stringify(payload.metadata).slice(0, 200) : '',
       nodeId: payload.nodeId,
       status: payload.status,
       turnSequence: payload.turnSequence,
-      metadata: payload.metadata ? JSON.stringify(payload.metadata).slice(0, 200) : '',
     });
   }
 
   recordCheckDispatch(payload: CheckDispatchPayload): void {
     log('info', 'telemetry.chronicle.check-dispatch', {
-      chronicleId: payload.chronicleId,
       auditRef: payload.auditRef,
       checkId: payload.checkId,
+      chronicleId: payload.chronicleId,
     });
   }
 
   recordToolError(payload: ToolErrorPayload): void {
     log('error', 'telemetry.chronicle.tool-error', {
+      attempt: payload.attempt,
       chronicleId: payload.chronicleId,
+      message: payload.message,
       operation: payload.operation,
       referenceId: payload.referenceId ?? '',
-      attempt: payload.attempt,
-      message: payload.message,
     });
   }
 
@@ -80,9 +80,9 @@ class ChronicleTelemetry {
 
   recordCheckResolution(payload: CheckResolutionPayload): void {
     log('info', 'telemetry.chronicle.check-resolution', {
-      chronicleId: payload.chronicleId,
       auditRef: payload.auditRef ?? '',
       checkId: payload.checkId,
+      chronicleId: payload.chronicleId,
       result: payload.result,
     });
   }

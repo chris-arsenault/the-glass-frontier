@@ -6,6 +6,7 @@
     },
     "dev": { "cache": false, "persistent": true, "dependsOn": ["^dev"]  },
     "lint": {},
+    "lint:fix": {},
     "test": { "dependsOn": ["^build"] },
   },
   "globalEnv": ["OPENAI_API_KEY", "VITE_TRPC_URL",

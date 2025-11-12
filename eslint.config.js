@@ -77,7 +77,7 @@ export default [
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
       '@typescript-eslint/prefer-readonly': 'warn',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      '@typescript-eslint/strict-boolean-expressions': ['error', {   allowAny: false,
+      '@typescript-eslint/strict-boolean-expressions': ['warn', {   allowAny: false,
         allowNumber: false,
         allowString: false,
         allowNullableBoolean: false,

@@ -1,6 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import type { ChronicleSeed, LocationPlace } from '@glass-frontier/dto';
 import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
+import { randomUUID } from 'node:crypto';
+
 import { LangGraphLlmClient } from '../langGraph/llmClient';
 import { PromptTemplateRuntime } from '../langGraph/prompts/templateRuntime';
 
@@ -14,9 +15,9 @@ type GenerateSeedRequest = {
 };
 
 export class ChronicleSeedService {
-  #templates: PromptTemplateManager;
-  #locations: LocationGraphStore;
-  #llm: LangGraphLlmClient;
+  readonly #templates: PromptTemplateManager;
+  readonly #locations: LocationGraphStore;
+  readonly #llm: LangGraphLlmClient;
 
   constructor(options: {
     templateManager: PromptTemplateManager;
@@ -39,33 +40,33 @@ export class ChronicleSeedService {
     });
 
     const prompt = await runtime.render('chronicle-seed', {
-      location_name: place.name,
-      location_kind: place.kind,
-      location_description: place.description ?? 'Uncatalogued locale.',
       breadcrumb: breadcrumb.map((entry) => `${entry.name} (${entry.kind})`).join(' / '),
+      location_description: place.description ?? 'Uncatalogued locale.',
+      location_kind: place.kind,
+      location_name: place.name,
+      requested,
       tags: tags.length ? tags.join(', ') : 'untagged',
       tone_chips: (request.toneChips ?? []).slice(0, 8).join(', ') || 'none',
       tone_notes: request.toneNotes?.slice(0, 240) ?? '',
-      requested,
     });
 
     const client = request.authorizationHeader
       ? new LangGraphLlmClient({
-          defaultHeaders: {
-            'content-type': 'application/json',
-            authorization: request.authorizationHeader,
-          },
-        })
+        defaultHeaders: {
+          authorization: request.authorizationHeader,
+          'content-type': 'application/json',
+        },
+      })
       : this.#llm;
 
     const response = await client.generateJson({
-      prompt,
-      temperature: 0.65,
       maxTokens: 600,
       metadata: {
-        operation: 'chronicle-seed',
         locationId: place.locationId,
+        operation: 'chronicle-seed',
       },
+      prompt,
+      temperature: 0.65,
     });
 
     return this.#normalizeSeeds(response.json, requested, place);
@@ -124,18 +125,18 @@ export class ChronicleSeedService {
       const teaser = typeof (entry as any).teaser === 'string' ? (entry as any).teaser.trim() : '';
       const tags = Array.isArray((entry as any).tags)
         ? (entry as any).tags
-            .map((tag: unknown) => (typeof tag === 'string' ? tag.trim().toLowerCase() : ''))
-            .filter((tag: string) => tag.length > 0)
-            .slice(0, 4)
+          .map((tag: unknown) => (typeof tag === 'string' ? tag.trim().toLowerCase() : ''))
+          .filter((tag: string) => tag.length > 0)
+          .slice(0, 4)
         : [];
       if (!title || !teaser) {
         continue;
       }
       result.push({
         id: randomUUID(),
-        title: title.slice(0, 80),
-        teaser: teaser.slice(0, 280),
         tags,
+        teaser: teaser.slice(0, 280),
+        title: title.slice(0, 80),
       });
     }
 
@@ -149,9 +150,9 @@ export class ChronicleSeedService {
     const tags = (place.tags ?? []).slice(0, 3);
     return {
       id: randomUUID(),
-      title: `${place.name} Hook ${index}`.slice(0, 80),
-      teaser: `Rumors ripple through ${place.name}, drawing attention to a fresh anomaly hidden within its ${place.kind}.`,
       tags,
+      teaser: `Rumors ripple through ${place.name}, drawing attention to a fresh anomaly hidden within its ${place.kind}.`,
+      title: `${place.name} Hook ${index}`.slice(0, 80),
     };
   }
 }

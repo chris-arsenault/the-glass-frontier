@@ -1,5 +1,6 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { log } from '@glass-frontier/utils';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+
 import { ConnectionRepository } from '../services/ConnectionRepository';
 
 const repository = new ConnectionRepository();
@@ -7,7 +8,7 @@ const repository = new ConnectionRepository();
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   const connectionId = event.requestContext.connectionId;
   if (!connectionId) {
-    return { statusCode: 200, body: 'ok' };
+    return { body: 'ok', statusCode: 200 };
   }
 
   try {
@@ -19,5 +20,5 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     });
   }
 
-  return { statusCode: 200, body: 'ok' };
+  return { body: 'ok', statusCode: 200 };
 };

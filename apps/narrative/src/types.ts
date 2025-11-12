@@ -1,4 +1,4 @@
-import {
+import type {
   Character,
   Chronicle,
   Intent,
@@ -14,9 +14,10 @@ import {
   ImbuedRegistry,
 } from '@glass-frontier/dto';
 import type { InventoryStoreDelta } from '@glass-frontier/persistence';
+
 import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 
-export interface ChronicleState {
+export type ChronicleState = {
   chronicleId: string;
   turnSequence: number;
   chronicle: Chronicle;
@@ -25,7 +26,7 @@ export interface ChronicleState {
   turns: Turn[];
 }
 
-export interface GraphContext {
+export type GraphContext = {
   //inputs
   chronicleId: string;
   turnSequence: number;
@@ -56,22 +57,22 @@ export interface GraphContext {
   inventoryRegistry?: ImbuedRegistry | null;
 }
 
-export interface LangGraphLlmLike {
-  generateText(
+export type LangGraphLlmLike = {
+  generateText: (
     input: Record<string, unknown>
-  ): Promise<{ text: string; provider?: string; raw?: unknown; usage?: unknown }>;
-  generateJson(
+  ) => Promise<{ text: string; provider?: string; raw?: unknown; usage?: unknown }>;
+  generateJson: (
     input: Record<string, unknown>
-  ): Promise<{ json: Record<string, unknown>; provider?: string; raw?: unknown; usage?: unknown }>;
+  ) => Promise<{ json: Record<string, unknown>; provider?: string; raw?: unknown; usage?: unknown }>;
 }
 
-export interface TelemetryLike {
-  recordToolError(entry: {
+export type TelemetryLike = {
+  recordToolError: (entry: {
     chronicleId: string;
     operation: string;
     referenceId?: string | null;
     attempt: number;
     message: string;
-  }): void;
-  recordToolNotRun(entry: { chronicleId: string; operation: string }): void;
+  }) => void;
+  recordToolNotRun: (entry: { chronicleId: string; operation: string }) => void;
 }

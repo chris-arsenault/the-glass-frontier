@@ -1,13 +1,13 @@
+import type { SkillCheckRequest } from '@glass-frontier/dto';
 import { randomInt } from 'node:crypto';
-import { SkillCheckRequest } from '@glass-frontier/dto';
 
 export type AdvantageMode = 'advantage' | 'keepDrop';
 
 class DiceRoller {
-  numDice: number = 2;
-  dieSize: number = 6;
+  numDice = 2;
+  dieSize = 6;
   mode: AdvantageMode = 'advantage';
-  extraDice: number = 1;
+  extraDice = 1;
   advantage: boolean;
   disadvantage: boolean;
 
@@ -24,7 +24,7 @@ class DiceRoller {
     this.result = -Infinity;
   }
 
-  rollDice(extraDice: number = 0): number[] {
+  rollDice(extraDice = 0): number[] {
     return Array.from({ length: this.numDice + extraDice }, () => randomInt(1, this.dieSize + 1));
   }
 
@@ -62,12 +62,12 @@ class DiceRoller {
     return this.result;
   }
 
-  shouldApplyAdvantage() {
+  shouldApplyAdvantage(): boolean {
     const creativeSpark = this.flags.includes('creative-spark') || this.flags.includes('advantage');
     return creativeSpark || this.momentum >= 2;
   }
 
-  shouldApplyDisadvantage() {
+  shouldApplyDisadvantage(): boolean {
     const reckless = this.flags.includes('disadvantage');
     return reckless || this.momentum <= -2;
   }

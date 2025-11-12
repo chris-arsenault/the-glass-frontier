@@ -8,6 +8,7 @@ import {
   type ImbuedRegistryStore,
   PromptTemplateManager,
 } from '@glass-frontier/persistence';
+
 import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
@@ -32,14 +33,14 @@ const templateManager = new PromptTemplateManager({
   worldStateStore,
 });
 const seedService = new ChronicleSeedService({
-  templateManager,
   locationGraphStore,
+  templateManager,
 });
 const engine = new NarrativeEngine({
-  worldStateStore,
-  locationGraphStore,
   imbuedRegistryStore,
+  locationGraphStore,
   templateManager,
+  worldStateStore,
 });
 
 export type Context = {
@@ -54,13 +55,13 @@ export type Context = {
 
 export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   return {
-    worldStateStore,
-    locationGraphStore,
-    imbuedRegistryStore,
-    engine,
-    templateManager,
-    seedService,
     authorizationHeader: options?.authorizationHeader,
+    engine,
+    imbuedRegistryStore,
+    locationGraphStore,
+    seedService,
+    templateManager,
+    worldStateStore,
   };
 }
 

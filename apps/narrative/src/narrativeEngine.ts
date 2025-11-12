@@ -1,15 +1,18 @@
-import { formatTurnJobId, log } from '@glass-frontier/utils';
+import type { Character, TranscriptEntry, Turn, LocationSummary, PendingEquip } from '@glass-frontier/dto';
+import type {
+  PromptTemplateManager } from '@glass-frontier/persistence';
 import {
   createWorldStateStore,
   createLocationGraphStore,
   type WorldStateStore,
   type LocationGraphStore,
-  PromptTemplateManager,
   createImbuedRegistryStore,
   type ImbuedRegistryStore,
 } from '@glass-frontier/persistence';
-import { LangGraphOrchestrator } from './langGraph/orchestrator';
-import { ChronicleTelemetry } from './telemetry';
+import { formatTurnJobId, log } from '@glass-frontier/utils';
+import { randomUUID } from 'node:crypto';
+
+import { LangGraphLlmClient } from './langGraph/llmClient';
 import {
   CheckPlannerNode,
   GmSummaryNode,
@@ -19,12 +22,11 @@ import {
   UpdateCharacterNode,
   InventoryDeltaNode,
 } from './langGraph/nodes';
-import { LangGraphLlmClient } from './langGraph/llmClient';
-import { GraphContext, ChronicleState } from './types';
-import { Character, TranscriptEntry, Turn, LocationSummary, PendingEquip } from '@glass-frontier/dto';
-import { randomUUID } from 'node:crypto';
-import { TurnProgressEmitter, type TurnProgressPublisher } from './progressEmitter';
+import { LangGraphOrchestrator } from './langGraph/orchestrator';
 import { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
+import { TurnProgressEmitter, type TurnProgressPublisher } from './progressEmitter';
+import { ChronicleTelemetry } from './telemetry';
+import type { GraphContext, ChronicleState } from './types';
 
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStore;
@@ -110,19 +112,19 @@ class NarrativeEngine {
 
     let graphResult;
     const graphInput: GraphContext = {
-      chronicleId,
-      turnSequence,
       chronicle: chronicleState,
-      playerMessage,
-      pendingEquip: options?.pendingEquip ?? [],
-      llm: this.createLlmClient(options?.authorizationHeader),
-      telemetry: this.telemetry,
-      templates: templateRuntime,
+      chronicleId,
       failure: false,
       inventoryDelta: null,
-      inventoryStoreDelta: null,
       inventoryPreview: null,
       inventoryRegistry: null,
+      inventoryStoreDelta: null,
+      llm: this.createLlmClient(options?.authorizationHeader),
+      pendingEquip: options?.pendingEquip ?? [],
+      playerMessage,
+      telemetry: this.telemetry,
+      templates: templateRuntime,
+      turnSequence,
     };
     try {
       graphResult = await this.graph.run(graphInput, { jobId });
@@ -133,46 +135,46 @@ class NarrativeEngine {
         message: errorMessage,
       });
       errorResponse = {
-        id: randomUUID(),
         content: errorMessage,
-        role: 'system',
+        id: randomUUID(),
         metadata: {
-          timestamp: Date.now(),
           tags: ['system-failure'],
+          timestamp: Date.now(),
         },
+        role: 'system',
       };
     }
 
     const systemMessage = graphResult?.systemMessage || errorResponse;
-    const failure: boolean = graphResult?.failure || !!systemMessage;
+    const failure: boolean = graphResult?.failure || Boolean(systemMessage);
 
     const turn: Turn = {
-      id: randomUUID(),
       chronicleId,
-      playerMessage: playerMessage,
+      failure: failure,
       gmMessage: graphResult?.gmMessage,
-      systemMessage: systemMessage,
       gmSummary: graphResult?.gmSummary,
+      id: randomUUID(),
+      inventoryDelta: graphResult?.inventoryDelta ?? undefined,
       playerIntent: graphResult?.playerIntent,
+      playerMessage: playerMessage,
       skillCheckPlan: graphResult?.skillCheckPlan,
       skillCheckResult: graphResult?.skillCheckResult,
-      inventoryDelta: graphResult?.inventoryDelta ?? undefined,
+      systemMessage: systemMessage,
       turnSequence: turnSequence,
-      failure: failure,
     };
 
     await this.worldStateStore.addTurn(turn);
 
     log('info', 'Narrative engine resolved turn', {
-      chronicleId,
       checkIssued: Boolean(graphResult?.skillCheckPlan),
+      chronicleId,
     });
 
     const updatedCharacter = graphResult?.updatedCharacter ?? chronicleState.character ?? null;
 
     const locationSummary = graphResult?.locationSummary ?? null;
 
-    return { turn, updatedCharacter, locationSummary };
+    return { locationSummary, turn, updatedCharacter };
   }
 
   private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
@@ -182,8 +184,8 @@ class NarrativeEngine {
 
     return new LangGraphLlmClient({
       defaultHeaders: {
-        'content-type': 'application/json',
         authorization: authorizationHeader,
+        'content-type': 'application/json',
       },
     });
   }

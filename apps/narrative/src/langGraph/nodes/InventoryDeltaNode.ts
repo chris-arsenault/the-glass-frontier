@@ -1,16 +1,4 @@
-import { randomUUID } from 'node:crypto';
-import type { GraphContext } from '../../types.js';
-import type { GraphNode } from '../orchestrator.js';
-import type { ImbuedRegistryStore } from '@glass-frontier/persistence';
-import {
-  applyPendingEquipQueue,
-  applyInventoryOperations,
-  normalizeInventory,
-  type InventoryStoreDelta,
-  type InventoryStoreOp,
-} from '@glass-frontier/persistence';
-import {
-  InventoryDelta,
+import type {
   ImbuedRegistry,
   Inventory,
   InventoryCollectionBucket,
@@ -19,8 +7,22 @@ import {
   ImbuedItem,
   DataShard,
   Consumable,
-  SuppliesItem,
+  SuppliesItem } from '@glass-frontier/dto';
+import {
+  InventoryDelta
 } from '@glass-frontier/dto';
+import type { ImbuedRegistryStore } from '@glass-frontier/persistence';
+import {
+  applyPendingEquipQueue,
+  applyInventoryOperations,
+  normalizeInventory,
+  type InventoryStoreDelta,
+  type InventoryStoreOp,
+} from '@glass-frontier/persistence';
+import { randomUUID } from 'node:crypto';
+
+import type { GraphContext } from '../../types.js';
+import type { GraphNode } from '../orchestrator.js';
 import { composeInventoryDeltaPrompt } from '../prompts/prompts';
 
 class InventoryDeltaNode implements GraphNode {
@@ -38,10 +40,10 @@ class InventoryDeltaNode implements GraphNode {
       registry = await this.#materializeRegistry();
     } catch (error) {
       context.telemetry?.recordToolError({
-        chronicleId: context.chronicleId,
-        operation: 'inventory-registry.load',
         attempt: 0,
+        chronicleId: context.chronicleId,
         message: error instanceof Error ? error.message : 'unknown',
+        operation: 'inventory-registry.load',
       });
       return { ...context, failure: true };
     }
@@ -61,47 +63,47 @@ class InventoryDeltaNode implements GraphNode {
 
     if (shouldInvokeLlm) {
       const prompt = await composeInventoryDeltaPrompt({
-        templates: context.templates,
-        inventory: equipApplied,
         gmMessage: context.gmMessage?.content ?? '',
         gmSummary: context.gmSummary ?? '',
         intent: context.playerIntent!,
+        inventory: equipApplied,
         pendingEquip,
         registry,
+        templates: context.templates,
       });
 
       try {
         const result = await context.llm.generateJson({
+          maxTokens: 400,
+          metadata: { chronicleId: context.chronicleId, nodeId: this.id },
           prompt,
           temperature: 0.1,
-          maxTokens: 400,
-          metadata: { nodeId: this.id, chronicleId: context.chronicleId },
         });
         const parsed = InventoryDelta.safeParse(result.json);
         if (!parsed.success) {
           context.telemetry?.recordToolError({
-            chronicleId: context.chronicleId,
-            operation: 'llm.inventory-delta.parse',
             attempt: 0,
+            chronicleId: context.chronicleId,
             message: 'inventory_delta_parse_failed',
+            operation: 'llm.inventory-delta.parse',
           });
           return { ...context, failure: true };
         }
         if (parsed.data.prevRevision !== baseline.revision) {
           context.telemetry?.recordToolError({
-            chronicleId: context.chronicleId,
-            operation: 'llm.inventory-delta.conflict',
             attempt: 0,
+            chronicleId: context.chronicleId,
             message: `prevRevision mismatch expected=${baseline.revision} got=${parsed.data.prevRevision}`,
+            operation: 'llm.inventory-delta.conflict',
           });
           return { ...context, failure: true };
         }
         if (parsed.data.nextRevision < parsed.data.prevRevision) {
           context.telemetry?.recordToolError({
-            chronicleId: context.chronicleId,
-            operation: 'llm.inventory-delta.revision',
             attempt: 0,
+            chronicleId: context.chronicleId,
             message: `nextRevision regression prev=${parsed.data.prevRevision} next=${parsed.data.nextRevision}`,
+            operation: 'llm.inventory-delta.revision',
           });
           return { ...context, failure: true };
         }
@@ -112,19 +114,19 @@ class InventoryDeltaNode implements GraphNode {
           workingInventory = conversion.inventory;
         } catch (error) {
           context.telemetry?.recordToolError({
-            chronicleId: context.chronicleId,
-            operation: 'inventory-delta.transform',
             attempt: 0,
+            chronicleId: context.chronicleId,
             message: error instanceof Error ? error.message : 'unknown',
+            operation: 'inventory-delta.transform',
           });
           return { ...context, failure: true };
         }
       } catch (error) {
         context.telemetry?.recordToolError({
-          chronicleId: context.chronicleId,
-          operation: 'llm.inventory-delta.invoke',
           attempt: 0,
+          chronicleId: context.chronicleId,
           message: error instanceof Error ? error.message : 'unknown',
+          operation: 'llm.inventory-delta.invoke',
         });
         return { ...context, failure: true };
       }
@@ -133,22 +135,22 @@ class InventoryDeltaNode implements GraphNode {
     const hasChanges = storeOps.length > 0;
     const nextRevision = hasChanges ? baseline.revision + 1 : baseline.revision;
     const displayDelta: InventoryDelta = {
+      nextRevision,
       ops: displayOps,
       prevRevision: baseline.revision,
-      nextRevision,
     };
     const storeDelta: InventoryStoreDelta = {
+      nextRevision,
       ops: storeOps,
       prevRevision: baseline.revision,
-      nextRevision,
     };
 
     return {
       ...context,
       inventoryDelta: displayDelta,
-      inventoryStoreDelta: storeDelta,
       inventoryPreview: workingInventory,
       inventoryRegistry: registry,
+      inventoryStoreDelta: storeDelta,
     };
   }
 
@@ -201,7 +203,7 @@ class InventoryDeltaNode implements GraphNode {
       preview = next;
     }
 
-    return { storeOps, displayOps, inventory: preview };
+    return { displayOps, inventory: preview, storeOps };
   }
 
   #convertFlatOp(
@@ -210,53 +212,53 @@ class InventoryDeltaNode implements GraphNode {
     registry: ImbuedRegistry
   ): InventoryStoreOp {
     switch (op.op) {
-      case 'equip': {
-        const slot = this.#requireSlot(op);
-        const name = this.#requireName(op);
-        const itemId = this.#findItemIdByName(inventory, 'imbued_items', name);
-        if (!itemId) {
-          throw new Error(`inventory_unknown_item:${name}`);
-        }
-        return { op: 'equip', slot, itemId };
+    case 'equip': {
+      const slot = this.#requireSlot(op);
+      const name = this.#requireName(op);
+      const itemId = this.#findItemIdByName(inventory, 'imbued_items', name);
+      if (!itemId) {
+        throw new Error(`inventory_unknown_item:${name}`);
       }
-      case 'unequip': {
-        const slot = this.#requireSlot(op);
-        return { op: 'unequip', slot };
+      return { itemId, op: 'equip', slot };
+    }
+    case 'unequip': {
+      const slot = this.#requireSlot(op);
+      return { op: 'unequip', slot };
+    }
+    case 'add': {
+      const bucket = this.#requireBucket(op);
+      const name = this.#requireName(op);
+      const item = this.#buildItemForBucket(bucket, { ...op, name }, registry);
+      return { bucket, item, op: 'add' };
+    }
+    case 'remove': {
+      const bucket = this.#requireBucket(op);
+      const name = this.#requireName(op);
+      const itemId = this.#findItemIdByName(inventory, bucket, name);
+      if (!itemId) {
+        throw new Error(`inventory_unknown_item:${name}`);
       }
-      case 'add': {
-        const bucket = this.#requireBucket(op);
-        const name = this.#requireName(op);
-        const item = this.#buildItemForBucket(bucket, { ...op, name }, registry);
-        return { op: 'add', bucket, item };
+      return { bucket, itemId, op: 'remove' };
+    }
+    case 'consume': {
+      const amount = this.#requireAmount(op);
+      const name = this.#requireName(op);
+      const itemId = this.#findItemIdByName(inventory, 'consumables', name);
+      if (!itemId) {
+        throw new Error(`inventory_unknown_consumable:${name}`);
       }
-      case 'remove': {
-        const bucket = this.#requireBucket(op);
-        const name = this.#requireName(op);
-        const itemId = this.#findItemIdByName(inventory, bucket, name);
-        if (!itemId) {
-          throw new Error(`inventory_unknown_item:${name}`);
-        }
-        return { op: 'remove', bucket, itemId };
+      return { amount, itemId, op: 'consume' };
+    }
+    case 'spend_shard': {
+      const name = this.#requireName(op);
+      const itemId = this.#findItemIdByName(inventory, 'data_shards', name);
+      if (!itemId) {
+        throw new Error(`inventory_unknown_shard:${name}`);
       }
-      case 'consume': {
-        const amount = this.#requireAmount(op);
-        const name = this.#requireName(op);
-        const itemId = this.#findItemIdByName(inventory, 'consumables', name);
-        if (!itemId) {
-          throw new Error(`inventory_unknown_consumable:${name}`);
-        }
-        return { op: 'consume', itemId, amount };
-      }
-      case 'spend_shard': {
-        const name = this.#requireName(op);
-        const itemId = this.#findItemIdByName(inventory, 'data_shards', name);
-        if (!itemId) {
-          throw new Error(`inventory_unknown_shard:${name}`);
-        }
-        return { op: 'spend_shard', itemId };
-      }
-      default:
-        throw new Error(`inventory_op_not_supported:${op.op}`);
+      return { itemId, op: 'spend_shard' };
+    }
+    default:
+      throw new Error(`inventory_op_not_supported:${op.op}`);
     }
   }
 
@@ -266,51 +268,51 @@ class InventoryDeltaNode implements GraphNode {
     after: Inventory
   ): InventoryDelta['ops'][number] | null {
     switch (op.op) {
-      case 'equip':
-        return {
-          op: 'equip',
-          slot: op.slot,
-          name: after.gear?.[op.slot]?.name,
-        };
-      case 'unequip':
-        return {
-          op: 'unequip',
-          slot: op.slot,
-          name: before.gear?.[op.slot]?.name,
-        };
-      case 'add':
-        return this.#describeBucketItem('add', op.bucket, op.item);
-      case 'remove': {
-        const removed = this.#findBucketItemById(before, op.bucket, op.itemId);
-        return this.#describeBucketItem('remove', op.bucket, removed);
-      }
-      case 'consume': {
-        const item = this.#findBucketItemById(before, 'consumables', op.itemId) as
+    case 'equip':
+      return {
+        name: after.gear?.[op.slot]?.name,
+        op: 'equip',
+        slot: op.slot,
+      };
+    case 'unequip':
+      return {
+        name: before.gear?.[op.slot]?.name,
+        op: 'unequip',
+        slot: op.slot,
+      };
+    case 'add':
+      return this.#describeBucketItem('add', op.bucket, op.item);
+    case 'remove': {
+      const removed = this.#findBucketItemById(before, op.bucket, op.itemId);
+      return this.#describeBucketItem('remove', op.bucket, removed);
+    }
+    case 'consume': {
+      const item = this.#findBucketItemById(before, 'consumables', op.itemId) as
           | Consumable
           | undefined;
-        return {
-          op: 'consume',
-          bucket: 'consumables',
-          name: item?.name,
-          amount: op.amount,
-        };
-      }
-      case 'spend_shard': {
-        const shard = this.#findBucketItemById(before, 'data_shards', op.itemId) as
+      return {
+        amount: op.amount,
+        bucket: 'consumables',
+        name: item?.name,
+        op: 'consume',
+      };
+    }
+    case 'spend_shard': {
+      const shard = this.#findBucketItemById(before, 'data_shards', op.itemId) as
           | DataShard
           | undefined;
-        return shard
-          ? {
-              op: 'spend_shard',
-              bucket: 'data_shards',
-              name: shard.name,
-              purpose: shard.kind === 'chronicle_active' ? shard.purpose : undefined,
-              seed: shard.kind === 'chronicle_hook' ? shard.seed : undefined,
-            }
-          : null;
-      }
-      default:
-        return null;
+      return shard
+        ? {
+          bucket: 'data_shards',
+          name: shard.name,
+          op: 'spend_shard',
+          purpose: shard.kind === 'chronicle_active' ? shard.purpose : undefined,
+          seed: shard.kind === 'chronicle_hook' ? shard.seed : undefined,
+        }
+        : null;
+    }
+    default:
+      return null;
     }
   }
 
@@ -323,34 +325,34 @@ class InventoryDeltaNode implements GraphNode {
       return null;
     }
     switch (bucket) {
-      case 'relics': {
-        const relic = item as Relic;
-        return { op, bucket, name: relic.name, hook: relic.hook };
-      }
-      case 'imbued_items': {
-        const imbued = item as ImbuedItem;
-        return { op, bucket, name: imbued.name, slot: imbued.slot };
-      }
-      case 'data_shards': {
-        const shard = item as DataShard;
-        return {
-          op,
-          bucket,
-          name: shard.name,
-          purpose: shard.kind === 'chronicle_active' ? shard.purpose : undefined,
-          seed: shard.kind === 'chronicle_hook' ? shard.seed : undefined,
-        };
-      }
-      case 'consumables': {
-        const consumable = item as Consumable;
-        return { op, bucket, name: consumable.name };
-      }
-      case 'supplies': {
-        const supply = item as SuppliesItem;
-        return { op, bucket, name: supply.name };
-      }
-      default:
-        return null;
+    case 'relics': {
+      const relic = item as Relic;
+      return { bucket, hook: relic.hook, name: relic.name, op };
+    }
+    case 'imbued_items': {
+      const imbued = item as ImbuedItem;
+      return { bucket, name: imbued.name, op, slot: imbued.slot };
+    }
+    case 'data_shards': {
+      const shard = item as DataShard;
+      return {
+        bucket,
+        name: shard.name,
+        op,
+        purpose: shard.kind === 'chronicle_active' ? shard.purpose : undefined,
+        seed: shard.kind === 'chronicle_hook' ? shard.seed : undefined,
+      };
+    }
+    case 'consumables': {
+      const consumable = item as Consumable;
+      return { bucket, name: consumable.name, op };
+    }
+    case 'supplies': {
+      const supply = item as SuppliesItem;
+      return { bucket, name: supply.name, op };
+    }
+    default:
+      return null;
     }
   }
 
@@ -360,68 +362,68 @@ class InventoryDeltaNode implements GraphNode {
     registry: ImbuedRegistry
   ): unknown {
     switch (bucket) {
-      case 'relics': {
-        if (!op.hook) {
-          throw new Error('inventory_missing_hook');
-        }
-        const relic: Relic = {
+    case 'relics': {
+      if (!op.hook) {
+        throw new Error('inventory_missing_hook');
+      }
+      const relic: Relic = {
+        hook: op.hook,
+        id: randomUUID(),
+        name: op.name,
+      };
+      return relic;
+    }
+    case 'imbued_items': {
+      const entry = this.#matchRegistryEntry(op.name, registry);
+      if (!entry) {
+        throw new Error(`inventory_unknown_imbued:${op.name}`);
+      }
+      const item: ImbuedItem = {
+        id: randomUUID(),
+        name: entry.name,
+        registry_key: entry.key,
+        slot: entry.slot,
+      };
+      return item;
+    }
+    case 'data_shards': {
+      if (op.purpose) {
+        const shard: DataShard = {
           id: randomUUID(),
+          kind: 'chronicle_active',
           name: op.name,
-          hook: op.hook,
+          purpose: op.purpose,
         };
-        return relic;
+        return shard;
       }
-      case 'imbued_items': {
-        const entry = this.#matchRegistryEntry(op.name, registry);
-        if (!entry) {
-          throw new Error(`inventory_unknown_imbued:${op.name}`);
-        }
-        const item: ImbuedItem = {
+      if (op.seed) {
+        const shard: DataShard = {
           id: randomUUID(),
-          name: entry.name,
-          registry_key: entry.key,
-          slot: entry.slot,
-        };
-        return item;
-      }
-      case 'data_shards': {
-        if (op.purpose) {
-          const shard: DataShard = {
-            kind: 'chronicle_active',
-            id: randomUUID(),
-            name: op.name,
-            purpose: op.purpose,
-          };
-          return shard;
-        }
-        if (op.seed) {
-          const shard: DataShard = {
-            kind: 'chronicle_hook',
-            id: randomUUID(),
-            name: op.name,
-            seed: op.seed,
-          };
-          return shard;
-        }
-        throw new Error('inventory_missing_shard_context');
-      }
-      case 'consumables': {
-        const consumable: Consumable = {
-          id: randomUUID(),
+          kind: 'chronicle_hook',
           name: op.name,
-          count: 1,
+          seed: op.seed,
         };
-        return consumable;
+        return shard;
       }
-      case 'supplies': {
-        const supply: SuppliesItem = {
-          id: randomUUID(),
-          name: op.name,
-        };
-        return supply;
-      }
-      default:
-        throw new Error(`inventory_unknown_bucket:${bucket}`);
+      throw new Error('inventory_missing_shard_context');
+    }
+    case 'consumables': {
+      const consumable: Consumable = {
+        count: 1,
+        id: randomUUID(),
+        name: op.name,
+      };
+      return consumable;
+    }
+    case 'supplies': {
+      const supply: SuppliesItem = {
+        id: randomUUID(),
+        name: op.name,
+      };
+      return supply;
+    }
+    default:
+      throw new Error(`inventory_unknown_bucket:${bucket}`);
     }
   }
 

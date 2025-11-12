@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+
 import { cognitoConfig } from './env';
 
 export const AUTH_DISABLED_ERROR = 'COGNITO_AUTH_DISABLED';
@@ -6,9 +7,9 @@ export const AUTH_DISABLED_ERROR = 'COGNITO_AUTH_DISABLED';
 let cachedIssuer: string | null = null;
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-export interface AuthorizedIdentity extends JWTPayload {
+export type AuthorizedIdentity = {
   sub: string;
-}
+} & JWTPayload
 
 export async function verifyJwt(token: string): Promise<AuthorizedIdentity> {
   if (!cognitoConfig) {
@@ -22,8 +23,8 @@ export async function verifyJwt(token: string): Promise<AuthorizedIdentity> {
 
   const audience = cognitoConfig.appClientId ? [cognitoConfig.appClientId] : undefined;
   const verification = await jwtVerify(token, jwks, {
-    issuer: cachedIssuer,
     audience,
+    issuer: cachedIssuer,
   });
 
   const sub = typeof verification.payload.sub === 'string' ? verification.payload.sub : null;

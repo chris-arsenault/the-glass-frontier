@@ -1,11 +1,11 @@
-import Handlebars from 'handlebars';
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import type { PromptTemplateManager } from '@glass-frontier/persistence';
+import Handlebars from 'handlebars';
 
 export class PromptTemplateRuntime {
-  #loginId: string;
-  #manager: PromptTemplateManager;
-  #cache = new Map<string, Handlebars.TemplateDelegate>();
+  readonly #loginId: string;
+  readonly #manager: PromptTemplateManager;
+  readonly #cache = new Map<string, Handlebars.TemplateDelegate>();
 
   constructor(options: { loginId: string; manager: PromptTemplateManager }) {
     this.#loginId = options.loginId;

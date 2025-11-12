@@ -1,14 +1,16 @@
-import { z } from 'zod';
-import type { GraphNode } from '../orchestrator';
-import type { GraphContext } from '../../types';
-import type { LocationGraphStore } from '@glass-frontier/persistence';
+import type {
+  LocationPlan } from '@glass-frontier/dto';
 import {
-  LocationPlan,
   type LocationEdgeKind,
   type LocationGraphSnapshot,
   type LocationPlace,
 } from '@glass-frontier/dto';
+import type { LocationGraphStore } from '@glass-frontier/persistence';
 import { log } from '@glass-frontier/utils';
+import { z } from 'zod';
+
+import type { GraphContext } from '../../types';
+import type { GraphNode } from '../orchestrator';
 import { composeLocationDeltaPrompt } from '../prompts/prompts';
 
 const decisionSchema = z.object({
@@ -22,7 +24,7 @@ const MAX_NEIGHBORS = 25;
 
 export class LocationDeltaNode implements GraphNode {
   readonly id = 'location-delta';
-  #graphStore: LocationGraphStore;
+  readonly #graphStore: LocationGraphStore;
 
   constructor(graphStore: LocationGraphStore) {
     this.#graphStore = graphStore;
@@ -95,20 +97,20 @@ export class LocationDeltaNode implements GraphNode {
     );
 
     const prompt = await composeLocationDeltaPrompt(context.templates, {
-      current: anchorPlace.name,
-      parent: parentPlace?.name ?? null,
-      children: childNames,
       adjacent: adjacentNames,
-      links: linkNames,
-      playerIntent: context.playerMessage?.content ?? '',
+      children: childNames,
+      current: anchorPlace.name,
       gmResponse: context.gmMessage?.content ?? '',
+      links: linkNames,
+      parent: parentPlace?.name ?? null,
+      playerIntent: context.playerMessage?.content ?? '',
     });
 
     const llmResult = await context.llm.generateText({
+      maxTokens: 400,
+      metadata: { chronicleId, nodeId: this.id },
       prompt,
       temperature: 0.1,
-      maxTokens: 400,
-      metadata: { nodeId: this.id, chronicleId },
     });
     const raw = (llmResult.text ?? '').trim();
     if (!raw) {
@@ -129,11 +131,11 @@ export class LocationDeltaNode implements GraphNode {
     }
 
     return this.#decisionToPlan({
-      decision,
       anchorPlace,
+      characterId,
+      decision,
       parentPlace,
       placeByName,
-      characterId,
     });
   }
 
@@ -144,7 +146,7 @@ export class LocationDeltaNode implements GraphNode {
     placeByName: Map<string, LocationPlace>;
     characterId: string;
   }): LocationPlan | null {
-    const { decision, anchorPlace, parentPlace, placeByName, characterId } = input;
+    const { anchorPlace, characterId, decision, parentPlace, placeByName } = input;
 
     if (decision.action === 'no_change') {
       return null;
@@ -153,14 +155,14 @@ export class LocationDeltaNode implements GraphNode {
     if (decision.action === 'uncertain') {
       return {
         character_id: characterId,
+        notes: 'location-uncertain',
         ops: [
           {
-            op: 'SET_CERTAINTY',
             certainty: 'unknown',
             note: 'GM response ambiguous',
+            op: 'SET_CERTAINTY',
           },
         ],
-        notes: 'location-uncertain',
       } satisfies LocationPlan;
     }
 
@@ -175,27 +177,27 @@ export class LocationDeltaNode implements GraphNode {
       ops.push({
         op: 'CREATE_PLACE',
         place: {
-          temp_id: tempId,
-          name: decision.destination,
           kind: inferKind(decision.link),
+          name: decision.destination,
           tags: [],
+          temp_id: tempId,
         },
       });
       this.#appendEdgesForNewTarget({
-        ops,
-        link: decision.link,
         anchorId: anchorPlace.id,
+        link: decision.link,
+        ops,
         parentId: parentPlace?.id ?? anchorPlace.id,
         targetId: tempId,
       });
       targetRef = tempId;
     } else {
       this.#appendEdgesForExistingTarget({
-        ops,
-        link: decision.link,
         anchorId: anchorPlace.id,
-        targetId: targetRef,
+        link: decision.link,
+        ops,
         parentId: parentPlace?.id ?? anchorPlace.id,
+        targetId: targetRef,
       });
     }
 
@@ -203,12 +205,12 @@ export class LocationDeltaNode implements GraphNode {
       return null;
     }
 
-    ops.push({ op: 'MOVE', dst_place_id: targetRef });
+    ops.push({ dst_place_id: targetRef, op: 'MOVE' });
 
     return {
       character_id: characterId,
-      ops,
       notes: `move:${decision.destination}`,
+      ops,
     } satisfies LocationPlan;
   }
 
@@ -219,27 +221,27 @@ export class LocationDeltaNode implements GraphNode {
     parentId: string;
     targetId: string;
   }) {
-    const { ops, link, anchorId, parentId, targetId } = input;
+    const { anchorId, link, ops, parentId, targetId } = input;
     switch (link) {
-      case 'inside':
-        ops.push({ op: 'CREATE_EDGE', edge: { src: anchorId, dst: targetId, kind: 'CONTAINS' } });
-        break;
-      case 'adjacent':
-        ops.push({ op: 'CREATE_EDGE', edge: { src: parentId, dst: targetId, kind: 'CONTAINS' } });
-        ops.push({
-          op: 'CREATE_EDGE',
-          edge: { src: anchorId, dst: targetId, kind: 'ADJACENT_TO' },
-        });
-        break;
-      case 'linked':
-        ops.push({ op: 'CREATE_EDGE', edge: { src: anchorId, dst: targetId, kind: 'LINKS_TO' } });
-        break;
-      default:
-        ops.push({
-          op: 'CREATE_EDGE',
-          edge: { src: anchorId, dst: targetId, kind: 'ADJACENT_TO' },
-        });
-        break;
+    case 'inside':
+      ops.push({ edge: { dst: targetId, kind: 'CONTAINS', src: anchorId }, op: 'CREATE_EDGE' });
+      break;
+    case 'adjacent':
+      ops.push({ edge: { dst: targetId, kind: 'CONTAINS', src: parentId }, op: 'CREATE_EDGE' });
+      ops.push({
+        edge: { dst: targetId, kind: 'ADJACENT_TO', src: anchorId },
+        op: 'CREATE_EDGE',
+      });
+      break;
+    case 'linked':
+      ops.push({ edge: { dst: targetId, kind: 'LINKS_TO', src: anchorId }, op: 'CREATE_EDGE' });
+      break;
+    default:
+      ops.push({
+        edge: { dst: targetId, kind: 'ADJACENT_TO', src: anchorId },
+        op: 'CREATE_EDGE',
+      });
+      break;
     }
   }
 
@@ -250,23 +252,23 @@ export class LocationDeltaNode implements GraphNode {
     parentId: string;
     targetId: string;
   }) {
-    const { ops, link, anchorId, parentId, targetId } = input;
+    const { anchorId, link, ops, parentId, targetId } = input;
     switch (link) {
-      case 'inside':
-        ops.push({ op: 'CREATE_EDGE', edge: { src: anchorId, dst: targetId, kind: 'CONTAINS' } });
-        break;
-      case 'adjacent':
-        ops.push({
-          op: 'CREATE_EDGE',
-          edge: { src: anchorId, dst: targetId, kind: 'ADJACENT_TO' },
-        });
-        break;
-      case 'linked':
-        ops.push({ op: 'CREATE_EDGE', edge: { src: anchorId, dst: targetId, kind: 'LINKS_TO' } });
-        break;
-      default:
-        ops.push({ op: 'CREATE_EDGE', edge: { src: parentId, dst: targetId, kind: 'CONTAINS' } });
-        break;
+    case 'inside':
+      ops.push({ edge: { dst: targetId, kind: 'CONTAINS', src: anchorId }, op: 'CREATE_EDGE' });
+      break;
+    case 'adjacent':
+      ops.push({
+        edge: { dst: targetId, kind: 'ADJACENT_TO', src: anchorId },
+        op: 'CREATE_EDGE',
+      });
+      break;
+    case 'linked':
+      ops.push({ edge: { dst: targetId, kind: 'LINKS_TO', src: anchorId }, op: 'CREATE_EDGE' });
+      break;
+    default:
+      ops.push({ edge: { dst: targetId, kind: 'CONTAINS', src: parentId }, op: 'CREATE_EDGE' });
+      break;
     }
   }
 }
@@ -278,15 +280,15 @@ function collectNeighborNames(
 ): string[] {
   const names: string[] = [];
   for (const edge of graph.edges) {
-    if (!kinds.includes(edge.kind as LocationEdgeKind)) {
+    if (!kinds.includes(edge.kind)) {
       continue;
     }
     if (edge.src === anchorId) {
       const target = graph.places.find((place) => place.id === edge.dst);
-      if (target) names.push(target.name);
+      if (target) {names.push(target.name);}
     } else if (edge.dst === anchorId) {
       const target = graph.places.find((place) => place.id === edge.src);
-      if (target) names.push(target.name);
+      if (target) {names.push(target.name);}
     }
   }
   return dedupe(names);
@@ -297,7 +299,7 @@ function dedupe(values: string[]): string[] {
   const result: string[] = [];
   for (const value of values) {
     const key = value.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {continue;}
     seen.add(key);
     result.push(value);
   }
@@ -319,12 +321,12 @@ function createTempId(name: string): string {
 
 function inferKind(link: string): string {
   switch (link) {
-    case 'inside':
-      return 'room';
-    case 'linked':
-      return 'structure';
-    default:
-      return 'locale';
+  case 'inside':
+    return 'room';
+  case 'linked':
+    return 'structure';
+  default:
+    return 'locale';
   }
 }
 

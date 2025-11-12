@@ -1,4 +1,4 @@
-export interface SubscribeMessage {
+export type SubscribeMessage = {
   action: 'subscribe';
   jobId?: string;
 }

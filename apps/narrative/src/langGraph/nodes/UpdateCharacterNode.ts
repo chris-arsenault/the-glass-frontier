@@ -4,9 +4,10 @@ import {
   type WorldStateStore,
   type LocationGraphStore,
 } from '@glass-frontier/persistence';
+import { log } from '@glass-frontier/utils';
+
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
-import { log } from '@glass-frontier/utils';
 
 const XP_REWARDS: Record<string, number> = {
   collapse: 2,
@@ -63,10 +64,10 @@ class UpdateCharacterNode implements GraphNode {
       };
     } catch (error) {
       context.telemetry?.recordToolError?.({
-        chronicleId: context.chronicleId,
-        operation: 'inventory-delta.commit',
         attempt: 0,
+        chronicleId: context.chronicleId,
         message: error instanceof Error ? error.message : 'unknown',
+        operation: 'inventory-delta.commit',
       });
       return { ...context, failure: true };
     }
@@ -102,10 +103,10 @@ class UpdateCharacterNode implements GraphNode {
       momentumDelta: wantsMomentumUpdate ? momentumDelta : undefined,
       skill: shouldTouchSkill
         ? {
-            name: skillName!,
-            attribute: skillAttribute,
-            xpAward,
-          }
+          attribute: skillAttribute,
+          name: skillName,
+          xpAward,
+        }
         : undefined,
     });
 
@@ -122,7 +123,7 @@ class UpdateCharacterNode implements GraphNode {
       };
 
     }
-      return nextContext;
+    return nextContext;
   }
 
   async #applyLocationPlan(context: GraphContext): Promise<GraphContext> {
@@ -135,13 +136,13 @@ class UpdateCharacterNode implements GraphNode {
         return context;
       }
       await this.locationGraphStore.applyPlan({
-        locationId,
         characterId: context.chronicle.character.id,
+        locationId,
         plan: context.locationPlan,
       });
       const summary = await this.locationGraphStore.summarizeCharacterLocation({
-        locationId,
         characterId: context.chronicle.character.id,
+        locationId,
       });
       return {
         ...context,

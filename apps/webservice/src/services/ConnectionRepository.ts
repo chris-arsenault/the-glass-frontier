@@ -7,6 +7,7 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { log } from '@glass-frontier/utils';
+
 import { websocketConfig } from './env';
 
 const connectionKey = (id: string) => `CONNECTION#${id}`;
@@ -14,14 +15,14 @@ const jobKey = (id: string) => `JOB#${id}`;
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
-export interface ConnectionMetadata {
+export type ConnectionMetadata = {
   connectionId: string;
   userId: string;
   domainName: string;
   stage: string;
 }
 
-export interface JobTarget {
+export type JobTarget = {
   connectionId: string;
   domainName: string;
   stage: string;
@@ -35,13 +36,13 @@ export class ConnectionRepository {
   async rememberConnection(metadata: ConnectionMetadata): Promise<void> {
     await client.send(
       new PutCommand({
-        TableName: this.tableName,
         Item: {
           pk: connectionKey(metadata.connectionId),
           sk: 'META',
           ...metadata,
           ttl: this.ttlFromNow(this.connectionTtlSeconds),
         },
+        TableName: this.tableName,
       })
     );
   }
@@ -56,11 +57,11 @@ export class ConnectionRepository {
       {
         PutRequest: {
           Item: {
-            pk: jobKey(jobId),
-            sk: connectionKey(connectionId),
-            jobId,
             connectionId,
             domainName: meta.domainName,
+            jobId,
+            pk: jobKey(jobId),
+            sk: connectionKey(connectionId),
             stage: meta.stage,
             ttl,
           },
@@ -69,10 +70,10 @@ export class ConnectionRepository {
       {
         PutRequest: {
           Item: {
+            connectionId,
+            jobId,
             pk: connectionKey(connectionId),
             sk: jobKey(jobId),
-            jobId,
-            connectionId,
             ttl,
           },
         },
@@ -85,12 +86,12 @@ export class ConnectionRepository {
   async listTargets(jobId: string): Promise<JobTarget[]> {
     const response = await client.send(
       new QueryCommand({
-        TableName: this.tableName,
-        KeyConditionExpression: 'pk = :pk',
+        ConsistentRead: true,
         ExpressionAttributeValues: {
           ':pk': jobKey(jobId),
         },
-        ConsistentRead: true,
+        KeyConditionExpression: 'pk = :pk',
+        TableName: this.tableName,
       })
     );
 
@@ -113,9 +114,9 @@ export class ConnectionRepository {
     const pk = connectionKey(connectionId);
     const response = await client.send(
       new QueryCommand({
-        TableName: this.tableName,
-        KeyConditionExpression: 'pk = :pk',
         ExpressionAttributeValues: { ':pk': pk },
+        KeyConditionExpression: 'pk = :pk',
+        TableName: this.tableName,
       })
     );
 
@@ -143,8 +144,8 @@ export class ConnectionRepository {
   private async getConnection(connectionId: string): Promise<ConnectionMetadata | null> {
     const result = await client.send(
       new GetCommand({
-        TableName: this.tableName,
         Key: { pk: connectionKey(connectionId), sk: 'META' },
+        TableName: this.tableName,
       })
     );
 
@@ -152,7 +153,7 @@ export class ConnectionRepository {
       return null;
     }
 
-    const { userId, domainName, stage } = result.Item;
+    const { domainName, stage, userId } = result.Item;
     if (typeof userId !== 'string' || typeof domainName !== 'string' || typeof stage !== 'string') {
       log('warn', 'Connection metadata missing fields', { connectionId });
       return null;
@@ -160,9 +161,9 @@ export class ConnectionRepository {
 
     return {
       connectionId,
-      userId,
       domainName,
       stage,
+      userId,
     };
   }
 

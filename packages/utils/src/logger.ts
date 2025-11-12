@@ -40,13 +40,13 @@ function log(level: string, message: string, metadata: Record<string, Loggable> 
   const timestamp = new Date().toISOString();
   const payload = {
     level,
-    timestamp,
     message,
+    timestamp,
     ...metadata,
   };
 
   // Using stdout keeps the skeleton lightweight while staying observable-friendly.
-  // eslint-disable-next-line no-console
+
   console.log(JSON.stringify(payload));
 }
 

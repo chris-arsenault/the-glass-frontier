@@ -1,16 +1,18 @@
+import type {
+  SkillCheckRequest,
+  SkillCheckResult,
+  MomentumState,
+  OutcomeTier } from '@glass-frontier/dto';
 import {
   attributeModifierFromName,
   MOMENTUM_DELTA,
   RISK_LEVEL_MAP,
-  SkillCheckRequest,
-  SkillCheckResult,
   skillModifierFromSkillName,
   TIER_THRESHOLDS,
-  MomentumState,
-  OutcomeTier, MomentumDelta,
 } from '@glass-frontier/dto';
-import { DiceRoller } from './DiceRoller';
 import { clamp } from '@glass-frontier/utils';
+
+import { DiceRoller } from './DiceRoller';
 import { CheckRequestTelemetry } from './telemetry';
 
 class SkillCheckResolver {
@@ -22,48 +24,34 @@ class SkillCheckResolver {
     this.telemetry = new CheckRequestTelemetry(this.request);
   }
 
-  isValid(): boolean {
-    return true;
-  }
+  resolveRequest(): SkillCheckResult {
+    const roller = new DiceRoller(this.request);
 
-  resolveRequest() {
-    if (!this.isValid()) {
-      this.telemetry.recordCheckInvalid();
-      return;
-    }
+    const modifier = this.computeModifier();
+    const dieResult = roller.computeResult(modifier);
+    const target = RISK_LEVEL_MAP[this.request.riskLevel];
+    const margin = dieResult - target;
+    const outcomeTier: OutcomeTier = this.determineTier(margin);
+    const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier);
 
-    try {
-      const roller = new DiceRoller(this.request);
+    const result: SkillCheckResult = {
+      advantage: roller.advantage,
+      checkId: this.request.checkId,
+      chronicleId: this.request.chronicleId,
+      dieSum: dieResult,
+      disadvantage: roller.disadvantage,
+      margin: margin,
+      metadata: {
+        tags: [],
+        timestamp: Date.now(),
+      },
+      newMomentum: newMomentum,
+      outcomeTier: outcomeTier,
+      totalModifier: modifier,
+    };
 
-      const modifier = this.computeModifier();
-      const dieResult = roller.computeResult(modifier);
-      const target = RISK_LEVEL_MAP[this.request.riskLevel];
-      const margin = dieResult - target;
-      const outcomeTier: OutcomeTier = this.determineTier(margin);
-      const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier);
-      console.log(this.request.character.momentum);
-      console.log(newMomentum);
-
-      const result: SkillCheckResult = {
-        advantage: roller.advantage,
-        checkId: this.request.checkId,
-        dieSum: dieResult,
-        disadvantage: roller.disadvantage,
-        chronicleId: this.request.chronicleId,
-        totalModifier: modifier,
-        margin: margin,
-        outcomeTier: outcomeTier,
-        newMomentum: newMomentum,
-        metadata: {
-          timestamp: Date.now(),
-          tags: [],
-        },
-      };
-      this.telemetry.recordCheckRun(result);
-      return result;
-    } catch (error) {
-      this.telemetry.recordCheckError(error);
-    }
+    this.telemetry.recordCheckRun(result);
+    return result;
   }
 
   computeModifier(): number {
@@ -82,7 +70,7 @@ class SkillCheckResolver {
 
   determineTier(margin: number): OutcomeTier {
     for (const [threshold, tier] of TIER_THRESHOLDS) {
-      if (threshold && tier && margin >= threshold) return tier;
+      if (threshold && tier && margin >= threshold) {return tier;}
     }
     return 'collapse'; // fallback (should never hit)
   }

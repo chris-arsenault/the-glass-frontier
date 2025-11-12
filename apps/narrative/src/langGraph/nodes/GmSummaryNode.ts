@@ -21,23 +21,23 @@ class GmSummaryNode implements GraphNode {
       context.skillCheckResult
     );
 
-    let summary: string = '';
+    let summary = '';
 
     try {
       const result = await context.llm.generateText({
+        maxTokens: 220,
+        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
         temperature: 0.35,
-        maxTokens: 220,
-        metadata: { nodeId: this.id, chronicleId: context.chronicleId },
       });
       summary = result.text?.trim() || '';
     } catch (error: any) {
       context.telemetry?.recordToolError?.({
+        attempt: 0,
         chronicleId: context.chronicleId,
+        message: error instanceof Error ? error.message : 'unknown',
         operation: 'llm.gm-summary',
         referenceId: null,
-        attempt: 0,
-        message: error instanceof Error ? error.message : 'unknown',
       });
       return { ...context, failure: true };
     }

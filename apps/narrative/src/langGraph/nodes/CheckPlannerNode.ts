@@ -1,16 +1,17 @@
+import type { SkillCheckPlan, SkillCheckRequest, RiskLevel } from '@glass-frontier/dto';
+import { SkillCheckResolver } from '@glass-frontier/skill-check-resolver';
 import { randomUUID } from 'node:crypto';
+
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeCheckRulesPrompt } from '../prompts/prompts';
-import { SkillCheckResolver } from '@glass-frontier/skill-check-resolver';
-import { SkillCheckPlan, SkillCheckRequest, RiskLevel } from '@glass-frontier/dto';
 
 function fallbackPlan() {
   return {
-    riskLevel: 'standard',
     advantage: 'none',
-    rationale: ['You cant quite recall how to do that.'],
     complicationSeeds: ['The universe disagrees with your intent.'],
+    rationale: ['You cant quite recall how to do that.'],
+    riskLevel: 'standard',
   };
 }
 
@@ -43,18 +44,18 @@ class CheckPlannerNode implements GraphNode {
     );
     try {
       const result = await context.llm.generateJson({
+        maxTokens: 700,
+        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
         temperature: 0.25,
-        maxTokens: 700,
-        metadata: { nodeId: this.id, chronicleId: context.chronicleId },
       });
       parsed = result.json;
     } catch (error) {
       context.telemetry?.recordToolError?.({
-        chronicleId: context.chronicleId,
-        operation: 'llm.check-planner',
         attempt: 0,
+        chronicleId: context.chronicleId,
         message: error instanceof Error ? error.message : 'unknown',
+        operation: 'llm.check-planner',
       });
       return { ...context, failure: true };
     }
@@ -72,28 +73,28 @@ class CheckPlannerNode implements GraphNode {
     }
 
     const skillCheckPlan: SkillCheckPlan = {
-      riskLevel,
       advantage,
-      rationale,
       complicationSeeds,
       metadata: {
-        timestamp: Date.now(),
         tags: [],
+        timestamp: Date.now(),
       },
+      rationale,
+      riskLevel,
     };
 
     const input: SkillCheckRequest = {
-      chronicleId: context.chronicleId,
-      checkId: randomUUID(),
-      flags: flags,
       attribute: context.playerIntent.attribute,
-      skill: context.playerIntent.skill,
       character: context.chronicle.character,
-      riskLevel: riskLevel,
+      checkId: randomUUID(),
+      chronicleId: context.chronicleId,
+      flags: flags,
       metadata: {
-        timestamp: Date.now(),
         tags: [],
+        timestamp: Date.now(),
       },
+      riskLevel: riskLevel,
+      skill: context.playerIntent.skill,
     };
 
     const resolver = new SkillCheckResolver(input);

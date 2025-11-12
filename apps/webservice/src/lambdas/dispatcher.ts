@@ -1,7 +1,8 @@
-import type { SQSHandler } from 'aws-lambda';
 import { ApiGatewayManagementApi, GoneException } from '@aws-sdk/client-apigatewaymanagementapi';
-import { log } from '@glass-frontier/utils';
 import { TurnProgressEventSchema } from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
+import type { SQSHandler } from 'aws-lambda';
+
 import { ConnectionRepository } from '../services/ConnectionRepository';
 
 const repository = new ConnectionRepository();
@@ -57,7 +58,7 @@ export const handler: SQSHandler = async (event) => {
             Data: data,
           });
         } catch (error) {
-          if (error instanceof GoneException || (error as any)?.name === 'GoneException') {
+          if (error instanceof GoneException || (error)?.name === 'GoneException') {
             await repository.purgeConnection(target.connectionId);
             return;
           }

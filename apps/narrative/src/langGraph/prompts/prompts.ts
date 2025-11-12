@@ -8,9 +8,10 @@ import {
   type PendingEquip,
   type ImbuedRegistry,
 } from '@glass-frontier/dto';
+import type { PromptTemplateId } from '@glass-frontier/dto';
+
 import type { ChronicleState } from '../../types';
 import type { PromptTemplateRuntime } from './templateRuntime';
-import type { PromptTemplateId } from '@glass-frontier/dto';
 
 async function renderTemplate(
   templates: PromptTemplateRuntime,
@@ -29,14 +30,14 @@ export function composeCheckRulesPrompt(
   const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(', ') || 'None';
 
   return renderTemplate(templates, 'check-planner', {
-    intentSummary: intent.intentSummary,
-    skill: intent.skill,
     attribute: intent.attribute,
     characterName: chronicle?.character?.name ?? 'Unknown',
     characterTags: charTags,
-    skillsLine,
+    intentSummary: intent.intentSummary,
     locale: describeLocation(chronicle),
     momentum: chronicle?.character?.momentum.current ?? 0,
+    skill: intent.skill,
+    skillsLine,
   });
 }
 
@@ -52,13 +53,13 @@ export function composeGMSummaryPrompt(
     : null;
 
   return renderTemplate(templates, 'gm-summary', {
+    checkAdvantage: check?.advantage,
+    checkDifficulty: check?.riskLevel,
+    checkOutcome: checkResult?.outcomeTier ?? 'none',
     gmMessage,
+    hasCheck: Boolean(check),
     intentSummary: intent.intentSummary,
     skillLine,
-    hasCheck: Boolean(check),
-    checkDifficulty: check?.riskLevel,
-    checkAdvantage: check?.advantage,
-    checkOutcome: checkResult?.outcomeTier ?? 'none',
   });
 }
 
@@ -75,15 +76,15 @@ export function composeIntentPrompt({
   const skillsLine = Object.keys(chronicle?.character?.skills ?? {}).join(', ') || 'None';
 
   return renderTemplate(templates, 'intent-intake', {
-    promptHeader:
-      'You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.',
-    playerMessage,
-    characterName: chronicle?.character?.name ?? 'Unknown',
-    characterTags: charTags,
-    skillsLine,
-    locale: describeLocation(chronicle),
     attributeList: Attribute.options.join(', '),
     attributeQuotedList: Attribute.options.map((attr) => `"${attr}"`).join(', '),
+    characterName: chronicle?.character?.name ?? 'Unknown',
+    characterTags: charTags,
+    locale: describeLocation(chronicle),
+    playerMessage,
+    promptHeader:
+      'You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.',
+    skillsLine,
   });
 }
 
@@ -122,23 +123,23 @@ export function composeNarrationPrompt(
   return renderTemplate(templates, 'narrative-weaver', {
     characterName,
     characterTags,
-    locale,
+    checkAdvantage: check?.advantage,
+    checkDifficulty: check?.riskLevel,
     chronicleSeed: chronicle.chronicle?.seedText ?? null,
-    recentEvents,
-    playerUtterance,
-    intentSummary: intent.intentSummary,
-    tone: intent.tone,
+    complicationSeeds: shouldUseComplications ? (check?.complicationSeeds ?? []) : [],
     creativeSpark: intent.creativeSpark,
     hasMechanicalContext,
-    intentSkill: intent.skill,
     intentAttribute: intent.attribute,
-    checkDifficulty: check?.riskLevel,
-    checkAdvantage: check?.advantage,
+    intentSkill: intent.skill,
+    intentSummary: intent.intentSummary,
+    locale,
     outcomeTier: outcomeTier ?? 'stall',
     outcomeValue: outcomeTier ?? 'stall',
-    shouldUseComplications,
-    complicationSeeds: shouldUseComplications ? (check?.complicationSeeds ?? []) : [],
     playerMessage: rawUtterance,
+    playerUtterance,
+    recentEvents,
+    shouldUseComplications,
+    tone: intent.tone,
   });
 }
 
@@ -167,24 +168,24 @@ export function composeLocationDeltaPrompt(
   }
 ): Promise<string> {
   return renderTemplate(templates, 'location-delta', {
-    current: input.current,
-    parent: input.parent,
-    children: input.children,
     adjacent: input.adjacent,
-    links: input.links,
-    player_intent: truncateSnippet(input.playerIntent),
+    children: input.children,
+    current: input.current,
     gm_response: truncateSnippet(input.gmResponse),
+    links: input.links,
+    parent: input.parent,
+    player_intent: truncateSnippet(input.playerIntent),
   });
 }
 
 export function composeInventoryDeltaPrompt({
-  templates,
-  inventory,
   gmMessage,
   gmSummary,
   intent,
+  inventory,
   pendingEquip,
   registry,
+  templates,
 }: {
   templates: PromptTemplateRuntime;
   inventory: Inventory;
@@ -195,16 +196,16 @@ export function composeInventoryDeltaPrompt({
   registry: ImbuedRegistry;
 }): Promise<string> {
   return renderTemplate(templates, 'inventory-arbiter', {
+    gm_narration: truncateSnippet(gmMessage, 900),
+    gm_summary: truncateSnippet(gmSummary ?? '', 400),
+    intent_attribute: intent.attribute ?? null,
+    intent_skill: intent.skill ?? null,
+    intent_summary: intent.intentSummary,
     inventory_json: JSON.stringify(inventory, null, 2),
     pending_equip_json: JSON.stringify(pendingEquip ?? []),
     registry_json: JSON.stringify(registry ?? {}, null, 2),
     revision: inventory.revision,
     revision_next: inventory.revision + 1,
-    gm_narration: truncateSnippet(gmMessage, 900),
-    gm_summary: truncateSnippet(gmSummary ?? '', 400),
-    intent_summary: intent.intentSummary,
-    intent_skill: intent.skill ?? null,
-    intent_attribute: intent.attribute ?? null,
   });
 }
 

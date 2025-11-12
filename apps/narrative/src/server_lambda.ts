@@ -1,7 +1,8 @@
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
-import { appRouter } from './router';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
+
 import { createContext } from './context';
+import { appRouter } from './router';
 
 const ALLOW_ORIGINS = new Set([`"https://${process.env.DOMAIN_NAME}`]);
 
@@ -13,7 +14,7 @@ function corsFor(origin?: string) {
     vary: 'origin',
   };
   return o
-    ? { ...base, 'access-control-allow-origin': o, 'access-control-allow-credentials': 'true' }
+    ? { ...base, 'access-control-allow-credentials': 'true', 'access-control-allow-origin': o }
     : base;
 }
 
@@ -24,26 +25,26 @@ export const handler = async (
   // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
   if (event.requestContext.http.method === 'OPTIONS') {
     const origin = event.headers?.origin || event.headers?.Origin;
-    return { statusCode: 204, headers: corsFor(origin) };
+    return { headers: corsFor(origin), statusCode: 204 };
   }
 
   const origin = event.headers?.origin || event.headers?.Origin;
 
   // v11 handler. It reads event.rawPath like "/trpc/foo.bar" and supports batching via ?batch=1
   return awsLambdaRequestHandler({
-    router: appRouter,
+    batching: { enabled: true },
     // You can pass event/context into your own context factory if needed.
     createContext: ({ event }) =>
       createContext({ authorizationHeader: getAuthorizationHeader(event) }),
-    batching: { enabled: true },
+    // Optional: tighten status codes for errors
+    onError({ error, path, type }) {
+      console.error('trpc_lambda_error', { code: error.code, message: error.message, path, type });
+    },
     // Add CORS on ALL non-OPTIONS responses.
     responseMeta() {
       return { headers: corsFor(origin) };
     },
-    // Optional: tighten status codes for errors
-    onError({ error, path, type }) {
-      console.error('trpc_lambda_error', { path, type, code: error.code, message: error.message });
-    },
+    router: appRouter,
     /**
      * Optionally enforce a base path. If your API route is "ANY /trpc/{proxy+}",
      * you can uncomment this to be explicit:

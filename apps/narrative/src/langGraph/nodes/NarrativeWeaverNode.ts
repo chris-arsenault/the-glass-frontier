@@ -1,7 +1,8 @@
+import type { TranscriptEntry } from '@glass-frontier/dto/narrative/TranscriptEntry';
+
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeNarrationPrompt } from '../prompts/prompts';
-import { TranscriptEntry } from '@glass-frontier/dto/narrative/TranscriptEntry';
 
 class NarrativeWeaverNode implements GraphNode {
   readonly id = 'narrative-weaver';
@@ -27,33 +28,33 @@ class NarrativeWeaverNode implements GraphNode {
 
     try {
       const result = await context.llm.generateText({
-        prompt,
-        temperature: 0.8,
         maxTokens: 650,
         metadata: {
-          nodeId: this.id,
           chronicleId: context.chronicleId,
+          nodeId: this.id,
         },
+        prompt,
+        temperature: 0.8,
       });
       narration = result.text?.trim() || '';
     } catch (error) {
       context.telemetry?.recordToolError?.({
-        chronicleId: context.chronicleId,
-        operation: 'llm.narrative-weaver',
         attempt: 0,
+        chronicleId: context.chronicleId,
         message: error instanceof Error ? error.message : 'unknown',
+        operation: 'llm.narrative-weaver',
       });
       return { ...context, failure: true };
     }
 
     const gmMessage: TranscriptEntry = {
-      id: `narration-${context.chronicleId}-${context.turnSequence}`,
-      role: 'gm',
       content: narration,
+      id: `narration-${context.chronicleId}-${context.turnSequence}`,
       metadata: {
-        timestamp: Date.now(),
         tags: [],
+        timestamp: Date.now(),
       },
+      role: 'gm',
     };
 
     return {

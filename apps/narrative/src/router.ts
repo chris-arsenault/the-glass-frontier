@@ -1,30 +1,32 @@
-import { randomUUID } from 'node:crypto';
-import { initTRPC } from '@trpc/server';
-import type { Context } from './context';
-import { z } from 'zod';
+import type {
+  LocationBreadcrumbEntry,
+  LocationPlace } from '@glass-frontier/dto';
 import {
   Character as CharacterSchema,
   TranscriptEntry,
   PromptTemplateIds,
   type PromptTemplateId,
-  PendingEquip,
-  LocationBreadcrumbEntry,
-  LocationPlace,
+  PendingEquip
 } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
+import { initTRPC } from '@trpc/server';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+
+import type { Context } from './context';
 
 const t = initTRPC.context<Context>().create();
 const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
 const locationSegmentSchema = z.object({
-  name: z.string().min(1),
-  kind: z.string().min(1),
-  tags: z.array(z.string()).default([]),
   description: z.string().optional(),
+  kind: z.string().min(1),
+  name: z.string().min(1),
+  tags: z.array(z.string()).default([]),
 });
 
 const locationDetailsSchema = z.object({
-  locale: z.string().min(1),
   atmosphere: z.string().min(1),
+  locale: z.string().min(1),
 });
 
 const toneSchema = z.object({
@@ -33,19 +35,24 @@ const toneSchema = z.object({
 });
 
 export const appRouter = t.router({
+  createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
+    log('info', `Creating Character ${input.name}`);
+    const character = await ctx.worldStateStore.upsertCharacter(input);
+    return { character };
+  }),
   // POST /chronicles
   createChronicle: t.procedure
     .input(
       z
         .object({
+          characterId: z.string().min(1),
           chronicleId: z.string().uuid().optional(),
+          location: locationDetailsSchema.optional(),
           locationId: z.string().uuid().optional(),
           loginId: z.string().min(1),
-          characterId: z.string().min(1),
-          title: z.string().min(1),
-          location: locationDetailsSchema.optional(),
-          status: z.enum(['open', 'closed']).optional(),
           seedText: z.string().max(400).optional(),
+          status: z.enum(['open', 'closed']).optional(),
+          title: z.string().min(1),
         })
         .refine(
           (payload) => Boolean(payload.locationId) || Boolean(payload.location),
@@ -80,83 +87,36 @@ export const appRouter = t.router({
         'Atmosphere undisclosed.';
 
       const locationRoot = await ctx.locationGraphStore.ensureLocation({
+        characterId: input.characterId,
+        description: localeDescription,
+        kind: existingPlace?.kind ?? 'locale',
         locationId: existingPlace?.locationId ?? input.locationId,
         name: localeName,
-        description: localeDescription,
         tags: deriveLocationTags(localeDescription),
-        characterId: input.characterId,
-        kind: existingPlace?.kind ?? 'locale',
       });
 
       const chronicle = await ctx.worldStateStore.ensureChronicle({
-        chronicleId,
-        loginId: input.loginId,
-        locationId: locationRoot.locationId,
         characterId: input.characterId,
-        title: input.title,
-        status: input.status,
+        chronicleId,
+        locationId: locationRoot.locationId,
+        loginId: input.loginId,
         seedText: input.seedText,
+        status: input.status,
+        title: input.title,
       });
 
       if (existingPlace && input.characterId) {
         await ctx.locationGraphStore.applyPlan({
-          locationId: existingPlace.locationId,
           characterId: input.characterId,
+          locationId: existingPlace.locationId,
           plan: {
             character_id: input.characterId,
-            ops: [{ op: 'MOVE', dst_place_id: existingPlace.id }],
+            ops: [{ dst_place_id: existingPlace.id, op: 'MOVE' }],
           },
         });
       }
       log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
       return { chronicle }; // responseMeta sets 201
-    }),
-  listLocations: t.procedure
-    .input(
-      z
-        .object({
-          search: z.string().min(1).max(64).optional(),
-          limit: z.number().int().positive().max(100).optional(),
-        })
-        .optional()
-    )
-    .query(async ({ ctx, input }) => ctx.locationGraphStore.listLocationRoots(input)),
-
-  getLocationGraph: t.procedure
-    .input(z.object({ locationId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => ctx.locationGraphStore.getLocationGraph(input.locationId)),
-
-  getLocationPlace: t.procedure
-    .input(z.object({ placeId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const place = await ctx.locationGraphStore.getPlace(input.placeId);
-      if (!place) {
-        throw new Error('Location not found.');
-      }
-      const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, place);
-      return { place, breadcrumb };
-    }),
-
-  createLocationPlace: t.procedure
-    .input(
-      z.object({
-        parentId: z.string().uuid().optional(),
-        name: z.string().min(1),
-        kind: z.string().min(1),
-        tags: z.array(z.string()).max(12).optional(),
-        description: z.string().max(500).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const place = await ctx.locationGraphStore.createPlace({
-        parentId: input.parentId,
-        name: input.name,
-        kind: input.kind,
-        tags: normalizeTags(input.tags),
-        description: input.description,
-      });
-      const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, place);
-      return { place, breadcrumb };
     }),
 
   createLocationChain: t.procedure
@@ -176,27 +136,68 @@ export const appRouter = t.router({
         segments,
       });
       const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, result.anchor);
-      return { anchor: result.anchor, created: result.created, breadcrumb };
+      return { anchor: result.anchor, breadcrumb, created: result.created };
+    }),
+
+  createLocationPlace: t.procedure
+    .input(
+      z.object({
+        description: z.string().max(500).optional(),
+        kind: z.string().min(1),
+        name: z.string().min(1),
+        parentId: z.string().uuid().optional(),
+        tags: z.array(z.string()).max(12).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const place = await ctx.locationGraphStore.createPlace({
+        description: input.description,
+        kind: input.kind,
+        name: input.name,
+        parentId: input.parentId,
+        tags: normalizeTags(input.tags),
+      });
+      const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, place);
+      return { breadcrumb, place };
+    }),
+
+  deleteChronicle: t.procedure
+    .input(
+      z.object({
+        chronicleId: z.string().uuid(),
+        loginId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      if (!chronicle) {
+        return { chronicleId: input.chronicleId, deleted: false };
+      }
+      if (chronicle.loginId !== input.loginId) {
+        throw new Error('Chronicle does not belong to the requesting login.');
+      }
+      await ctx.worldStateStore.deleteChronicle(input.chronicleId);
+      return { chronicleId: input.chronicleId, deleted: true };
     }),
 
   generateChronicleSeeds: t.procedure
     .input(
       z
         .object({
-          loginId: z.string().min(1),
-          locationId: z.string().uuid(),
           count: z.number().int().positive().max(5).optional(),
+          locationId: z.string().uuid(),
+          loginId: z.string().min(1),
         })
         .merge(toneSchema)
     )
     .mutation(async ({ ctx, input }) =>
       ctx.seedService.generateSeeds({
-        loginId: input.loginId,
+        authorizationHeader: ctx.authorizationHeader,
+        count: input.count,
         locationId: input.locationId,
+        loginId: input.loginId,
         toneChips: input.toneChips,
         toneNotes: input.toneNotes,
-        count: input.count,
-        authorizationHeader: ctx.authorizationHeader,
       })
     ),
 
@@ -204,6 +205,55 @@ export const appRouter = t.router({
   getChronicle: t.procedure
     .input(z.object({ chronicleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => augmentChronicleSnapshot(ctx, input.chronicleId)),
+
+  getLocationGraph: t.procedure
+    .input(z.object({ locationId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => ctx.locationGraphStore.getLocationGraph(input.locationId)),
+
+  getLocationPlace: t.procedure
+    .input(z.object({ placeId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const place = await ctx.locationGraphStore.getPlace(input.placeId);
+      if (!place) {
+        throw new Error('Location not found.');
+      }
+      const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, place);
+      return { breadcrumb, place };
+    }),
+
+  getPromptTemplate: t.procedure
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        templateId: templateIdSchema,
+      })
+    )
+    .query(async ({ ctx, input }) =>
+      ctx.templateManager.getTemplate(input.loginId, input.templateId)
+    ),
+
+  listCharacters: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
+
+  listChronicles: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
+
+  listLocations: t.procedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().positive().max(100).optional(),
+          search: z.string().min(1).max(64).optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => ctx.locationGraphStore.listLocationRoots(input)),
+
+  listPromptTemplates: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.loginId)),
 
   // POST /chronicles/:chronicleId/messages
   postMessage: t.procedure
@@ -221,77 +271,11 @@ export const appRouter = t.router({
         pendingEquip: input.pendingEquip ?? [],
       });
       return {
-        turn: result.turn,
         character: result.updatedCharacter,
         location: result.locationSummary,
+        turn: result.turn,
       };
     }),
-
-  listCharacters: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
-
-  createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
-    log('info', `Creating Character ${input.name}`);
-    const character = await ctx.worldStateStore.upsertCharacter(input);
-    return { character };
-  }),
-
-  listChronicles: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
-
-  deleteChronicle: t.procedure
-    .input(
-      z.object({
-        loginId: z.string().min(1),
-        chronicleId: z.string().uuid(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
-      if (!chronicle) {
-        return { chronicleId: input.chronicleId, deleted: false };
-      }
-      if (chronicle.loginId !== input.loginId) {
-        throw new Error('Chronicle does not belong to the requesting login.');
-      }
-      await ctx.worldStateStore.deleteChronicle(input.chronicleId);
-      return { chronicleId: input.chronicleId, deleted: true };
-    }),
-
-  listPromptTemplates: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.loginId)),
-
-  getPromptTemplate: t.procedure
-    .input(
-      z.object({
-        loginId: z.string().min(1),
-        templateId: templateIdSchema,
-      })
-    )
-    .query(async ({ ctx, input }) =>
-      ctx.templateManager.getTemplate(input.loginId, input.templateId)
-    ),
-
-  savePromptTemplate: t.procedure
-    .input(
-      z.object({
-        loginId: z.string().min(1),
-        templateId: templateIdSchema,
-        editable: z.string().min(1),
-        label: z.string().max(64).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) =>
-      ctx.templateManager.saveTemplate({
-        loginId: input.loginId,
-        templateId: input.templateId,
-        editable: input.editable,
-        label: input.label,
-      })
-    ),
 
   revertPromptTemplate: t.procedure
     .input(
@@ -302,6 +286,24 @@ export const appRouter = t.router({
     )
     .mutation(async ({ ctx, input }) =>
       ctx.templateManager.revertTemplate({ loginId: input.loginId, templateId: input.templateId })
+    ),
+
+  savePromptTemplate: t.procedure
+    .input(
+      z.object({
+        editable: z.string().min(1),
+        label: z.string().max(64).optional(),
+        loginId: z.string().min(1),
+        templateId: templateIdSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) =>
+      ctx.templateManager.saveTemplate({
+        editable: input.editable,
+        label: input.label,
+        loginId: input.loginId,
+        templateId: input.templateId,
+      })
     ),
 });
 
@@ -315,8 +317,8 @@ async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {
   if (characterId && locationId) {
     snapshot.location =
       (await ctx.locationGraphStore.summarizeCharacterLocation({
-        locationId,
         characterId,
+        locationId,
       })) ?? null;
   }
   return snapshot;
@@ -332,8 +334,8 @@ async function buildLocationBreadcrumb(
   while (current && depth < 20) {
     path.unshift({
       id: current.id,
-      name: current.name,
       kind: current.kind,
+      name: current.name,
     });
     if (!current.canonicalParentId) {
       break;

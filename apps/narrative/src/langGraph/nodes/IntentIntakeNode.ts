@@ -1,17 +1,19 @@
+import type { Intent } from '@glass-frontier/dto';
+import { Attribute } from '@glass-frontier/dto';
+import { randomInt } from 'node:crypto';
+
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
-import { Attribute, Intent } from '@glass-frontier/dto';
-import { randomInt } from 'node:crypto';
 import { composeIntentPrompt } from '../prompts/prompts';
 
 function fallbackIntent(text: string) {
   return {
-    tone: 'narrative',
-    skill: 'talk',
-    requiresCheck: false,
-    creativeSpark: false,
     attribute: Attribute.options[0],
+    creativeSpark: false,
     intentSummary: text.slice(0, 120),
+    requiresCheck: false,
+    skill: 'talk',
+    tone: 'narrative',
   };
 }
 
@@ -38,19 +40,19 @@ class IntentIntakeNode implements GraphNode {
 
     try {
       const result = await context.llm.generateJson({
+        maxTokens: 500,
+        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
         temperature: 0.1,
-        maxTokens: 500,
-        metadata: { nodeId: this.id, chronicleId: context.chronicleId },
       });
       parsed = result.json;
     } catch (error) {
       context.telemetry?.recordToolError?.({
+        attempt: 0,
         chronicleId: context.chronicleId,
+        message: error instanceof Error ? error.message : 'unknown',
         operation: 'llm.intent-intake',
         referenceId: null,
-        attempt: 0,
-        message: error instanceof Error ? error.message : 'unknown',
       });
       return { ...context, failure: true };
     }
@@ -68,16 +70,16 @@ class IntentIntakeNode implements GraphNode {
     const intentSummary: string = parsed?.intentSummary ?? fallback.intentSummary;
 
     const playerIntent: Intent = {
-      tone,
-      skill,
       attribute,
-      requiresCheck,
       creativeSpark,
       intentSummary,
       metadata: {
-        timestamp: Date.now(),
         tags: [],
+        timestamp: Date.now(),
       },
+      requiresCheck,
+      skill,
+      tone,
     };
 
     return {

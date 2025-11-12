@@ -1,13 +1,14 @@
+import { log } from '@glass-frontier/utils';
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import type { IncomingMessage } from 'http';
-import { appRouter } from './router';
+
 import { createContext } from './context';
-import { log } from '@glass-frontier/utils';
+import { appRouter } from './router';
 
 const port = Number(process.env.PORT ?? process.env.NARRATIVE_PORT ?? 7000);
 const server = createHTTPServer({
-  router: appRouter,
   createContext: ({ req }) => createContext({ authorizationHeader: getAuthorizationHeader(req) }),
+  router: appRouter,
 }).listen(port);
 console.log(`tRPC dev server on http://localhost:${port}`);
 
