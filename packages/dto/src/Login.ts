@@ -1,10 +1,11 @@
 import { z } from 'zod';
+
 import { Metadata } from './Metadata';
 
 export const Login = z.object({
+  email: z.string().email().optional(),
   id: z.string().min(1),
   loginName: z.string().min(1),
-  email: z.string().email().optional(),
   metadata: Metadata.optional(),
 });
 

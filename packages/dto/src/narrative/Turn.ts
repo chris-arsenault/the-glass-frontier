@@ -1,21 +1,22 @@
 import { z } from 'zod';
-import { TranscriptEntry } from './TranscriptEntry';
+
+import { InventoryDelta } from '../Inventory';
 import { Intent } from './Intent';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
-import { InventoryDelta } from '../Inventory';
+import { TranscriptEntry } from './TranscriptEntry';
 
 export const TurnSchema = z.object({
-  id: z.string().min(1),
   chronicleId: z.string().min(1),
-  playerMessage: TranscriptEntry,
+  failure: z.boolean(),
   gmMessage: TranscriptEntry.optional(),
-  systemMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
+  id: z.string().min(1),
+  inventoryDelta: InventoryDelta.optional(),
   playerIntent: Intent.optional(),
+  playerMessage: TranscriptEntry,
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),
-  inventoryDelta: InventoryDelta.optional(),
+  systemMessage: TranscriptEntry.optional(),
   turnSequence: z.number().int().nonnegative(),
-  failure: z.boolean(),
 });
 export type Turn = z.infer<typeof TurnSchema>;

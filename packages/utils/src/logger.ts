@@ -1,7 +1,7 @@
 'use strict';
 
 const levels = ['debug', 'info', 'warn', 'error'];
-const levelWeights = levels.reduce((acc: Record<string, any>, level: string, index: number) => {
+const levelWeights = levels.reduce((acc: Record<string, number>, level: string, index: number) => {
   acc[level] = index;
   return acc;
 }, {});

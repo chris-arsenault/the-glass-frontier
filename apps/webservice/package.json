@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsup",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.744.0",

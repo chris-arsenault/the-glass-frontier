@@ -9,6 +9,7 @@
     "dev": "NODE_ENV=development tsx src/server_local.ts",
     "build": "TARGET=lambda tsup && pnpm copy:templates",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "copy:templates": "node ./scripts/copy-templates.mjs"
   },

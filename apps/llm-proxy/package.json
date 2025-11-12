@@ -7,6 +7,7 @@
     "dev": "NODE_ENV=development tsx src/server_local.ts",
     "build": "TARGET=lambda tsup",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run"
   },
   "keywords": [

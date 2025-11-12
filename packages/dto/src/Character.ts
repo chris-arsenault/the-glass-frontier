@@ -1,28 +1,29 @@
 import { z } from 'zod';
 
-import {
+import { Inventory as CharacterInventory, createEmptyInventory } from './Inventory';
+import type {
   Attribute,
+  SkillTier } from './mechanics';
+import {
   CharacterAttributes,
-  SkillTier,
   MomentumState,
   Skill,
   SKILL_TIER_MODIFIER,
   ATTRIBUTE_TIER_MODIFIER,
 } from './mechanics';
-import { Inventory as CharacterInventory, createEmptyInventory } from './Inventory';
 
 /** Character */
 export const Character = z.object({
-  id: z.string().min(1),
-  loginId: z.string().min(1),
-  name: z.string().min(1),
   archetype: z.string().min(1),
-  pronouns: z.string().min(1),
-  tags: z.array(z.string()),
-  momentum: MomentumState,
-  skills: z.record(z.string(), Skill),
   attributes: CharacterAttributes,
+  id: z.string().min(1),
   inventory: CharacterInventory.default(createEmptyInventory()),
+  loginId: z.string().min(1),
+  momentum: MomentumState,
+  name: z.string().min(1),
+  pronouns: z.string().min(1),
+  skills: z.record(z.string(), Skill),
+  tags: z.array(z.string()),
 });
 export type Character = z.infer<typeof Character>;
 

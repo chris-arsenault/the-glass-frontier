@@ -101,7 +101,7 @@ export function composeNarrationPrompt(
   const recentEventLines: string[] = [];
   if (chronicle.turns?.length) {
     chronicle.turns
-      .slice(-3)
+      .slice(-10)
       .forEach((turn) => {
         const snippet = `${turn.gmSummary ?? ''} - ${turn.playerIntent?.intentSummary ?? ''}`.trim();
         if (snippet) {

@@ -7,7 +7,7 @@ import {
   skillModifierFromSkillName,
   TIER_THRESHOLDS,
   MomentumState,
-  OutcomeTier,
+  OutcomeTier, MomentumDelta,
 } from '@glass-frontier/dto';
 import { DiceRoller } from './DiceRoller';
 import { clamp } from '@glass-frontier/utils';
@@ -75,14 +75,14 @@ class SkillCheckResolver {
     return skillModifier + attributeModifier + this.request.character.momentum.current;
   }
 
-  computeMomentum(current: MomentumState, tier: string): number {
+  computeMomentum(current: MomentumState, tier: OutcomeTier): number {
     const delta = MOMENTUM_DELTA[tier] ?? 0;
     return clamp(current.current + delta, current.floor, current.ceiling);
   }
 
   determineTier(margin: number): OutcomeTier {
     for (const [threshold, tier] of TIER_THRESHOLDS) {
-      if (margin >= threshold) return tier;
+      if (threshold && tier && margin >= threshold) return tier;
     }
     return 'collapse'; // fallback (should never hit)
   }

@@ -16,6 +16,7 @@
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run"
   },
   "keywords": [
