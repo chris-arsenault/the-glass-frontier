@@ -68,7 +68,6 @@ export interface ChronicleState {
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
   location?: LocationSummary | null;
-  recentChronicles: string[];
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;
@@ -87,6 +86,7 @@ export interface ChronicleStore extends ChronicleState {
   createChronicleForCharacter(details: ChronicleCreationDetails): Promise<string>;
   createChronicleFromSeed(details: ChronicleSeedCreationDetails): Promise<string>;
   createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
+  deleteChronicle(chronicleId: string): Promise<void>;
   queueEquipChange(entry: PendingEquip): void;
   clearPendingEquipQueue(): void;
   clearActiveChronicle(): void;

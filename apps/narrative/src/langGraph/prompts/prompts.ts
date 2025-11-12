@@ -98,12 +98,19 @@ export function composeNarrationPrompt(
   const characterName = chronicle.character?.name ?? 'the character';
   const characterTags = (chronicle.character?.tags ?? []).slice(0, 3).join(', ') || 'untagged';
   const locale = describeLocation(chronicle);
-  const recentEvents =
+  const recentEventLines: string[] = [];
+  if (chronicle.turns?.length) {
     chronicle.turns
-      ?.slice(-3)
-      .map((turn) => `${turn.gmSummary ?? ''} ${turn.playerIntent?.intentSummary ?? ''}`.trim())
-      .filter(Boolean)
-      .join('; ') || 'no prior events noted';
+      .slice(-3)
+      .forEach((turn) => {
+        const snippet = `${turn.gmSummary ?? ''} - ${turn.playerIntent?.intentSummary ?? ''}`.trim();
+        if (snippet) {
+          recentEventLines.push(snippet);
+        }
+      });
+  }
+  const recentEvents =
+    recentEventLines.join('; ') || chronicle.chronicle?.seedText || 'no prior events noted';
   const playerUtterance =
     rawUtterance.length > 500 ? `${rawUtterance.slice(0, 500)}…` : rawUtterance;
 
@@ -116,6 +123,7 @@ export function composeNarrationPrompt(
     characterName,
     characterTags,
     locale,
+    chronicleSeed: chronicle.chronicle?.seedText ?? null,
     recentEvents,
     playerUtterance,
     intentSummary: intent.intentSummary,

@@ -226,6 +226,21 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     return records.filter((chronicle): chronicle is Chronicle => Boolean(chronicle));
   }
 
+  async deleteChronicle(chronicleId: string): Promise<void> {
+    const chronicle = await this.getChronicle(chronicleId);
+    if (!chronicle) {
+      return;
+    }
+    const loginId = chronicle.loginId;
+    const turnKeys = await this.list(this.#turnPrefix(loginId, chronicleId), { suffix: '.json' });
+    await Promise.all(turnKeys.map((key) => this.delete(key)));
+    await this.delete(this.#chronicleKey(loginId, chronicleId));
+    this.#chronicles.delete(chronicleId);
+    this.#chronicleLoginIndex.delete(chronicleId);
+    await this.#index.removeChronicleFromLogin(chronicleId, loginId);
+    await this.#index.deleteChronicleRecords(chronicleId);
+  }
+
   async addTurn(turn: Turn): Promise<Turn> {
     const chronicleId = turn.chronicleId;
     const chronicle = chronicleId ? await this.getChronicle(chronicleId) : null;

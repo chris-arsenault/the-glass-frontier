@@ -143,4 +143,19 @@ export class WorldIndexRepository extends HybridIndexRepository {
       decodePrefixedValue(item.sk?.S, SK_PREFIX.character)
     );
   }
+
+  async removeChronicleFromLogin(chronicleId: string, loginId: string): Promise<void> {
+    await Promise.all([
+      this.delete(toPk('login', loginId), `${SK_PREFIX.chronicle}${chronicleId}`),
+      this.delete(toPk('chronicle', chronicleId), `${SK_PREFIX.login}${loginId}`),
+    ]);
+  }
+
+  async deleteChronicleRecords(chronicleId: string): Promise<void> {
+    const pk = toPk('chronicle', chronicleId);
+    const items = await this.query(pk);
+    await Promise.all(
+      items.map((item) => (item.sk?.S ? this.delete(pk, item.sk.S) : Promise.resolve()))
+    );
+  }
 }

@@ -4,6 +4,7 @@ import type {
   LocationBreadcrumbEntry,
   LocationPlace,
   ChronicleSeed,
+  DataShard,
 } from '@glass-frontier/dto';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { trpcClient } from '../../lib/trpcClient';
@@ -28,6 +29,7 @@ interface LocationInspectorState {
 }
 
 type SeedStatus = 'idle' | 'loading' | 'error';
+const EMPTY_SHARDS: DataShard[] = [];
 
 export function ChronicleStartWizard() {
   const navigate = useNavigate();
@@ -49,7 +51,9 @@ export function ChronicleStartWizard() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
-  const inventoryShards = useChronicleStore((state) => state.character?.inventory?.data_shards ?? []);
+  const inventoryShards = useChronicleStore(
+    (state) => state.character?.inventory?.data_shards ?? EMPTY_SHARDS
+  );
 
   const [roots, setRoots] = useState<LocationPlace[]>([]);
   const [rootError, setRootError] = useState<string | null>(null);
@@ -70,6 +74,7 @@ export function ChronicleStartWizard() {
 
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [chainModalOpen, setChainModalOpen] = useState(false);
+  const [chainModalParent, setChainModalParent] = useState<LocationPlace | null>(null);
   const [seedStatus, setSeedStatus] = useState<SeedStatus>('idle');
   const setSeeds = useChronicleStartStore((state) => state.setSeeds);
   const setToneNotes = useChronicleStartStore((state) => state.setToneNotes);
@@ -149,19 +154,16 @@ export function ChronicleStartWizard() {
     try {
       const details = await trpcClient.getLocationPlace.query({ placeId });
       setInspector({ place: details.place, breadcrumb: details.breadcrumb });
+      setSelectedLocation({
+        id: details.place.id,
+        name: details.place.name,
+        breadcrumb: details.breadcrumb,
+      });
     } catch (error) {
       setInspector({ place: null, breadcrumb: [] });
+      setSelectedLocation(null);
       setGraphError(error instanceof Error ? error.message : 'Failed to load location details.');
     }
-  };
-
-  const handleSelectLocation = () => {
-    if (!inspector.place) return;
-    setSelectedLocation({
-      id: inspector.place.id,
-      name: inspector.place.name,
-      breadcrumb: inspector.breadcrumb,
-    });
   };
 
   const selectedCharacterName = useMemo(() => {
@@ -176,8 +178,8 @@ export function ChronicleStartWizard() {
     switch (step) {
       case 'location':
         return (
-          <LocationStep
-            roots={roots}
+            <LocationStep
+              roots={roots}
             isLoadingRoots={isLoadingRoots}
             rootError={rootError}
             selectedRootId={selectedRootId}
@@ -188,11 +190,13 @@ export function ChronicleStartWizard() {
             activePlaceId={activePlaceId}
             onSelectPlace={handlePlaceSelection}
             inspector={inspector}
-            onSelectLocation={handleSelectLocation}
             listViewFallback={listViewFallback}
             setListViewFallback={setListViewFallback}
             onOpenSubModal={() => setSubModalOpen(true)}
-            onOpenChainModal={() => setChainModalOpen(true)}
+            onOpenChainModal={(parent) => {
+              setChainModalParent(parent ?? null);
+              setChainModalOpen(true);
+            }}
           />
         );
       case 'tone':
@@ -319,10 +323,13 @@ export function ChronicleStartWizard() {
     try {
       const chronicleId = await createChronicleFromSeed(payload);
       resetWizard();
+      setStep('location');
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('shard');
+      setSearchParams(nextParams, { replace: true });
       navigate('/', { replace: true });
-      if (chronicleId) {
-        searchParams.delete('shard');
-        setSearchParams(searchParams, { replace: true });
+      if (!chronicleId) {
+        console.warn('Chronicle created but id was not returned; wizard closed without hydration.');
       }
     } catch (error) {
       setCreationError(error instanceof Error ? error.message : 'Failed to create chronicle.');
@@ -330,6 +337,13 @@ export function ChronicleStartWizard() {
       setIsCreatingChronicle(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      resetWizard();
+      setStep('location');
+    };
+  }, [resetWizard, setStep]);
 
   useEffect(() => {
     const shardId = searchParams.get('shard');
@@ -471,19 +485,27 @@ export function ChronicleStartWizard() {
           onClose={() => setSubModalOpen(false)}
           onCreated={(placeId) => {
             setSubModalOpen(false);
-            loadGraph(inspector.place?.locationId ?? placeId).catch(() => undefined);
+            const rootId = inspector.place?.locationId ?? placeId;
+            handleRootSelection(rootId).catch(() => undefined);
             handlePlaceSelection(placeId).catch(() => undefined);
+            loadRoots().catch(() => undefined);
           }}
         />
       ) : null}
-      {chainModalOpen && inspector.place ? (
+      {chainModalOpen ? (
         <ChainLocationModal
-          parent={inspector.place}
-          onClose={() => setChainModalOpen(false)}
+          parent={chainModalParent}
+          onClose={() => {
+            setChainModalOpen(false);
+            setChainModalParent(null);
+          }}
           onCreated={(placeId) => {
             setChainModalOpen(false);
-            loadGraph(inspector.place?.locationId ?? placeId).catch(() => undefined);
+            setChainModalParent(null);
+            const rootId = inspector.place?.locationId ?? placeId;
+            handleRootSelection(rootId).catch(() => undefined);
             handlePlaceSelection(placeId).catch(() => undefined);
+            loadRoots().catch(() => undefined);
           }}
         />
       ) : null}
@@ -534,11 +556,10 @@ interface LocationStepProps {
   activePlaceId: string | null;
   onSelectPlace(placeId: string): void;
   inspector: LocationInspectorState;
-  onSelectLocation(): void;
   listViewFallback: boolean;
   setListViewFallback(enabled: boolean): void;
   onOpenSubModal(): void;
-  onOpenChainModal(): void;
+  onOpenChainModal(parent?: LocationPlace | null): void;
 }
 
 function LocationStep({
@@ -553,7 +574,6 @@ function LocationStep({
   activePlaceId,
   onSelectPlace,
   inspector,
-  onSelectLocation,
   listViewFallback,
   setListViewFallback,
   onOpenSubModal,
@@ -576,6 +596,15 @@ function LocationStep({
     <div className="location-step">
       <aside className="location-sidebar">
         <h2>Available locations</h2>
+        {roots.length === 0 ? (
+          <button
+            type="button"
+            className="location-root"
+            onClick={() => onOpenChainModal(null)}
+          >
+            Create first location chain
+          </button>
+        ) : null}
         {isLoadingRoots ? <p>Loading locations…</p> : null}
         {rootError ? <p className="wizard-error">{rootError}</p> : null}
         <ul>
@@ -627,34 +656,41 @@ function LocationStep({
         </div>
       </div>
       <div className="location-inspector">
-        <h3>Inspector</h3>
         {inspector.place ? (
           <>
             <p className="inspector-name">{inspector.place.name}</p>
             <p className="inspector-kind">{inspector.place.kind}</p>
-            <p className="inspector-description">{inspector.place.description ?? 'No summary.'}</p>
-            <div className="inspector-breadcrumb">
-              {inspector.breadcrumb.map((entry) => entry.name).join(' → ')}
-            </div>
+            <pre className="inspector-breadcrumb">
+              {inspector.breadcrumb.map((entry, index) => `${'  '.repeat(index)}${entry.name}`).join('\n')}
+            </pre>
+            <p className="inspector-description">
+              {inspector.place.description ?? 'No summary.'}
+            </p>
             <div className="inspector-tags">
               {(inspector.place.tags ?? []).map((tag) => (
                 <span key={tag}>{tag}</span>
               ))}
             </div>
             <div className="inspector-actions">
-              <button type="button" onClick={onSelectLocation}>
-                Select location
-              </button>
-              <button type="button" onClick={onOpenSubModal}>
+              <button type="button" className="chip-button" onClick={onOpenSubModal}>
                 Add sub-location
               </button>
-              <button type="button" onClick={onOpenChainModal}>
+              <button
+                type="button"
+                className="chip-button"
+                onClick={() => onOpenChainModal(inspector.place)}
+              >
                 New multi-level
               </button>
             </div>
           </>
         ) : (
-          <p>Select a node to inspect.</p>
+          <div className="inspector-empty">
+            <p>Select a node to inspect or create a new root chain.</p>
+            <button type="button" className="chip-button" onClick={() => onOpenChainModal(null)}>
+              Create root chain
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -727,6 +763,7 @@ function SeedStep({
   onCustomSeedChange,
 }: SeedStepProps) {
   const [error, setError] = useState<string | null>(null);
+  const hasSelection = Boolean(selectedSeedId);
 
   const handleGenerate = async () => {
     if (!locationId) {
@@ -754,12 +791,18 @@ function SeedStep({
 
   return (
     <div className="seed-step">
-      <div className="seed-toolbar">
-        <button type="button" onClick={handleGenerate} disabled={seedStatus === 'loading'}>
-          {seedStatus === 'loading' ? 'Generating…' : 'Regenerate 3'}
-        </button>
-        <button type="button" onClick={() => onSelectSeed(null)}>
-          Write my own
+      <div className={`seed-toolbar${hasSelection ? '' : ' seed-toolbar-prominent'}`}>
+        <button
+          type="button"
+          className={`chip-button${selectedSeedId ? '' : ' chip-button-active'}`}
+          onClick={handleGenerate}
+          disabled={seedStatus === 'loading'}
+        >
+          {seedStatus === 'loading'
+            ? 'Generating…'
+            : hasSelection
+              ? 'Regenerate 3'
+              : 'Generate 3'}
         </button>
       </div>
       {error ? <p className="wizard-error">{error}</p> : null}
@@ -782,26 +825,7 @@ function SeedStep({
         ))}
       </div>
       {selectedSeedId === null ? (
-        <div className="seed-custom">
-          <label>
-            Title
-            <input
-              type="text"
-              value={customSeedTitle}
-              onChange={(event) => onCustomSeedChange({ title: event.target.value, text: customSeedText })}
-              placeholder="Optional title"
-            />
-          </label>
-          <label>
-            Teaser
-            <textarea
-              rows={5}
-              value={customSeedText}
-              onChange={(event) => onCustomSeedChange({ title: customSeedTitle, text: event.target.value })}
-              placeholder="Describe the opening prompt…"
-            />
-          </label>
-        </div>
+        <p className="seed-empty">Generate seeds to continue.</p>
       ) : null}
     </div>
   );
@@ -924,8 +948,8 @@ function AddLocationModal({ parent, onClose, onCreated }: AddLocationModalProps)
   };
 
   return (
-    <div className="modal">
-      <div className="modal-content">
+    <div className="wizard-modal">
+      <div className="wizard-modal-content">
         <h3>Add sub-location</h3>
         <p>Parent: {parent.name}</p>
         <label>
@@ -945,7 +969,7 @@ function AddLocationModal({ parent, onClose, onCreated }: AddLocationModalProps)
           <textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
         </label>
         {error ? <p className="wizard-error">{error}</p> : null}
-        <div className="modal-actions">
+        <div className="wizard-modal-actions">
           <button type="button" onClick={onClose}>
             Cancel
           </button>
@@ -959,7 +983,7 @@ function AddLocationModal({ parent, onClose, onCreated }: AddLocationModalProps)
 }
 
 interface ChainLocationModalProps {
-  parent: LocationPlace;
+  parent: LocationPlace | null;
   onClose(): void;
   onCreated(placeId: string): void;
 }
@@ -994,7 +1018,7 @@ function ChainLocationModal({ parent, onClose, onCreated }: ChainLocationModalPr
     setError(null);
     try {
       const result = await trpcClient.createLocationChain.mutate({
-        parentId: parent.id,
+        parentId: parent?.id,
         segments: segments.map((segment) => ({
           name: segment.name.trim(),
           kind: segment.kind.trim() || 'locale',
@@ -1014,12 +1038,12 @@ function ChainLocationModal({ parent, onClose, onCreated }: ChainLocationModalPr
   };
 
   return (
-    <div className="modal">
-      <div className="modal-content">
+    <div className="wizard-modal">
+      <div className="wizard-modal-content">
         <h3>New multi-level path</h3>
-        <p>Parent: {parent.name}</p>
+        <p>{parent ? `Parent: ${parent.name}` : 'Create a root location chain'}</p>
         {segments.map((segment, index) => (
-          <div key={index} className="segment-row">
+          <div key={index} className="wizard-segment-row">
             <label>
               Name
               <input
@@ -1060,7 +1084,7 @@ function ChainLocationModal({ parent, onClose, onCreated }: ChainLocationModalPr
           Add row
         </button>
         {error ? <p className="wizard-error">{error}</p> : null}
-        <div className="modal-actions">
+        <div className="wizard-modal-actions">
           <button type="button" onClick={onClose}>
             Cancel
           </button>

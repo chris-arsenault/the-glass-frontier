@@ -4135,6 +4135,32 @@ body {
   min-height: 400px;
 }
 
+.chronicle-wizard input,
+.chronicle-wizard textarea,
+.chronicle-wizard select {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: #f8fafc;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chronicle-wizard input:focus,
+.chronicle-wizard textarea:focus,
+.chronicle-wizard select:focus {
+  outline: none;
+  border-color: rgba(94, 234, 212, 0.8);
+  box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.3);
+}
+
+.chronicle-wizard input:disabled,
+.chronicle-wizard textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .chronicle-wizard-footer {
   display: flex;
   justify-content: flex-end;
@@ -4235,15 +4261,32 @@ body {
   text-align: left;
   background: rgba(15, 23, 42, 0.6);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .location-node.active {
   border-color: rgba(94, 234, 212, 0.7);
 }
 
+.location-node small {
+  margin-top: 0.1rem;
+  opacity: 0.7;
+}
+
 .location-inspector {
   border-left: 1px solid rgba(148, 163, 184, 0.2);
   padding-left: 1rem;
+}
+
+.inspector-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inspector-empty button {
+  align-self: flex-start;
 }
 
 .location-inspector .inspector-name {
@@ -4309,6 +4352,12 @@ body {
 .seed-toolbar {
   display: flex;
   gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.seed-toolbar-prominent {
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .seed-tags span {
@@ -4339,7 +4388,7 @@ body {
   font-style: italic;
 }
 
-.modal {
+.wizard-modal {
   position: fixed;
   inset: 0;
   background: rgba(5, 11, 24, 0.8);
@@ -4349,7 +4398,7 @@ body {
   z-index: 20;
 }
 
-.modal-content {
+.wizard-modal-content {
   background: #0f172a;
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 0.75rem;
@@ -4357,14 +4406,14 @@ body {
   width: min(480px, 90vw);
 }
 
-.modal-actions {
+.wizard-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-.segment-row {
+.wizard-segment-row {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 0.5rem;
   padding: 0.5rem;

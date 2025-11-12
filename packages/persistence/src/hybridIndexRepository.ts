@@ -2,6 +2,7 @@ import {
   DynamoDBClient,
   PutItemCommand,
   QueryCommand,
+  DeleteItemCommand,
   type AttributeValue,
 } from '@aws-sdk/client-dynamodb';
 
@@ -41,6 +42,18 @@ export abstract class HybridIndexRepository {
           pk: { S: pk },
           sk: { S: sk },
           ...attributes,
+        },
+      })
+    );
+  }
+
+  protected async delete(pk: string, sk: string): Promise<void> {
+    await this.#client.send(
+      new DeleteItemCommand({
+        TableName: this.#tableName,
+        Key: {
+          pk: { S: pk },
+          sk: { S: sk },
         },
       })
     );

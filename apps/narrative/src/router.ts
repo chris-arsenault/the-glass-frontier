@@ -97,6 +97,17 @@ export const appRouter = t.router({
         status: input.status,
         seedText: input.seedText,
       });
+
+      if (existingPlace && input.characterId) {
+        await ctx.locationGraphStore.applyPlan({
+          locationId: existingPlace.locationId,
+          characterId: input.characterId,
+          plan: {
+            character_id: input.characterId,
+            ops: [{ op: 'MOVE', dst_place_id: existingPlace.id }],
+          },
+        });
+      }
       log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
       return { chronicle }; // responseMeta sets 201
     }),
@@ -229,6 +240,25 @@ export const appRouter = t.router({
   listChronicles: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
+
+  deleteChronicle: t.procedure
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        chronicleId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      if (!chronicle) {
+        return { chronicleId: input.chronicleId, deleted: false };
+      }
+      if (chronicle.loginId !== input.loginId) {
+        throw new Error('Chronicle does not belong to the requesting login.');
+      }
+      await ctx.worldStateStore.deleteChronicle(input.chronicleId);
+      return { chronicleId: input.chronicleId, deleted: true };
+    }),
 
   listPromptTemplates: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))

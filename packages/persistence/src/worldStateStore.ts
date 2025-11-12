@@ -28,6 +28,7 @@ export interface WorldStateStore {
   upsertChronicle(chronicle: Chronicle): Promise<Chronicle>;
   getChronicle(chronicleId: string): Promise<Chronicle | null>;
   listChroniclesByLogin(loginId: string): Promise<Chronicle[]>;
+  deleteChronicle(chronicleId: string): Promise<void>;
 
   addTurn(turn: Turn): Promise<Turn>;
   listChronicleTurns(chronicleId: string): Promise<Turn[]>;

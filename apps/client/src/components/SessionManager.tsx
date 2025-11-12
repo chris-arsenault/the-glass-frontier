@@ -11,7 +11,6 @@ export function SessionManager() {
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
   const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
-  const recentChronicles = useChronicleStore((state) => state.recentChronicles);
   const connectionState = useChronicleStore((state) => state.connectionState);
   const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId ?? 'Unknown');
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
@@ -21,16 +20,13 @@ export function SessionManager() {
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveChronicle = useChronicleStore((state) => state.clearActiveChronicle);
+  const deleteChronicleRecord = useChronicleStore((state) => state.deleteChronicle);
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const disabled = connectionState === 'connecting' || isWorking || directoryStatus === 'loading';
 
-  const displayChronicles = useMemo(
-    () => recentChronicles.filter((id) => id && id !== currentChronicleId),
-    [recentChronicles, currentChronicleId]
-  );
   const chronicleTitleById = useMemo(() => {
     const map = new Map<string, string>();
     for (const chronicle of availableChronicles) {
@@ -69,6 +65,23 @@ export function SessionManager() {
     setPreferredCharacterId(targetId);
     setError(null);
     navigate('/chronicles/start');
+  };
+
+  const handleDeleteChronicle = async (chronicleId: string) => {
+    if (!chronicleId) return;
+    const confirmed = window.confirm('Delete this chronicle? This cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+    setError(null);
+    setIsWorking(true);
+    try {
+      await deleteChronicleRecord(chronicleId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to delete chronicle.');
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   return (
@@ -110,25 +123,12 @@ export function SessionManager() {
 
       <div className="session-manager-section">
         <div className="session-manager-section-header">
-          <h4>New Chronicle</h4>
-          <p className="session-manager-hint">Launch the guided start wizard.</p>
-        </div>
-        <button
-          type="button"
-          className="session-manager-new"
-          onClick={() => handleOpenWizard()}
-          disabled={disabled}
-        >
-          Open Start Wizard
-        </button>
-      </div>
-
-      <div className="session-manager-section">
-        <div className="session-manager-section-header">
           <h4>Characters</h4>
-          <p className="session-manager-hint">
-            Select a character before starting a new chronicle.
-          </p>
+          {!preferredCharacterId ? (
+            <p className="session-manager-hint">
+              Select a character before starting a new chronicle.
+            </p>
+          ) : null}
         </div>
         {availableCharacters.length === 0 ? (
           <p className="session-manager-empty">No characters yet.</p>
@@ -158,14 +158,6 @@ export function SessionManager() {
                   >
                     {preferredCharacterId === character.id ? 'Selected' : 'Select'}
                   </button>
-                  <button
-                    type="button"
-                    className="chip-button"
-                    onClick={() => handleOpenWizard(character.id)}
-                    disabled={disabled}
-                  >
-                    Start Wizard
-                  </button>
                 </div>
               </li>
             ))}
@@ -176,6 +168,14 @@ export function SessionManager() {
       <div className="session-manager-section">
         <div className="session-manager-section-header">
           <h4>Chronicles</h4>
+          <button
+            type="button"
+            className="chip-button"
+            onClick={() => handleOpenWizard()}
+            disabled={disabled}
+          >
+            New Chronicle
+          </button>
           <button
             type="button"
             className="chip-button"
@@ -210,34 +210,17 @@ export function SessionManager() {
                   >
                     Load
                   </button>
+                  <button
+                    type="button"
+                    className="chip-button chip-button-danger"
+                    onClick={() => handleDeleteChronicle(session.id)}
+                    disabled={disabled || isWorking}
+                  >
+                    Delete
+                  </button>
                 </div>
               </li>
             ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="session-manager-recents">
-        <p className="session-manager-label">Recent</p>
-        {displayChronicles.length === 0 ? (
-          <p className="session-manager-empty">No previous chronicles</p>
-        ) : (
-          <ul className="session-manager-list">
-            {displayChronicles.map((id) => {
-              const label = chronicleTitleById.get(id);
-              return (
-                <li key={id}>
-                  <button
-                    type="button"
-                    className="session-manager-recent"
-                    onClick={() => handleLoad(id)}
-                    disabled={disabled}
-                  >
-                    {label ?? 'Unknown Chronicle'}
-                  </button>
-                </li>
-              );
-            })}
           </ul>
         )}
       </div>

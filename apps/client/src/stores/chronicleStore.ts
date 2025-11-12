@@ -25,34 +25,6 @@ import { useAuthStore } from './authStore';
 import { progressStream } from '../lib/progressStream';
 import { formatTurnJobId } from '@glass-frontier/utils';
 
-const RECENT_CHRONICLES_KEY = 'glass-frontier-recent-chronicles';
-const MAX_RECENT_CHRONICLES = 5;
-
-const readRecentChronicles = (): string[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem(RECENT_CHRONICLES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((value) => typeof value === 'string') : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeRecentChronicles = (chronicles: string[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(RECENT_CHRONICLES_KEY, JSON.stringify(chronicles));
-  } catch {
-    // ignore storage failures
-  }
-};
-
 const decodeJwtPayload = (token?: string | null): Record<string, unknown> | null => {
   if (!token) {
     return null;
@@ -179,14 +151,25 @@ const buildPlayerEntry = (content: string): TranscriptEntry => ({
   },
 });
 
-const applyRecentChronicle = (chronicles: string[], chronicleId: string): string[] => {
-  const next = [chronicleId, ...chronicles.filter((id) => id !== chronicleId)].slice(
-    0,
-    MAX_RECENT_CHRONICLES
-  );
-  writeRecentChronicles(next);
-  return next;
-};
+const createSeedChatMessage = (seedText: string): ChatMessage => ({
+  entry: {
+    id: createMessageId(),
+    role: 'gm',
+    content: seedText,
+    metadata: {
+      timestamp: Date.now(),
+      tags: ['chronicle-seed'],
+    },
+  },
+  skillCheckPlan: null,
+  skillCheckResult: null,
+  skillKey: null,
+  attributeKey: null,
+  playerIntent: null,
+  gmSummary: 'Chronicle seed',
+  skillProgress: null,
+  inventoryDelta: null,
+});
 
 const deriveTitleFromSeed = (seedText: string): string => {
   const words = seedText
@@ -343,7 +326,7 @@ const createBaseState = () => ({
   chronicleStatus: 'open' as const,
   character: null as Character | null,
   location: null as LocationSummary | null,
-  recentChronicles: readRecentChronicles(),
+  recentChronicles: [],
   availableCharacters: [] as Character[],
   availableChronicles: [] as Chronicle[],
   directoryStatus: 'idle' as const,
@@ -421,12 +404,20 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         throw new Error('Chronicle not found.');
       }
 
+      const messageHistory = flattenTurns(chronicleState.turns ?? []);
+      if (
+        messageHistory.length === 0 &&
+        chronicleState.chronicle?.seedText &&
+        chronicleState.chronicle.seedText.trim().length > 0
+      ) {
+        messageHistory.push(createSeedChatMessage(chronicleState.chronicle.seedText));
+      }
       set((prev) => ({
         ...prev,
         chronicleId: chronicleState.chronicleId,
         chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
         loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
-        messages: flattenTurns(chronicleState.turns ?? []),
+        messages: messageHistory,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
         connectionState: 'connected',
         chronicleStatus: chronicleState.chronicle?.status ?? 'open',
@@ -434,7 +425,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         location: chronicleState.location ?? null,
         transportError: null,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
-        recentChronicles: applyRecentChronicle(prev.recentChronicles, chronicleState.chronicleId),
         availableChronicles:
           chronicleState.chronicle && prev.availableChronicles
             ? mergeChronicleRecord(prev.availableChronicles, chronicleState.chronicle)
@@ -528,6 +518,36 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         ...prev,
         directoryError: nextError,
         directoryStatus: prev.directoryStatus === 'idle' ? 'error' : prev.directoryStatus,
+      }));
+      throw nextError;
+    }
+  },
+
+  async deleteChronicle(chronicleId) {
+    if (!chronicleId) {
+      throw new Error('Chronicle id is required.');
+    }
+    const identity = resolveLoginIdentity();
+    const isActive = get().chronicleId === chronicleId;
+    try {
+      await trpcClient.deleteChronicle.mutate({
+        loginId: identity.loginId,
+        chronicleId,
+      });
+      set((prev) => ({
+        ...prev,
+        availableChronicles: prev.availableChronicles.filter((entry) => entry.id !== chronicleId),
+        recentChronicles: prev.recentChronicles.filter((id) => id !== chronicleId),
+      }));
+      if (isActive) {
+        get().clearActiveChronicle();
+      }
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to delete chronicle.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
       }));
       throw nextError;
     }
@@ -730,10 +750,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
           momentumTrend: nextMomentumTrend,
-          recentChronicles: applyRecentChronicle(
-            prev.recentChronicles,
-            prev.chronicleId ?? chronicleId
-          ),
           location: location ?? prev.location,
           pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
           pendingPlayerMessageId:

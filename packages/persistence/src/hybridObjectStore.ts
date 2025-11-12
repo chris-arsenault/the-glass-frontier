@@ -2,6 +2,7 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
+  DeleteObjectCommand,
   paginateListObjectsV2,
 } from '@aws-sdk/client-s3';
 import { fromEnv } from '@aws-sdk/credential-providers';
@@ -79,6 +80,21 @@ export abstract class HybridObjectStore {
         ContentType: 'application/json',
       })
     );
+  }
+
+  protected async delete(relativeKey: string): Promise<void> {
+    try {
+      await this.#client.send(
+        new DeleteObjectCommand({
+          Bucket: this.#bucket,
+          Key: this.buildKey(relativeKey),
+        })
+      );
+    } catch (error) {
+      if (!isNotFound(error)) {
+        throw error;
+      }
+    }
   }
 
   protected async list(
