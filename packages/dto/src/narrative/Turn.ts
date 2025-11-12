@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TranscriptEntry } from './TranscriptEntry';
 import { Intent } from './Intent';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
+import { InventoryDelta } from '../Inventory';
 
 export const TurnSchema = z.object({
   id: z.string().min(1),
@@ -13,6 +14,7 @@ export const TurnSchema = z.object({
   playerIntent: Intent.optional(),
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),
+  inventoryDelta: InventoryDelta.optional(),
   turnSequence: z.number().int().nonnegative(),
   failure: z.boolean(),
 });

@@ -6,6 +6,7 @@ export const PromptTemplateIds = [
   'narrative-weaver',
   'location-delta',
   'gm-summary',
+  'inventory-arbiter',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -66,6 +67,15 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/gm-summary.hbs',
     editableStartToken: '## Instructions',
     editableEndToken: '## Output',
+    supportsVariants: true,
+  },
+  'inventory-arbiter': {
+    id: 'inventory-arbiter',
+    label: 'Inventory Arbiter',
+    description: 'Applies deterministic inventory changes between the GM narration and character save.',
+    officialObjectKey: 'official/inventory-arbiter.hbs',
+    editableStartToken: '## Rules',
+    editableEndToken: '## Output Schema',
     supportsVariants: true,
   },
 };

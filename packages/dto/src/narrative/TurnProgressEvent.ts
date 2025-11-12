@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { Intent } from './Intent';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
+import { InventoryDelta } from '../Inventory';
 
 export const TurnProgressPayloadSchema = z.object({
   playerIntent: Intent.optional(),
@@ -11,6 +12,7 @@ export const TurnProgressPayloadSchema = z.object({
   systemMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
   failure: z.boolean().optional(),
+  inventoryDelta: InventoryDelta.optional(),
 });
 
 export const TurnProgressEventSchema = z.object({

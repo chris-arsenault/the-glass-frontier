@@ -8,6 +8,8 @@ import type {
   SkillCheckResult,
   SkillTier,
   TranscriptEntry,
+  PendingEquip,
+  InventoryDelta,
 } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
@@ -23,6 +25,7 @@ export interface ChatMessage {
   playerIntent?: Intent | null;
   gmSummary?: string | null;
   skillProgress?: SkillProgressBadge[] | null;
+  inventoryDelta?: InventoryDelta | null;
 }
 
 export type SkillProgressBadge =
@@ -73,6 +76,7 @@ export interface ChronicleState {
   momentumTrend: MomentumTrend | null;
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
+  pendingEquip: PendingEquip[];
 }
 
 export interface ChronicleStore extends ChronicleState {
@@ -82,6 +86,8 @@ export interface ChronicleStore extends ChronicleState {
   refreshLoginResources(): Promise<void>;
   createChronicleForCharacter(details: ChronicleCreationDetails): Promise<string>;
   createCharacterProfile(draft: CharacterCreationDraft): Promise<void>;
+  queueEquipChange(entry: PendingEquip): void;
+  clearPendingEquipQueue(): void;
   clearActiveChronicle(): void;
   resetStore(): void;
 }

@@ -28,6 +28,7 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => ({
   systemMessage: context.systemMessage,
   gmSummary: context.gmSummary,
   failure: context.failure,
+  inventoryDelta: context.inventoryDelta ?? undefined,
 });
 
 export class TurnProgressEmitter implements TurnProgressPublisher {

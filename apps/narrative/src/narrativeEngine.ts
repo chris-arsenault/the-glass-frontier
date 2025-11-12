@@ -5,6 +5,8 @@ import {
   type WorldStateStore,
   type LocationGraphStore,
   PromptTemplateManager,
+  createImbuedRegistryStore,
+  type ImbuedRegistryStore,
 } from '@glass-frontier/persistence';
 import { LangGraphOrchestrator } from './langGraph/orchestrator';
 import { ChronicleTelemetry } from './telemetry';
@@ -15,10 +17,11 @@ import {
   LocationDeltaNode,
   NarrativeWeaverNode,
   UpdateCharacterNode,
+  InventoryDeltaNode,
 } from './langGraph/nodes';
 import { LangGraphLlmClient } from './langGraph/llmClient';
 import { GraphContext, ChronicleState } from './types';
-import { Character, TranscriptEntry, Turn, LocationSummary } from '@glass-frontier/dto';
+import { Character, TranscriptEntry, Turn, LocationSummary, PendingEquip } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import { TurnProgressEmitter, type TurnProgressPublisher } from './progressEmitter';
 import { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
@@ -26,6 +29,7 @@ import { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStore;
   readonly locationGraphStore: LocationGraphStore;
+  readonly imbuedRegistryStore: ImbuedRegistryStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
@@ -35,6 +39,7 @@ class NarrativeEngine {
   constructor(options?: {
     worldStateStore?: WorldStateStore;
     locationGraphStore?: LocationGraphStore;
+    imbuedRegistryStore?: ImbuedRegistryStore;
     progressEmitter?: TurnProgressPublisher;
     templateManager: PromptTemplateManager;
   }) {
@@ -42,6 +47,12 @@ class NarrativeEngine {
     this.locationGraphStore =
       options?.locationGraphStore ??
       createLocationGraphStore({
+        bucket: process.env.NARRATIVE_S3_BUCKET,
+        prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+      });
+    this.imbuedRegistryStore =
+      options?.imbuedRegistryStore ??
+      createImbuedRegistryStore({
         bucket: process.env.NARRATIVE_S3_BUCKET,
         prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
       });
@@ -59,6 +70,7 @@ class NarrativeEngine {
         new NarrativeWeaverNode(),
         new LocationDeltaNode(this.locationGraphStore),
         new GmSummaryNode(),
+        new InventoryDeltaNode(this.imbuedRegistryStore),
         new UpdateCharacterNode(this.worldStateStore, this.locationGraphStore),
       ],
       this.telemetry,
@@ -69,7 +81,7 @@ class NarrativeEngine {
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
-    options?: { authorizationHeader?: string }
+    options?: { authorizationHeader?: string; pendingEquip?: PendingEquip[] }
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
@@ -102,10 +114,15 @@ class NarrativeEngine {
       turnSequence,
       chronicle: chronicleState,
       playerMessage,
+      pendingEquip: options?.pendingEquip ?? [],
       llm: this.createLlmClient(options?.authorizationHeader),
       telemetry: this.telemetry,
       templates: templateRuntime,
       failure: false,
+      inventoryDelta: null,
+      inventoryStoreDelta: null,
+      inventoryPreview: null,
+      inventoryRegistry: null,
     };
     try {
       graphResult = await this.graph.run(graphInput, { jobId });
@@ -139,6 +156,7 @@ class NarrativeEngine {
       playerIntent: graphResult?.playerIntent,
       skillCheckPlan: graphResult?.skillCheckPlan,
       skillCheckResult: graphResult?.skillCheckResult,
+      inventoryDelta: graphResult?.inventoryDelta ?? undefined,
       turnSequence: turnSequence,
       failure: failure,
     };

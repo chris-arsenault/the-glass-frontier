@@ -1110,6 +1110,125 @@ body {
   text-align: right;
 }
 
+.inventory-delta-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(30, 58, 138, 0.35);
+  color: #bfdbfe;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.inventory-delta-badge:focus-visible {
+  outline: 2px solid rgba(191, 219, 254, 0.95);
+  outline-offset: 4px;
+}
+
+.inventory-delta-badge .badge-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.inventory-delta-tooltip {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 230px;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(8, 15, 40, 0.96);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.75);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  z-index: 6;
+}
+
+.inventory-delta-badge:hover,
+.inventory-delta-badge:focus-within {
+  border-color: rgba(191, 219, 254, 0.9);
+  background: rgba(30, 64, 175, 0.4);
+  color: #e0e7ff;
+}
+
+.inventory-delta-badge:hover .inventory-delta-tooltip,
+.inventory-delta-badge:focus-within .inventory-delta-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.inventory-delta-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #bfdbfe;
+}
+
+.inventory-delta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.inventory-delta-row:last-child {
+  border-bottom: none;
+}
+
+.inventory-delta-row .delta-op {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #facc15;
+}
+
+.inventory-delta-row.inventory-delta-add .delta-op {
+  color: #4ade80;
+}
+
+.inventory-delta-row.inventory-delta-remove .delta-op,
+.inventory-delta-row.inventory-delta-unequip .delta-op,
+.inventory-delta-row.inventory-delta-spend_shard .delta-op {
+  color: #f87171;
+}
+
+.inventory-delta-row.inventory-delta-consume .delta-op {
+  color: #fb923c;
+}
+
+.inventory-delta-row .delta-slot,
+.inventory-delta-row .delta-bucket {
+  font-style: italic;
+  color: #cbd5f5;
+}
+
+.inventory-delta-row .delta-name {
+  color: #f8fafc;
+}
+
+.inventory-delta-row .delta-meta {
+  color: #94a3b8;
+  font-style: italic;
+}
+
 .session-panels {
   margin-top: 1.25rem;
   display: grid;
@@ -1227,6 +1346,190 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.inventory-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inventory-reset-button {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: #cbd5f5;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.inventory-reset-button:hover,
+.inventory-reset-button:focus-visible {
+  border-color: rgba(148, 163, 184, 0.8);
+  color: #f8fafc;
+}
+
+.gear-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.gear-slot-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gear-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gear-slot-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pending-chip {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.25);
+}
+
+.gear-slot-body {
+  min-height: 48px;
+}
+
+.gear-item-name {
+  margin: 0;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.gear-item-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.gear-slot-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inventory-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.15);
+  margin: 1rem 0;
+}
+
+.inventory-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inventory-list-item {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 0.8rem;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.inventory-item-name {
+  margin: 0;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.inventory-item-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.inventory-equip-button {
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  background: transparent;
+  color: #bfdbfe;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.inventory-equip-button.queued {
+  background: rgba(37, 99, 235, 0.2);
+  color: #e0e7ff;
+}
+
+.inventory-equip-button:hover:not(.queued),
+.inventory-equip-button:focus-visible:not(.queued) {
+  background: rgba(37, 99, 235, 0.2);
+}
+
+.pending-equip-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: #cbd5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pending-equip-slot {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.pending-equip-action {
+  color: #cbd5f5;
+}
+
+.inventory-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.inventory-tag {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 0.75rem;
+  color: #cbd5f5;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .session-location-body {

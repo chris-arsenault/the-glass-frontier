@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { useChronicleStore } from '../stores/chronicleStore';
 import { useUiStore } from '../stores/uiStore';
 import { SkillCheckBadge } from './SkillCheckBadge';
+import { InventoryDeltaBadge } from './InventoryDeltaBadge';
 
 export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);
@@ -122,12 +123,15 @@ export function ChatCanvas() {
                       </span>
                     ) : null}
                     {entry.role === 'gm' ? (
-                      <SkillCheckBadge
-                        plan={skillCheckPlan}
-                        result={skillCheckResult}
-                        skillKey={skillKey}
-                        attributeKey={attributeKey}
-                      />
+                      <>
+                        <SkillCheckBadge
+                          plan={skillCheckPlan}
+                          result={skillCheckResult}
+                          skillKey={skillKey}
+                          attributeKey={attributeKey}
+                        />
+                        <InventoryDeltaBadge delta={chatMessage.inventoryDelta} />
+                      </>
                     ) : null}
                   </div>
                 </header>

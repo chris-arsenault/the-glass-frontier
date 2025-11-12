@@ -7,6 +7,7 @@ import {
   TranscriptEntry,
   PromptTemplateIds,
   type PromptTemplateId,
+  PendingEquip,
 } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 
@@ -72,12 +73,14 @@ export const appRouter = t.router({
       z.object({
         chronicleId: z.string().uuid(),
         content: TranscriptEntry, // tighten to your DTO schema
+        pendingEquip: z.array(PendingEquip).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const playerEntry = { ...input.content, role: 'player' as const };
       const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
         authorizationHeader: ctx.authorizationHeader,
+        pendingEquip: input.pendingEquip ?? [],
       });
       return {
         turn: result.turn,

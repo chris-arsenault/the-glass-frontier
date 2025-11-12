@@ -1,5 +1,9 @@
 import { MOMENTUM_DELTA, type Attribute } from '@glass-frontier/dto';
-import type { WorldStateStore, LocationGraphStore } from '@glass-frontier/persistence';
+import {
+  resolveInventoryDelta,
+  type WorldStateStore,
+  type LocationGraphStore,
+} from '@glass-frontier/persistence';
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { log } from '@glass-frontier/utils';
@@ -22,10 +26,50 @@ class UpdateCharacterNode implements GraphNode {
       return context;
     }
 
-    const characterUpdateContext = await this.#applySkillUpdates(context);
+    const inventoryContext = await this.#applyInventoryDelta(context);
+    if (inventoryContext.failure) {
+      return inventoryContext;
+    }
+
+    const characterUpdateContext = await this.#applySkillUpdates(inventoryContext);
     const locationUpdateContext = await this.#applyLocationPlan(characterUpdateContext);
 
     return locationUpdateContext;
+  }
+
+  async #applyInventoryDelta(context: GraphContext): Promise<GraphContext> {
+    const storeDelta = context.inventoryStoreDelta;
+    const character = context.chronicle.character;
+    if (!storeDelta || !character || storeDelta.ops.length === 0) {
+      return context;
+    }
+
+    try {
+      const nextInventory = resolveInventoryDelta(character.inventory, storeDelta, {
+        registry: context.inventoryRegistry ?? null,
+      });
+      const updatedCharacter = {
+        ...character,
+        inventory: nextInventory,
+      };
+      await this.worldStateStore.upsertCharacter(updatedCharacter);
+      return {
+        ...context,
+        chronicle: {
+          ...context.chronicle,
+          character: updatedCharacter,
+        },
+        updatedCharacter,
+      };
+    } catch (error) {
+      context.telemetry?.recordToolError?.({
+        chronicleId: context.chronicleId,
+        operation: 'inventory-delta.commit',
+        attempt: 0,
+        message: error instanceof Error ? error.message : 'unknown',
+      });
+      return { ...context, failure: true };
+    }
   }
 
   async #applySkillUpdates(context: GraphContext): Promise<GraphContext> {

@@ -8,7 +8,12 @@ import {
   SkillCheckResult,
   Turn,
   TranscriptEntry,
+  PendingEquip,
+  InventoryDelta,
+  Inventory,
+  ImbuedRegistry,
 } from '@glass-frontier/dto';
+import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 
 export interface ChronicleState {
@@ -26,6 +31,7 @@ export interface GraphContext {
   turnSequence: number;
   chronicle: ChronicleState;
   playerMessage: TranscriptEntry;
+  pendingEquip: PendingEquip[];
 
   //operations
   llm: LangGraphLlmLike;
@@ -44,6 +50,10 @@ export interface GraphContext {
   updatedCharacter?: Character | null;
   locationPlan?: LocationPlan | null;
   locationSummary?: LocationSummary | null;
+  inventoryDelta?: InventoryDelta | null;
+  inventoryStoreDelta?: InventoryStoreDelta | null;
+  inventoryPreview?: Inventory | null;
+  inventoryRegistry?: ImbuedRegistry | null;
 }
 
 export interface LangGraphLlmLike {

@@ -9,6 +9,7 @@ import {
   SKILL_TIER_MODIFIER,
   ATTRIBUTE_TIER_MODIFIER,
 } from './mechanics';
+import { Inventory as CharacterInventory, createEmptyInventory } from './Inventory';
 
 /** Character */
 export const Character = z.object({
@@ -21,6 +22,7 @@ export const Character = z.object({
   momentum: MomentumState,
   skills: z.record(z.string(), Skill),
   attributes: CharacterAttributes,
+  inventory: CharacterInventory.default(createEmptyInventory()),
 });
 export type Character = z.infer<typeof Character>;
 

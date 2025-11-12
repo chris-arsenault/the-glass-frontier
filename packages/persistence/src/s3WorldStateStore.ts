@@ -1,6 +1,7 @@
 import type { S3Client } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
+import { createEmptyInventory } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { HybridObjectStore } from './hybridObjectStore';
 import type { WorldStateStore } from './worldStateStore';
@@ -111,11 +112,12 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async upsertCharacter(character: Character): Promise<Character> {
-    this.#characters.set(character.id, character);
-    this.#characterLoginIndex.set(character.id, character.loginId);
-    await this.setJson(this.#characterKey(character.loginId, character.id), character);
-    await this.#index.linkCharacterToLogin(character.id, character.loginId);
-    return character;
+    const normalized = this.#ensureInventory(character);
+    this.#characters.set(normalized.id, normalized);
+    this.#characterLoginIndex.set(normalized.id, normalized.loginId);
+    await this.setJson(this.#characterKey(normalized.loginId, normalized.id), normalized);
+    await this.#index.linkCharacterToLogin(normalized.id, normalized.loginId);
+    return normalized;
   }
 
   async getCharacter(characterId: string): Promise<Character | null> {
@@ -127,8 +129,10 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
 
     const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
     if (record) {
-      this.#characters.set(characterId, record);
+      const normalized = this.#ensureInventory(record);
+      this.#characters.set(characterId, normalized);
       this.#characterLoginIndex.set(characterId, loginId);
+      return normalized;
     }
     return record;
   }
@@ -144,8 +148,10 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
         if (cached) return cached;
         const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
         if (record) {
-          this.#characters.set(characterId, record);
+          const normalized = this.#ensureInventory(record);
+          this.#characters.set(characterId, normalized);
           this.#characterLoginIndex.set(characterId, loginId);
+          return normalized;
         }
         return record;
       })
@@ -284,6 +290,16 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       return loginId;
     }
     return null;
+  }
+
+  #ensureInventory(character: Character): Character {
+    if (character.inventory) {
+      return character;
+    }
+    return {
+      ...character,
+      inventory: createEmptyInventory(),
+    };
   }
 
   #loginKey(loginId: string): string {

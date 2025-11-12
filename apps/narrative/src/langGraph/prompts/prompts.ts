@@ -4,6 +4,9 @@ import {
   type OutcomeTier,
   type SkillCheckPlan,
   type SkillCheckResult,
+  type Inventory,
+  type PendingEquip,
+  type ImbuedRegistry,
 } from '@glass-frontier/dto';
 import type { ChronicleState } from '../../types';
 import type { PromptTemplateRuntime } from './templateRuntime';
@@ -163,6 +166,37 @@ export function composeLocationDeltaPrompt(
     links: input.links,
     player_intent: truncateSnippet(input.playerIntent),
     gm_response: truncateSnippet(input.gmResponse),
+  });
+}
+
+export function composeInventoryDeltaPrompt({
+  templates,
+  inventory,
+  gmMessage,
+  gmSummary,
+  intent,
+  pendingEquip,
+  registry,
+}: {
+  templates: PromptTemplateRuntime;
+  inventory: Inventory;
+  gmMessage: string;
+  gmSummary?: string | null;
+  intent: Intent;
+  pendingEquip: PendingEquip[];
+  registry: ImbuedRegistry;
+}): Promise<string> {
+  return renderTemplate(templates, 'inventory-arbiter', {
+    inventory_json: JSON.stringify(inventory, null, 2),
+    pending_equip_json: JSON.stringify(pendingEquip ?? []),
+    registry_json: JSON.stringify(registry ?? {}, null, 2),
+    revision: inventory.revision,
+    revision_next: inventory.revision + 1,
+    gm_narration: truncateSnippet(gmMessage, 900),
+    gm_summary: truncateSnippet(gmSummary ?? '', 400),
+    intent_summary: intent.intentSummary,
+    intent_skill: intent.skill ?? null,
+    intent_attribute: intent.attribute ?? null,
   });
 }
 

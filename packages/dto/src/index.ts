@@ -15,3 +15,4 @@ export * from './narrative/Turn';
 export * from './narrative/TurnProgressEvent';
 export * from './Player';
 export * from './templates';
+export * from './Inventory';
