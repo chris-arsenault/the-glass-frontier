@@ -19,11 +19,20 @@ const SessionMeta = (): JSX.Element => {
   const character = useChronicleStore((state) => state.character);
   const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId);
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
+  const logout = useAuthStore((state) => state.logout);
   const normalizedLoginLabel = typeof loginLabel === 'string' ? loginLabel.trim() : '';
   const hasLoginLabel = normalizedLoginLabel.length > 0;
 
   return (
     <div className="session-meta">
+      <button
+        type="button"
+        className="session-logout-button"
+        onClick={logout}
+        aria-label="Sign out"
+      >
+        Logout
+      </button>
       {hasLoginLabel ? <p className="app-session-id">Login {normalizedLoginLabel}</p> : null}
       {character ? (
         <div className="character-pill">

@@ -13,7 +13,6 @@ export function SessionManager() {
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
   const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
   const connectionState = useChronicleStore((state) => state.connectionState);
-  const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId ?? 'Unknown');
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
   const directoryError = useChronicleStore((state) => state.directoryError);
@@ -95,11 +94,6 @@ export function SessionManager() {
             New Character
           </button>
         </div>
-      </div>
-
-      <div className="session-manager-identity">
-        <p className="session-manager-label">Login</p>
-        <p className="session-manager-identity-value">{loginLabel}</p>
       </div>
 
       <div className="session-manager-status">
