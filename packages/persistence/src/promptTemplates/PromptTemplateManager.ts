@@ -4,17 +4,27 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { randomUUID } from 'node:crypto';
-import { Readable } from 'node:stream';
-import type { WorldStateStore } from '@glass-frontier/persistence';
+import type {
+  PromptTemplateDescriptor,
+  PromptTemplateId } from '@glass-frontier/dto';
 import {
   PROMPT_TEMPLATE_DESCRIPTORS,
-  PromptTemplateDescriptor,
-  PromptTemplateId,
   type Player,
   type PlayerTemplateSlot,
   type PlayerTemplateVariant,
 } from '@glass-frontier/dto';
+import type { WorldStateStore } from '@glass-frontier/persistence';
+import { randomUUID } from 'node:crypto';
+
+import {
+  DEFAULT_PLAYER_PREFIX,
+  OFFICIAL_VARIANT_ID,
+  fromOverrideMap,
+  isNonEmptyString,
+  mergeVariants,
+  readBodyAsString,
+  toOverrideMap,
+} from './templateUtils';
 
 type VariantSource = 'official' | 'player';
 
@@ -48,16 +58,19 @@ type TemplateSlice = {
   suffix: string;
 };
 
-const OFFICIAL_VARIANT_ID = 'official';
-
 export class PromptTemplateManager {
-  #bucket: string;
-  #playerPrefix: string;
-  #client: S3Client;
-  #worldState: WorldStateStore;
-  #officialCache = new Map<PromptTemplateId, { body: string; updatedAt: number }>();
-  #officialSlices = new Map<PromptTemplateId, TemplateSlice>();
-  #playerCache = new Map<string, Map<PromptTemplateId, { variantId: string; body: string }>>();
+  readonly #bucket: string;
+  readonly #playerPrefix: string;
+  readonly #client: S3Client;
+  readonly #worldState: WorldStateStore;
+  readonly #descriptorMap = new Map<PromptTemplateId, PromptTemplateDescriptor>(
+    Object.entries(PROMPT_TEMPLATE_DESCRIPTORS) as Array<
+      [PromptTemplateId, PromptTemplateDescriptor]
+    >
+  );
+  readonly #officialCache = new Map<PromptTemplateId, { body: string; updatedAt: number }>();
+  readonly #officialSlices = new Map<PromptTemplateId, TemplateSlice>();
+  readonly #playerCache = new Map<string, Map<PromptTemplateId, { variantId: string; body: string }>>();
 
   constructor(options: {
     bucket: string;
@@ -65,11 +78,15 @@ export class PromptTemplateManager {
     playerPrefix?: string;
     region?: string;
   }) {
-    if (!options.bucket) {
+    const bucket = options.bucket.trim();
+    if (bucket.length === 0) {
       throw new Error('PromptTemplateManager requires a template bucket.');
     }
-    this.#bucket = options.bucket;
-    this.#playerPrefix = this.#normalizePrefix(options.playerPrefix ?? 'players');
+    const playerPrefixInput = isNonEmptyString(options.playerPrefix)
+      ? options.playerPrefix.trim()
+      : DEFAULT_PLAYER_PREFIX;
+    this.#bucket = bucket;
+    this.#playerPrefix = this.#normalizePrefix(playerPrefixInput);
     this.#worldState = options.worldStateStore;
     this.#client = new S3Client({
       region:
@@ -79,9 +96,7 @@ export class PromptTemplateManager {
 
   async listTemplates(loginId: string): Promise<TemplateSummary[]> {
     const player = await this.#ensurePlayer(loginId);
-    return (Object.keys(PROMPT_TEMPLATE_DESCRIPTORS) as PromptTemplateId[]).map((id) =>
-      this.#summarizeTemplate(id, player)
-    );
+    return Array.from(this.#descriptorMap.keys()).map((id) => this.#summarizeTemplate(id, player));
   }
 
   async getTemplate(loginId: string, templateId: PromptTemplateId): Promise<TemplateDetail> {
@@ -89,8 +104,8 @@ export class PromptTemplateManager {
     const summary = this.#summarizeTemplate(templateId, player);
     const editable = await this.#loadEditableBlock(summary.activeVariantId, summary.activeSource, {
       loginId,
-      templateId,
       player,
+      templateId,
     });
     const variants = await this.#materializeVariants(
       loginId,
@@ -111,51 +126,30 @@ export class PromptTemplateManager {
     editable: string;
     label?: string;
   }): Promise<TemplateDetail> {
-    const descriptor = this.#descriptor(options.templateId);
     const player = await this.#ensurePlayer(options.loginId);
     const slice = await this.#getOfficialSlice(options.templateId);
     const sanitized = this.#normalizeEditable(options.editable);
     const fullBody = `${slice.prefix}${sanitized}${slice.suffix}`;
-
-    const slot = player.templateOverrides?.[options.templateId];
-    const activeVariantId = slot?.activeVariantId ?? slot?.variants?.[0]?.variantId ?? randomUUID();
-    const variantLabel =
-      options.label?.trim() && options.label.trim().length > 0
-        ? options.label.trim()
-        : (slot?.variants?.[0]?.label ?? 'Custom Variant');
+    const overrides = toOverrideMap(player.templateOverrides);
+    const slot = overrides.get(options.templateId);
+    const { activeVariantId, label } = this.#resolveVariantMetadata(slot, options.label);
     const objectKey = this.#playerObjectKey(options.loginId, options.templateId, activeVariantId);
-
-    await this.#client.send(
-      new PutObjectCommand({
-        Bucket: this.#bucket,
-        Key: objectKey,
-        Body: fullBody,
-        ContentType: 'text/x-handlebars-template; charset=utf-8',
-      })
-    );
+    await this.#writeVariantBody(objectKey, fullBody);
 
     const nextVariant: PlayerTemplateVariant = {
-      variantId: activeVariantId,
-      label: variantLabel,
+      label,
       objectKey,
       updatedAt: Date.now(),
+      variantId: activeVariantId,
     };
 
-    const nextOverrides = {
-      ...(player.templateOverrides ?? {}),
-    };
-
-    const existingVariants = slot?.variants ?? [];
-    nextOverrides[options.templateId] = {
-      nodeId: options.templateId,
+    overrides.set(options.templateId, {
       activeVariantId,
-      variants: [
-        nextVariant,
-        ...existingVariants.filter((variant) => variant.variantId !== activeVariantId),
-      ],
-    } satisfies PlayerTemplateSlot;
+      nodeId: options.templateId,
+      variants: mergeVariants(slot?.variants ?? [], nextVariant),
+    });
 
-    player.templateOverrides = nextOverrides;
+    player.templateOverrides = fromOverrideMap(overrides);
     await this.#worldState.upsertPlayer(player);
     this.#invalidatePlayerCache(options.loginId, options.templateId);
 
@@ -167,8 +161,9 @@ export class PromptTemplateManager {
     templateId: PromptTemplateId;
   }): Promise<TemplateDetail> {
     const player = await this.#ensurePlayer(options.loginId);
-    const slot = player.templateOverrides?.[options.templateId];
-    if (slot?.variants?.length) {
+    const overrides = toOverrideMap(player.templateOverrides);
+    const slot = overrides.get(options.templateId);
+    if (slot !== undefined && slot.variants.length > 0) {
       await Promise.all(
         slot.variants.map((variant) =>
           this.#client.send(
@@ -180,9 +175,8 @@ export class PromptTemplateManager {
         )
       );
     }
-    if (player.templateOverrides) {
-      delete player.templateOverrides[options.templateId];
-    }
+    overrides.delete(options.templateId);
+    player.templateOverrides = fromOverrideMap(overrides);
     await this.#worldState.upsertPlayer(player);
     this.#invalidatePlayerCache(options.loginId, options.templateId);
     return this.getTemplate(options.loginId, options.templateId);
@@ -193,18 +187,19 @@ export class PromptTemplateManager {
     templateId: PromptTemplateId
   ): Promise<{ body: string; variantId: string }> {
     const player = await this.#ensurePlayer(loginId);
-    const slot = player.templateOverrides?.[templateId];
-    if (!slot || !slot.activeVariantId) {
+    const overrides = toOverrideMap(player.templateOverrides);
+    const slot = overrides.get(templateId);
+    if (slot === undefined || !isNonEmptyString(slot.activeVariantId)) {
       const official = await this.#getOfficialTemplate(templateId);
       return { body: official.body, variantId: OFFICIAL_VARIANT_ID };
     }
     const variant = slot.variants?.find((entry) => entry.variantId === slot.activeVariantId);
-    if (!variant) {
+    if (variant === undefined) {
       const fallback = await this.#getOfficialTemplate(templateId);
       return { body: fallback.body, variantId: OFFICIAL_VARIANT_ID };
     }
     const cached = this.#playerCache.get(loginId)?.get(templateId);
-    if (cached && cached.variantId === variant.variantId) {
+    if (cached !== undefined && cached.variantId === variant.variantId) {
       return { body: cached.body, variantId: variant.variantId };
     }
     const body = await this.#readObject(variant.objectKey);
@@ -212,24 +207,68 @@ export class PromptTemplateManager {
     return { body, variantId: variant.variantId };
   }
 
-  #cachePlayerBody(loginId: string, templateId: PromptTemplateId, variantId: string, body: string) {
-    if (!this.#playerCache.has(loginId)) {
-      this.#playerCache.set(loginId, new Map());
-    }
-    this.#playerCache.get(loginId)!.set(templateId, { variantId, body });
+  #resolveVariantMetadata(
+    slot: PlayerTemplateSlot | undefined,
+    labelInput?: string
+  ): { activeVariantId: string; label: string } {
+    return {
+      activeVariantId: this.#determineActiveVariantId(slot),
+      label: this.#determineVariantLabel(slot, labelInput),
+    };
   }
 
-  #invalidatePlayerCache(loginId: string, templateId: PromptTemplateId) {
+  #determineVariantLabel(slot: PlayerTemplateSlot | undefined, labelInput?: string): string {
+    const trimmedLabel = labelInput?.trim();
+    if (isNonEmptyString(trimmedLabel)) {
+      return trimmedLabel;
+    }
+    return slot?.variants?.[0]?.label ?? 'Custom Variant';
+  }
+
+  #determineActiveVariantId(slot: PlayerTemplateSlot | undefined): string {
+    const candidateId = slot?.activeVariantId ?? slot?.variants?.[0]?.variantId ?? null;
+    return isNonEmptyString(candidateId) ? candidateId : randomUUID();
+  }
+
+  async #writeVariantBody(objectKey: string, body: string): Promise<void> {
+    await this.#client.send(
+      new PutObjectCommand({
+        Body: body,
+        Bucket: this.#bucket,
+        ContentType: 'text/x-handlebars-template; charset=utf-8',
+        Key: objectKey,
+      })
+    );
+  }
+
+  #cachePlayerBody(
+    loginId: string,
+    templateId: PromptTemplateId,
+    variantId: string,
+    body: string
+  ): void {
+    let cache = this.#playerCache.get(loginId);
+    if (cache === undefined) {
+      cache = new Map();
+      this.#playerCache.set(loginId, cache);
+    }
+    cache.set(templateId, { body, variantId });
+  }
+
+  #invalidatePlayerCache(loginId: string, templateId: PromptTemplateId): void {
     const cache = this.#playerCache.get(loginId);
-    if (cache) {
+    if (cache !== undefined) {
       cache.delete(templateId);
+      if (cache.size === 0) {
+        this.#playerCache.delete(loginId);
+      }
     }
   }
 
   async #ensurePlayer(loginId: string): Promise<Player> {
     const existing = await this.#worldState.getPlayer(loginId);
-    if (existing) {
-      if (!existing.templateOverrides) {
+    if (existing !== null && existing !== undefined) {
+      if (existing.templateOverrides === undefined) {
         existing.templateOverrides = {};
       }
       return existing;
@@ -244,49 +283,62 @@ export class PromptTemplateManager {
 
   #summarizeTemplate(templateId: PromptTemplateId, player: Player): TemplateSummary {
     const descriptor = this.#descriptor(templateId);
-    const slot = player.templateOverrides?.[templateId];
-    const hasOverride = Boolean(slot?.variants?.length);
-    const activeVariantId = slot?.activeVariantId ?? OFFICIAL_VARIANT_ID;
-    const activeSource: VariantSource = slot?.activeVariantId ? 'player' : 'official';
-    const updatedAt = slot?.activeVariantId
-      ? (slot?.variants?.find((variant) => variant.variantId === slot.activeVariantId)?.updatedAt ??
-        Date.now())
-      : (this.#officialCache.get(templateId)?.updatedAt ?? Date.now());
-
+    const overrides = toOverrideMap(player.templateOverrides);
+    const slot = overrides.get(templateId);
+    const hasOverride = slot !== undefined && slot.variants.length > 0;
+    const variantInfo = this.#resolveActiveVariant(slot, templateId);
     return {
-      nodeId: templateId,
-      label: descriptor.label,
+      activeSource: variantInfo.source,
+      activeVariantId: variantInfo.activeVariantId,
       description: descriptor.description,
-      activeSource,
-      activeVariantId,
-      updatedAt,
-      supportsVariants: descriptor.supportsVariants,
       hasOverride,
+      label: descriptor.label,
+      nodeId: templateId,
+      supportsVariants: descriptor.supportsVariants,
+      updatedAt: variantInfo.updatedAt,
+    };
+  }
+
+  #resolveActiveVariant(
+    slot: PlayerTemplateSlot | undefined,
+    templateId: PromptTemplateId
+  ): { activeVariantId: string; source: VariantSource; updatedAt: number } {
+    if (slot === undefined) {
+      return this.#officialVariantInfo(templateId);
+    }
+    const selectedVariant = this.#selectPlayerVariant(slot);
+    if (selectedVariant === null) {
+      return this.#officialVariantInfo(templateId);
+    }
+    return {
+      activeVariantId: selectedVariant.variantId,
+      source: 'player',
+      updatedAt: selectedVariant.updatedAt,
     };
   }
 
   async #materializeVariants(
-    loginId: string,
+    _loginId: string,
     templateId: PromptTemplateId,
     player: Player,
     activeVariantId: string
   ): Promise<TemplateVariantView[]> {
-    const descriptor = this.#descriptor(templateId);
     const officialEntry: TemplateVariantView = {
-      variantId: OFFICIAL_VARIANT_ID,
+      isActive: activeVariantId === OFFICIAL_VARIANT_ID,
       label: 'System Default',
       source: 'official',
       updatedAt: this.#officialCache.get(templateId)?.updatedAt ?? Date.now(),
-      isActive: activeVariantId === OFFICIAL_VARIANT_ID,
+      variantId: OFFICIAL_VARIANT_ID,
     };
 
-    const overrides = player.templateOverrides?.[templateId]?.variants ?? [];
+    const overrides = toOverrideMap(player.templateOverrides)
+      .get(templateId)?.variants ?? [];
     const overrideViews: TemplateVariantView[] = overrides.map((variant) => ({
-      variantId: variant.variantId,
+      isActive: variant.variantId === activeVariantId,
       label: variant.label,
       source: 'player',
       updatedAt: variant.updatedAt,
-      isActive: variant.variantId === activeVariantId,
+      variantId: variant.variantId,
     }));
 
     if (!this.#officialCache.has(templateId)) {
@@ -305,15 +357,16 @@ export class PromptTemplateManager {
       const slice = await this.#getOfficialSlice(context.templateId);
       return slice.editable.trimEnd();
     }
-    const slot = context.player.templateOverrides?.[context.templateId];
+    const overrides = toOverrideMap(context.player.templateOverrides);
+    const slot = overrides.get(context.templateId);
     const variant = slot?.variants?.find((entry) => entry.variantId === activeVariantId);
-    if (!variant) {
+    if (variant === undefined) {
       const slice = await this.#getOfficialSlice(context.templateId);
       return slice.editable.trimEnd();
     }
     const cached = this.#playerCache.get(context.loginId)?.get(context.templateId);
     let body: string;
-    if (cached && cached.variantId === variant.variantId) {
+    if (cached !== undefined && cached.variantId === variant.variantId) {
       body = cached.body;
     } else {
       body = await this.#readObject(variant.objectKey);
@@ -327,7 +380,7 @@ export class PromptTemplateManager {
     templateId: PromptTemplateId
   ): Promise<{ body: string; updatedAt: number }> {
     const cached = this.#officialCache.get(templateId);
-    if (cached) {
+    if (cached !== undefined) {
       return cached;
     }
     const descriptor = this.#descriptor(templateId);
@@ -339,13 +392,38 @@ export class PromptTemplateManager {
 
   async #getOfficialSlice(templateId: PromptTemplateId): Promise<TemplateSlice> {
     const cached = this.#officialSlices.get(templateId);
-    if (cached) {
+    if (cached !== undefined) {
       return cached;
     }
     const official = await this.#getOfficialTemplate(templateId);
     const slice = this.#sliceTemplate(official.body, this.#descriptor(templateId));
     this.#officialSlices.set(templateId, slice);
     return slice;
+  }
+
+  #selectPlayerVariant(slot: PlayerTemplateSlot): PlayerTemplateVariant | null {
+    if (slot.variants.length === 0) {
+      return null;
+    }
+    if (isNonEmptyString(slot.activeVariantId)) {
+      const match = slot.variants.find((variant) => variant.variantId === slot.activeVariantId);
+      if (match !== undefined) {
+        return match;
+      }
+    }
+    return slot.variants[0] ?? null;
+  }
+
+  #officialVariantInfo(templateId: PromptTemplateId): {
+    activeVariantId: string;
+    source: VariantSource;
+    updatedAt: number;
+  } {
+    return {
+      activeVariantId: OFFICIAL_VARIANT_ID,
+      source: 'official',
+      updatedAt: this.#officialCache.get(templateId)?.updatedAt ?? Date.now(),
+    };
   }
 
   #sliceTemplate(body: string, descriptor: PromptTemplateDescriptor): TemplateSlice {
@@ -375,8 +453,8 @@ export class PromptTemplateManager {
     }
 
     return {
-      prefix: body.slice(0, editableStart),
       editable: body.slice(editableStart, suffixStart),
+      prefix: body.slice(0, editableStart),
       suffix: body.slice(suffixStart),
     };
   }
@@ -388,39 +466,15 @@ export class PromptTemplateManager {
         Key: key,
       })
     );
-    return this.#readBody(output.Body);
-  }
-
-  async #readBody(body: unknown): Promise<string> {
-    if (!body) {
-      throw new Error('Template body stream missing');
-    }
-    if (typeof body === 'string') {
-      return body;
-    }
-    if (Buffer.isBuffer(body)) {
-      return body.toString('utf-8');
-    }
-    if (typeof (body as any).transformToString === 'function') {
-      return (body as any).transformToString('utf-8');
-    }
-    if (typeof (body as any).arrayBuffer === 'function') {
-      const buffer = await (body as any).arrayBuffer();
-      return Buffer.from(buffer).toString('utf-8');
-    }
-    if (body instanceof Readable) {
-      return await new Promise<string>((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        body.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-        body.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-        body.on('error', reject);
-      });
-    }
-    throw new Error('Unsupported template body type');
+    return readBodyAsString(output.Body);
   }
 
   #descriptor(templateId: PromptTemplateId): PromptTemplateDescriptor {
-    return PROMPT_TEMPLATE_DESCRIPTORS[templateId];
+    const descriptor = this.#descriptorMap.get(templateId);
+    if (descriptor === undefined) {
+      throw new Error(`Unknown prompt template: ${templateId}`);
+    }
+    return descriptor;
   }
 
   #playerObjectKey(loginId: string, templateId: PromptTemplateId, variantId: string): string {
@@ -428,12 +482,14 @@ export class PromptTemplateManager {
   }
 
   #normalizePrefix(prefix: string): string {
-    return prefix.replace(/\/+$/, '') + '/';
+    const trimmed = prefix.trim().replace(/\/+$/, '');
+    const normalized = trimmed.length > 0 ? trimmed : DEFAULT_PLAYER_PREFIX;
+    return `${normalized}/`;
   }
 
   #normalizeEditable(editable: string): string {
     const trimmed = editable.replace(/\s+$/u, '');
-    if (!trimmed) {
+    if (trimmed.length === 0) {
       return '';
     }
     return `${trimmed}\n\n`;

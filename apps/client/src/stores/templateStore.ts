@@ -6,6 +6,77 @@ import { trpcClient } from '../lib/trpcClient';
 type TemplateSummary = Awaited<ReturnType<typeof trpcClient.listPromptTemplates.query>>[number];
 type TemplateDetail = Awaited<ReturnType<typeof trpcClient.getPromptTemplate.query>>;
 
+type TemplateStoreSet = (
+  partial:
+    | TemplateStoreState
+    | Partial<TemplateStoreState>
+    | ((state: TemplateStoreState) => TemplateStoreState | Partial<TemplateStoreState>),
+  replace?: boolean
+) => void;
+
+type TemplateStoreGet = () => TemplateStoreState;
+
+const isNonEmptyString = (value: string | null | undefined): value is string => {
+  return typeof value === 'string' && value.trim().length > 0;
+};
+
+const toTemplateSummary = (detail: TemplateDetail): TemplateSummary => {
+  return {
+    activeSource: detail.activeSource,
+    activeVariantId: detail.activeVariantId,
+    description: detail.description,
+    hasOverride: detail.hasOverride,
+    label: detail.label,
+    nodeId: detail.nodeId,
+    supportsVariants: detail.supportsVariants,
+    updatedAt: detail.updatedAt,
+  };
+};
+
+const computeSelectionState = (
+  prev: TemplateStoreState,
+  summaries: TemplateSummary[]
+): Pick<TemplateStoreState, 'detail' | 'draft' | 'isDirty' | 'selectedTemplateId'> => {
+  if (prev.selectedTemplateId === null) {
+    return {
+      detail: null,
+      draft: '',
+      isDirty: false,
+      selectedTemplateId: null,
+    };
+  }
+
+  const stillExists = summaries.some((entry) => entry.nodeId === prev.selectedTemplateId);
+  if (stillExists) {
+    return {
+      detail: prev.detail,
+      draft: prev.draft,
+      isDirty: prev.isDirty,
+      selectedTemplateId: prev.selectedTemplateId,
+    };
+  }
+
+  return {
+    detail: null,
+    draft: '',
+    isDirty: false,
+    selectedTemplateId: null,
+  };
+};
+
+const applyDetailUpdate = (set: TemplateStoreSet, detail: TemplateDetail): void => {
+  set((prev) => ({
+    detail,
+    draft: detail.editable,
+    isDirty: false,
+    isSaving: false,
+    summaries: {
+      ...prev.summaries,
+      [detail.nodeId]: toTemplateSummary(detail),
+    },
+  }));
+};
+
 type TemplateStoreState = {
   summaries: Record<string, TemplateSummary>;
   selectedTemplateId: PromptTemplateId | null;
@@ -24,50 +95,30 @@ type TemplateStoreState = {
 };
 
 const toRecord = (summaries: TemplateSummary[]): Record<string, TemplateSummary> => {
-  return summaries.reduce<Record<string, TemplateSummary>>((acc, summary) => {
-    acc[summary.nodeId] = summary;
-    return acc;
-  }, {});
+  const record: Record<string, TemplateSummary> = {};
+  for (const summary of summaries) {
+    record[summary.nodeId] = summary;
+  }
+  return record;
 };
 
-export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
-  detail: null,
-  draft: '',
-  error: null,
-  isDirty: false,
-  isLoading: false,
-  isSaving: false,
-  async loadSummaries(loginId) {
-    if (!loginId) {
+const createLoadSummariesHandler = (set: TemplateStoreSet) => {
+  return async (loginId: string): Promise<void> => {
+    if (!isNonEmptyString(loginId)) {
       return;
     }
+
     set({ error: null, isLoading: true });
+
     try {
       const summaries = await trpcClient.listPromptTemplates.query({ loginId });
+      const summaryList = summaries ?? [];
+
       set((prev) => ({
-        detail:
-          prev.selectedTemplateId &&
-          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
-            ? prev.detail
-            : null,
-        draft:
-          prev.selectedTemplateId &&
-          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
-            ? prev.draft
-            : '',
+        ...computeSelectionState(prev, summaryList),
         error: null,
-        isDirty:
-          prev.selectedTemplateId &&
-          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
-            ? prev.isDirty
-            : false,
         isLoading: false,
-        selectedTemplateId:
-          prev.selectedTemplateId &&
-          summaries?.some((entry) => entry.nodeId === prev.selectedTemplateId)
-            ? prev.selectedTemplateId
-            : null,
-        summaries: toRecord(summaries ?? []),
+        summaries: toRecord(summaryList),
       }));
     } catch (error) {
       set({
@@ -75,46 +126,24 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
         isLoading: false,
       });
     }
-  },
-  reset() {
-    set({
-      detail: null,
-      draft: '',
-      error: null,
-      isDirty: false,
-      selectedTemplateId: null,
-    });
-  },
-  async revertTemplate(loginId) {
-    const { selectedTemplateId } = get();
-    if (!selectedTemplateId || !loginId) {
+  };
+};
+
+const createRevertTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet) => {
+  return async (loginId: string): Promise<void> => {
+    const selectedTemplateId = get().selectedTemplateId;
+    if (selectedTemplateId === null || !isNonEmptyString(loginId)) {
       return;
     }
+
     set({ error: null, isSaving: true });
+
     try {
       const next = await trpcClient.revertPromptTemplate.mutate({
         loginId,
         templateId: selectedTemplateId,
       });
-      set((prev) => ({
-        detail: next,
-        draft: next.editable,
-        isDirty: false,
-        isSaving: false,
-        summaries: {
-          ...prev.summaries,
-          [next.nodeId]: {
-            activeSource: next.activeSource,
-            activeVariantId: next.activeVariantId,
-            description: next.description,
-            hasOverride: next.hasOverride,
-            label: next.label,
-            nodeId: next.nodeId,
-            supportsVariants: next.supportsVariants,
-            updatedAt: next.updatedAt,
-          },
-        },
-      }));
+      applyDetailUpdate(set, next);
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to revert template.',
@@ -122,38 +151,25 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
       });
       throw error;
     }
-  },
-  async saveTemplate(loginId) {
+  };
+};
+
+const createSaveTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet) => {
+  return async (loginId: string): Promise<void> => {
     const { detail, draft, selectedTemplateId } = get();
-    if (!detail || !selectedTemplateId || !loginId) {
+    if (detail === null || selectedTemplateId === null || !isNonEmptyString(loginId)) {
       return;
     }
+
     set({ error: null, isSaving: true });
+
     try {
       const next = await trpcClient.savePromptTemplate.mutate({
         editable: draft,
         loginId,
         templateId: selectedTemplateId,
       });
-      set((prev) => ({
-        detail: next,
-        draft: next.editable,
-        isDirty: false,
-        isSaving: false,
-        summaries: {
-          ...prev.summaries,
-          [next.nodeId]: {
-            activeSource: next.activeSource,
-            activeVariantId: next.activeVariantId,
-            description: next.description,
-            hasOverride: next.hasOverride,
-            label: next.label,
-            nodeId: next.nodeId,
-            supportsVariants: next.supportsVariants,
-            updatedAt: next.updatedAt,
-          },
-        },
-      }));
+      applyDetailUpdate(set, next);
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to save template.',
@@ -161,14 +177,18 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
       });
       throw error;
     }
-  },
-  selectedTemplateId: null,
-  async selectTemplate(templateId, loginId) {
-    if (!templateId || !loginId) {
+  };
+};
+
+const createSelectTemplateHandler = (set: TemplateStoreSet) => {
+  return async (templateId: PromptTemplateId | null, loginId: string): Promise<void> => {
+    if (templateId === null || !isNonEmptyString(loginId)) {
       set({ detail: null, draft: '', isDirty: false, selectedTemplateId: templateId ?? null });
       return;
     }
+
     set({ error: null, isLoading: true, selectedTemplateId: templateId });
+
     try {
       const detail = await trpcClient.getPromptTemplate.query({ loginId, templateId });
       set({
@@ -184,11 +204,34 @@ export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
         isLoading: false,
       });
     }
+  };
+};
+
+export const useTemplateStore = create<TemplateStoreState>()((set, get) => ({
+  detail: null,
+  draft: '',
+  error: null,
+  isDirty: false,
+  isLoading: false,
+  isSaving: false,
+  loadSummaries: createLoadSummariesHandler(set),
+  reset() {
+    set({
+      detail: null,
+      draft: '',
+      error: null,
+      isDirty: false,
+      selectedTemplateId: null,
+    });
   },
+  revertTemplate: createRevertTemplateHandler(set, get),
+  saveTemplate: createSaveTemplateHandler(set, get),
+  selectedTemplateId: null,
+  selectTemplate: createSelectTemplateHandler(set),
   summaries: {},
   updateDraft(value) {
     const detail = get().detail;
-    if (!detail) {
+    if (detail === null) {
       return;
     }
     set({ draft: value, isDirty: value.trimEnd() !== detail.editable.trimEnd() });

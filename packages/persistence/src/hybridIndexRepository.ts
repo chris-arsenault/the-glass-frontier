@@ -6,7 +6,7 @@ import {
   type AttributeValue,
 } from '@aws-sdk/client-dynamodb';
 
-export interface HybridIndexRepositoryOptions {
+export type HybridIndexRepositoryOptions = {
   tableName: string;
   client?: DynamoDBClient;
   region?: string;
@@ -17,7 +17,7 @@ export abstract class HybridIndexRepository {
   readonly #tableName: string;
 
   constructor(options: HybridIndexRepositoryOptions) {
-    if (!options.tableName) {
+    if (typeof options.tableName !== 'string' || options.tableName.trim().length === 0) {
       throw new Error('HybridIndexRepository requires a table name.');
     }
 
@@ -37,12 +37,12 @@ export abstract class HybridIndexRepository {
   ): Promise<void> {
     await this.#client.send(
       new PutItemCommand({
-        TableName: this.#tableName,
         Item: {
           pk: { S: pk },
           sk: { S: sk },
           ...attributes,
         },
+        TableName: this.#tableName,
       })
     );
   }
@@ -50,22 +50,22 @@ export abstract class HybridIndexRepository {
   protected async delete(pk: string, sk: string): Promise<void> {
     await this.#client.send(
       new DeleteItemCommand({
-        TableName: this.#tableName,
         Key: {
           pk: { S: pk },
           sk: { S: sk },
         },
+        TableName: this.#tableName,
       })
     );
   }
 
-  protected async query(pk: string) {
+  protected async query(pk: string): Promise<Array<Record<string, AttributeValue>>> {
     const result = await this.#client.send(
       new QueryCommand({
-        TableName: this.#tableName,
-        KeyConditionExpression: '#pk = :pk',
         ExpressionAttributeNames: { '#pk': 'pk' },
         ExpressionAttributeValues: { ':pk': { S: pk } },
+        KeyConditionExpression: '#pk = :pk',
+        TableName: this.#tableName,
       })
     );
     return result.Items ?? [];
@@ -79,9 +79,15 @@ export abstract class HybridIndexRepository {
   ): Promise<T[]> {
     const items = await this.query(pk);
     const output = items
-      .filter((item) => item.sk?.S?.startsWith(prefix))
+      .filter((item) => {
+        const sortKey = item.sk?.S ?? null;
+        return typeof sortKey === 'string' && sortKey.startsWith(prefix);
+      })
       .map(decoder)
-      .filter((entry): entry is T => Boolean(entry));
-    return options?.sort ? output.sort(options.sort) : output;
+      .filter((entry): entry is T => entry !== null);
+    if (typeof options?.sort === 'function') {
+      return [...output].sort(options.sort);
+    }
+    return output;
   }
 }

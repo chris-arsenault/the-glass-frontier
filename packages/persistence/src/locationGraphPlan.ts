@@ -7,13 +7,13 @@ import type {
 } from '@glass-frontier/dto';
 import type { LocationEdgeKind } from '@glass-frontier/dto';
 
-export interface PlanMutationAdapter {
-  createPlace(place: LocationPlanPlace): Promise<string>;
-  createEdge(edge: LocationPlanEdge): Promise<void>;
-  setCanonicalParent(childId: string, parentId: string): Promise<void>;
+export type PlanMutationAdapter = {
+  createPlace: (place: LocationPlanPlace) => Promise<string>;
+  createEdge: (edge: LocationPlanEdge) => Promise<void>;
+  setCanonicalParent: (childId: string, parentId: string) => Promise<void>;
 }
 
-export interface PlanExecutionResult {
+export type PlanExecutionResult = {
   anchorPlaceId?: string;
   status?: string[];
   certainty?: LocationCertainty;
@@ -37,59 +37,91 @@ export async function executeLocationPlan(
   let note: string | undefined;
 
   const resolveId = (value: string): string => tempToReal.get(value) ?? value;
+  const registerPlace = (tempId: string, realId: string): void => {
+    tempToReal.set(tempId, realId);
+  };
+  const setAnchor = (placeId: string): void => {
+    anchorPlaceId = placeId;
+  };
+  const appendStatus = (entries: string[]): void => {
+    status = dedupe([...(status ?? []), ...entries]);
+  };
+  const setCertaintyState = (payload: { certainty: LocationCertainty; note?: string }): void => {
+    certainty = payload.certainty;
+    note = payload.note;
+  };
 
-  for (const op of plan.ops) {
-    await handleOp(op);
+  const opHandlers = createPlanHandlers({
+    adapter,
+    appendStatus,
+    registerPlace,
+    resolveId,
+    setAnchor,
+    setCertainty: setCertaintyState,
+  });
+
+  let sequence = Promise.resolve();
+  for (const operation of plan.ops) {
+    sequence = sequence.then(() => opHandlers[operation.op](operation as never));
   }
+  await sequence;
 
   return {
     anchorPlaceId,
-    status,
     certainty,
     note,
+    status,
   };
-
-  async function handleOp(op: LocationPlanOp): Promise<void> {
-    switch (op.op) {
-      case 'NO_CHANGE':
-        return;
-      case 'CREATE_PLACE': {
-        const realId = await adapter.createPlace(op.place);
-        tempToReal.set(op.place.temp_id, realId);
-        return;
-      }
-      case 'CREATE_EDGE': {
-        const edge = {
-          src: resolveId(op.edge.src),
-          dst: resolveId(op.edge.dst),
-          kind: op.edge.kind,
-        };
-        await adapter.createEdge(edge);
-        if (isContainment(edge)) {
-          await adapter.setCanonicalParent(edge.dst, edge.src);
-        }
-        return;
-      }
-      case 'MOVE':
-      case 'ENTER': {
-        anchorPlaceId = resolveId(op.dst_place_id);
-        return;
-      }
-      case 'EXIT':
-        return;
-      case 'SET_STATUS': {
-        status = dedupe([...(status ?? []), ...op.status]);
-        return;
-      }
-      case 'SET_CERTAINTY':
-        certainty = op.certainty;
-        note = op.note;
-        return;
-      default:
-        return;
-    }
-  }
 }
+
+type PlanHandlers = {
+  [K in LocationPlanOp['op']]: (
+    operation: Extract<LocationPlanOp, { op: K }>
+  ) => void | Promise<void>;
+};
+
+type PlanHandlerDeps = {
+  adapter: PlanMutationAdapter;
+  appendStatus: (entries: string[]) => void;
+  registerPlace: (tempId: string, realId: string) => void;
+  resolveId: (value: string) => string;
+  setAnchor: (placeId: string) => void;
+  setCertainty: (input: { certainty: LocationCertainty; note?: string }) => void;
+};
+
+const createPlanHandlers = (deps: PlanHandlerDeps): PlanHandlers => ({
+  CREATE_EDGE: async (op) => {
+    const edge = {
+      dst: deps.resolveId(op.edge.dst),
+      kind: op.edge.kind,
+      src: deps.resolveId(op.edge.src),
+    };
+    await deps.adapter.createEdge(edge);
+    if (isContainment(edge)) {
+      await deps.adapter.setCanonicalParent(edge.dst, edge.src);
+    }
+  },
+  CREATE_PLACE: async (op) => {
+    const realId = await deps.adapter.createPlace(op.place);
+    deps.registerPlace(op.place.temp_id, realId);
+  },
+  ENTER: (op) => {
+    deps.setAnchor(deps.resolveId(op.dst_place_id));
+  },
+  EXIT: () => {
+    // Exit currently only affects downstream systems.
+  },
+  MOVE: (op) => {
+    deps.setAnchor(deps.resolveId(op.dst_place_id));
+  },
+  NO_CHANGE: () => {},
+  SET_CERTAINTY: (op) => {
+    deps.setCertainty({ certainty: op.certainty, note: op.note });
+  },
+  SET_STATUS: (op) => {
+    deps.appendStatus(op.status);
+  },
+});
 
 const dedupe = (values: string[]): string[] => {
   const seen = new Set<string>();

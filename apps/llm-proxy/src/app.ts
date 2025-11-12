@@ -1,7 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 
-import { Router, chatCompletionInputSchema } from './Router';
 import { ProviderError } from './providers';
+import { Router, chatCompletionInputSchema } from './Router';
 
 export type LlmProxyContext = {
   playerId?: string;
@@ -17,7 +17,7 @@ const routerService = new Router();
 const t = initTRPC.context<LlmProxyContext>().create();
 
 export const appRouter = t.router({
-  chatCompletion: t.procedure.input(chatCompletionInputSchema).mutation(async ({ input, ctx }) => {
+  chatCompletion: t.procedure.input(chatCompletionInputSchema).mutation(async ({ ctx, input }) => {
     try {
       return await routerService.proxy(input, { playerId: ctx.playerId, requestId: ctx.requestId });
     } catch (error) {
@@ -35,9 +35,9 @@ export const appRouter = t.router({
           code = 'BAD_REQUEST';
         }
         throw new TRPCError({
+          cause: error,
           code,
           message: error.message,
-          cause: error,
         });
       }
       throw error;

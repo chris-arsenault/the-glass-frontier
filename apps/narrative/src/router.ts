@@ -16,6 +16,10 @@ import { z } from 'zod';
 
 import type { Context } from './context';
 
+type EnsureChronicleResult = Awaited<
+  ReturnType<Context['worldStateStore']['ensureChronicle']>
+>;
+
 const t = initTRPC.context<Context>().create();
 const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
 const locationSegmentSchema = z.object({
@@ -118,7 +122,7 @@ export const appRouter = t.router({
     )
     .mutation(async ({ ctx, input }) => {
       const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
-      if (!chronicle) {
+      if (chronicle === null || chronicle === undefined) {
         return { chronicleId: input.chronicleId, deleted: false };
       }
       if (chronicle.loginId !== input.loginId) {
@@ -162,7 +166,7 @@ export const appRouter = t.router({
     .input(z.object({ placeId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const place = await ctx.locationGraphStore.getPlace(input.placeId);
-      if (!place) {
+      if (place === null || place === undefined) {
         throw new Error('Location not found.');
       }
       const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, place);
@@ -255,7 +259,10 @@ export const appRouter = t.router({
     ),
 });
 
-async function createChronicleHandler(ctx: Context, input: CreateChronicleInput) {
+async function createChronicleHandler(
+  ctx: Context,
+  input: CreateChronicleInput
+): Promise<{ chronicle: EnsureChronicleResult }> {
   const character = await requireCharacter(ctx, input.characterId);
   ensureCharacterOwnership(character, input.loginId);
 
@@ -290,7 +297,7 @@ async function createChronicleHandler(ctx: Context, input: CreateChronicleInput)
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {
   const character = await ctx.worldStateStore.getCharacter(characterId);
-  if (!character) {
+  if (character === null || character === undefined) {
     throw new Error('Character not found for chronicle creation.');
   }
   return character;
@@ -302,8 +309,11 @@ function ensureCharacterOwnership(character: Character, loginId: string): void {
   }
 }
 
-async function resolveExistingPlace(ctx: Context, locationId?: string) {
-  if (!locationId) {
+async function resolveExistingPlace(
+  ctx: Context,
+  locationId?: string
+): Promise<LocationPlace | null> {
+  if (!isNonEmptyString(locationId)) {
     return null;
   }
   return ctx.locationGraphStore.getPlace(locationId);
@@ -313,7 +323,11 @@ function ensureLocationSelection(
   existingPlace: LocationPlace | null,
   input: CreateChronicleInput
 ): void {
-  if (input.locationId && !existingPlace && !input.location) {
+  if (
+    isNonEmptyString(input.locationId) &&
+    existingPlace === null &&
+    input.location === undefined
+  ) {
     throw new Error('Selected location was not found.');
   }
 }
@@ -333,10 +347,10 @@ function resolveLocaleDescription(
   input: CreateChronicleInput,
   existingPlace: LocationPlace | null
 ): string {
-  if (input.location?.atmosphere) {
-    return input.location.atmosphere;
+  if (isNonEmptyString(input.location?.atmosphere)) {
+    return input.location.atmosphere.trim();
   }
-  if (existingPlace?.description) {
+  if (isNonEmptyString(existingPlace?.description)) {
     return existingPlace.description;
   }
   return 'Atmosphere undisclosed.';
@@ -346,10 +360,10 @@ function resolveLocaleName(
   input: CreateChronicleInput,
   existingPlace: LocationPlace | null
 ): string {
-  if (input.location?.locale) {
-    return input.location.locale;
+  if (isNonEmptyString(input.location?.locale)) {
+    return input.location.locale.trim();
   }
-  if (existingPlace?.name) {
+  if (isNonEmptyString(existingPlace?.name)) {
     return existingPlace.name;
   }
   return 'Uncatalogued Locale';
@@ -360,7 +374,7 @@ async function maybeMoveCharacterToExistingPlace(
   characterId: string,
   place: LocationPlace | null
 ): Promise<void> {
-  if (!place) {
+  if (place === null) {
     return;
   }
   await ctx.locationGraphStore.applyPlan({
@@ -373,14 +387,17 @@ async function maybeMoveCharacterToExistingPlace(
   });
 }
 
-async function augmentChronicleSnapshot(ctx: Context, chronicleId: string) {
+async function augmentChronicleSnapshot(
+  ctx: Context,
+  chronicleId: string
+): Promise<ChronicleState | null> {
   const snapshot = await ctx.worldStateStore.getChronicleState(chronicleId);
-  if (!snapshot) {
+  if (snapshot === null || snapshot === undefined) {
     return null;
   }
   const characterId = snapshot.chronicle.characterId ?? snapshot.character?.id ?? null;
   const locationId = snapshot.chronicle.locationId;
-  if (characterId && locationId) {
+  if (isNonEmptyString(characterId) && isNonEmptyString(locationId)) {
     snapshot.location =
       (await ctx.locationGraphStore.summarizeCharacterLocation({
         characterId,
@@ -394,33 +411,23 @@ async function buildLocationBreadcrumb(
   store: Context['locationGraphStore'],
   place: LocationPlace
 ): Promise<LocationBreadcrumbEntry[]> {
-  const path: LocationBreadcrumbEntry[] = [];
-  let current: LocationPlace | null = place;
-  let depth = 0;
-  while (current && depth < 20) {
-    path.unshift({
-      id: current.id,
-      kind: current.kind,
-      name: current.name,
-    });
-    if (!current.canonicalParentId) {
-      break;
-    }
-    current = current.canonicalParentId ? await store.getPlace(current.canonicalParentId) : null;
-    depth += 1;
-  }
-  return path;
+  const chain = await collectAncestorChain(store, place, 0);
+  return chain.map((entry) => ({
+    id: entry.id,
+    kind: entry.kind,
+    name: entry.name,
+  }));
 }
 
-function normalizeTags(tags?: string[]): string[] {
-  if (!tags) {
+function normalizeTags(tags?: string[] | null): string[] {
+  if (!Array.isArray(tags)) {
     return [];
   }
   const result: string[] = [];
   const seen = new Set<string>();
   for (const tag of tags) {
     const value = tag.trim().toLowerCase();
-    if (!value || seen.has(value)) {
+    if (value.length === 0 || seen.has(value)) {
       continue;
     }
     seen.add(value);
@@ -433,7 +440,7 @@ function normalizeTags(tags?: string[]): string[] {
 }
 
 function deriveLocationTags(atmosphere: string): string[] {
-  if (!atmosphere) {
+  if (!isNonEmptyString(atmosphere)) {
     return [];
   }
   return atmosphere
@@ -442,5 +449,27 @@ function deriveLocationTags(atmosphere: string): string[] {
     .filter((part) => part.length > 1)
     .slice(0, 6);
 }
+
+async function collectAncestorChain(
+  store: Context['locationGraphStore'],
+  place: LocationPlace,
+  depth: number
+): Promise<LocationPlace[]> {
+  if (depth >= 20 || !isNonEmptyString(place.canonicalParentId)) {
+    return [place];
+  }
+
+  const parent = await store.getPlace(place.canonicalParentId);
+  if (parent === null || parent === undefined) {
+    return [place];
+  }
+
+  const chain = await collectAncestorChain(store, parent, depth + 1);
+  chain.push(place);
+  return chain;
+}
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
 
 export type AppRouter = typeof appRouter;

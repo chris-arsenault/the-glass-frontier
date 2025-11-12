@@ -104,23 +104,25 @@ class NarrativeEngine {
   }
 
   private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
-    if (!authorizationHeader) {
+    if (!isNonEmptyString(authorizationHeader)) {
       return this.defaultLlm;
     }
+    const headerValue = authorizationHeader.trim();
 
     return new LangGraphLlmClient({
       defaultHeaders: {
-        authorization: authorizationHeader,
+        authorization: headerValue,
         'content-type': 'application/json',
       },
     });
   }
 
   #requireTemplateManager(options?: NarrativeEngineOptions): PromptTemplateManager {
-    if (!options?.templateManager) {
+    const manager = options?.templateManager;
+    if (manager === undefined || manager === null) {
       throw new Error('NarrativeEngine requires a prompt template manager instance');
     }
-    return options.templateManager;
+    return manager;
   }
 
   #resolveWorldStateStore(store?: WorldStateStore): WorldStateStore {
@@ -128,7 +130,7 @@ class NarrativeEngine {
   }
 
   #resolveLocationGraphStore(store?: LocationGraphStore): LocationGraphStore {
-    if (store) {
+    if (isDefined(store)) {
       return store;
     }
     return createLocationGraphStore({
@@ -138,7 +140,7 @@ class NarrativeEngine {
   }
 
   #resolveImbuedRegistryStore(store?: ImbuedRegistryStore): ImbuedRegistryStore {
-    if (store) {
+    if (isDefined(store)) {
       return store;
     }
     return createImbuedRegistryStore({
@@ -164,14 +166,14 @@ class NarrativeEngine {
   }
 
   #assertChronicleId(chronicleId: string): void {
-    if (!chronicleId) {
+    if (!isNonEmptyString(chronicleId)) {
       throw new Error('chronicleId is required');
     }
   }
 
   async #loadChronicleState(chronicleId: string): Promise<ChronicleState> {
     const state = await this.worldStateStore.getChronicleState(chronicleId);
-    if (!state) {
+    if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
     return state;
@@ -179,10 +181,10 @@ class NarrativeEngine {
 
   #requireLoginId(state: ChronicleState): string {
     const loginId = state.chronicle?.loginId;
-    if (!loginId) {
+    if (!isNonEmptyString(loginId)) {
       throw new Error('Chronicle state missing login identifier for template resolution');
     }
-    return loginId;
+    return loginId.trim();
   }
 
   #createTemplateRuntime(loginId: string): PromptTemplateRuntime {
@@ -292,11 +294,12 @@ class NarrativeEngine {
 
 function createProgressEmitterFromEnv(): TurnProgressPublisher | undefined {
   const queueUrl = process.env.TURN_PROGRESS_QUEUE_URL;
-  if (!queueUrl) {
+  if (!isNonEmptyString(queueUrl)) {
     return undefined;
   }
+  const trimmed = queueUrl.trim();
   try {
-    return new TurnProgressEmitter(queueUrl);
+    return new TurnProgressEmitter(trimmed);
   } catch (error) {
     log('warn', 'Failed to initialize progress emitter', {
       reason: error instanceof Error ? error.message : 'unknown',
@@ -304,5 +307,10 @@ function createProgressEmitterFromEnv(): TurnProgressPublisher | undefined {
     return undefined;
   }
 }
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const isDefined = <T>(value: T | null | undefined): value is T => value !== null && value !== undefined;
 
 export { NarrativeEngine };

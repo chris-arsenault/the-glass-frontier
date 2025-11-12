@@ -34,14 +34,14 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => ({
 
 export class TurnProgressEmitter implements TurnProgressPublisher {
   private readonly client: SQSClient;
+  private readonly queueUrl: string;
 
-  constructor(
-    private readonly queueUrl: string,
-    client?: SQSClient
-  ) {
-    if (!queueUrl) {
+  constructor(queueUrl: string, client?: SQSClient) {
+    const normalizedQueueUrl = typeof queueUrl === 'string' ? queueUrl.trim() : '';
+    if (normalizedQueueUrl.length === 0) {
       throw new Error('TURN_PROGRESS_QUEUE_URL is required to emit progress events');
     }
+    this.queueUrl = normalizedQueueUrl;
     this.client = client ?? new SQSClient({});
   }
 

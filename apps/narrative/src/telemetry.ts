@@ -36,9 +36,11 @@ type CheckResolutionPayload = {
 
 class ChronicleTelemetry {
   recordTransition(payload: TransitionPayload): void {
+    const metadata =
+      payload.metadata !== undefined ? JSON.stringify(payload.metadata).slice(0, 200) : '';
     log('info', 'telemetry.chronicle.transition', {
       chronicleId: payload.chronicleId,
-      metadata: payload.metadata ? JSON.stringify(payload.metadata).slice(0, 200) : '',
+      metadata,
       nodeId: payload.nodeId,
       status: payload.status,
       turnSequence: payload.turnSequence,

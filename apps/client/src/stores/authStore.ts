@@ -1,31 +1,32 @@
-import type {
-  CognitoUserSession } from 'amazon-cognito-identity-js';
-import {
-  AuthenticationDetails,
-  CognitoUser,
-  CognitoUserPool
-} from 'amazon-cognito-identity-js';
+import type { CognitoUserSession } from 'amazon-cognito-identity-js';
+import { AuthenticationDetails, CognitoUser, CognitoUserPool } from 'amazon-cognito-identity-js';
 import { create } from 'zustand';
 
 import { getConfigValue } from '../utils/runtimeConfig';
+
+const hasStringValue = (value: string | undefined): value is string => {
+  return typeof value === 'string' && value.length > 0;
+};
 
 const poolId =
   getConfigValue('VITE_COGNITO_USER_POOL_ID') ?? import.meta.env.VITE_COGNITO_USER_POOL_ID;
 const clientId = getConfigValue('VITE_COGNITO_CLIENT_ID') ?? import.meta.env.VITE_COGNITO_CLIENT_ID;
 
-if (!poolId || !clientId) {
+const resolvedPoolId = hasStringValue(poolId) ? poolId : undefined;
+const resolvedClientId = hasStringValue(clientId) ? clientId : undefined;
+
+if (resolvedPoolId === undefined || resolvedClientId === undefined) {
   console.warn(
     'Cognito environment variables are not fully configured. Set VITE_COGNITO_USER_POOL_ID and VITE_COGNITO_CLIENT_ID.'
   );
 }
 
-const userPool =
-  poolId && clientId
-    ? new CognitoUserPool({
-      ClientId: clientId,
-      UserPoolId: poolId,
-    })
-    : null;
+const userPool = resolvedPoolId !== undefined && resolvedClientId !== undefined
+  ? new CognitoUserPool({
+    ClientId: resolvedClientId,
+    UserPoolId: resolvedPoolId,
+  })
+  : null;
 
 type AuthTokens = {
   idToken: string;
@@ -52,34 +53,90 @@ const extractTokens = (session: CognitoUserSession): AuthTokens => ({
   refreshToken: session.getRefreshToken().getToken(),
 });
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
-  challengeUser: null,
-  async completeNewPassword(newPassword) {
+type StoreSet = (
+  partial:
+    | AuthState
+    | Partial<AuthState>
+    | ((state: AuthState) => AuthState | Partial<AuthState>),
+  replace?: boolean
+) => void;
+
+type StoreGet = () => AuthState;
+
+const NEW_PASSWORD_REQUIRED = 'NEW_PASSWORD_REQUIRED';
+
+const authenticateUser = (
+  user: CognitoUser,
+  authenticationDetails: AuthenticationDetails,
+  onNewPasswordRequired: () => void
+): Promise<CognitoUserSession> => {
+  return new Promise<CognitoUserSession>((resolve, reject) => {
+    user.authenticateUser(authenticationDetails, {
+      newPasswordRequired: () => {
+        onNewPasswordRequired();
+        reject(new Error(NEW_PASSWORD_REQUIRED));
+      },
+      onFailure: reject,
+      onSuccess: resolve,
+    });
+  });
+};
+
+const completePasswordChallenge = (
+  user: CognitoUser,
+  newPassword: string
+): Promise<CognitoUserSession> => {
+  return new Promise<CognitoUserSession>((resolve, reject) => {
+    user.completeNewPasswordChallenge(
+      newPassword,
+      {},
+      {
+        onFailure: reject,
+        onSuccess: resolve,
+      }
+    );
+  });
+};
+
+const setAuthenticatedState = (
+  set: StoreSet,
+  tokens: AuthTokens,
+  username?: string
+): void => {
+  set({
+    challengeUser: null,
+    error: null,
+    isAuthenticated: true,
+    isAuthenticating: false,
+    newPasswordRequired: false,
+    tokens,
+    ...(username !== undefined ? { username } : {}),
+  });
+};
+
+const setAuthFailure = (set: StoreSet, errorMessage: string): void => {
+  set({
+    challengeUser: null,
+    error: errorMessage,
+    isAuthenticated: false,
+    isAuthenticating: false,
+    newPasswordRequired: false,
+    tokens: null,
+  });
+};
+
+const createCompleteNewPasswordHandler = (set: StoreSet, get: StoreGet) => {
+  return async (newPassword: string): Promise<void> => {
     const challengeUser = get().challengeUser;
-    if (!challengeUser) {
+    if (challengeUser === null) {
       throw new Error('No pending password challenge.');
     }
+
     set({ error: null, isAuthenticating: true });
+
     try {
-      const session = await new Promise<CognitoUserSession>((resolve, reject) => {
-        challengeUser.completeNewPasswordChallenge(
-          newPassword,
-          {},
-          {
-            onFailure: reject,
-            onSuccess: resolve,
-          }
-        );
-      });
-      const tokens = extractTokens(session);
-      set({
-        challengeUser: null,
-        error: null,
-        isAuthenticated: true,
-        isAuthenticating: false,
-        newPasswordRequired: false,
-        tokens,
-      });
+      const session = await completePasswordChallenge(challengeUser, newPassword);
+      setAuthenticatedState(set, extractTokens(session));
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to update password.',
@@ -87,14 +144,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       });
       throw error;
     }
-  },
-  error: null,
-  isAuthenticated: false,
-  isAuthenticating: false,
-  async login(username, password) {
-    if (!userPool) {
+  };
+};
+
+const createLoginHandler = (set: StoreSet, _get: StoreGet) => {
+  return async (username: string, password: string): Promise<void> => {
+    if (userPool === null) {
       throw new Error('Cognito User Pool not configured.');
     }
+
     set({ error: null, isAuthenticating: true });
 
     const authenticationDetails = new AuthenticationDetails({
@@ -108,54 +166,42 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     });
 
     try {
-      const session = await new Promise<CognitoUserSession>((resolve, reject) => {
-        cognitoUser.authenticateUser(authenticationDetails, {
-          newPasswordRequired: () => {
-            set({
-              challengeUser: cognitoUser,
-              error: null,
-              isAuthenticating: false,
-              newPasswordRequired: true,
-              username,
-            });
-            reject(new Error('NEW_PASSWORD_REQUIRED'));
-          },
-          onFailure: reject,
-          onSuccess: resolve,
+      const session = await authenticateUser(cognitoUser, authenticationDetails, () => {
+        set({
+          challengeUser: cognitoUser,
+          error: null,
+          isAuthenticating: false,
+          newPasswordRequired: true,
+          username,
         });
       });
 
-      const tokens = extractTokens(session);
-      set({
-        challengeUser: null,
-        error: null,
-        isAuthenticated: true,
-        isAuthenticating: false,
-        newPasswordRequired: false,
-        tokens,
-        username,
-      });
+      setAuthenticatedState(set, extractTokens(session), username);
     } catch (error) {
-      if (error instanceof Error && error.message === 'NEW_PASSWORD_REQUIRED') {
+      if (error instanceof Error && error.message === NEW_PASSWORD_REQUIRED) {
         return;
       }
-      set({
-        challengeUser: null,
-        error: error instanceof Error ? error.message : 'Login failed.',
-        isAuthenticated: false,
-        isAuthenticating: false,
-        newPasswordRequired: false,
-        tokens: null,
-      });
+
+      setAuthFailure(set, error instanceof Error ? error.message : 'Login failed.');
       throw error;
     }
-  },
+  };
+};
+
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  challengeUser: null,
+  completeNewPassword: createCompleteNewPasswordHandler(set, get),
+  error: null,
+  isAuthenticated: false,
+  isAuthenticating: false,
+  login: createLoginHandler(set, get),
   logout() {
     const currentTokens = get().tokens;
-    if (userPool && currentTokens) {
+    if (userPool !== null && currentTokens !== null) {
       const cognitoUser = userPool.getCurrentUser();
       cognitoUser?.signOut();
     }
+
     set({
       error: null,
       isAuthenticated: false,
@@ -168,18 +214,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   username: '',
 }));
 
-export const getAuthHeaders = () => {
+export const getAuthHeaders = (): Record<string, string> => {
   const token = useAuthStore.getState().tokens?.idToken;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (typeof token === 'string' && token.length > 0) {
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  return {};
 };
 
-if (userPool) {
+if (userPool !== null) {
   const currentUser = userPool.getCurrentUser();
-  if (currentUser) {
-    currentUser.getSession((err, session) => {
-      if (err || !session) {
+  if (currentUser !== null) {
+    currentUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+      if (err !== null || session === null) {
         return;
       }
+
       if (session.isValid()) {
         useAuthStore.setState({
           error: null,

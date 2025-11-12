@@ -24,10 +24,12 @@ export const PromptTemplateDescriptor = z.object({
 
 export type PromptTemplateDescriptor = z.infer<typeof PromptTemplateDescriptor>;
 
+const OUTPUT_FORMAT_SECTION = '## Output Format';
+
 export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplateDescriptor> = {
   'check-planner': {
     description: 'Determines mechanical framing for risky actions and complications.',
-    editableEndToken: '## Output Format',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
     editableStartToken: '## Decision Rules',
     id: 'check-planner',
     label: 'Check Planner',
@@ -54,7 +56,7 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'intent-intake': {
     description: 'Parses the player\'s utterance into actionable intent metadata.',
-    editableEndToken: '## Output Format',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
     editableStartToken: '## Decision Rules',
     id: 'intent-intake',
     label: 'Intent Intake',
@@ -72,7 +74,7 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'location-delta': {
     description: 'Decides if the scene anchor shifts within the location graph.',
-    editableEndToken: '## Output Format',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
     editableStartToken: 'RULES',
     id: 'location-delta',
     label: 'Location Delta',

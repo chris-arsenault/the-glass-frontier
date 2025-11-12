@@ -16,7 +16,7 @@ export class PromptTemplateRuntime {
     const resolved = await this.#manager.resolveTemplate(this.#loginId, templateId);
     const cacheKey = `${templateId}:${resolved.variantId}`;
     let template = this.#cache.get(cacheKey);
-    if (!template) {
+    if (template === undefined) {
       template = Handlebars.compile(resolved.body, { noEscape: true });
       this.#cache.set(cacheKey, template);
     }

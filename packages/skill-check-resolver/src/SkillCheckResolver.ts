@@ -7,6 +7,7 @@ import {
   attributeModifierFromName,
   MOMENTUM_DELTA,
   RISK_LEVEL_MAP,
+  type RiskLevel,
   skillModifierFromSkillName,
   TIER_THRESHOLDS,
 } from '@glass-frontier/dto';
@@ -14,6 +15,13 @@ import { clamp } from '@glass-frontier/utils';
 
 import { DiceRoller } from './DiceRoller';
 import { CheckRequestTelemetry } from './telemetry';
+
+const momentumDeltaByTier = new Map<OutcomeTier, number>(
+  Object.entries(MOMENTUM_DELTA) as Array<[OutcomeTier, number]>
+);
+const riskThresholdByLevel = new Map<RiskLevel, number>(
+  Object.entries(RISK_LEVEL_MAP) as Array<[RiskLevel, number]>
+);
 
 class SkillCheckResolver {
   request: SkillCheckRequest;
@@ -29,7 +37,7 @@ class SkillCheckResolver {
 
     const modifier = this.computeModifier();
     const dieResult = roller.computeResult(modifier);
-    const target = RISK_LEVEL_MAP[this.request.riskLevel];
+    const target = this.resolveRiskThreshold(this.request.riskLevel);
     const margin = dieResult - target;
     const outcomeTier: OutcomeTier = this.determineTier(margin);
     const newMomentum = this.computeMomentum(this.request.character.momentum, outcomeTier);
@@ -64,15 +72,21 @@ class SkillCheckResolver {
   }
 
   computeMomentum(current: MomentumState, tier: OutcomeTier): number {
-    const delta = MOMENTUM_DELTA[tier] ?? 0;
+    const delta = momentumDeltaByTier.get(tier) ?? 0;
     return clamp(current.current + delta, current.floor, current.ceiling);
   }
 
   determineTier(margin: number): OutcomeTier {
     for (const [threshold, tier] of TIER_THRESHOLDS) {
-      if (threshold && tier && margin >= threshold) {return tier;}
+      if (margin >= threshold) {
+        return tier;
+      }
     }
-    return 'collapse'; // fallback (should never hit)
+    return 'collapse';
+  }
+
+  private resolveRiskThreshold(level: RiskLevel): number {
+    return riskThresholdByLevel.get(level) ?? riskThresholdByLevel.get('standard') ?? RISK_LEVEL_MAP.standard;
   }
 }
 

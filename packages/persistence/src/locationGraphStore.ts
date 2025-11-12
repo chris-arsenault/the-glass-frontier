@@ -6,46 +6,46 @@ import type {
   LocationSummary,
 } from '@glass-frontier/dto';
 
-export interface LocationGraphStore {
-  ensureLocation(input: {
+export type LocationGraphStore = {
+  ensureLocation: (input: {
     locationId?: string;
     name: string;
     description?: string;
     tags?: string[];
     characterId?: string;
     kind?: string;
-  }): Promise<LocationPlace>;
+  }) => Promise<LocationPlace>;
 
-  getLocationGraph(locationId: string): Promise<LocationGraphSnapshot>;
+  getLocationGraph: (locationId: string) => Promise<LocationGraphSnapshot>;
 
-  applyPlan(input: {
+  applyPlan: (input: {
     locationId: string;
     characterId: string;
     plan: LocationPlan;
-  }): Promise<LocationState | null>;
+  }) => Promise<LocationState | null>;
 
-  getLocationState(characterId: string): Promise<LocationState | null>;
+  getLocationState: (characterId: string) => Promise<LocationState | null>;
 
-  summarizeCharacterLocation(input: {
+  summarizeCharacterLocation: (input: {
     locationId: string;
     characterId: string;
-  }): Promise<LocationSummary | null>;
+  }) => Promise<LocationSummary | null>;
 
-  listLocationRoots(input?: { search?: string; limit?: number }): Promise<LocationPlace[]>;
+  listLocationRoots: (input?: { search?: string; limit?: number }) => Promise<LocationPlace[]>;
 
-  getPlace(placeId: string): Promise<LocationPlace | null>;
+  getPlace: (placeId: string) => Promise<LocationPlace | null>;
 
-  createPlace(input: {
+  createPlace: (input: {
     parentId?: string | null;
     locationId?: string;
     name: string;
     kind: string;
     tags?: string[];
     description?: string;
-  }): Promise<LocationPlace>;
+  }) => Promise<LocationPlace>;
 
-  createLocationChain(input: {
+  createLocationChain: (input: {
     parentId?: string | null;
     segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
-  }): Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
+  }) => Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
 }

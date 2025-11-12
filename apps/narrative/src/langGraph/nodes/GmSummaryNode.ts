@@ -31,7 +31,9 @@ class GmSummaryNode implements GraphNode {
   }
 
   #canSummarize(context: GraphContext): boolean {
-    return Boolean(!context.failure && context.gmMessage && context.playerIntent);
+    const hasMessage = context.gmMessage !== undefined && context.gmMessage !== null;
+    const hasIntent = context.playerIntent !== undefined;
+    return context.failure !== true && hasMessage && hasIntent;
   }
 
   #recordSkip(context: GraphContext): void {

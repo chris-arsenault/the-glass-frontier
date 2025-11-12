@@ -40,7 +40,12 @@ class CheckPlannerNode implements GraphNode {
       return { ...context, failure: true };
     }
 
-    if (!context.playerIntent || !context.playerIntent.requiresCheck || !context.chronicle.character) {
+    if (
+      context.playerIntent === undefined ||
+      context.playerIntent.requiresCheck !== true ||
+      context.chronicle.character === undefined ||
+      context.chronicle.character === null
+    ) {
       return { ...context, skillCheckResult: undefined };
     }
 
@@ -54,7 +59,7 @@ class CheckPlannerNode implements GraphNode {
     const character = context.chronicle.character;
 
     const overrides = await this.#requestPlan(context, prompt);
-    if (!overrides) {
+    if (overrides === null) {
       return { ...context, failure: true };
     }
 
@@ -135,7 +140,7 @@ class CheckPlannerNode implements GraphNode {
     if (advantage !== 'none') {
       flags.push(advantage);
     }
-    if (playerIntent.creativeSpark) {
+    if (playerIntent.creativeSpark === true) {
       flags.push('creative-spark');
     }
     return flags;
@@ -173,7 +178,7 @@ class CheckPlannerNode implements GraphNode {
   #normalizeString(value?: string | null): string | null {
     if (typeof value === 'string') {
       const trimmed = value.trim();
-      return trimmed.length ? trimmed : null;
+      return trimmed.length > 0 ? trimmed : null;
     }
     return null;
   }
@@ -184,8 +189,8 @@ class CheckPlannerNode implements GraphNode {
     }
     const normalized = values
       .map((entry) => this.#normalizeString(entry))
-      .filter((entry): entry is string => Boolean(entry));
-    return normalized.length ? normalized : null;
+      .filter((entry): entry is string => entry !== null);
+    return normalized.length > 0 ? normalized : null;
   }
 
   #normalizeRationale(value?: string | string[] | null): string | null {
@@ -195,7 +200,7 @@ class CheckPlannerNode implements GraphNode {
     if (Array.isArray(value)) {
       for (const entry of value) {
         const normalized = this.#normalizeString(entry);
-        if (normalized) {
+        if (normalized !== null) {
           return normalized;
         }
       }

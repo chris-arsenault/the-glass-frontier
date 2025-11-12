@@ -54,13 +54,17 @@ type LlmClientOptions = {
 };
 
 const resolveBaseUrl = (value?: string): string => {
-  const candidate = value ?? process.env.LLM_PROXY_URL ?? DEFAULT_BASE_URL;
-  return candidate.replace(/\/+$/, '');
+  const candidate = [value, process.env.LLM_PROXY_URL, DEFAULT_BASE_URL].find(
+    (entry): entry is string => typeof entry === 'string' && entry.length > 0
+  );
+  return (candidate ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
 };
 
-const resolveModel = (value?: string): string => value ?? DEFAULT_MODEL;
+const resolveModel = (value?: string): string =>
+  typeof value === 'string' && value.length > 0 ? value : DEFAULT_MODEL;
 
-const resolveProviderId = (value?: string): string => value ?? DEFAULT_PROVIDER;
+const resolveProviderId = (value?: string): string =>
+  typeof value === 'string' && value.length > 0 ? value : DEFAULT_PROVIDER;
 
 const resolveTimeout = (value?: number): number => {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -77,7 +81,7 @@ const resolveMaxRetries = (value?: number): number => {
 };
 
 const resolveHeaders = (headers?: Record<string, string>): Record<string, string> => {
-  if (headers && Object.keys(headers).length > 0) {
+  if (headers !== undefined && Object.keys(headers).length > 0) {
     return { ...headers };
   }
   return { ...DEFAULT_HEADERS };
@@ -152,7 +156,7 @@ class LangGraphLlmClient {
     }
 
     const coerced = this.#coerceRecord(output);
-    if (coerced) {
+    if (coerced !== null) {
       return {
         attempts,
         json: coerced,
@@ -174,11 +178,11 @@ class LangGraphLlmClient {
   }: LlmInvokeOptions): Record<string, unknown> {
     const sequence = Array.isArray(messages) ? [...messages] : [];
 
-    if (system) {
+    if (typeof system === 'string' && system.length > 0) {
       sequence.unshift({ content: system, role: 'system' });
     }
 
-    if (prompt) {
+    if (typeof prompt === 'string' && prompt.length > 0) {
       sequence.push({ content: prompt, role: 'user' });
     }
 
@@ -202,52 +206,51 @@ class LangGraphLlmClient {
     body: Record<string, unknown>;
     metadata?: Record<string, unknown>;
   }): Promise<ExecuteResult> {
-    let attempt = 0;
-    let lastError: unknown;
-
-    while (attempt <= this.#maxRetries) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
-      try {
-        const mergedBody = this.#mergeMetadata(body, metadata);
-        const response = await this.#invokeMutation(mergedBody, controller.signal);
-        const parsed = this.#parseResponse(response);
-        const message = this.#extractMessage(parsed.choices[0]);
-
-        return {
-          attempts: attempt + 1,
-          output: message,
-          raw: parsed,
-          usage: parsed.usage ?? null,
-        };
-      } catch (error) {
-        lastError = error;
-        this.#logError(error, attempt, metadata);
-
-        if (this.#isBadRequest(error)) {
-          throw this.#createBadRequestError(error);
-        }
-
-        if (attempt === this.#maxRetries) {
-          throw this.#toError(error);
-        }
-
-        await delay(this.#retryDelay(attempt));
-      } finally {
-        clearTimeout(timer);
-      }
-
-      attempt += 1;
-    }
-
-    throw this.#toError(lastError ?? new Error('llm_invoke_failed'));
+    return this.#attemptExecution(body, metadata, 0);
   }
 
   #mergeMetadata(
     body: Record<string, unknown>,
     metadata?: Record<string, unknown>
   ): Record<string, unknown> {
-    return metadata ? { ...body, metadata } : body;
+    return metadata === undefined ? { ...body } : { ...body, metadata };
+  }
+
+  async #attemptExecution(
+    body: Record<string, unknown>,
+    metadata: Record<string, unknown> | undefined,
+    attempt: number
+  ): Promise<ExecuteResult> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
+    try {
+      const mergedBody = this.#mergeMetadata(body, metadata);
+      const response = await this.#invokeMutation(mergedBody, controller.signal);
+      const parsed = this.#parseResponse(response);
+      const message = this.#extractMessage(parsed.choices[0]);
+
+      return {
+        attempts: attempt + 1,
+        output: message,
+        raw: parsed,
+        usage: parsed.usage ?? null,
+      };
+    } catch (error) {
+      this.#logError(error, attempt, metadata);
+
+      if (this.#isBadRequest(error)) {
+        throw this.#createBadRequestError(error);
+      }
+
+      if (attempt >= this.#maxRetries) {
+        throw this.#toError(error);
+      }
+
+      await delay(this.#retryDelay(attempt));
+      return this.#attemptExecution(body, metadata, attempt + 1);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async #invokeMutation(payload: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
@@ -255,7 +258,7 @@ class LangGraphLlmClient {
   }
 
   #parseResponse(payload: unknown): ChatCompletionResponse {
-    if (!payload || typeof payload !== 'object') {
+    if (payload === null || typeof payload !== 'object') {
       throw new Error('llm_invalid_response');
     }
     const record = payload as Record<string, unknown>;
@@ -268,11 +271,11 @@ class LangGraphLlmClient {
   }
 
   #isChoice(value: unknown): value is ChatCompletionChoice {
-    return Boolean(value && typeof value === 'object');
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
 
   #extractMessage(choice?: ChatCompletionChoice): string {
-    if (!choice) {
+    if (choice === undefined || choice === null) {
       return '';
     }
     const raw = choice.message?.content ?? choice.delta?.content ?? '';
@@ -286,7 +289,11 @@ class LangGraphLlmClient {
     if (typeof segment === 'string') {
       return segment;
     }
-    if (segment && typeof segment === 'object' && 'text' in (segment as Record<string, unknown>)) {
+    if (
+      segment !== null &&
+      typeof segment === 'object' &&
+      'text' in (segment as Record<string, unknown>)
+    ) {
       const value = (segment as Record<string, unknown>).text;
       return typeof value === 'string' ? value : '';
     }
@@ -294,7 +301,7 @@ class LangGraphLlmClient {
   }
 
   #coerceRecord(value: unknown): Record<string, unknown> | null {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
       return value as Record<string, unknown>;
     }
     return null;
@@ -303,7 +310,7 @@ class LangGraphLlmClient {
   #logError(error: unknown, attempt: number, metadata?: Record<string, unknown>): void {
     log('error', 'narrative.llm.invoke_failed', {
       attempt,
-      context: metadata ? this.#stringifyMetadata(metadata) : '{}',
+      context: metadata !== undefined ? this.#stringifyMetadata(metadata) : '{}',
       message: this.#toError(error).message,
       provider: this.#providerId,
     });
@@ -346,10 +353,13 @@ class LangGraphLlmClient {
     const cause =
       (error.cause as { message?: unknown } | undefined)?.message ??
       (error as { cause?: { message?: unknown } }).cause?.message;
-    if (typeof cause === 'string' && cause.trim()) {
-      return cause;
+    if (typeof cause === 'string') {
+      const trimmed = cause.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
     }
-    return error.message || 'Downstream bad request.';
+    return error.message.length > 0 ? error.message : 'Downstream bad request.';
   }
 }
 

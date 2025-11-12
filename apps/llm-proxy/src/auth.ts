@@ -13,12 +13,35 @@ const PLAYER_ID_CLAIMS = [
   'sub',
 ];
 
-type ClaimMap = Record<string, unknown> | undefined;
+type ClaimMap = Record<string, unknown>;
+
+type JwtAuthorizerSection = {
+  claims?: ClaimMap;
+};
+
+type JwtAuthorizerContext = {
+  jwt?: JwtAuthorizerSection;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const extractClaimsFromAuthorizer = (authorizer: unknown): ClaimMap | undefined => {
+  if (!isRecord(authorizer)) {
+    return undefined;
+  }
+  const jwtSection = (authorizer as JwtAuthorizerContext).jwt;
+  if (!isRecord(jwtSection)) {
+    return undefined;
+  }
+  const { claims } = jwtSection;
+  return isRecord(claims) ? claims : undefined;
+};
 
 export function resolvePlayerIdFromEvent(event: APIGatewayProxyEventV2): string | undefined {
-  const claims = event.requestContext?.authorizer?.jwt?.claims as ClaimMap;
+  const claims = extractClaimsFromAuthorizer(event.requestContext?.authorizer);
   const fromClaims = extractPlayerIdFromClaims(claims);
-  if (fromClaims) {
+  if (fromClaims !== undefined) {
     return fromClaims;
   }
   const header = event.headers?.authorization ?? event.headers?.Authorization;
@@ -33,28 +56,51 @@ export function resolvePlayerIdFromHeaders(headers: IncomingHttpHeaders): string
   return extractPlayerIdFromAuthorization(header);
 }
 
-function extractPlayerIdFromClaims(claims: ClaimMap): string | undefined {
-  if (!claims) return undefined;
+function extractPlayerIdFromClaims(claims?: ClaimMap): string | undefined {
+  if (claims === undefined) {
+    return undefined;
+  }
+
+  const claimEntries = Object.entries(claims);
+  const claimMap = new Map<string, unknown>(claimEntries);
+
   for (const key of PLAYER_ID_CLAIMS) {
-    const value = claims[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim();
+    const value = claimMap.get(key);
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
     }
   }
   return undefined;
 }
 
 function extractPlayerIdFromAuthorization(header?: string): string | undefined {
-  if (!header) {
+  if (typeof header !== 'string') {
     return undefined;
   }
-  const token = header.trim().startsWith('Bearer ') ? header.trim().slice(7).trim() : header.trim();
+
+  const trimmedHeader = header.trim();
+  if (trimmedHeader.length === 0) {
+    return undefined;
+  }
+
+  const token = trimmedHeader.startsWith('Bearer ')
+    ? trimmedHeader.slice(7).trim()
+    : trimmedHeader;
+  if (token.length === 0) {
+    return undefined;
+  }
+
   const payload = decodeJwtPayload(token);
-  return extractPlayerIdFromClaims(payload ?? undefined);
+  return extractPlayerIdFromClaims(payload);
 }
 
-function decodeJwtPayload(token: string): ClaimMap {
-  if (!token) return undefined;
+function decodeJwtPayload(token: string): ClaimMap | undefined {
+  if (token.length === 0) {
+    return undefined;
+  }
   const parts = token.split('.');
   if (parts.length < 2) {
     return undefined;
@@ -66,7 +112,8 @@ function decodeJwtPayload(token: string): ClaimMap {
         ? normalized
         : normalized.padEnd(normalized.length + (4 - (normalized.length % 4)), '=');
     const decoded = Buffer.from(padded, 'base64').toString('utf8');
-    return JSON.parse(decoded) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(decoded);
+    return isRecord(parsed) ? parsed : undefined;
   } catch {
     return undefined;
   }

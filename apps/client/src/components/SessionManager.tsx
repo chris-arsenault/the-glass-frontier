@@ -28,15 +28,6 @@ export function SessionManager() {
 
   const disabled = connectionState === 'connecting' || isWorking || directoryStatus === 'loading';
 
-  const chronicleTitleById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const chronicle of availableChronicles) {
-      if (chronicle.id) {
-        map.set(chronicle.id, chronicle.title);
-      }
-    }
-    return map;
-  }, [availableChronicles]);
   const characterNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const character of availableCharacters) {
@@ -65,7 +56,7 @@ export function SessionManager() {
     }
     setPreferredCharacterId(targetId);
     setError(null);
-    navigate('/chronicles/start');
+    void navigate('/chronicles/start');
   };
 
   const handleDeleteChronicle = async (chronicleId: string) => {
@@ -93,7 +84,9 @@ export function SessionManager() {
           <button
             type="button"
             className="session-manager-new"
-            onClick={() => refreshDirectory().catch(() => undefined)}
+            onClick={() => {
+              void refreshDirectory().catch(() => undefined);
+            }}
             disabled={directoryStatus === 'loading'}
           >
             Refresh

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useUiStore } from '../stores/uiStore';
 import { CharacterOverview } from './CharacterOverview';
 
-export function CharacterDrawer() {
+export function CharacterDrawer(): JSX.Element {
   const isOpen = useUiStore((state) => state.isCharacterDrawerOpen);
   const close = useUiStore((state) => state.closeCharacterDrawer);
 

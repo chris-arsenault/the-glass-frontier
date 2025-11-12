@@ -8,21 +8,23 @@ class NarrativeWeaverNode implements GraphNode {
   readonly id = 'narrative-weaver';
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (!this.#canWeave(context)) {
+    const rawUtterance = context.playerMessage?.content;
+    if (!this.#canWeave(context, rawUtterance)) {
       this.#recordSkip(context);
       return { ...context, failure: true };
     }
 
+    const trimmedUtterance = rawUtterance.trim();
     const prompt = await composeNarrationPrompt({
       check: context.skillCheckPlan,
       chronicle: context.chronicle,
       intent: context.playerIntent,
       outcomeTier: context.skillCheckResult?.outcomeTier,
-      rawUtterance: context.playerMessage.content,
+      rawUtterance: trimmedUtterance,
       templates: context.templates,
     });
     const narration = await this.#generateNarration(context, prompt);
-    if (!narration) {
+    if (!isNonEmptyString(narration)) {
       return { ...context, failure: true };
     }
 
@@ -32,8 +34,12 @@ class NarrativeWeaverNode implements GraphNode {
     };
   }
 
-  #canWeave(context: GraphContext): boolean {
-    return Boolean(!context.failure && context.playerIntent);
+  #canWeave(context: GraphContext, rawUtterance: string | undefined): rawUtterance is string {
+    return (
+      context.failure !== true &&
+      context.playerIntent !== undefined &&
+      isNonEmptyString(rawUtterance)
+    );
   }
 
   #recordSkip(context: GraphContext): void {
@@ -75,5 +81,8 @@ class NarrativeWeaverNode implements GraphNode {
     };
   }
 }
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
 
 export { NarrativeWeaverNode };

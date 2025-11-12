@@ -5,6 +5,8 @@ import { ConnectionRepository } from '../services/ConnectionRepository';
 import { parseSubscribeMessage } from '../types';
 
 const repository = new ConnectionRepository();
+const hasText = (value: string | null | undefined): value is string =>
+  typeof value === 'string' && value.length > 0;
 
 const badRequest = (message: string): APIGatewayProxyResultV2 => ({
   body: message,
@@ -15,14 +17,15 @@ export const handler = async (
   event: APIGatewayProxyWebsocketEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   const connectionId = event.requestContext.connectionId;
-  if (!connectionId) {
+  if (!hasText(connectionId)) {
     return badRequest('missing connection');
   }
 
   try {
-    const body: unknown = event.body ? JSON.parse(event.body) : {};
+    const payload = typeof event.body === 'string' && event.body.length > 0 ? event.body : '{}';
+    const body: unknown = JSON.parse(payload);
     const message = parseSubscribeMessage(body);
-    if (!message?.jobId) {
+    if (!hasText(message?.jobId ?? null)) {
       return badRequest('jobId required');
     }
 

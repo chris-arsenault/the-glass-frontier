@@ -10,10 +10,12 @@ import { log } from '@glass-frontier/utils';
 
 import { websocketConfig } from './env';
 
-const connectionKey = (id: string) => `CONNECTION#${id}`;
-const jobKey = (id: string) => `JOB#${id}`;
+const connectionKey = (id: string): string => `CONNECTION#${id}`;
+const jobKey = (id: string): string => `JOB#${id}`;
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const hasText = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0;
 
 export type ConnectionMetadata = {
   connectionId: string;
@@ -49,7 +51,7 @@ export class ConnectionRepository {
 
   async subscribe(jobId: string, connectionId: string): Promise<void> {
     const meta = await this.getConnection(connectionId);
-    if (!meta) {
+    if (meta === null) {
       throw new Error('Connection not registered');
     }
     const ttl = this.ttlFromNow(this.subscriptionTtlSeconds);
@@ -98,10 +100,10 @@ export class ConnectionRepository {
     const items = response.Items ?? [];
     const deduped = new Map<string, JobTarget>();
     for (const item of items) {
-      const connectionId = typeof item.connectionId === 'string' ? item.connectionId : null;
-      const domainName = typeof item.domainName === 'string' ? item.domainName : null;
-      const stage = typeof item.stage === 'string' ? item.stage : null;
-      if (!connectionId || !domainName || !stage) {
+      const connectionId = hasText(item.connectionId) ? item.connectionId : null;
+      const domainName = hasText(item.domainName) ? item.domainName : null;
+      const stage = hasText(item.stage) ? item.stage : null;
+      if (connectionId === null || domainName === null || stage === null) {
         continue;
       }
       deduped.set(connectionId, { connectionId, domainName, stage });
@@ -128,8 +130,8 @@ export class ConnectionRepository {
     }
 
     for (const item of items) {
-      const sk = typeof item.sk === 'string' ? item.sk : undefined;
-      if (!sk) {
+      const sk = hasText(item.sk) ? item.sk : null;
+      if (sk === null) {
         continue;
       }
       deletes.push({ DeleteRequest: { Key: { pk, sk } } });
@@ -149,12 +151,12 @@ export class ConnectionRepository {
       })
     );
 
-    if (!result.Item) {
+    if (result.Item === undefined) {
       return null;
     }
 
     const { domainName, stage, userId } = result.Item;
-    if (typeof userId !== 'string' || typeof domainName !== 'string' || typeof stage !== 'string') {
+    if (!hasText(userId) || !hasText(domainName) || !hasText(stage)) {
       log('warn', 'Connection metadata missing fields', { connectionId });
       return null;
     }
@@ -176,23 +178,31 @@ export class ConnectionRepository {
       return;
     }
 
+    let sequence = Promise.resolve();
     for (let i = 0; i < requests.length; i += 25) {
-      let pending: Record<string, WriteRequest[]> | undefined = {
-        [this.tableName]: requests.slice(i, i + 25),
-      };
+      const batch = requests.slice(i, i + 25);
+      sequence = sequence.then(() => this.#writeChunk(batch));
+    }
+    await sequence;
+  }
 
-      while (pending && Object.keys(pending).length > 0) {
-        const response = await client.send(
-          new BatchWriteCommand({
-            RequestItems: pending,
-          })
-        );
+  private async #writeChunk(batch: WriteRequest[]): Promise<void> {
+    if (batch.length === 0) {
+      return;
+    }
+    const pending: Record<string, WriteRequest[]> = { [this.tableName]: batch };
+    await this.#processBatch(pending);
+  }
 
-        const unprocessedItems: WriteRequest[] =
-          response.UnprocessedItems?.[this.tableName] ?? [];
-        pending =
-          unprocessedItems.length > 0 ? { [this.tableName]: unprocessedItems } : undefined;
-      }
+  private async #processBatch(pending: Record<string, WriteRequest[]>): Promise<void> {
+    const response = await client.send(
+      new BatchWriteCommand({
+        RequestItems: pending,
+      })
+    );
+    const unprocessed = response.UnprocessedItems?.[this.tableName] ?? [];
+    if (unprocessed.length > 0) {
+      await this.#processBatch({ [this.tableName]: unprocessed });
     }
   }
 }

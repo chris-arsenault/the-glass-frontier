@@ -25,11 +25,11 @@ const imbuedRegistryStore: ImbuedRegistryStore = createImbuedRegistryStore({
   prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
 });
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
-if (!templateBucket) {
+if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
   throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
 }
 const templateManager = new PromptTemplateManager({
-  bucket: templateBucket,
+  bucket: templateBucket.trim(),
   worldStateStore,
 });
 const seedService = new ChronicleSeedService({
@@ -53,7 +53,7 @@ export type Context = {
   authorizationHeader?: string;
 };
 
-export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
+export function createContext(options?: { authorizationHeader?: string }): Context {
   return {
     authorizationHeader: options?.authorizationHeader,
     engine,

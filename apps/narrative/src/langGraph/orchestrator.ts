@@ -9,6 +9,13 @@ export type GraphNode = {
   execute: (context: GraphContext) => Promise<GraphContext> | GraphContext;
 }
 
+type NodeDescriptor = {
+  node: GraphNode;
+  nodeId: string;
+  step: number;
+  total: number;
+};
+
 class LangGraphOrchestrator {
   readonly #nodes: GraphNode[];
   readonly #telemetry?: ChronicleTelemetry;
@@ -28,61 +35,9 @@ class LangGraphOrchestrator {
   }
 
   async run(initialContext: GraphContext, options?: { jobId?: string }): Promise<GraphContext> {
-    let context = { ...initialContext };
+    const descriptors = this.#buildNodeDescriptors();
     const jobId = options?.jobId;
-    const total = this.#nodes.length;
-
-    for (let index = 0; index < this.#nodes.length; index += 1) {
-      const node = this.#nodes[index];
-      const nodeId = node.id || 'unknown-node';
-      const step = index + 1;
-
-      await this.#notifyStatus({
-        context,
-        jobId,
-        nodeId,
-        status: 'start',
-        step,
-        total,
-      });
-
-      try {
-        context = await node.execute(context);
-        if (context.failure) {
-          await this.#notifyStatus({
-            context,
-            jobId,
-            nodeId,
-            status: 'error',
-            step,
-            total,
-          });
-          return context;
-        }
-
-        await this.#notifyStatus({
-          context,
-          jobId,
-          nodeId,
-          status: 'success',
-          step,
-          total,
-        });
-      } catch (error) {
-        await this.#notifyStatus({
-          context,
-          jobId,
-          metadata: { message: error instanceof Error ? error.message : 'unknown' },
-          nodeId,
-          status: 'error',
-          step,
-          total,
-        });
-        throw error;
-      }
-    }
-
-    return context;
+    return this.#runNodesSequentially(descriptors, { ...initialContext }, jobId, 0);
   }
 
   private async emitProgress(
@@ -97,7 +52,7 @@ class LangGraphOrchestrator {
       context: GraphContext;
     }
   ): Promise<void> {
-    if (!jobId || !this.#progressEmitter) {
+    if (!isNonEmptyString(jobId) || this.#progressEmitter === undefined) {
       return;
     }
     try {
@@ -148,6 +103,83 @@ class LangGraphOrchestrator {
       turnSequence: context.turnSequence,
     });
   }
+
+  async #runNodesSequentially(
+    descriptors: NodeDescriptor[],
+    context: GraphContext,
+    jobId: string | undefined,
+    index: number
+  ): Promise<GraphContext> {
+    if (index >= descriptors.length) {
+      return context;
+    }
+
+    const descriptor = descriptors.at(index);
+    if (descriptor === undefined) {
+      return context;
+    }
+
+    const nextContext = await this.#executeNode(descriptor, context, jobId);
+    if (nextContext.failure) {
+      return nextContext;
+    }
+
+    return this.#runNodesSequentially(descriptors, nextContext, jobId, index + 1);
+  }
+
+  async #executeNode(
+    descriptor: NodeDescriptor,
+    context: GraphContext,
+    jobId: string | undefined
+  ): Promise<GraphContext> {
+    const { node, nodeId, step, total } = descriptor;
+    await this.#notifyStatus({
+      context,
+      jobId,
+      nodeId,
+      status: 'start',
+      step,
+      total,
+    });
+
+    try {
+      const nextContext = await node.execute(context);
+      const status: TurnProgressStatus = nextContext.failure ? 'error' : 'success';
+      await this.#notifyStatus({
+        context: nextContext,
+        jobId,
+        nodeId,
+        status,
+        step,
+        total,
+      });
+      return nextContext;
+    } catch (error) {
+      await this.#notifyStatus({
+        context,
+        jobId,
+        metadata: { message: error instanceof Error ? error.message : 'unknown' },
+        nodeId,
+        status: 'error',
+        step,
+        total,
+      });
+      throw error;
+    }
+  }
+
+  #buildNodeDescriptors(): NodeDescriptor[] {
+    const total = this.#nodes.length;
+    return this.#nodes.map((node, index) => ({
+      node,
+      nodeId: isNonEmptyString(node.id) ? node.id : `node-${index}`,
+      step: index + 1,
+      total,
+    }));
+  }
 }
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
 
 export { LangGraphOrchestrator };

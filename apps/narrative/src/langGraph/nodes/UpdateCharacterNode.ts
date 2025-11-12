@@ -1,4 +1,4 @@
-import { MOMENTUM_DELTA, type Attribute } from '@glass-frontier/dto';
+import { MOMENTUM_DELTA, type Attribute, type OutcomeTier } from '@glass-frontier/dto';
 import {
   resolveInventoryDelta,
   type WorldStateStore,
@@ -23,7 +23,7 @@ class UpdateCharacterNode implements GraphNode {
   ) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (context.failure) {
+    if (context.failure === true) {
       return context;
     }
 
@@ -39,12 +39,12 @@ class UpdateCharacterNode implements GraphNode {
   }
 
   async #applyInventoryDelta(context: GraphContext): Promise<GraphContext> {
-    const storeDelta = context.inventoryStoreDelta;
-    const character = context.chronicle.character;
-    if (!storeDelta || !character || storeDelta.ops.length === 0) {
+    const inputs = this.#extractInventoryInputs(context);
+    if (inputs === null) {
       return context;
     }
 
+    const { character, storeDelta } = inputs;
     try {
       const nextInventory = resolveInventoryDelta(character.inventory, storeDelta, {
         registry: context.inventoryRegistry ?? null,
@@ -75,11 +75,11 @@ class UpdateCharacterNode implements GraphNode {
 
   async #applySkillUpdates(context: GraphContext): Promise<GraphContext> {
     const progress = this.#evaluateSkillProgress(context);
-    if (!progress) {
+    if (progress === null) {
       return context;
     }
     const updatedCharacter = await this.worldStateStore.applyCharacterProgress(progress);
-    if (!updatedCharacter) {
+    if (updatedCharacter === null || updatedCharacter === undefined) {
       return context;
     }
     return {
@@ -97,12 +97,12 @@ class UpdateCharacterNode implements GraphNode {
   ): { characterId: string; momentumDelta?: number; skill?: { attribute: Attribute; name: string; xpAward: number } } | null {
     const characterId = context.chronicle.character?.id;
     const intent = context.playerIntent;
-    if (!characterId || !intent || !intent.requiresCheck) {
+    if (!isNonEmptyString(characterId) || intent === undefined || intent.requiresCheck !== true) {
       return null;
     }
     const { momentumDelta, xpAward } = this.#calculateProgressDeltas(context);
     const skillUpdate = this.#buildSkillUpdate(context, intent, xpAward);
-    if (!skillUpdate && momentumDelta === 0) {
+    if (skillUpdate === undefined && momentumDelta === 0) {
       return null;
     }
     return {
@@ -114,12 +114,12 @@ class UpdateCharacterNode implements GraphNode {
 
   #calculateProgressDeltas(context: GraphContext): { momentumDelta: number; xpAward: number } {
     const outcomeTier = context.skillCheckResult?.outcomeTier;
-    if (!outcomeTier) {
+    if (outcomeTier === undefined) {
       return { momentumDelta: 0, xpAward: 0 };
     }
     return {
-      momentumDelta: MOMENTUM_DELTA[outcomeTier] ?? 0,
-      xpAward: XP_REWARDS[outcomeTier] ?? 0,
+      momentumDelta: this.#momentumDeltaFor(outcomeTier),
+      xpAward: this.#xpAwardFor(outcomeTier),
     };
   }
 
@@ -128,37 +128,43 @@ class UpdateCharacterNode implements GraphNode {
     intent: NonNullable<GraphContext['playerIntent']>,
     xpAward: number
   ): { attribute: Attribute; name: string; xpAward: number } | undefined {
-    if (!intent.skill || !intent.attribute) {
+    const skillName = intent.skill;
+    if (
+      !isNonEmptyString(skillName) ||
+      intent.attribute === undefined ||
+      intent.attribute === null
+    ) {
       return undefined;
     }
-    const currentSkill = context.chronicle.character?.skills?.[intent.skill];
-    const needsUnlock = !currentSkill;
+    const currentSkill = this.#getCharacterSkill(context, skillName);
+    const needsUnlock = currentSkill === null;
     if (!needsUnlock && xpAward === 0) {
       return undefined;
     }
     return {
       attribute: intent.attribute,
-      name: intent.skill,
+      name: skillName,
       xpAward,
     };
   }
 
   async #applyLocationPlan(context: GraphContext): Promise<GraphContext> {
-    if (!this.locationGraphStore || !context.locationPlan || !context.chronicle.character?.id) {
+    if (this.locationGraphStore === undefined) {
       return context;
     }
+    const planInputs = this.#extractLocationPlanInputs(context);
+    if (planInputs === null) {
+      return context;
+    }
+    const { characterId, locationId, plan } = planInputs;
     try {
-      const locationId = context.chronicle.chronicle.locationId;
-      if (!locationId) {
-        return context;
-      }
       await this.locationGraphStore.applyPlan({
-        characterId: context.chronicle.character.id,
+        characterId,
         locationId,
-        plan: context.locationPlan,
+        plan,
       });
       const summary = await this.locationGraphStore.summarizeCharacterLocation({
-        characterId: context.chronicle.character.id,
+        characterId,
         locationId,
       });
       return {
@@ -174,6 +180,85 @@ class UpdateCharacterNode implements GraphNode {
       return context;
     }
   }
+
+  #getCharacterSkill(context: GraphContext, skillName: string): unknown | null {
+    const skills = context.chronicle.character?.skills;
+    if (skills === undefined || skills === null) {
+      return null;
+    }
+    for (const [name, entry] of Object.entries(skills)) {
+      if (name === skillName) {
+        return entry ?? null;
+      }
+    }
+    return null;
+  }
+
+  #extractInventoryInputs(
+    context: GraphContext
+  ): { character: NonNullable<typeof context.chronicle.character>; storeDelta: NonNullable<typeof context.inventoryStoreDelta> } | null {
+    const storeDelta = context.inventoryStoreDelta;
+    if (storeDelta === undefined || storeDelta === null || storeDelta.ops.length === 0) {
+      return null;
+    }
+    const character = context.chronicle.character;
+    if (character === undefined || character === null) {
+      return null;
+    }
+    return { character, storeDelta };
+  }
+
+  #extractLocationPlanInputs(
+    context: GraphContext
+  ): { characterId: string; locationId: string; plan: NonNullable<GraphContext['locationPlan']> } | null {
+    if (this.locationGraphStore === undefined) {
+      return null;
+    }
+    const plan = context.locationPlan;
+    const characterId = context.chronicle.character?.id;
+    const locationId = context.chronicle.chronicle.locationId;
+    if (
+      plan === undefined ||
+      plan === null ||
+      plan.ops.length === 0 ||
+      !isNonEmptyString(characterId) ||
+      !isNonEmptyString(locationId)
+    ) {
+      return null;
+    }
+    return { characterId, locationId, plan };
+  }
+
+  #momentumDeltaFor(outcome: OutcomeTier): number {
+    switch (outcome) {
+    case 'breakthrough':
+      return MOMENTUM_DELTA.breakthrough;
+    case 'advance':
+      return MOMENTUM_DELTA.advance;
+    case 'stall':
+      return MOMENTUM_DELTA.stall;
+    case 'regress':
+      return MOMENTUM_DELTA.regress;
+    case 'collapse':
+      return MOMENTUM_DELTA.collapse;
+    default:
+      return 0;
+    }
+  }
+
+  #xpAwardFor(outcome: OutcomeTier): number {
+    switch (outcome) {
+    case 'collapse':
+      return XP_REWARDS.collapse;
+    case 'regress':
+      return XP_REWARDS.regress;
+    default:
+      return 0;
+    }
+  }
 }
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
 
 export { UpdateCharacterNode };

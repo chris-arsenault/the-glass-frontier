@@ -1,6 +1,6 @@
 import type { Attribute, Character, Chronicle, LocationSummary, Turn } from '@glass-frontier/dto';
 
-export interface ChronicleSnapshot {
+export type ChronicleSnapshot = {
   chronicleId: string;
   turnSequence: number;
   chronicle: Chronicle;
@@ -9,7 +9,7 @@ export interface ChronicleSnapshot {
   turns: Turn[];
 }
 
-export interface CharacterProgressPayload {
+export type CharacterProgressPayload = {
   characterId: string;
   momentumDelta?: number;
   skill?: {

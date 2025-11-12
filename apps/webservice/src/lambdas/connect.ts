@@ -16,13 +16,13 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   try {
     const token = extractToken(event.queryStringParameters);
-    if (!token) {
+    if (token === null) {
       return unauthorized();
     }
 
     const identity = await verifyJwt(token);
     const metadata = extractConnectionMetadata(event.requestContext);
-    if (!metadata) {
+    if (metadata === null) {
       log('error', 'Missing connection metadata', {
         connectionId: event.requestContext.connectionId ?? 'unknown',
       });
@@ -52,7 +52,7 @@ export const handler = async (
 const extractToken = (
   params: APIGatewayProxyWebsocketEventV2['queryStringParameters']
 ): string | null => {
-  if (!params || typeof params !== 'object') {
+  if (params === null || typeof params !== 'object') {
     return null;
   }
   const record = params as Record<string, unknown>;
@@ -77,7 +77,7 @@ const extractConnectionMetadata = (
       : null;
   const stage =
     typeof context.stage === 'string' && context.stage.length > 0 ? context.stage : null;
-  if (!connectionId || !domainName || !stage) {
+  if (connectionId === null || domainName === null || stage === null) {
     return null;
   }
   return { connectionId, domainName, stage };

@@ -6,16 +6,32 @@ import { appRouter } from './router';
 
 const ALLOW_ORIGINS = new Set([`"https://${process.env.DOMAIN_NAME}`]);
 
-function corsFor(origin?: string) {
-  const o = origin && ALLOW_ORIGINS.has(origin) ? origin : '';
-  const base = {
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0;
+
+const resolveOriginHeader = (event: APIGatewayProxyEventV2): string | undefined => {
+  const header = event.headers?.origin ?? event.headers?.Origin;
+  if (isNonEmptyString(header)) {
+    const trimmed = header.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return undefined;
+};
+
+function corsFor(origin?: string): Record<string, string> {
+  const baseHeaders = {
     'access-control-allow-headers': 'content-type, authorization, x-trpc-source',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
     vary: 'origin',
   };
-  return o
-    ? { ...base, 'access-control-allow-credentials': 'true', 'access-control-allow-origin': o }
-    : base;
+  if (origin !== undefined && ALLOW_ORIGINS.has(origin)) {
+    return {
+      ...baseHeaders,
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-origin': origin,
+    };
+  }
+  return baseHeaders;
 }
 
 export const handler = async (
@@ -24,11 +40,11 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
   if (event.requestContext.http.method === 'OPTIONS') {
-    const origin = event.headers?.origin || event.headers?.Origin;
+    const origin = resolveOriginHeader(event);
     return { headers: corsFor(origin), statusCode: 204 };
   }
 
-  const origin = event.headers?.origin || event.headers?.Origin;
+  const origin = resolveOriginHeader(event);
 
   // v11 handler. It reads event.rawPath like "/trpc/foo.bar" and supports batching via ?batch=1
   return awsLambdaRequestHandler({

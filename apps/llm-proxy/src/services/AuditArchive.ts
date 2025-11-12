@@ -1,6 +1,6 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
-import {log} from "@glass-frontier/utils";
 
 type ArchiveRecord = {
   id: string;
@@ -13,9 +13,11 @@ type ArchiveRecord = {
   metadata?: Record<string, unknown>;
 };
 
+const UNKNOWN_NODE_ID = 'unknown-node';
+
 class AuditArchive {
-  #bucket: string;
-  #client: S3Client;
+  readonly #bucket: string;
+  readonly #client: S3Client;
 
   private constructor(bucket: string, client?: S3Client) {
     this.#bucket = bucket;
@@ -23,41 +25,46 @@ class AuditArchive {
   }
 
   static fromEnv(): AuditArchive | null {
-    const bucket = process.env.LLM_PROXY_ARCHIVE_BUCKET;
-    if (!bucket) {
+    const rawBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET;
+    if (typeof rawBucket !== 'string') {
+      return null;
+    }
+    const bucket = rawBucket.trim();
+    if (bucket.length === 0) {
       return null;
     }
     return new AuditArchive(bucket);
   }
 
   async record(entry: ArchiveRecord): Promise<void> {
-    const id = entry.id || randomUUID();
+    const id =
+      typeof entry.id === 'string' && entry.id.trim().length > 0 ? entry.id.trim() : randomUUID();
     const timestamp = new Date();
     const key = this.#buildKey(timestamp, id, entry.nodeId);
-    const body = JSON.stringify(
-      {
-        id,
-        createdAt: timestamp.toISOString(),
-        playerId: entry.playerId ?? null,
-        providerId: entry.providerId,
-        requestContextId: entry.requestContextId ?? null,
-        request: entry.request,
-        response: entry.response,
-        nodeId: entry.nodeId ?? null,
-        metadata: entry.metadata ?? null,
-      },
-      (_key, value) => (typeof value === 'bigint' ? Number(value) : value)
+    const payload = {
+      createdAt: timestamp.toISOString(),
+      id,
+      metadata: entry.metadata ?? null,
+      nodeId: entry.nodeId ?? null,
+      playerId: entry.playerId ?? null,
+      providerId: entry.providerId,
+      request: entry.request,
+      requestContextId: entry.requestContextId ?? null,
+      response: entry.response,
+    };
+    const body = JSON.stringify(payload, (_key, value) =>
+      typeof value === 'bigint' ? Number(value) : value
     );
 
     await this.#client.send(
       new PutObjectCommand({
-        Bucket: this.#bucket,
-        Key: key,
         Body: body,
+        Bucket: this.#bucket,
         ContentType: 'application/json',
+        Key: key,
       })
     );
-    log("info", `Wrote ${id} to audit log.`)
+    log('info', `Wrote ${id} to audit log.`);
   }
 
   #buildKey(timestamp: Date, id: string, nodeId?: string): string {
@@ -69,14 +76,15 @@ class AuditArchive {
   }
 
   #sanitizeNodeId(value?: string): string {
-    if (!value) {
-      return 'unknown-node';
+    if (typeof value !== 'string') {
+      return UNKNOWN_NODE_ID;
     }
     const trimmed = value.trim();
-    if (!trimmed) {
-      return 'unknown-node';
+    if (trimmed.length === 0) {
+      return UNKNOWN_NODE_ID;
     }
-    return trimmed.replace(/[^A-Za-z0-9-_]+/g, '-').slice(0, 64) || 'unknown-node';
+    const normalized = trimmed.replace(/[^A-Za-z0-9-_]+/g, '-').slice(0, 64);
+    return normalized.length > 0 ? normalized : UNKNOWN_NODE_ID;
   }
 }
 

@@ -1,3 +1,5 @@
+/* eslint-env browser */
+/* global window, console */
 import * as React from 'react';
 
 if (import.meta.env.DEV) {

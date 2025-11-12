@@ -12,7 +12,7 @@ const server = createHTTPServer({
 }).listen(port);
 console.log(`tRPC dev server on http://localhost:${port}`);
 
-function shutdown() {
+function shutdown(): void {
   log('info', 'Shutting down narrative engine server');
   server.close(() => process.exit(0));
 }

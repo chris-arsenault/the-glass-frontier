@@ -1,51 +1,49 @@
 'use strict';
 
-const levels = ['debug', 'info', 'warn', 'error'];
-const levelWeights = levels.reduce((acc: Record<string, number>, level: string, index: number) => {
-  acc[level] = index;
-  return acc;
-}, {});
+const levels = ['debug', 'info', 'warn', 'error'] as const;
+type LogLevel = (typeof levels)[number];
 
-function resolveThreshold() {
-  const envLevel = process.env.LOG_LEVEL ? process.env.LOG_LEVEL.toLowerCase() : 'info';
+const levelWeights = new Map<LogLevel, number>();
+levels.forEach((level, index) => {
+  levelWeights.set(level, index);
+});
 
-  if (!Object.prototype.hasOwnProperty.call(levelWeights, envLevel)) {
-    return levelWeights.info;
+function resolveThreshold(): number {
+  const envLevelRaw = process.env.LOG_LEVEL;
+  const envLevel = typeof envLevelRaw === 'string' ? envLevelRaw.toLowerCase() : null;
+  if (envLevel !== null && levelWeights.has(envLevel as LogLevel)) {
+    return levelWeights.get(envLevel as LogLevel) ?? 1;
   }
-
-  return levelWeights[envLevel];
+  return levelWeights.get('info') ?? 1;
 }
 
-function isSilent() {
+function isSilent(): boolean {
   return process.env.LOG_SILENT === '1';
 }
 
 type Loggable = string | number | boolean;
 
-function log(level: string, message: string, metadata: Record<string, Loggable> = {}) {
-  if (!levels.includes(level)) {
-    throw new Error(`Unknown log level: ${level}`);
-  }
-
+function log(
+  level: LogLevel,
+  message: string,
+  metadata: Record<string, Loggable> = {}
+): void {
   if (isSilent()) {
     return;
   }
 
   const threshold = resolveThreshold();
-
-  if (levelWeights[level] < threshold) {
+  const levelWeight = levelWeights.get(level) ?? threshold;
+  if (levelWeight < threshold) {
     return;
   }
 
-  const timestamp = new Date().toISOString();
   const payload = {
     level,
     message,
-    timestamp,
+    timestamp: new Date().toISOString(),
     ...metadata,
   };
-
-  // Using stdout keeps the skeleton lightweight while staying observable-friendly.
 
   console.log(JSON.stringify(payload));
 }

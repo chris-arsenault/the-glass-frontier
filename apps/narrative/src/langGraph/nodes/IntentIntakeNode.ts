@@ -38,7 +38,7 @@ class IntentIntakeNode implements GraphNode {
     });
 
     const response = await this.#requestIntent(context, prompt);
-    if (!response) {
+    if (response === null) {
       return { ...context, failure: true };
     }
 
@@ -106,33 +106,64 @@ class IntentIntakeNode implements GraphNode {
 
   #deriveSummary(override: string | undefined, message: string): string {
     const normalized = this.#normalizeString(override);
-    if (normalized) {
+    if (normalized !== null) {
       return normalized;
     }
     const trimmed = message.trim();
-    if (!trimmed) {
+    if (trimmed.length === 0) {
       return 'No intent provided.';
     }
     return trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed;
   }
 
   #deriveAttribute(context: GraphContext, skill: string, override?: string): string {
-    const skillAttribute = context.chronicle.character?.skills?.[skill]?.attribute;
-    if (skillAttribute) {
-      return skillAttribute;
-    }
-    if (override && Attribute.safeParse(override).success) {
-      return override;
-    }
-    return DEFAULT_ATTRIBUTE;
+    return (
+      this.#attributeFromSkill(context, skill) ??
+      this.#attributeFromOverride(override) ??
+      DEFAULT_ATTRIBUTE
+    );
   }
 
   #normalizeString(value?: string | null): string | null {
     if (typeof value === 'string') {
       const trimmed = value.trim();
-      return trimmed.length ? trimmed : null;
+      return trimmed.length > 0 ? trimmed : null;
     }
     return null;
+  }
+
+  #attributeFromSkill(context: GraphContext, skill: string): string | null {
+    const skills = context.chronicle.character?.skills;
+    if (skills === undefined || skills === null) {
+      return null;
+    }
+
+    for (const [name, entry] of Object.entries(skills)) {
+      if (name !== skill) {
+        continue;
+      }
+      if (entry === undefined || entry === null) {
+        continue;
+      }
+      if (typeof entry.attribute !== 'string') {
+        continue;
+      }
+
+      const trimmed = entry.attribute.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+
+    return null;
+  }
+
+  #attributeFromOverride(value?: string): string | null {
+    const candidate = this.#normalizeString(value);
+    if (candidate === null) {
+      return null;
+    }
+    return Attribute.safeParse(candidate).success ? candidate : null;
   }
 }
 

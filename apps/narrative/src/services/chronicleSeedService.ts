@@ -18,6 +18,7 @@ export class ChronicleSeedService {
   readonly #templates: PromptTemplateManager;
   readonly #locations: LocationGraphStore;
   readonly #llm: LangGraphLlmClient;
+  readonly #clientCache = new Map<string, LangGraphLlmClient>();
 
   constructor(options: {
     templateManager: PromptTemplateManager;
@@ -45,19 +46,12 @@ export class ChronicleSeedService {
       location_kind: place.kind,
       location_name: place.name,
       requested,
-      tags: tags.length ? tags.join(', ') : 'untagged',
-      tone_chips: (request.toneChips ?? []).slice(0, 8).join(', ') || 'none',
-      tone_notes: request.toneNotes?.slice(0, 240) ?? '',
+      tags: tags.length > 0 ? tags.join(', ') : 'untagged',
+      tone_chips: this.#formatToneChips(request.toneChips),
+      tone_notes: this.#formatToneNotes(request.toneNotes),
     });
 
-    const client = request.authorizationHeader
-      ? new LangGraphLlmClient({
-        defaultHeaders: {
-          authorization: request.authorizationHeader,
-          'content-type': 'application/json',
-        },
-      })
-      : this.#llm;
+    const client = this.#resolveClient(request.authorizationHeader);
 
     const response = await client.generateJson({
       maxTokens: 600,
@@ -74,35 +68,25 @@ export class ChronicleSeedService {
 
   async #ensurePlace(locationId: string): Promise<LocationPlace> {
     const place = await this.#locations.getPlace(locationId);
-    if (!place) {
+    if (place === undefined || place === null) {
       throw new Error(`Location ${locationId} not found.`);
     }
     return place;
   }
 
   async #buildBreadcrumb(anchor: LocationPlace): Promise<LocationPlace[]> {
-    const path: LocationPlace[] = [];
-    const visited = new Set<string>();
-    let current: LocationPlace | null = anchor;
-    let depth = 0;
-    while (current && !visited.has(current.id) && depth < 20) {
-      path.unshift(current);
-      visited.add(current.id);
-      depth += 1;
-      if (!current.canonicalParentId) {
-        break;
-      }
-      current = await this.#locations.getPlace(current.canonicalParentId);
-    }
-    return path;
+    return this.#collectBreadcrumb(anchor, new Set<string>(), 0);
   }
 
   #collectTags(chain: LocationPlace[]): string[] {
     const tags = new Set<string>();
     for (const node of chain) {
-      for (const tag of node.tags ?? []) {
+      const nodeTags = Array.isArray(node.tags)
+        ? node.tags.filter((tag): tag is string => typeof tag === 'string')
+        : [];
+      for (const tag of nodeTags) {
         const trimmed = tag.trim().toLowerCase();
-        if (trimmed.length) {
+        if (trimmed.length > 0) {
           tags.add(trimmed);
         }
       }
@@ -117,7 +101,7 @@ export class ChronicleSeedService {
         break;
       }
       const seed = this.#coerceSeedEntry(entry);
-      if (!seed) {
+      if (seed === null) {
         continue;
       }
       normalized.push({
@@ -131,7 +115,7 @@ export class ChronicleSeedService {
   }
 
   #extractSeedEntries(payload: unknown): unknown[] {
-    if (!payload || typeof payload !== 'object') {
+    if (payload === null || typeof payload !== 'object') {
       return [];
     }
     const record = payload as Record<string, unknown>;
@@ -139,7 +123,7 @@ export class ChronicleSeedService {
   }
 
   #coerceSeedEntry(entry: unknown): { title: string; teaser: string; tags: string[] } | null {
-    if (!entry || typeof entry !== 'object') {
+    if (entry === null || typeof entry !== 'object') {
       return null;
     }
     const record = entry as Record<string, unknown>;
@@ -148,10 +132,10 @@ export class ChronicleSeedService {
     const tags = Array.isArray(record.tags)
       ? (record.tags as unknown[])
         .map((tag) => (typeof tag === 'string' ? tag.trim().toLowerCase() : ''))
-        .filter((tag): tag is string => Boolean(tag))
+        .filter((tag): tag is string => tag.length > 0)
         .slice(0, 4)
       : [];
-    if (!title || !teaser) {
+    if (!this.#isNonEmpty(title) || !this.#isNonEmpty(teaser)) {
       return null;
     }
     return { tags, teaser, title };
@@ -170,12 +154,88 @@ export class ChronicleSeedService {
   }
 
   #fallbackSeed(place: LocationPlace, index: number): ChronicleSeed {
-    const tags = (place.tags ?? []).slice(0, 3);
+    const tags = Array.isArray(place.tags) ? place.tags.slice(0, 3) : [];
     return {
       id: randomUUID(),
       tags,
       teaser: `Rumors ripple through ${place.name}, drawing attention to a fresh anomaly hidden within its ${place.kind}.`,
       title: `${place.name} Hook ${index}`.slice(0, 80),
     };
+  }
+
+  #formatToneChips(chips?: string[]): string {
+    if (!Array.isArray(chips) || chips.length === 0) {
+      return 'none';
+    }
+    const normalized = chips
+      .map((chip) => chip.trim())
+      .filter((chip) => chip.length > 0)
+      .slice(0, 8);
+    return normalized.length > 0 ? normalized.join(', ') : 'none';
+  }
+
+  #formatToneNotes(notes?: string): string {
+    if (!this.#isNonEmpty(notes)) {
+      return '';
+    }
+    return notes.slice(0, 240);
+  }
+
+  #isNonEmpty(value?: string | null): value is string {
+    if (typeof value !== 'string') {
+      return false;
+    }
+    return value.trim().length > 0;
+  }
+
+  #sanitizeHeader(header?: string): string | null {
+    if (typeof header !== 'string') {
+      return null;
+    }
+    const trimmed = header.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  #resolveClient(authorizationHeader?: string): LangGraphLlmClient {
+    const sanitized = this.#sanitizeHeader(authorizationHeader);
+    if (sanitized === null) {
+      return this.#llm;
+    }
+    const cached = this.#clientCache.get(sanitized);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const client = new LangGraphLlmClient({
+      defaultHeaders: { Authorization: sanitized },
+    });
+    this.#clientCache.set(sanitized, client);
+    return client;
+  }
+
+  async #collectBreadcrumb(
+    node: LocationPlace | null,
+    visited: Set<string>,
+    depth: number
+  ): Promise<LocationPlace[]> {
+    if (node === null) {
+      return [];
+    }
+    if (visited.has(node.id) || depth >= 20) {
+      return [node];
+    }
+    visited.add(node.id);
+    const parentId =
+      typeof node.canonicalParentId === 'string' && node.canonicalParentId.length > 0
+        ? node.canonicalParentId
+        : null;
+    if (parentId === null) {
+      return [node];
+    }
+    const parentPlace = await this.#locations.getPlace(parentId);
+    if (parentPlace === undefined || parentPlace === null) {
+      return [node];
+    }
+    const path = await this.#collectBreadcrumb(parentPlace, visited, depth + 1);
+    return [...path, node];
   }
 }

@@ -1,50 +1,71 @@
 import type { AttributeValue, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+
 import { HybridIndexRepository } from './hybridIndexRepository';
 
 const PK_PREFIX = {
-  login: 'LOGIN#',
   character: 'CHARACTER#',
   chronicle: 'CHRONICLE#',
-  turn: 'TURN#',
   location: 'LOCATION#',
+  login: 'LOGIN#',
+  turn: 'TURN#',
 } as const;
 
 const SK_PREFIX = {
-  login: 'LOGIN#',
   character: 'CHARACTER#',
   chronicle: 'CHRONICLE#',
-  turn: 'TURN#',
   location: 'LOCATION#',
+  login: 'LOGIN#',
+  turn: 'TURN#',
 } as const;
 
 const TURN_PAD_LENGTH = 12;
 
-const toPk = (prefix: keyof typeof PK_PREFIX, id: string) => `${PK_PREFIX[prefix]}${id}`;
-const padSequence = (value: number) => value.toString().padStart(TURN_PAD_LENGTH, '0');
+const resolvePkPrefix = (prefix: keyof typeof PK_PREFIX): string => {
+  switch (prefix) {
+  case 'character':
+    return PK_PREFIX.character;
+  case 'chronicle':
+    return PK_PREFIX.chronicle;
+  case 'location':
+    return PK_PREFIX.location;
+  case 'login':
+    return PK_PREFIX.login;
+  case 'turn':
+    return PK_PREFIX.turn;
+  default:
+    throw new Error(`Unknown PK prefix: ${prefix}`);
+  }
+};
+
+const toPk = (prefix: keyof typeof PK_PREFIX, id: string): string => `${resolvePkPrefix(prefix)}${id}`;
+const padSequence = (value: number): string => value.toString().padStart(TURN_PAD_LENGTH, '0');
 
 const decodePrefixedValue = (value: string | undefined, prefix: string): string | null => {
-  if (!value || !value.startsWith(prefix)) {
+  if (value === undefined || !value.startsWith(prefix)) {
     return null;
   }
   return value.slice(prefix.length);
 };
 
+const hasText = (value: string | null | undefined): value is string =>
+  typeof value === 'string' && value.length > 0;
+
 type ChronicleTurnPointer = { turnId: string; turnSequence: number };
 
 export class WorldIndexRepository extends HybridIndexRepository {
   constructor(options: { client: DynamoDBClient; tableName: string }) {
-    super({ tableName: options.tableName, client: options.client });
+    super({ client: options.client, tableName: options.tableName });
   }
 
   async linkCharacterToLogin(characterId: string, loginId: string): Promise<void> {
     await Promise.all([
       this.put(toPk('login', loginId), `${SK_PREFIX.character}${characterId}`, {
-        targetType: { S: 'character' },
         targetId: { S: characterId },
+        targetType: { S: 'character' },
       }),
       this.put(toPk('character', characterId), `${SK_PREFIX.login}${loginId}`, {
-        targetType: { S: 'login' },
         targetId: { S: loginId },
+        targetType: { S: 'login' },
       }),
     ]);
   }
@@ -52,27 +73,27 @@ export class WorldIndexRepository extends HybridIndexRepository {
   async linkChronicleToLogin(chronicleId: string, loginId: string): Promise<void> {
     await Promise.all([
       this.put(toPk('login', loginId), `${SK_PREFIX.chronicle}${chronicleId}`, {
-        targetType: { S: 'chronicle' },
         targetId: { S: chronicleId },
+        targetType: { S: 'chronicle' },
       }),
       this.put(toPk('chronicle', chronicleId), `${SK_PREFIX.login}${loginId}`, {
-        targetType: { S: 'login' },
         targetId: { S: loginId },
+        targetType: { S: 'login' },
       }),
     ]);
   }
 
   async linkChronicleToCharacter(chronicleId: string, characterId: string): Promise<void> {
     await this.put(toPk('chronicle', chronicleId), `${SK_PREFIX.character}${characterId}`, {
-      targetType: { S: 'character' },
       targetId: { S: characterId },
+      targetType: { S: 'character' },
     });
   }
 
   async linkChronicleToLocation(chronicleId: string, locationId: string): Promise<void> {
     await this.put(toPk('chronicle', chronicleId), `${SK_PREFIX.location}${locationId}`, {
-      targetType: { S: 'location' },
       targetId: { S: locationId },
+      targetType: { S: 'location' },
     });
   }
 
@@ -83,8 +104,8 @@ export class WorldIndexRepository extends HybridIndexRepository {
   ): Promise<void> {
     const padded = padSequence(Math.max(turnSequence, 0));
     await this.put(toPk('chronicle', chronicleId), `${SK_PREFIX.turn}${padded}#${turnId}`, {
-      targetType: { S: 'turn' },
       targetId: { S: turnId },
+      targetType: { S: 'turn' },
       turnSequence: { N: Math.max(turnSequence, 0).toString() },
     });
   }
@@ -123,17 +144,7 @@ export class WorldIndexRepository extends HybridIndexRepository {
     return this.listByPrefix(
       toPk('chronicle', chronicleId),
       SK_PREFIX.turn,
-      (item) => {
-        const parts = item.sk?.S?.split('#') ?? [];
-        const turnSequence = item.turnSequence?.N
-          ? Number(item.turnSequence.N)
-          : Number(parts[1] ?? 0);
-        const turnId = parts[2] ?? item.targetId?.S ?? '';
-        if (!turnId) {
-          return null;
-        }
-        return { turnId, turnSequence };
-      },
+      (item) => parseChronicleTurnPointer(item),
       { sort: (a, b) => a.turnSequence - b.turnSequence }
     );
   }
@@ -155,7 +166,27 @@ export class WorldIndexRepository extends HybridIndexRepository {
     const pk = toPk('chronicle', chronicleId);
     const items = await this.query(pk);
     await Promise.all(
-      items.map((item) => (item.sk?.S ? this.delete(pk, item.sk.S) : Promise.resolve()))
+      items.map((item) => {
+        const sortKey = item.sk?.S ?? null;
+        if (!hasText(sortKey)) {
+          return Promise.resolve();
+        }
+        return this.delete(pk, sortKey);
+      })
     );
   }
 }
+
+const parseChronicleTurnPointer = (
+  item: Record<string, AttributeValue>
+): ChronicleTurnPointer | null => {
+  const rawKey = item.sk?.S;
+  const parts = typeof rawKey === 'string' ? rawKey.split('#') : [];
+  const sequenceSource = item.turnSequence?.N ?? parts[1] ?? '0';
+  const turnSequence = Number(sequenceSource);
+  const candidateId = parts[2] ?? item.targetId?.S ?? null;
+  if (!hasText(candidateId)) {
+    return null;
+  }
+  return { turnId: candidateId, turnSequence };
+};

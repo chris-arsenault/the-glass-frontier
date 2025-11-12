@@ -32,6 +32,12 @@ type LocationInspectorState = {
 type SeedStatus = 'idle' | 'loading' | 'error';
 const EMPTY_SHARDS: DataShard[] = [];
 
+type ChronicleHookShard = Extract<DataShard, { kind: 'chronicle_hook' }>;
+
+const isChronicleHookShard = (shard: DataShard): shard is ChronicleHookShard => {
+  return shard.kind === 'chronicle_hook';
+};
+
 export function ChronicleStartWizard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,7 +58,7 @@ export function ChronicleStartWizard() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
-  const inventoryShards = useChronicleStore(
+  const inventoryShards: DataShard[] = useChronicleStore(
     (state) => state.character?.inventory?.data_shards ?? EMPTY_SHARDS
   );
 
@@ -118,16 +124,16 @@ export function ChronicleStartWizard() {
       if (!selectedRootId && locations.length) {
         void handleRootSelection(locations[0].id);
       }
-    } catch (error) {
-      setRootError(error instanceof Error ? error.message : 'Failed to load locations.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load locations.';
+      setRootError(message);
     } finally {
       setIsLoadingRoots(false);
     }
   };
 
   useEffect(() => {
-    loadRoots().catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void loadRoots().catch(() => undefined);
   }, []);
 
   const loadGraph = async (locationId: string) => {
@@ -138,8 +144,9 @@ export function ChronicleStartWizard() {
       setGraph(snapshot);
       setActivePlaceId(locationId);
       await handlePlaceSelection(locationId);
-    } catch (error) {
-      setGraphError(error instanceof Error ? error.message : 'Failed to load graph.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load graph.';
+      setGraphError(message);
     } finally {
       setIsGraphLoading(false);
     }
@@ -160,10 +167,12 @@ export function ChronicleStartWizard() {
         id: details.place.id,
         name: details.place.name,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to load location details.';
       setInspector({ breadcrumb: [], place: null });
       setSelectedLocation(null);
-      setGraphError(error instanceof Error ? error.message : 'Failed to load location details.');
+      setGraphError(message);
     }
   };
 
@@ -291,7 +300,7 @@ export function ChronicleStartWizard() {
     } else if (step === 'create') {
       setStep('seeds');
     } else {
-      navigate('/');
+      void navigate('/');
     }
   };
 
@@ -328,12 +337,13 @@ export function ChronicleStartWizard() {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('shard');
       setSearchParams(nextParams, { replace: true });
-      navigate('/', { replace: true });
+      void navigate('/', { replace: true });
       if (!chronicleId) {
         console.warn('Chronicle created but id was not returned; wizard closed without hydration.');
       }
-    } catch (error) {
-      setCreationError(error instanceof Error ? error.message : 'Failed to create chronicle.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create chronicle.';
+      setCreationError(message);
     } finally {
       setIsCreatingChronicle(false);
     }
@@ -347,73 +357,94 @@ export function ChronicleStartWizard() {
   }, [resetWizard, setStep]);
 
   useEffect(() => {
-    const shardId = searchParams.get('shard');
-    if (!shardId || isShardProcessing || !inventoryShards.length) {
-      return;
-    }
-    const shard = inventoryShards.find((entry) => entry.id === shardId);
-    if (!shard) {
-      setShardMessage('Shard context unavailable. Continue with manual setup.');
-      return;
-    }
-    if (shard.locationId && shard.seed) {
-      setIsShardProcessing(true);
-      createChronicleFromSeed({
-        characterId: preferredCharacterId,
-        locationId: shard.locationId,
-        seedText: shard.seed,
-        title: shard.name,
-      })
-        .then(() => {
+    const processShard = async () => {
+      const shardId = searchParams.get('shard');
+      if (!shardId || isShardProcessing || inventoryShards.length === 0) {
+        return;
+      }
+
+      const shard = inventoryShards.find((entry) => entry.id === shardId);
+      if (!shard) {
+        setShardMessage('Shard context unavailable. Continue with manual setup.');
+        return;
+      }
+
+      if (isChronicleHookShard(shard) && shard.locationId && shard.seed) {
+        setIsShardProcessing(true);
+        try {
+          await createChronicleFromSeed({
+            characterId: preferredCharacterId,
+            locationId: shard.locationId,
+            seedText: shard.seed,
+            title: shard.name,
+          });
           resetWizard();
           setShardMessage(null);
-          navigate('/', { replace: true });
-        })
-        .catch((error) => {
-          setShardMessage(
+          void navigate('/', { replace: true });
+        } catch (error: unknown) {
+          const message =
             error instanceof Error
               ? error.message
-              : 'Unable to start chronicle from shard. Please use the wizard.'
-          );
-        })
-        .finally(() => {
+              : 'Unable to start chronicle from shard. Please use the wizard.';
+          setShardMessage(message);
+        } finally {
           setIsShardProcessing(false);
-        });
-    } else if (shard.locationStack?.length) {
-      setShardMessage('Preparing shard locations…');
-      setIsShardProcessing(true);
-      bootstrapShardLocation(shard.locationStack)
-        .then((placeId) => {
+        }
+        return;
+      }
+
+      if (isChronicleHookShard(shard) && Array.isArray(shard.locationStack) && shard.locationStack.length > 0) {
+        setShardMessage('Preparing shard locations…');
+        setIsShardProcessing(true);
+        try {
+          const placeId = await bootstrapShardLocation(shard.locationStack);
           if (placeId) {
-            return trpcClient.getLocationPlace.query({ placeId }).then((details) => {
-              handlePlaceSelection(placeId).catch(() => undefined);
-              setSelectedLocation({
-                breadcrumb: details.breadcrumb,
-                id: placeId,
-                name: details.place.name,
-              });
-              setStep('tone');
-              setShardMessage(null);
+            const details = await trpcClient.getLocationPlace.query({ placeId });
+            try {
+              await handlePlaceSelection(placeId);
+            } catch {
+              // ignore place selection failure, user can retry manually
+            }
+            setSelectedLocation({
+              breadcrumb: details.breadcrumb,
+              id: placeId,
+              name: details.place.name,
             });
+            setStep('tone');
+            setShardMessage(null);
+          } else {
+            setShardMessage(null);
           }
-          setShardMessage(null);
-          return null;
-        })
-        .catch((error) => {
-          setShardMessage(
+        } catch (error: unknown) {
+          const message =
             error instanceof Error
               ? error.message
-              : 'Unable to prepare shard locations. Continue manually.'
-          );
-        })
-        .finally(() => {
+              : 'Unable to prepare shard locations. Continue manually.';
+          setShardMessage(message);
+        } finally {
           setIsShardProcessing(false);
-        });
-    } else {
+        }
+        return;
+      }
+
       setShardMessage('Shard missing location data. Continue manually.');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, inventoryShards, preferredCharacterId, isShardProcessing]);
+    };
+
+    void processShard();
+  }, [
+    searchParams,
+    inventoryShards,
+    preferredCharacterId,
+    isShardProcessing,
+    bootstrapShardLocation,
+    createChronicleFromSeed,
+    handlePlaceSelection,
+    navigate,
+    resetWizard,
+    setSelectedLocation,
+    setShardMessage,
+    setStep,
+  ]);
 
   const bootstrapShardLocation = async (
     stack: LocationBreadcrumbEntry[]
@@ -765,6 +796,12 @@ function SeedStep({
 }: SeedStepProps) {
   const [error, setError] = useState<string | null>(null);
   const hasSelection = Boolean(selectedSeedId);
+  const handleCustomSeedTitleChange = (value: string) => {
+    onCustomSeedChange({ text: customSeedText, title: value });
+  };
+  const handleCustomSeedTextChange = (value: string) => {
+    onCustomSeedChange({ text: value, title: customSeedTitle });
+  };
 
   const handleGenerate = async () => {
     if (!locationId) {
@@ -782,9 +819,10 @@ function SeedStep({
         toneNotes: tone.toneNotes,
       });
       onSeedsLoaded(result ?? []);
-    } catch (err) {
+    } catch (err: unknown) {
       setSeedStatus('error');
-      setError(err instanceof Error ? err.message : 'Failed to generate seeds.');
+      const message = err instanceof Error ? err.message : 'Failed to generate seeds.';
+      setError(message);
       return;
     }
     setSeedStatus('idle');
@@ -828,6 +866,27 @@ function SeedStep({
       {selectedSeedId === null ? (
         <p className="seed-empty">Generate seeds to continue.</p>
       ) : null}
+      <div className="custom-seed-editor">
+        <h4>Or write your own seed</h4>
+        <label>
+          Title
+          <input
+            type="text"
+            value={customSeedTitle}
+            placeholder="Optional seed title"
+            onChange={(event) => handleCustomSeedTitleChange(event.target.value)}
+          />
+        </label>
+        <label>
+          Seed text
+          <textarea
+            rows={4}
+            placeholder="Describe the chronicle seed"
+            value={customSeedText}
+            onChange={(event) => handleCustomSeedTextChange(event.target.value)}
+          />
+        </label>
+      </div>
     </div>
   );
 }
@@ -941,8 +1000,9 @@ function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps)
           .filter(Boolean),
       });
       onCreated(created.place.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create location.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create location.';
+      setError(message);
     } finally {
       setIsSaving(false);
     }
@@ -989,16 +1049,37 @@ type ChainLocationModalProps = {
   onCreated: (placeId: string) => void;
 }
 
+type SegmentDraft = {
+  description: string;
+  kind: string;
+  name: string;
+  tags: string;
+};
+
 function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalProps) {
-  const [segments, setSegments] = useState([
+  const [segments, setSegments] = useState<SegmentDraft[]>([
     { description: '', kind: 'locale', name: '', tags: '' },
   ]);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const updateSegment = (index: number, field: string, value: string) => {
+  const updateSegment = (index: number, field: keyof SegmentDraft, value: string) => {
     setSegments((prev) =>
-      prev.map((segment, idx) => (idx === index ? { ...segment, [field]: value } : segment))
+      prev.map((segment, idx) => {
+        if (idx !== index) {
+          return segment;
+        }
+        if (field === 'description') {
+          return { ...segment, description: value };
+        }
+        if (field === 'kind') {
+          return { ...segment, kind: value };
+        }
+        if (field === 'name') {
+          return { ...segment, name: value };
+        }
+        return { ...segment, tags: value };
+      })
     );
   };
 
@@ -1031,8 +1112,9 @@ function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalPr
         })),
       });
       onCreated(result.anchor.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create chain.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create chain.';
+      setError(message);
     } finally {
       setIsSaving(false);
     }

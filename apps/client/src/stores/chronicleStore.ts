@@ -61,14 +61,6 @@ const resolveLoginIdentity = (): { loginId: string; loginName: string } => {
   throw new Error('Login identity unavailable. Please reauthenticate.');
 };
 
-const tryResolveLoginIdentity = (): { loginId: string | null; loginName: string | null } => {
-  try {
-    return resolveLoginIdentity();
-  } catch {
-    return { loginId: null, loginName: null };
-  }
-};
-
 const generateId = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();
@@ -368,7 +360,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }));
   },
 
-  async createCharacterProfile(draft) {
+  async createCharacterProfile(draft: CharacterCreationDraft) {
     const identity = resolveLoginIdentity();
     const character: Character = {
       archetype: draft.archetype,

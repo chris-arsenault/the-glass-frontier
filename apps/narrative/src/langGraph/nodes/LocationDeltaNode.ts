@@ -22,6 +22,22 @@ const decisionSchema = z.object({
 const MAX_CHILDREN = 25;
 const MAX_NEIGHBORS = 25;
 
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+type Decision = z.infer<typeof decisionSchema>;
+
+type PromptInput = {
+  adjacent: string[];
+  children: string[];
+  current: string;
+  currentId: string;
+  gmResponse: string;
+  links: string[];
+  parent: string | null;
+  playerIntent: string;
+};
+
 type PlanContext = {
   anchorPlace: LocationPlace;
   parentPlace: LocationPlace | null;
@@ -29,6 +45,11 @@ type PlanContext = {
   characterId: string;
   graph: LocationGraphSnapshot;
   chronicleId: string;
+};
+
+type PriorState = {
+  anchorPlaceId: string;
+  locationId: string;
 };
 
 export class LocationDeltaNode implements GraphNode {
@@ -40,13 +61,19 @@ export class LocationDeltaNode implements GraphNode {
   }
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    if (context.failure || !context.gmMessage || !context.chronicle.character?.id) {
+    const gmMessageContent = context.gmMessage?.content;
+    const characterId = context.chronicle.character?.id;
+    if (
+      context.failure === true ||
+      !isNonEmptyString(gmMessageContent) ||
+      !isNonEmptyString(characterId)
+    ) {
       return context;
     }
 
     try {
       const plan = await this.#buildPlan(context);
-      if (!plan || plan.ops.length === 0) {
+      if (plan === null || plan.ops.length === 0) {
         return context;
       }
       return { ...context, locationPlan: plan };
@@ -59,16 +86,16 @@ export class LocationDeltaNode implements GraphNode {
     }
   }
 
-  async #buildPlan(context: GraphContext) {
+  async #buildPlan(context: GraphContext): Promise<LocationPlan | null> {
     const planContext = await this.#resolvePlanContext(context);
-    if (!planContext) {
+    if (planContext === null) {
       return null;
     }
 
     const promptInput = this.#buildPromptInput(context, planContext);
     const prompt = await composeLocationDeltaPrompt(context.templates, promptInput);
     const decision = await this.#requestDecision(context, promptInput.currentId, prompt);
-    if (!decision) {
+    if (decision === null) {
       return null;
     }
 
@@ -81,28 +108,23 @@ export class LocationDeltaNode implements GraphNode {
   async #resolvePlanContext(context: GraphContext): Promise<PlanContext | null> {
     const locationId = context.chronicle.chronicle.locationId;
     const characterId = context.chronicle.character?.id;
-    if (!characterId || !locationId) {
+    if (!isNonEmptyString(characterId) || !isNonEmptyString(locationId)) {
       return null;
     }
     const [graph, priorState] = await Promise.all([
       this.#graphStore.getLocationGraph(locationId),
       this.#graphStore.getLocationState(characterId),
     ]);
-    if (!priorState || priorState.locationId !== locationId) {
+    if (!this.#isValidPriorState(priorState, locationId)) {
       return null;
     }
-    const anchorPlace = graph.places.find((place) => place.id === priorState.anchorPlaceId);
-    if (!anchorPlace) {
+    const anchorPlace = this.#findAnchorPlace(graph, priorState.anchorPlaceId);
+    if (anchorPlace === null) {
       return null;
     }
-    const placeById = new Map(graph.places.map((place) => [place.id, place]));
-    const placeByName = new Map<string, LocationPlace>();
-    for (const place of graph.places) {
-      placeByName.set(normalizeName(place.name), place);
-    }
-    const parentPlace = anchorPlace.canonicalParentId
-      ? placeById.get(anchorPlace.canonicalParentId) ?? null
-      : null;
+    const placeById = this.#buildPlaceIdIndex(graph);
+    const placeByName = this.#buildPlaceNameIndex(graph);
+    const parentPlace = this.#resolveParentPlace(anchorPlace, placeById);
     return {
       anchorPlace,
       characterId,
@@ -113,19 +135,46 @@ export class LocationDeltaNode implements GraphNode {
     };
   }
 
-  #buildPromptInput(
-    context: GraphContext,
-    planContext: PlanContext
-  ): {
-      adjacent: string[];
-      children: string[];
-      current: string;
-      currentId: string;
-      gmResponse: string;
-      links: string[];
-      parent: string | null;
-      playerIntent: string;
-    } {
+  #isValidPriorState(state: unknown, locationId: string): state is PriorState {
+    if (
+      state === null ||
+      state === undefined ||
+      typeof (state as { locationId?: unknown }).locationId !== 'string' ||
+      typeof (state as { anchorPlaceId?: unknown }).anchorPlaceId !== 'string'
+    ) {
+      return false;
+    }
+    return (state as { locationId: string }).locationId === locationId;
+  }
+
+  #findAnchorPlace(graph: LocationGraphSnapshot, anchorPlaceId: string): LocationPlace | null {
+    const place = graph.places.find((entry) => entry.id === anchorPlaceId);
+    return place ?? null;
+  }
+
+  #buildPlaceIdIndex(graph: LocationGraphSnapshot): Map<string, LocationPlace> {
+    return new Map(graph.places.map((place) => [place.id, place]));
+  }
+
+  #buildPlaceNameIndex(graph: LocationGraphSnapshot): Map<string, LocationPlace> {
+    const map = new Map<string, LocationPlace>();
+    for (const place of graph.places) {
+      map.set(normalizeName(place.name), place);
+    }
+    return map;
+  }
+
+  #resolveParentPlace(
+    anchorPlace: LocationPlace,
+    placeById: Map<string, LocationPlace>
+  ): LocationPlace | null {
+    if (!isNonEmptyString(anchorPlace.canonicalParentId)) {
+      return null;
+    }
+    return placeById.get(anchorPlace.canonicalParentId) ?? null;
+  }
+
+  #buildPromptInput(context: GraphContext, planContext: PlanContext): PromptInput {
     const { anchorPlace, graph, parentPlace } = planContext;
     const childNames = graph.places
       .filter((place) => place.canonicalParentId === anchorPlace.id)
@@ -155,7 +204,7 @@ export class LocationDeltaNode implements GraphNode {
     context: GraphContext,
     locationId: string,
     prompt: string
-  ): Promise<z.infer<typeof decisionSchema> | null> {
+  ): Promise<Decision | null> {
     const llmResult = await context.llm.generateText({
       maxTokens: 400,
       metadata: { chronicleId: context.chronicleId, nodeId: this.id },
@@ -163,7 +212,7 @@ export class LocationDeltaNode implements GraphNode {
       temperature: 0.1,
     });
     const raw = (llmResult.text ?? '').trim();
-    if (!raw) {
+    if (raw.length === 0) {
       return null;
     }
     try {
@@ -181,84 +230,102 @@ export class LocationDeltaNode implements GraphNode {
 
   #decisionToPlan(
     input: PlanContext & {
-      decision: z.infer<typeof decisionSchema>;
+      decision: Decision;
     }
   ): LocationPlan | null {
-    const { anchorPlace, characterId, decision, parentPlace, placeByName } = input;
+    const { characterId, decision } = input;
 
     if (decision.action === 'no_change') {
       return null;
     }
 
     if (decision.action === 'uncertain') {
-      return {
-        character_id: characterId,
-        notes: 'location-uncertain',
-        ops: [
-          {
-            certainty: 'unknown',
-            note: 'GM response ambiguous',
-            op: 'SET_CERTAINTY',
-          },
-        ],
-      } satisfies LocationPlan;
+      return this.#buildUncertainPlan(characterId);
     }
-
-    const normalized = normalizeName(decision.destination);
-    const known = placeByName.get(normalized);
 
     const ops: LocationPlan['ops'] = [];
-    let targetRef: string | undefined = known?.id;
+    const targetRef = this.#resolveTargetReference(input, ops);
 
-    if (!targetRef) {
-      const tempId = createTempId(decision.destination);
-      ops.push({
-        op: 'CREATE_PLACE',
-        place: {
-          kind: inferKind(decision.link),
-          name: decision.destination,
-          tags: [],
-          temp_id: tempId,
-        },
-      });
-      this.#appendEdgesForNewTarget({
-        anchorId: anchorPlace.id,
-        link: decision.link,
-        ops,
-        parentId: parentPlace?.id ?? anchorPlace.id,
-        targetId: tempId,
-      });
-      targetRef = tempId;
-    } else {
-      this.#appendEdgesForExistingTarget({
-        anchorId: anchorPlace.id,
-        link: decision.link,
-        ops,
-        parentId: parentPlace?.id ?? anchorPlace.id,
-        targetId: targetRef,
-      });
-    }
-
-    if (!targetRef) {
+    if (targetRef === null) {
       return null;
     }
 
     ops.push({ dst_place_id: targetRef, op: 'MOVE' });
 
+    return this.#finalizeMovePlan(characterId, decision.destination, ops);
+  }
+
+  #buildUncertainPlan(characterId: string): LocationPlan {
     return {
       character_id: characterId,
-      notes: `move:${decision.destination}`,
+      notes: 'location-uncertain',
+      ops: [
+        {
+          certainty: 'unknown',
+          note: 'GM response ambiguous',
+          op: 'SET_CERTAINTY',
+        },
+      ],
+    };
+  }
+
+  #finalizeMovePlan(
+    characterId: string,
+    destination: string,
+    ops: LocationPlan['ops']
+  ): LocationPlan {
+    return {
+      character_id: characterId,
+      notes: `move:${destination}`,
       ops,
-    } satisfies LocationPlan;
+    };
+  }
+
+  #resolveTargetReference(
+    input: PlanContext & { decision: Decision },
+    ops: LocationPlan['ops']
+  ): string | null {
+    const { anchorPlace, decision, parentPlace, placeByName } = input;
+    const known = placeByName.get(normalizeName(decision.destination)) ?? null;
+
+    if (known !== null) {
+      this.#appendEdgesForExistingTarget({
+        anchorId: anchorPlace.id,
+        link: decision.link,
+        ops,
+        parentId: parentPlace?.id ?? anchorPlace.id,
+        targetId: known.id,
+      });
+      return known.id;
+    }
+
+    const tempId = createTempId(decision.destination);
+    ops.push({
+      op: 'CREATE_PLACE',
+      place: {
+        kind: inferKind(decision.link),
+        name: decision.destination,
+        tags: [],
+        temp_id: tempId,
+      },
+    });
+    this.#appendEdgesForNewTarget({
+      anchorId: anchorPlace.id,
+      link: decision.link,
+      ops,
+      parentId: parentPlace?.id ?? anchorPlace.id,
+      targetId: tempId,
+    });
+    return tempId;
   }
 
   #appendEdgesForNewTarget(input: {
     ops: LocationPlan['ops'];
-    link: string;
+    link: Decision['link'];
     anchorId: string;
     parentId: string;
     targetId: string;
-  }) {
+  }): void {
     const { anchorId, link, ops, parentId, targetId } = input;
     switch (link) {
     case 'inside':
@@ -285,11 +352,11 @@ export class LocationDeltaNode implements GraphNode {
 
   #appendEdgesForExistingTarget(input: {
     ops: LocationPlan['ops'];
-    link: string;
+    link: Decision['link'];
     anchorId: string;
     parentId: string;
     targetId: string;
-  }) {
+  }): void {
     const { anchorId, link, ops, parentId, targetId } = input;
     switch (link) {
     case 'inside':
@@ -322,11 +389,15 @@ function collectNeighborNames(
       continue;
     }
     if (edge.src === anchorId) {
-      const target = graph.places.find((place) => place.id === edge.dst);
-      if (target) {names.push(target.name);}
+      const target = graph.places.find((place) => place.id === edge.dst) ?? null;
+      if (target !== null) {
+        names.push(target.name);
+      }
     } else if (edge.dst === anchorId) {
-      const target = graph.places.find((place) => place.id === edge.src);
-      if (target) {names.push(target.name);}
+      const target = graph.places.find((place) => place.id === edge.src) ?? null;
+      if (target !== null) {
+        names.push(target.name);
+      }
     }
   }
   return dedupe(names);
@@ -337,7 +408,9 @@ function dedupe(values: string[]): string[] {
   const result: string[] = [];
   for (const value of values) {
     const key = value.toLowerCase();
-    if (seen.has(key)) {continue;}
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     result.push(value);
   }
@@ -354,10 +427,12 @@ function createTempId(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 32);
-  return `temp-${slug || 'place'}-${Math.random().toString(16).slice(2, 6)}`;
+  const normalizedSlug = slug.length > 0 ? slug : 'place';
+  const suffix = Math.random().toString(16).slice(2, 6);
+  return `temp-${normalizedSlug}-${suffix}`;
 }
 
-function inferKind(link: string): string {
+function inferKind(link: Decision['link']): string {
   switch (link) {
   case 'inside':
     return 'room';

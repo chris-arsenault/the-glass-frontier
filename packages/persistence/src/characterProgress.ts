@@ -5,6 +5,7 @@ import {
   type Skill,
   type SkillTier,
 } from '@glass-frontier/dto';
+
 import type { CharacterProgressPayload } from './types';
 
 const clampMomentum = (state: Character['momentum'], delta: number): number => {
@@ -18,13 +19,14 @@ const clampMomentum = (state: Character['momentum'], delta: number): number => {
   return candidate;
 };
 
+const tierSequence: readonly SkillTier[] = SKILL_TIER_SEQUENCE;
+
 const nextTier = (current: SkillTier): SkillTier => {
-  const order = SKILL_TIER_SEQUENCE as ReadonlyArray<SkillTier>;
-  const index = order.indexOf(current);
-  if (index < 0 || index === order.length - 1) {
+  const index = tierSequence.indexOf(current);
+  if (index < 0 || index === tierSequence.length - 1) {
     return current;
   }
-  return order[index + 1];
+  return tierSequence[index + 1];
 };
 
 const normalizeSkill = (skill: Skill, xpAward: number): Skill => {
@@ -48,50 +50,61 @@ const normalizeSkill = (skill: Skill, xpAward: number): Skill => {
   return { ...skill, tier, xp };
 };
 
-const ensureSkillRecord = (
-  skillMap: Record<string, Skill>,
+const resolveBaselineSkill = (
+  skills: Record<string, Skill>,
   name: string,
   attribute: Attribute
 ): Skill => {
-  const existing = skillMap[name];
-  if (existing) {
-    return existing;
+  const match = Object.entries(skills).find(([skillName]) => skillName === name)?.[1];
+  if (match !== undefined) {
+    return match;
   }
-  const created: Skill = {
-    name,
+  return {
     attribute,
+    name,
     tier: 'fool',
     xp: 0,
   };
-  skillMap[name] = created;
-  return created;
+};
+
+const applyMomentumDelta = (
+  momentum: Character['momentum'],
+  delta?: number
+): Character['momentum'] => {
+  const next = { ...momentum };
+  if (typeof delta === 'number' && delta !== 0) {
+    next.current = clampMomentum(momentum, delta);
+  }
+  return next;
+};
+
+const applySkillProgressUpdate = (
+  skills: Record<string, Skill>,
+  skillUpdate?: CharacterProgressPayload['skill']
+): Record<string, Skill> => {
+  const snapshot = { ...skills };
+  if (skillUpdate === undefined) {
+    return snapshot;
+  }
+  const trimmedSkillName = skillUpdate.name.trim();
+  if (trimmedSkillName.length === 0) {
+    return snapshot;
+  }
+  const attribute = skillUpdate.attribute;
+  const baseline = resolveBaselineSkill(snapshot, trimmedSkillName, attribute);
+  const normalizedBaseline =
+    baseline.attribute === attribute ? baseline : { ...baseline, attribute };
+  const normalized = normalizeSkill(normalizedBaseline, skillUpdate.xpAward ?? 0);
+  return { ...snapshot, [trimmedSkillName]: normalized };
 };
 
 export const applyCharacterSnapshotProgress = (
   character: Character,
   update: CharacterProgressPayload
 ): Character => {
-  const next: Character = {
+  return {
     ...character,
-    momentum: { ...character.momentum },
-    skills: { ...character.skills },
+    momentum: applyMomentumDelta(character.momentum, update.momentumDelta),
+    skills: applySkillProgressUpdate(character.skills, update.skill),
   };
-
-  if (typeof update.momentumDelta === 'number' && update.momentumDelta !== 0) {
-    next.momentum.current = clampMomentum(next.momentum, update.momentumDelta);
-  }
-
-  if (update.skill?.name && update.skill.attribute) {
-    const name = update.skill.name;
-    const baseline = ensureSkillRecord(next.skills, name, update.skill.attribute);
-    const xpAward = update.skill.xpAward ?? 0;
-    const normalizedBaseline =
-      baseline.attribute === update.skill.attribute
-        ? baseline
-        : { ...baseline, attribute: update.skill.attribute };
-    const normalized = normalizeSkill(normalizedBaseline, xpAward);
-    next.skills[name] = normalized;
-  }
-
-  return next;
 };

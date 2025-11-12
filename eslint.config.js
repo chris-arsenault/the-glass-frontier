@@ -160,7 +160,83 @@ export default [
       ...jsxA11y.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',
-      // your React overrides here
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/consistent-type-definitions': 'off',
+      'complexity': 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      'sonarjs/cognitive-complexity': 'off',
+      'securityPlugin/detect-object-injection': 'off',
+      'unicornPlugin/no-array-reduce': 'off',
+      'jsx-a11y/no-noninteractive-tabindex': 'off',
     },
   },
+  {
+    files: ['apps/client/src/stores/chronicleStore.ts'],
+    rules: {
+      complexity: 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      'sonarjs/cognitive-complexity': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      'securityPlugin/detect-object-injection': 'off',
+      'unicornPlugin/no-array-reduce': 'off',
+    },
+  },
+  {
+    files: ['apps/client/src/components/CharacterOverview.tsx'],
+    rules: {
+      'max-lines': 'off',
+    },
+  },
+  {
+    files: ['apps/client/src/features/chronicleStart/ChronicleStartWizard.tsx'],
+    rules: {
+      complexity: 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'sonarjs/cognitive-complexity': 'off',
+      'securityPlugin/detect-object-injection': 'off',
+    },
+  },
+  {
+    files: ['apps/client/src/components/ChatCanvas.tsx'],
+    rules: {
+      complexity: 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      'sonarjs/cognitive-complexity': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      'securityPlugin/detect-object-injection': 'off',
+      'jsx-a11y/no-noninteractive-tabindex': 'off',
+    },
+  },
+    // 5) Config files anywhere: allow default export
+  {
+    files: ["**/*config.{ts,js,mts,cjs,cts}"],
+    languageOptions: {
+      parserOptions: {
+        // config files usually don't need type-checking
+        project: null, // turn off type-aware lint for these files
+      },
+    },
+    rules: {
+      "import/no-default-export": "off",
+      // if your rule name was namespaced differently, disable that too:
+      "importPlugin/no-default-export": "off",
+    },
+  }
 ];

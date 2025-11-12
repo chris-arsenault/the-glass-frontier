@@ -15,14 +15,16 @@ import { useProgressStreamConnection } from './hooks/useProgressStreamConnection
 import { useAuthStore } from './stores/authStore';
 import { useChronicleStore } from './stores/chronicleStore';
 
-function SessionMeta() {
+const SessionMeta = (): JSX.Element => {
   const character = useChronicleStore((state) => state.character);
   const loginLabel = useChronicleStore((state) => state.loginName ?? state.loginId);
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
+  const normalizedLoginLabel = typeof loginLabel === 'string' ? loginLabel.trim() : '';
+  const hasLoginLabel = normalizedLoginLabel.length > 0;
 
   return (
     <div className="session-meta">
-      {loginLabel ? <p className="app-session-id">Login {loginLabel}</p> : null}
+      {hasLoginLabel ? <p className="app-session-id">Login {normalizedLoginLabel}</p> : null}
       {character ? (
         <div className="character-pill">
           <span className="character-pill-name">{character.name}</span>
@@ -34,9 +36,9 @@ function SessionMeta() {
       ) : null}
     </div>
   );
-}
+};
 
-function ChatExperience() {
+const ChatExperience = (): JSX.Element => {
   return (
     <div className="app-body">
       <main className="app-main">
@@ -49,9 +51,9 @@ function ChatExperience() {
       </main>
     </div>
   );
-}
+};
 
-export default function App() {
+export function App(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   useLoginResources(isAuthenticated);
   useProgressStreamConnection(isAuthenticated);

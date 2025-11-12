@@ -4,7 +4,7 @@ export type SubscribeMessage = {
 }
 
 export const parseSubscribeMessage = (payload: unknown): SubscribeMessage | null => {
-  if (!payload || typeof payload !== 'object') {
+  if (payload === null || typeof payload !== 'object') {
     return null;
   }
 

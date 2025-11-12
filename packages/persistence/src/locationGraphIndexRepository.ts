@@ -1,15 +1,17 @@
 import type { AttributeValue, DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import type { LocationEdgeKind } from '@glass-frontier/dto';
+
 import { HybridIndexRepository } from './hybridIndexRepository';
 
-const pkLocation = (locationId: string) => `LOCATION#${locationId}`;
-const pkPlace = (placeId: string) => `PLACE#${placeId}`;
+const pkLocation = (locationId: string): string => `LOCATION#${locationId}`;
+const pkPlace = (placeId: string): string => `PLACE#${placeId}`;
 
-const skPlace = (placeId: string) => `PLACE#${placeId}`;
-const skEdge = (src: string, kind: LocationEdgeKind, dst: string) => `EDGE#${src}#${kind}#${dst}`;
+const skPlace = (placeId: string): string => `PLACE#${placeId}`;
+const skEdge = (src: string, kind: LocationEdgeKind, dst: string): string =>
+  `EDGE#${src}#${kind}#${dst}`;
 
 const decodePlaceId = (value: string | undefined): string | null => {
-  if (!value || !value.startsWith('PLACE#')) {
+  if (value === undefined || !value.startsWith('PLACE#')) {
     return null;
   }
   return value.slice('PLACE#'.length);
@@ -18,19 +20,26 @@ const decodePlaceId = (value: string | undefined): string | null => {
 const decodeEdge = (
   value: string | undefined
 ): { src: string; kind: LocationEdgeKind; dst: string } | null => {
-  if (!value || !value.startsWith('EDGE#')) {
+  if (value === undefined || !value.startsWith('EDGE#')) {
     return null;
   }
   const [, src, kind, dst] = value.split('#');
-  if (!src || !kind || !dst) {
+  if (
+    src === undefined ||
+    src.length === 0 ||
+    kind === undefined ||
+    kind.length === 0 ||
+    dst === undefined ||
+    dst.length === 0
+  ) {
     return null;
   }
-  return { src, kind: kind as LocationEdgeKind, dst };
+  return { dst, kind: kind as LocationEdgeKind, src };
 };
 
 export class LocationGraphIndexRepository extends HybridIndexRepository {
   constructor(options: { client: DynamoDBClient; tableName: string }) {
-    super({ tableName: options.tableName, client: options.client });
+    super({ client: options.client, tableName: options.tableName });
   }
 
   async registerPlace(locationId: string, placeId: string): Promise<void> {
@@ -45,10 +54,10 @@ export class LocationGraphIndexRepository extends HybridIndexRepository {
     edge: { src: string; kind: LocationEdgeKind; dst: string }
   ): Promise<void> {
     const attributes: Record<string, AttributeValue> = {
-      entityType: { S: 'edge' },
-      src: { S: edge.src },
       dst: { S: edge.dst },
+      entityType: { S: 'edge' },
       kind: { S: edge.kind },
+      src: { S: edge.src },
     };
     await Promise.all([
       this.put(pkLocation(locationId), skEdge(edge.src, edge.kind, edge.dst), attributes),

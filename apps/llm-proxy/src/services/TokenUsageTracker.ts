@@ -1,11 +1,11 @@
 import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
-import {log} from "@glass-frontier/utils";
+import { log } from '@glass-frontier/utils';
 
-type UsageRecord = Record<string, number>;
+type UsageRecord = Map<string, number>;
 
 class TokenUsageTracker {
-  #tableName: string;
-  #client: DynamoDBClient;
+  readonly #tableName: string;
+  readonly #client: DynamoDBClient;
 
   private constructor(tableName: string, client?: DynamoDBClient) {
     this.#tableName = tableName;
@@ -13,8 +13,12 @@ class TokenUsageTracker {
   }
 
   static fromEnv(): TokenUsageTracker | null {
-    const tableName = process.env.LLM_PROXY_USAGE_TABLE;
-    if (!tableName) {
+    const rawTableName = process.env.LLM_PROXY_USAGE_TABLE;
+    if (typeof rawTableName !== 'string') {
+      return null;
+    }
+    const tableName = rawTableName.trim();
+    if (tableName.length === 0) {
       return null;
     }
     return new TokenUsageTracker(tableName);
@@ -25,60 +29,31 @@ class TokenUsageTracker {
     usage: unknown,
     timestamp = new Date()
   ): Promise<void> {
-    if (!playerId) {
+    const normalizedPlayerId = this.#normalizePlayerId(playerId);
+    if (normalizedPlayerId === null) {
       return;
     }
     const summary = this.#flattenUsage(usage);
-    if (Object.keys(summary).length === 0) {
+    if (summary.size === 0) {
       return;
     }
 
     const period = this.#usagePeriod(timestamp);
-    const setParts = [
-      '#updatedAt = :updated_at',
-      '#requestTotal = if_not_exists(#requestTotal, :zero) + :one',
-    ];
-
-    const names: Record<string, string> = {
-      '#updatedAt': 'updated_at',
-      '#requestTotal': 'total_requests',
-    };
-
-    const values: Record<string, AttributeValue> = {
-      ':updated_at': { S: timestamp.toISOString() },
-      ':zero': { N: '0' },
-      ':one': { N: '1' },
-    };
-
-    const addParts: string[] = [];
-    let index = 0;
-    for (const [metric, value] of Object.entries(summary)) {
-      index += 1;
-      const attrAlias = `#metric${index}`;
-      const valueAlias = `:metric${index}`;
-      names[attrAlias] = this.#metricAttributeName(metric);
-      values[valueAlias] = { N: value.toString() };
-      addParts.push(`${attrAlias} ${valueAlias}`);
-    }
-
-    const expressionSegments = [`SET ${setParts.join(', ')}`];
-    if (addParts.length > 0) {
-      expressionSegments.push(`ADD ${addParts.join(', ')}`);
-    }
+    const { expression, names, values } = this.#buildUpdateComponents(summary, timestamp);
 
     await this.#client.send(
       new UpdateItemCommand({
-        TableName: this.#tableName,
-        Key: {
-          player_id: { S: playerId },
-          usage_period: { S: period },
-        },
-        UpdateExpression: expressionSegments.join(' '),
         ExpressionAttributeNames: names,
         ExpressionAttributeValues: values,
+        Key: {
+          player_id: { S: normalizedPlayerId },
+          usage_period: { S: period },
+        },
+        TableName: this.#tableName,
+        UpdateExpression: expression,
       })
     );
-    log("info", `Updated ${playerId} usage data.`);
+    log('info', `Updated ${normalizedPlayerId} usage data.`);
   }
 
   #usagePeriod(date: Date): string {
@@ -88,10 +63,10 @@ class TokenUsageTracker {
   }
 
   #flattenUsage(candidate: unknown): UsageRecord {
-    if (!candidate || typeof candidate !== 'object') {
-      return {};
+    if (candidate === null || typeof candidate !== 'object') {
+      return new Map();
     }
-    const summary: UsageRecord = {};
+    const summary: UsageRecord = new Map();
     this.#walkUsage(candidate as Record<string, unknown>, summary, []);
     return summary;
   }
@@ -99,8 +74,9 @@ class TokenUsageTracker {
   #walkUsage(value: unknown, summary: UsageRecord, path: string[]): void {
     if (typeof value === 'number' && Number.isFinite(value)) {
       const key = path.join('_');
-      if (key) {
-        summary[key] = (summary[key] ?? 0) + value;
+      if (key.length > 0) {
+        const current = summary.get(key) ?? 0;
+        summary.set(key, current + value);
       }
       return;
     }
@@ -112,7 +88,7 @@ class TokenUsageTracker {
       return;
     }
 
-    if (value && typeof value === 'object') {
+    if (value !== null && typeof value === 'object') {
       for (const [key, nested] of Object.entries(value)) {
         this.#walkUsage(nested, summary, [...path, key]);
       }
@@ -121,7 +97,61 @@ class TokenUsageTracker {
 
   #metricAttributeName(raw: string): string {
     const safe = raw.replace(/[^A-Za-z0-9_]+/g, '_').slice(0, 80);
-    return `metric_${safe || 'unknown'}`;
+    return `metric_${safe.length > 0 ? safe : 'unknown'}`;
+  }
+
+  #normalizePlayerId(playerId: string | undefined): string | null {
+    if (typeof playerId !== 'string') {
+      return null;
+    }
+    const trimmed = playerId.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  #buildUpdateComponents(
+    summary: UsageRecord,
+    timestamp: Date
+  ): {
+    expression: string;
+    names: Record<string, string>;
+    values: Record<string, AttributeValue>;
+  } {
+    const names = new Map<string, string>([
+      ['#requestTotal', 'total_requests'],
+      ['#updatedAt', 'updated_at'],
+    ]);
+    const values = new Map<string, AttributeValue>([
+      [':one', { N: '1' }],
+      [':updated_at', { S: timestamp.toISOString() }],
+      [':zero', { N: '0' }],
+    ]);
+
+    const setParts = [
+      '#updatedAt = :updated_at',
+      '#requestTotal = if_not_exists(#requestTotal, :zero) + :one',
+    ];
+    const addParts: string[] = [];
+
+    let index = 0;
+    for (const [metric, value] of summary.entries()) {
+      index += 1;
+      const attrAlias = `#metric${index}`;
+      const valueAlias = `:metric${index}`;
+      names.set(attrAlias, this.#metricAttributeName(metric));
+      values.set(valueAlias, { N: value.toString() });
+      addParts.push(`${attrAlias} ${valueAlias}`);
+    }
+
+    const expressionSegments = [`SET ${setParts.join(', ')}`];
+    if (addParts.length > 0) {
+      expressionSegments.push(`ADD ${addParts.join(', ')}`);
+    }
+
+    return {
+      expression: expressionSegments.join(' '),
+      names: Object.fromEntries(names),
+      values: Object.fromEntries(values),
+    };
   }
 }
 

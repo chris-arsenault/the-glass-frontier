@@ -2,28 +2,45 @@
 
 import { randomUUID } from 'crypto';
 
+type RawPayload = Record<string, unknown>;
+
+const stripProviderHints = (body: RawPayload): RawPayload => {
+  const clone = { ...body };
+  delete clone.provider;
+  delete clone.fallbackProviders;
+  return clone;
+};
+
+const resolveModel = (body: RawPayload, defaultModel?: string): RawPayload => {
+  const existingModel = body.model;
+  const hasModel = typeof existingModel === 'string' && existingModel.trim().length > 0;
+  const fallbackModel = typeof defaultModel === 'string' ? defaultModel.trim() : '';
+
+  if (hasModel || fallbackModel.length === 0) {
+    return body;
+  }
+
+  return { ...body, model: fallbackModel };
+};
+
 class Payload {
-  body: Record<string, any>;
-  requestId: string;
+  readonly body: RawPayload;
+  readonly requestId: string;
 
-  constructor(body: Record<string, any>) {
+  constructor(body: RawPayload) {
     this.body = body;
-    this.requestId = body.requestId || randomUUID();
+    this.requestId =
+      typeof body.requestId === 'string' && body.requestId.trim().length > 0
+        ? body.requestId
+        : randomUUID();
   }
 
-  sanitizePayload(): Payload {
-    const clone = { ...this.body };
-    delete clone.provider;
-    delete clone.fallbackProviders;
-
-    if (!clone.model && process.env.LLM_PROXY_DEFAULT_MODEL) {
-      clone.model = process.env.LLM_PROXY_DEFAULT_MODEL;
-    }
-
-    return new Payload(clone);
+  sanitizePayload(defaultModel = process.env.LLM_PROXY_DEFAULT_MODEL): Payload {
+    const withModel = resolveModel(this.body, defaultModel);
+    return new Payload(stripProviderHints(withModel));
   }
 
-  json(): string {
+  serialize(): string {
     return JSON.stringify(this.body);
   }
 }

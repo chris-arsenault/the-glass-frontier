@@ -1,8 +1,9 @@
 import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
+
 import type { CharacterProgressPayload, ChronicleSnapshot } from './types';
 
-export interface WorldStateStore {
-  ensureChronicle(params: {
+export type WorldStateStore = {
+  ensureChronicle: (params: {
     chronicleId?: string;
     loginId: string;
     locationId: string;
@@ -10,28 +11,28 @@ export interface WorldStateStore {
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
-  }): Promise<Chronicle>;
+  }) => Promise<Chronicle>;
 
-  getChronicleState(chronicleId: string): Promise<ChronicleSnapshot | null>;
+  getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;
 
-  upsertLogin(login: Login): Promise<Login>;
-  getLogin(loginId: string): Promise<Login | null>;
-  listLogins(): Promise<Login[]>;
+  upsertLogin: (login: Login) => Promise<Login>;
+  getLogin: (loginId: string) => Promise<Login | null>;
+  listLogins: () => Promise<Login[]>;
 
-  upsertCharacter(character: Character): Promise<Character>;
-  getCharacter(characterId: string): Promise<Character | null>;
-  listCharactersByLogin(loginId: string): Promise<Character[]>;
+  upsertCharacter: (character: Character) => Promise<Character>;
+  getCharacter: (characterId: string) => Promise<Character | null>;
+  listCharactersByLogin: (loginId: string) => Promise<Character[]>;
 
-  upsertPlayer(player: Player): Promise<Player>;
-  getPlayer(loginId: string): Promise<Player | null>;
+  upsertPlayer: (player: Player) => Promise<Player>;
+  getPlayer: (loginId: string) => Promise<Player | null>;
 
-  upsertChronicle(chronicle: Chronicle): Promise<Chronicle>;
-  getChronicle(chronicleId: string): Promise<Chronicle | null>;
-  listChroniclesByLogin(loginId: string): Promise<Chronicle[]>;
-  deleteChronicle(chronicleId: string): Promise<void>;
+  upsertChronicle: (chronicle: Chronicle) => Promise<Chronicle>;
+  getChronicle: (chronicleId: string) => Promise<Chronicle | null>;
+  listChroniclesByLogin: (loginId: string) => Promise<Chronicle[]>;
+  deleteChronicle: (chronicleId: string) => Promise<void>;
 
-  addTurn(turn: Turn): Promise<Turn>;
-  listChronicleTurns(chronicleId: string): Promise<Turn[]>;
+  addTurn: (turn: Turn) => Promise<Turn>;
+  listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
 
-  applyCharacterProgress(update: CharacterProgressPayload): Promise<Character | null>;
+  applyCharacterProgress: (update: CharacterProgressPayload) => Promise<Character | null>;
 }

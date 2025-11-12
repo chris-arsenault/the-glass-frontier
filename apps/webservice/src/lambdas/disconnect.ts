@@ -9,7 +9,7 @@ export const handler = async (
   event: APIGatewayProxyWebsocketEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   const connectionId = event.requestContext.connectionId;
-  if (!connectionId) {
+  if (typeof connectionId !== 'string' || connectionId.length === 0) {
     return { body: 'ok', statusCode: 200 };
   }
 
