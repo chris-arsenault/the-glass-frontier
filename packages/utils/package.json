@@ -1,0 +1,28 @@
+{
+  "name": "@glass-frontier/utils",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "glass-frontier",
+    "narrative-engine",
+    "langgraph"
+  ],
+  "author": "Tsonu",
+  "license": "Polyform-Noncommercial-1.0.0"
+}

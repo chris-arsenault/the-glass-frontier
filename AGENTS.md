@@ -1,120 +1,162 @@
-<!-- AGENTS.md -->
-# Codex Single-Agent Manual
+# Agent Guardrails
 
-## Single-Agent Operating Loop (Mandatory)
-1. **Load the latest handoff immediately.** Call `mcp__game-mcp-server__fetch_handoff` before planning anything. If no handoff exists, bootstrap the project (Phase 0).
-2. **Parse and plan.** Extract TODOs, risks, and asset needs from the handoff, then refresh the Codex plan tool so every active task is tracked while cross-referencing `REQUIREMENTS.md` to keep plans aligned with baseline feature and technical commitments.
-3. **Review Git context.** Run `git diff --stat` to understand prior work before starting execution.
-4. **Align with the backlog.** Inspect current priorities in the MCP backlog, confirm WIP capacity, and pull the highest-impact story—ensure the target item already belongs to a feature or assign it before continuing.
-5. **Execute and log decisions.** Implement the work item end-to-end, capturing architecture changes with `mcp__game-mcp-server__store_architecture_decision` (query/check with `mcp__game-mcp-server__query_architecture` and `mcp__game-mcp-server__check_consistency`) and updating narrative outcomes through `mcp__game-mcp-server__store_narrative_element`, `mcp__game-mcp-server__store_lore_entry`, or `mcp__game-mcp-server__store_dialogue_scene` as appropriate.
-6. **Verify and document.** Run automated tests (Jest, Playwright, profiling) and note results. Update docs, backlog items, and session notes with links to the stored MCP entries.
-7. **Publish the next handoff.** Create `docs/reports/autonomous-session-[N]-handoff.md`, then persist the same content with `mcp__game-mcp-server__store_handoff` (`content`, `updated_by`, `tags`). Do not exit the session until both are complete.
+- Never revert user-authored tweaks unless explicitly asked; prefer additive fixes.  When a diff results in unexpected diffs assume the user made them. Flag in output but do not adjust code.
+- Ignore the `archive/` directory unless the user explicitly requests changes there; it’s only for historical snapshots.
+- Ignore the `docs/` directory unless the user explicitly requests updates; treat it as reference material.
 
-**Non-negotiable:** Handoff fetch and store bookend every autonomous run. Skipping either step breaks continuity.
+## General Implementation Guidelines
 
-## Backlog & Planning Discipline
-1. **Discover:** Query the MCP backlog (`mcp__game-mcp-server__search_backlog_semantic`, `mcp__game-mcp-server__search_backlog_by_tag`, `mcp__game-mcp-server__get_top_backlog_items`) before starting work to avoid duplication and to lock onto current priorities.
-2. **Enforce WIP ≤ 10:** Keep at most ten items in `in-progress`, `blocked`, or `ready-for-review`. Escalate conflicts instead of overcommitting.
-3. **Create intentionally:** Only open new backlog items when the work is critical to the shipping roadmap. Include summary, acceptance criteria, dependencies, priority, sprint, aligned tags, and attach the item to the owning feature.
-4. **Structure with features:** Treat features as the parent container for initiatives spanning multiple PBIs. After design, research, and narrative phases wrap, carve the implementation backlog into multiple high-level features aligned to major systems or pillars—never collapse all implementation work into a single catch-all feature. Before creating new work, confirm whether an existing feature applies (`mcp__game-mcp-server__list_features`, `mcp__game-mcp-server__list_feature_backlog_items`) or establish a new one (`mcp__game-mcp-server__create_feature`, `mcp__game-mcp-server__update_feature`). Link each backlog item using `mcp__game-mcp-server__assign_backlog_to_feature`.
-5. **Update relentlessly:** Use `mcp__game-mcp-server__update_backlog_item` to track status, next steps, completed work, and references to architecture or narrative entries.
-6. **Close fast:** Mark stories done as soon as acceptance criteria pass; do not extend scope within the same item.
-7. **Synchronize records:** After adjusting MCP items, refresh `docs/plans/backlog.md` so markdown mirrors the authoritative backlog.
+- Preserve existing code style and do not overcomplicate code.
+- Do not introduce options or polymorphism unless required.
+- Choose sane defaults instead of configuration.
+- Skip feature flags/feature gating for prototype apps; ship the single canonical behavior unless explicitly asked otherwise.
+- Only add new environment variables when a value truly needs to be surfaced from Terraform; prefer hardcoded defaults in code for everything else.
+- Use the existing layers: persistence-related functionality belongs in `packages/persistence`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
+- Use declarative programing for sequenced events.
 
-**Non-negotiable:** Every change and new work item must be reflected in the MCP backlog, and every backlog item must belong to a feature. Stay focused on core systems—no speculative tooling or analytics.
+## Subproject Overview
 
-## Workflow Standards
-- Maintain an up-to-date plan whenever a task spans multiple steps.
-- Stay on the highest-priority backlog commitments; accept deep work over task-churn.
-- Run shell commands with `bash -lc` and an explicit `workdir`, capturing outputs that drive decisions.
-- Favor `apply_patch` (or heredocs for new files) over describing intent without implementation.
-- Summarize automated verification (tests, lint, Playwright, profiling) plus follow-ups in the final response.
-- Restrict edits to active scope; ignore unrelated files unless the user directs otherwise.
-- Treat MCP integrations as first-class: query before authoring, store results immediately, and tag entries for discoverability.
-- Mirror MCP decisions in local docs only after the MCP source is updated.
-- Rely exclusively on automated QA—no manual sweeps.
+### Apps
+- `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the narrative services through tRPC and shared DTOs.
+- `apps/llm-proxy`: Node-based proxy (deployment targets: local or AWS Lambda) that standardizes OpenAI/LLM calls and exposes them to the rest of the stack.
+- `apps/narrative`: Narrative engine service that runs storytelling logic, handles skill checks, and ships as an AWS Lambda with supporting build scripts.
+- `apps/webservice`: WebSocket-facing webservice that brokers progress updates (Step Functions → SQS → API Gateway) and manages connection/job subscriptions.
 
-### Command & Editing Practices
-- Keep edits ASCII unless a file already uses another encoding.
-- Avoid destructive git commands (`git reset --hard`, `git checkout --`) unless explicitly instructed.
-- Use repository tooling (npm scripts, Jest, Playwright) when validating work.
+### Packages
+- `packages/dto`: Shared Zod DTO/type definitions consumed by the client, narrative engine, and proxy for consistent contracts.
+- `packages/skill-check-resolver`: Domain module that encapsulates skill-check math/rules used during narrative resolution.
+- `packages/utils`: Common utility helpers that the other workspaces depend on.
+- `packages/persistence`: Shared world-state persistence layer (in-memory + S3 implementations plus factory) consumed by narrative services, now including the location graph store/index for cross-chronicle navigation state.
 
-### Asset Sourcing Policy
-- Generate required art/audio via `mcp__generate-image__generate_image`, specifying `background` and absolute `file_location`.
-- Record asset metadata, usage, and automation details in session notes or relevant docs.
+### Infrastructure
+- `infrastructure/terraform`: Terraform project that provisions the AWS footprint (API Gateway, Cognito, Lambda builds, S3/CloudFront, etc.) and wires in workspace build artifacts.
 
-### Verification & Reporting
-- Run `npm test` after meaningful implementation changes; add focused suites (Playwright, profiling) when relevant.
-- If a verification step cannot run, log the gap with a plan to validate once unblocked.
+## Issue Tracking with bd (beads)
 
-## MCP Tooling for the Single Agent
-- **Backlog & Handoff:** `mcp__game-mcp-server__fetch_handoff`, `mcp__game-mcp-server__store_handoff`, `mcp__game-mcp-server__search_backlog_semantic`, `mcp__game-mcp-server__search_backlog_by_tag`, `mcp__game-mcp-server__get_top_backlog_items`, `mcp__game-mcp-server__create_backlog_item`, `mcp__game-mcp-server__update_backlog_item`, `mcp__game-mcp-server__list_features`, `mcp__game-mcp-server__list_feature_backlog_items`, `mcp__game-mcp-server__create_feature`, `mcp__game-mcp-server__update_feature`, `mcp__game-mcp-server__assign_backlog_to_feature`.
-- **Architecture Knowledge:** `mcp__game-mcp-server__query_architecture`, `mcp__game-mcp-server__check_consistency`, `mcp__game-mcp-server__store_architecture_decision`.
-- **Narrative Knowledge:** `mcp__game-mcp-server__store_narrative_element`, `mcp__game-mcp-server__search_narrative_elements`, `mcp__game-mcp-server__get_narrative_outline`, `mcp__game-mcp-server__store_lore_entry`, `mcp__game-mcp-server__search_lore`, `mcp__game-mcp-server__store_dialogue_scene`, `mcp__game-mcp-server__find_dialogue`.
-- **Development Patterns & QA:** `mcp__game-mcp-server__store_pattern`, `mcp__game-mcp-server__find_similar_patterns`, `mcp__game-mcp-server__validate_against_patterns`, `mcp__game-mcp-server__record_playtest_feedback`, `mcp__game-mcp-server__store_test_strategy`.
+**IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
 
-### Core MCP Principles
-1. Query before creating new content.
-2. Store results as soon as work completes.
-3. Apply rich tagging for discoverability and link related entries.
-4. Validate designs and implementations against stored patterns and decisions.
+### Why bd?
 
-### Benefits
-- Eliminates redundant effort across sessions.
-- Maintains consistency in code, narrative, and lore.
-- Preserves cumulative project knowledge.
-- Enables cross-discipline coordination through shared references.
-- Accelerates development by reusing proven solutions.
+- Dependency-aware: Track blockers and relationships between issues
+- Git-friendly: Auto-syncs to JSONL for version control
+- Agent-optimized: JSON output, ready work detection, discovered-from links
+- Prevents duplicate tracking systems and confusion
 
-## Project Context
-### Overview
-Medium-complexity 2D action-adventure built with vanilla JavaScript and Canvas. The experience blends at least two genres, uses procedural generation, and delivers a cohesive narrative with consequential player choices.
+### Quick Start
 
-Always consult `REQUIREMENTS.md` for the authoritative list of user-provided requirements that guide these systems; treat that document as the baseline scope for research, design, narrative, and implementation decisions.
+**Check for ready work:**
+```bash
+bd ready --json
+```
 
-### Design Intent Shift Alignment
-- Center every decision on cooperative GM-style **freeform storytelling** during solo sessions; narrative breadth outweighs mechanical parsing, and story beats may span minutes to months.
-- Treat the continuously updated shared world as secondary; maintain world consistency without constraining player creativity unless safety or anti-power-creep rules are at risk, and let narrative freedom take precedence when trade-offs arise.
-- Restrict conflict-resolution workflows to exceptional cases when world edits are materially incompatible.
-- Reject text-action parsers or rigid verb lists outside of MUD hubs; keep creative inputs open-ended elsewhere.
-- Uphold the Prohibited Capabilities List—no reality-breaking or open-ended superpowers.
-- Favor self-hosted search solutions; do not introduce managed stacks such as Elasticsearch during bootstrap.
+**Create new issues:**
+```bash
+bd create "Issue title" -t bug|feature|task -p 0-4 --json
+bd create "Issue title" -p 1 --deps discovered-from:bd-123 --json
+```
 
-### Technology Stack
-- **Engine:** Vanilla JavaScript (ES6+) / React
-- **Rendering:** HTML5 Canvas API
-- **Build:** Vite
-- **Testing:** Jest + Playwright
-- **Linting & Formatting:** ESLint + Prettier
+**Claim and update:**
+```bash
+bd update bd-42 --status in_progress --json
+bd update bd-42 --priority 1 --json
+```
 
-## Development Cadence
-- Rotate through research, planning, implementation, testing, optimization, and documentation within each session.
-- Keep narrative implications visible in every system you touch; seed plot hooks and consequence tracking during implementation.
-- Maintain automated test coverage alongside features; expand Playwright or profiling runs when gameplay breadth or performance shifts.
-- Treat performance tuning as an ongoing activity—profile when systems affect frame time, AI density, or narrative state machines.
-- Capture architectural decisions and narrative updates in MCP as soon as they occur to keep historical context fresh.
+**Complete work:**
+```bash
+bd close bd-42 --reason "Completed" --json
+```
 
-### Continuous Practices
-- Keep `docs/plans/backlog.md` prioritized and prune completed entries promptly.
-- Trigger Playwright (`mcp__playwright__browser_*`) when UI or end-to-end validation is required.
-- Treat MCP outages as blockers: log the downtime, proceed with local inspection, and note the gap in the handoff.
-- **Important:** Do not work on CI, independent verification pipelines, or reporting features.
+### Issue Types
 
-### Completion Checklist
-Before ending a session ensure:
-- Handoff file and MCP entry are updated with summary, metrics, outstanding work, asset sourcing actions, and blockers.
-- Tests relevant to the change set are green (or pending with rationale).
-- Documentation and backlog mirror the latest state.
-- Media sourcing notes capture every automation run and resulting assets.
+- `bug` - Something broken
+- `feature` - New functionality
+- `task` - Work item (tests, docs, refactoring)
+- `epic` - Large feature with subtasks
+- `chore` - Maintenance (dependencies, tooling)
 
-## Standards
-### Code
-- camelCase for functions/variables, PascalCase for classes.
-- Max 300 lines per file, 50 lines per function; keep single responsibility.
-- JSDoc all public APIs and note narrative/world hooks where applicable.
-- Use conventional commits with test results in the body and narrative/genre impact notes for feature work.
+### Priorities
 
-### Performance
-- Use object pooling for frequently instantiated objects.
-- Avoid per-frame allocations; stream content and narrative state lazily.
-- Ensure branching quests and world updates remain performant under stress.
+- `0` - Critical (security, data loss, broken builds)
+- `1` - High (major features, important bugs)
+- `2` - Medium (default, nice-to-have)
+- `3` - Low (polish, optimization)
+- `4` - Backlog (future ideas)
+
+### Workflow for AI Agents
+
+1. **Check ready work**: `bd ready` shows unblocked issues
+2. **Claim your task**: `bd update <id> --status in_progress`
+3. **Work on it**: Implement, test, document
+4. **Discover new work?** Create linked issue:
+   - `bd create "Found bug" -p 1 --deps discovered-from:<parent-id>`
+5. **Complete**: `bd close <id> --reason "Done"`
+6. **Commit together**: Always commit the `.beads/issues.jsonl` file together with the code changes so issue state stays in sync with code state
+
+### Auto-Sync
+
+bd automatically syncs with git:
+- Exports to `.beads/issues.jsonl` after changes (5s debounce)
+- Imports from JSONL when newer (e.g., after `git pull`)
+- No manual export/import needed!
+
+### MCP Server (Recommended)
+
+If using Claude or MCP-compatible clients, install the beads MCP server:
+
+```bash
+pip install beads-mcp
+```
+
+Add to MCP config (e.g., `~/.config/claude/config.json`):
+```json
+{
+  "beads": {
+    "command": "beads-mcp",
+    "args": []
+  }
+}
+```
+
+Then use `mcp__beads__*` functions instead of CLI commands.
+
+### Managing AI-Generated Planning Documents
+
+AI assistants often create planning and design documents during development:
+- PLAN.md, IMPLEMENTATION.md, ARCHITECTURE.md
+- DESIGN.md, CODEBASE_SUMMARY.md, INTEGRATION_PLAN.md
+- TESTING_GUIDE.md, TECHNICAL_DESIGN.md, and similar files
+
+**Best Practice: Use a dedicated directory for these ephemeral files**
+
+**Recommended approach:**
+- Create a `history/` directory in the project root
+- Store ALL AI-generated planning/design docs in `history/`
+- Keep the repository root clean and focused on permanent project files
+- Only access `history/` when explicitly asked to review past planning
+
+**Example .gitignore entry (optional):**
+```
+# AI planning documents (ephemeral)
+history/
+```
+
+**Benefits:**
+- ✅ Clean repository root
+- ✅ Clear separation between ephemeral and permanent documentation
+- ✅ Easy to exclude from version control if desired
+- ✅ Preserves planning history for archeological research
+- ✅ Reduces noise when browsing the project
+
+### Important Rules
+
+- ✅ Use bd for ALL task tracking
+- ✅ Always use `--json` flag for programmatic bd commands
+- ✅ Link discovered work with `discovered-from` dependencies
+- ✅ Check `bd ready` before asking "what should I work on?"
+- ✅ Store AI planning docs in `history/` directory
+- ❌ Do NOT create markdown TODO lists
+- ❌ Do NOT use external issue trackers
+- ❌ Do NOT duplicate tracking systems
+- ❌ Do NOT clutter repo root with planning documents
+
+For more details, see README.md and QUICKSTART.md.

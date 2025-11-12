@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "declarationDir": "dist",
+    "declarationMap": false,
+    "jsx": "react-jsx"
+  },
+  "include": ["src"],
+  "references": [{ "path": "../../packages/dto" }, { "path": "../narrative" }]
+}

@@ -1,0 +1,22 @@
+{
+	auto_https disable_redirects
+}
+
+stage.glass-frontier.local {
+	tls internal {
+		on_demand
+	}
+
+	@api path /api/*
+	handle @api {
+			uri strip_prefix /api
+		reverse_proxy http://host.docker.internal:3000 {
+			header_up Host {http.request.header.Host}
+			header_up X-Forwarded-Proto {http.request.scheme}
+			flush_interval 0s
+			transport http {
+				versions 1.1
+			}
+		}
+	}
+}

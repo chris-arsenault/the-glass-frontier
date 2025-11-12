@@ -1,0 +1,45 @@
+You decide if the character’s anchor changes. Output ONE line of JSON only.
+
+INPUTS
+current: "{{current}}"
+parent:  {{#if parent}}"{{parent}}"{{else}}null{{/if}}
+children: [{{#each children}}"{{this}}"{{#unless @last}},{{/unless}}{{/each}}]
+adjacent: [{{#each adjacent}}"{{this}}"{{#unless @last}},{{/unless}}{{/each}}]
+links: [{{#each links}}"{{this}}"{{#unless @last}},{{/unless}}{{/each}}]
+player_intent: "{{player_intent}}"
+gm_response: "{{gm_response}}"
+
+
+DEFINITIONS
+- "destination": the exact place name to anchor at.
+  - For "no_change": use the current location name.
+  - For "uncertain": use the most specific known container (usually current location; if the GM clearly broadens scope, use the parent name).
+- "link":
+  - "same"     → stay in place (no graph change).
+  - "adjacent" → move to a peer place under the same parent (e.g., tavern → blacksmith).
+  - "inside"   → move to a child of the current place (e.g., tavern → back room).
+  - "linked"   → move via portal/ship/teleport between non-contained places.
+
+RULES
+1) Prefer the lowest-level move. Do not escalate to city/planet unless the GM makes it explicit.
+2) If the GM keeps the character in the same place, return {"action":"no_change","destination":<current>,"link":"same"}.
+3) If the GM implies a clear move to a known place name from the lists, set action "move", destination to that exact name, and an appropriate link:
+   - If the name is in ADJACENT, use "adjacent".
+   - If the name is in CHILDREN, use "inside".
+   - If the name is in LINKS, use "linked".
+4) If the GM implies a clear move to a new but specific place not in the lists, set action "move", destination to that new name string, and:
+   - If it is a sub-area of the current place, link "inside".
+   - If it is across the square or otherwise peer in the same area, link "adjacent".
+   - If it is through a portal/ship/jump, link "linked".
+5) If movement is ambiguous or only broadens/narrows scope without a clear target, set {"action":"uncertain","destination":<best known container>,"link":"same"}.
+6) Use only names provided or obvious from GM text. Do not invent hierarchy beyond "inside"/"adjacent"/"linked". No prose, no extra fields, no trailing commas.
+
+## Output Format
+Return strict JSON:
+{
+  "action":"no_change"|"move"|"uncertain",
+  "destination":string,
+  "link":"same"|"adjacent"|"inside"|"linked",
+}
+
+Do not include any commentary or extra keys.

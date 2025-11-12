@@ -1,0 +1,57 @@
+groups:
+  - name: story-pipeline
+    rules:
+      - alert: TemporalWorkflowLagHigh
+        expr: histogram_quantile(0.95, sum(rate(${lag_metric}_bucket[5m])) by (le)) * 1000 > ${latency_target_ms}
+        for: 5m
+        labels:
+          severity: critical
+          service: ${alert_label_service}
+        annotations:
+          summary: "Temporal workflow lag exceeds ${latency_target_ms} ms p95"
+          description: "Investigate Temporal workers or check queues for backlog and scale Nomad allocations."
+      - alert: StoryConsolidationRetries
+        expr: increase(story_consolidation_retry_total[15m]) > 3
+        for: 10m
+        labels:
+          severity: warning
+          service: ${alert_label_service}
+        annotations:
+          summary: "Story consolidation retries spiking"
+          description: "Review change feed ingestion for malformed transcripts or Vault credential issues."
+      - alert: StorageBucketCapacityHigh
+        expr: max_over_time(telemetry_storage_bucket_usage_capacityPercent[10m]) > 70
+        for: 15m
+        labels:
+          severity: warning
+          service: ${alert_label_service}
+        annotations:
+          summary: "MinIO bucket above 70% capacity"
+          description: "Investigate lifecycle automation or expand bucket capacity before archival queue overflows."
+      - alert: StorageLifecycleDrift
+        expr: max_over_time(telemetry_storage_bucket_lifecycle_drift_driftDays[15m]) > 1
+        for: 30m
+        labels:
+          severity: warning
+          service: ${alert_label_service}
+        annotations:
+          summary: "Lifecycle drift detected for MinIO bucket"
+          description: "Lifecycle manager reports archive lag beyond allowance — check cron job and Backblaze B2 connectivity."
+      - alert: StorageRemoteTierFailures
+        expr: 'increase(telemetry_storage_remote_tier_rehearsal_total{status=~"error|restore_failed"}[30m]) > 0'
+        for: 15m
+        labels:
+          severity: critical
+          service: ${alert_label_service}
+        annotations:
+          summary: "Remote tier rehearsal failing for MinIO lifecycle job"
+          description: "Backblaze B2 rehearsal probes failing — investigate credentials, network access, or bucket policy drift."
+      - alert: StorageRemoteTierCredentialsMissing
+        expr: 'increase(telemetry_storage_remote_tier_rehearsal_total{status="credentials_missing"}[30m]) > 0'
+        for: 10m
+        labels:
+          severity: warning
+          service: ${alert_label_service}
+        annotations:
+          summary: "Remote tier rehearsal missing credentials"
+          description: "Lifecycle manager detected missing Backblaze credentials; confirm Vault/terraform variables before next run."

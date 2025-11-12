@@ -1,0 +1,24 @@
+{
+  "name": "@glass-frontier/webservice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.744.0",
+    "@aws-sdk/client-dynamodb": "^3.744.0",
+    "@aws-sdk/lib-dynamodb": "^3.744.0",
+    "@glass-frontier/dto": "workspace:*",
+    "@glass-frontier/utils": "workspace:*",
+    "jose": "^5.9.4",
+    "tsup": "^8.5.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.138",
+    "typescript": "^5.9.3"
+  }
+}

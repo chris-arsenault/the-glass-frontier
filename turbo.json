@@ -1,0 +1,21 @@
+{
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "dev": { "cache": false, "persistent": true, "dependsOn": ["^dev"]  },
+    "lint": {},
+    "lint:fix": {},
+    "test": { "dependsOn": ["^build"] },
+  },
+  "globalEnv": ["OPENAI_API_KEY", "VITE_TRPC_URL",
+    "VITE_COGNITO_USER_POOL_ID", "VITE_COGNITO_CLIENT_ID",
+    "NARRATIVE_S3_BUCKET", "NARRATIVE_S3_PREFIX",
+    "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+    "NARRATIVE_DDB_TABLE", "LOCATION_GRAPH_DDB_TABLE",
+    "PROMPT_TEMPLATE_BUCKET", "TURN_PROGRESS_QUEUE_URL",
+    "LLM_PROXY_ARCHIVE_BUCKET", "LLM_PROXY_USAGE_TABLE",
+    "AWS_REGION"
+  ]
+}
