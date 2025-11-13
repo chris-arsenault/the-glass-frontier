@@ -1,0 +1,27 @@
+{
+  "name": "@glass-frontier/prompt-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prompt template management API for the Glass Frontier platform.",
+  "type": "module",
+  "scripts": {
+    "start": "TARGET=local tsup && node dist/server.local.js",
+    "dev": "NODE_ENV=development tsx src/server_local.ts",
+    "build": "TARGET=lambda tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "author": "Tsonu",
+  "license": "Polyform-Noncommercial-1.0.0",
+  "dependencies": {
+    "@glass-frontier/dto": "workspace:*",
+    "@glass-frontier/persistence": "workspace:*",
+    "@trpc/server": "^11.7.1",
+    "tsup": "^8.5.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.158",
+    "eslint": "^9.39.1"
+  }
+}
