@@ -1,20 +1,20 @@
 locals {
-  prefix            = "gf-stage"
-  output_root       = "${abspath(path.module)}/artifacts"
-  alert_config_path = "${local.output_root}/alerting"
-  dashboard_path    = "${local.output_root}/dashboards"
-  bootstrap_path    = "${local.output_root}/vault"
-  temporal_db_host     = "172.19.28.130"
-  temporal_db_port     = 5432
-  temporal_db_name     = "temporal"
+  prefix                 = "gf-stage"
+  output_root            = "${abspath(path.module)}/artifacts"
+  alert_config_path      = "${local.output_root}/alerting"
+  dashboard_path         = "${local.output_root}/dashboards"
+  bootstrap_path         = "${local.output_root}/vault"
+  temporal_db_host       = "172.19.28.130"
+  temporal_db_port       = 5432
+  temporal_db_name       = "temporal"
   temporal_visibility_db = "temporal_visibility"
 }
 
 resource "null_resource" "artifact_directories" {
   triggers = {
-    alerting  = local.alert_config_path
+    alerting   = local.alert_config_path
     dashboards = local.dashboard_path
-    vault     = local.bootstrap_path
+    vault      = local.bootstrap_path
   }
 
   provisioner "local-exec" {
@@ -55,29 +55,29 @@ module "vault_platform" {
 module "nomad_core" {
   source = "../../modules/nomad-core"
 
-  prefix             = local.prefix
-  region             = var.nomad_region
-  datacenter         = var.nomad_datacenter
-  environment        = var.environment
-  service_namespace  = var.service_namespace
-  consul_http_addr   = var.consul_http_addr
-  vault_addr         = var.vault_address
-  redis_url          = var.redis_url
-  redis_streams_url  = var.redis_streams_url
-  couchdb_url        = var.couchdb_url
-  api_base_url       = var.api_base_url
+  prefix                 = local.prefix
+  region                 = var.nomad_region
+  datacenter             = var.nomad_datacenter
+  environment            = var.environment
+  service_namespace      = var.service_namespace
+  consul_http_addr       = var.consul_http_addr
+  vault_addr             = var.vault_address
+  redis_url              = var.redis_url
+  redis_streams_url      = var.redis_streams_url
+  couchdb_url            = var.couchdb_url
+  api_base_url           = var.api_base_url
   couchdb_admin_password = var.couchdb_admin_password
 
   postgres_admin_user     = "postgres"
   postgres_admin_password = "postgres-super-secret"
   postgres_database       = local.temporal_db_name
 
-  temporal_database_host           = local.temporal_db_host
-  temporal_database_port           = local.temporal_db_port
-  temporal_database_name           = local.temporal_db_name
-  temporal_visibility_database     = local.temporal_visibility_db
-  temporal_database_user           = "temporal_admin"
-  temporal_database_password       = "super-secret"
+  temporal_database_host       = local.temporal_db_host
+  temporal_database_port       = local.temporal_db_port
+  temporal_database_name       = local.temporal_db_name
+  temporal_visibility_database = local.temporal_visibility_db
+  temporal_database_user       = "temporal_admin"
+  temporal_database_password   = "super-secret"
 
   langgraph_count         = 1
   api_gateway_count       = 1
@@ -128,9 +128,9 @@ module "observability" {
   victoria_metrics_url = var.victoria_metrics_url
   loki_url             = var.loki_url
 
-  dashboard_output_path       = local.dashboard_path
-  alertmanager_config_path    = local.alert_config_path
-  grafana_admin_password      = "stage-grafana-secret"
+  dashboard_output_path            = local.dashboard_path
+  alertmanager_config_path         = local.alert_config_path
+  grafana_admin_password           = "stage-grafana-secret"
   grafana_victoria_datasource_name = "VictoriaMetrics"
   grafana_loki_datasource_name     = "Loki"
 }

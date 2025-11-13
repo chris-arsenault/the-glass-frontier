@@ -9,14 +9,14 @@ terraform {
 
 locals {
   job_context = {
-    region          = var.region
-    datacenter      = var.datacenter
-    environment     = var.environment
+    region           = var.region
+    datacenter       = var.datacenter
+    environment      = var.environment
     consul_http_addr = var.consul_http_addr
-    vault_addr      = var.vault_addr
-    redis_url       = var.redis_url
-    couchdb_url     = var.couchdb_url
-    api_base_url    = var.api_base_url
+    vault_addr       = var.vault_addr
+    redis_url        = var.redis_url
+    couchdb_url      = var.couchdb_url
+    api_base_url     = var.api_base_url
   }
 }
 
@@ -58,20 +58,20 @@ resource "nomad_job" "hub_gateway" {
 
 resource "nomad_job" "temporal_frontend" {
   jobspec = templatefile("${path.module}/templates/temporal-frontend.nomad.hcl", merge(local.job_context, {
-    job_name        = "${var.prefix}-temporal-frontend"
-    service_name    = "${var.service_namespace}-temporal-frontend"
-    docker_image    = var.temporal_frontend_image
-    cpu             = var.temporal_frontend_cpu
-    memory          = var.temporal_frontend_memory
-    count           = var.temporal_frontend_count
-    temporal_ui     = var.temporal_ui_enabled
-    temporal_domain = var.temporal_domain
-    temporal_db_host      = var.temporal_database_host
-    temporal_db_port      = var.temporal_database_port
-    temporal_db_name      = var.temporal_database_name
+    job_name               = "${var.prefix}-temporal-frontend"
+    service_name           = "${var.service_namespace}-temporal-frontend"
+    docker_image           = var.temporal_frontend_image
+    cpu                    = var.temporal_frontend_cpu
+    memory                 = var.temporal_frontend_memory
+    count                  = var.temporal_frontend_count
+    temporal_ui            = var.temporal_ui_enabled
+    temporal_domain        = var.temporal_domain
+    temporal_db_host       = var.temporal_database_host
+    temporal_db_port       = var.temporal_database_port
+    temporal_db_name       = var.temporal_database_name
     temporal_visibility_db = var.temporal_visibility_database
-    temporal_db_user      = var.temporal_database_user
-    temporal_db_password  = var.temporal_database_password
+    temporal_db_user       = var.temporal_database_user
+    temporal_db_password   = var.temporal_database_password
   }))
 }
 
@@ -119,18 +119,18 @@ resource "nomad_job" "couchdb" {
 
 resource "nomad_job" "postgres" {
   jobspec = templatefile("${path.module}/templates/postgres.nomad.hcl", merge(local.job_context, {
-    job_name      = "${var.prefix}-postgres"
-    service_name  = "${var.service_namespace}-postgres"
-    docker_image  = var.postgres_image
-    cpu           = var.postgres_cpu
-    memory        = var.postgres_memory
-    volume_name   = var.postgres_volume_name
-    volume_path   = var.postgres_volume_path
-    admin_user    = var.postgres_admin_user
-    admin_password = var.postgres_admin_password
-    database_name = var.postgres_database
-    temporal_user = var.temporal_database_user
-    temporal_password = var.temporal_database_password
+    job_name            = "${var.prefix}-postgres"
+    service_name        = "${var.service_namespace}-postgres"
+    docker_image        = var.postgres_image
+    cpu                 = var.postgres_cpu
+    memory              = var.postgres_memory
+    volume_name         = var.postgres_volume_name
+    volume_path         = var.postgres_volume_path
+    admin_user          = var.postgres_admin_user
+    admin_password      = var.postgres_admin_password
+    database_name       = var.postgres_database
+    temporal_user       = var.temporal_database_user
+    temporal_password   = var.temporal_database_password
     visibility_database = var.temporal_visibility_database
   }))
 }
@@ -152,20 +152,20 @@ resource "nomad_job" "minio_lifecycle" {
   count = var.enable_minio_lifecycle_job ? 1 : 0
 
   jobspec = templatefile("${path.module}/templates/minio-lifecycle.nomad.hcl", merge(local.job_context, {
-    job_name            = "${var.prefix}-minio-lifecycle"
-    docker_image        = var.minio_lifecycle_image
-    cron_schedule       = var.minio_lifecycle_cron
-    cpu                 = var.minio_lifecycle_cpu
-    memory              = var.minio_lifecycle_memory
-    minio_endpoint      = var.minio_endpoint
-    minio_port          = tostring(var.minio_port)
-    minio_use_ssl       = var.minio_use_ssl ? "1" : "0"
-    minio_access_key    = var.minio_access_key
-    minio_secret_key    = var.minio_secret_key
-    minio_region        = var.minio_region
-    minio_remote_tier   = var.minio_remote_tier
-    lifecycle_policy    = trimspace(var.minio_lifecycle_policy)
-    b2_key_id           = var.minio_b2_key_id
-    b2_application_key  = var.minio_b2_application_key
+    job_name           = "${var.prefix}-minio-lifecycle"
+    docker_image       = var.minio_lifecycle_image
+    cron_schedule      = var.minio_lifecycle_cron
+    cpu                = var.minio_lifecycle_cpu
+    memory             = var.minio_lifecycle_memory
+    minio_endpoint     = var.minio_endpoint
+    minio_port         = tostring(var.minio_port)
+    minio_use_ssl      = var.minio_use_ssl ? "1" : "0"
+    minio_access_key   = var.minio_access_key
+    minio_secret_key   = var.minio_secret_key
+    minio_region       = var.minio_region
+    minio_remote_tier  = var.minio_remote_tier
+    lifecycle_policy   = trimspace(var.minio_lifecycle_policy)
+    b2_key_id          = var.minio_b2_key_id
+    b2_application_key = var.minio_b2_application_key
   }))
 }

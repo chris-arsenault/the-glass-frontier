@@ -42,7 +42,7 @@ resource "aws_dynamodb_table" "location_graph_index" {
   name         = "${local.name_prefix}-location-graph"
   billing_mode = "PAY_PER_REQUEST"
 
-  hash_key = "pk"
+  hash_key  = "pk"
   range_key = "sk"
 
   attribute {
