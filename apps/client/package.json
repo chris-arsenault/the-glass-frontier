@@ -20,26 +20,26 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
+    "@glass-frontier/chronicle-api": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
-    "@glass-frontier/narrative": "workspace:*",
     "@trpc/client": "^11.7.1",
     "@trpc/server": "^11.7.1",
-    "amazon-cognito-identity-js": "^6.3.7",
-    "react-router-dom": "^7.0.2",
+    "amazon-cognito-identity-js": "^6.3.16",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.5",
     "remark-gfm": "^4.0.1",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.1.0",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "@types/react": "19.2.3",
+    "@types/react": "19.2.4",
     "@types/react-dom": "19.2.3",
-    "vite": "~7.1.0"
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "vite": "~7.2.2"
   },
   "jest": {
     "testEnvironment": "node",

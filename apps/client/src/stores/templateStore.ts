@@ -1,10 +1,10 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import { create } from 'zustand';
 
-import { trpcClient } from '../lib/trpcClient';
+import { promptClient } from '../lib/promptClient';
 
-type TemplateSummary = Awaited<ReturnType<typeof trpcClient.listPromptTemplates.query>>[number];
-type TemplateDetail = Awaited<ReturnType<typeof trpcClient.getPromptTemplate.query>>;
+type TemplateSummary = Awaited<ReturnType<typeof promptClient.listPromptTemplates.query>>[number];
+type TemplateDetail = Awaited<ReturnType<typeof promptClient.getPromptTemplate.query>>;
 
 type TemplateStoreSet = (
   partial:
@@ -111,7 +111,7 @@ const createLoadSummariesHandler = (set: TemplateStoreSet) => {
     set({ error: null, isLoading: true });
 
     try {
-      const summaries = await trpcClient.listPromptTemplates.query({ loginId });
+      const summaries = await promptClient.listPromptTemplates.query({ loginId });
       const summaryList = summaries ?? [];
 
       set((prev) => ({
@@ -139,7 +139,7 @@ const createRevertTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGe
     set({ error: null, isSaving: true });
 
     try {
-      const next = await trpcClient.revertPromptTemplate.mutate({
+      const next = await promptClient.revertPromptTemplate.mutate({
         loginId,
         templateId: selectedTemplateId,
       });
@@ -164,7 +164,7 @@ const createSaveTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet)
     set({ error: null, isSaving: true });
 
     try {
-      const next = await trpcClient.savePromptTemplate.mutate({
+      const next = await promptClient.savePromptTemplate.mutate({
         editable: draft,
         loginId,
         templateId: selectedTemplateId,
@@ -190,7 +190,7 @@ const createSelectTemplateHandler = (set: TemplateStoreSet) => {
     set({ error: null, isLoading: true, selectedTemplateId: templateId });
 
     try {
-      const detail = await trpcClient.getPromptTemplate.query({ loginId, templateId });
+      const detail = await promptClient.getPromptTemplate.query({ loginId, templateId });
       set({
         detail,
         draft: detail?.editable ?? '',

@@ -1,4 +1,4 @@
-import type { AppRouter } from '@glass-frontier/chronicle-api';
+import type { PromptRouter } from '@glass-frontier/prompt-api';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 
 import { useAuthStore } from '../stores/authStore';
@@ -9,16 +9,16 @@ const hasValue = (value: string | undefined): value is string => {
   return typeof value === 'string' && value.length > 0;
 };
 
-const resolveTrpcUrl = (): string => {
+const resolvePromptTrpcUrl = (): string => {
   const apiTarget = getConfigValue('VITE_API_TARGET') ?? import.meta.env.VITE_API_TARGET;
   if (hasValue(apiTarget)) {
-    return `${apiTarget.replace(/\/$/, '')}/chronicle`;
+    return `${apiTarget.replace(/\/$/, '')}/prompt`;
   }
 
-  return '/chronicle';
+  return '/prompt';
 };
 
-export const trpcClient = createTRPCProxyClient<AppRouter>({
+export const promptClient = createTRPCProxyClient<PromptRouter>({
   links: [
     httpBatchLink({
       fetch: authenticatedFetch,
@@ -29,7 +29,7 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({
         }
         return {};
       },
-      url: resolveTrpcUrl(),
+      url: resolvePromptTrpcUrl(),
     }),
   ],
 });

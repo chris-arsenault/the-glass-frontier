@@ -20,7 +20,7 @@
 ### Apps
 - `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the narrative services through tRPC and shared DTOs.
 - `apps/llm-proxy`: Node-based proxy (deployment targets: local or AWS Lambda) that standardizes OpenAI/LLM calls and exposes them to the rest of the stack.
-- `apps/narrative`: Narrative engine service that runs storytelling logic, handles skill checks, and ships as an AWS Lambda with supporting build scripts.
+- `apps/chronicle-api`: Chronicle engine service that runs storytelling logic, handles skill checks, and ships as an AWS Lambda with supporting build scripts.
 - `apps/webservice`: WebSocket-facing webservice that brokers progress updates (Step Functions → SQS → API Gateway) and manages connection/job subscriptions.
 
 ### Packages

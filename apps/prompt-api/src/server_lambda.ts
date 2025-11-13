@@ -2,9 +2,9 @@ import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 
 import { createContext } from './context';
-import { appRouter } from './router';
+import { promptRouter } from './router';
 
-const ALLOW_ORIGINS = new Set([`"https://${process.env.DOMAIN_NAME}`]);
+const ALLOW_ORIGINS = new Set([`https://${process.env.DOMAIN_NAME}`]);
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
@@ -38,7 +38,6 @@ export const handler = async (
   event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
-  // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
   if (event.requestContext.http.method === 'OPTIONS') {
     const origin = resolveOriginHeader(event);
     return { headers: corsFor(origin), statusCode: 204 };
@@ -46,26 +45,17 @@ export const handler = async (
 
   const origin = resolveOriginHeader(event);
 
-  // v11 handler. It reads event.rawPath like "/trpc/foo.bar" and supports batching via ?batch=1
   return awsLambdaRequestHandler({
     batching: { enabled: true },
-    // You can pass event/context into your own context factory if needed.
     createContext: ({ event }) =>
       createContext({ authorizationHeader: getAuthorizationHeader(event) }),
-    // Optional: tighten status codes for errors
     onError({ error, path, type }) {
-      console.error('trpc_lambda_error', { code: error.code, message: error.message, path, type });
+      console.error('prompt_trpc_error', { code: error.code, message: error.message, path, type });
     },
-    // Add CORS on ALL non-OPTIONS responses.
     responseMeta() {
       return { headers: corsFor(origin) };
     },
-    router: appRouter,
-    /**
-     * Optionally enforce a base path. If your API route is "ANY /trpc/{proxy+}",
-     * you can uncomment this to be explicit:
-     */
-    // endpoint: "/trpc",
+    router: promptRouter,
   })(event, context);
 };
 

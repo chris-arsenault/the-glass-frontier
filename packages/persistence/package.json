@@ -26,9 +26,9 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.679.0",
-    "@aws-sdk/client-s3": "^3.679.0",
-    "@aws-sdk/credential-providers": "^3.679.0",
+    "@aws-sdk/client-dynamodb": "^3.930.0",
+    "@aws-sdk/client-s3": "^3.930.0",
+    "@aws-sdk/credential-providers": "^3.930.0",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/utils": "workspace:*"
   }

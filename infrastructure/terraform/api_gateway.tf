@@ -32,9 +32,25 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
   }
 }
 
-resource "aws_apigatewayv2_integration" "narrative" {
+resource "aws_apigatewayv2_integration" "chronicle_api" {
   api_id                 = aws_apigatewayv2_api.http_api.id
-  integration_uri        = aws_lambda_function.narrative.invoke_arn
+  integration_uri        = aws_lambda_function.chronicle_api.invoke_arn
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_integration" "prompt_api" {
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_uri        = aws_lambda_function.prompt_api.invoke_arn
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_integration" "location_api" {
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_uri        = aws_lambda_function.location_api.invoke_arn
   integration_type       = "AWS_PROXY"
   integration_method     = "POST"
   payload_format_version = "2.0"
@@ -48,19 +64,19 @@ resource "aws_apigatewayv2_integration" "llm" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "narrative_post" {
+resource "aws_apigatewayv2_route" "chronicle_post" {
   api_id    = aws_apigatewayv2_api.http_api.id
-  route_key = "POST /trpc/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.narrative.id}"
+  route_key = "POST /chronicle/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.chronicle_api.id}"
 
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
   authorization_type = "JWT"
 }
 
-resource "aws_apigatewayv2_route" "narrative_get" {
+resource "aws_apigatewayv2_route" "chronicle_get" {
   api_id             = aws_apigatewayv2_api.http_api.id
-  route_key          = "GET /trpc/{proxy+}"
-  target             = "integrations/${aws_apigatewayv2_integration.narrative.id}"
+  route_key          = "GET /chronicle/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.chronicle_api.id}"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
   authorization_type = "JWT"
 }
@@ -138,10 +154,10 @@ resource "aws_route53_record" "api" {
   }
 }
 
-resource "aws_lambda_permission" "narrative_api" {
-  statement_id  = "AllowAPIGatewayInvokeNarrative"
+resource "aws_lambda_permission" "chronicle_api" {
+  statement_id  = "AllowAPIGatewayInvokeChronicle"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.narrative.function_name
+  function_name = aws_lambda_function.chronicle_api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
@@ -152,4 +168,55 @@ resource "aws_lambda_permission" "llm_api" {
   function_name = aws_lambda_function.llm_proxy.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "prompt_api" {
+  statement_id  = "AllowAPIGatewayInvokePromptApi"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.prompt_api.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "location_api" {
+  statement_id  = "AllowAPIGatewayInvokeLocationApi"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.location_api.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+resource "aws_apigatewayv2_route" "prompt_api_post" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /prompt/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.prompt_api.id}"
+
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "prompt_api_get" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /prompt/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.prompt_api.id}"
+
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "location_api_post" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /location/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.location_api.id}"
+
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "location_api_get" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /location/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.location_api.id}"
+
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "JWT"
 }
