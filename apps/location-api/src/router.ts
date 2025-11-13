@@ -18,11 +18,11 @@ export const locationRouter = t.router({
   addLocationEdge: t.procedure
     .input(
       z.object({
-        dst: z.string().uuid(),
-        kind: z.nativeEnum(LocationEdgeKind),
-        locationId: z.string().uuid(),
+        dst: z.uuid(),
+        kind: LocationEdgeKind,
+        locationId: z.uuid(),
         metadata: z.record(z.string(), z.unknown()).optional(),
-        src: z.string().uuid(),
+        src: z.uuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
