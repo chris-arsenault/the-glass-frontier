@@ -1,7 +1,7 @@
+import type { AppRouter, ChatCompletionInput } from '@glass-frontier/llm-proxy';
 import { log } from '@glass-frontier/utils';
-import { TRPCClientError, createTRPCUntypedClient, httpBatchLink } from '@trpc/client';
-import type { TRPCUntypedClient } from '@trpc/client';
-import type { AnyRouter } from '@trpc/server';
+import { TRPCClientError, createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import type { inferRouterProxyClient } from '@trpc/client';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -13,6 +13,9 @@ const DEFAULT_MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 40;
 const METADATA_MAX_CHARS = 200;
 const DEFAULT_HEADERS: Record<string, string> = { 'content-type': 'application/json' };
+const JSON_PARSE_RECOVERY_ATTEMPTS = 2;
+const JSON_NESTED_PARSE_LIMIT = 3;
+const JSON_WRAPPER_CHARS = new Set(['\'', '"', '`']);
 
 type LlmInvokeOptions = {
   prompt?: string;
@@ -20,7 +23,7 @@ type LlmInvokeOptions = {
   messages?: Array<{ role: string; content: string }>;
   temperature?: number;
   maxTokens?: number;
-  metadata?: Record<string, unknown>;
+  metadata?: InvocationMetadata;
 };
 
 type ExecuteResult = {
@@ -43,6 +46,9 @@ type ChatCompletionResponse = {
   choices: ChatCompletionChoice[];
   usage: Record<string, unknown> | null;
 };
+
+type LlmProxyClient = inferRouterProxyClient<AppRouter>;
+type InvocationMetadata = NonNullable<ChatCompletionInput['metadata']>;
 
 type LlmClientOptions = {
   baseUrl?: string;
@@ -94,7 +100,7 @@ class LangGraphLlmClient {
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
   readonly #defaultHeaders: Record<string, string>;
-  readonly #client: TRPCUntypedClient<AnyRouter>;
+  readonly #client: LlmProxyClient;
 
   constructor(options?: LlmClientOptions) {
     this.#baseUrl = resolveBaseUrl(options?.baseUrl);
@@ -103,7 +109,7 @@ class LangGraphLlmClient {
     this.#timeoutMs = resolveTimeout(options?.timeoutMs);
     this.#maxRetries = resolveMaxRetries(options?.maxRetries);
     this.#defaultHeaders = resolveHeaders(options?.defaultHeaders);
-    this.#client = createTRPCUntypedClient<AnyRouter>({
+    this.#client = createTRPCProxyClient<AppRouter>({
       links: [
         httpBatchLink({
           headers: () => this.#defaultHeaders,
@@ -133,40 +139,40 @@ class LangGraphLlmClient {
     attempts: number;
   }> {
     const payload = { ...this.#buildPayload(options), response_format: { type: 'json_object' } };
-    const { attempts, output, raw, usage } = await this.#execute({
-      body: payload,
-      metadata: options.metadata,
-    });
-    if (typeof output === 'string') {
-      const trimmed = output.trim();
-      try {
-        const parsed = this.#coerceRecord(JSON.parse(trimmed)) ?? {};
+    let totalAttempts = 0;
+    let lastOutput: unknown;
+
+    for (let parseAttempt = 0; parseAttempt <= JSON_PARSE_RECOVERY_ATTEMPTS; parseAttempt += 1) {
+      // eslint-disable-next-line no-await-in-loop -- sequential retries depend on previous attempts
+      const execution = await this.#execute({
+        body: payload,
+        metadata: options.metadata,
+      });
+      totalAttempts += execution.attempts;
+      lastOutput = execution.output;
+
+      const json = this.#coerceJsonResponse(execution.output);
+      if (json !== null) {
         return {
-          attempts,
-          json: parsed,
+          attempts: totalAttempts,
+          json,
           provider: this.#providerId,
-          raw,
-          usage,
+          raw: execution.raw,
+          usage: execution.usage,
         };
-      } catch (error) {
-        throw new Error(
-          `llm_json_parse_failed: ${error instanceof Error ? error.message : 'unknown'}`
-        );
       }
+
+      this.#logJsonParseFailure(parseAttempt, execution.output);
+      if (parseAttempt === JSON_PARSE_RECOVERY_ATTEMPTS) {
+        break;
+      }
+      // eslint-disable-next-line no-await-in-loop -- sequential retries depend on previous attempts
+      await delay(this.#retryDelay(parseAttempt));
     }
 
-    const coerced = this.#coerceRecord(output);
-    if (coerced !== null) {
-      return {
-        attempts,
-        json: coerced,
-        provider: this.#providerId,
-        raw,
-        usage,
-      };
-    }
-
-    return { attempts, json: {}, provider: this.#providerId, raw, usage };
+    throw new Error(
+      `llm_json_parse_failed (${this.#providerId}): ${this.#formatJsonFailurePreview(lastOutput)}`
+    );
   }
 
   #buildPayload({
@@ -175,7 +181,7 @@ class LangGraphLlmClient {
     prompt,
     system,
     temperature = 0.7,
-  }: LlmInvokeOptions): Record<string, unknown> {
+  }: LlmInvokeOptions): ChatCompletionInput {
     const sequence = Array.isArray(messages) ? [...messages] : [];
 
     if (typeof system === 'string' && system.length > 0) {
@@ -203,22 +209,22 @@ class LangGraphLlmClient {
     body,
     metadata,
   }: {
-    body: Record<string, unknown>;
-    metadata?: Record<string, unknown>;
+    body: ChatCompletionInput;
+    metadata?: InvocationMetadata;
   }): Promise<ExecuteResult> {
     return this.#attemptExecution(body, metadata, 0);
   }
 
-  #mergeMetadata(
-    body: Record<string, unknown>,
-    metadata?: Record<string, unknown>
-  ): Record<string, unknown> {
-    return metadata === undefined ? { ...body } : { ...body, metadata };
+  #mergeMetadata(body: ChatCompletionInput, metadata?: InvocationMetadata): ChatCompletionInput {
+    if (metadata === undefined) {
+      return { ...body };
+    }
+    return { ...body, metadata };
   }
 
   async #attemptExecution(
-    body: Record<string, unknown>,
-    metadata: Record<string, unknown> | undefined,
+    body: ChatCompletionInput,
+    metadata: InvocationMetadata | undefined,
     attempt: number
   ): Promise<ExecuteResult> {
     const controller = new AbortController();
@@ -253,8 +259,8 @@ class LangGraphLlmClient {
     }
   }
 
-  async #invokeMutation(payload: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
-    return this.#client.mutation('chatCompletion', payload, { signal });
+  async #invokeMutation(payload: ChatCompletionInput, signal: AbortSignal): Promise<unknown> {
+    return this.#client.chatCompletion.mutate(payload, { signal });
   }
 
   #parseResponse(payload: unknown): ChatCompletionResponse {
@@ -268,6 +274,111 @@ class LangGraphLlmClient {
       : [];
     const usage = this.#coerceRecord(record.usage);
     return { choices, usage };
+  }
+
+  #coerceJsonResponse(output: unknown): Record<string, unknown> | null {
+    const record = this.#coerceRecord(output);
+    if (record !== null) {
+      return record;
+    }
+    if (typeof output !== 'string') {
+      return null;
+    }
+    return this.#coerceJsonFromString(output);
+  }
+
+  #coerceJsonFromString(value: string): Record<string, unknown> | null {
+    const candidates = this.#buildJsonCandidates(value);
+    for (const candidate of candidates) {
+      const parsed = this.#parseNestedJson(candidate);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  #buildJsonCandidates(value: string): string[] {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return [];
+    }
+    const candidates = new Set<string>();
+    const withoutFence = this.#stripCodeFence(trimmed);
+    const baseCandidates = [trimmed, withoutFence];
+    for (const candidate of baseCandidates) {
+      candidates.add(candidate);
+      const unwrapped = this.#unwrapMatchingQuotes(candidate);
+      candidates.add(unwrapped);
+    }
+    return Array.from(candidates).filter((candidate) => candidate.length > 0);
+  }
+
+  #stripCodeFence(value: string): string {
+    const fence = value.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fence !== null && fence[1] !== undefined) {
+      return fence[1].trim();
+    }
+    return value;
+  }
+
+  #unwrapMatchingQuotes(value: string): string {
+    if (value.length < 2) {
+      return value;
+    }
+    const first = value.at(0);
+    const last = value.at(-1);
+    if (first !== undefined && first === last && JSON_WRAPPER_CHARS.has(first)) {
+      return value.slice(1, -1).trim();
+    }
+    return value;
+  }
+
+  #parseNestedJson(value: string): Record<string, unknown> | null {
+    let current = value;
+    for (let depth = 0; depth < JSON_NESTED_PARSE_LIMIT; depth += 1) {
+      const trimmed = current.trim();
+      if (trimmed.length === 0) {
+        return null;
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        return null;
+      }
+
+      const record = this.#coerceRecord(parsed);
+      if (record !== null) {
+        return record;
+      }
+
+      if (typeof parsed === 'string') {
+        current = parsed;
+        continue;
+      }
+
+      const arrayRecord = this.#coerceJsonFromArray(parsed);
+      if (arrayRecord !== null) {
+        return arrayRecord;
+      }
+
+      return null;
+    }
+    return null;
+  }
+
+  #coerceJsonFromArray(value: unknown): Record<string, unknown> | null {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+    for (const entry of value) {
+      const entryRecord = this.#coerceRecord(entry);
+      if (entryRecord !== null) {
+        return entryRecord;
+      }
+    }
+    return null;
   }
 
   #isChoice(value: unknown): value is ChatCompletionChoice {
@@ -307,7 +418,29 @@ class LangGraphLlmClient {
     return null;
   }
 
-  #logError(error: unknown, attempt: number, metadata?: Record<string, unknown>): void {
+  #logJsonParseFailure(parseAttempt: number, output: unknown): void {
+    log('warn', 'narrative.llm.json_parse_retry', {
+      attempt: parseAttempt,
+      preview: this.#formatJsonFailurePreview(output),
+      provider: this.#providerId,
+    });
+  }
+
+  #formatJsonFailurePreview(value: unknown): string {
+    if (typeof value === 'string') {
+      return value.trim().slice(0, METADATA_MAX_CHARS);
+    }
+    if (value === undefined) {
+      return 'undefined';
+    }
+    try {
+      return JSON.stringify(value).slice(0, METADATA_MAX_CHARS);
+    } catch {
+      return '[unserializable]';
+    }
+  }
+
+  #logError(error: unknown, attempt: number, metadata?: InvocationMetadata): void {
     log('error', 'narrative.llm.invoke_failed', {
       attempt,
       context: metadata !== undefined ? this.#stringifyMetadata(metadata) : '{}',
@@ -316,7 +449,7 @@ class LangGraphLlmClient {
     });
   }
 
-  #stringifyMetadata(metadata: Record<string, unknown>): string {
+  #stringifyMetadata(metadata: InvocationMetadata): string {
     try {
       return JSON.stringify(metadata).slice(0, METADATA_MAX_CHARS);
     } catch {
@@ -324,11 +457,11 @@ class LangGraphLlmClient {
     }
   }
 
-  #isBadRequest(error: unknown): error is TRPCClientError<AnyRouter> {
+  #isBadRequest(error: unknown): error is TRPCClientError<AppRouter> {
     return error instanceof TRPCClientError && this.#extractHttpStatus(error) === 400;
   }
 
-  #createBadRequestError(error: TRPCClientError<AnyRouter>): Error {
+  #createBadRequestError(error: TRPCClientError<AppRouter>): Error {
     const causeMessage = this.#extractCauseMessage(error);
     return new Error(`llm_bad_request (${this.#providerId}): ${causeMessage}`.slice(0, 500));
   }
@@ -344,12 +477,12 @@ class LangGraphLlmClient {
     return RETRY_DELAY_MS * (attempt + 1);
   }
 
-  #extractHttpStatus(error: TRPCClientError<AnyRouter>): number | null {
+  #extractHttpStatus(error: TRPCClientError<AppRouter>): number | null {
     const status = (error as { data?: { httpStatus?: unknown } }).data?.httpStatus;
     return typeof status === 'number' ? status : null;
   }
 
-  #extractCauseMessage(error: TRPCClientError<AnyRouter>): string {
+  #extractCauseMessage(error: TRPCClientError<AppRouter>): string {
     const cause =
       (error.cause as { message?: unknown } | undefined)?.message ??
       (error as { cause?: { message?: unknown } }).cause?.message;

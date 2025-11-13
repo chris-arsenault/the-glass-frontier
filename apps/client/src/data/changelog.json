@@ -33,5 +33,12 @@
     "summary": "Added the moderator LLM audit review workspace",
     "details": "Moderators and admins can open the new LLM audit review page from the player menu to filter archived LLM requests, capture structured review notes, and inspect template improvement proposals.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-13-llm-proxy-typed-client",
+    "releasedAt": "2025-11-13",
+    "summary": "Stabilized LLM proxy requests",
+    "details": "Typed the chronicle API's LLM client against the proxy schema, added JSON coercion heuristics for fenced or double-encoded responses, and automatically retries the proxy when parsing still fails.",
+    "type": "bugfix"
   }
 ]

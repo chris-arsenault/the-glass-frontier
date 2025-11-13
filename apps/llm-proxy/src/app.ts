@@ -19,6 +19,7 @@ const t = initTRPC.context<LlmProxyContext>().create();
 export const appRouter = t.router({
   chatCompletion: t.procedure.input(chatCompletionInputSchema).mutation(async ({ ctx, input }) => {
     try {
+      console.log(input)
       return await routerService.proxy(input, { playerId: ctx.playerId, requestId: ctx.requestId });
     } catch (error) {
       if (error instanceof ProviderError) {
@@ -46,3 +47,5 @@ export const appRouter = t.router({
 });
 
 export type AppRouter = typeof appRouter;
+export { chatCompletionInputSchema } from './Router';
+export type { ChatCompletionInput } from './Router';
