@@ -1,6 +1,7 @@
 import type { MomentumState } from '@glass-frontier/dto';
 
-import type { MomentumTrend } from '../state/chronicleState';
+import type { MomentumTrend } from '../../../state/chronicleState';
+import './MomentumIndicator.css';
 
 type MomentumIndicatorProps = {
   momentum: MomentumState;

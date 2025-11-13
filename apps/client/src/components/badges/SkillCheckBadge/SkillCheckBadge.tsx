@@ -1,5 +1,7 @@
 import type { Attribute, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/dto';
 
+import './SkillCheckBadge.css';
+
 const MOMENTUM_DELTA: Record<string, number> = {
   advance: 1,
   breakthrough: 2,

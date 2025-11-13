@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-import { useChronicleStore } from '../stores/chronicleStore';
-import { useUiStore } from '../stores/uiStore';
-import { InventoryDeltaBadge } from './InventoryDeltaBadge';
-import { SkillCheckBadge } from './SkillCheckBadge';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useUiStore } from '../../../stores/uiStore';
+import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
+import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
+import './ChatCanvas.css';
 
 export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);

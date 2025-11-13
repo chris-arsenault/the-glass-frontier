@@ -1,8 +1,9 @@
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 
-import { useChronicleStore } from '../stores/chronicleStore';
-import { LocationOverview } from './LocationOverview';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { LocationOverview } from '../../overview/LocationOverview/LocationOverview';
+import './ChatComposer.css';
 
 export function ChatComposer() {
   const sendPlayerMessage = useChronicleStore((state) => state.sendPlayerMessage);

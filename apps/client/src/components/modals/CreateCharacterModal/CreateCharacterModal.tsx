@@ -6,9 +6,11 @@ import type {
 } from '@glass-frontier/dto';
 import { useEffect, useMemo, useState } from 'react';
 
-import type { CharacterCreationDraft } from '../state/chronicleState';
-import { useChronicleStore } from '../stores/chronicleStore';
-import { useUiStore } from '../stores/uiStore';
+import type { CharacterCreationDraft } from '../../../state/chronicleState';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useUiStore } from '../../../stores/uiStore';
+import '../shared/modalBase.css';
+import './CreateCharacterModal.css';
 
 type SkillDraft = {
   id: string;

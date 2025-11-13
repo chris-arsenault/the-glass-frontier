@@ -1,0 +1,51 @@
+.location-pill {
+  display: flex;
+  flex: 1 1 240px;
+  padding: 0.45rem 0.9rem;
+  background: rgb(15 23 42 / 80%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.75rem;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.location-pill-label {
+  color: #93c5fd;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.location-pill-value {
+  display: flex;
+  color: #e2e8f0;
+  flex-direction: column;
+  font-size: 0.9rem;
+  gap: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-pill-path {
+  color: #f8fafc;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-pill-meta {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.location-pill-empty .location-pill-value {
+  color: #94a3b8;
+}

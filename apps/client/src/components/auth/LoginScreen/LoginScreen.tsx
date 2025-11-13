@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../../../stores/authStore';
+import './LoginScreen.css';
 
 export function LoginScreen() {
   const login = useAuthStore((state) => state.login);

@@ -6,9 +6,10 @@ import {
 } from '@glass-frontier/dto';
 import { type ReactNode, useCallback, useMemo } from 'react';
 
-import type { MomentumTrend } from '../state/chronicleState';
-import { useChronicleStore } from '../stores/chronicleStore';
-import { MomentumIndicator } from './MomentumIndicator';
+import type { MomentumTrend } from '../../../state/chronicleState';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndicator';
+import './CharacterOverview.css';
 
 const slotOrder: Slot[] = ['outfit', 'headgear', 'armament', 'module'];
 

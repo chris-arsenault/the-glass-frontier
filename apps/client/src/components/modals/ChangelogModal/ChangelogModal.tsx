@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 
-import changelogEntries from '../data/changelog.json';
-import { useUiStore } from '../stores/uiStore';
-import type { ChangelogEntry, ChangelogEntryType } from '../types/changelog';
+import changelogEntries from '../../../data/changelog.json';
+import { useUiStore } from '../../../stores/uiStore';
+import type { ChangelogEntry, ChangelogEntryType } from '../../../types/changelog';
+import '../shared/modalBase.css';
+import './ChangelogModal.css';
 
 const ENTRY_TYPE_LABELS: Record<ChangelogEntryType, string> = {
   bugfix: 'Bug Fix',

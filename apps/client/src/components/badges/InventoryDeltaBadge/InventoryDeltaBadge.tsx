@@ -1,5 +1,7 @@
 import type { InventoryDelta } from '@glass-frontier/dto';
 
+import './InventoryDeltaBadge.css';
+
 const slotLabels: Record<string, string> = {
   armament: 'Armament',
   headgear: 'Headgear',

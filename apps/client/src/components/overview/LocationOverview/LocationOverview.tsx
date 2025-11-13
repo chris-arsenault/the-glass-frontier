@@ -1,4 +1,5 @@
-import { useChronicleStore } from '../stores/chronicleStore';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import './LocationOverview.css';
 
 export function LocationOverview() {
   const location = useChronicleStore((state) => state.location);

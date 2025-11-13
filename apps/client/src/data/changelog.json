@@ -19,5 +19,19 @@
     "summary": "Introduced the expandable player menu",
     "details": "Refined the new account menu into a compact, file-menu inspired widget with role badges, uppercase player names, and a slim character/chronicle/location strip while keeping the changelog button separate.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-12-css-decomposition",
+    "releasedAt": "2025-11-12",
+    "summary": "Localized UI styles by component",
+    "details": "Reorganized the component tree and moved drawer, modal, badge, and widget styles into colocated CSS modules, trimming the global stylesheet and making future tweaks safer.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-character-wizard-polish",
+    "releasedAt": "2025-11-12",
+    "summary": "Polished the character sheet and chronicle wizard",
+    "details": "Moved the Character Overview, player session chrome, and chronicle creation wizard styles into dedicated modules so those surfaces render with their intended layout again while keeping the global stylesheet lean.",
+    "type": "improvement"
   }
 ]

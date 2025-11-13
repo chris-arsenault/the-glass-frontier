@@ -1,10 +1,11 @@
 import type { LocationSummary } from '@glass-frontier/dto';
 import { useEffect, useMemo, useRef } from 'react';
 
-import { useAuthStore } from '../stores/authStore';
-import { useChronicleStore } from '../stores/chronicleStore';
-import { useUiStore } from '../stores/uiStore';
-import { decodeJwtPayload } from '../utils/jwt';
+import { useAuthStore } from '../../../stores/authStore';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useUiStore } from '../../../stores/uiStore';
+import { decodeJwtPayload } from '../../../utils/jwt';
+import './PlayerMenu.css';
 
 const ROLE_PRIORITY = ['admin', 'moderator', 'user', 'free'] as const;
 const ROLE_BADGES: Record<string, string> = {

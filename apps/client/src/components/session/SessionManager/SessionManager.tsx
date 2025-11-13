@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useChronicleStore } from '../stores/chronicleStore';
-import { useUiStore } from '../stores/uiStore';
-import { MomentumIndicator } from './MomentumIndicator';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useUiStore } from '../../../stores/uiStore';
+import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndicator';
+import './SessionManager.css';
 
 export function SessionManager() {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);

@@ -1,5 +1,6 @@
-import { useUiStore } from '../stores/uiStore';
-import { SessionManager } from './SessionManager';
+import { useUiStore } from '../../../stores/uiStore';
+import { SessionManager } from '../../session/SessionManager/SessionManager';
+import './SideNavigation.css';
 
 const CharacterIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">

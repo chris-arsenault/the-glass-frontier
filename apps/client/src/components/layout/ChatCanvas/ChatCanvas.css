@@ -1,0 +1,172 @@
+.chat-canvas {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  padding: 1rem;
+  background: rgb(15 23 42 / 60%);
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 25%);
+  box-sizing: border-box;
+  flex-direction: column;
+  max-height: max(16rem, calc(100vh - 26rem));
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chat-stream {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  overflow: hidden auto;
+  padding-right: 0.5rem;
+}
+
+.chat-stream:focus-visible {
+  outline: 2px solid rgb(96 165 250 / 90%);
+  outline-offset: 2px;
+}
+
+.chat-entry {
+  border-bottom: 1px solid rgb(148 163 184 / 18%);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+}
+
+.chat-entry-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.chat-entry-heading {
+  display: flex;
+  color: #cbd5f5;
+  align-items: baseline;
+  font-size: 0.8rem;
+  gap: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chat-entry-aside {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chat-entry-summary {
+  margin: 0.5rem 0 0;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.skill-progress-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.skill-progress-badge {
+  padding: 0.15rem 0.5rem;
+  color: #e0e7ff;
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid rgb(148 163 184 / 40%);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skill-progress-badge-skill-gain {
+  color: #5eead4;
+  border-color: rgb(45 212 191 / 60%);
+}
+
+.skill-progress-badge-skill-tier-up {
+  color: #c4b5fd;
+  border-color: rgb(129 140 248 / 60%);
+}
+
+.chat-entry-tone {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chat-entry-spark {
+  color: #fde047;
+  font-size: 0.75rem;
+}
+
+.chat-entry-player .chat-entry-content {
+  color: #f9a8d4;
+}
+
+.chat-entry-gm .chat-entry-content {
+  color: #bfdbfe;
+}
+
+.chat-entry-system {
+  background: rgb(248 113 113 / 8%);
+  border-left: 3px solid rgb(248 113 113 / 70%);
+  box-shadow: inset 0 0 0 1px rgb(248 113 113 / 15%);
+}
+
+.chat-entry-system .chat-entry-heading,
+.chat-entry-system .chat-entry-content {
+  color: #fecaca;
+}
+
+.chat-entry-system .chat-entry-meta {
+  color: #fca5a5;
+}
+
+.chat-empty {
+  color: #94a3b8;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.chat-loading {
+  display: inline-flex;
+  padding: 0.5rem 0.85rem;
+  color: #cbd5f5;
+  background: rgb(59 130 246 / 8%);
+  align-items: center;
+  border: 1px solid rgb(96 165 250 / 35%);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.chat-loading-spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  animation: chat-loading-spin 0.85s linear infinite;
+  border: 2px solid rgb(59 130 246 / 25%);
+  border-radius: 999px;
+  border-top-color: rgb(236 72 153 / 85%);
+}
+
+.chat-loading-text {
+  letter-spacing: 0.02em;
+}
+
+@keyframes chat-loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

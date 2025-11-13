@@ -13,6 +13,7 @@ import { trpcClient } from '../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../state/chronicleState';
 import { useChronicleStore } from '../../stores/chronicleStore';
 import { useChronicleStartStore, type SelectedLocationSummary } from './store';
+import './ChronicleStartWizard.css';
 
 const toneOptions = [
   'gritty',

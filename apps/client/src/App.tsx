@@ -1,20 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import { ChangelogModal } from './components/ChangelogModal';
-import { CharacterDrawer } from './components/CharacterDrawer';
-import { ChatCanvas } from './components/ChatCanvas';
-import { ChatComposer } from './components/ChatComposer';
-import { ChronicleHeader } from './components/ChronicleHeader';
-import { CreateCharacterModal } from './components/CreateCharacterModal';
-import { LoginScreen } from './components/LoginScreen';
-import { PlayerMenu } from './components/PlayerMenu';
-import { SideNavigation } from './components/SideNavigation';
-import { TemplateDrawer } from './components/TemplateDrawer';
+import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
+import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
+import { TemplateDrawer } from './components/drawers/TemplateDrawer/TemplateDrawer';
+import { ChatCanvas } from './components/layout/ChatCanvas/ChatCanvas';
+import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
+import { ChronicleHeader } from './components/layout/ChronicleHeader/ChronicleHeader';
+import { ChangelogModal } from './components/modals/ChangelogModal/ChangelogModal';
+import { CreateCharacterModal } from './components/modals/CreateCharacterModal/CreateCharacterModal';
+import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
+import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
 import { ChronicleStartWizard } from './features/chronicleStart/ChronicleStartWizard';
 import { useLoginResources } from './hooks/useLoginResources';
 import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
 import { useAuthStore } from './stores/authStore';
 import { useUiStore } from './stores/uiStore';
+import './App.css';
 
 const SessionMeta = (): JSX.Element => {
   const openChangelog = useUiStore((state) => state.openChangelogModal);

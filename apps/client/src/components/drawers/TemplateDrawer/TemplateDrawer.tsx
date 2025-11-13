@@ -2,9 +2,10 @@ import type { PromptTemplateId } from '@glass-frontier/dto';
 import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { useChronicleStore } from '../stores/chronicleStore';
-import { useTemplateStore } from '../stores/templateStore';
-import { useUiStore } from '../stores/uiStore';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useTemplateStore } from '../../../stores/templateStore';
+import { useUiStore } from '../../../stores/uiStore';
+import './TemplateDrawer.css';
 
 export function TemplateDrawer() {
   const isOpen = useUiStore((state) => state.isTemplateDrawerOpen);

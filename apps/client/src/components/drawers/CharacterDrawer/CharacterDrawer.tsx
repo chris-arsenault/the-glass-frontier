@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 
-import { useUiStore } from '../stores/uiStore';
-import { CharacterOverview } from './CharacterOverview';
+import { useUiStore } from '../../../stores/uiStore';
+import { CharacterOverview } from '../../overview/CharacterOverview/CharacterOverview';
+import './CharacterDrawer.css';
 
 export function CharacterDrawer(): JSX.Element {
   const isOpen = useUiStore((state) => state.isCharacterDrawerOpen);
