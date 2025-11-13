@@ -36,7 +36,7 @@ const chatCompletionInputSchema = z
     fallbackProviders: z.array(z.string()).optional(),
     max_tokens: z.number().optional(),
     messages: z.array(chatMessageSchema).optional(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
     model: z.string(),
     prompt: z.any().optional(),
     provider: z.string().optional(),

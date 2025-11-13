@@ -46,3 +46,5 @@ export const appRouter = t.router({
 });
 
 export type AppRouter = typeof appRouter;
+export { chatCompletionInputSchema } from './Router';
+export type { ChatCompletionInput } from './Router';
