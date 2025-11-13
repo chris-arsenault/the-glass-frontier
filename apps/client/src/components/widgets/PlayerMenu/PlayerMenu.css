@@ -132,6 +132,59 @@
   list-style: none;
 }
 
+.player-menu-link-button {
+  display: flex;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  color: #e2e8f0;
+  background: rgb(15 23 42 / 70%);
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.65rem;
+  cursor: pointer;
+  gap: 0.5rem;
+  text-align: left;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.player-menu-link-button:hover,
+.player-menu-link-button:focus-visible {
+  background: rgb(15 23 42 / 85%);
+  border-color: rgb(148 197 255 / 65%);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.player-menu-link-icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  color: rgb(148 197 255);
+  background: rgb(15 118 110 / 25%);
+  align-items: center;
+  border-radius: 0.5rem;
+  justify-content: center;
+}
+
+.player-menu-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.player-menu-link-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.player-menu-link-subtitle {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
 .player-menu-empty {
   margin: 0;
   color: #94a3b8;

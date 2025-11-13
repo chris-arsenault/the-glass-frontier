@@ -11,6 +11,16 @@ import './PlayerMenu.css';
 const ROLE_PRIORITY = ['admin', 'moderator', 'user', 'free'] as const;
 type RoleKey = (typeof ROLE_PRIORITY)[number];
 
+const TemplateIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      fill="currentColor"
+      d="M6 4h9l3 3v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm8 0v3h3"
+    />
+    <path fill="currentColor" d="M8 9h8v2H8zm0 4h8v2H8zm0 4h4v2H8z" />
+  </svg>
+);
+
 const ROLE_BADGES: Record<RoleKey, { icon: string; label: string }> = {
   admin: { icon: '🛡️', label: 'Admin' },
   moderator: { icon: '⚔️', label: 'Moderator' },
@@ -57,7 +67,9 @@ export function PlayerMenu(): JSX.Element {
   const isOpen = useUiStore((state) => state.isPlayerMenuOpen);
   const toggle = useUiStore((state) => state.togglePlayerMenu);
   const close = useUiStore((state) => state.closePlayerMenu);
+  const toggleTemplateDrawer = useUiStore((state) => state.toggleTemplateDrawer);
   const highestRole = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
+  const canAccessTemplates = highestRole === 'admin' || highestRole === 'moderator';
   const roleBadge = ROLE_BADGES[highestRole];
   const playerLabel = (loginName?.trim() || 'Unnamed Player').toUpperCase();
   const chronicleTitle = chronicle?.title?.trim() || 'No chronicle selected';
@@ -92,6 +104,11 @@ export function PlayerMenu(): JSX.Element {
 
   const handleLogout = () => {
     logout();
+    close();
+  };
+
+  const handleTemplateShortcut = () => {
+    toggleTemplateDrawer();
     close();
   };
 
@@ -158,7 +175,23 @@ export function PlayerMenu(): JSX.Element {
           </div>
         </div>
         <div className="player-menu-links">
-          <p className="player-menu-empty">Admin and lore shortcuts will appear here.</p>
+          {canAccessTemplates ? (
+            <button
+              type="button"
+              className="player-menu-link-button"
+              onClick={handleTemplateShortcut}
+            >
+              <span className="player-menu-link-icon" aria-hidden="true">
+                <TemplateIcon />
+              </span>
+              <div className="player-menu-link-text">
+                <span className="player-menu-link-title">Templates</span>
+                <span className="player-menu-link-subtitle">Open the shared lore templates</span>
+              </div>
+            </button>
+          ) : (
+            <p className="player-menu-empty">Admin and lore shortcuts will appear here.</p>
+          )}
         </div>
       </div>
     </div>

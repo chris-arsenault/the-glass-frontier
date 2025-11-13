@@ -7,32 +7,11 @@
     "type": "feature"
   },
   {
-    "id": "2025-11-12-css-lint-hardening",
-    "releasedAt": "2025-11-12",
-    "summary": "Polished the interface styling and accessibility",
-    "details": "Resolved the outstanding CSS lint violations, refreshed button states, and tightened utility classes so the app ships with a clean, consistent look.",
-    "type": "improvement"
-  },
-  {
     "id": "2025-11-12-player-menu-widget",
     "releasedAt": "2025-11-12",
     "summary": "Introduced the expandable player menu",
     "details": "Refined the new account menu into a compact, file-menu inspired widget with role badges, uppercase player names, and a slim character/chronicle/location strip while keeping the changelog button separate.",
     "type": "feature"
-  },
-  {
-    "id": "2025-11-12-css-decomposition",
-    "releasedAt": "2025-11-12",
-    "summary": "Localized UI styles by component",
-    "details": "Reorganized the component tree and moved drawer, modal, badge, and widget styles into colocated CSS modules, trimming the global stylesheet and making future tweaks safer.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-12-character-wizard-polish",
-    "releasedAt": "2025-11-12",
-    "summary": "Polished the character sheet and chronicle wizard",
-    "details": "Moved the Character Overview, player session chrome, and chronicle creation wizard styles into dedicated modules so those surfaces render with their intended layout again while keeping the global stylesheet lean.",
-    "type": "improvement"
   },
   {
     "id": "2025-11-12-chronicle-api-preflight",
@@ -42,31 +21,10 @@
     "type": "bugfix"
   },
   {
-    "id": "2025-11-12-player-role-icons",
+    "id": "2025-11-12-ui-styling-refactor",
     "releasedAt": "2025-11-12",
-    "summary": "Gave player menu roles distinctive icons",
-    "details": "Replaced the parenthetical role letters with emoji-based badges so admins, moderators, and free players can be identified at a glance in the account menu.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-12-character-drawer-relocation",
-    "releasedAt": "2025-11-12",
-    "summary": "Moved the character sheet button into the list",
-    "details": "Removed the left-nav character toggle and added an icon button to the character list so the drawer opens from within the session manager itself.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-12-character-button-relocation",
-    "releasedAt": "2025-11-12",
-    "summary": "Relocated the New Character control",
-    "details": "Shifted the New Character action next to the character list header so it matches the New Chronicle placement and keeps related controls together.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-12-character-locking",
-    "releasedAt": "2025-11-12",
-    "summary": "Synced the character picker with chronicles",
-    "details": "You can now pick any character while idle to preview them in the player menu and drawer, then once a chronicle loads that pair stays pinned to the top, greys out the alternates, and the leading icon/name open the sheet.",
+    "summary": "Refined UI styling and menus",
+    "details": "Collapsed the recent CSS refactors, player menu polish, character panel updates, and template shortcut tweaks into a single styling refresh that keeps the UI consistent.",
     "type": "improvement"
   }
 ]
