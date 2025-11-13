@@ -28,10 +28,10 @@ variable "client_build_command" {
   default     = "pnpm --filter ./apps/client build"
 }
 
-variable "narrative_build_command" {
-  description = "Command used to compile the narrative engine."
+variable "chronicle_api_build_command" {
+  description = "Command used to compile the chronicle API."
   type        = string
-  default     = "pnpm --filter ./apps/narrative build"
+  default     = "pnpm --filter ./apps/chronicle-api build"
 }
 
 variable "llm_proxy_build_command" {

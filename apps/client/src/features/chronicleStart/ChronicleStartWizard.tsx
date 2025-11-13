@@ -8,6 +8,7 @@ import type {
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { locationClient } from '../../lib/locationClient';
 import { trpcClient } from '../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../state/chronicleState';
 import { useChronicleStore } from '../../stores/chronicleStore';
@@ -98,6 +99,41 @@ export function ChronicleStartWizard() {
     [selectedSeedId, seeds]
   );
 
+  const bootstrapShardLocation = async (
+    stack: LocationBreadcrumbEntry[]
+  ): Promise<string | null> => {
+    if (!stack.length) {
+      return null;
+    }
+    const knownIndex = [...stack].reverse().findIndex((entry) => entry.id);
+    let parentId: string | undefined;
+    let baseIndex = 0;
+    if (knownIndex >= 0) {
+      const realIndex = stack.length - 1 - knownIndex;
+      parentId = stack[realIndex].id;
+      baseIndex = realIndex + 1;
+    }
+    const pending = stack.slice(baseIndex);
+    if (!pending.length && parentId) {
+      return parentId;
+    }
+    if (!pending.length) {
+      return null;
+    }
+    const segments = pending.map((entry) => ({
+      description: undefined,
+      kind: entry.kind,
+      name: entry.name,
+      tags: [],
+    }));
+    const result = await locationClient.createLocationChain.mutate({
+      parentId,
+      segments,
+    });
+    await loadGraph(result.anchor.locationId);
+    return result.anchor.id;
+  };
+
   useEffect(() => {
     if (!customTitle) {
       if (selectedSeed?.title) {
@@ -119,7 +155,7 @@ export function ChronicleStartWizard() {
     setIsLoadingRoots(true);
     setRootError(null);
     try {
-      const locations = await trpcClient.listLocations.query({ limit: 100 });
+      const locations = await locationClient.listLocations.query({ limit: 100 });
       setRoots(locations);
       if (!selectedRootId && locations.length) {
         void handleRootSelection(locations[0].id);
@@ -140,7 +176,7 @@ export function ChronicleStartWizard() {
     setIsGraphLoading(true);
     setGraphError(null);
     try {
-      const snapshot = await trpcClient.getLocationGraph.query({ locationId });
+      const snapshot = await locationClient.getLocationGraph.query({ locationId });
       setGraph(snapshot);
       setActivePlaceId(locationId);
       await handlePlaceSelection(locationId);
@@ -160,7 +196,7 @@ export function ChronicleStartWizard() {
   const handlePlaceSelection = async (placeId: string) => {
     setActivePlaceId(placeId);
     try {
-      const details = await trpcClient.getLocationPlace.query({ placeId });
+      const details = await locationClient.getLocationPlace.query({ placeId });
       setInspector({ breadcrumb: details.breadcrumb, place: details.place });
       setSelectedLocation({
         breadcrumb: details.breadcrumb,
@@ -399,7 +435,7 @@ export function ChronicleStartWizard() {
         try {
           const placeId = await bootstrapShardLocation(shard.locationStack);
           if (placeId) {
-            const details = await trpcClient.getLocationPlace.query({ placeId });
+            const details = await locationClient.getLocationPlace.query({ placeId });
             try {
               await handlePlaceSelection(placeId);
             } catch {
@@ -445,41 +481,6 @@ export function ChronicleStartWizard() {
     setShardMessage,
     setStep,
   ]);
-
-  const bootstrapShardLocation = async (
-    stack: LocationBreadcrumbEntry[]
-  ): Promise<string | null> => {
-    if (!stack.length) {
-      return null;
-    }
-    const knownIndex = [...stack].reverse().findIndex((entry) => entry.id);
-    let parentId: string | undefined;
-    let baseIndex = 0;
-    if (knownIndex >= 0) {
-      const realIndex = stack.length - 1 - knownIndex;
-      parentId = stack[realIndex].id;
-      baseIndex = realIndex + 1;
-    }
-    const pending = stack.slice(baseIndex);
-    if (!pending.length && parentId) {
-      return parentId;
-    }
-    if (!pending.length) {
-      return null;
-    }
-    const segments = pending.map((entry) => ({
-      description: undefined,
-      kind: entry.kind,
-      name: entry.name,
-      tags: [],
-    }));
-    const result = await trpcClient.createLocationChain.mutate({
-      parentId,
-      segments,
-    });
-    await loadGraph(result.anchor.locationId);
-    return result.anchor.id;
-  };
 
   return (
     <section className="chronicle-wizard" aria-label="Chronicle start wizard">
@@ -989,7 +990,7 @@ function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps)
     setIsSaving(true);
     setError(null);
     try {
-      const created = await trpcClient.createLocationPlace.mutate({
+      const created = await locationClient.createLocationPlace.mutate({
         description: description.trim() || undefined,
         kind: kind.trim() || 'locale',
         name: name.trim(),
@@ -1099,7 +1100,7 @@ function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalPr
     setIsSaving(true);
     setError(null);
     try {
-      const result = await trpcClient.createLocationChain.mutate({
+      const result = await locationClient.createLocationChain.mutate({
         parentId: parent?.id,
         segments: segments.map((segment) => ({
           description: segment.description.trim() || undefined,

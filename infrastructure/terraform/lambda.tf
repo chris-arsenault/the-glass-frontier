@@ -1,5 +1,17 @@
-resource "aws_cloudwatch_log_group" "narrative" {
-  name              = "/aws/lambda/${local.name_prefix}-narrative"
+resource "aws_cloudwatch_log_group" "chronicle_api" {
+  name              = "/aws/lambda/${local.name_prefix}-chronicle-api"
+  retention_in_days = 14
+  tags              = local.tags
+}
+
+resource "aws_cloudwatch_log_group" "prompt_api" {
+  name              = "/aws/lambda/${local.name_prefix}-prompt-api"
+  retention_in_days = 14
+  tags              = local.tags
+}
+
+resource "aws_cloudwatch_log_group" "location_api" {
+  name              = "/aws/lambda/${local.name_prefix}-location-api"
   retention_in_days = 14
   tags              = local.tags
 }
@@ -42,13 +54,13 @@ data "aws_secretsmanager_secret_version" "openai_api_key" {
   secret_id = data.aws_secretsmanager_secret.openai_api_key.id
 }
 
-resource "aws_lambda_function" "narrative" {
-  function_name    = "${local.name_prefix}-narrative"
-  role             = aws_iam_role.narrative_lambda.arn
+resource "aws_lambda_function" "chronicle_api" {
+  function_name    = "${local.name_prefix}-chronicle-api"
+  role             = aws_iam_role.chronicle_lambda.arn
   runtime          = var.lambda_node_version
   handler          = "handler.handler"
-  filename         = data.archive_file.narrative_lambda.output_path
-  source_code_hash = data.archive_file.narrative_lambda.output_base64sha256
+  filename         = data.archive_file.chronicle_lambda.output_path
+  source_code_hash = data.archive_file.chronicle_lambda.output_base64sha256
   timeout          = 30
   memory_size      = 512
 
@@ -68,7 +80,58 @@ resource "aws_lambda_function" "narrative" {
 
   tags = local.tags
 
-  depends_on = [aws_cloudwatch_log_group.narrative]
+  depends_on = [aws_cloudwatch_log_group.chronicle_api]
+}
+
+resource "aws_lambda_function" "prompt_api" {
+  function_name    = "${local.name_prefix}-prompt-api"
+  role             = aws_iam_role.prompt_api_lambda.arn
+  runtime          = var.lambda_node_version
+  handler          = "handler.handler"
+  filename         = data.archive_file.prompt_api_lambda.output_path
+  source_code_hash = data.archive_file.prompt_api_lambda.output_base64sha256
+  timeout          = 15
+  memory_size      = 384
+
+  environment {
+    variables = {
+      NODE_ENV             = var.environment
+      DOMAIN_NAME          = local.cloudfront_domain
+      NARRATIVE_S3_BUCKET  = aws_s3_bucket.narrative_data.id
+      NARRATIVE_S3_PREFIX  = "${var.environment}/"
+      NARRATIVE_DDB_TABLE  = aws_dynamodb_table.world_index.name
+      PROMPT_TEMPLATE_BUCKET = aws_s3_bucket.prompt_templates.id
+    }
+  }
+
+  tags = local.tags
+
+  depends_on = [aws_cloudwatch_log_group.prompt_api]
+}
+
+resource "aws_lambda_function" "location_api" {
+  function_name    = "${local.name_prefix}-location-api"
+  role             = aws_iam_role.location_api_lambda.arn
+  runtime          = var.lambda_node_version
+  handler          = "handler.handler"
+  filename         = data.archive_file.location_api_lambda.output_path
+  source_code_hash = data.archive_file.location_api_lambda.output_base64sha256
+  timeout          = 15
+  memory_size      = 384
+
+  environment {
+    variables = {
+      NODE_ENV                 = var.environment
+      DOMAIN_NAME              = local.cloudfront_domain
+      NARRATIVE_S3_BUCKET      = aws_s3_bucket.narrative_data.id
+      NARRATIVE_S3_PREFIX      = "${var.environment}/"
+      LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
+    }
+  }
+
+  tags = local.tags
+
+  depends_on = [aws_cloudwatch_log_group.location_api]
 }
 
 resource "aws_lambda_function" "llm_proxy" {

@@ -3,23 +3,44 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
+import { URL } from 'node:url';
 
 const r = (p) => path.resolve(process.cwd(), p);
 
-const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:7000';
+const baseTarget = process.env.VITE_API_TARGET || 'http://localhost';
+const ensureUrl = (value) => (value.includes('://') ? value : `http://${value}`);
+const normalizedBase = ensureUrl(baseTarget);
+const isLocalHost = (hostname) =>
+  hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+const buildTarget = (port) => {
+  const url = new URL(normalizedBase);
+  if (!url.port && isLocalHost(url.hostname)) {
+    url.port = String(port);
+  }
+  return url.toString().replace(/\/$/, '');
+};
 
-const proxyRoutes = ['/trpc'];
+const chroniclePort = Number(process.env.CHRONICLE_API_PORT ?? process.env.NARRATIVE_PORT ?? 7000);
+const promptPort = Number(process.env.PROMPT_API_PORT ?? 7400);
+const locationPort = Number(process.env.LOCATION_API_PORT ?? 7300);
 
-const proxy = Object.fromEntries(
-  proxyRoutes.map((route) => [
-    route,
-    {
-      target: apiTarget,
-      changeOrigin: true,
-      rewrite: (p) => p.replace(/^\/trpc/, ''),
-    },
-  ])
-);
+const proxy = {
+  '/chronicle': {
+    target: buildTarget(chroniclePort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/chronicle/, ''),
+  },
+  '/prompt': {
+    target: buildTarget(promptPort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/prompt/, ''),
+  },
+  '/location': {
+    target: buildTarget(locationPort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/location/, ''),
+  },
+};
 
 export default defineConfig({
   plugins: [react()],

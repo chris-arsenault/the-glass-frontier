@@ -9,16 +9,16 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.744.0",
-    "@aws-sdk/client-dynamodb": "^3.744.0",
-    "@aws-sdk/lib-dynamodb": "^3.744.0",
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.930.0",
+    "@aws-sdk/client-dynamodb": "^3.930.0",
+    "@aws-sdk/lib-dynamodb": "^3.930.0",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
-    "jose": "^5.9.4",
-    "tsup": "^8.5.0"
+    "jose": "^6.1.1",
+    "tsup": "^8.5.1"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.138",
+    "@types/aws-lambda": "^8.10.158",
     "typescript": "^5.9.3"
   }
 }
