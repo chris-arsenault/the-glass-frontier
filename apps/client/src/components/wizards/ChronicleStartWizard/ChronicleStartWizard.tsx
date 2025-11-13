@@ -8,12 +8,12 @@ import type {
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { locationClient } from '../../../lib/locationClient';
 import { trpcClient } from '../../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
-import { useChronicleStore } from '../../../stores/chronicleStore';
-import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { useChronicleStartStore, type SelectedLocationSummary } from '../../../stores/chronicleStartWizardStore';
+import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
 
 const toneOptions = [

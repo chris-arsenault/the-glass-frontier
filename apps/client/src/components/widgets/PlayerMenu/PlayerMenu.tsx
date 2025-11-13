@@ -1,15 +1,13 @@
 import type { LocationSummary } from '@glass-frontier/dto';
 import { useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { useAuthStore } from '../../../stores/authStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { decodeJwtPayload } from '../../../utils/jwt';
+import { canModerate, getHighestRole, type RoleKey } from '../../../utils/roles';
 import './PlayerMenu.css';
-
-const ROLE_PRIORITY = ['admin', 'moderator', 'user', 'free'] as const;
-type RoleKey = (typeof ROLE_PRIORITY)[number];
 
 const TemplateIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -23,24 +21,23 @@ const TemplateIcon = () => (
 
 const ROLE_BADGES: Record<RoleKey, { icon: string; label: string }> = {
   admin: { icon: '🛡️', label: 'Admin' },
+  free: { icon: '🎟️', label: 'Free tier' },
   moderator: { icon: '⚔️', label: 'Moderator' },
   user: { icon: '👤', label: 'Player' },
-  free: { icon: '🎟️', label: 'Free tier' },
 };
 
-const getHighestRole = (idToken?: string | null): RoleKey => {
-  const payload = decodeJwtPayload(idToken);
-  const groups = Array.isArray(payload?.['cognito:groups'])
-    ? (payload?.['cognito:groups'] as string[])
-    : [];
-  const normalized = groups.map((entry) => entry.toLowerCase());
-  for (const role of ROLE_PRIORITY) {
-    if (normalized.includes(role)) {
-      return role;
-    }
-  }
-  return 'user';
-};
+const AuditIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm0 16a7 7 0 1 1 7-7 7.01 7.01 0 0 1-7 7Z"
+      fill="currentColor"
+    />
+    <path
+      d="M12.75 7h-1.5v6l5.25 3.15.75-1.23-4.5-2.67Z"
+      fill="currentColor"
+    />
+  </svg>
+);
 
 const describeLocation = (location?: LocationSummary | null) => {
   if (!location) {
@@ -69,13 +66,14 @@ export function PlayerMenu(): JSX.Element {
   const close = useUiStore((state) => state.closePlayerMenu);
   const toggleTemplateDrawer = useUiStore((state) => state.toggleTemplateDrawer);
   const highestRole = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
-  const canAccessTemplates = highestRole === 'admin' || highestRole === 'moderator';
+  const canAccessAdminTools = canModerate(highestRole);
   const roleBadge = ROLE_BADGES[highestRole];
   const playerLabel = (loginName?.trim() || 'Unnamed Player').toUpperCase();
   const chronicleTitle = chronicle?.title?.trim() || 'No chronicle selected';
   const locationDetails = describeLocation(location);
   const containerRef = useRef<HTMLDivElement>(null);
   const panelId = 'player-menu-panel';
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isOpen) {
@@ -109,6 +107,11 @@ export function PlayerMenu(): JSX.Element {
 
   const handleTemplateShortcut = () => {
     toggleTemplateDrawer();
+    close();
+  };
+
+  const handleAuditShortcut = () => {
+    void navigate('/moderation/audit');
     close();
   };
 
@@ -175,20 +178,37 @@ export function PlayerMenu(): JSX.Element {
           </div>
         </div>
         <div className="player-menu-links">
-          {canAccessTemplates ? (
-            <button
-              type="button"
-              className="player-menu-link-button"
-              onClick={handleTemplateShortcut}
-            >
-              <span className="player-menu-link-icon" aria-hidden="true">
-                <TemplateIcon />
-              </span>
-              <div className="player-menu-link-text">
-                <span className="player-menu-link-title">Templates</span>
-                <span className="player-menu-link-subtitle">Open the shared lore templates</span>
-              </div>
-            </button>
+          {canAccessAdminTools ? (
+            <>
+              <button
+                type="button"
+                className="player-menu-link-button"
+                onClick={handleTemplateShortcut}
+              >
+                <span className="player-menu-link-icon" aria-hidden="true">
+                  <TemplateIcon />
+                </span>
+                <div className="player-menu-link-text">
+                  <span className="player-menu-link-title">Templates</span>
+                  <span className="player-menu-link-subtitle">Open the shared lore templates</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="player-menu-link-button"
+                onClick={handleAuditShortcut}
+              >
+                <span className="player-menu-link-icon" aria-hidden="true">
+                  <AuditIcon />
+                </span>
+                <div className="player-menu-link-text">
+                  <span className="player-menu-link-title">LLM Audit Review</span>
+                  <span className="player-menu-link-subtitle">
+                    Inspect requests, capture reviews, and proposals
+                  </span>
+                </div>
+              </button>
+            </>
           ) : (
             <p className="player-menu-empty">Admin and lore shortcuts will appear here.</p>
           )}

@@ -65,3 +65,17 @@
 .session-changelog-button svg {
   pointer-events: none;
 }
+
+.app-global-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.app-route-surface {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}

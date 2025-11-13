@@ -12,3 +12,5 @@ export {
   resolveInventoryDelta,
 } from './inventory';
 export type { InventoryStoreDelta, InventoryStoreOp } from './inventory';
+export { AuditLogStore } from './audit/AuditLogStore';
+export { AuditModerationStore } from './audit/AuditModerationStore';

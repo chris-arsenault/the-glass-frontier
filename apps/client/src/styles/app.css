@@ -30,6 +30,8 @@ body {
 
 .app-frame {
   display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   width: 100%;
   padding: 1.5rem 2rem;
   background: linear-gradient(135deg, rgb(15 23 42 / 95%), rgb(2 6 23 / 90%));
