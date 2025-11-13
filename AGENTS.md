@@ -3,6 +3,7 @@
 - Never revert user-authored tweaks unless explicitly asked; prefer additive fixes.  When a diff results in unexpected diffs assume the user made them. Flag in output but do not adjust code.
 - Ignore the `archive/` directory unless the user explicitly requests changes there; it’s only for historical snapshots.
 - Ignore the `docs/` directory unless the user explicitly requests updates; treat it as reference material.
+- Preserve the current lint-clean state: do not introduce ESLint errors or warnings, and fix any that appear before handing off.
 
 ## General Implementation Guidelines
 

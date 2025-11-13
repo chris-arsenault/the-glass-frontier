@@ -157,6 +157,24 @@ body {
   gap: 0.45rem;
 }
 
+.session-logout-button {
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+  border-radius: 999px;
+  padding: 0.2rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.session-logout-button:hover,
+.session-logout-button:focus-visible {
+  background: rgba(248, 113, 113, 0.2);
+  outline: none;
+  border-color: rgba(248, 113, 113, 0.8);
+}
+
 .character-pill {
   display: inline-flex;
   align-items: center;
@@ -304,17 +322,10 @@ body {
   cursor: pointer;
 }
 
-.session-manager-identity,
 .session-manager-preference {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-}
-
-.session-manager-identity-value {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #cbd5f5;
 }
 
 .session-manager-form {

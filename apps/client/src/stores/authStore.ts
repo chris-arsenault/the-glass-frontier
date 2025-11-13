@@ -1,5 +1,10 @@
 import type { CognitoUserSession } from 'amazon-cognito-identity-js';
-import { AuthenticationDetails, CognitoUser, CognitoUserPool } from 'amazon-cognito-identity-js';
+import {
+  AuthenticationDetails,
+  CognitoRefreshToken,
+  CognitoUser,
+  CognitoUserPool,
+} from 'amazon-cognito-identity-js';
 import { create } from 'zustand';
 
 import { getConfigValue } from '../utils/runtimeConfig';
@@ -45,6 +50,7 @@ type AuthState = {
   login: (username: string, password: string) => Promise<void>;
   completeNewPassword: (newPassword: string) => Promise<void>;
   logout: () => void;
+  refreshTokens: () => Promise<AuthTokens | null>;
 };
 
 const extractTokens = (session: CognitoUserSession): AuthTokens => ({
@@ -113,6 +119,15 @@ const setAuthenticatedState = (
     ...(username !== undefined ? { username } : {}),
   });
 };
+
+const getCurrentUser = (): CognitoUser | null => {
+  if (userPool === null) {
+    return null;
+  }
+  return userPool.getCurrentUser();
+};
+
+let refreshPromise: Promise<AuthTokens | null> | null = null;
 
 const setAuthFailure = (set: StoreSet, errorMessage: string): void => {
   set({
@@ -188,6 +203,53 @@ const createLoginHandler = (set: StoreSet, _get: StoreGet) => {
   };
 };
 
+const createRefreshHandler = (set: StoreSet, get: StoreGet) => {
+  return async (): Promise<AuthTokens | null> => {
+    if (refreshPromise !== null) {
+      return refreshPromise;
+    }
+    if (userPool === null) {
+      return null;
+    }
+    const currentTokens = get().tokens;
+    if (currentTokens?.refreshToken === undefined) {
+      return null;
+    }
+    const cognitoUser = getCurrentUser();
+    if (cognitoUser === null) {
+      return null;
+    }
+    const refreshToken = new CognitoRefreshToken({
+      RefreshToken: currentTokens.refreshToken,
+    });
+
+    refreshPromise = new Promise<AuthTokens | null>((resolve) => {
+      cognitoUser.refreshSession(refreshToken, (err, session) => {
+        if (err !== null || session === null) {
+          set({
+            challengeUser: null,
+            error: err instanceof Error ? err.message : 'Session expired.',
+            isAuthenticated: false,
+            isAuthenticating: false,
+            newPasswordRequired: false,
+            tokens: null,
+            username: '',
+          });
+          resolve(null);
+          return;
+        }
+        const tokens = extractTokens(session);
+        setAuthenticatedState(set, tokens, cognitoUser.getUsername());
+        resolve(tokens);
+      });
+    }).finally(() => {
+      refreshPromise = null;
+    });
+
+    return refreshPromise;
+  };
+};
+
 export const useAuthStore = create<AuthState>()((set, get) => ({
   challengeUser: null,
   completeNewPassword: createCompleteNewPasswordHandler(set, get),
@@ -201,27 +263,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const cognitoUser = userPool.getCurrentUser();
       cognitoUser?.signOut();
     }
+    refreshPromise = null;
 
     set({
+      challengeUser: null,
       error: null,
       isAuthenticated: false,
+      isAuthenticating: false,
+      newPasswordRequired: false,
       tokens: null,
       username: '',
     });
   },
   newPasswordRequired: false,
+  refreshTokens: createRefreshHandler(set, get),
   tokens: null,
   username: '',
 }));
-
-export const getAuthHeaders = (): Record<string, string> => {
-  const token = useAuthStore.getState().tokens?.idToken;
-  if (typeof token === 'string' && token.length > 0) {
-    return { Authorization: `Bearer ${token}` };
-  }
-
-  return {};
-};
 
 if (userPool !== null) {
   const currentUser = userPool.getCurrentUser();
