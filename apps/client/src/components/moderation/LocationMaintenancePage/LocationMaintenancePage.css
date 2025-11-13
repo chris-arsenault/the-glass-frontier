@@ -1,0 +1,361 @@
+.lm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.lm-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lm-page-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.lm-page-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.lm-page-actions button,
+.lm-panel-actions button,
+.lm-form-actions button,
+.lm-child-form button,
+.lm-relationship-form button,
+.lm-panel button,
+.lm-root-item,
+.lm-location-list button,
+.lm-tree-node,
+.lm-graph button {
+  background: var(--gf-surface-3, #24324d);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.5rem 0.9rem;
+  transition: background 120ms ease, border 120ms ease;
+}
+
+.lm-page-actions button:hover,
+.lm-panel-actions button:hover,
+.lm-form-actions button:hover,
+.lm-child-form button:hover,
+.lm-relationship-form button:hover,
+.lm-root-item:hover,
+.lm-location-list button:hover,
+.lm-tree-node:hover,
+.lm-graph button:hover {
+  border-color: var(--gf-accent, rgba(108, 139, 255, 0.7));
+}
+
+.lm-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(420px, 2fr) minmax(320px, 1.3fr);
+  gap: 1.25rem;
+}
+
+.lm-panel {
+  background: var(--gf-surface-2, #1a2234);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.lm-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lm-panel-header h2 {
+  margin: 0;
+}
+
+.lm-panel-label {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.lm-panel-subtitle {
+  margin: 0.25rem 0 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.lm-panel-actions,
+.lm-pill-switch {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.lm-pill-switch button {
+  border-radius: 999px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lm-pill-switch button.active {
+  background: var(--gf-accent, rgba(108, 139, 255, 0.4));
+}
+
+.lm-root-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lm-root-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lm-root-item small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.lm-root-item.active {
+  border-color: var(--gf-accent, rgba(108, 139, 255, 0.8));
+}
+
+.lm-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.lm-filter-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.lm-filter-grid input,
+.lm-filter-grid select,
+.lm-editor-form input,
+.lm-editor-form textarea,
+.lm-child-form input,
+.lm-child-form textarea,
+.lm-relationship-form select,
+.lm-relationship-form input,
+.lm-relationship-form textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: inherit;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+}
+
+.lm-location-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.lm-location-list button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lm-location-list button small {
+  opacity: 0.7;
+}
+
+.lm-location-list button.active,
+.lm-tree-node.active,
+.lm-graph-node.active {
+  border-color: var(--gf-accent, rgba(108, 139, 255, 0.8));
+  background: rgba(108, 139, 255, 0.1);
+}
+
+.lm-tree-view ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.lm-tree-node {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.lm-editor-form,
+.lm-child-form,
+.lm-relationship-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lm-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.lm-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.lm-form-actions .ghost {
+  background: transparent;
+}
+
+.lm-pending {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lm-empty {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.25rem 0;
+}
+
+.lm-child-form h3,
+.lm-relationship-form h3,
+.lm-panel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lm-relationship-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.lm-edge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lm-edge-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.lm-edge-list button {
+  border-radius: 6px;
+}
+
+.lm-chip {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lm-remove {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.4);
+  width: 2rem;
+  text-align: center;
+}
+
+.lm-graph {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.lm-graph-column ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lm-graph-node {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lm-graph-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.lm-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.lm-chip-row button {
+  font-size: 0.85rem;
+}
+
+.lm-alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 10px;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.lm-alert button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.lm-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 1200px) {
+  .lm-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .lm-side-column {
+    flex-direction: column;
+  }
+}
