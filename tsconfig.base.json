@@ -3,6 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
     "noImplicitThis": true,

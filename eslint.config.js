@@ -197,7 +197,7 @@ export default [
     },
   },
   {
-    files: ['apps/client/src/features/chronicleStart/ChronicleStartWizard.tsx'],
+    files: ['apps/client/src/components/wizards/ChronicleStartWizard/ChronicleStartWizard.tsx'],
     rules: {
       complexity: 'off',
       'max-lines': 'off',

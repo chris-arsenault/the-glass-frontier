@@ -1,0 +1,333 @@
+.session-manager {
+  display: flex;
+  padding: 0.75rem;
+  background: rgb(2 6 23 / 75%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 220px;
+}
+
+.session-manager-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.session-manager-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.session-manager-header h3 {
+  margin: 0;
+  color: #bfdbfe;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.session-manager-new {
+  padding: 0.3rem 0.75rem;
+  color: #bfdbfe;
+  background: rgb(59 130 246 / 15%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.session-manager-section {
+  border-top: 1px solid rgb(148 163 184 / 18%);
+  padding-top: 0.75rem;
+}
+
+.session-manager-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.session-manager-section-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.session-manager-section-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.session-manager-card-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.session-manager-card {
+  display: flex;
+  padding: 0.6rem;
+  background: rgb(2 6 23 / 85%);
+  border: 1px solid rgb(148 163 184 / 30%);
+  border-radius: 0.6rem;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.session-manager-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: space-between;
+}
+
+.session-manager-card-toggle {
+  display: inline-flex;
+  flex: 1;
+  padding: 0.2rem 0;
+  color: #e2e8f0;
+  background: none;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.session-manager-card-toggle-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.session-manager-card-toggle-icon {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: inherit;
+  background: rgb(59 130 246 / 12%);
+  align-items: center;
+  border: 1px solid rgb(96 165 250 / 35%);
+  border-radius: 0.4rem;
+  justify-content: center;
+}
+
+.session-manager-card-toggle:hover,
+.session-manager-card-toggle:focus-visible {
+  color: #bfdbfe;
+  outline: none;
+}
+
+.session-manager-card-toggle.active .session-manager-card-toggle-icon {
+  background: rgb(59 130 246 / 25%);
+  border-color: rgb(96 165 250 / 70%);
+}
+
+.session-card-title {
+  margin: 0;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.session-manager-card .session-card-meta {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.session-manager-card-active {
+  border-color: rgb(96 165 250 / 70%);
+  box-shadow: 0 0 12px rgb(59 130 246 / 25%);
+}
+
+.session-manager-card-disabled {
+  opacity: 0.6;
+  filter: grayscale(0.4);
+}
+
+.session-manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.session-manager-label {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.session-manager-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-chip {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-ready {
+  color: #bbf7d0;
+  background: rgb(34 197 94 / 18%);
+  border-color: rgb(34 197 94 / 40%);
+}
+
+.status-loading {
+  color: #bfdbfe;
+  background: rgb(59 130 246 / 18%);
+  border-color: rgb(59 130 246 / 40%);
+}
+
+.status-error {
+  color: #fecaca;
+  background: rgb(248 113 113 / 18%);
+  border-color: rgb(248 113 113 / 45%);
+}
+
+.status-idle {
+  color: #cbd5f5;
+  background: rgb(148 163 184 / 15%);
+  border-color: rgb(148 163 184 / 35%);
+}
+
+.session-manager-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-manager-input {
+  flex: 1;
+  padding: 0.3rem 0.6rem;
+  color: inherit;
+  background: rgb(15 23 42 / 85%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.5rem;
+}
+
+.session-manager-hint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.session-manager-icon-button {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #94a3b8;
+  background: rgb(15 23 42 / 80%);
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 999px;
+  cursor: pointer;
+  justify-content: center;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.session-manager-icon-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.session-manager-icon-button:hover,
+.session-manager-icon-button:focus-visible {
+  color: #f8fafc;
+  border-color: rgb(148 197 255 / 60%);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.session-manager-icon-button.active {
+  color: #bfdbfe;
+  background: rgb(59 130 246 / 20%);
+  border-color: rgb(96 165 250 / 80%);
+}
+
+.session-manager-load {
+  padding: 0.3rem 0.75rem;
+  color: #bfdbfe;
+  background: rgb(59 130 246 / 20%);
+  border: 1px solid rgb(59 130 246 / 50%);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.session-manager-recents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.session-manager-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.session-manager-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+}
+
+.session-manager-recent {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  color: inherit;
+  background: rgb(15 23 42 / 80%);
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-align: left;
+  word-break: break-all;
+}
+
+.session-manager-error {
+  margin: 0;
+  color: #f87171;
+  font-size: 0.8rem;
+}
+
+.session-manager-link {
+  padding: 0;
+  color: #60a5fa;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  text-decoration: underline;
+}

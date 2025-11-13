@@ -18,6 +18,19 @@ const resolveOriginHeader = (event: APIGatewayProxyEventV2): string | undefined 
   return undefined;
 };
 
+type RequestContextWithMethod = APIGatewayProxyEventV2['requestContext'] & {
+  httpMethod?: string;
+};
+
+function resolveRequestMethod(event: APIGatewayProxyEventV2): string | undefined {
+  const context = event.requestContext as RequestContextWithMethod | undefined;
+  return (
+    context?.http?.method ??
+    context?.httpMethod ??
+    (event as { httpMethod?: string }).httpMethod
+  );
+}
+
 function corsFor(origin?: string): Record<string, string> {
   const baseHeaders = {
     'access-control-allow-headers': 'content-type, authorization, x-trpc-source',
@@ -39,7 +52,8 @@ export const handler = async (
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
   // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
-  if (event.requestContext.http.method === 'OPTIONS') {
+  const requestMethod = resolveRequestMethod(event);
+  if (requestMethod?.toUpperCase() === 'OPTIONS') {
     const origin = resolveOriginHeader(event);
     return { headers: corsFor(origin), statusCode: 204 };
   }

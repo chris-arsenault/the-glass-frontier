@@ -1,0 +1,77 @@
+.character-drawer-backdrop {
+  position: fixed;
+  background: rgb(2 6 23 / 60%);
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 10;
+}
+
+.character-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.character-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(420px, 90vw);
+  padding: 1.5rem;
+  background: linear-gradient(160deg, rgb(12 19 41 / 98%), rgb(4 8 20 / 95%));
+  backdrop-filter: blur(6px);
+  border-right: 1px solid rgb(96 165 250 / 30%);
+  box-shadow: 0 0 60px rgb(5 10 20 / 85%);
+  isolation: isolate;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 220ms ease;
+  z-index: 11;
+}
+
+.character-drawer::before {
+  position: absolute;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgb(59 130 246 / 5%),
+      rgb(59 130 246 / 5%) 1px,
+      transparent 1px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgb(59 130 246 / 3%),
+      rgb(59 130 246 / 3%) 1px,
+      transparent 1px,
+      transparent 20px
+    );
+  content: '';
+  inset: 0;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.character-drawer.open {
+  transform: translateX(0);
+}
+
+.character-drawer-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  color: #e2e8f0;
+  background: rgb(15 23 42 / 80%);
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 40%);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 1.5rem;
+  justify-content: center;
+}

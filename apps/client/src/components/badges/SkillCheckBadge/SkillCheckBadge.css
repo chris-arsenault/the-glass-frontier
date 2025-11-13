@@ -1,0 +1,85 @@
+.skill-check-badge {
+  position: relative;
+  display: inline-flex;
+}
+
+.skill-check-icon {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  color: #93c5fd;
+  background: rgb(15 23 42 / 70%);
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 40%);
+  border-radius: 999px;
+  cursor: pointer;
+  justify-content: center;
+}
+
+.skill-check-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.skill-check-tooltip {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  padding: 0.85rem;
+  color: #e2e8f0;
+  background: rgb(15 23 42 / 95%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 30px rgb(2 6 23 / 75%);
+  min-width: 220px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  z-index: 20;
+}
+
+.skill-check-badge:hover .skill-check-tooltip,
+.skill-check-badge:focus-within .skill-check-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.skill-check-title {
+  margin: 0 0 0.5rem;
+  color: #93c5fd;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.skill-check-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  font-size: 0.85rem;
+  gap: 0.35rem;
+}
+
+.skill-check-list div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.skill-check-list dt {
+  margin: 0;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.skill-check-list dd {
+  margin: 0;
+  color: #e2e8f0;
+}

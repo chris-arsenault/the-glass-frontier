@@ -15,6 +15,14 @@
 - Use the existing layers: persistence-related functionality belongs in `packages/persistence`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
 - Use declarative programing for sequenced events.
 
+## Changelog Workflow
+
+- All user-facing work must update the bundled changelog stored at `apps/client/src/data/changelog.json`; this file ships with the UI and powers the account-bar modal.
+- Each entry is a JSON object with the shape `{ "id": string, "releasedAt": "YYYY-MM-DD", "summary": string, "details": string, "type": "feature" | "improvement" | "bugfix" }`.
+- Add a new entry when completing standalone work. If you are extending previously tracked work, edit the existing entry instead of creating a duplicate.
+- Keep the records sorted by `releasedAt` (newest dates at the end of the file) so the UI can sort deterministically.
+- The initial entry documents the creation of the changelog itself—preserve it for historical context.
+
 ## Subproject Overview
 
 ### Apps

@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { App } from './App';
 import './styles/app.css';
+import './styles/chipButton.css';
 
 const container = document.getElementById('root');
 

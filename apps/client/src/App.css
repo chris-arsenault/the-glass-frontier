@@ -1,0 +1,67 @@
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  min-width: 0;
+}
+
+.session-bar {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.session-meta {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.session-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-changelog-button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  color: #c7d2fe;
+  background: rgb(79 70 229 / 15%);
+  align-items: center;
+  border: 1px solid rgb(165 180 252 / 45%);
+  border-radius: 999px;
+  cursor: pointer;
+  justify-content: center;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.session-changelog-button:hover,
+.session-changelog-button:focus-visible {
+  background: rgb(99 102 241 / 25%);
+  border-color: rgb(165 180 252 / 85%);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.session-changelog-button svg {
+  pointer-events: none;
+}

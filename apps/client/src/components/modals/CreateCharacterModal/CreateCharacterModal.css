@@ -1,0 +1,77 @@
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.form-field span {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.form-field input,
+.form-field select {
+  padding: 0.35rem 0.5rem;
+  color: inherit;
+  background: rgb(15 23 42 / 85%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.5rem;
+}
+
+.form-field-full {
+  grid-column: span 2;
+}
+
+.character-form-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.character-section {
+  border-top: 1px solid rgb(148 163 184 / 25%);
+  padding-top: 0.75rem;
+}
+
+.character-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.skill-row {
+  display: grid;
+  align-items: center;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.skill-row input,
+.skill-row select {
+  padding: 0.3rem 0.45rem;
+  color: inherit;
+  background: rgb(15 23 42 / 85%);
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 0.4rem;
+}
+
+.form-error {
+  margin: 0;
+  color: #fecaca;
+  font-size: 0.85rem;
+}
+
+.form-hint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
