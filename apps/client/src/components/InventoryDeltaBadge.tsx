@@ -63,6 +63,8 @@ const formatRows = (delta: InventoryDelta): Row[] => {
     .filter((row) => row.name);
 };
 
+const getOpClassName = (op: string): string => op.replace(/_/g, '-');
+
 export function InventoryDeltaBadge({ delta }: InventoryDeltaBadgeProps) {
   if (!delta?.ops?.length) {
     return null;
@@ -85,7 +87,10 @@ export function InventoryDeltaBadge({ delta }: InventoryDeltaBadgeProps) {
       <div className="inventory-delta-tooltip" role="presentation">
         <p className="inventory-delta-title">Inventory Delta</p>
         {rows.map((row) => (
-          <div key={row.id} className={`inventory-delta-row inventory-delta-${row.op}`}>
+          <div
+            key={row.id}
+            className={`inventory-delta-row inventory-delta-${getOpClassName(row.op)}`}
+          >
             <span className="delta-op">{row.op}</span>
             {row.slot ? <span className="delta-slot">{row.slot}</span> : null}
             {row.bucket ? <span className="delta-bucket">{row.bucket}</span> : null}

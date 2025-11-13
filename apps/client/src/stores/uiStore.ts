@@ -9,6 +9,9 @@ type UiState = {
   isTemplateDrawerOpen: boolean;
   toggleTemplateDrawer: () => void;
   closeTemplateDrawer: () => void;
+  isChangelogModalOpen: boolean;
+  openChangelogModal: () => void;
+  closeChangelogModal: () => void;
   isCreateCharacterModalOpen: boolean;
   openCreateCharacterModal: () => void;
   closeCreateCharacterModal: () => void;
@@ -18,16 +21,24 @@ type UiState = {
   ) => void;
   toggleMessageExpansion: (entryId: string) => void;
   resetExpandedMessages: () => void;
+  isPlayerMenuOpen: boolean;
+  togglePlayerMenu: () => void;
+  closePlayerMenu: () => void;
 };
 
 export const useUiStore = create<UiState>((set) => ({
+  closeChangelogModal: () => set({ isChangelogModalOpen: false }),
   closeCharacterDrawer: () => set({ isCharacterDrawerOpen: false }),
   closeCreateCharacterModal: () => set({ isCreateCharacterModalOpen: false }),
+  closePlayerMenu: () => set({ isPlayerMenuOpen: false }),
   closeTemplateDrawer: () => set({ isTemplateDrawerOpen: false }),
   expandedMessages: {},
+  isChangelogModalOpen: false,
   isCharacterDrawerOpen: false,
   isCreateCharacterModalOpen: false,
+  isPlayerMenuOpen: false,
   isTemplateDrawerOpen: false,
+  openChangelogModal: () => set({ isChangelogModalOpen: true }),
   openCreateCharacterModal: () => set({ isCreateCharacterModalOpen: true }),
   resetExpandedMessages: () => set({ expandedMessages: {} }),
   setExpandedMessages: (next) =>
@@ -47,6 +58,10 @@ export const useUiStore = create<UiState>((set) => ({
         ...state.expandedMessages,
         [entryId]: !(state.expandedMessages[entryId] ?? false),
       },
+    })),
+  togglePlayerMenu: () =>
+    set((state) => ({
+      isPlayerMenuOpen: !state.isPlayerMenuOpen,
     })),
   toggleTemplateDrawer: () =>
     set((state) => ({

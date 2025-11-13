@@ -1,0 +1,23 @@
+[
+  {
+    "id": "2025-11-12-create-changelog",
+    "releasedAt": "2025-11-12",
+    "summary": "Introduced the in-app changelog",
+    "details": "Created a bundled changelog data file and modal so players can review product updates from the account bar.",
+    "type": "feature"
+  },
+  {
+    "id": "2025-11-12-css-lint-hardening",
+    "releasedAt": "2025-11-12",
+    "summary": "Polished the interface styling and accessibility",
+    "details": "Resolved the outstanding CSS lint violations, refreshed button states, and tightened utility classes so the app ships with a clean, consistent look.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-player-menu-widget",
+    "releasedAt": "2025-11-12",
+    "summary": "Introduced the expandable player menu",
+    "details": "Refined the new account menu into a compact, file-menu inspired widget with role badges, uppercase player names, and a slim character/chronicle/location strip while keeping the changelog button separate.",
+    "type": "feature"
+  }
+]
