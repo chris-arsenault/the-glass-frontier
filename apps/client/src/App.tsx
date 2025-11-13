@@ -9,6 +9,7 @@ import { ChronicleHeader } from './components/layout/ChronicleHeader/ChronicleHe
 import { ChangelogModal } from './components/modals/ChangelogModal/ChangelogModal';
 import { CreateCharacterModal } from './components/modals/CreateCharacterModal/CreateCharacterModal';
 import { AuditReviewPage } from './components/moderation/AuditReviewPage/AuditReviewPage';
+import { LocationMaintenancePage } from './components/moderation/LocationMaintenancePage/LocationMaintenancePage';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
 import { ChronicleStartWizard } from './components/wizards/ChronicleStartWizard/ChronicleStartWizard';
@@ -93,6 +94,7 @@ export function App(): JSX.Element {
             <Route path="/" element={<ChatExperience />} />
             <Route path="/chronicles/start" element={<ChronicleStartWizard />} />
             <Route path="/moderation/audit" element={<AuditReviewPage />} />
+            <Route path="/moderation/locations" element={<LocationMaintenancePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

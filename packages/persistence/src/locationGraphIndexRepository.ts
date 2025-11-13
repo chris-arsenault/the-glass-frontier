@@ -65,6 +65,16 @@ export class LocationGraphIndexRepository extends HybridIndexRepository {
     ]);
   }
 
+  async unregisterEdge(
+    locationId: string,
+    edge: { src: string; kind: LocationEdgeKind; dst: string }
+  ): Promise<void> {
+    await Promise.all([
+      this.delete(pkLocation(locationId), skEdge(edge.src, edge.kind, edge.dst)),
+      this.delete(pkPlace(edge.src), skEdge(edge.src, edge.kind, edge.dst)),
+    ]);
+  }
+
   async listLocationPlaceIds(locationId: string): Promise<string[]> {
     return this.listByPrefix(pkLocation(locationId), 'PLACE#', (item) => decodePlaceId(item.sk?.S));
   }

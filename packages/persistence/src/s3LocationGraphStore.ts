@@ -30,6 +30,25 @@ const normalizeSearchTerm = (value?: string | null): string | null => {
   const normalized = coerceString(value)?.toLowerCase() ?? null;
   return normalized !== null && normalized.length > 0 ? normalized : null;
 };
+const normalizeTags = (tags?: string[] | null): string[] => {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    const value = tag.trim().toLowerCase();
+    if (value.length === 0 || seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    result.push(value);
+    if (result.length >= 12) {
+      break;
+    }
+  }
+  return result;
+};
 export class S3LocationGraphStore extends HybridObjectStore implements LocationGraphStore {
   readonly #index: LocationGraphIndexRepository;
   readonly #placeCache = new Map<string, LocationPlace>();
@@ -105,13 +124,23 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
     const edgesMeta = await this.#index.listLocationEdges(locationId);
     const edges = await Promise.all(
       edgesMeta.map(async (edge) => {
-        const metadata = await this.#readEdgeMetadata(locationId, edge);
+        const stored = await this.#readEdgeMetadata(locationId, edge);
+        const createdAtCandidate = stored !== null ? (stored as { createdAt?: unknown }).createdAt : undefined;
+        const createdAt =
+          typeof createdAtCandidate === 'number' && Number.isFinite(createdAtCandidate)
+            ? createdAtCandidate
+            : Date.now();
+        const metadataContainer = stored !== null ? (stored as { metadata?: unknown }) : null;
+        const metadataValue =
+          metadataContainer?.metadata !== undefined
+            ? (metadataContainer.metadata as Record<string, unknown>)
+            : stored ?? undefined;
         return {
-          createdAt: Date.now(),
+          createdAt,
           dst: edge.dst,
           kind: edge.kind,
           locationId,
-          metadata: metadata ?? undefined,
+          metadata: metadataValue,
           src: edge.src,
         };
       })
@@ -257,6 +286,49 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
     return record;
   }
 
+  async updatePlace(input: {
+    placeId: string;
+    name?: string;
+    kind?: string;
+    description?: string | null;
+    tags?: string[];
+    canonicalParentId?: string | null;
+  }): Promise<LocationPlace> {
+    const current = await this.#requirePlace(input.placeId);
+    const nextParentId = await this.#resolveParentTarget(current, input.canonicalParentId);
+    const updated = this.#applyPlaceUpdates(current, {
+      canonicalParentId: nextParentId,
+      description: input.description,
+      kind: input.kind,
+      name: input.name,
+      tags: input.tags,
+    });
+    await this.#syncContainmentEdges(current, nextParentId ?? undefined);
+    await this.#writePlace(updated);
+    return updated;
+  }
+
+  async addEdge(input: {
+    locationId: string;
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.#ensurePlaceInLocation(input.locationId, input.src);
+    await this.#ensurePlaceInLocation(input.locationId, input.dst);
+    await this.#createEdge(input.locationId, input, input.metadata);
+  }
+
+  async removeEdge(input: {
+    locationId: string;
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+  }): Promise<void> {
+    await this.#deleteEdge(input.locationId, input);
+  }
+
   async createLocationChain(input: {
     parentId?: string | null;
     segments: LocationChainSegment[];
@@ -347,23 +419,37 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
       kind: input.kind,
       locationId,
       name: input.name,
-      tags: input.tags ?? [],
+      tags: normalizeTags(input.tags),
+      updatedAt: Date.now(),
     };
     await this.#writePlace(record);
     await this.#index.registerPlace(locationId, record.id);
     return record;
   }
 
-  async #createEdge(locationId: string, edge: LocationPlanEdge): Promise<void> {
+  async #createEdge(
+    locationId: string,
+    edge: LocationPlanEdge,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
     const entry = {
       createdAt: Date.now(),
       dst: edge.dst,
       kind: edge.kind,
       locationId,
+      metadata,
       src: edge.src,
     };
     await this.setJson(this.#edgeKey(locationId, edge), entry);
     await this.#index.registerEdge(locationId, edge);
+  }
+
+  async #deleteEdge(
+    locationId: string,
+    edge: { src: string; kind: LocationEdgeKind; dst: string }
+  ): Promise<void> {
+    await this.delete(this.#edgeKey(locationId, edge));
+    await this.#index.unregisterEdge(locationId, edge);
   }
 
   async #setCanonicalParent(childId: string, parentId: string): Promise<void> {
@@ -422,6 +508,14 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
     await this.setJson(this.#placeKey(place.id), place);
   }
 
+  async #requirePlace(placeId: string): Promise<LocationPlace> {
+    const place = await this.#getPlace(placeId);
+    if (place === null) {
+      throw new Error(`Place ${placeId} not found.`);
+    }
+    return place;
+  }
+
   #placeKey(placeId: string): string {
     return `location-graph/places/${placeId}.json`;
   }
@@ -450,6 +544,101 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
       return await this.getJson<Record<string, unknown>>(this.#edgeKey(locationId, edge));
     } catch {
       return null;
+    }
+  }
+
+  async #ensurePlaceInLocation(locationId: string, placeId: string): Promise<void> {
+    const place = await this.#getPlace(placeId);
+    if (place === null) {
+      throw new Error(`Place ${placeId} not found.`);
+    }
+    if (place.locationId !== locationId) {
+      throw new Error('Edge endpoints must belong to the specified location.');
+    }
+  }
+
+  async #resolveParentTarget(
+    place: LocationPlace,
+    candidate?: string | null
+  ): Promise<string | undefined> {
+    if (candidate === undefined) {
+      return place.canonicalParentId ?? undefined;
+    }
+    const parentId = coerceString(candidate);
+    if (parentId === null) {
+      return undefined;
+    }
+    if (parentId === place.id) {
+      throw new Error('A location cannot be its own parent.');
+    }
+    const parent = await this.#getPlace(parentId);
+    if (parent === null) {
+      throw new Error(`Parent place ${parentId} not found.`);
+    }
+    if (parent.locationId !== place.locationId) {
+      throw new Error('Parent place must belong to the same location.');
+    }
+    return parent.id;
+  }
+
+  #applyPlaceUpdates(
+    place: LocationPlace,
+    updates: {
+      canonicalParentId?: string;
+      description?: string | null;
+      kind?: string;
+      name?: string;
+      tags?: string[];
+    }
+  ): LocationPlace {
+    return {
+      ...place,
+      canonicalParentId: updates.canonicalParentId,
+      description: this.#resolveDescription(place.description, updates.description),
+      kind: this.#resolveScalarField(place.kind, updates.kind),
+      name: this.#resolveScalarField(place.name, updates.name),
+      tags: updates.tags === undefined ? place.tags : normalizeTags(updates.tags),
+      updatedAt: Date.now(),
+    };
+  }
+
+  #resolveScalarField(current: string, next?: string): string {
+    if (!isNonEmptyString(next)) {
+      return current;
+    }
+    return next.trim();
+  }
+
+  #resolveDescription(current: string | undefined, next?: string | null): string | undefined {
+    if (next === undefined) {
+      return current;
+    }
+    if (next === null) {
+      return undefined;
+    }
+    const trimmed = next.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  async #syncContainmentEdges(place: LocationPlace, nextParentId?: string): Promise<void> {
+    const previousParentId = place.canonicalParentId ?? undefined;
+    const didChange = (previousParentId ?? null) !== (nextParentId ?? null);
+    if (!didChange) {
+      return;
+    }
+    if (isNonEmptyString(previousParentId)) {
+      await this.#deleteEdge(place.locationId, {
+        dst: place.id,
+        kind: 'CONTAINS',
+        src: previousParentId,
+      });
+    }
+    if (isNonEmptyString(nextParentId)) {
+      await this.#createEdge(place.locationId, {
+        dst: place.id,
+        kind: 'CONTAINS',
+        src: nextParentId,
+      });
     }
   }
 
