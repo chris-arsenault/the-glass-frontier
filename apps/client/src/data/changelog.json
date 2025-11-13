@@ -33,5 +33,12 @@
     "summary": "Polished the character sheet and chronicle wizard",
     "details": "Moved the Character Overview, player session chrome, and chronicle creation wizard styles into dedicated modules so those surfaces render with their intended layout again while keeping the global stylesheet lean.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-chronicle-api-preflight",
+    "releasedAt": "2025-11-12",
+    "summary": "Restored chronicle list API calls",
+    "details": "Hardened the Lambda handlers so API Gateway requests without the HTTP v2 metadata stop crashing, which restores the listCharacters and listChronicles player flows.",
+    "type": "bugfix"
   }
 ]

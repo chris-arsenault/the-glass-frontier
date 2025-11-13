@@ -33,16 +33,21 @@
   min-width: 0;
 }
 
+.player-menu-name-badge {
+  display: flex;
+}
+
 .player-menu-role-badge {
   display: inline-flex;
-  padding: 0.1rem 0.35rem;
+  padding: 0.1rem 0.2rem;
   color: #bbf7d0;
-  align-items: center;
+  align-items: flex-start;
   border: 1px solid rgb(148 197 255 / 45%);
   border-radius: 999px;
   font-size: 0.75rem;
   justify-content: center;
   min-width: 1.5rem;
+  margin-left: 0.5rem;
 }
 
 .player-menu-caret {

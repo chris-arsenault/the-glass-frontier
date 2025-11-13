@@ -115,8 +115,10 @@ export function PlayerMenu(): JSX.Element {
         aria-label="Player details"
       >
         <header className="player-menu-header">
-          <p className="player-menu-name">{playerLabel}</p>
-          <span className="player-menu-role-badge">({roleBadge})</span>
+          <div className="player-menu-name-badge">
+            <p className="player-menu-name">{playerLabel}</p>
+            <span className="player-menu-role-badge">({roleBadge})</span>
+          </div>
           <button type="button" className="player-menu-logout" onClick={handleLogout}>
             Logout
           </button>
@@ -127,23 +129,14 @@ export function PlayerMenu(): JSX.Element {
             <p className="player-menu-info-primary">
               {character ? character.name : 'No character selected'}
             </p>
-            <p className="player-menu-info-secondary">
-              {character ? character.archetype : 'Select a chronicle'}
-            </p>
           </div>
           <div className="player-menu-info-card">
             <p className="player-menu-pill-label">Chronicle</p>
             <p className="player-menu-info-primary">{chronicleTitle}</p>
-            <p className="player-menu-info-secondary">
-              {chronicle?.status ?? 'Awaiting selection'}
-            </p>
           </div>
           <div className="player-menu-info-card">
             <p className="player-menu-pill-label">Location</p>
             <p className="player-menu-info-primary">{locationDetails.edge}</p>
-            <p className="player-menu-info-secondary" title={locationDetails.breadcrumb}>
-              {locationDetails.breadcrumb}
-            </p>
           </div>
         </div>
         <div className="player-menu-links">
