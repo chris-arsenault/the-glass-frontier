@@ -26,5 +26,12 @@
     "summary": "Refined UI styling and menus",
     "details": "Collapsed the recent CSS refactors, player menu polish, character panel updates, and template shortcut tweaks into a single styling refresh that keeps the UI consistent.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-llm-audit-review",
+    "releasedAt": "2025-11-12",
+    "summary": "Added the moderator LLM audit review workspace",
+    "details": "Moderators and admins can open the new LLM audit review page from the player menu to filter archived LLM requests, capture structured review notes, and inspect template improvement proposals.",
+    "type": "feature"
   }
 ]

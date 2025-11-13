@@ -179,7 +179,7 @@ export function SessionManager() {
                 .join(' ');
               const showSheetToggle = index === 0;
               return (
-                <li key={character.id} className={cardClasses} aria-disabled={isLocked}>
+                <li key={character.id} className={cardClasses} data-locked={isLocked || undefined}>
                   <div className="session-manager-card-header">
                     {showSheetToggle ? (
                       <button

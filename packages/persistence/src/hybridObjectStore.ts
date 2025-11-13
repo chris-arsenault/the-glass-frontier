@@ -93,6 +93,18 @@ export abstract class HybridObjectStore {
       });
   }
 
+  protected get bucket(): string {
+    return this.#bucket;
+  }
+
+  protected get prefix(): string {
+    return this.#prefix;
+  }
+
+  protected get client(): S3Client {
+    return this.#client;
+  }
+
   protected buildKey(relativeKey: string): string {
     const sanitized = relativeKey.replace(/^\/+/, '');
     return `${this.#prefix}${sanitized}`;
