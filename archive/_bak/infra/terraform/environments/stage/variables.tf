@@ -60,7 +60,7 @@ variable "couchdb_url" {
 
 variable "couchdb_admin_password" {
   description = "CounchDB Admin Password"
-  type = string
+  type        = string
 }
 
 variable "api_base_url" {
@@ -155,6 +155,6 @@ variable "minio_lifecycle_cron" {
 
 variable "glass_docker_tag" {
   description = "Current tag for latest custom docker builds"
-  type = string
-  default = "2025.11.1"
+  type        = string
+  default     = "2025.11.1"
 }

@@ -44,6 +44,6 @@ The `apply` step will:
 ## Terraform State
 
 This project creates an S3 bucket and DynamoDB table that can be used for
-remote state/locking (`aws_s3_bucket.tf_state`, `aws_dynamodb_table.tf_locks`).
+remote state/locking (`module.tf_state_bucket`, `aws_dynamodb_table.tf_locks`).
 Configure the backend manually after the first apply if you want Terraform
 to store state there.

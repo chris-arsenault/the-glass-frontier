@@ -1,0 +1,11 @@
+{
+  "name": "@glass-frontier/infrastructure",
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.21.0",
+  "private": true,
+  "type": "module",
+  "description": "Root project for The Glass Frontier",
+  "scripts": {
+    "lint:fix": "tf fmt --recursive"
+  }
+}

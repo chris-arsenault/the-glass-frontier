@@ -1,20 +1,20 @@
 locals {
-  prefix            = "gf-prod"
-  output_root       = "${path.module}/artifacts"
-  alert_config_path = "${local.output_root}/alerting"
-  dashboard_path    = "${local.output_root}/dashboards"
-  bootstrap_path    = "${local.output_root}/vault"
-  temporal_db_host     = "${var.service_namespace}-postgres.service.consul"
-  temporal_db_port     = 5432
-  temporal_db_name     = "temporal"
+  prefix                 = "gf-prod"
+  output_root            = "${path.module}/artifacts"
+  alert_config_path      = "${local.output_root}/alerting"
+  dashboard_path         = "${local.output_root}/dashboards"
+  bootstrap_path         = "${local.output_root}/vault"
+  temporal_db_host       = "${var.service_namespace}-postgres.service.consul"
+  temporal_db_port       = 5432
+  temporal_db_name       = "temporal"
   temporal_visibility_db = "temporal_visibility"
 }
 
 resource "null_resource" "artifact_directories" {
   triggers = {
-    alerting  = local.alert_config_path
+    alerting   = local.alert_config_path
     dashboards = local.dashboard_path
-    vault     = local.bootstrap_path
+    vault      = local.bootstrap_path
   }
 
   provisioner "local-exec" {
@@ -72,15 +72,15 @@ module "nomad_core" {
   postgres_admin_password = "rotate-me-prod"
   postgres_database       = local.temporal_db_name
 
-  temporal_database_host         = local.temporal_db_host
-  temporal_database_port         = local.temporal_db_port
-  temporal_database_name         = local.temporal_db_name
-  temporal_visibility_database   = local.temporal_visibility_db
-  temporal_database_user         = "temporal_admin"
-  temporal_database_password     = "rotate-me"
+  temporal_database_host       = local.temporal_db_host
+  temporal_database_port       = local.temporal_db_port
+  temporal_database_name       = local.temporal_db_name
+  temporal_visibility_database = local.temporal_visibility_db
+  temporal_database_user       = "temporal_admin"
+  temporal_database_password   = "rotate-me"
 
-  langgraph_count = 5
-  hub_gateway_count = 3
+  langgraph_count       = 5
+  hub_gateway_count     = 3
   temporal_worker_count = 5
 
   langgraph_image         = "registry.prod/langgraph:2025.11.0"
@@ -123,7 +123,7 @@ module "observability" {
   alertmanager_config_path = local.alert_config_path
   grafana_admin_password   = "prod-grafana-secret"
 
-  otel_collector_count = 4
+  otel_collector_count           = 4
   victoriametrics_retention_days = 90
   temporal_latency_target_ms     = 2000
 }

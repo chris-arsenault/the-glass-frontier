@@ -59,7 +59,7 @@ resource "vault_policy" "llm_proxy" {
 }
 
 resource "vault_policy" "temporal_worker" {
-  name   = "${var.namespace}-temporal-worker"
+  name = "${var.namespace}-temporal-worker"
   policy = templatefile("${path.module}/templates/temporal-worker-policy.hcl.tmpl", merge(local.base_template_context, {
     temporal_task_queue = var.temporal_task_queue
   }))
@@ -158,8 +158,8 @@ resource "vault_kv_secret_v2" "bootstrap_secrets" {
 }
 
 resource "vault_kv_secret_v2" "temporal_admin" {
-  mount     = vault_mount.kv.path
-  name      = "${var.namespace}/temporal/admin"
+  mount = vault_mount.kv.path
+  name  = "${var.namespace}/temporal/admin"
   data_json = jsonencode({
     username = var.temporal_admin_username
     password = var.temporal_admin_password
@@ -175,16 +175,16 @@ resource "vault_transit_secret_backend_key" "story_signing" {
 }
 
 resource "vault_database_secret_backend_connection" "temporal" {
-  count      = var.enable_database_engine ? 1 : 0
-  backend    = vault_mount.database[0].path
-  name       = "${var.namespace}-temporal"
-  plugin_name = "postgresql-database-plugin"
+  count         = var.enable_database_engine ? 1 : 0
+  backend       = vault_mount.database[0].path
+  name          = "${var.namespace}-temporal"
+  plugin_name   = "postgresql-database-plugin"
   allowed_roles = ["${var.namespace}-temporal"]
 
   postgresql {
     connection_url = var.postgres_connection_url
-      username       = var.postgres_admin_username
-      password       = var.postgres_admin_password
+    username       = var.postgres_admin_username
+    password       = var.postgres_admin_password
   }
 
   verify_connection = false
@@ -212,41 +212,41 @@ EOT
 locals {
   approle_manifest = [
     {
-      name     = vault_approle_auth_backend_role.langgraph.role_name
-      policy   = vault_policy.langgraph.name
-      secret   = "langgraph"
+      name   = vault_approle_auth_backend_role.langgraph.role_name
+      policy = vault_policy.langgraph.name
+      secret = "langgraph"
     },
     {
-      name     = vault_approle_auth_backend_role.llm_proxy.role_name
-      policy   = vault_policy.llm_proxy.name
-      secret   = "llm-proxy"
+      name   = vault_approle_auth_backend_role.llm_proxy.role_name
+      policy = vault_policy.llm_proxy.name
+      secret = "llm-proxy"
     },
     {
-      name     = vault_approle_auth_backend_role.temporal_worker.role_name
-      policy   = vault_policy.temporal_worker.name
-      secret   = "temporal-worker"
+      name   = vault_approle_auth_backend_role.temporal_worker.role_name
+      policy = vault_policy.temporal_worker.name
+      secret = "temporal-worker"
     },
     {
-      name     = vault_approle_auth_backend_role.hub_gateway.role_name
-      policy   = vault_policy.hub_gateway.name
-      secret   = "hub-gateway"
+      name   = vault_approle_auth_backend_role.hub_gateway.role_name
+      policy = vault_policy.hub_gateway.name
+      secret = "hub-gateway"
     },
     {
-      name     = vault_approle_auth_backend_role.api_gateway.role_name
-      policy   = vault_policy.api_gateway.name
-      secret   = "api-gateway"
+      name   = vault_approle_auth_backend_role.api_gateway.role_name
+      policy = vault_policy.api_gateway.name
+      secret = "api-gateway"
     }
   ]
 }
 
 resource "local_file" "bootstrap_script" {
   content = templatefile("${path.module}/templates/bootstrap.sh.tmpl", {
-    approle_path   = vault_auth_backend.approle.path
-    output_dir     = var.bootstrap_output_path
-    namespace      = var.namespace
-    manifest       = local.approle_manifest
-    rotate_cron    = var.rotate_cron_spec
-    kv_mount_path  = vault_mount.kv.path
+    approle_path  = vault_auth_backend.approle.path
+    output_dir    = var.bootstrap_output_path
+    namespace     = var.namespace
+    manifest      = local.approle_manifest
+    rotate_cron   = var.rotate_cron_spec
+    kv_mount_path = vault_mount.kv.path
   })
 
   filename        = "${var.bootstrap_output_path}/vault-bootstrap-${var.namespace}.sh"

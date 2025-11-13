@@ -9,70 +9,80 @@ data "aws_iam_policy_document" "lambda_assume" {
   }
 }
 
-resource "aws_iam_role" "chronicle_lambda" {
-  name               = "${local.name_prefix}-chronicle-api-lambda"
+resource "aws_iam_role" "lambda" {
+  for_each = local.lambda_role_names
+
+  name               = each.value
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
   tags               = local.tags
 }
 
-resource "aws_iam_role" "prompt_api_lambda" {
-  name               = "${local.name_prefix}-prompt-api-lambda"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-  tags               = local.tags
+moved {
+  from = aws_iam_role.chronicle_lambda
+  to   = aws_iam_role.lambda["chronicle_lambda"]
 }
 
-resource "aws_iam_role" "location_api_lambda" {
-  name               = "${local.name_prefix}-location-api-lambda"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-  tags               = local.tags
+moved {
+  from = aws_iam_role.prompt_api_lambda
+  to   = aws_iam_role.lambda["prompt_api_lambda"]
 }
 
-resource "aws_iam_role" "llm_lambda" {
-  name               = "${local.name_prefix}-llm-lambda"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-  tags               = local.tags
+moved {
+  from = aws_iam_role.location_api_lambda
+  to   = aws_iam_role.lambda["location_api_lambda"]
 }
 
-resource "aws_iam_role" "webservice_lambda" {
-  name               = "${local.name_prefix}-webservice-lambda"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-  tags               = local.tags
+moved {
+  from = aws_iam_role.llm_lambda
+  to   = aws_iam_role.lambda["llm_lambda"]
 }
 
-resource "aws_iam_role_policy_attachment" "chronicle_logs" {
-  role       = aws_iam_role.chronicle_lambda.name
+moved {
+  from = aws_iam_role.webservice_lambda
+  to   = aws_iam_role.lambda["webservice_lambda"]
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_logs" {
+  for_each = local.lambda_role_names
+
+  role       = aws_iam_role.lambda[each.key].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "prompt_api_logs" {
-  role       = aws_iam_role.prompt_api_lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+moved {
+  from = aws_iam_role_policy_attachment.chronicle_logs
+  to   = aws_iam_role_policy_attachment.lambda_basic_logs["chronicle_lambda"]
 }
 
-resource "aws_iam_role_policy_attachment" "location_api_logs" {
-  role       = aws_iam_role.location_api_lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+moved {
+  from = aws_iam_role_policy_attachment.prompt_api_logs
+  to   = aws_iam_role_policy_attachment.lambda_basic_logs["prompt_api_lambda"]
 }
 
-resource "aws_iam_role_policy_attachment" "llm_logs" {
-  role       = aws_iam_role.llm_lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+moved {
+  from = aws_iam_role_policy_attachment.location_api_logs
+  to   = aws_iam_role_policy_attachment.lambda_basic_logs["location_api_lambda"]
 }
 
-resource "aws_iam_role_policy_attachment" "webservice_logs" {
-  role       = aws_iam_role.webservice_lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+moved {
+  from = aws_iam_role_policy_attachment.llm_logs
+  to   = aws_iam_role_policy_attachment.lambda_basic_logs["llm_lambda"]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.webservice_logs
+  to   = aws_iam_role_policy_attachment.lambda_basic_logs["webservice_lambda"]
 }
 
 resource "aws_iam_role_policy_attachment" "webservice_sqs" {
-  role       = aws_iam_role.webservice_lambda.name
+  role       = aws_iam_role.lambda["webservice_lambda"].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
 data "aws_iam_policy_document" "chronicle_s3" {
   statement {
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
-    resources = [aws_s3_bucket.narrative_data.arn, "${aws_s3_bucket.narrative_data.arn}/*"]
+    resources = [module.narrative_data_bucket.arn, "${module.narrative_data_bucket.arn}/*"]
   }
 }
 
@@ -83,24 +93,24 @@ resource "aws_iam_policy" "chronicle_s3" {
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_s3" {
-  role       = aws_iam_role.chronicle_lambda.name
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
   policy_arn = aws_iam_policy.chronicle_s3.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prompt_api_s3" {
-  role       = aws_iam_role.prompt_api_lambda.name
+  role       = aws_iam_role.lambda["prompt_api_lambda"].name
   policy_arn = aws_iam_policy.chronicle_s3.arn
 }
 
 resource "aws_iam_role_policy_attachment" "location_api_s3" {
-  role       = aws_iam_role.location_api_lambda.name
+  role       = aws_iam_role.lambda["location_api_lambda"].name
   policy_arn = aws_iam_policy.chronicle_s3.arn
 }
 
 data "aws_iam_policy_document" "prompt_templates" {
   statement {
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
-    resources = [aws_s3_bucket.prompt_templates.arn, "${aws_s3_bucket.prompt_templates.arn}/*"]
+    resources = [module.prompt_templates_bucket.arn, "${module.prompt_templates_bucket.arn}/*"]
   }
 }
 
@@ -111,12 +121,12 @@ resource "aws_iam_policy" "prompt_templates" {
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_prompt_templates" {
-  role       = aws_iam_role.chronicle_lambda.name
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
   policy_arn = aws_iam_policy.prompt_templates.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prompt_api_templates" {
-  role       = aws_iam_role.prompt_api_lambda.name
+  role       = aws_iam_role.lambda["prompt_api_lambda"].name
   policy_arn = aws_iam_policy.prompt_templates.arn
 }
 
@@ -140,17 +150,17 @@ resource "aws_iam_policy" "chronicle_dynamodb" {
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_dynamodb" {
-  role       = aws_iam_role.chronicle_lambda.name
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
   policy_arn = aws_iam_policy.chronicle_dynamodb.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prompt_api_dynamodb" {
-  role       = aws_iam_role.prompt_api_lambda.name
+  role       = aws_iam_role.lambda["prompt_api_lambda"].name
   policy_arn = aws_iam_policy.chronicle_dynamodb.arn
 }
 
 resource "aws_iam_role_policy_attachment" "location_api_location_index" {
-  role       = aws_iam_role.location_api_lambda.name
+  role       = aws_iam_role.lambda["location_api_lambda"].name
   policy_arn = aws_iam_policy.location_graph_index.arn
 }
 
@@ -174,14 +184,14 @@ resource "aws_iam_policy" "location_graph_index" {
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_location_graph_index" {
-  role       = aws_iam_role.chronicle_lambda.name
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
   policy_arn = aws_iam_policy.location_graph_index.arn
 }
 
 data "aws_iam_policy_document" "llm_audit_storage" {
   statement {
-    actions = ["s3:PutObject", "s3:PutObjectAcl", "s3:GetObject", "s3:ListBucket"]
-    resources = [aws_s3_bucket.llm_audit.arn, "${aws_s3_bucket.llm_audit.arn}/*"]
+    actions   = ["s3:PutObject", "s3:PutObjectAcl", "s3:GetObject", "s3:ListBucket"]
+    resources = [module.llm_audit_bucket.arn, "${module.llm_audit_bucket.arn}/*"]
   }
 }
 
@@ -192,7 +202,7 @@ resource "aws_iam_policy" "llm_audit_storage" {
 }
 
 resource "aws_iam_role_policy_attachment" "llm_audit_storage" {
-  role       = aws_iam_role.llm_lambda.name
+  role       = aws_iam_role.lambda["llm_lambda"].name
   policy_arn = aws_iam_policy.llm_audit_storage.arn
 }
 
@@ -214,7 +224,7 @@ resource "aws_iam_policy" "llm_usage_table" {
 }
 
 resource "aws_iam_role_policy_attachment" "llm_usage_table" {
-  role       = aws_iam_role.llm_lambda.name
+  role       = aws_iam_role.lambda["llm_lambda"].name
   policy_arn = aws_iam_policy.llm_usage_table.arn
 }
 
@@ -242,7 +252,7 @@ resource "aws_iam_policy" "webservice_dynamodb" {
 }
 
 resource "aws_iam_role_policy_attachment" "webservice_dynamodb" {
-  role       = aws_iam_role.webservice_lambda.name
+  role       = aws_iam_role.lambda["webservice_lambda"].name
   policy_arn = aws_iam_policy.webservice_dynamodb.arn
 }
 
@@ -260,7 +270,7 @@ resource "aws_iam_policy" "webservice_manage_connections" {
 }
 
 resource "aws_iam_role_policy_attachment" "webservice_manage_connections" {
-  role       = aws_iam_role.webservice_lambda.name
+  role       = aws_iam_role.lambda["webservice_lambda"].name
   policy_arn = aws_iam_policy.webservice_manage_connections.arn
 }
 
@@ -280,6 +290,6 @@ resource "aws_iam_policy" "chronicle_progress_queue" {
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_progress_queue" {
-  role       = aws_iam_role.chronicle_lambda.name
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
   policy_arn = aws_iam_policy.chronicle_progress_queue.arn
 }

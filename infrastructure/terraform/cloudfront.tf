@@ -1,6 +1,6 @@
 resource "aws_cloudfront_origin_access_control" "client_site" {
   name                              = "${local.name_prefix}-client-oac"
-  description                       = "Access control for ${aws_s3_bucket.client_site.id}"
+  description                       = "Access control for ${module.client_site_bucket.id}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -12,15 +12,15 @@ resource "aws_cloudfront_distribution" "client" {
   comment             = "${local.name_prefix} client"
 
   origin {
-    domain_name              = aws_s3_bucket.client_site.bucket_regional_domain_name
-    origin_id                = aws_s3_bucket.client_site.id
+    domain_name              = module.client_site_bucket.bucket_regional_domain_name
+    origin_id                = module.client_site_bucket.id
     origin_access_control_id = aws_cloudfront_origin_access_control.client_site.id
   }
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = aws_s3_bucket.client_site.id
+    target_origin_id = module.client_site_bucket.id
 
     forwarded_values {
       query_string = true
@@ -78,7 +78,7 @@ data "aws_iam_policy_document" "client_site" {
     }
     actions = ["s3:GetObject"]
     resources = [
-      "${aws_s3_bucket.client_site.arn}/*"
+      "${module.client_site_bucket.arn}/*"
     ]
     condition {
       test     = "StringEquals"
@@ -89,7 +89,7 @@ data "aws_iam_policy_document" "client_site" {
 }
 
 resource "aws_s3_bucket_policy" "client_site" {
-  bucket = aws_s3_bucket.client_site.id
+  bucket = module.client_site_bucket.id
   policy = data.aws_iam_policy_document.client_site.json
 }
 

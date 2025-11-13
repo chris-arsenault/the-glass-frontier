@@ -24,17 +24,17 @@ output "cognito_domain" {
 }
 
 output "narrative_data_bucket" {
-  value       = aws_s3_bucket.narrative_data.id
+  value       = module.narrative_data_bucket.id
   description = "S3 bucket used for session persistence."
 }
 
 output "prompt_template_bucket" {
-  value       = aws_s3_bucket.prompt_templates.id
+  value       = module.prompt_templates_bucket.id
   description = "S3 bucket containing official prompt templates and player overrides."
 }
 
 output "tf_state_bucket" {
-  value       = aws_s3_bucket.tf_state.id
+  value       = module.tf_state_bucket.id
   description = "S3 bucket created for Terraform state."
 }
 

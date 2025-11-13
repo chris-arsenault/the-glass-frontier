@@ -9,7 +9,7 @@ locals {
 resource "aws_s3_object" "client_assets" {
   for_each = { for file in local.client_files : file => file }
 
-  bucket = aws_s3_bucket.client_site.id
+  bucket = module.client_site_bucket.id
   key    = each.value
   source = "${local.client_build_dir}/${each.value}"
   etag   = filemd5("${local.client_build_dir}/${each.value}")
@@ -31,18 +31,18 @@ resource "aws_s3_object" "client_assets" {
 
 locals {
   client_runtime_config = jsonencode({
-    VITE_API_TARGET             = "https://${local.api_domain}"
-    VITE_PROGRESS_WS_URL        = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
-    VITE_COGNITO_USER_POOL_ID   = aws_cognito_user_pool.this.id
-    VITE_COGNITO_CLIENT_ID      = aws_cognito_user_pool_client.this.id
-    VITE_COGNITO_DOMAIN         = local.cognito_domain
-    VITE_COGNITO_REGION         = var.aws_region
-    REGEN                       = 2
+    VITE_API_TARGET           = "https://${local.api_domain}"
+    VITE_PROGRESS_WS_URL      = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
+    VITE_COGNITO_USER_POOL_ID = aws_cognito_user_pool.this.id
+    VITE_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.this.id
+    VITE_COGNITO_DOMAIN       = local.cognito_domain
+    VITE_COGNITO_REGION       = var.aws_region
+    REGEN                     = 2
   })
 }
 
 resource "aws_s3_object" "client_config" {
-  bucket       = aws_s3_bucket.client_site.id
+  bucket       = module.client_site_bucket.id
   key          = "config.js"
   content_type = "application/javascript"
   content      = <<-JSCONFIG
