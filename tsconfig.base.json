@@ -23,8 +23,12 @@
       "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
       "@glass-frontier/persistence": ["packages/persistence/src/index.ts"],
       "@glass-frontier/persistence/*": ["packages/persistence/src/*"],
-      "@glass-frontier/narrative": ["apps/narrative/src/index.ts"],
-      "@glass-frontier/narrative/*": ["apps/narrative/src/*"]
+      "@glass-frontier/chronicle-api": ["apps/chronicle-api/src/index.ts"],
+      "@glass-frontier/chronicle-api/*": ["apps/chronicle-api/src/*"],
+      "@glass-frontier/prompt-api": ["apps/prompt-api/src/index.ts"],
+      "@glass-frontier/prompt-api/*": ["apps/prompt-api/src/*"],
+      "@glass-frontier/location-api": ["apps/location-api/src/index.ts"],
+      "@glass-frontier/location-api/*": ["apps/location-api/src/*"]
     }
   }
 }

@@ -2,9 +2,13 @@ locals {
   name_prefix          = "${var.project}-${var.environment}"
   client_source_dir    = "${path.module}/../../apps/client"
   client_build_dir     = "${local.client_source_dir}/dist"
-  narrative_source_dir = "${path.module}/../../apps/narrative"
-  narrative_dist_dir   = "${local.narrative_source_dir}/dist"
-  prompt_template_source_dir = "${local.narrative_source_dir}/src/langGraph/prompts/templates"
+  chronicle_source_dir = "${path.module}/../../apps/chronicle-api"
+  chronicle_dist_dir   = "${local.chronicle_source_dir}/dist"
+  prompt_template_source_dir = "${local.chronicle_source_dir}/src/langGraph/prompts/templates"
+  prompt_api_source_dir     = "${path.module}/../../apps/prompt-api"
+  prompt_api_dist_dir       = "${local.prompt_api_source_dir}/dist"
+  location_api_source_dir   = "${path.module}/../../apps/location-api"
+  location_api_dist_dir     = "${local.location_api_source_dir}/dist"
   llm_source_dir       = "${path.module}/../../apps/llm-proxy"
   llm_dist_dir         = "${local.llm_source_dir}/dist"
   webservice_source_dir = "${path.module}/../../apps/webservice"
@@ -23,9 +27,9 @@ locals {
     )
   )
 
-  narrative_source_files = distinct(
+  chronicle_source_files = distinct(
     concat(
-      tolist(fileset(local.narrative_source_dir, "src/**")),
+      tolist(fileset(local.chronicle_source_dir, "src/**")),
       [
         "package.json",
         "tsconfig.json"
@@ -34,6 +38,24 @@ locals {
   )
 
   prompt_template_source_files = distinct(tolist(fileset(local.prompt_template_source_dir, "*.hbs")))
+  prompt_api_source_files = distinct(
+    concat(
+      tolist(fileset(local.prompt_api_source_dir, "src/**")),
+      [
+        "package.json",
+        "tsconfig.json"
+      ]
+    )
+  )
+  location_api_source_files = distinct(
+    concat(
+      tolist(fileset(local.location_api_source_dir, "src/**")),
+      [
+        "package.json",
+        "tsconfig.json"
+      ]
+    )
+  )
 
   llm_source_files = distinct(
     concat(
@@ -56,7 +78,9 @@ locals {
   )
 
   client_source_hash    = sha1(join("", [for file in local.client_source_files : filesha1("${local.client_source_dir}/${file}") if file != ""]))
-  narrative_source_hash = sha1(join("", [for file in local.narrative_source_files : filesha1("${local.narrative_source_dir}/${file}") if file != ""]))
+  chronicle_source_hash = sha1(join("", [for file in local.chronicle_source_files : filesha1("${local.chronicle_source_dir}/${file}") if file != ""]))
+  prompt_api_source_hash = sha1(join("", [for file in local.prompt_api_source_files : filesha1("${local.prompt_api_source_dir}/${file}") if file != ""]))
+  location_api_source_hash = sha1(join("", [for file in local.location_api_source_files : filesha1("${local.location_api_source_dir}/${file}") if file != ""]))
   llm_source_hash       = sha1(join("", [for file in local.llm_source_files : filesha1("${local.llm_source_dir}/${file}") if file != ""]))
   webservice_source_hash = sha1(join("", [for file in local.webservice_source_files : filesha1("${local.webservice_source_dir}/${file}") if file != ""]))
 
