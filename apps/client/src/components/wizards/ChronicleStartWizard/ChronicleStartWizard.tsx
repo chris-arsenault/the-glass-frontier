@@ -8,11 +8,12 @@ import type {
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { locationClient } from '../../lib/locationClient';
-import { trpcClient } from '../../lib/trpcClient';
-import type { ChronicleSeedCreationDetails } from '../../state/chronicleState';
-import { useChronicleStore } from '../../stores/chronicleStore';
-import { useChronicleStartStore, type SelectedLocationSummary } from './store';
+import { locationClient } from '../../../lib/locationClient';
+import { trpcClient } from '../../../lib/trpcClient';
+import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
+import { useChronicleStartStore, type SelectedLocationSummary } from '../../../stores/chronicleStartWizardStore';
 import './ChronicleStartWizard.css';
 
 const toneOptions = [
@@ -60,9 +61,8 @@ export function ChronicleStartWizard() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
-  const inventoryShards: DataShard[] = useChronicleStore(
-    (state) => state.character?.inventory?.data_shards ?? EMPTY_SHARDS
-  );
+  const selectedCharacter = useSelectedCharacter();
+  const inventoryShards: DataShard[] = selectedCharacter?.inventory?.data_shards ?? EMPTY_SHARDS;
 
   const [roots, setRoots] = useState<LocationPlace[]>([]);
   const [rootError, setRootError] = useState<string | null>(null);

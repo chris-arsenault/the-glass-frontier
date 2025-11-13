@@ -39,15 +39,16 @@
 
 .player-menu-role-badge {
   display: inline-flex;
-  padding: 0.1rem 0.2rem;
+  padding: 0.2rem 0.0rem;
   color: #bbf7d0;
-  align-items: flex-start;
+  align-items: center;
   border: 1px solid rgb(148 197 255 / 45%);
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 1rem;
+  line-height: 1;
   justify-content: center;
   min-width: 1.5rem;
-  margin-left: 0.5rem;
+  margin-left: 0.1rem;
 }
 
 .player-menu-caret {

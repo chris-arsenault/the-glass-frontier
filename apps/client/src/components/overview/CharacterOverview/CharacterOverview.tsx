@@ -7,6 +7,7 @@ import {
 import { type ReactNode, useCallback, useMemo } from 'react';
 
 import type { MomentumTrend } from '../../../state/chronicleState';
+import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndicator';
 import './CharacterOverview.css';
@@ -355,7 +356,7 @@ type OverviewData = {
 };
 
 const useCharacterOverviewState = (): OverviewData => {
-  const character = useChronicleStore((state) => state.character);
+  const character = useSelectedCharacter();
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const pendingEquip = useChronicleStore((state) => state.pendingEquip);
   const queueEquipChange = useChronicleStore((state) => state.queueEquipChange);

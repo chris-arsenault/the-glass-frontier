@@ -10,7 +10,7 @@ import { ChangelogModal } from './components/modals/ChangelogModal/ChangelogModa
 import { CreateCharacterModal } from './components/modals/CreateCharacterModal/CreateCharacterModal';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
-import { ChronicleStartWizard } from './features/chronicleStart/ChronicleStartWizard';
+import { ChronicleStartWizard } from './components/wizards/ChronicleStartWizard/ChronicleStartWizard';
 import { useLoginResources } from './hooks/useLoginResources';
 import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
 import { useAuthStore } from './stores/authStore';

@@ -54,6 +54,20 @@
   margin-bottom: 0.4rem;
 }
 
+.session-manager-section-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.session-manager-section-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .session-manager-card-list {
   display: flex;
   margin: 0;
@@ -73,6 +87,58 @@
   gap: 0.35rem;
 }
 
+.session-manager-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: space-between;
+}
+
+.session-manager-card-toggle {
+  display: inline-flex;
+  flex: 1;
+  padding: 0.2rem 0;
+  color: #e2e8f0;
+  background: none;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.session-manager-card-toggle-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.session-manager-card-toggle-icon {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: inherit;
+  background: rgb(59 130 246 / 12%);
+  align-items: center;
+  border: 1px solid rgb(96 165 250 / 35%);
+  border-radius: 0.4rem;
+  justify-content: center;
+}
+
+.session-manager-card-toggle:hover,
+.session-manager-card-toggle:focus-visible {
+  color: #bfdbfe;
+  outline: none;
+}
+
+.session-manager-card-toggle.active .session-manager-card-toggle-icon {
+  background: rgb(59 130 246 / 25%);
+  border-color: rgb(96 165 250 / 70%);
+}
+
 .session-card-title {
   margin: 0;
   color: #e2e8f0;
@@ -83,6 +149,16 @@
   margin: 0;
   color: #94a3b8;
   font-size: 0.8rem;
+}
+
+.session-manager-card-active {
+  border-color: rgb(96 165 250 / 70%);
+  box-shadow: 0 0 12px rgb(59 130 246 / 25%);
+}
+
+.session-manager-card-disabled {
+  opacity: 0.6;
+  filter: grayscale(0.4);
 }
 
 .session-manager-actions {
@@ -157,6 +233,43 @@
   margin: 0;
   color: #94a3b8;
   font-size: 0.75rem;
+}
+
+.session-manager-icon-button {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #94a3b8;
+  background: rgb(15 23 42 / 80%);
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 999px;
+  cursor: pointer;
+  justify-content: center;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.session-manager-icon-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.session-manager-icon-button:hover,
+.session-manager-icon-button:focus-visible {
+  color: #f8fafc;
+  border-color: rgb(148 197 255 / 60%);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.session-manager-icon-button.active {
+  color: #bfdbfe;
+  background: rgb(59 130 246 / 20%);
+  border-color: rgb(96 165 250 / 80%);
 }
 
 .session-manager-load {

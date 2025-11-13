@@ -1,10 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndicator';
 import './SessionManager.css';
+
+const CharacterIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="currentColor"
+      d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.33 0-6 2-6 4v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1c0-2-2.67-4-6-4Z"
+    />
+  </svg>
+);
 
 export function SessionManager() {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
@@ -17,7 +27,8 @@ export function SessionManager() {
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
   const directoryError = useChronicleStore((state) => state.directoryError);
-  const activeCharacterId = useChronicleStore((state) => state.character?.id ?? null);
+  const chronicleCharacterId = useChronicleStore((state) => state.character?.id ?? null);
+  const selectedCharacterId = useSelectedCharacter()?.id ?? null;
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveChronicle = useChronicleStore((state) => state.clearActiveChronicle);
@@ -25,8 +36,32 @@ export function SessionManager() {
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const toggleCharacterDrawer = useUiStore((state) => state.toggleCharacterDrawer);
+  const isCharacterDrawerOpen = useUiStore((state) => state.isCharacterDrawerOpen);
+  const hasActiveChronicle = Boolean(currentChronicleId);
 
   const disabled = connectionState === 'connecting' || isWorking || directoryStatus === 'loading';
+
+  const primaryCharacterId = chronicleCharacterId ?? selectedCharacterId ?? preferredCharacterId ?? null;
+
+  const sortedCharacters = useMemo(() => {
+    if (!primaryCharacterId) {
+      return availableCharacters;
+    }
+    const primaryIndex = availableCharacters.findIndex((character) => character.id === primaryCharacterId);
+    if (primaryIndex < 0) {
+      return availableCharacters;
+    }
+    const primaryCharacter = availableCharacters[primaryIndex];
+    const remaining = availableCharacters.filter((_, index) => index !== primaryIndex);
+    return [primaryCharacter, ...remaining];
+  }, [availableCharacters, primaryCharacterId]);
+
+  useEffect(() => {
+    if (hasActiveChronicle && chronicleCharacterId && preferredCharacterId !== chronicleCharacterId) {
+      setPreferredCharacterId(chronicleCharacterId);
+    }
+  }, [chronicleCharacterId, hasActiveChronicle, preferredCharacterId, setPreferredCharacterId]);
 
   const characterNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -36,7 +71,9 @@ export function SessionManager() {
     return map;
   }, [availableCharacters]);
   const handleLoad = async (chronicleId: string) => {
-    if (!chronicleId) {return;}
+    if (!chronicleId) {
+      return;
+    }
     setError(null);
     setIsWorking(true);
     try {
@@ -60,7 +97,9 @@ export function SessionManager() {
   };
 
   const handleDeleteChronicle = async (chronicleId: string) => {
-    if (!chronicleId) {return;}
+    if (!chronicleId) {
+      return;
+    }
     const confirmed = window.confirm('Delete this chronicle? This cannot be undone.');
     if (!confirmed) {
       return;
@@ -91,9 +130,6 @@ export function SessionManager() {
           >
             Refresh
           </button>
-          <button type="button" className="session-manager-new" onClick={openCreateCharacterModal}>
-            New Character
-          </button>
         </div>
       </div>
 
@@ -112,44 +148,93 @@ export function SessionManager() {
 
       <div className="session-manager-section">
         <div className="session-manager-section-header">
-          <h4>Characters</h4>
-          {!preferredCharacterId ? (
-            <p className="session-manager-hint">
-              Select a character before starting a new chronicle.
-            </p>
-          ) : null}
+          <div className="session-manager-section-title">
+            <h4>Characters</h4>
+            {!preferredCharacterId ? (
+              <p className="session-manager-hint">
+                Select a character before starting a new chronicle.
+              </p>
+            ) : null}
+          </div>
+          <div className="session-manager-section-controls">
+            <button type="button" className="chip-button" onClick={openCreateCharacterModal}>
+              New Character
+            </button>
+          </div>
         </div>
         {availableCharacters.length === 0 ? (
           <p className="session-manager-empty">No characters yet.</p>
         ) : (
           <ul className="session-manager-card-list">
-            {availableCharacters.map((character) => (
-              <li key={character.id} className="session-manager-card">
-                <div>
-                  <p className="session-card-title">
-                    {character.name} · {character.archetype}
-                  </p>
+            {sortedCharacters.map((character, index) => {
+              const isChronicleCharacter = character.id === chronicleCharacterId;
+              const isPreferred = character.id === preferredCharacterId;
+              const isLocked = hasActiveChronicle && !isChronicleCharacter;
+              const cardClasses = [
+                'session-manager-card',
+                isLocked ? 'session-manager-card-disabled' : '',
+                character.id === primaryCharacterId ? 'session-manager-card-active' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+              const showSheetToggle = index === 0;
+              return (
+                <li key={character.id} className={cardClasses} aria-disabled={isLocked}>
+                  <div className="session-manager-card-header">
+                    {showSheetToggle ? (
+                      <button
+                        type="button"
+                        className={`session-manager-card-toggle${
+                          isCharacterDrawerOpen ? ' active' : ''
+                        }`}
+                        onClick={toggleCharacterDrawer}
+                        aria-pressed={isCharacterDrawerOpen}
+                        aria-label="Toggle character sheet"
+                      >
+                        <span className="session-manager-card-toggle-icon" aria-hidden="true">
+                          <CharacterIcon />
+                        </span>
+                        <span className="session-manager-card-toggle-text">
+                          {character.name} · {character.archetype}
+                        </span>
+                      </button>
+                    ) : (
+                      <p className="session-card-title">
+                        {character.name} · {character.archetype}
+                      </p>
+                    )}
+                  </div>
                   <p className="session-card-meta">
                     {character.pronouns} · Momentum{' '}
                     <MomentumIndicator
                       momentum={character.momentum}
-                      trend={character.id === activeCharacterId ? momentumTrend : null}
+                      trend={isChronicleCharacter ? momentumTrend : null}
                     />
                   </p>
-                </div>
-                <div className="session-manager-actions">
-                  <button
-                    type="button"
-                    className={`chip-button${
-                      preferredCharacterId === character.id ? ' chip-button-active' : ''
-                    }`}
-                    onClick={() => setPreferredCharacterId(character.id)}
-                  >
-                    {preferredCharacterId === character.id ? 'Selected' : 'Select'}
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="session-manager-actions">
+                    <button
+                      type="button"
+                      className={`chip-button${isPreferred ? ' chip-button-active' : ''}`}
+                      onClick={() => {
+                        if (hasActiveChronicle) {
+                          return;
+                        }
+                        setPreferredCharacterId(character.id);
+                      }}
+                      disabled={hasActiveChronicle || isPreferred}
+                    >
+                      {hasActiveChronicle
+                        ? isChronicleCharacter
+                          ? 'Active'
+                          : 'Locked'
+                        : isPreferred
+                          ? 'Selected'
+                          : 'Select'}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

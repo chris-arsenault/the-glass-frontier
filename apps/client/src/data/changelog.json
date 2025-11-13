@@ -40,5 +40,33 @@
     "summary": "Restored chronicle list API calls",
     "details": "Hardened the Lambda handlers so API Gateway requests without the HTTP v2 metadata stop crashing, which restores the listCharacters and listChronicles player flows.",
     "type": "bugfix"
+  },
+  {
+    "id": "2025-11-12-player-role-icons",
+    "releasedAt": "2025-11-12",
+    "summary": "Gave player menu roles distinctive icons",
+    "details": "Replaced the parenthetical role letters with emoji-based badges so admins, moderators, and free players can be identified at a glance in the account menu.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-character-drawer-relocation",
+    "releasedAt": "2025-11-12",
+    "summary": "Moved the character sheet button into the list",
+    "details": "Removed the left-nav character toggle and added an icon button to the character list so the drawer opens from within the session manager itself.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-character-button-relocation",
+    "releasedAt": "2025-11-12",
+    "summary": "Relocated the New Character control",
+    "details": "Shifted the New Character action next to the character list header so it matches the New Chronicle placement and keeps related controls together.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-12-character-locking",
+    "releasedAt": "2025-11-12",
+    "summary": "Synced the character picker with chronicles",
+    "details": "You can now pick any character while idle to preview them in the player menu and drawer, then once a chronicle loads that pair stays pinned to the top, greys out the alternates, and the leading icon/name open the sheet.",
+    "type": "improvement"
   }
 ]

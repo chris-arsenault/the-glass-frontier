@@ -1,6 +1,7 @@
 import type { LocationSummary } from '@glass-frontier/dto';
 import { useEffect, useMemo, useRef } from 'react';
 
+import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { useAuthStore } from '../../../stores/authStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -8,14 +9,16 @@ import { decodeJwtPayload } from '../../../utils/jwt';
 import './PlayerMenu.css';
 
 const ROLE_PRIORITY = ['admin', 'moderator', 'user', 'free'] as const;
-const ROLE_BADGES: Record<string, string> = {
-  admin: 'A',
-  free: 'C',
-  moderator: 'M',
-  user: 'P',
+type RoleKey = (typeof ROLE_PRIORITY)[number];
+
+const ROLE_BADGES: Record<RoleKey, { icon: string; label: string }> = {
+  admin: { icon: '🛡️', label: 'Admin' },
+  moderator: { icon: '⚔️', label: 'Moderator' },
+  user: { icon: '👤', label: 'Player' },
+  free: { icon: '🎟️', label: 'Free tier' },
 };
 
-const getHighestRole = (idToken?: string | null): string => {
+const getHighestRole = (idToken?: string | null): RoleKey => {
   const payload = decodeJwtPayload(idToken);
   const groups = Array.isArray(payload?.['cognito:groups'])
     ? (payload?.['cognito:groups'] as string[])
@@ -23,10 +26,10 @@ const getHighestRole = (idToken?: string | null): string => {
   const normalized = groups.map((entry) => entry.toLowerCase());
   for (const role of ROLE_PRIORITY) {
     if (normalized.includes(role)) {
-      return ROLE_BADGES[role];
+      return role;
     }
   }
-  return ROLE_BADGES.user;
+  return 'user';
 };
 
 const describeLocation = (location?: LocationSummary | null) => {
@@ -46,7 +49,7 @@ const describeLocation = (location?: LocationSummary | null) => {
 
 export function PlayerMenu(): JSX.Element {
   const loginName = useChronicleStore((state) => state.loginName);
-  const character = useChronicleStore((state) => state.character);
+  const character = useSelectedCharacter();
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const location = useChronicleStore((state) => state.location);
   const tokens = useAuthStore((state) => state.tokens);
@@ -54,7 +57,8 @@ export function PlayerMenu(): JSX.Element {
   const isOpen = useUiStore((state) => state.isPlayerMenuOpen);
   const toggle = useUiStore((state) => state.togglePlayerMenu);
   const close = useUiStore((state) => state.closePlayerMenu);
-  const roleBadge = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
+  const highestRole = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
+  const roleBadge = ROLE_BADGES[highestRole];
   const playerLabel = (loginName?.trim() || 'Unnamed Player').toUpperCase();
   const chronicleTitle = chronicle?.title?.trim() || 'No chronicle selected';
   const locationDetails = describeLocation(location);
@@ -103,7 +107,14 @@ export function PlayerMenu(): JSX.Element {
         title="Player menu"
       >
         <div className="player-menu-toggle-text">{playerLabel}</div>
-        <span className="player-menu-role-badge">({roleBadge})</span>
+        <span
+          className="player-menu-role-badge"
+          role="img"
+          aria-label={`${roleBadge.label} role`}
+          title={roleBadge.label}
+        >
+          {roleBadge.icon}
+        </span>
         <span className="player-menu-caret" aria-hidden="true">
           ▾
         </span>
@@ -117,7 +128,14 @@ export function PlayerMenu(): JSX.Element {
         <header className="player-menu-header">
           <div className="player-menu-name-badge">
             <p className="player-menu-name">{playerLabel}</p>
-            <span className="player-menu-role-badge">({roleBadge})</span>
+            <span
+              className="player-menu-role-badge"
+              role="img"
+              aria-label={`${roleBadge.label} role`}
+              title={roleBadge.label}
+            >
+              {roleBadge.icon}
+            </span>
           </div>
           <button type="button" className="player-menu-logout" onClick={handleLogout}>
             Logout
