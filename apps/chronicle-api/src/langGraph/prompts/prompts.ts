@@ -14,9 +14,11 @@ import type { ChronicleState } from '../../types';
 import type { PromptTemplateRuntime } from './templateRuntime';
 
 type GmSummaryPromptOptions = {
+  chronicle: ChronicleState;
   templates: PromptTemplateRuntime;
   gmMessage: string;
   intent: Intent;
+  turnSequence: number;
   check?: SkillCheckPlan;
   checkResult?: SkillCheckResult;
 };
@@ -28,6 +30,7 @@ type NarrationPromptOptions = {
   outcomeTier?: OutcomeTier;
   rawUtterance: string;
   templates: PromptTemplateRuntime;
+  turnSequence: number;
 };
 
 const ATTRIBUTE_LIST = Attribute.options.join(', ');
@@ -101,12 +104,9 @@ function buildCheckPlannerPayload(intent: Intent, chronicle: ChronicleState): Te
   };
 }
 
-function buildGmSummaryPayload({
-  check,
-  checkResult,
-  gmMessage,
-  intent,
-}: GmSummaryPromptOptions): TemplatePayload {
+function buildGmSummaryPayload(options: GmSummaryPromptOptions): TemplatePayload {
+  const { check, checkResult, gmMessage, intent } = options;
+  const wrapState = deriveWrapUpState(options.chronicle, options.turnSequence);
   return {
     checkAdvantage: check?.advantage,
     checkDifficulty: check?.riskLevel,
@@ -115,6 +115,7 @@ function buildGmSummaryPayload({
     hasCheck: Boolean(check),
     intentSummary: intent.intentSummary,
     skillLine: buildSkillLine(intent),
+    ...wrapState,
   };
 }
 
@@ -122,6 +123,7 @@ function buildNarrationPayload(options: NarrationPromptOptions): TemplatePayload
   return {
     ...buildNarrationBase(options),
     ...buildNarrationMechanics(options),
+    ...buildNarrationWrapUpData(options),
   };
 }
 
@@ -172,6 +174,36 @@ function buildNarrationIntentData({ check, intent }: NarrationPromptOptions): Te
     intentAttribute: intent.attribute,
     intentSkill: intent.skill,
     intentSummary: intent.intentSummary,
+  };
+}
+
+function buildNarrationWrapUpData(options: NarrationPromptOptions): TemplatePayload {
+  return deriveWrapUpState(options.chronicle, options.turnSequence);
+}
+
+type WrapDirective = {
+  wrapIsFinalTurn: boolean;
+  wrapTargetTurn: number | null;
+  wrapTurnsRemaining: number | null;
+  wrapUpRequested: boolean;
+};
+
+function deriveWrapUpState(chronicle: ChronicleState, turnSequence: number): WrapDirective {
+  const targetEndTurn = chronicle.chronicle?.targetEndTurn;
+  if (typeof targetEndTurn !== 'number' || Number.isNaN(targetEndTurn)) {
+    return {
+      wrapIsFinalTurn: false,
+      wrapTargetTurn: null,
+      wrapTurnsRemaining: null,
+      wrapUpRequested: false,
+    };
+  }
+  const turnsRemaining = Math.max(targetEndTurn - turnSequence, 0);
+  return {
+    wrapIsFinalTurn: turnsRemaining === 0,
+    wrapTargetTurn: targetEndTurn,
+    wrapTurnsRemaining: turnsRemaining,
+    wrapUpRequested: true,
   };
 }
 

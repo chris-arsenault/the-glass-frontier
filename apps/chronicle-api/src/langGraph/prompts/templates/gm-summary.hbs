@@ -1,14 +1,37 @@
-Summarize the GM narration into a compact game-log entry. ## Source (GM prose) """{{gmMessage}}"""
-## Context Intent:
-{{intentSummary}}
+Summarize the GM narration into a compact game-log entry and decide if the chronicle should end.
+
+## Source (GM prose)
+"""{{gmMessage}}"""
+
+## Context
+Intent: {{intentSummary}}
 {{#if skillLine}}Skill: {{skillLine}}{{/if}}
 {{#if hasCheck}}
-  Check: difficulty={{checkDifficulty}}, advantage={{checkAdvantage}}, outcome={{checkOutcome}}
+Check: difficulty={{checkDifficulty}}, advantage={{checkAdvantage}}, outcome={{checkOutcome}}
 {{else}}
-  Check: none
+Check: none
 {{/if}}
 
-## Instructions - Output 1–2 short sentences (≤ 180 chars total if possible). - Capture: what
-changed, who was involved, where it happened. - If a check occurred, append a brief postfix like:
-(advance) or (collapse). - No mechanics jargon, no numbers, no quotes, no lists. ## Output Return
-only the summary line.
+{{#if wrapUpRequested}}
+### Wrap-Up Signal
+- The player requested closure with target turn {{wrapTargetTurn}}.
+- {{#if wrapIsFinalTurn}}This is the requested final turn; treat the story as ending now.{{else}}There are {{wrapTurnsRemaining}} requested turn(s) remaining to conclude.{{/if}}
+{{else}}
+### Wrap-Up Signal
+- No explicit wrap request is active; only close if the narration clearly ends the current arc.
+{{/if}}
+
+## Instructions
+- Craft a 1–2 sentence summary (≤ 180 chars if possible) capturing who changed, what happened, and where.
+- If a check occurred, append a short postfix like "(advance)" or "(collapse)" to indicate the outcome.
+- No mechanics jargon, no numbers, no direct quotes, no lists.
+- Determine `shouldCloseChronicle`:
+  - Set to `true` when the narration resolves major stakes, delivers epilogue energy, or when a wrap request reaches its final turn.
+  - Otherwise return `false`.
+
+## Output
+Return strict JSON matching:
+{
+  "summary": "<1-2 sentence description>",
+  "shouldCloseChronicle": true | false
+}

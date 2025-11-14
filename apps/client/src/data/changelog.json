@@ -54,5 +54,19 @@
     "summary": "Players can react to GM stories",
     "details": "Added a Give Feedback button to GM replies so players can share a quick sentiment and note. Submissions piggyback on the audit API so moderators see feedback alongside narrative request logs.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-13-chronicle-wrap-toggle",
+    "releasedAt": "2025-11-13",
+    "summary": "Players can request chronicle endings",
+    "details": "Added a Wrap Up toggle next to Send to GM that stores a chronicle targetEndTurn marker and updates the narrative prompting so the GM closes the story within three turns when requested.",
+    "type": "feature"
+  },
+  {
+    "id": "2025-11-13-chronicle-closure-lock",
+    "releasedAt": "2025-11-13",
+    "summary": "Wrap-up turns now end chronicles",
+    "details": "GM summaries now emit JSON with a closure signal, so once the story lands the chronicle flips to closed, the API blocks more turns, and the client disables Send/Wrap for that session.",
+    "type": "improvement"
   }
 ]

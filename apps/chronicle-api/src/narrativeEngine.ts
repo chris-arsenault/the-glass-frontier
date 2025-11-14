@@ -1,4 +1,11 @@
-import type { Character, TranscriptEntry, Turn, LocationSummary, PendingEquip } from '@glass-frontier/dto';
+import type {
+  Character,
+  TranscriptEntry,
+  Turn,
+  LocationSummary,
+  PendingEquip,
+  Chronicle,
+} from '@glass-frontier/dto';
 import type { PromptTemplateManager } from '@glass-frontier/persistence';
 import {
   createWorldStateStore,
@@ -64,9 +71,11 @@ class NarrativeEngine {
     turn: Turn;
     updatedCharacter: Character | null;
     locationSummary: LocationSummary | null;
+    chronicleStatus: Chronicle['status'];
   }> {
     this.#assertChronicleId(chronicleId);
     const chronicleState = await this.#loadChronicleState(chronicleId);
+    this.#ensureChronicleOpen(chronicleState);
     const turnSequence = chronicleState.turnSequence + 1;
     const loginId = this.#requireLoginId(chronicleState);
     const jobId = formatTurnJobId(chronicleId, turnSequence);
@@ -81,6 +90,7 @@ class NarrativeEngine {
       turnSequence,
     });
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
+    let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
 
     const turn = this.#buildTurn({
       chronicleId,
@@ -89,6 +99,11 @@ class NarrativeEngine {
       systemMessage,
       turnSequence,
     });
+
+    if (graphResult.chronicleShouldClose && chronicleState.chronicle?.status !== 'closed') {
+      await this.#closeChronicle(chronicleState.chronicle);
+      chronicleStatus = 'closed';
+    }
 
     await this.worldStateStore.addTurn(turn);
 
@@ -100,7 +115,7 @@ class NarrativeEngine {
     const updatedCharacter = graphResult.updatedCharacter ?? chronicleState.character ?? null;
     const locationSummary = graphResult.locationSummary ?? null;
 
-    return { locationSummary, turn, updatedCharacter };
+    return { locationSummary, turn, updatedCharacter, chronicleStatus };
   }
 
   private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
@@ -194,6 +209,12 @@ class NarrativeEngine {
     });
   }
 
+  #ensureChronicleOpen(state: ChronicleState): void {
+    if (state.chronicle?.status === 'closed') {
+      throw new Error('Chronicle is closed.');
+    }
+  }
+
   #buildGraphInput({
     authorizationHeader,
     chronicleId,
@@ -215,6 +236,7 @@ class NarrativeEngine {
       chronicle: chronicleState,
       chronicleId,
       failure: false,
+      chronicleShouldClose: false,
       gmTrace: null,
       inventoryDelta: null,
       inventoryPreview: null,
@@ -291,6 +313,16 @@ class NarrativeEngine {
       systemMessage: combinedSystemMessage,
       turnSequence,
     };
+  }
+
+  async #closeChronicle(record?: Chronicle | null): Promise<void> {
+    if (!record || record.status === 'closed') {
+      return;
+    }
+    await this.worldStateStore.upsertChronicle({
+      ...record,
+      status: 'closed',
+    });
   }
 }
 

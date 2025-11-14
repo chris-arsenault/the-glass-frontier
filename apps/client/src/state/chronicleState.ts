@@ -94,6 +94,7 @@ export type ChronicleStore = {
   queueEquipChange: (entry: PendingEquip) => void;
   clearPendingEquipQueue: () => void;
   clearActiveChronicle: () => void;
+  setChronicleWrapTarget: (shouldWrap: boolean) => Promise<void>;
   resetStore: () => void;
 } & ChronicleState
 

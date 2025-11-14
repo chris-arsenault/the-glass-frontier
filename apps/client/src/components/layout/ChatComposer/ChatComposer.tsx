@@ -13,7 +13,13 @@ export function ChatComposer() {
   const connectionState = useChronicleStore((state) => state.connectionState);
   const chronicleStatus = useChronicleStore((state) => state.chronicleStatus);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
+  const wrapTargetTurn = useChronicleStore(
+    (state) => state.chronicleRecord?.targetEndTurn ?? null
+  );
+  const setChronicleWrapTarget = useChronicleStore((state) => state.setChronicleWrapTarget);
+  const isWrapRequested = typeof wrapTargetTurn === 'number' && !Number.isNaN(wrapTargetTurn);
   const [draft, setDraft] = useState('');
+  const [isWrapPending, setIsWrapPending] = useState(false);
 
   const chronicleUnavailable =
     !hasChronicle || chronicleStatus === 'closed' || connectionState === 'closed';
@@ -42,9 +48,25 @@ export function ChatComposer() {
         ? queuedCount > 0
           ? 'Queue Intent'
           : 'Queue Intent'
-        : isSending
+      : isSending
           ? 'Sending...'
           : 'Send to GM';
+  const wrapButtonLabel = isWrapRequested ? 'Wrapping' : 'Wrap Up';
+  const wrapButtonClassName = `chat-wrap-toggle${isWrapRequested ? ' chat-wrap-toggle--active' : ''}`;
+
+  const handleWrapToggle = async () => {
+    if (chronicleUnavailable || isWrapPending) {
+      return;
+    }
+    setIsWrapPending(true);
+    try {
+      await setChronicleWrapTarget(!isWrapRequested);
+    } catch {
+      // transportError is handled globally
+    } finally {
+      setIsWrapPending(false);
+    }
+  };
 
   return (
     <form
@@ -100,14 +122,27 @@ export function ChatComposer() {
       />
       <div className="chat-composer-controls">
         {hasChronicle ? <LocationOverview /> : null}
-        <button
-          type="submit"
-          className="chat-send-button"
-          disabled={isSending || chronicleUnavailable}
-          data-testid="chat-submit"
-        >
-          {buttonLabel}
-        </button>
+        <div className="chat-composer-actions">
+          {hasChronicle ? (
+            <button
+              type="button"
+              className={wrapButtonClassName}
+              aria-pressed={isWrapRequested}
+              onClick={handleWrapToggle}
+              disabled={chronicleUnavailable || isWrapPending}
+            >
+              {wrapButtonLabel}
+            </button>
+          ) : null}
+          <button
+            type="submit"
+            className="chat-send-button"
+            disabled={isSending || chronicleUnavailable}
+            data-testid="chat-submit"
+          >
+            {buttonLabel}
+          </button>
+        </div>
       </div>
     </form>
   );

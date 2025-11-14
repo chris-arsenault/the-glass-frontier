@@ -11,6 +11,7 @@ export const TurnProgressPayloadSchema = z.object({
   gmMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
   gmTrace: LlmTraceSchema.optional(),
+  chronicleShouldClose: z.boolean().optional(),
   inventoryDelta: InventoryDelta.optional(),
   playerIntent: Intent.optional(),
   skillCheckPlan: SkillCheckPlan.optional(),

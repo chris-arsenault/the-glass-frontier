@@ -10,6 +10,7 @@ export const Chronicle = z.object({
   metadata: Metadata.optional(),
   seedText: z.string().optional(),
   status: z.enum(['open', 'closed']).default('open'),
+  targetEndTurn: z.number().int().nonnegative().nullable().optional(),
   title: z.string().min(1),
 });
 

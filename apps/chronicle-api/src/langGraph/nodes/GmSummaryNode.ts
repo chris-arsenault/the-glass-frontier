@@ -1,6 +1,15 @@
+import { z } from 'zod';
+
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeGMSummaryPrompt } from '../prompts/prompts';
+
+const SummaryResponseSchema = z.object({
+  summary: z.string().min(1),
+  shouldCloseChronicle: z.boolean().optional(),
+});
+
+type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
 
 class GmSummaryNode implements GraphNode {
   readonly id = 'gm-summary';
@@ -12,11 +21,13 @@ class GmSummaryNode implements GraphNode {
     }
 
     const prompt = await composeGMSummaryPrompt({
+      chronicle: context.chronicle,
       check: context.skillCheckPlan,
       checkResult: context.skillCheckResult,
       gmMessage: context.gmMessage.content,
       intent: context.playerIntent,
       templates: context.templates,
+      turnSequence: context.turnSequence,
     });
 
     const summary = await this.#summarize(context, prompt);
@@ -26,7 +37,8 @@ class GmSummaryNode implements GraphNode {
 
     return {
       ...context,
-      gmSummary: summary,
+      chronicleShouldClose: summary.shouldCloseChronicle === true,
+      gmSummary: summary.summary,
     };
   }
 
@@ -43,15 +55,26 @@ class GmSummaryNode implements GraphNode {
     });
   }
 
-  async #summarize(context: GraphContext, prompt: string): Promise<string | null> {
+  async #summarize(context: GraphContext, prompt: string): Promise<SummaryResponse | null> {
     try {
-      const result = await context.llm.generateText({
-        maxTokens: 220,
+      const result = await context.llm.generateJson({
+        maxTokens: 350,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
-        temperature: 0.35,
+        temperature: 0.2,
       });
-      return (result.text ?? '').trim();
+      const parsed = SummaryResponseSchema.safeParse(result.json);
+      if (!parsed.success) {
+        return null;
+      }
+      const summary = parsed.data.summary.trim();
+      if (summary.length === 0) {
+        return null;
+      }
+      return {
+        shouldCloseChronicle: parsed.data.shouldCloseChronicle === true,
+        summary,
+      };
     } catch (error: unknown) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
