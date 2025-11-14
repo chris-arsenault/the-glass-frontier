@@ -30,8 +30,6 @@
 .lm-relationship-form button,
 .lm-panel button,
 .lm-root-item,
-.lm-location-list button,
-.lm-tree-node,
 .lm-graph button {
   background: var(--gf-surface-3, #24324d);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -48,16 +46,13 @@
 .lm-child-form button:hover,
 .lm-relationship-form button:hover,
 .lm-root-item:hover,
-.lm-location-list button:hover,
-.lm-tree-node:hover,
 .lm-graph button:hover {
   border-color: var(--gf-accent, rgba(108, 139, 255, 0.7));
 }
 
 .lm-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(420px, 2fr) minmax(320px, 1.3fr);
-  gap: 1.25rem;
+  display: block;
+  margin-top: 1rem;
 }
 
 .lm-panel {
@@ -96,27 +91,33 @@
   font-size: 0.85rem;
 }
 
-.lm-panel-actions,
-.lm-pill-switch {
+.lm-panel-actions {
   display: inline-flex;
   gap: 0.4rem;
 }
 
-.lm-pill-switch button {
-  border-radius: 999px;
-  padding: 0.25rem 0.8rem;
-  font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.lm-pill-switch button.active {
-  background: var(--gf-accent, rgba(108, 139, 255, 0.4));
-}
-
-.lm-root-list {
+.lm-root-bar {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: var(--gf-surface-2, #1a2234);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
+}
+
+.lm-root-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lm-root-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
 }
 
 .lm-root-item {
@@ -162,49 +163,22 @@
   color: inherit;
   padding: 0.45rem 0.6rem;
   font: inherit;
+  color-scheme: dark;
 }
 
-.lm-location-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  max-height: 16rem;
-  overflow-y: auto;
+.lm-filter-grid select,
+.lm-filter-grid option,
+.lm-relationship-form select,
+.lm-relationship-form option,
+.lm-grid-wrapper select,
+.lm-grid-wrapper option {
+  background-color: rgba(18, 26, 42, 0.95);
+  color: #f5f7ff;
 }
 
-.lm-location-list button {
-  width: 100%;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.lm-location-list button small {
-  opacity: 0.7;
-}
-
-.lm-location-list button.active,
-.lm-tree-node.active,
 .lm-graph-node.active {
   border-color: var(--gf-accent, rgba(108, 139, 255, 0.8));
   background: rgba(108, 139, 255, 0.1);
-}
-
-.lm-tree-view ul {
-  list-style: none;
-  margin: 0;
-  padding-left: 0;
-}
-
-.lm-tree-node {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.25rem;
 }
 
 .lm-editor-form,
@@ -326,6 +300,130 @@
 
 .lm-chip-row button {
   font-size: 0.85rem;
+}
+
+.lm-tree-container {
+  flex: 1;
+  min-height: 20rem;
+  max-height: 34rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.lm-tree-container .MuiTreeItem-root {
+  margin-bottom: 0.1rem;
+}
+
+.lm-tree-container .MuiTreeItem-content {
+  border-radius: 8px;
+  padding: 0.2rem 0.4rem;
+}
+
+.lm-tree-container .MuiTreeItem-content.Mui-selected,
+.lm-tree-container .MuiTreeItem-content.Mui-focused {
+  background: rgba(108, 139, 255, 0.18);
+}
+
+.lm-tree-item-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+}
+
+.lm-tree-item-label small {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.lm-grid-panel {
+  min-height: 0;
+}
+
+.lm-grid-wrapper {
+  flex: 1;
+  min-height: 26rem;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lm-grid-wrapper .MuiDataGrid-root {
+  border: none;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lm-grid-wrapper .MuiDataGrid-columnHeaders {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.lm-grid-wrapper .MuiDataGrid-cell {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.lm-grid-wrapper .MuiDataGrid-cell:focus,
+.lm-grid-wrapper .MuiDataGrid-cell:focus-within {
+  outline: none;
+}
+
+.lm-grid-wrapper .MuiDataGrid-row.Mui-selected,
+.lm-grid-wrapper .MuiDataGrid-row.Mui-selected:hover {
+  background-color: rgba(108, 139, 255, 0.12);
+}
+
+.lm-description-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.lm-description-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.lm-grid-link {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.15rem 0.6rem;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.lm-grid-link:hover {
+  border-color: var(--gf-accent, rgba(108, 139, 255, 0.8));
+}
+
+.lm-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lm-dialog-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.lm-dialog-textarea {
+  width: 100%;
+  min-height: 6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: inherit;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  resize: vertical;
+  color-scheme: dark;
 }
 
 .lm-alert {

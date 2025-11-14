@@ -47,5 +47,12 @@
     "summary": "Stabilized LLM proxy requests",
     "details": "Typed the chronicle API's LLM client against the proxy schema, added JSON coercion heuristics for fenced or double-encoded responses, and automatically retries the proxy when parsing still fails.",
     "type": "bugfix"
+  },
+  {
+    "id": "2025-11-13-location-maintenance-mui-grid",
+    "releasedAt": "2025-11-13",
+    "summary": "Streamlined the moderator location maintenance UI",
+    "details": "Upgraded the Location Maintenance workspace with a top-mounted root selector, full-width editable grid, and modal relationship/child/description editors so moderators can manage hierarchy, metadata, and connections without juggling side panels.",
+    "type": "improvement"
   }
 ]
