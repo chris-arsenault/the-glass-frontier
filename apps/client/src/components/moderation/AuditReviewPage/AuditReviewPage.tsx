@@ -2,11 +2,14 @@ import {
   AUDIT_REVIEW_TAGS,
   PROMPT_TEMPLATE_DESCRIPTORS,
   PromptTemplateIds,
-  type AuditQueueItem,
+  type AuditLogEntry,
   type AuditReviewStatus,
   type PromptTemplateId,
 } from '@glass-frontier/dto';
-import { useEffect } from 'react';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -199,44 +202,13 @@ const QueueFilters = ({ filters, isBusy, onApply, onChange }: QueueFiltersProps)
   );
 };
 
-type QueueListProps = {
-  items: AuditQueueItem[];
-  onSelect: (storageKey: string) => void;
-  selectedKey: string | null;
-};
-
-const QueueList = ({ items, onSelect, selectedKey }: QueueListProps) => {
-  if (items.length === 0) {
-    return <p className="audit-queue-empty">No audit records match the current filters.</p>;
-  }
-  return (
-    <ul className="audit-queue-list horizontal">
-      {items.map((item) => (
-        <li key={item.storageKey}>
-          <button
-            type="button"
-            className={`audit-queue-item${selectedKey === item.storageKey ? ' selected' : ''}`}
-            onClick={() => onSelect(item.storageKey)}
-          >
-            <div className="audit-queue-item-head">
-              <span className={`audit-chip status-${item.status}`}>{STATUS_LABELS[item.status]}</span>
-              <span className="audit-queue-item-date">{formatDate(item.createdAt)}</span>
-            </div>
-            <div className="audit-queue-item-body">
-              <p className="audit-queue-item-title">
-                {item.templateId
-                  ? PROMPT_TEMPLATE_DESCRIPTORS[item.templateId].label
-                  : item.nodeId ?? 'Unknown node'}
-              </p>
-              <p className="audit-queue-item-meta">
-                Player {item.playerId ?? 'n/a'} · Provider {item.providerId ?? 'n/a'}
-              </p>
-            </div>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
+type AuditGridRow = {
+  createdAt: number | string;
+  id: string;
+  playerId: string;
+  providerId: string;
+  status: AuditReviewStatus;
+  templateLabel: string;
 };
 
 export function AuditReviewPage(): JSX.Element {
@@ -259,10 +231,8 @@ export function AuditReviewPage(): JSX.Element {
     proposalLoading,
     proposals,
     refreshProposals,
-    review,
     saveReview,
     selectedItem,
-    selectedKey,
     selectItem,
     setFilters,
     updateDraft,
@@ -283,14 +253,74 @@ export function AuditReviewPage(): JSX.Element {
       proposalLoading: state.proposalLoading,
       proposals: state.proposals,
       refreshProposals: state.refreshProposals,
-      review: state.review,
       saveReview: state.saveReview,
       selectedItem: state.selectedItem,
-      selectedKey: state.selectedKey,
       selectItem: state.selectItem,
       setFilters: state.setFilters,
       updateDraft: state.updateDraft,
     }))
+  );
+
+  const [reviewModalKey, setReviewModalKey] = useState<string | null>(null);
+
+  const rows = useMemo<AuditGridRow[]>(
+    () =>
+      items.map((item) => ({
+        createdAt: item.createdAt,
+        id: item.storageKey,
+        playerId: item.playerId ?? 'n/a',
+        providerId: item.providerId ?? 'n/a',
+        status: item.status,
+        templateLabel: item.templateId
+          ? PROMPT_TEMPLATE_DESCRIPTORS[item.templateId].label
+          : item.nodeId ?? 'Unknown',
+      })),
+    [items]
+  );
+
+  const handleOpenReview = useCallback(
+    (storageKey: string) => {
+      void selectItem(storageKey);
+      setReviewModalKey(storageKey);
+    },
+    [selectItem]
+  );
+
+  const columns = useMemo<Array<GridColDef<AuditGridRow>>>(
+    () => [
+      { field: 'templateLabel', flex: 1.5, headerName: 'Template / Node' },
+      { field: 'playerId', flex: 1, headerName: 'Player' },
+      { field: 'providerId', flex: 1, headerName: 'Provider' },
+      {
+        field: 'status',
+        headerName: 'Status',
+        renderCell: (params) => (
+          <span className={`audit-chip status-${params.row.status}`}>
+            {STATUS_LABELS[params.row.status]}
+          </span>
+        ),
+        width: 140,
+      },
+      {
+        field: 'createdAt',
+        headerName: 'Created',
+        valueFormatter: (params) => formatDate(params.value as number),
+        width: 200,
+      },
+      {
+        field: 'actions',
+        filterable: false,
+        headerName: 'Review',
+        renderCell: (params: GridRenderCellParams<AuditGridRow>) => (
+          <button type="button" className="audit-grid-link" onClick={() => handleOpenReview(params.row.id)}>
+            Open Review
+          </button>
+        ),
+        sortable: false,
+        width: 160,
+      },
+    ],
+    [handleOpenReview]
   );
 
   useEffect(() => {
@@ -355,120 +385,44 @@ export function AuditReviewPage(): JSX.Element {
           </div>
           <QueueFilters
             filters={filters}
-            onChange={setFilters}
-            onApply={() => void loadQueue()}
             isBusy={isLoading}
+            onApply={() => void loadQueue()}
+            onChange={setFilters}
           />
-          <QueueList items={items} onSelect={(key) => void selectItem(key)} selectedKey={selectedKey} />
+          <div className="audit-grid-wrapper">
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              autoHeight
+              disableColumnFilter
+              disableDensitySelector
+              hideFooterSelectedRowCount
+              loading={isLoading}
+              paginationModel={{ page: 0, pageSize: 25 }}
+              pageSizeOptions={[25]}
+            />
+          </div>
           <div className="audit-panel-footer">
             <button type="button" onClick={() => void loadMore()} disabled={!cursor || isLoadingMore}>
               {isLoadingMore ? 'Loading…' : cursor ? 'Load More' : 'End of Queue'}
             </button>
           </div>
         </section>
-        <section className="audit-panel audit-workspace-panel">
-          <div className="audit-panel-header">
-            <h2>Review Workspace</h2>
-            {detail ? (
-              <span className={`audit-chip status-${review?.status ?? 'unreviewed'}`}>
-                {STATUS_LABELS[review?.status ?? 'unreviewed']}
-              </span>
-            ) : null}
-          </div>
-          {detail ? (
-            <div className="audit-workspace">
-              <div className="audit-context">
-                <div>
-                  <p className="audit-context-label">Template</p>
-                  <p className="audit-context-value">{detailTemplateLabel}</p>
-                </div>
-                <div>
-                  <p className="audit-context-label">Player</p>
-                  <p className="audit-context-value">{detail.playerId ?? 'n/a'}</p>
-                </div>
-                <div>
-                  <p className="audit-context-label">Provider</p>
-                  <p className="audit-context-value">{detail.providerId ?? 'n/a'}</p>
-                </div>
-                <div>
-                  <p className="audit-context-label">Request Context</p>
-                  <p className="audit-context-value">{detail.requestContextId ?? 'n/a'}</p>
-                </div>
-              </div>
-              <div className="audit-body">
-                <div>
-                  <h3>Request Payload</h3>
-                  <pre className="audit-blob">
-                    {extractRequestPreview(detail.request) ?? 'No message content available.'}
-                  </pre>
-                </div>
-                <div>
-                  <h3>Response Payload</h3>
-                  <pre className="audit-blob">
-                    {extractResponsePreview(detail.response) ?? 'No message content available.'}
-                  </pre>
-                </div>
-              </div>
-              <form
-                className="audit-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleComplete();
-                }}
-              >
-                <label>
-                  Notes
-                  <textarea
-                    rows={4}
-                    value={draft.notes}
-                    onChange={(event) => updateDraft({ notes: event.target.value })}
-                  />
-                </label>
-                <div className="audit-tags">
-                  <p>Tags</p>
-                  <div className="audit-tag-grid">
-                    {AUDIT_REVIEW_TAGS.map((tag) => (
-                      <label key={tag} className="audit-filter-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={draft.tags.includes(tag)}
-                          onChange={(event) => {
-                            const next = event.target.checked
-                              ? [...draft.tags, tag]
-                              : draft.tags.filter((entry) => entry !== tag);
-                            updateDraft({ tags: next });
-                          }}
-                        />
-                        <span>{formatTag(tag)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="audit-form-actions">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={handleSaveDraft}
-                    disabled={!loginId || isLoading}
-                  >
-                    {isLoading ? 'Saving…' : 'Save Draft'}
-                  </button>
-                  <button type="submit" className="primary" disabled={!loginId || isLoading}>
-                    {isLoading ? 'Saving…' : 'Complete Review'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <p className="audit-placeholder">Select an audit record from the queue to begin.</p>
-          )}
-        </section>
         <aside className="audit-panel audit-proposals-panel">
           <div className="audit-panel-header">
             <h2>Template Proposals</h2>
-            <button type="button" onClick={() => void refreshProposals()} disabled={proposalLoading}>
-              {proposalLoading ? 'Refreshing…' : 'Refresh'}
-            </button>
+            <div className="audit-panel-actions">
+              <button
+                type="button"
+                onClick={() => void generateProposals()}
+                disabled={proposalGenerating}
+              >
+                {proposalGenerating ? 'Generating…' : 'Generate'}
+              </button>
+              <button type="button" onClick={() => void refreshProposals()} disabled={proposalLoading}>
+                {proposalLoading ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
           </div>
           {proposals.length === 0 ? (
             <p className="audit-placeholder">No proposals generated yet.</p>
@@ -486,8 +440,7 @@ export function AuditReviewPage(): JSX.Element {
                   </div>
                   <p className="audit-proposal-summary">{proposal.summary}</p>
                   <p className="audit-proposal-meta">
-                    {formatDate(proposal.createdAt)} · {proposal.reviewCount} reviews ·{' '}
-                    {(proposal.confidence * 100).toFixed(0)}% confidence
+                    {formatDate(proposal.createdAt)} · {proposal.reviewCount} reviews · {(proposal.confidence * 100).toFixed(0)}% confidence
                   </p>
                   {proposal.tags.length > 0 ? (
                     <div className="audit-proposal-tags">
@@ -504,6 +457,120 @@ export function AuditReviewPage(): JSX.Element {
           )}
         </aside>
       </div>
+      <ReviewDialog
+        detail={detail}
+        draft={draft}
+        isOpen={Boolean(reviewModalKey)}
+        isSaving={isLoading}
+        loginId={loginId}
+        onCancel={() => {
+          setReviewModalKey(null);
+          void selectItem(null);
+        }}
+        onComplete={handleComplete}
+        onSaveDraft={handleSaveDraft}
+        templateLabel={detailTemplateLabel}
+        updateDraft={updateDraft}
+      />
     </div>
   );
 }
+
+type ReviewDialogProps = {
+  detail: AuditLogEntry | null;
+  draft: { notes: string; tags: string[] };
+  isOpen: boolean;
+  isSaving: boolean;
+  loginId: string | null;
+  onCancel: () => void;
+  onComplete: () => void;
+  onSaveDraft: () => void;
+  templateLabel: string;
+  updateDraft: (updates: Partial<{ notes: string; tags: string[] }>) => void;
+};
+
+const ReviewDialog = ({
+  detail,
+  draft,
+  isOpen,
+  isSaving,
+  loginId,
+  onCancel,
+  onComplete,
+  onSaveDraft,
+  templateLabel,
+  updateDraft,
+}: ReviewDialogProps) => {
+  if (!detail) {
+    return (
+      <Dialog open={isOpen} onClose={onCancel} fullWidth maxWidth="md">
+        <DialogTitle>Review</DialogTitle>
+        <DialogContent>
+          <p className="audit-placeholder">Loading record…</p>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onCancel}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onClose={onCancel} fullWidth maxWidth="md">
+      <DialogTitle>Review · {templateLabel}</DialogTitle>
+      <DialogContent className="audit-dialog-content">
+        <div className="audit-body">
+          <div>
+            <h3>Request Payload</h3>
+            <pre className="audit-blob">
+              {extractRequestPreview(detail.request) ?? 'No message content available.'}
+            </pre>
+          </div>
+          <div>
+            <h3>Response Payload</h3>
+            <pre className="audit-blob">
+              {extractResponsePreview(detail.response) ?? 'No message content available.'}
+            </pre>
+          </div>
+        </div>
+        <label className="audit-dialog-notes">
+          Notes
+          <textarea
+            rows={4}
+            value={draft.notes}
+            onChange={(event) => updateDraft({ notes: event.target.value })}
+          />
+        </label>
+        <div className="audit-dialog-tags">
+          <p>Tags</p>
+          <div className="audit-tag-grid">
+            {AUDIT_REVIEW_TAGS.map((tag) => (
+              <label key={tag} className="audit-filter-checkbox">
+                <input
+                  type="checkbox"
+                  checked={draft.tags.includes(tag)}
+                  onChange={(event) => {
+                    const next = event.target.checked
+                      ? [...draft.tags, tag]
+                      : draft.tags.filter((entry) => entry !== tag);
+                    updateDraft({ tags: next });
+                  }}
+                />
+                <span>{formatTag(tag)}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onCancel}>Close</Button>
+        <Button onClick={onSaveDraft} disabled={!loginId || isSaving}>
+          {isSaving ? 'Saving…' : 'Save Draft'}
+        </Button>
+        <Button onClick={onComplete} variant="contained" disabled={!loginId || isSaving}>
+          {isSaving ? 'Saving…' : 'Save'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};

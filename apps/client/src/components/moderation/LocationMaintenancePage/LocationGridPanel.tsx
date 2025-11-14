@@ -54,7 +54,7 @@ export const LocationGridPanel = ({
 }: GridPanelProps) => {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
-    pageSize: 15,
+    pageSize: 20,
   });
 
   const handleFilterUpdate = useCallback(
