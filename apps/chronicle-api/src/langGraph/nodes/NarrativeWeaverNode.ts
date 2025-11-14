@@ -1,4 +1,5 @@
 import type { TranscriptEntry } from '@glass-frontier/dto/narrative/TranscriptEntry';
+import { randomUUID } from 'node:crypto';
 
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
@@ -24,13 +25,18 @@ class NarrativeWeaverNode implements GraphNode {
       templates: context.templates,
     });
     const narration = await this.#generateNarration(context, prompt);
-    if (!isNonEmptyString(narration)) {
+    if (narration === null) {
       return { ...context, failure: true };
     }
 
     return {
       ...context,
-      gmMessage: this.#toTranscript(context, narration),
+      gmMessage: this.#toTranscript(context, narration.text),
+      gmTrace: {
+        auditId: narration.requestId,
+        nodeId: this.id,
+        requestId: narration.requestId,
+      },
     };
   }
 
@@ -49,15 +55,24 @@ class NarrativeWeaverNode implements GraphNode {
     });
   }
 
-  async #generateNarration(context: GraphContext, prompt: string): Promise<string | null> {
+  async #generateNarration(
+    context: GraphContext,
+    prompt: string
+  ): Promise<{ text: string; requestId: string } | null> {
     try {
+      const requestId = this.#buildRequestId(context);
       const result = await context.llm.generateText({
         maxTokens: 650,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
+        requestId,
         temperature: 0.8,
       });
-      return (result.text ?? '').trim();
+      const text = (result.text ?? '').trim();
+      if (!isNonEmptyString(text)) {
+        return null;
+      }
+      return { requestId: result.requestId, text };
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
@@ -67,6 +82,10 @@ class NarrativeWeaverNode implements GraphNode {
       });
       return null;
     }
+  }
+
+  #buildRequestId(context: GraphContext): string {
+    return `gm-${context.chronicleId}-${context.turnSequence}-${randomUUID()}`;
   }
 
   #toTranscript(context: GraphContext, narration: string): TranscriptEntry {

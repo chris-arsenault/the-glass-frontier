@@ -2,6 +2,7 @@ import type { AppRouter, ChatCompletionInput } from '@glass-frontier/llm-proxy';
 import { log } from '@glass-frontier/utils';
 import { TRPCClientError, createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import type { inferRouterProxyClient } from '@trpc/client';
+import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -24,6 +25,7 @@ type LlmInvokeOptions = {
   temperature?: number;
   maxTokens?: number;
   metadata?: InvocationMetadata;
+  requestId?: string;
 };
 
 type ExecuteResult = {
@@ -31,6 +33,7 @@ type ExecuteResult = {
   raw: ChatCompletionResponse;
   usage: unknown;
   attempts: number;
+  requestId: string;
 };
 
 type ChatCompletionMessage = {
@@ -121,14 +124,21 @@ class LangGraphLlmClient {
 
   async generateText(
     options: LlmInvokeOptions
-  ): Promise<{ text: string; raw: unknown; usage: unknown; provider: string; attempts: number }> {
+  ): Promise<{
+    text: string;
+    raw: unknown;
+    usage: unknown;
+    provider: string;
+    attempts: number;
+    requestId: string;
+  }> {
     const payload = this.#buildPayload(options);
-    const { attempts, output, raw, usage } = await this.#execute({
+    const { attempts, output, raw, requestId, usage } = await this.#execute({
       body: payload,
       metadata: options.metadata,
     });
     const text = Array.isArray(output) ? output.join('') : String(output ?? '');
-    return { attempts, provider: this.#providerId, raw, text, usage };
+    return { attempts, provider: this.#providerId, raw, requestId, text, usage };
   }
 
   async generateJson(options: LlmInvokeOptions): Promise<{
@@ -137,6 +147,7 @@ class LangGraphLlmClient {
     usage: unknown;
     provider: string;
     attempts: number;
+    requestId: string;
   }> {
     const payload = { ...this.#buildPayload(options), response_format: { type: 'json_object' } };
     let totalAttempts = 0;
@@ -158,6 +169,7 @@ class LangGraphLlmClient {
           json,
           provider: this.#providerId,
           raw: execution.raw,
+          requestId: execution.requestId,
           usage: execution.usage,
         };
       }
@@ -179,6 +191,7 @@ class LangGraphLlmClient {
     maxTokens = 450,
     messages,
     prompt,
+    requestId,
     system,
     temperature = 0.7,
   }: LlmInvokeOptions): ChatCompletionInput {
@@ -200,6 +213,7 @@ class LangGraphLlmClient {
       max_tokens: maxTokens,
       messages: sequence,
       model: this.#model,
+      requestId,
       stream: false,
       temperature,
     };
@@ -212,7 +226,9 @@ class LangGraphLlmClient {
     body: ChatCompletionInput;
     metadata?: InvocationMetadata;
   }): Promise<ExecuteResult> {
-    return this.#attemptExecution(body, metadata, 0);
+    const requestId = this.#ensureRequestId(body.requestId);
+    const preparedBody = { ...body, requestId };
+    return this.#attemptExecution(preparedBody, metadata, 0, requestId);
   }
 
   #mergeMetadata(body: ChatCompletionInput, metadata?: InvocationMetadata): ChatCompletionInput {
@@ -225,7 +241,8 @@ class LangGraphLlmClient {
   async #attemptExecution(
     body: ChatCompletionInput,
     metadata: InvocationMetadata | undefined,
-    attempt: number
+    attempt: number,
+    requestId: string
   ): Promise<ExecuteResult> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
@@ -239,6 +256,7 @@ class LangGraphLlmClient {
         attempts: attempt + 1,
         output: message,
         raw: parsed,
+        requestId,
         usage: parsed.usage ?? null,
       };
     } catch (error) {
@@ -253,7 +271,7 @@ class LangGraphLlmClient {
       }
 
       await delay(this.#retryDelay(attempt));
-      return this.#attemptExecution(body, metadata, attempt + 1);
+      return this.#attemptExecution(body, metadata, attempt + 1, requestId);
     } finally {
       clearTimeout(timer);
     }
@@ -493,6 +511,16 @@ class LangGraphLlmClient {
       }
     }
     return error.message.length > 0 ? error.message : 'Downstream bad request.';
+  }
+
+  #ensureRequestId(value?: string): string {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    return randomUUID();
   }
 }
 

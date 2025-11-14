@@ -1,9 +1,11 @@
 import {
   AUDIT_REVIEW_STATUSES,
   AUDIT_REVIEW_TAGS,
+  PLAYER_FEEDBACK_SENTIMENTS,
   AuditLogEntrySchema,
   AuditProposalRecordSchema,
   AuditReviewRecordSchema,
+  PlayerFeedbackRecordSchema,
   PromptTemplateIds,
   type AuditLogEntry,
   type AuditProposalRecord,
@@ -23,6 +25,7 @@ const t = initTRPC.context<Context>().create();
 const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
 const auditStatusSchema = z.enum(AUDIT_REVIEW_STATUSES);
 const auditTagSchema = z.enum(AUDIT_REVIEW_TAGS);
+const feedbackSentimentSchema = z.enum(PLAYER_FEEDBACK_SENTIMENTS);
 
 const listAuditQueueInput = z.object({
   cursor: z.string().optional(),
@@ -46,6 +49,18 @@ const saveAuditReviewInput = z.object({
   storageKey: z.string().min(1),
   tags: z.array(auditTagSchema).default([]),
   templateId: templateIdSchema.optional(),
+});
+
+const submitPlayerFeedbackInput = z.object({
+  auditId: z.string().min(1),
+  chronicleId: z.string().min(1),
+  comment: z.string().max(2000).optional(),
+  gmEntryId: z.string().min(1),
+  playerId: z.string().optional(),
+  playerLoginId: z.string().min(1),
+  sentiment: feedbackSentimentSchema,
+  turnId: z.string().min(1),
+  turnSequence: z.number().int().nonnegative(),
 });
 
 const getSeverityWeight = (severity: AuditReviewSeverity): number => {
@@ -260,6 +275,7 @@ const toQueueItem = (
     createdAtMs: entry.createdAtMs,
     nodeId: entry.nodeId ?? null,
     notes: review?.notes ?? null,
+    playerFeedback: entry.playerFeedback ?? [],
     playerId: entry.playerId ?? null,
     providerId: entry.providerId ?? null,
     requestContextId: entry.requestContextId ?? null,
@@ -340,9 +356,13 @@ export const promptRouter = t.router({
       if (entry === null) {
         throw new Error('Audit entry not found.');
       }
+      const playerFeedback = await ctx.auditFeedbackStore.listFeedbackForAudit(entry.id);
       const review = await ctx.auditModerationStore.getReview(entry.id);
       return {
-        entry: AuditLogEntrySchema.parse(entry),
+        entry: AuditLogEntrySchema.parse({
+          ...entry,
+          playerFeedback,
+        }),
         review: review !== null ? AuditReviewRecordSchema.parse(review) : null,
       };
     }),
@@ -389,13 +409,20 @@ export const promptRouter = t.router({
         templateId: filters.templateId,
       });
 
+      const feedbackLookup = await ctx.auditFeedbackStore.listFeedbackForAudits(
+        entries.map((entry) => entry.id)
+      );
       const reviews = await Promise.all(
         entries.map((entry) => ctx.auditModerationStore.getReview(entry.id))
       );
+      const enrichedEntries = entries.map((entry) => ({
+        ...entry,
+        playerFeedback: feedbackLookup.get(entry.id) ?? [],
+      }));
 
       return {
         cursor: nextCursor ?? null,
-        items: buildQueueItems(entries, reviews, filters.statusFilter),
+        items: buildQueueItems(enrichedEntries, reviews, filters.statusFilter),
       };
     }),
 
@@ -449,6 +476,23 @@ export const promptRouter = t.router({
         templateId: input.templateId,
       })
     ),
+
+  submitPlayerFeedback: t.procedure
+    .input(submitPlayerFeedbackInput)
+    .mutation(async ({ ctx, input }) => {
+      const record = await ctx.auditFeedbackStore.saveFeedback({
+        auditId: input.auditId,
+        chronicleId: input.chronicleId,
+        comment: normalizeString(input.comment),
+        gmEntryId: input.gmEntryId,
+        playerId: normalizeString(input.playerId),
+        playerLoginId: input.playerLoginId,
+        sentiment: input.sentiment,
+        turnId: input.turnId,
+        turnSequence: input.turnSequence,
+      });
+      return PlayerFeedbackRecordSchema.parse(record);
+    }),
 });
 
 export type PromptRouter = typeof promptRouter;

@@ -12,6 +12,7 @@ import type {
   InventoryDelta,
   Inventory,
   ImbuedRegistry,
+  LlmTrace,
 } from '@glass-frontier/dto';
 import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 
@@ -48,6 +49,7 @@ export type GraphContext = {
   skillCheckPlan?: SkillCheckPlan;
   gmMessage?: TranscriptEntry;
   gmSummary?: string;
+  gmTrace?: LlmTrace | null;
   updatedCharacter?: Character | null;
   locationPlan?: LocationPlan | null;
   locationSummary?: LocationSummary | null;
@@ -60,10 +62,22 @@ export type GraphContext = {
 export type LangGraphLlmLike = {
   generateText: (
     input: Record<string, unknown>
-  ) => Promise<{ text: string; provider?: string; raw?: unknown; usage?: unknown }>;
+  ) => Promise<{
+    text: string;
+    provider?: string;
+    raw?: unknown;
+    usage?: unknown;
+    requestId: string;
+  }>;
   generateJson: (
     input: Record<string, unknown>
-  ) => Promise<{ json: Record<string, unknown>; provider?: string; raw?: unknown; usage?: unknown }>;
+  ) => Promise<{
+    json: Record<string, unknown>;
+    provider?: string;
+    raw?: unknown;
+    usage?: unknown;
+    requestId: string;
+  }>;
 }
 
 export type TelemetryLike = {

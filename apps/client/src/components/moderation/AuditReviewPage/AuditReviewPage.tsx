@@ -32,6 +32,17 @@ const formatTag = (tag: string): string =>
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(' ');
 
+const formatFeedbackTimestamp = (value?: string | null): string => {
+  if (typeof value !== 'string') {
+    return 'Unknown date';
+  }
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) {
+    return 'Unknown date';
+  }
+  return new Date(parsed).toLocaleString();
+};
+
 const formatDate = (timestamp: number | string): string => {
   const date = typeof timestamp === 'number' ? new Date(timestamp) : new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -304,7 +315,11 @@ export function AuditReviewPage(): JSX.Element {
       {
         field: 'createdAt',
         headerName: 'Created',
-        valueFormatter: (params) => formatDate(params.value as number),
+        renderCell: (params: GridRenderCellParams<AuditGridRow>) => (
+          <span>
+            {formatDate(params?.row?.createdAt)}
+          </span>
+        ),
         width: 200,
       },
       {
@@ -501,6 +516,9 @@ const ReviewDialog = ({
   templateLabel,
   updateDraft,
 }: ReviewDialogProps) => {
+  const feedbackEntries = detail?.playerFeedback ?? [];
+  const hasFeedback = feedbackEntries.length > 0;
+
   if (!detail) {
     return (
       <Dialog open={isOpen} onClose={onCancel} fullWidth maxWidth="md">
@@ -533,6 +551,34 @@ const ReviewDialog = ({
             </pre>
           </div>
         </div>
+        <section className="audit-feedback-panel">
+          <div className="audit-feedback-header">
+            <h3>Player Feedback</h3>
+            <span className="audit-feedback-count">
+              {hasFeedback ? `${feedbackEntries.length} submission${feedbackEntries.length === 1 ? '' : 's'}` : 'None yet'}
+            </span>
+          </div>
+          {hasFeedback ? (
+            <ul className="audit-feedback-list">
+              {feedbackEntries.map((entry) => (
+                <li key={entry.id} className="audit-feedback-item">
+                  <div className="audit-feedback-meta">
+                    <span className={`audit-chip sentiment-${entry.sentiment}`}>
+                      {entry.sentiment}
+                    </span>
+                    <span>{entry.playerLoginId}</span>
+                    <span>{formatFeedbackTimestamp(entry.createdAt)}</span>
+                  </div>
+                  <p className="audit-feedback-comment">
+                    {entry.comment?.trim().length ? entry.comment : 'No additional context provided.'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="audit-placeholder">No player feedback has been recorded for this response.</p>
+          )}
+        </section>
         <label className="audit-dialog-notes">
           Notes
           <textarea

@@ -1,4 +1,5 @@
 import {
+  AuditFeedbackStore,
   AuditLogStore,
   AuditModerationStore,
   createWorldStateStore,
@@ -36,7 +37,13 @@ const auditModerationStore = new AuditModerationStore({
   prefix: process.env.LLM_PROXY_ARCHIVE_PREFIX ?? undefined,
 });
 
+const auditFeedbackStore = new AuditFeedbackStore({
+  bucket: auditBucket.trim(),
+  prefix: process.env.LLM_PROXY_ARCHIVE_PREFIX ?? undefined,
+});
+
 export type Context = {
+  auditFeedbackStore: AuditFeedbackStore;
   auditLogStore: AuditLogStore;
   auditModerationStore: AuditModerationStore;
   templateManager: PromptTemplateManager;
@@ -45,6 +52,7 @@ export type Context = {
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
   return {
+    auditFeedbackStore,
     auditLogStore,
     auditModerationStore,
     authorizationHeader: options?.authorizationHeader,

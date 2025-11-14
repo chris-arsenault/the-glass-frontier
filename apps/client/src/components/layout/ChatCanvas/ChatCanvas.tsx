@@ -1,22 +1,136 @@
-import { useEffect, useRef } from 'react';
+import type { PlayerFeedbackSentiment } from '@glass-frontier/dto';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { promptClient } from '../../../lib/promptClient';
+import type { ChatMessage } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
 import './ChatCanvas.css';
 
+type FeedbackTarget = {
+  auditId: string;
+  gmEntryId: string;
+  turnId: string;
+  turnSequence: number;
+  excerpt: string;
+};
+
+const FEEDBACK_CACHE_KEY = 'chat-feedback-cache';
+const FEEDBACK_SENTIMENTS: PlayerFeedbackSentiment[] = ['positive', 'neutral', 'negative'];
+const FEEDBACK_LABELS: Record<PlayerFeedbackSentiment, string> = {
+  negative: 'Needs work',
+  neutral: 'It was okay',
+  positive: 'Loved it',
+};
+
+const readFeedbackCache = (): Record<string, true> => {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(FEEDBACK_CACHE_KEY);
+    if (typeof raw !== 'string') {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as Record<string, true>;
+    return parsed !== null && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeFeedbackCache = (cache: Record<string, true>): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(FEEDBACK_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
+  const chronicleId = useChronicleStore((state) => state.chronicleId);
+  const loginId = useChronicleStore((state) => state.loginId);
   const isWaitingForGm = useChronicleStore((state) => state.isSending);
   const expandedMessages = useUiStore((state) => state.expandedMessages);
   const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
   const toggleMessageExpansion = useUiStore((state) => state.toggleMessageExpansion);
   const resetExpandedMessages = useUiStore((state) => state.resetExpandedMessages);
   const streamRef = useRef(null);
+  const [feedbackCache, setFeedbackCache] = useState<Record<string, true>>(() => readFeedbackCache());
+  const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(null);
+  const [feedbackSentiment, setFeedbackSentiment] = useState<PlayerFeedbackSentiment>('positive');
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const markFeedbackSubmitted = (auditId: string) => {
+    setFeedbackCache((prev) => {
+      if (prev[auditId]) {
+        return prev;
+      }
+      const next = { ...prev, [auditId]: true };
+      writeFeedbackCache(next);
+      return next;
+    });
+  };
+
+  const closeFeedbackModal = () => {
+    setFeedbackTarget(null);
+    setFeedbackComment('');
+    setFeedbackError(null);
+    setIsSubmittingFeedback(false);
+  };
+
+  const openFeedbackModal = (message: ChatMessage) => {
+    const auditId = message.gmTrace?.auditId ?? null;
+    const turnSequence = typeof message.turnSequence === 'number' ? message.turnSequence : null;
+    if (!auditId || !message.turnId || turnSequence === null) {
+      return;
+    }
+    setFeedbackTarget({
+      auditId,
+      excerpt: (message.entry.content ?? '').slice(0, 280),
+      gmEntryId: message.entry.id,
+      turnId: message.turnId,
+      turnSequence,
+    });
+    setFeedbackSentiment('positive');
+    setFeedbackComment('');
+    setFeedbackError(null);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (feedbackTarget === null || !chronicleId || !loginId) {
+      return;
+    }
+    setIsSubmittingFeedback(true);
+    setFeedbackError(null);
+    try {
+      await promptClient.submitPlayerFeedback.mutate({
+        auditId: feedbackTarget.auditId,
+        chronicleId,
+        comment: feedbackComment.trim() || undefined,
+        gmEntryId: feedbackTarget.gmEntryId,
+        playerLoginId: loginId,
+        sentiment: feedbackSentiment,
+        turnId: feedbackTarget.turnId,
+        turnSequence: feedbackTarget.turnSequence,
+      });
+      markFeedbackSubmitted(feedbackTarget.auditId);
+      closeFeedbackModal();
+    } catch (error) {
+      setFeedbackError(error instanceof Error ? error.message : 'Unable to submit feedback.');
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   useEffect(() => {
     if (streamRef.current) {
@@ -93,6 +207,16 @@ export function ChatCanvas() {
               skillKey,
               skillProgress,
             } = chatMessage;
+            const auditId = chatMessage.gmTrace?.auditId ?? null;
+            const hasSubmitted = auditId ? feedbackCache[auditId] === true : false;
+            const hasTurnSequence = typeof chatMessage.turnSequence === 'number';
+            const canSubmitFeedback =
+              auditId !== null &&
+              Boolean(chatMessage.turnId) &&
+              hasTurnSequence &&
+              Boolean(chronicleId) &&
+              Boolean(loginId) &&
+              !hasSubmitted;
             const timestamp =
               typeof entry.metadata?.timestamp === 'number'
                 ? new Date(entry.metadata.timestamp)
@@ -133,6 +257,22 @@ export function ChatCanvas() {
                           attributeKey={attributeKey}
                         />
                         <InventoryDeltaBadge delta={chatMessage.inventoryDelta} />
+                        {hasSubmitted ? (
+                          <span className="chat-entry-feedback-status">Feedback sent</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="chat-entry-feedback-button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              event.preventDefault();
+                              openFeedbackModal(chatMessage);
+                            }}
+                            disabled={!canSubmitFeedback}
+                          >
+                            Share Feedback
+                          </button>
+                        )}
                       </>
                     ) : null}
                   </div>
@@ -214,6 +354,72 @@ export function ChatCanvas() {
         <div className="chat-loading" role="status" aria-live="polite">
           <span className="chat-loading-spinner" aria-hidden="true" />
           <span className="chat-loading-text">GM is composing the next beat…</span>
+        </div>
+      ) : null}
+      {feedbackTarget ? (
+        <div className="chat-feedback-modal" role="dialog" aria-modal="true" aria-label="Narrative feedback form">
+          <button
+            type="button"
+            className="chat-feedback-backdrop"
+            aria-label="Dismiss feedback form"
+            onClick={closeFeedbackModal}
+          />
+          <div className="chat-feedback-content">
+            <header className="chat-feedback-header">
+              <h3>Share Feedback</h3>
+              <button
+                type="button"
+                className="chat-feedback-close"
+                aria-label="Close feedback form"
+                onClick={closeFeedbackModal}
+              >
+                ×
+              </button>
+            </header>
+            <p className="chat-feedback-excerpt">
+              {feedbackTarget.excerpt.length > 0
+                ? feedbackTarget.excerpt
+                : 'No preview available for this response.'}
+            </p>
+            <div className="chat-feedback-options">
+              {FEEDBACK_SENTIMENTS.map((value) => (
+                <label key={value} className="chat-feedback-option">
+                  <input
+                    type="radio"
+                    name="feedback-sentiment"
+                    value={value}
+                    checked={feedbackSentiment === value}
+                    onChange={() => setFeedbackSentiment(value)}
+                  />
+                  <span>{FEEDBACK_LABELS[value]}</span>
+                </label>
+              ))}
+            </div>
+            <label className="chat-feedback-comment">
+              <span>Optional details</span>
+              <textarea
+                rows={3}
+                maxLength={2000}
+                value={feedbackComment}
+                placeholder="What stood out or what felt off?"
+                onChange={(event) => setFeedbackComment(event.target.value)}
+              />
+            </label>
+            {feedbackError ? <p className="chat-feedback-error">{feedbackError}</p> : null}
+            <div className="chat-feedback-actions">
+              <button type="button" className="chat-feedback-cancel" onClick={closeFeedbackModal}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="chat-feedback-submit"
+                onClick={handleSubmitFeedback}
+                disabled={isSubmittingFeedback}
+              >
+                {isSubmittingFeedback ? 'Sending…' : 'Send Feedback'}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </section>

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDelta } from '../Inventory';
 import { Intent } from './Intent';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
@@ -10,6 +11,7 @@ export const TurnSchema = z.object({
   failure: z.boolean(),
   gmMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
+  gmTrace: LlmTraceSchema.optional(),
   id: z.string().min(1),
   inventoryDelta: InventoryDelta.optional(),
   playerIntent: Intent.optional(),

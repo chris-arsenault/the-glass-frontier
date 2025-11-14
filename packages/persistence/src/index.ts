@@ -14,3 +14,4 @@ export {
 export type { InventoryStoreDelta, InventoryStoreOp } from './inventory';
 export { AuditLogStore } from './audit/AuditLogStore';
 export { AuditModerationStore } from './audit/AuditModerationStore';
+export { AuditFeedbackStore } from './audit/AuditFeedbackStore';
