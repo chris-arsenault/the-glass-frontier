@@ -7,6 +7,10 @@ that helps the player understand the scene without advancing time or state.
 - Player Question: """{{playerUtterance}}"""
 - Intent Summary: {{intentSummary}}
 
+## Continuity Anchor
+Consult recent event highlights to ensure descriptions reference active threads:
+{{recentEvents}}
+
 {{#if hasActiveBeats}}
 Reference beats if they supply relevant details:
 {{#each activeBeatLines}}
@@ -17,10 +21,10 @@ Reference beats if they supply relevant details:
 ## Guidance
 - Answer **only** what was asked, using vivid sensory detail (sight, sound, texture, emotion).
 - Surface 1–2 implicit affordances or clues the player might pursue next.
+- Tie descriptions to any directly relevant Continuity Anchor entries to maintain narrative continuity.
 - Preserve the current timeline — no new actions conclude, no state changes happen.
 - Stay concise (under ~120 words) yet evocative.
 - Avoid mechanical talk, dice outcomes, or explicit instructions; keep it diegetic.
 
 ## Output
 Return a single paragraph describing what the player perceives, ending with a natural prompt for further inquiry or action.
-

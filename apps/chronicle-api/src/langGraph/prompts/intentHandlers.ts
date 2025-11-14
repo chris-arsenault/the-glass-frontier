@@ -114,7 +114,7 @@ function buildIntentHandlerPayload(
     momentum: resolveMomentum(options.chronicle),
     playerMessage: options.playerMessage,
     playerUtterance: truncateText(options.playerMessage, 500),
-    recentEvents: buildRecentEventsSummary(options.chronicle),
+    recentEvents: buildRecentEventsSummary(options.chronicle, options.intent),
     skillLine: buildSkillLine(options.intent),
     ...wrapState,
   };

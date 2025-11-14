@@ -9,7 +9,7 @@ import {
 } from '@glass-frontier/persistence';
 import { zodTextFormat } from 'openai/helpers/zod';
 
-import type { GraphContext } from '../../types.js';
+import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeInventoryDeltaPrompt } from '../prompts/prompts';
 import { convertFlatDelta, describeStoreOperations } from './inventoryDeltaHelpers';
@@ -19,6 +19,11 @@ const INVENTORY_DELTA_TEXT = {
   format: INVENTORY_DELTA_FORMAT,
   verbosity: 'low' as const,
 };
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 class InventoryDeltaNode implements GraphNode {
   readonly id = 'inventory-delta';
@@ -165,12 +170,13 @@ class InventoryDeltaNode implements GraphNode {
   }
 
   async #fetchInventoryDelta(context: GraphContext, prompt: string): Promise<InventoryDelta | null> {
+    const classifier = resolveClassifierLlm(context);
     try {
-      const result = await context.llm.generateJson({
+      const result = await classifier.generateJson({
         maxTokens: 400,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
-        reasoning: { effort: 'minimal' as const },
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.1,
         text: INVENTORY_DELTA_TEXT,
       });

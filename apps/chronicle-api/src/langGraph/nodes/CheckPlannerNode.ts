@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types.js';
+import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode, GraphNodeResult } from '../orchestrator.js';
 import { composeCheckRulesPrompt } from '../prompts/prompts';
 
@@ -34,6 +34,8 @@ const CHECK_PLANNER_TEXT = {
   format: CHECK_PLANNER_FORMAT,
   verbosity: 'low' as const,
 };
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
 
 type PlannerPlanFields = z.infer<typeof PlannerPlanSchema>;
 
@@ -50,6 +52,9 @@ const FALLBACK_PLAN: PlannerPlan = {
   rationale: 'You cannot quite recall how to do that.',
   riskLevel: 'standard',
 };
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 class CheckPlannerNode implements GraphNode {
   readonly id = 'check-planner';
@@ -94,12 +99,13 @@ class CheckPlannerNode implements GraphNode {
     context: GraphContext,
     prompt: string
   ): Promise<PlannerPlanFields | null> {
+    const classifier = resolveClassifierLlm(context);
     try {
-      const result = await context.llm.generateJson({
+      const result = await classifier.generateJson({
         maxTokens: 700,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
-        reasoning: { effort: 'minimal' as const },
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.25,
         text: CHECK_PLANNER_TEXT,
       });

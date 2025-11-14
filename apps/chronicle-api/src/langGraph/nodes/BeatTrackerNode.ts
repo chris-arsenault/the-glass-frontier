@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types.js';
+import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeBeatDirectorPrompt } from '../prompts/prompts';
 
@@ -51,6 +51,11 @@ const BEAT_DECISION_TEXT = {
   format: BEAT_DECISION_FORMAT,
   verbosity: 'low' as const,
 };
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 type BeatDecision = z.infer<typeof BeatDecisionSchema>;
 type BeatUpdate = z.infer<typeof BeatUpdateSchema>;
@@ -88,12 +93,13 @@ class BeatTrackerNode implements GraphNode {
     context: GraphContext,
     prompt: string
   ): Promise<BeatDecision | null> {
+    const classifier = resolveClassifierLlm(context);
     try {
-      const response = await context.llm.generateJson({
+      const response = await classifier.generateJson({
         maxTokens: 600,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
-        reasoning: { effort: 'minimal' as const },
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.15,
         text: BEAT_DECISION_TEXT,
       });

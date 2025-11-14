@@ -1,4 +1,4 @@
-import type { ChronicleBeat, Intent } from '@glass-frontier/dto';
+import type { ChronicleBeat, Intent, IntentType, Turn } from '@glass-frontier/dto';
 
 import type { ChronicleState } from '../../types';
 
@@ -114,18 +114,181 @@ export const resolveCharacterName = (chronicle: ChronicleState): string =>
 export const resolveMomentum = (chronicle: ChronicleState): number =>
   chronicle?.character?.momentum.current ?? 0;
 
-export const buildRecentEventsSummary = (chronicle: ChronicleState): string => {
+const RECENCY_WEIGHT = 0.5;
+const IMPORTANCE_WEIGHT = 0.3;
+const TOPIC_WEIGHT = 0.2;
+
+const resolveIntentImportance = (intentType: IntentType | null): number | null => {
+  switch (intentType) {
+  case 'action':
+    return 1;
+  case 'planning':
+    return 0.9;
+  case 'possibility':
+    return 0.65;
+  case 'inquiry':
+    return 0.6;
+  case 'reflection':
+    return 0.5;
+  case 'clarification':
+    return 0.4;
+  default:
+    return null;
+  }
+};
+
+const resolveIntentType = (turn: Turn): IntentType | null => {
+  if (turn.resolvedIntentType !== undefined && turn.resolvedIntentType !== null) {
+    return turn.resolvedIntentType;
+  }
+  return turn.playerIntent?.intentType ?? null;
+};
+
+const resolveBeatTargetId = (intent?: Intent | null): string | null => {
+  if (intent?.beatDirective?.kind === 'existing' && isNonEmptyString(intent.beatDirective.targetBeatId)) {
+    return intent.beatDirective.targetBeatId;
+  }
+  return null;
+};
+
+type WeightedTurn = {
+  score: number;
+  snippet: string;
+  turn: Turn;
+};
+
+type RankingConfig = {
+  currentIntentType: IntentType | null;
+  maxSequence: number;
+  minSequence: number;
+  targetBeatId: string | null;
+};
+
+const computeRecencyScore = (turn: Turn, minSequence: number, maxSequence: number): number => {
+  if (maxSequence === minSequence) {
+    return 1;
+  }
+  const sequence = typeof turn.turnSequence === 'number' ? turn.turnSequence : maxSequence;
+  const normalized = (sequence - minSequence) / (maxSequence - minSequence);
+  return Math.max(0, Math.min(1, normalized));
+};
+
+const computeImportanceScore = (turn: Turn): number => {
+  const type = resolveIntentType(turn);
+  const value = resolveIntentImportance(type);
+  if (typeof value === 'number') {
+    return value;
+  }
+  return 0.55;
+};
+
+const computeBeatRelevance = (turn: Turn, targetBeatId: string | null): number => {
+  if (targetBeatId === null) {
+    return 0.4;
+  }
+  const intentBeat = turn.playerIntent?.beatDirective?.targetBeatId;
+  const focusBeat = turn.beatDelta?.focusBeatId;
+  if (intentBeat === targetBeatId || focusBeat === targetBeatId) {
+    return 1;
+  }
+  if (intentBeat === undefined && focusBeat === undefined) {
+    return 0.5;
+  }
+  return 0.1;
+};
+
+const computeTopicScore = (
+  turn: Turn,
+  currentIntentType: IntentType | null,
+  targetBeatId: string | null
+): number => {
+  const type = resolveIntentType(turn);
+  const typeScore = currentIntentType === null ? 0.6 : type === currentIntentType ? 1 : 0.35;
+  const beatScore = computeBeatRelevance(turn, targetBeatId);
+  return typeScore * 0.4 + beatScore * 0.6;
+};
+
+const buildTurnSnippet = (turn: Turn): string => {
+  const gm = truncateSnippet(turn.gmMessage?.content ?? '', 280);
+  const player = truncateSnippet(turn.playerMessage?.content ?? '', 200);
+  const parts: string[] = [];
+  if (gm.length > 0) {
+    parts.push(`GM: ${gm}`);
+  }
+  if (player.length > 0) {
+    parts.push(`Player: ${player}`);
+  }
+  if (parts.length === 0) {
+    return '';
+  }
+  return `[Turn ${turn.turnSequence}] ${parts.join(' | ')}`;
+};
+
+const resolveSequenceBounds = (turns: Turn[]): { max: number; min: number } => {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const turn of turns) {
+    if (typeof turn.turnSequence !== 'number') {
+      continue;
+    }
+    if (turn.turnSequence < min) {
+      min = turn.turnSequence;
+    }
+    if (turn.turnSequence > max) {
+      max = turn.turnSequence;
+    }
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    const fallback = turns[turns.length - 1]?.turnSequence ?? 0;
+    return { max: fallback, min: fallback };
+  }
+  return { max, min };
+};
+
+const selectRankedSnippets = (turns: Turn[], config: RankingConfig): string[] => {
+  const weighted: WeightedTurn[] = [];
+  for (const turn of turns) {
+    const snippet = buildTurnSnippet(turn);
+    if (snippet.length === 0) {
+      continue;
+    }
+    const recencyScore = computeRecencyScore(turn, config.minSequence, config.maxSequence);
+    const importanceScore = computeImportanceScore(turn);
+    const topicScore = computeTopicScore(turn, config.currentIntentType, config.targetBeatId);
+    const score =
+      recencyScore * RECENCY_WEIGHT +
+      importanceScore * IMPORTANCE_WEIGHT +
+      topicScore * TOPIC_WEIGHT;
+    weighted.push({ score, snippet, turn });
+  }
+  if (weighted.length === 0) {
+    return [];
+  }
+  weighted.sort((a, b) => b.score - a.score);
+  const limited = weighted.slice(0, 10);
+  limited.sort((a, b) => a.turn.turnSequence - b.turn.turnSequence);
+  return limited.map((entry) => entry.snippet);
+};
+
+export const buildRecentEventsSummary = (
+  chronicle: ChronicleState,
+  currentIntent?: Intent | null
+): string => {
+  const fallback = chronicle.chronicle?.seedText ?? 'no prior events noted';
   if (!Array.isArray(chronicle.turns) || chronicle.turns.length === 0) {
-    return chronicle.chronicle?.seedText ?? 'no prior events noted';
+    return fallback;
   }
-  const snippets = chronicle.turns
-    .slice(-10)
-    .map((turn) => `${turn.gmMessage?.content ?? ''} - ${turn.playerMessage.content ?? ''}`.trim())
-    .filter((snippet) => snippet.length > 0);
-  if (snippets.length === 0) {
-    return chronicle.chronicle?.seedText ?? 'no prior events noted';
+  const { max, min } = resolveSequenceBounds(chronicle.turns);
+  const ranked = selectRankedSnippets(chronicle.turns, {
+    currentIntentType: currentIntent?.intentType ?? null,
+    maxSequence: max,
+    minSequence: min,
+    targetBeatId: resolveBeatTargetId(currentIntent ?? null),
+  });
+  if (ranked.length === 0) {
+    return fallback;
   }
-  return snippets.join('; ');
+  return ranked.join('\n');
 };
 
 export const truncateText = (value: string, limit: number): string => {

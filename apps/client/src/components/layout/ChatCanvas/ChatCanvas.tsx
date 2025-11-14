@@ -276,7 +276,7 @@ export function ChatCanvas() {
               entry.role === 'player'
                 ? describeBeatDirectiveTag(playerIntent?.beatDirective, beatLookup)
                 : null;
-            const intentLabel = formatIntentBadgeLabel(chatMessage.intentType ?? null);
+            const playerIntentLabel = formatIntentBadgeLabel(playerIntent?.intentType ?? null);
             const timelineLabel = describeTimelineBadge(chatMessage.advancesTimeline ?? null);
             const deltaLabel = describeWorldDeltaTags(chatMessage.worldDeltaTags ?? null);
 
@@ -299,6 +299,11 @@ export function ChatCanvas() {
                     {entry.role === 'player' && playerIntent?.tone ? (
                       <span className="chat-entry-tone">{playerIntent.tone}</span>
                     ) : null}
+                    {entry.role === 'player' && playerIntentLabel ? (
+                      <span className="chat-entry-intent-tag" title="Detected intent type">
+                        {playerIntentLabel}
+                      </span>
+                    ) : null}
                     {entry.role === 'player' && playerIntent?.creativeSpark ? (
                       <span className="chat-entry-spark" title="Creative Spark awarded">
                         ★
@@ -309,9 +314,6 @@ export function ChatCanvas() {
                     ) : null}
                     {entry.role === 'gm' ? (
                       <>
-                        {intentLabel ? (
-                          <span className="chat-entry-intent-tag">{intentLabel}</span>
-                        ) : null}
                         {timelineLabel ? (
                           <span className="chat-entry-timeline-tag">{timelineLabel}</span>
                         ) : null}

@@ -10,7 +10,7 @@ import { log } from '@glass-frontier/utils';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types';
+import type { GraphContext, LangGraphLlmLike } from '../../types';
 import type { GraphNode } from '../orchestrator';
 import { composeLocationDeltaPrompt } from '../prompts/prompts';
 
@@ -32,6 +32,11 @@ const LOCATION_DECISION_TEXT = {
   format: LOCATION_DECISION_FORMAT,
   verbosity: 'low' as const,
 };
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 const MAX_CHILDREN = 25;
 const MAX_NEIGHBORS = 25;
@@ -215,12 +220,13 @@ export class LocationDeltaNode implements GraphNode {
     locationId: string,
     prompt: string
   ): Promise<Decision | null> {
+    const classifier = resolveClassifierLlm(context);
     try {
-      const llmResult = await context.llm.generateJson({
+      const llmResult = await classifier.generateJson({
         maxTokens: 400,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
-        reasoning: { effort: 'minimal' as const },
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.1,
         text: LOCATION_DECISION_TEXT,
       });

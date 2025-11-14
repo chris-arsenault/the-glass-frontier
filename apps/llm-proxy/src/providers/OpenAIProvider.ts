@@ -241,7 +241,7 @@ class OpenAIProvider extends BaseProvider {
   #extractText(payload: Record<string, unknown>): string {
     const parts: string[] = [];
     parts.push(...this.#collectText(payload.output_text));
-    if (parts.length == 0) {
+    if (parts.length === 0) {
       parts.push(...this.#collectText(payload.output));
     }
     return parts.join('').trim();

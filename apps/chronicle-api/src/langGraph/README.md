@@ -106,19 +106,24 @@ All handler prompts receive the same base payload (via `compose*Prompt`) with th
 | `intentSummary`, `intentAttribute`, `intentTone`, `skillLine` | Normalized intent data. |
 | `checkAdvantage`, `checkDifficulty`, `checkOutcome`, `hasSkillCheck` | Present when a check ran. |
 | `activeBeatLines`, `beatCount`, `hasActiveBeats` | Array of formatted beats. |
-| `recentEvents` | Last 10 GM/player snippets stitched together. |
+| `recentEvents` | Weighted recap of the top 10 prior turns (recency × intent importance × beat relevance). |
 | `handlerMode` | One of `action`, `inquiry`, `clarification`, `possibility`, `planning`, `reflection`. |
 | `wrapUpRequested`, `wrapTargetTurn`, `wrapTurnsRemaining`, `wrapIsFinalTurn` | Wrap toggle state. |
+
+> Continuity scoring: each candidate turn receives `score = recency * 0.5 + importance * 0.3 + topic * 0.2`,
+where **importance** is intent-type weight (Action > Planning > Inquiry > Reflection > Clarification) and
+**topic** blends beat alignment (60%) plus matching the current intent type (40%). The top 10 scores are
+sorted chronologically to create `recentEvents`.
 
 Individual templates lean on these values as follows:
 
 | Template | Key Behaviors |
 |----------|---------------|
-| `action-resolver` | Uses check metadata to scale consequence. Optionally adds world delta tags when prompting for follow-up hooks. |
-| `inquiry-describer` | Ignores checks, focuses on sensory render. Should not reference `advancesTimeline`. |
-| `clarification-retriever` | Produces concise text without prose; wraps only existing facts. |
+| `action-resolver` | Uses check metadata to scale consequence and references the continuity highlights to anchor fallout. Optionally adds world delta tags when prompting for follow-up hooks. |
+| `inquiry-describer` | Ignores checks, focuses on sensory render informed by relevant continuity entries. Should not reference `advancesTimeline`. |
+| `clarification-retriever` | Produces concise text without prose; uses recent events to cite established rulings without inventing new facts. |
 | `possibility-advisor` | Presents options and highlights risks using `recentEvents`, `activeBeatLines`, and `momentum`. |
-| `planning-narrator` | Applies minor time deltas using `wrap*` info and optional check result to determine readiness. |
+| `planning-narrator` | Applies minor time deltas using `wrap*` info, optional check results, and continuity highlights to keep the montage tied to current stakes. |
 | `reflection-weaver` | Uses `intentTone` + `recentEvents` to craft introspection; no deltas. |
 
 ### Supporting Templates
