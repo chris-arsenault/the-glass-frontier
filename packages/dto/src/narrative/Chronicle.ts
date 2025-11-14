@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { Metadata } from '../Metadata';
 import { ChronicleBeat } from './ChronicleBeat';
+import { ChronicleSummaryEntry } from './ChronicleSummary';
 
 export const Chronicle = z.object({
   beats: z.array(ChronicleBeat).default([]),
@@ -13,6 +14,7 @@ export const Chronicle = z.object({
   metadata: Metadata.optional(),
   seedText: z.string().optional(),
   status: z.enum(['open', 'closed']).default('open'),
+  summaries: z.array(ChronicleSummaryEntry).default([]),
   targetEndTurn: z.number().int().nonnegative().nullable().optional(),
   title: z.string().min(1),
 });

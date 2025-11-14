@@ -17,6 +17,7 @@ import {
 export const Character = z.object({
   archetype: z.string().min(1),
   attributes: CharacterAttributes,
+  bio: z.string().min(1).optional(),
   id: z.string().min(1),
   inventory: CharacterInventory.default(createEmptyInventory()),
   loginId: z.string().min(1),

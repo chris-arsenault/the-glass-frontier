@@ -75,5 +75,12 @@
     "summary": "Chronicle beats anchor long-term goals",
     "details": "Chronicle creation now lets you enable beat tracking (on by default), the GM automatically seeds and resolves beats with title/description/status updates, and the client surfaces active beats under the navigation so players can see which story arcs are in progress.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-14-chronicle-closer",
+    "releasedAt": "2025-11-14",
+    "summary": "Chronicle closures now generate epilogues",
+    "details": "When a chronicle is closed we enqueue a new chronicle-closer Lambda that fabricates a short-story recap, high-level location events, and character bio notes via SQS so completed runs get preserved across the world state.",
+    "type": "feature"
   }
 ]
