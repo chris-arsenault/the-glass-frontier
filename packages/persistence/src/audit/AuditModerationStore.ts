@@ -43,6 +43,7 @@ export class AuditModerationStore extends HybridObjectStore {
     return parsed.success ? parsed.data : null;
   }
 
+  /* eslint-disable complexity */
   async saveReview(payload: SaveReviewPayload): Promise<AuditReviewRecord> {
     const now = new Date().toISOString();
     const existing = await this.getReview(payload.auditId);
@@ -55,9 +56,9 @@ export class AuditModerationStore extends HybridObjectStore {
             ? existing?.completedAt ?? null
             : null,
       createdAt: existing?.createdAt ?? now,
-      notes: payload.notes ?? existing?.notes ?? null,
       draftAt: payload.status === 'in_progress' ? now : existing?.draftAt ?? null,
       nodeId: payload.nodeId ?? existing?.nodeId ?? null,
+      notes: payload.notes ?? existing?.notes ?? null,
       reviewerLoginId: payload.reviewerLoginId,
       reviewerName: payload.reviewerName ?? existing?.reviewerName ?? null,
       status: payload.status,
@@ -70,6 +71,7 @@ export class AuditModerationStore extends HybridObjectStore {
     await this.setJson(this.#reviewKey(payload.auditId), nextRecord);
     return nextRecord;
   }
+  /* eslint-enable complexity */
 
   async listReviews(): Promise<AuditReviewRecord[]> {
     const keys = await this.list(`${REVIEW_FOLDER}/`, { suffix: '.json' });

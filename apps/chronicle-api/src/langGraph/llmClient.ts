@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Legacy LangGraph client compiled from generated code */
 import type { AppRouter, ChatCompletionInput } from '@glass-frontier/llm-proxy';
 import { log } from '@glass-frontier/utils';
 import { TRPCClientError, createTRPCProxyClient, httpBatchLink } from '@trpc/client';

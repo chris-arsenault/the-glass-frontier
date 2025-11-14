@@ -19,6 +19,7 @@ export type ChronicleStartState = {
   customSeedText: string;
   customSeedTitle: string;
   listViewFallback: boolean;
+  beatsEnabled: boolean;
 }
 
 type ChronicleStartActions = {
@@ -31,9 +32,11 @@ type ChronicleStartActions = {
   chooseSeed: (seedId: string | null) => void;
   setCustomSeed: (details: { title: string; text: string }) => void;
   setListViewFallback: (enabled: boolean) => void;
+  setBeatsEnabled: (enabled: boolean) => void;
 }
 
 const initialState: ChronicleStartState = {
+  beatsEnabled: true,
   chosenSeedId: null,
   customSeedText: '',
   customSeedTitle: '',
@@ -54,6 +57,7 @@ export const useChronicleStartStore = create<ChronicleStartState & ChronicleStar
       customSeedTitle: seedId ? state.customSeedTitle : '',
     })),
   reset: () => set(initialState),
+  setBeatsEnabled: (enabled) => set({ beatsEnabled: enabled }),
   setCustomSeed: ({ text, title }) =>
     set({
       chosenSeedId: null,

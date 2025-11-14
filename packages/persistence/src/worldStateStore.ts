@@ -11,6 +11,7 @@ export type WorldStateStore = {
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
+    beatsEnabled?: boolean;
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;

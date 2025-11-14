@@ -58,24 +58,14 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
+    beatsEnabled?: boolean;
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
     if (existing !== null) {
       return existing;
     }
-    const seed = params.seedText?.trim() ?? null;
-    const title = params.title?.trim() ?? null;
-    const record: Chronicle = {
-      characterId: params.characterId,
-      id: chronicleId,
-      locationId: params.locationId,
-      loginId: params.loginId,
-      metadata: undefined,
-      seedText: isNonEmptyString(seed) ? seed : undefined,
-      status: params.status ?? 'open',
-      title: isNonEmptyString(title) ? title : 'Untitled Chronicle',
-    };
+    const record = this.#buildChronicleRecord(params, chronicleId);
     return this.upsertChronicle(record);
   }
 
@@ -197,9 +187,10 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
-    this.#chronicles.set(chronicle.id, chronicle);
-    this.#chronicleLoginIndex.set(chronicle.id, chronicle.loginId);
-    await this.setJson(this.#chronicleKey(chronicle.loginId, chronicle.id), chronicle);
+    const normalized = this.#normalizeChronicle(chronicle);
+    this.#chronicles.set(normalized.id, normalized);
+    this.#chronicleLoginIndex.set(normalized.id, normalized.loginId);
+    await this.setJson(this.#chronicleKey(normalized.loginId, normalized.id), normalized);
     await this.#index.linkChronicleToLogin(chronicle.id, chronicle.loginId);
     if (isNonEmptyString(chronicle.characterId)) {
       await this.#index.linkChronicleToCharacter(chronicle.id, chronicle.characterId);
@@ -207,7 +198,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     if (isNonEmptyString(chronicle.locationId)) {
       await this.#index.linkChronicleToLocation(chronicle.id, chronicle.locationId);
     }
-    return chronicle;
+    return normalized;
   }
 
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
@@ -223,8 +214,10 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
 
     const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
     if (record !== null) {
-      this.#chronicles.set(chronicleId, record);
+      const normalized = this.#normalizeChronicle(record);
+      this.#chronicles.set(chronicleId, normalized);
       this.#chronicleLoginIndex.set(chronicleId, loginId);
+      return normalized;
     }
     return record;
   }
@@ -242,8 +235,10 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
         }
         const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
         if (record !== null) {
-          this.#chronicles.set(chronicleId, record);
+          const normalized = this.#normalizeChronicle(record);
+          this.#chronicles.set(chronicleId, normalized);
           this.#chronicleLoginIndex.set(chronicleId, loginId);
+          return normalized;
         }
         return record;
       })
@@ -373,5 +368,46 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
 
   #turnKey(loginId: string, chronicleId: string, turnId: string): string {
     return `${this.#turnPrefix(loginId, chronicleId)}${turnId}.json`;
+  }
+
+  #normalizeChronicle(chronicle: Chronicle): Chronicle {
+    const beatsEnabled =
+      chronicle.beatsEnabled === undefined || chronicle.beatsEnabled === null
+        ? true
+        : Boolean(chronicle.beatsEnabled);
+    const beats = Array.isArray(chronicle.beats) ? chronicle.beats : [];
+    return {
+      ...chronicle,
+      beats,
+      beatsEnabled,
+    };
+  }
+
+  #buildChronicleRecord(
+    params: {
+      characterId?: string;
+      loginId: string;
+      locationId: string;
+      seedText?: string | null;
+      status?: Chronicle['status'];
+      title?: string;
+      beatsEnabled?: boolean;
+    },
+    chronicleId: string
+  ): Chronicle {
+    const seed = params.seedText?.trim() ?? null;
+    const title = params.title?.trim() ?? null;
+    return {
+      beats: [],
+      beatsEnabled: params.beatsEnabled ?? true,
+      characterId: params.characterId,
+      id: chronicleId,
+      locationId: params.locationId,
+      loginId: params.loginId,
+      metadata: undefined,
+      seedText: isNonEmptyString(seed) ? seed : undefined,
+      status: params.status ?? 'open',
+      title: isNonEmptyString(title) ? title : 'Untitled Chronicle',
+    };
   }
 }

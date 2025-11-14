@@ -2,16 +2,18 @@ import { z } from 'zod';
 
 import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDelta } from '../Inventory';
+import { BeatDelta } from './ChronicleBeat';
 import { Intent } from './Intent';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 
 export const TurnProgressPayloadSchema = z.object({
+  beatDelta: BeatDelta.optional(),
+  chronicleShouldClose: z.boolean().optional(),
   failure: z.boolean().optional(),
   gmMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
   gmTrace: LlmTraceSchema.optional(),
-  chronicleShouldClose: z.boolean().optional(),
   inventoryDelta: InventoryDelta.optional(),
   playerIntent: Intent.optional(),
   skillCheckPlan: SkillCheckPlan.optional(),

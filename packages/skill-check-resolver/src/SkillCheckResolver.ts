@@ -3,7 +3,7 @@ import type {
   SkillCheckResult,
   MomentumState,
   OutcomeTier,
-  TierThreshold } from '@glass-frontier/dto';
+} from '@glass-frontier/dto';
 import {
   attributeModifierFromName,
   MOMENTUM_DELTA,
@@ -78,7 +78,7 @@ class SkillCheckResolver {
   }
 
   determineTier(margin: number): OutcomeTier {
-    for (const [threshold, tier] of TIER_THRESHOLDS as TierThreshold[]) {
+    for (const [threshold, tier] of TIER_THRESHOLDS) {
       if (margin >= threshold) {
         return tier;
       }

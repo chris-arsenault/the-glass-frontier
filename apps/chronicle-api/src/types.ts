@@ -13,6 +13,7 @@ import type {
   Inventory,
   ImbuedRegistry,
   LlmTrace,
+  BeatDelta,
 } from '@glass-frontier/dto';
 import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 
@@ -58,6 +59,7 @@ export type GraphContext = {
   inventoryStoreDelta?: InventoryStoreDelta | null;
   inventoryPreview?: Inventory | null;
   inventoryRegistry?: ImbuedRegistry | null;
+  beatDelta?: BeatDelta | null;
 }
 
 export type LangGraphLlmLike = {

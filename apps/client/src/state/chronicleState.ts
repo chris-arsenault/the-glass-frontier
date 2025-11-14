@@ -2,6 +2,7 @@ import type {
   Attribute,
   Character,
   Chronicle,
+  ChronicleBeat,
   Intent,
   LocationSummary,
   SkillCheckPlan,
@@ -57,6 +58,9 @@ export type MomentumTrend = {
 }
 
 export type ChronicleState = {
+  beats: ChronicleBeat[];
+  beatsEnabled: boolean;
+  focusedBeatId: string | null;
   chronicleId: string | null;
   chronicleRecord: Chronicle | null;
   loginId: string | null;
@@ -111,6 +115,7 @@ export type ChronicleCreationDetails = {
   title: string;
   locationName: string;
   locationAtmosphere: string;
+  beatsEnabled?: boolean;
 }
 
 export type ChronicleSeedCreationDetails = {
@@ -118,4 +123,5 @@ export type ChronicleSeedCreationDetails = {
   locationId: string;
   title?: string | null;
   seedText: string;
+  beatsEnabled?: boolean;
 }

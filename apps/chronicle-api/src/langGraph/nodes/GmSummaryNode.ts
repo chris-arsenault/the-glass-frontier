@@ -5,8 +5,8 @@ import type { GraphNode } from '../orchestrator.js';
 import { composeGMSummaryPrompt } from '../prompts/prompts';
 
 const SummaryResponseSchema = z.object({
-  summary: z.string().min(1),
   shouldCloseChronicle: z.boolean().optional(),
+  summary: z.string().min(1),
 });
 
 type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
@@ -21,9 +21,9 @@ class GmSummaryNode implements GraphNode {
     }
 
     const prompt = await composeGMSummaryPrompt({
-      chronicle: context.chronicle,
       check: context.skillCheckPlan,
       checkResult: context.skillCheckResult,
+      chronicle: context.chronicle,
       gmMessage: context.gmMessage.content,
       intent: context.playerIntent,
       templates: context.templates,

@@ -40,17 +40,18 @@ export function ChatComposer() {
   };
 
   const queuedCount = Math.max(queuedIntents, 0);
-  const buttonLabel = !hasChronicle
-    ? 'Select a chronicle'
-    : chronicleStatus === 'closed' || connectionState === 'closed'
-      ? 'Chronicle closed'
-      : isOffline
-        ? queuedCount > 0
-          ? 'Queue Intent'
-          : 'Queue Intent'
-      : isSending
-          ? 'Sending...'
-          : 'Send to GM';
+  const buttonLabel = (() => {
+    if (!hasChronicle) {
+      return 'Select a chronicle';
+    }
+    if (chronicleStatus === 'closed' || connectionState === 'closed') {
+      return 'Chronicle closed';
+    }
+    if (isOffline) {
+      return queuedCount > 0 ? 'Queue Intent' : 'Queue Intent';
+    }
+    return isSending ? 'Sending...' : 'Send to GM';
+  })();
   const wrapButtonLabel = isWrapRequested ? 'Wrapping' : 'Wrap Up';
   const wrapButtonClassName = `chat-wrap-toggle${isWrapRequested ? ' chat-wrap-toggle--active' : ''}`;
 

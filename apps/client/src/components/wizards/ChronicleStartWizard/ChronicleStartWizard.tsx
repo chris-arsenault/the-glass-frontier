@@ -80,6 +80,8 @@ export function ChronicleStartWizard() {
   const listViewFallback = useChronicleStartStore((state) => state.listViewFallback);
   const setListViewFallback = useChronicleStartStore((state) => state.setListViewFallback);
   const setSelectedLocation = useChronicleStartStore((state) => state.setSelectedLocation);
+  const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
+  const setBeatsEnabled = useChronicleStartStore((state) => state.setBeatsEnabled);
 
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [chainModalOpen, setChainModalOpen] = useState(false);
@@ -283,6 +285,8 @@ export function ChronicleStartWizard() {
           preferredCharacterName={selectedCharacterName}
           customTitle={customTitle}
           setCustomTitle={setCustomTitle}
+          beatsEnabled={beatsEnabled}
+          setBeatsEnabled={setBeatsEnabled}
         />
       );
     default:
@@ -314,6 +318,7 @@ export function ChronicleStartWizard() {
     customTitle,
     selectedSeed,
     selectedCharacterName,
+    beatsEnabled,
   ]);
 
   const handleNext = () => {
@@ -362,6 +367,7 @@ export function ChronicleStartWizard() {
     setIsCreatingChronicle(true);
     setCreationError(null);
     const payload: ChronicleSeedCreationDetails = {
+      beatsEnabled,
       characterId: preferredCharacterId,
       locationId: selectedLocation.id,
       seedText: seedPayload,
@@ -410,6 +416,7 @@ export function ChronicleStartWizard() {
         setIsShardProcessing(true);
         try {
           await createChronicleFromSeed({
+            beatsEnabled,
             characterId: preferredCharacterId,
             locationId: shard.locationId,
             seedText: shard.seed,
@@ -481,6 +488,7 @@ export function ChronicleStartWizard() {
     setSelectedLocation,
     setShardMessage,
     setStep,
+    beatsEnabled,
   ]);
 
   return (
@@ -902,15 +910,19 @@ type CreateStepProps = {
   preferredCharacterName: string | null;
   customTitle: string;
   setCustomTitle: (value: string) => void;
+  beatsEnabled: boolean;
+  setBeatsEnabled: (value: boolean) => void;
 }
 
 function CreateStep({
+  beatsEnabled,
   customSeedText,
   customSeedTitle,
   customTitle,
   preferredCharacterName,
   selectedLocation,
   selectedSeed,
+  setBeatsEnabled,
   setCustomTitle,
   tone,
 }: CreateStepProps) {
@@ -964,6 +976,20 @@ function CreateStep({
         ) : (
           <p>Select a character in the session manager before creating a chronicle.</p>
         )}
+      </section>
+      <section>
+        <h3>Chronicle beats</h3>
+        <label className="beat-toggle">
+          <input
+            type="checkbox"
+            checked={beatsEnabled}
+            onChange={(event) => setBeatsEnabled(event.target.checked)}
+          />
+          Enable beat tracking (recommended)
+        </label>
+        <p className="session-manager-hint">
+          Beats track multi-turn goals and guide the GM&apos;s pacing.
+        </p>
       </section>
     </div>
   );
