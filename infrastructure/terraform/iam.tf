@@ -29,6 +29,11 @@ resource "aws_iam_role_policy_attachment" "webservice_sqs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "chronicle_closer_sqs" {
+  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
+}
+
 data "aws_iam_policy_document" "chronicle_s3" {
   statement {
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
@@ -45,6 +50,29 @@ resource "aws_iam_policy" "chronicle_s3" {
 resource "aws_iam_role_policy_attachment" "chronicle_s3" {
   role       = aws_iam_role.lambda["chronicle_lambda"].name
   policy_arn = aws_iam_policy.chronicle_s3.arn
+}
+
+resource "aws_iam_role_policy_attachment" "chronicle_closer_s3" {
+  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_s3.arn
+}
+
+data "aws_iam_policy_document" "chronicle_closure_queue" {
+  statement {
+    actions   = ["sqs:SendMessage"]
+    resources = [aws_sqs_queue.chronicle_closure.arn]
+  }
+}
+
+resource "aws_iam_policy" "chronicle_closure_queue" {
+  name        = "${local.name_prefix}-chronicle-closure-queue"
+  description = "Allow the chronicle lambda to enqueue chronicle closure jobs."
+  policy      = data.aws_iam_policy_document.chronicle_closure_queue.json
+}
+
+resource "aws_iam_role_policy_attachment" "chronicle_closure_queue" {
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_closure_queue.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prompt_api_s3" {
@@ -109,6 +137,11 @@ resource "aws_iam_role_policy_attachment" "prompt_api_dynamodb" {
   policy_arn = aws_iam_policy.chronicle_dynamodb.arn
 }
 
+resource "aws_iam_role_policy_attachment" "chronicle_closer_dynamodb" {
+  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
+}
+
 resource "aws_iam_role_policy_attachment" "location_api_location_index" {
   role       = aws_iam_role.lambda["location_api_lambda"].name
   policy_arn = aws_iam_policy.location_graph_index.arn
@@ -135,6 +168,11 @@ resource "aws_iam_policy" "location_graph_index" {
 
 resource "aws_iam_role_policy_attachment" "chronicle_location_graph_index" {
   role       = aws_iam_role.lambda["chronicle_lambda"].name
+  policy_arn = aws_iam_policy.location_graph_index.arn
+}
+
+resource "aws_iam_role_policy_attachment" "chronicle_closer_location_graph_index" {
+  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
   policy_arn = aws_iam_policy.location_graph_index.arn
 }
 

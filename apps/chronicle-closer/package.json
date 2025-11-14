@@ -1,0 +1,23 @@
+{
+  "name": "@glass-frontier/chronicle-closer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@glass-frontier/dto": "workspace:*",
+    "@glass-frontier/llm-client": "workspace:*",
+    "@glass-frontier/persistence": "workspace:*",
+    "@glass-frontier/utils": "workspace:*",
+    "tsup": "^8.5.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.158",
+    "typescript": "^5.9.3"
+  }
+}

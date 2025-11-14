@@ -1,6 +1,7 @@
 /* eslint-disable max-lines -- Legacy location graph store pending modularization */
 import type { S3Client } from '@aws-sdk/client-s3';
 import type {
+  LocationEvent,
   LocationGraphSnapshot,
   LocationPlan,
   LocationPlanEdge,
@@ -355,6 +356,40 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
     }
     return { anchor, created };
   }
+
+  async appendLocationEvents(input: {
+    locationId: string;
+    events: Array<{
+      chronicleId: string;
+      summary: string;
+      scope?: string;
+      metadata?: Record<string, unknown>;
+    }>;
+  }): Promise<LocationEvent[]> {
+    if (input.events.length === 0) {
+      return [];
+    }
+    const key = this.#locationEventsKey(input.locationId);
+    const existing = (await this.getJson<LocationEvent[]>(key)) ?? [];
+    const now = Date.now();
+    const appended = input.events.map((event, index) => ({
+      chronicleId: event.chronicleId,
+      createdAt: now + index,
+      id: randomUUID(),
+      locationId: input.locationId,
+      metadata: event.metadata,
+      scope: isNonEmptyString(event.scope) ? event.scope : undefined,
+      summary: event.summary,
+    }));
+    await this.setJson(key, [...existing, ...appended]);
+    return appended;
+  }
+
+  async listLocationEvents(input: { locationId: string }): Promise<LocationEvent[]> {
+    const key = this.#locationEventsKey(input.locationId);
+    const records = await this.getJson<LocationEvent[]>(key);
+    return Array.isArray(records) ? records : [];
+  }
   async #createPlace(locationId: string, place: LocationPlanPlace): Promise<LocationPlace> {
     return this.#createPlaceRecord(locationId, {
       description: place.description,
@@ -530,6 +565,10 @@ export class S3LocationGraphStore extends HybridObjectStore implements LocationG
 
   #stateKey(characterId: string): string {
     return `location-graph/states/${characterId}.json`;
+  }
+
+  #locationEventsKey(locationId: string): string {
+    return `location-graph/events/${locationId}.json`;
   }
 
   async #writeState(state: LocationState): Promise<void> {

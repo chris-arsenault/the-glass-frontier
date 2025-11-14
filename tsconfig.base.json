@@ -18,6 +18,8 @@
     "paths": {
       "@glass-frontier/llm-proxy": ["apps/llm-proxy/src/app.ts"],
       "@glass-frontier/llm-proxy/*": ["apps/llm-proxy/src/*"],
+      "@glass-frontier/llm-client": ["packages/llm-client/src/index.ts"],
+      "@glass-frontier/llm-client/*": ["packages/llm-client/src/*"],
       "@glass-frontier/dto": ["packages/dto/src/index.ts"],
       "@glass-frontier/dto/*": ["packages/dto/src/*"],
       "@glass-frontier/utils": ["packages/utils/src/index.ts"],
