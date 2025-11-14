@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { IntentType as IntentTypeSchema } from '../narrative/IntentType';
 import { PromptTemplateIds, type PromptTemplateId } from '../templates/PromptTemplates';
 
 export const AUDIT_REVIEW_TAGS = [
@@ -35,6 +36,13 @@ export const PlayerFeedbackRecordSchema = z.object({
   chronicleId: z.string().min(1),
   comment: z.string().max(2000).optional().nullable(),
   createdAt: z.string().min(1),
+  expectedIntentType: IntentTypeSchema.optional().nullable(),
+  expectedInventoryDelta: z.boolean().optional().nullable(),
+  expectedInventoryNotes: z.string().max(2000).optional().nullable(),
+  expectedLocationChange: z.boolean().optional().nullable(),
+  expectedLocationNotes: z.string().max(2000).optional().nullable(),
+  expectedSkillCheck: z.boolean().optional().nullable(),
+  expectedSkillNotes: z.string().max(2000).optional().nullable(),
   gmEntryId: z.string().min(1),
   id: z.string().min(1),
   metadata: z.record(z.string(), z.unknown()).optional(),

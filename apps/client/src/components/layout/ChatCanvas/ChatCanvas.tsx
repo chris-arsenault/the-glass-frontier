@@ -26,6 +26,31 @@ const FEEDBACK_LABELS: Record<PlayerFeedbackSentiment, string> = {
   neutral: 'It was okay',
   positive: 'Loved it',
 };
+type FeedbackIntentChoice = 'none' | NonNullable<Intent['intentType']>;
+type FeedbackBooleanChoice = 'none' | 'true' | 'false';
+
+const INTENT_TYPE_VALUES: Array<NonNullable<Intent['intentType']>> = [
+  'action',
+  'inquiry',
+  'clarification',
+  'possibility',
+  'planning',
+  'reflection',
+];
+
+const FEEDBACK_INTENT_OPTIONS: Array<{ label: string; value: FeedbackIntentChoice }> = [
+  { label: 'No Feedback', value: 'none' },
+  ...INTENT_TYPE_VALUES.map((value) => ({
+    label: value.replace(/^[a-z]/, (char) => char.toUpperCase()),
+    value,
+  })),
+];
+
+const FEEDBACK_BOOLEAN_OPTIONS: Array<{ label: string; value: FeedbackBooleanChoice }> = [
+  { label: 'No Feedback', value: 'none' },
+  { label: 'True', value: 'true' },
+  { label: 'False', value: 'false' },
+];
 
 const describeBeatDirectiveTag = (
   directive: Intent['beatDirective'] | null | undefined,
@@ -109,6 +134,17 @@ export function ChatCanvas() {
   const [feedbackSentiment, setFeedbackSentiment] = useState<PlayerFeedbackSentiment>('positive');
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [feedbackIntentExpectation, setFeedbackIntentExpectation] =
+    useState<FeedbackIntentChoice>('none');
+  const [feedbackSkillExpectation, setFeedbackSkillExpectation] =
+    useState<FeedbackBooleanChoice>('none');
+  const [feedbackLocationExpectation, setFeedbackLocationExpectation] =
+    useState<FeedbackBooleanChoice>('none');
+  const [feedbackInventoryExpectation, setFeedbackInventoryExpectation] =
+    useState<FeedbackBooleanChoice>('none');
+  const [feedbackSkillNotes, setFeedbackSkillNotes] = useState('');
+  const [feedbackLocationNotes, setFeedbackLocationNotes] = useState('');
+  const [feedbackInventoryNotes, setFeedbackInventoryNotes] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const beatLookup = useMemo(() => {
     const map = new Map<string, string>();
@@ -136,6 +172,13 @@ export function ChatCanvas() {
     setFeedbackComment('');
     setFeedbackError(null);
     setIsSubmittingFeedback(false);
+    setFeedbackIntentExpectation('none');
+    setFeedbackSkillExpectation('none');
+    setFeedbackLocationExpectation('none');
+    setFeedbackInventoryExpectation('none');
+    setFeedbackSkillNotes('');
+    setFeedbackLocationNotes('');
+    setFeedbackInventoryNotes('');
   };
 
   const openFeedbackModal = (message: ChatMessage) => {
@@ -154,6 +197,13 @@ export function ChatCanvas() {
     setFeedbackSentiment('positive');
     setFeedbackComment('');
     setFeedbackError(null);
+    setFeedbackIntentExpectation('none');
+    setFeedbackSkillExpectation('none');
+    setFeedbackLocationExpectation('none');
+    setFeedbackInventoryExpectation('none');
+    setFeedbackSkillNotes('');
+    setFeedbackLocationNotes('');
+    setFeedbackInventoryNotes('');
   };
 
   const handleSubmitFeedback = async () => {
@@ -162,11 +212,39 @@ export function ChatCanvas() {
     }
     setIsSubmittingFeedback(true);
     setFeedbackError(null);
+    const expectedIntentType =
+      feedbackIntentExpectation === 'none' ? undefined : feedbackIntentExpectation;
+    const resolveBoolean = (value: FeedbackBooleanChoice): boolean | undefined => {
+      if (value === 'none') {
+        return undefined;
+      }
+      return value === 'true';
+    };
+    const expectedSkillCheck = resolveBoolean(feedbackSkillExpectation);
+    const expectedLocationChange = resolveBoolean(feedbackLocationExpectation);
+    const expectedInventoryDelta = resolveBoolean(feedbackInventoryExpectation);
+    const expectedSkillNotes =
+      feedbackSkillExpectation === 'true' ? feedbackSkillNotes.trim() || undefined : undefined;
+    const expectedLocationNotes =
+      feedbackLocationExpectation === 'true'
+        ? feedbackLocationNotes.trim() || undefined
+        : undefined;
+    const expectedInventoryNotes =
+      feedbackInventoryExpectation === 'true'
+        ? feedbackInventoryNotes.trim() || undefined
+        : undefined;
     try {
       await promptClient.submitPlayerFeedback.mutate({
         auditId: feedbackTarget.auditId,
         chronicleId,
         comment: feedbackComment.trim() || undefined,
+        expectedIntentType,
+        expectedInventoryDelta,
+        expectedInventoryNotes,
+        expectedLocationChange,
+        expectedLocationNotes,
+        expectedSkillCheck,
+        expectedSkillNotes,
         gmEntryId: feedbackTarget.gmEntryId,
         playerLoginId: loginId,
         sentiment: feedbackSentiment,
@@ -469,6 +547,100 @@ export function ChatCanvas() {
                   <span>{FEEDBACK_LABELS[value]}</span>
                 </label>
               ))}
+            </div>
+            <div className="chat-feedback-expectations">
+              <label className="chat-feedback-field">
+                Expected intent type
+                <select
+                  value={feedbackIntentExpectation}
+                  onChange={(event) =>
+                    setFeedbackIntentExpectation(event.target.value as FeedbackIntentChoice)
+                  }
+                >
+                  {FEEDBACK_INTENT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="chat-feedback-boolean-grid">
+                <label className="chat-feedback-field">
+                  Expected Skill Check
+                  <select
+                    value={feedbackSkillExpectation}
+                    onChange={(event) =>
+                      setFeedbackSkillExpectation(event.target.value as FeedbackBooleanChoice)
+                    }
+                  >
+                    {FEEDBACK_BOOLEAN_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {feedbackSkillExpectation === 'true' ? (
+                    <textarea
+                      className="chat-feedback-note-input"
+                      rows={2}
+                      maxLength={2000}
+                      placeholder="Describe the situation requiring a check"
+                      value={feedbackSkillNotes}
+                      onChange={(event) => setFeedbackSkillNotes(event.target.value)}
+                    />
+                  ) : null}
+                </label>
+                <label className="chat-feedback-field">
+                  Expected Location Change
+                  <select
+                    value={feedbackLocationExpectation}
+                    onChange={(event) =>
+                      setFeedbackLocationExpectation(event.target.value as FeedbackBooleanChoice)
+                    }
+                  >
+                    {FEEDBACK_BOOLEAN_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {feedbackLocationExpectation === 'true' ? (
+                    <textarea
+                      className="chat-feedback-note-input"
+                      rows={2}
+                      maxLength={2000}
+                      placeholder="Where should the scene have moved?"
+                      value={feedbackLocationNotes}
+                      onChange={(event) => setFeedbackLocationNotes(event.target.value)}
+                    />
+                  ) : null}
+                </label>
+                <label className="chat-feedback-field">
+                  Expected Inventory Delta
+                  <select
+                    value={feedbackInventoryExpectation}
+                    onChange={(event) =>
+                      setFeedbackInventoryExpectation(event.target.value as FeedbackBooleanChoice)
+                    }
+                  >
+                    {FEEDBACK_BOOLEAN_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {feedbackInventoryExpectation === 'true' ? (
+                    <textarea
+                      className="chat-feedback-note-input"
+                      rows={2}
+                      maxLength={2000}
+                      placeholder="What gear change was expected?"
+                      value={feedbackInventoryNotes}
+                      onChange={(event) => setFeedbackInventoryNotes(event.target.value)}
+                    />
+                  ) : null}
+                </label>
+              </div>
             </div>
             <label className="chat-feedback-comment">
               <span>Optional details</span>

@@ -315,6 +315,46 @@
   flex-wrap: wrap;
 }
 
+.chat-feedback-expectations {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-feedback-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #cbd5f5;
+  font-size: 0.85rem;
+}
+
+.chat-feedback-field select {
+  border-radius: 0.5rem;
+  border: 1px solid rgb(148 163 184 / 35%);
+  background: rgb(15 23 42 / 60%);
+  color: #e2e8f0;
+  padding: 0.4rem;
+}
+
+.chat-feedback-boolean-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
+
+.chat-feedback-note-input {
+  margin-top: 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(148 163 184 / 35%);
+  background: rgb(15 23 42 / 60%);
+  color: #e2e8f0;
+  padding: 0.4rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
 .chat-feedback-option {
   display: inline-flex;
   align-items: center;
