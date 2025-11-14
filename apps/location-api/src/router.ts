@@ -1,3 +1,4 @@
+import { LocationEdgeKind } from '@glass-frontier/dto';
 import type { LocationBreadcrumbEntry, LocationPlace } from '@glass-frontier/dto';
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
@@ -14,6 +15,27 @@ const locationSegmentSchema = z.object({
 });
 
 export const locationRouter = t.router({
+  addLocationEdge: t.procedure
+    .input(
+      z.object({
+        dst: z.uuid(),
+        kind: LocationEdgeKind,
+        locationId: z.uuid(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+        src: z.uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.locationGraphStore.addEdge({
+        dst: input.dst,
+        kind: input.kind,
+        locationId: input.locationId,
+        metadata: input.metadata,
+        src: input.src,
+      });
+      return ctx.locationGraphStore.getLocationGraph(input.locationId);
+    }),
+
   createLocationChain: t.procedure
     .input(
       z.object({
@@ -81,6 +103,49 @@ export const locationRouter = t.router({
         .optional()
     )
     .query(async ({ ctx, input }) => ctx.locationGraphStore.listLocationRoots(input)),
+
+  removeLocationEdge: t.procedure
+    .input(
+      z.object({
+        dst: z.string().uuid(),
+        kind: z.nativeEnum(LocationEdgeKind),
+        locationId: z.string().uuid(),
+        src: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.locationGraphStore.removeEdge({
+        dst: input.dst,
+        kind: input.kind,
+        locationId: input.locationId,
+        src: input.src,
+      });
+      return ctx.locationGraphStore.getLocationGraph(input.locationId);
+    }),
+
+  updateLocationPlace: t.procedure
+    .input(
+      z.object({
+        description: z.string().max(1000).optional().or(z.literal('')).optional(),
+        kind: z.string().min(1).optional(),
+        name: z.string().min(1).optional(),
+        parentId: z.string().uuid().nullable().optional(),
+        placeId: z.string().uuid(),
+        tags: z.array(z.string()).max(12).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const place = await ctx.locationGraphStore.updatePlace({
+        canonicalParentId: input.parentId ?? undefined,
+        description: input.description,
+        kind: input.kind,
+        name: input.name,
+        placeId: input.placeId,
+        tags: input.tags === undefined ? undefined : normalizeTags(input.tags),
+      });
+      const breadcrumb = await buildLocationBreadcrumb(ctx.locationGraphStore, place);
+      return { breadcrumb, place };
+    }),
 });
 
 async function buildLocationBreadcrumb(

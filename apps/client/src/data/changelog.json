@@ -35,6 +35,13 @@
     "type": "feature"
   },
   {
+    "id": "2025-11-13-location-maintenance",
+    "releasedAt": "2025-11-13",
+    "summary": "Rolled out the moderator location maintenance workspace",
+    "details": "Moderators and admins can open the Location Maintenance page from the player menu to browse the world graph, edit location metadata, and manage relationships via the location API without feature flags.",
+    "type": "feature"
+  },
+  {
     "id": "2025-11-13-llm-proxy-typed-client",
     "releasedAt": "2025-11-13",
     "summary": "Stabilized LLM proxy requests",

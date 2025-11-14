@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b --clean",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run"

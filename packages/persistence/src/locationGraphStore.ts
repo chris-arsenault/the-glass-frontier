@@ -1,4 +1,5 @@
 import type {
+  LocationEdgeKind,
   LocationGraphSnapshot,
   LocationPlan,
   LocationPlace,
@@ -43,6 +44,30 @@ export type LocationGraphStore = {
     tags?: string[];
     description?: string;
   }) => Promise<LocationPlace>;
+
+  updatePlace: (input: {
+    placeId: string;
+    name?: string;
+    kind?: string;
+    description?: string | null;
+    tags?: string[];
+    canonicalParentId?: string | null;
+  }) => Promise<LocationPlace>;
+
+  addEdge: (input: {
+    locationId: string;
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
+
+  removeEdge: (input: {
+    locationId: string;
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+  }) => Promise<void>;
 
   createLocationChain: (input: {
     parentId?: string | null;

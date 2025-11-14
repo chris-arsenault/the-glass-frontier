@@ -8,7 +8,7 @@ export const LocationPlace = z.object({
     .number()
     .int()
     .nonnegative()
-    .default(() => Date.now()),
+    .default(Date.now()),
   description: z.string().optional(),
   id: z.string().min(1),
   kind: z.string().min(1),
@@ -16,6 +16,11 @@ export const LocationPlace = z.object({
   metadata: Metadata.optional(),
   name: z.string().min(1),
   tags: z.array(z.string()).default([]),
+  updatedAt: z
+    .number()
+    .int()
+    .nonnegative()
+    .default(Date.now()),
 });
 
 export type LocationPlace = z.infer<typeof LocationPlace>;
