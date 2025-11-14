@@ -1,25 +1,43 @@
 import type { Intent } from '@glass-frontier/dto';
 import { Attribute } from '@glass-frontier/dto';
+import { IntentType as IntentTypeSchema } from '@glass-frontier/dto';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types.js';
+import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeIntentPrompt } from '../prompts/prompts';
 
-const BeatDirectiveSchema = z.object({
-  kind: z.enum(['independent', 'existing', 'new']).optional(),
-  summary: z.string().optional(),
-  targetBeatId: z.string().nullable().optional(),
-});
-
 const IntentResponseSchema = z.object({
-  attribute: z.string().optional(),
-  beatDirective: BeatDirectiveSchema.optional(),
-  creativeSpark: z.boolean().optional(),
-  intentSummary: z.string().optional(),
-  requiresCheck: z.boolean().optional(),
-  skill: z.string().optional(),
-  tone: z.string().optional(),
+  creativeSpark: z
+    .boolean()
+    .describe('True when the player intent expresses improvisational or imaginative action.'),
+  handlerHints: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .describe('Lowercase hint that nudges downstream narration (e.g., "whispered").')
+    )
+    .describe('Ordered list of handler hints; emit an empty array when none apply.'),
+  intentSummary: z
+    .string()
+    .min(1)
+    .describe('Concise paraphrase of the player’s request (≤ 140 characters).'),
+  intentType: IntentTypeSchema.describe('One of the canonical Glass Frontier intent types.'),
+  requiresCheck: z
+    .boolean()
+    .describe('True when the move is risky, contested, or otherwise requires a skill check.'),
+  routerConfidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe('Float between 0-1 capturing classifier confidence in the chosen intent type.'),
+  routerRationale: z
+    .string()
+    .min(1)
+    .describe('Single sentence explaining why the classification was chosen.'),
+  tone: z.string().min(1).describe('Narrative tone adjective grounded in the current scene.'),
 });
 
 type IntentResponse = z.infer<typeof IntentResponseSchema>;
@@ -27,6 +45,16 @@ type IntentResponse = z.infer<typeof IntentResponseSchema>;
 const DEFAULT_SKILL = 'talk';
 const DEFAULT_TONE = 'narrative';
 const DEFAULT_ATTRIBUTE = Attribute.options[0];
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+const INTENT_RESPONSE_FORMAT = zodTextFormat(IntentResponseSchema, 'intent_intake_response');
+const INTENT_TEXT_SETTINGS = {
+  format: INTENT_RESPONSE_FORMAT,
+  verbosity: 'low' as const,
+};
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 class IntentIntakeNode implements GraphNode {
   readonly id = 'intent-intake';
@@ -49,11 +77,20 @@ class IntentIntakeNode implements GraphNode {
       return { ...context, failure: true };
     }
 
-    const playerIntent = this.#buildIntent(context, response, content);
+    const playerIntent = this.#buildIntent(response, content);
+    const resolvedIntentType =
+      this.#normalizeIntentType(playerIntent.intentType) ?? ('action' as Intent['intentType']);
+    const resolvedConfidence = this.#normalizeConfidence(response.routerConfidence);
 
     return {
       ...context,
-      playerIntent,
+      playerIntent: {
+        ...playerIntent,
+        intentType: resolvedIntentType,
+        routerConfidence: resolvedConfidence,
+      },
+      resolvedIntentConfidence: resolvedConfidence ?? context.resolvedIntentConfidence,
+      resolvedIntentType,
     };
   }
 
@@ -69,14 +106,17 @@ class IntentIntakeNode implements GraphNode {
     prompt: string
   ): Promise<IntentResponse | null> {
     try {
-      const result = await context.llm.generateJson({
+      const classifier = resolveClassifierLlm(context);
+      const result = await classifier.generateJson({
         maxTokens: 500,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.1,
+        text: INTENT_TEXT_SETTINGS,
       });
       const parsed = IntentResponseSchema.safeParse(result.json);
-      return parsed.success ? parsed.data : {};
+      return parsed.success ? parsed.data : null;
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
@@ -89,30 +129,33 @@ class IntentIntakeNode implements GraphNode {
     }
   }
 
-  #buildIntent(context: GraphContext, response: IntentResponse, message: string): Intent {
+  #buildIntent(response: IntentResponse, message: string): Intent {
     const tone = this.#normalizeString(response.tone) ?? DEFAULT_TONE;
-    const skill = this.#normalizeString(response.skill) ?? DEFAULT_SKILL;
     const requiresCheck = response.requiresCheck ?? false;
     const creativeSpark = response.creativeSpark ?? false;
     const intentSummary = this.#deriveSummary(response.intentSummary, message);
-    const attribute = this.#deriveAttribute(context, skill, response.attribute);
+    const handlerHints = this.#normalizeStringArray(response.handlerHints);
 
     return {
-      attribute,
-      beatDirective: this.#buildBeatDirective(context, response.beatDirective),
+      attribute: DEFAULT_ATTRIBUTE,
+      beatDirective: undefined,
       creativeSpark,
+      handlerHints: handlerHints ?? undefined,
       intentSummary,
+      intentType: this.#normalizeIntentType(response.intentType),
       metadata: {
         tags: [],
         timestamp: Date.now(),
       },
       requiresCheck,
-      skill,
+      routerConfidence: this.#normalizeConfidence(response.routerConfidence),
+      routerRationale: this.#normalizeString(response.routerRationale) ?? undefined,
+      skill: DEFAULT_SKILL,
       tone,
     };
   }
 
-  #deriveSummary(override: string | undefined, message: string): string {
+  #deriveSummary(override: string, message: string): string {
     const normalized = this.#normalizeString(override);
     if (normalized !== null) {
       return normalized;
@@ -124,14 +167,6 @@ class IntentIntakeNode implements GraphNode {
     return trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed;
   }
 
-  #deriveAttribute(context: GraphContext, skill: string, override?: string): string {
-    return (
-      this.#attributeFromSkill(context, skill) ??
-      this.#attributeFromOverride(override) ??
-      DEFAULT_ATTRIBUTE
-    );
-  }
-
   #normalizeString(value?: string | null): string | null {
     if (typeof value === 'string') {
       const trimmed = value.trim();
@@ -140,90 +175,41 @@ class IntentIntakeNode implements GraphNode {
     return null;
   }
 
-  #attributeFromSkill(context: GraphContext, skill: string): string | null {
-    const skills = context.chronicle.character?.skills;
-    if (skills === undefined || skills === null) {
-      return null;
-    }
-
-    for (const [name, entry] of Object.entries(skills)) {
-      if (name !== skill) {
-        continue;
-      }
-      if (entry === undefined || entry === null) {
-        continue;
-      }
-      if (typeof entry.attribute !== 'string') {
-        continue;
-      }
-
-      const trimmed = entry.attribute.trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
-    }
-
-    return null;
-  }
-
-  #attributeFromOverride(value?: string): string | null {
-    const candidate = this.#normalizeString(value);
-    if (candidate === null) {
-      return null;
-    }
-    return Attribute.safeParse(candidate).success ? candidate : null;
-  }
-
-  #buildBeatDirective(
-    context: GraphContext,
-    directive?: z.infer<typeof BeatDirectiveSchema> | null
-  ): Intent['beatDirective'] | undefined {
-    if (directive === undefined || directive === null || directive.kind === undefined) {
+  #normalizeConfidence(value?: number): number | undefined {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
       return undefined;
     }
-    const kind = this.#normalizeBeatDirectiveKind(directive.kind);
-    if (kind === null) {
-      return undefined;
+    if (value < 0) {
+      return 0;
     }
-    const summary = this.#normalizeString(directive.summary) ?? undefined;
-    if (kind === 'existing') {
-      const beatId = this.#normalizeBeatId(context, directive.targetBeatId);
-      if (beatId === null) {
-        return undefined;
-      }
-      return { kind, summary, targetBeatId: beatId };
+    if (value > 1) {
+      return 1;
     }
-    return { kind, summary };
+    return value;
   }
 
-  #normalizeBeatDirectiveKind(
-    value?: z.infer<typeof BeatDirectiveSchema>['kind']
-  ): 'existing' | 'new' | 'independent' | null {
-    if (value === 'existing' || value === 'new' || value === 'independent') {
+  #normalizeStringArray(values?: string[] | null): string[] | null {
+    if (!Array.isArray(values)) {
+      return null;
+    }
+    const normalized = values
+      .map((entry) => this.#normalizeString(entry))
+      .filter((entry): entry is string => entry !== null);
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  #normalizeIntentType(value?: Intent['intentType'] | null): Intent['intentType'] | undefined {
+    if (
+      value === 'action' ||
+      value === 'inquiry' ||
+      value === 'clarification' ||
+      value === 'possibility' ||
+      value === 'planning' ||
+      value === 'reflection'
+    ) {
       return value;
     }
-    return null;
-  }
-
-  #normalizeBeatId(context: GraphContext, candidate?: string | null): string | null {
-    const normalized = this.#normalizeString(candidate);
-    if (normalized === null) {
-      return null;
-    }
-    const openIds = this.#getOpenBeatIds(context);
-    return openIds.has(normalized) ? normalized : null;
-  }
-
-  #getOpenBeatIds(context: GraphContext): Set<string> {
-    const beats = context.chronicle.chronicle?.beats;
-    if (!Array.isArray(beats) || beats.length === 0) {
-      return new Set();
-    }
-    const ids = beats
-      .filter((beat) => beat?.status === 'in_progress')
-      .map((beat) => beat?.id)
-      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
-    return new Set(ids);
+    return undefined;
   }
 }
 

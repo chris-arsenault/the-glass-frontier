@@ -7,17 +7,36 @@ import {
 } from '@glass-frontier/dto';
 import type { LocationGraphStore } from '@glass-frontier/persistence';
 import { log } from '@glass-frontier/utils';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types';
+import type { GraphContext, LangGraphLlmLike } from '../../types';
 import type { GraphNode } from '../orchestrator';
 import { composeLocationDeltaPrompt } from '../prompts/prompts';
 
 const decisionSchema = z.object({
-  action: z.enum(['no_change', 'move', 'uncertain']),
-  destination: z.string().min(1),
-  link: z.enum(['same', 'adjacent', 'inside', 'linked']),
+  action: z
+    .enum(['no_change', 'move', 'uncertain'])
+    .describe('Whether to stay put, move to a specific place, or flag uncertainty.'),
+  destination: z
+    .string()
+    .min(1)
+    .describe('Name of the destination or best-known container.'),
+  link: z
+    .enum(['same', 'adjacent', 'inside', 'linked'])
+    .describe('How the destination relates to the current anchor.'),
 });
+
+const LOCATION_DECISION_FORMAT = zodTextFormat(decisionSchema, 'location_delta_decision');
+const LOCATION_DECISION_TEXT = {
+  format: LOCATION_DECISION_FORMAT,
+  verbosity: 'low' as const,
+};
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 const MAX_CHILDREN = 25;
 const MAX_NEIGHBORS = 25;
@@ -63,11 +82,7 @@ export class LocationDeltaNode implements GraphNode {
   async execute(context: GraphContext): Promise<GraphContext> {
     const gmMessageContent = context.gmMessage?.content;
     const characterId = context.chronicle.character?.id;
-    if (
-      context.failure === true ||
-      !isNonEmptyString(gmMessageContent) ||
-      !isNonEmptyString(characterId)
-    ) {
+    if (!this.#isRunnable(context, gmMessageContent, characterId)) {
       return context;
     }
 
@@ -205,23 +220,32 @@ export class LocationDeltaNode implements GraphNode {
     locationId: string,
     prompt: string
   ): Promise<Decision | null> {
-    const llmResult = await context.llm.generateText({
-      maxTokens: 400,
-      metadata: { chronicleId: context.chronicleId, nodeId: this.id },
-      prompt,
-      temperature: 0.1,
-    });
-    const raw = (llmResult.text ?? '').trim();
-    if (raw.length === 0) {
-      return null;
-    }
+    const classifier = resolveClassifierLlm(context);
     try {
-      return decisionSchema.parse(JSON.parse(extractJsonLine(raw)));
+      const llmResult = await classifier.generateJson({
+        maxTokens: 400,
+        metadata: { chronicleId: context.chronicleId, nodeId: this.id },
+        prompt,
+        reasoning: CLASSIFIER_REASONING.reasoning,
+        temperature: 0.1,
+        text: LOCATION_DECISION_TEXT,
+      });
+      const parsed = decisionSchema.safeParse(llmResult.json);
+      if (!parsed.success) {
+        log('warn', 'location-delta-node.invalid-json', {
+          chronicleId: context.chronicleId,
+          locationId,
+          payload: llmResult.json,
+          reason: 'schema_parse_failed',
+        });
+        return null;
+      }
+      return parsed.data;
     } catch (error) {
       log('warn', 'location-delta-node.invalid-json', {
         chronicleId: context.chronicleId,
         locationId,
-        payload: raw,
+        payload: 'structured_output_failure',
         reason: error instanceof Error ? error.message : 'unknown',
       });
       return null;
@@ -376,6 +400,24 @@ export class LocationDeltaNode implements GraphNode {
       break;
     }
   }
+
+  #shouldApplyDelta(context: GraphContext): boolean {
+    const type = context.resolvedIntentType ?? context.playerIntent?.intentType;
+    return type === 'action' || type === 'planning';
+  }
+
+  #isRunnable(
+    context: GraphContext,
+    gmMessageContent?: string | null,
+    characterId?: string | null
+  ): boolean {
+    return (
+      context.failure !== true &&
+      this.#shouldApplyDelta(context) &&
+      isNonEmptyString(gmMessageContent) &&
+      isNonEmptyString(characterId)
+    );
+  }
 }
 
 function collectNeighborNames(
@@ -441,13 +483,4 @@ function inferKind(link: Decision['link']): string {
   default:
     return 'locale';
   }
-}
-
-function extractJsonLine(raw: string): string {
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    return raw;
-  }
-  return raw.slice(start, end + 1);
 }

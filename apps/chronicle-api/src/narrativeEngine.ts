@@ -23,13 +23,20 @@ import { randomUUID } from 'node:crypto';
 
 import { ChronicleClosureEmitter, type ChronicleClosurePublisher } from './closureEmitter';
 import {
+  ActionResolverNode,
+  BeatDetectorNode,
   BeatTrackerNode,
   CheckPlannerNode,
+  ClarificationResponderNode,
   GmSummaryNode,
   IntentIntakeNode,
+  InquiryResponderNode,
   InventoryDeltaNode,
   LocationDeltaNode,
-  NarrativeWeaverNode,
+  PlanningNarratorNode,
+  PossibilityAdvisorNode,
+  ReflectionWeaverNode,
+  SkillDetectorNode,
   UpdateCharacterNode,
 } from './langGraph/nodes';
 import { LangGraphOrchestrator } from './langGraph/orchestrator';
@@ -135,9 +142,17 @@ class NarrativeEngine {
     return { chronicleStatus, locationSummary, turn, updatedCharacter };
   }
 
-  private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
+  private createLlmClient(
+    authorizationHeader?: string,
+    options?: { model?: string }
+  ): LangGraphLlmClient {
     if (!isNonEmptyString(authorizationHeader)) {
-      return this.defaultLlm;
+      if (options?.model === undefined) {
+        return this.defaultLlm;
+      }
+      return new LangGraphLlmClient({
+        model: options.model,
+      });
     }
     const headerValue = authorizationHeader.trim();
 
@@ -146,6 +161,7 @@ class NarrativeEngine {
         authorization: headerValue,
         'content-type': 'application/json',
       },
+      model: options?.model,
     });
   }
 
@@ -182,11 +198,41 @@ class NarrativeEngine {
   }
 
   #createGraph(): LangGraphOrchestrator {
+    const actionResolver = new ActionResolverNode();
+    const beatDetector = new BeatDetectorNode();
+    const skillDetector = new SkillDetectorNode();
+    const inquiryResponder = new InquiryResponderNode();
+    const clarificationResponder = new ClarificationResponderNode();
+    const possibilityAdvisor = new PossibilityAdvisorNode();
+    const planningNarrator = new PlanningNarratorNode();
+    const reflectionWeaver = new ReflectionWeaverNode();
+    const handlerNodes = [
+      actionResolver,
+      inquiryResponder,
+      clarificationResponder,
+      possibilityAdvisor,
+      planningNarrator,
+      reflectionWeaver,
+    ];
     return new LangGraphOrchestrator(
       [
-        new IntentIntakeNode(),
-        new CheckPlannerNode(),
-        new NarrativeWeaverNode(),
+        {
+          next: [beatDetector.id, skillDetector.id],
+          node: new IntentIntakeNode(),
+        },
+        beatDetector,
+        {
+          next: ['check-planner'],
+          node: skillDetector,
+        },
+        {
+          next: handlerNodes.map((node) => node.id),
+          node: new CheckPlannerNode(),
+        },
+        ...handlerNodes.map((node) => ({
+          next: ['location-delta'],
+          node,
+        })),
         new LocationDeltaNode(this.locationGraphStore),
         new GmSummaryNode(),
         new BeatTrackerNode(this.worldStateStore),
@@ -250,23 +296,50 @@ class NarrativeEngine {
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
   }): GraphContext {
+    const llmResolver = this.#createLlmResolver(authorizationHeader);
     return {
+      advancesTimeline: false,
       beatDelta: null,
       chronicle: chronicleState,
       chronicleId,
       chronicleShouldClose: false,
+      executedNodes: [],
       failure: false,
       gmTrace: null,
+      handlerId: undefined,
       inventoryDelta: null,
       inventoryPreview: null,
       inventoryRegistry: null,
       inventoryStoreDelta: null,
-      llm: this.createLlmClient(authorizationHeader),
+      llm: llmResolver(''),
+      llmResolver,
       pendingEquip: pendingEquip ?? [],
       playerMessage,
+      resolvedIntentConfidence: undefined,
+      resolvedIntentType: undefined,
       telemetry: this.telemetry,
       templates: templateRuntime,
       turnSequence,
+      worldDeltaTags: [],
+    };
+  }
+
+  #createLlmResolver(
+    authorizationHeader?: string
+  ): (model: string) => LangGraphLlmClient {
+    const cache = new Map<string, LangGraphLlmClient>();
+    return (model: string) => {
+      const key = typeof model === 'string' && model.length > 0 ? model : 'default';
+      const existing = cache.get(key);
+      if (existing !== undefined) {
+        return existing;
+      }
+      const client =
+        key === 'default'
+          ? this.createLlmClient(authorizationHeader)
+          : this.createLlmClient(authorizationHeader, { model });
+      cache.set(key, client);
+      return client;
     };
   }
 
@@ -318,20 +391,26 @@ class NarrativeEngine {
     const combinedSystemMessage = systemMessage ?? graphResult.systemMessage;
     const failure = Boolean(graphResult.failure || combinedSystemMessage);
     return {
+      advancesTimeline: graphResult.advancesTimeline,
       beatDelta: graphResult.beatDelta ?? undefined,
       chronicleId,
+      executedNodes: graphResult.executedNodes ?? undefined,
       failure,
       gmMessage: graphResult.gmMessage,
       gmSummary: graphResult.gmSummary,
       gmTrace: graphResult.gmTrace ?? undefined,
+      handlerId: graphResult.handlerId,
       id: randomUUID(),
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
       playerIntent: graphResult.playerIntent,
       playerMessage,
+      resolvedIntentConfidence: graphResult.resolvedIntentConfidence,
+      resolvedIntentType: graphResult.resolvedIntentType ?? graphResult.playerIntent?.intentType,
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage: combinedSystemMessage,
       turnSequence,
+      worldDeltaTags: graphResult.worldDeltaTags ?? undefined,
     };
   }
 

@@ -1,7 +1,6 @@
 import {
   AUDIT_REVIEW_STATUSES,
   AUDIT_REVIEW_TAGS,
-  PLAYER_FEEDBACK_SENTIMENTS,
   AuditLogEntrySchema,
   AuditProposalRecordSchema,
   AuditReviewRecordSchema,
@@ -20,12 +19,12 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 
 import type { Context } from './context';
+import { submitPlayerFeedbackInput } from './schemas/submitPlayerFeedback';
 
 const t = initTRPC.context<Context>().create();
 const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
 const auditStatusSchema = z.enum(AUDIT_REVIEW_STATUSES);
 const auditTagSchema = z.enum(AUDIT_REVIEW_TAGS);
-const feedbackSentimentSchema = z.enum(PLAYER_FEEDBACK_SENTIMENTS);
 
 const listAuditQueueInput = z.object({
   cursor: z.string().optional(),
@@ -49,18 +48,6 @@ const saveAuditReviewInput = z.object({
   storageKey: z.string().min(1),
   tags: z.array(auditTagSchema).default([]),
   templateId: templateIdSchema.optional(),
-});
-
-const submitPlayerFeedbackInput = z.object({
-  auditId: z.string().min(1),
-  chronicleId: z.string().min(1),
-  comment: z.string().max(2000).optional(),
-  gmEntryId: z.string().min(1),
-  playerId: z.string().optional(),
-  playerLoginId: z.string().min(1),
-  sentiment: feedbackSentimentSchema,
-  turnId: z.string().min(1),
-  turnSequence: z.number().int().nonnegative(),
 });
 
 const getSeverityWeight = (severity: AuditReviewSeverity): number => {
@@ -484,6 +471,13 @@ export const promptRouter = t.router({
         auditId: input.auditId,
         chronicleId: input.chronicleId,
         comment: normalizeString(input.comment),
+        expectedIntentType: input.expectedIntentType ?? null,
+        expectedInventoryDelta: input.expectedInventoryDelta ?? null,
+        expectedInventoryNotes: normalizeString(input.expectedInventoryNotes),
+        expectedLocationChange: input.expectedLocationChange ?? null,
+        expectedLocationNotes: normalizeString(input.expectedLocationNotes),
+        expectedSkillCheck: input.expectedSkillCheck ?? null,
+        expectedSkillNotes: normalizeString(input.expectedSkillNotes),
         gmEntryId: input.gmEntryId,
         playerId: normalizeString(input.playerId),
         playerLoginId: input.playerLoginId,

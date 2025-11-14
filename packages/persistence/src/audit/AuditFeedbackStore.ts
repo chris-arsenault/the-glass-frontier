@@ -1,4 +1,4 @@
-import type { PlayerFeedbackRecord, PlayerFeedbackSentiment } from '@glass-frontier/dto';
+import type { Intent, PlayerFeedbackRecord, PlayerFeedbackSentiment } from '@glass-frontier/dto';
 import { PlayerFeedbackRecordSchema } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 
@@ -11,6 +11,13 @@ export type SaveFeedbackPayload = {
   auditId: string;
   chronicleId: string;
   comment?: string | null;
+  expectedIntentType?: Intent['intentType'] | null;
+  expectedInventoryDelta?: boolean | null;
+  expectedInventoryNotes?: string | null;
+  expectedLocationChange?: boolean | null;
+  expectedLocationNotes?: string | null;
+  expectedSkillCheck?: boolean | null;
+  expectedSkillNotes?: string | null;
   gmEntryId: string;
   playerId?: string | null;
   playerLoginId: string;
@@ -36,6 +43,13 @@ export class AuditFeedbackStore extends HybridObjectStore {
       chronicleId: payload.chronicleId,
       comment: payload.comment ?? null,
       createdAt: now,
+      expectedIntentType: payload.expectedIntentType ?? null,
+      expectedInventoryDelta: payload.expectedInventoryDelta ?? null,
+      expectedInventoryNotes: payload.expectedInventoryNotes ?? null,
+      expectedLocationChange: payload.expectedLocationChange ?? null,
+      expectedLocationNotes: payload.expectedLocationNotes ?? null,
+      expectedSkillCheck: payload.expectedSkillCheck ?? null,
+      expectedSkillNotes: payload.expectedSkillNotes ?? null,
       gmEntryId: payload.gmEntryId,
       id,
       metadata: undefined,

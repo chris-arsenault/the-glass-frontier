@@ -2,18 +2,40 @@ import { RiskLevel as RiskLevelSchema } from '@glass-frontier/dto';
 import type { SkillCheckPlan, SkillCheckRequest, RiskLevel } from '@glass-frontier/dto';
 import { SkillCheckResolver } from '@glass-frontier/skill-check-resolver';
 import { randomUUID } from 'node:crypto';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types.js';
-import type { GraphNode } from '../orchestrator.js';
+import type { GraphContext, LangGraphLlmLike } from '../../types.js';
+import type { GraphNode, GraphNodeResult } from '../orchestrator.js';
 import { composeCheckRulesPrompt } from '../prompts/prompts';
 
 const PlannerPlanSchema = z.object({
-  advantage: z.string().optional(),
-  complicationSeeds: z.array(z.string()).optional(),
-  rationale: z.union([z.string(), z.array(z.string())]).optional(),
-  riskLevel: RiskLevelSchema.optional(),
+  advantage: z
+    .enum(['advantage', 'disadvantage', 'none'])
+    .describe('Check framing: advantage, disadvantage, or none.'),
+  complicationSeeds: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .describe('≤ 90 char hook showing what failure/partial success might introduce.')
+    )
+    .min(1)
+    .describe('List of at least two complication hooks that may appear on failure.'),
+  rationale: z
+    .string()
+    .min(1)
+    .describe('One sentence explaining why this action requires a check.'),
+  riskLevel: RiskLevelSchema.describe('Overall risk posture for this move.'),
 });
+
+const CHECK_PLANNER_FORMAT = zodTextFormat(PlannerPlanSchema, 'check_planner_response');
+const CHECK_PLANNER_TEXT = {
+  format: CHECK_PLANNER_FORMAT,
+  verbosity: 'low' as const,
+};
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
 
 type PlannerPlanFields = z.infer<typeof PlannerPlanSchema>;
 
@@ -31,53 +53,38 @@ const FALLBACK_PLAN: PlannerPlan = {
   riskLevel: 'standard',
 };
 
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
+
 class CheckPlannerNode implements GraphNode {
   readonly id = 'check-planner';
 
-  async execute(context: GraphContext): Promise<GraphContext> {
+  async execute(context: GraphContext): Promise<GraphNodeResult> {
     if (context.failure) {
       this.#recordNotRun(context);
       return { ...context, failure: true };
     }
 
-    if (
-      context.playerIntent === undefined ||
-      context.playerIntent.requiresCheck !== true ||
-      context.chronicle.character === undefined ||
-      context.chronicle.character === null
-    ) {
-      return { ...context, skillCheckResult: undefined };
+    const handlerTarget = this.#resolveHandlerForIntent(context);
+    const nextTargets = this.#buildNextTargets(handlerTarget);
+    if (!this.#isEligibleForPlanning(context)) {
+      return {
+        context: { ...context, skillCheckPlan: undefined, skillCheckResult: undefined },
+        next: nextTargets,
+      };
     }
 
-    const prompt = await composeCheckRulesPrompt(
-      context.playerIntent,
-      context.chronicle,
-      context.templates
-    );
-
-    const playerIntent = context.playerIntent;
-    const character = context.chronicle.character;
-
-    const overrides = await this.#requestPlan(context, prompt);
-    if (overrides === null) {
+    const planningOutcome = await this.#planSkillCheck(context);
+    if (planningOutcome === null) {
       return { ...context, failure: true };
     }
 
-    const plan = this.#mergePlan(overrides);
-    const skillCheckPlan = this.#toSkillCheckPlan(plan);
-    const flags = this.#buildFlags(playerIntent, plan.advantage);
-    const skillCheckResult = this.#resolveSkillCheck({
-      character,
-      context,
-      flags,
-      playerIntent,
-      riskLevel: plan.riskLevel,
-    });
-
     return {
-      ...context,
-      skillCheckPlan,
-      skillCheckResult,
+      context: {
+        ...context,
+        ...planningOutcome,
+      },
+      next: nextTargets,
     };
   }
 
@@ -92,15 +99,18 @@ class CheckPlannerNode implements GraphNode {
     context: GraphContext,
     prompt: string
   ): Promise<PlannerPlanFields | null> {
+    const classifier = resolveClassifierLlm(context);
     try {
-      const result = await context.llm.generateJson({
+      const result = await classifier.generateJson({
         maxTokens: 700,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.25,
+        text: CHECK_PLANNER_TEXT,
       });
       const parsed = PlannerPlanSchema.safeParse(result.json);
-      return parsed.success ? parsed.data : {};
+      return parsed.success ? parsed.data : null;
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
@@ -206,6 +216,79 @@ class CheckPlannerNode implements GraphNode {
       }
     }
     return null;
+  }
+
+  #shouldPlanCheck(context: GraphContext): boolean {
+    const type = this.#resolveIntentType(context);
+    if (type === 'action' || type === 'planning') {
+      return context.playerIntent?.requiresCheck === true;
+    }
+    return false;
+  }
+
+  #resolveIntentType(context: GraphContext): NonNullable<GraphContext['resolvedIntentType']> {
+    return context.resolvedIntentType ?? context.playerIntent?.intentType ?? 'action';
+  }
+
+  #resolveHandlerForIntent(context: GraphContext): string | undefined {
+    const type = this.#resolveIntentType(context);
+    if (type === 'inquiry') {
+      return 'inquiry-responder';
+    }
+    if (type === 'clarification') {
+      return 'clarification-responder';
+    }
+    if (type === 'possibility') {
+      return 'possibility-advisor';
+    }
+    if (type === 'planning') {
+      return 'planning-narrator';
+    }
+    if (type === 'reflection') {
+      return 'reflection-weaver';
+    }
+    return 'action-resolver';
+  }
+
+  #buildNextTargets(handlerId?: string): string[] | undefined {
+    return handlerId === undefined ? undefined : [handlerId];
+  }
+
+  #isEligibleForPlanning(context: GraphContext): boolean {
+    return (
+      context.playerIntent !== undefined &&
+      context.chronicle.character !== undefined &&
+      context.chronicle.character !== null &&
+      this.#shouldPlanCheck(context)
+    );
+  }
+
+  async #planSkillCheck(context: GraphContext): Promise<{
+    skillCheckPlan: SkillCheckPlan;
+    skillCheckResult: ReturnType<SkillCheckResolver['resolveRequest']>;
+  } | null> {
+    const prompt = await composeCheckRulesPrompt(
+      context.playerIntent!,
+      context.chronicle,
+      context.templates
+    );
+
+    const overrides = await this.#requestPlan(context, prompt);
+    if (overrides === null) {
+      return null;
+    }
+
+    const plan = this.#mergePlan(overrides);
+    const skillCheckPlan = this.#toSkillCheckPlan(plan);
+    const flags = this.#buildFlags(context.playerIntent!, plan.advantage);
+    const skillCheckResult = this.#resolveSkillCheck({
+      character: context.chronicle.character!,
+      context,
+      flags,
+      playerIntent: context.playerIntent!,
+      riskLevel: plan.riskLevel,
+    });
+    return { skillCheckPlan, skillCheckResult };
   }
 }
 

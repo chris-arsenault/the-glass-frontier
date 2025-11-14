@@ -560,20 +560,83 @@ const ReviewDialog = ({
           </div>
           {hasFeedback ? (
             <ul className="audit-feedback-list">
-              {feedbackEntries.map((entry) => (
-                <li key={entry.id} className="audit-feedback-item">
-                  <div className="audit-feedback-meta">
-                    <span className={`audit-chip sentiment-${entry.sentiment}`}>
-                      {entry.sentiment}
-                    </span>
-                    <span>{entry.playerLoginId}</span>
-                    <span>{formatFeedbackTimestamp(entry.createdAt)}</span>
-                  </div>
-                  <p className="audit-feedback-comment">
-                    {entry.comment?.trim().length ? entry.comment : 'No additional context provided.'}
-                  </p>
-                </li>
-              ))}
+              {feedbackEntries.map((entry) => {
+                const hasSkillExpectation =
+                  entry.expectedSkillCheck !== null && entry.expectedSkillCheck !== undefined;
+                const hasLocationExpectation =
+                  entry.expectedLocationChange !== null && entry.expectedLocationChange !== undefined;
+                const hasInventoryExpectation =
+                  entry.expectedInventoryDelta !== null && entry.expectedInventoryDelta !== undefined;
+                const hasSkillNotes = Boolean(entry.expectedSkillNotes?.trim().length);
+                const hasLocationNotes = Boolean(entry.expectedLocationNotes?.trim().length);
+                const hasInventoryNotes = Boolean(entry.expectedInventoryNotes?.trim().length);
+                const showExpectations = Boolean(
+                  entry.expectedIntentType ||
+                    hasSkillExpectation ||
+                    hasLocationExpectation ||
+                    hasInventoryExpectation ||
+                    hasSkillNotes ||
+                    hasLocationNotes ||
+                    hasInventoryNotes
+                );
+                return (
+                  <li key={entry.id} className="audit-feedback-item">
+                    <div className="audit-feedback-meta">
+                      <span className={`audit-chip sentiment-${entry.sentiment}`}>
+                        {entry.sentiment}
+                      </span>
+                      <span>{entry.playerLoginId}</span>
+                      <span>{formatFeedbackTimestamp(entry.createdAt)}</span>
+                    </div>
+                    {showExpectations ? (
+                      <div className="audit-feedback-expectations">
+                        {entry.expectedIntentType ? (
+                          <div className="audit-feedback-expectation-row">
+                            <span>Expected intent type</span>
+                            <strong>{entry.expectedIntentType}</strong>
+                          </div>
+                        ) : null}
+                        {hasSkillExpectation ? (
+                          <div className="audit-feedback-expectation-row">
+                            <span>Expected skill check</span>
+                            <strong>{entry.expectedSkillCheck ? 'True' : 'False'}</strong>
+                            {hasSkillNotes ? (
+                              <p className="audit-feedback-note">
+                                {entry.expectedSkillNotes}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {hasLocationExpectation ? (
+                          <div className="audit-feedback-expectation-row">
+                            <span>Expected location change</span>
+                            <strong>{entry.expectedLocationChange ? 'True' : 'False'}</strong>
+                            {hasLocationNotes ? (
+                              <p className="audit-feedback-note">
+                                {entry.expectedLocationNotes}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {hasInventoryExpectation ? (
+                          <div className="audit-feedback-expectation-row">
+                            <span>Expected inventory delta</span>
+                            <strong>{entry.expectedInventoryDelta ? 'True' : 'False'}</strong>
+                            {hasInventoryNotes ? (
+                              <p className="audit-feedback-note">
+                                {entry.expectedInventoryNotes}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <p className="audit-feedback-comment">
+                      {entry.comment?.trim().length ? entry.comment : 'No additional context provided.'}
+                    </p>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="audit-placeholder">No player feedback has been recorded for this response.</p>

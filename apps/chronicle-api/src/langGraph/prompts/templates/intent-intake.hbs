@@ -1,58 +1,30 @@
 {{promptHeader}}
 
-## Task
-Analyze the player's utterance. Decide tone, pick the most relevant skill, decide if a skill
-check is required, choose the governing attribute, summarize the intent, and classify how the turn
-relates to current chronicle beats.
+## Mission
+Always return the single best interpretation of the player’s utterance. Classify it into one of the
+canonical GM intent types, capture mechanical metadata, and describe how it touches the long-term
+beats. Your output powers downstream nodes directly—do not hedge, and do not emit prose.
 
 ## Player Utterance
 """{{playerMessage}}"""
 
-## Context Snapshot
+## Chronicle Snapshot
 - Character: {{characterName}}
 - Tags: {{characterTags}}
 - Known skills: {{skillsLine}}
-- Location: {{locale}}
+- Locale: {{locale}}
 - Active beats ({{totalBeatCount}}):
 {{beatsSection}}
 
-## Beat Awareness
-- Chronicle beats are multi-turn objectives. Refer to them when relevant, not for momentary tasks.
-- If the player is clearly advancing one of the listed beats, reference its `id`.
-- If they pitch a new long-horizon objective, mark the directive as `new`.
-- If their action stands apart, classify as `independent`.
-- When no beats exist, you **must** start one by setting the directive to `new`.
+## Intent Types
+| Type | When to use | Timeline effect |
+| --- | --- | --- |
+| `action` | Player is attempting to change the fiction through a concrete verb. | Advances time and can apply world deltas. |
+| `inquiry` | Player is requesting sensory detail or situational awareness. | Descriptive only, no time shift. |
+| `clarification` | Player is confirming a fact or correcting memory. | One-line factual response. |
+| `possibility` | Player is exploring hypothetical options or constraints. | Advisory answer, no resolution. |
+| `planning` | Player is preparing, regrouping, or traveling between beats. | May advance time with minor deltas. |
+| `reflection` | Player is expressing internal thoughts or emotions. | Purely introspective, no deltas. |
 
-## Decision Rules
-- Prefer an existing skill from the *Known skills* list if it fits semantically.
-- If no existing skill fits, create a concise new skill name.
-- Choose exactly one attribute from this list: {{attributeList}}.
-- `requiresCheck` should be **true** only when the player attempts something hard, novel, risky,
-  contested, or dramatically impactful. This should be uncommon but not rare.
-  Examples of **check-worthy**: high stakes, uncertain outcome, opposition, scarce-resource use,
-  significant world change, cinematic gambit.
-- Otherwise set `requiresCheck: false`.
-
-## Output Format
-Return **only** strict JSON with exactly these keys:
-{
-  "tone": string,
-  "skill": string,               // existing if possible, else new concise name
-  "requiresCheck": boolean,
-  "attribute": string,           // one of: {{attributeQuotedList}}
-  "intentSummary": string,
-  "creativeSpark": boolean,      // true if especially stylish/clever/cinematic
-  "beatDirective": {
-    "kind": "existing" | "new" | "independent",
-    "targetBeatId": string | null, // required when kind === "existing"
-    "summary": string              // short reason for the classification
-  }
-}
-Do not include markdown, commentary, or extra keys.
-
-## Mini-Examples
-- Low-stakes info ask → requiresCheck: false.
-- Bold stunt or contested action → requiresCheck: true, pick fitting attribute (e.g., "finesse" for
-  acrobatics, "resolve" for intimidation, "attunement" for spellcasting).
-- Referencing a listed beat explicitly → `beatDirective.kind = "existing"` with that beat id.
-- Pitching a brand-new plotline → `beatDirective.kind = "new"`.
+## Output Instructions
+Respond using the provided structured format. Do not emit prose, explanations, or any fields that fall outside of that schema.

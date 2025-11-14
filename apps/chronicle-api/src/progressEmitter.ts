@@ -21,19 +21,33 @@ export type TurnProgressPublisher = {
   publish: (update: TurnProgressUpdate) => Promise<void>;
 }
 
-const buildPayload = (context: GraphContext): TurnProgressPayload => ({
-  beatDelta: context.beatDelta ?? undefined,
-  chronicleShouldClose: context.chronicleShouldClose ?? undefined,
-  failure: context.failure,
-  gmMessage: context.gmMessage,
-  gmSummary: context.gmSummary,
-  gmTrace: context.gmTrace ?? undefined,
-  inventoryDelta: context.inventoryDelta ?? undefined,
-  playerIntent: context.playerIntent,
-  skillCheckPlan: context.skillCheckPlan,
-  skillCheckResult: context.skillCheckResult,
-  systemMessage: context.systemMessage,
-});
+const buildPayload = (context: GraphContext): TurnProgressPayload => {
+  const optionalEntries: Array<[keyof TurnProgressPayload, unknown]> = [
+    ['advancesTimeline', context.advancesTimeline],
+    ['beatDelta', context.beatDelta],
+    ['chronicleShouldClose', context.chronicleShouldClose],
+    ['executedNodes', context.executedNodes],
+    ['gmMessage', context.gmMessage],
+    ['gmSummary', context.gmSummary],
+    ['gmTrace', context.gmTrace],
+    ['handlerId', context.handlerId],
+    ['inventoryDelta', context.inventoryDelta],
+    ['resolvedIntentConfidence', context.resolvedIntentConfidence],
+    ['resolvedIntentType', context.resolvedIntentType ?? context.playerIntent?.intentType],
+    ['systemMessage', context.systemMessage],
+    ['worldDeltaTags', context.worldDeltaTags],
+  ];
+  const optionalPayload = Object.fromEntries(
+    optionalEntries.filter(([, value]) => value !== undefined && value !== null)
+  ) as Partial<TurnProgressPayload>;
+  return {
+    failure: context.failure,
+    playerIntent: context.playerIntent,
+    skillCheckPlan: context.skillCheckPlan,
+    skillCheckResult: context.skillCheckResult,
+    ...optionalPayload,
+  };
+};
 
 export class TurnProgressEmitter implements TurnProgressPublisher {
   private readonly client: SQSClient;

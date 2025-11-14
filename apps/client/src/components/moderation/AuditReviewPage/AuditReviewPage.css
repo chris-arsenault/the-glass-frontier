@@ -519,6 +519,37 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+.audit-feedback-expectations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.audit-feedback-expectation-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.audit-feedback-expectation-row span {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.audit-feedback-expectation-row strong {
+  font-weight: 600;
+}
+
+.audit-feedback-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
 .audit-feedback-item .sentiment-positive {
   border-color: rgba(52, 211, 153, 0.8);
   color: #6ee7b7;

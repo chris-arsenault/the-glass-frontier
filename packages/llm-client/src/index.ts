@@ -19,6 +19,11 @@ const JSON_PARSE_RECOVERY_ATTEMPTS = 2;
 const JSON_NESTED_PARSE_LIMIT = 3;
 const JSON_WRAPPER_CHARS = new Set(['\'', '"', '`']);
 
+type TextOptions = {
+  format?: Record<string, unknown>;
+  verbosity?: 'low' | 'medium' | 'high';
+};
+
 type LlmInvokeOptions = {
   prompt?: string;
   system?: string;
@@ -27,6 +32,8 @@ type LlmInvokeOptions = {
   maxTokens?: number;
   metadata?: InvocationMetadata;
   requestId?: string;
+  reasoning?: { effort: 'minimal' | 'low' | 'medium' | 'high' };
+  text?: TextOptions;
 };
 
 type ExecuteResult = {
@@ -150,7 +157,42 @@ class LangGraphLlmClient {
     attempts: number;
     requestId: string;
   }> {
-    const payload = { ...this.#buildPayload(options), response_format: { type: 'json_object' } };
+    const payload = this.#prepareJsonPayload(options);
+    const result = await this.#invokeJsonWithRecovery(payload, options.metadata);
+    return { ...result, provider: this.#providerId };
+  }
+
+  #prepareJsonPayload(options: LlmInvokeOptions): ChatCompletionInput {
+    const payload = { ...this.#buildPayload(options) };
+    if (!this.#hasStructuredFormat(payload)) {
+      (payload as ChatCompletionInput & { response_format?: { type: string } }).response_format = {
+        type: 'json_object',
+      };
+    }
+    return payload;
+  }
+
+  #hasStructuredFormat(payload: ChatCompletionInput): boolean {
+    const textField = (payload as { text?: TextOptions | null }).text;
+    return Boolean(
+      textField !== undefined &&
+        textField !== null &&
+        typeof textField === 'object' &&
+        'format' in textField &&
+        textField.format !== undefined
+    );
+  }
+
+  async #invokeJsonWithRecovery(
+    payload: ChatCompletionInput,
+    metadata?: InvocationMetadata
+  ): Promise<{
+    attempts: number;
+    json: Record<string, unknown>;
+    raw: unknown;
+    usage: unknown;
+    requestId: string;
+  }> {
     let totalAttempts = 0;
     let lastOutput: unknown;
 
@@ -158,7 +200,7 @@ class LangGraphLlmClient {
       // eslint-disable-next-line no-await-in-loop -- sequential retries depend on previous attempts
       const execution = await this.#execute({
         body: payload,
-        metadata: options.metadata,
+        metadata,
       });
       totalAttempts += execution.attempts;
       lastOutput = execution.output;
@@ -168,7 +210,6 @@ class LangGraphLlmClient {
         return {
           attempts: totalAttempts,
           json,
-          provider: this.#providerId,
           raw: execution.raw,
           requestId: execution.requestId,
           usage: execution.usage,
@@ -192,9 +233,11 @@ class LangGraphLlmClient {
     maxTokens = 450,
     messages,
     prompt,
+    reasoning,
     requestId,
     system,
     temperature = 0.7,
+    text,
   }: LlmInvokeOptions): ChatCompletionInput {
     const sequence = Array.isArray(messages) ? [...messages] : [];
 
@@ -210,7 +253,7 @@ class LangGraphLlmClient {
       throw new Error('llm_payload_requires_prompt_or_messages');
     }
 
-    return {
+    const payload: ChatCompletionInput = {
       max_tokens: maxTokens,
       messages: sequence,
       model: this.#model,
@@ -218,6 +261,23 @@ class LangGraphLlmClient {
       stream: false,
       temperature,
     };
+    return this.#applyOutputSettings(payload, { reasoning, text });
+  }
+
+  #applyOutputSettings(
+    payload: ChatCompletionInput,
+    options: { reasoning?: LlmInvokeOptions['reasoning']; text?: LlmInvokeOptions['text'] }
+  ): ChatCompletionInput {
+    if (options.reasoning !== undefined) {
+      payload.reasoning = options.reasoning;
+    }
+    if (options.text !== undefined) {
+      payload.text = {
+        ...(payload.text ?? {}),
+        ...options.text,
+      };
+    }
+    return payload;
   }
 
   async #execute({
