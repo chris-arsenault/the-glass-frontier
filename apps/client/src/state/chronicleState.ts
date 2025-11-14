@@ -12,6 +12,7 @@ import type {
   PendingEquip,
   InventoryDelta,
   LlmTrace,
+  PlayerFeedbackVisibilityLevel,
 } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
@@ -62,6 +63,10 @@ export type MomentumTrend = {
   ceiling: number;
 }
 
+export type PlayerSettings = {
+  feedbackVisibility: PlayerFeedbackVisibilityLevel;
+}
+
 export type ChronicleState = {
   beats: ChronicleBeat[];
   beatsEnabled: boolean;
@@ -89,6 +94,10 @@ export type ChronicleState = {
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
   pendingEquip: PendingEquip[];
+  playerSettings: PlayerSettings;
+  playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
+  playerSettingsError: Error | null;
+  isUpdatingPlayerSettings: boolean;
 }
 
 export type ChronicleStore = {
@@ -105,6 +114,8 @@ export type ChronicleStore = {
   clearActiveChronicle: () => void;
   setChronicleWrapTarget: (shouldWrap: boolean) => Promise<void>;
   resetStore: () => void;
+  loadPlayerSettings: () => Promise<void>;
+  updatePlayerSettings: (settings: PlayerSettings) => Promise<void>;
 } & ChronicleState
 
 export type CharacterCreationDraft = {

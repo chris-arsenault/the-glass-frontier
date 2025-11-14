@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 import { Metadata } from './Metadata';
 
+export const PLAYER_FEEDBACK_VISIBILITY_LEVELS = ['none', 'badges', 'narrative', 'all'] as const;
+export type PlayerFeedbackVisibilityLevel =
+  (typeof PLAYER_FEEDBACK_VISIBILITY_LEVELS)[number];
+
+export const PlayerPreferencesSchema = z.object({
+  feedbackVisibility: z.enum(PLAYER_FEEDBACK_VISIBILITY_LEVELS).default('all'),
+});
+
+export type PlayerPreferences = z.infer<typeof PlayerPreferencesSchema>;
+
 export const PlayerTemplateVariant = z.object({
   label: z.string().min(1),
   objectKey: z.string().min(1),
@@ -22,6 +32,7 @@ export type PlayerTemplateSlot = z.infer<typeof PlayerTemplateSlot>;
 export const Player = z.object({
   loginId: z.string().min(1),
   metadata: Metadata.optional(),
+  preferences: PlayerPreferencesSchema.optional(),
   templateOverrides: z.record(z.string(), PlayerTemplateSlot).optional(),
 });
 

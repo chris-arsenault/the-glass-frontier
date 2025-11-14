@@ -225,6 +225,7 @@ type AuditGridRow = {
 export function AuditReviewPage(): JSX.Element {
   const canModerate = useCanModerate();
   const loginId = useChronicleStore((state) => state.loginId);
+  const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const navigate = useNavigate();
   const {
     cursor,
@@ -346,8 +347,17 @@ export function AuditReviewPage(): JSX.Element {
     void refreshProposals();
   }, [canModerate, loadQueue, refreshProposals]);
 
+  const goBackToPlayerSurface = useCallback(() => {
+    if (activeChronicleId) {
+      void navigate(`/chronicle/${activeChronicleId}`);
+    } else {
+      void navigate('/');
+    }
+  }, [activeChronicleId, navigate]);
+
   if (!canModerate) {
-    return <Navigate to="/" replace />;
+    const redirectTarget = activeChronicleId ? `/chronicle/${activeChronicleId}` : '/';
+    return <Navigate to={redirectTarget} replace />;
   }
 
   const handleSaveDraft = () => {
@@ -376,7 +386,7 @@ export function AuditReviewPage(): JSX.Element {
           <p>Browse archived requests, capture moderator reviews, and inspect template proposals.</p>
         </div>
         <div className="audit-header-actions">
-          <button type="button" onClick={() => navigate('/')}>
+          <button type="button" onClick={goBackToPlayerSurface}>
             Back to Chronicle
           </button>
           <button type="button" onClick={() => void loadQueue()} disabled={isLoading}>

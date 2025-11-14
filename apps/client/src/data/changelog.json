@@ -96,5 +96,12 @@
     "summary": "Intent DAG now uses dedicated classifiers",
     "details": "Split the router into intent, beat, and skill detector nodes that run gpt-5-nano through the revamped llmResolver, rewrote every prompt template (especially intent intake) to match the new DAG contracts, documented the node/parameter flow in apps/chronicle-api/src/langGraph/README.md, and migrated the llm proxy plus client to the OpenAI responses API with reasoning/text knobs so classifier nodes stay lean.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-16-chronicle-landing-ux",
+    "releasedAt": "2025-11-16",
+    "summary": "Landing briefs, player guide, and bug reporting",
+    "details": "Added a briefing-style landing page with news, recent features, global chronicle signals, and a quick-continue panel so players see what's new before diving in. Chronicle chat now lives at /chronicle/:id with route-driven hydration, plus a new in-app player guide, live token-usage readout, and system bug report modal so crews can find help or flag issues without leaving the client.",
+    "type": "feature"
   }
 ]

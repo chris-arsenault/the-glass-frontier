@@ -93,6 +93,7 @@ export function SessionManager() {
     setIsWorking(true);
     try {
       await hydrateChronicle(chronicleId);
+      void navigate(`/chronicle/${chronicleId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load chronicle.');
     } finally {
@@ -121,13 +122,26 @@ export function SessionManager() {
     }
     setError(null);
     setIsWorking(true);
+    const wasActive = chronicleId === currentChronicleId;
     try {
       await deleteChronicleRecord(chronicleId);
+      if (wasActive) {
+        void navigate('/');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete chronicle.');
     } finally {
       setIsWorking(false);
     }
+  };
+
+  const handleClearActive = () => {
+    if (!currentChronicleId) {
+      clearActiveChronicle();
+      return;
+    }
+    clearActiveChronicle();
+    void navigate('/');
   };
 
   return (
@@ -268,7 +282,7 @@ export function SessionManager() {
           <button
             type="button"
             className="chip-button"
-            onClick={clearActiveChronicle}
+            onClick={handleClearActive}
             disabled={!currentChronicleId}
           >
             Clear Active

@@ -61,6 +61,7 @@ export function ChronicleStartWizard() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
+  const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const selectedCharacter = useSelectedCharacter();
   const inventoryShards: DataShard[] = selectedCharacter?.inventory?.data_shards ?? EMPTY_SHARDS;
 
@@ -334,6 +335,14 @@ export function ChronicleStartWizard() {
     }
   };
 
+  const goToDefaultSurface = (replace = false) => {
+    if (activeChronicleId) {
+      void navigate(`/chronicle/${activeChronicleId}`, replace ? { replace: true } : undefined);
+    } else {
+      void navigate('/', replace ? { replace: true } : undefined);
+    }
+  };
+
   const handleBack = () => {
     if (step === 'tone') {
       setStep('location');
@@ -342,7 +351,7 @@ export function ChronicleStartWizard() {
     } else if (step === 'create') {
       setStep('seeds');
     } else {
-      void navigate('/');
+      goToDefaultSurface();
     }
   };
 
@@ -380,9 +389,11 @@ export function ChronicleStartWizard() {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('shard');
       setSearchParams(nextParams, { replace: true });
-      void navigate('/', { replace: true });
-      if (!chronicleId) {
+      if (chronicleId) {
+        void navigate(`/chronicle/${chronicleId}`, { replace: true });
+      } else {
         console.warn('Chronicle created but id was not returned; wizard closed without hydration.');
+        goToDefaultSurface(true);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to create chronicle.';
@@ -415,7 +426,7 @@ export function ChronicleStartWizard() {
       if (isChronicleHookShard(shard) && shard.locationId && shard.seed) {
         setIsShardProcessing(true);
         try {
-          await createChronicleFromSeed({
+          const chronicleId = await createChronicleFromSeed({
             beatsEnabled,
             characterId: preferredCharacterId,
             locationId: shard.locationId,
@@ -424,7 +435,11 @@ export function ChronicleStartWizard() {
           });
           resetWizard();
           setShardMessage(null);
-          void navigate('/', { replace: true });
+          if (chronicleId) {
+            void navigate(`/chronicle/${chronicleId}`, { replace: true });
+          } else {
+            goToDefaultSurface(true);
+          }
         } catch (error: unknown) {
           const message =
             error instanceof Error
@@ -498,7 +513,7 @@ export function ChronicleStartWizard() {
           <h1>Start a new chronicle</h1>
           <p>Guided setup for picking a location, tone, and seed.</p>
         </div>
-        <button type="button" className="wizard-close" onClick={() => navigate('/')}>
+        <button type="button" className="wizard-close" onClick={() => goToDefaultSurface()}>
           Exit
         </button>
       </header>

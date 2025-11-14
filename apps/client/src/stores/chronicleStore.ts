@@ -8,6 +8,7 @@ import type {
   TurnProgressEvent,
   PendingEquip,
   BeatDelta,
+  PlayerPreferences,
 } from '@glass-frontier/dto';
 import { createEmptyInventory } from '@glass-frontier/dto';
 import { formatTurnJobId } from '@glass-frontier/utils';
@@ -24,6 +25,7 @@ import type {
   ChronicleStore,
   MomentumTrend,
   SkillProgressBadge,
+  PlayerSettings,
 } from '../state/chronicleState';
 import { decodeJwtPayload } from '../utils/jwt';
 import { useAuthStore } from './authStore';
@@ -41,6 +43,14 @@ const resolveLoginIdentity = (): { loginId: string; loginName: string } => {
   }
   throw new Error('Login identity unavailable. Please reauthenticate.');
 };
+
+const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
+  feedbackVisibility: 'all',
+};
+
+const normalizePlayerSettings = (preferences?: PlayerPreferences | null): PlayerSettings => ({
+  feedbackVisibility: preferences?.feedbackVisibility ?? DEFAULT_PLAYER_SETTINGS.feedbackVisibility,
+});
 
 const generateId = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -384,6 +394,7 @@ const createBaseState = () => ({
   focusedBeatId: null as string | null,
   isOffline: false,
   isSending: false,
+  isUpdatingPlayerSettings: false,
   location: null as LocationSummary | null,
   loginId: null as string | null,
   loginName: null as string | null,
@@ -392,6 +403,9 @@ const createBaseState = () => ({
   pendingEquip: [] as PendingEquip[],
   pendingPlayerMessageId: null as string | null,
   pendingTurnJobId: null as string | null,
+  playerSettings: DEFAULT_PLAYER_SETTINGS,
+  playerSettingsError: null as Error | null,
+  playerSettingsStatus: 'idle' as const,
   preferredCharacterId: null as string | null,
   queuedIntents: 0,
   recentChronicles: [],
@@ -647,6 +661,35 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         ...prev,
         connectionState: 'error',
         transportError: nextError,
+      }));
+      throw nextError;
+    }
+  },
+
+  async loadPlayerSettings() {
+    const loginId = get().loginId ?? get().loginName;
+    if (!loginId) {
+      return;
+    }
+    set((prev) => ({
+      ...prev,
+      playerSettingsError: null,
+      playerSettingsStatus: 'loading',
+    }));
+    try {
+      const result = await trpcClient.getPlayerSettings.query({ loginId });
+      set((prev) => ({
+        ...prev,
+        playerSettings: normalizePlayerSettings(result.preferences),
+        playerSettingsStatus: 'ready',
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to load player settings.');
+      set((prev) => ({
+        ...prev,
+        playerSettingsError: nextError,
+        playerSettingsStatus: 'error',
       }));
       throw nextError;
     }
@@ -921,6 +964,45 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       preferredCharacterId:
         characterId && characterId.trim().length > 0 ? characterId.trim() : null,
     }));
+  },
+
+  async updatePlayerSettings(settings) {
+    const loginId = get().loginId ?? get().loginName;
+    if (!loginId) {
+      const nextError = new Error('Login not established. Please reauthenticate.');
+      set((prev) => ({
+        ...prev,
+        playerSettingsError: nextError,
+      }));
+      throw nextError;
+    }
+    set((prev) => ({
+      ...prev,
+      isUpdatingPlayerSettings: true,
+      playerSettings: settings,
+      playerSettingsError: null,
+    }));
+    try {
+      const result = await trpcClient.updatePlayerSettings.mutate({
+        loginId,
+        preferences: settings,
+      });
+      set((prev) => ({
+        ...prev,
+        isUpdatingPlayerSettings: false,
+        playerSettings: normalizePlayerSettings(result.preferences),
+        playerSettingsStatus: 'ready',
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to update player settings.');
+      set((prev) => ({
+        ...prev,
+        isUpdatingPlayerSettings: false,
+        playerSettingsError: nextError,
+      }));
+      throw nextError;
+    }
   },
 }));
 

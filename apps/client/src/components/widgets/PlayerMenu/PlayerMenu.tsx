@@ -1,8 +1,9 @@
-import type { LocationSummary } from '@glass-frontier/dto';
-import { useEffect, useMemo, useRef } from 'react';
+import type { LocationSummary, TokenUsagePeriod } from '@glass-frontier/dto';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
+import { trpcClient } from '../../../lib/trpcClient';
 import { useAuthStore } from '../../../stores/authStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -48,6 +49,15 @@ const LocationIcon = () => (
   </svg>
 );
 
+const SettingsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      fill="currentColor"
+      d="m21 12.75v-1.5l-2.16-.35a7.16 7.16 0 0 0-.55-1.33l1.27-1.77-1.06-1.06-1.77 1.27a7.16 7.16 0 0 0-1.33-.55L12.75 3h-1.5l-.35 2.16a7.16 7.16 0 0 0-1.33.55L7.8 4.44 6.74 5.5l1.27 1.77a7.16 7.16 0 0 0-.55 1.33L3 11.25v1.5l2.16.35a7.16 7.16 0 0 0 .55 1.33L4.44 16.2l1.06 1.06 1.77-1.27a7.16 7.16 0 0 0 1.33.55L11.25 21h1.5l.35-2.16a7.16 7.16 0 0 0 1.33-.55l1.77 1.27 1.06-1.06-1.27-1.77a7.16 7.16 0 0 0 .55-1.33Zm-9 1.5a2.25 2.25 0 1 1 2.25-2.25 2.25 2.25 0 0 1-2.25 2.25Z"
+    />
+  </svg>
+);
+
 const describeLocation = (location?: LocationSummary | null) => {
   if (!location) {
     return {
@@ -63,8 +73,31 @@ const describeLocation = (location?: LocationSummary | null) => {
   };
 };
 
+const formatTokenCount = (value: number): string => {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) {
+    return `${Number((value / 1_000_000).toPrecision(3))}M`;
+  }
+  if (abs >= 1_000) {
+    return `${Number((value / 1_000).toPrecision(3))}K`;
+  }
+  if (abs >= 1) {
+    return value.toLocaleString();
+  }
+  return '0';
+};
+
+const formatUsageDate = (value: string): string => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  return parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+};
+
 export function PlayerMenu(): JSX.Element {
   const loginName = useChronicleStore((state) => state.loginName);
+  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
   const character = useSelectedCharacter();
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const location = useChronicleStore((state) => state.location);
@@ -74,6 +107,7 @@ export function PlayerMenu(): JSX.Element {
   const toggle = useUiStore((state) => state.togglePlayerMenu);
   const close = useUiStore((state) => state.closePlayerMenu);
   const toggleTemplateDrawer = useUiStore((state) => state.toggleTemplateDrawer);
+  const openPlayerSettingsModal = useUiStore((state) => state.openPlayerSettingsModal);
   const highestRole = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
   const canAccessAdminTools = canModerate(highestRole);
   const roleBadge = ROLE_BADGES[highestRole];
@@ -83,6 +117,9 @@ export function PlayerMenu(): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const panelId = 'player-menu-panel';
   const navigate = useNavigate();
+  const [usage, setUsage] = useState<TokenUsagePeriod[]>([]);
+  const [usageState, setUsageState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [usageError, setUsageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -128,6 +165,43 @@ export function PlayerMenu(): JSX.Element {
     void navigate('/moderation/locations');
     close();
   };
+
+  const handleOpenPlayerSettings = () => {
+    openPlayerSettingsModal();
+    close();
+  };
+
+  useEffect(() => {
+    if (!isOpen || !loginId) {
+      return;
+    }
+    let cancelled = false;
+    const fetchUsage = async () => {
+      setUsageState('loading');
+      setUsageError(null);
+      try {
+        const result = await trpcClient.getTokenUsageSummary.query({ limit: 6, loginId });
+        if (cancelled) {
+          return;
+        }
+        setUsage(result.usage);
+        setUsageState('ready');
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setUsageState('error');
+        setUsageError(error instanceof Error ? error.message : 'Failed to load usage.');
+      }
+    };
+    void fetchUsage();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, loginId]);
+
+  const usagePreview = usage[0] ?? null;
+  const topMetrics = usagePreview?.metrics.slice(0, 3) ?? [];
 
   return (
     <div className="player-menu" data-open={isOpen ? 'true' : 'false'} ref={containerRef}>
@@ -191,6 +265,62 @@ export function PlayerMenu(): JSX.Element {
             <p className="player-menu-info-primary">{locationDetails.edge}</p>
           </div>
         </div>
+        <div className="player-menu-usage-card">
+          <div className="player-menu-usage-header">
+            <div>
+              <p className="player-menu-pill-label">LLM Tokens</p>
+              <p className="player-menu-usage-period">
+                {usagePreview ? usagePreview.period : loginId ? 'No usage yet' : 'Login unknown'}
+              </p>
+            </div>
+            {usagePreview?.updatedAt ? (
+              <span className="player-menu-usage-updated">
+                {formatUsageDate(usagePreview.updatedAt)}
+              </span>
+            ) : null}
+          </div>
+          {usageState === 'loading' ? (
+            <p className="player-menu-usage-note">Loading usage…</p>
+          ) : usageState === 'error' ? (
+            <p className="player-menu-usage-note">
+              Unable to load usage{usageError ? ` · ${usageError}` : ''}.
+            </p>
+          ) : usagePreview ? (
+            <div className="player-menu-usage-grid">
+              <div className="player-menu-usage-stat">
+                <span className="player-menu-usage-label">Requests</span>
+                <span className="player-menu-usage-value">
+                  {formatTokenCount(usagePreview.totalRequests)}
+                </span>
+              </div>
+              {topMetrics.map((metric) => (
+                <div key={metric.key} className="player-menu-usage-stat">
+                  <span className="player-menu-usage-label">{metric.key}</span>
+                  <span className="player-menu-usage-value">
+                    {formatTokenCount(metric.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="player-menu-usage-note">Usage data will appear after your next session.</p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="player-menu-link-button"
+          onClick={handleOpenPlayerSettings}
+        >
+          <span className="player-menu-link-icon" aria-hidden="true">
+            <SettingsIcon />
+          </span>
+          <div className="player-menu-link-text">
+            <span className="player-menu-link-title">Player Settings</span>
+            <span className="player-menu-link-subtitle">
+              Choose how much internal detail appears in chat
+            </span>
+          </div>
+        </button>
         <div className="player-menu-links">
           {canAccessAdminTools ? (
             <>
