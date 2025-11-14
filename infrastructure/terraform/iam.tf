@@ -17,61 +17,11 @@ resource "aws_iam_role" "lambda" {
   tags               = local.tags
 }
 
-moved {
-  from = aws_iam_role.chronicle_lambda
-  to   = aws_iam_role.lambda["chronicle_lambda"]
-}
-
-moved {
-  from = aws_iam_role.prompt_api_lambda
-  to   = aws_iam_role.lambda["prompt_api_lambda"]
-}
-
-moved {
-  from = aws_iam_role.location_api_lambda
-  to   = aws_iam_role.lambda["location_api_lambda"]
-}
-
-moved {
-  from = aws_iam_role.llm_lambda
-  to   = aws_iam_role.lambda["llm_lambda"]
-}
-
-moved {
-  from = aws_iam_role.webservice_lambda
-  to   = aws_iam_role.lambda["webservice_lambda"]
-}
-
 resource "aws_iam_role_policy_attachment" "lambda_basic_logs" {
   for_each = local.lambda_role_names
 
   role       = aws_iam_role.lambda[each.key].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.chronicle_logs
-  to   = aws_iam_role_policy_attachment.lambda_basic_logs["chronicle_lambda"]
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.prompt_api_logs
-  to   = aws_iam_role_policy_attachment.lambda_basic_logs["prompt_api_lambda"]
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.location_api_logs
-  to   = aws_iam_role_policy_attachment.lambda_basic_logs["location_api_lambda"]
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.llm_logs
-  to   = aws_iam_role_policy_attachment.lambda_basic_logs["llm_lambda"]
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.webservice_logs
-  to   = aws_iam_role_policy_attachment.lambda_basic_logs["webservice_lambda"]
 }
 
 resource "aws_iam_role_policy_attachment" "webservice_sqs" {
@@ -203,6 +153,11 @@ resource "aws_iam_policy" "llm_audit_storage" {
 
 resource "aws_iam_role_policy_attachment" "llm_audit_storage" {
   role       = aws_iam_role.lambda["llm_lambda"].name
+  policy_arn = aws_iam_policy.llm_audit_storage.arn
+}
+
+resource "aws_iam_role_policy_attachment" "prompt_api_audit_storage" {
+  role       = aws_iam_role.lambda["prompt_api_lambda"].name
   policy_arn = aws_iam_policy.llm_audit_storage.arn
 }
 

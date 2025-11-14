@@ -10,6 +10,7 @@ import type {
   TranscriptEntry,
   PendingEquip,
   InventoryDelta,
+  LlmTrace,
 } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
@@ -24,6 +25,9 @@ export type ChatMessage = {
   attributeKey?: Attribute | null;
   playerIntent?: Intent | null;
   gmSummary?: string | null;
+  gmTrace?: LlmTrace | null;
+  turnId?: string | null;
+  turnSequence?: number | null;
   skillProgress?: SkillProgressBadge[] | null;
   inventoryDelta?: InventoryDelta | null;
 }

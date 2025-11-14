@@ -458,3 +458,78 @@
 .horizontal .audit-queue-item {
   min-width: 220px;
 }
+
+.audit-feedback-panel {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.audit-feedback-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.audit-feedback-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.audit-feedback-count {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.audit-feedback-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.audit-feedback-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.audit-feedback-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  align-items: center;
+}
+
+.audit-feedback-comment {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.audit-feedback-item .sentiment-positive {
+  border-color: rgba(52, 211, 153, 0.8);
+  color: #6ee7b7;
+}
+
+.audit-feedback-item .sentiment-neutral {
+  border-color: rgba(251, 191, 36, 0.6);
+  color: #fde68a;
+}
+
+.audit-feedback-item .sentiment-negative {
+  border-color: rgba(248, 113, 113, 0.75);
+  color: #fca5a5;
+}

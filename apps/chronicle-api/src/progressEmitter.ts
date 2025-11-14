@@ -25,6 +25,7 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => ({
   failure: context.failure,
   gmMessage: context.gmMessage,
   gmSummary: context.gmSummary,
+  gmTrace: context.gmTrace ?? undefined,
   inventoryDelta: context.inventoryDelta ?? undefined,
   playerIntent: context.playerIntent,
   skillCheckPlan: context.skillCheckPlan,

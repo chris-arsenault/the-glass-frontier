@@ -22,6 +22,40 @@ export type AuditReviewTag = (typeof AUDIT_REVIEW_TAGS)[number];
 export type AuditReviewSeverity = (typeof AUDIT_REVIEW_SEVERITIES)[number];
 export type AuditReviewStatus = (typeof AUDIT_REVIEW_STATUSES)[number];
 
+export const PLAYER_FEEDBACK_SENTIMENTS = ['positive', 'neutral', 'negative'] as const;
+export type PlayerFeedbackSentiment = (typeof PLAYER_FEEDBACK_SENTIMENTS)[number];
+
+const FEEDBACK_SENTIMENT_ENUM = [...PLAYER_FEEDBACK_SENTIMENTS] as [
+  PlayerFeedbackSentiment,
+  ...PlayerFeedbackSentiment[],
+];
+
+export const PlayerFeedbackRecordSchema = z.object({
+  auditId: z.string().min(1),
+  chronicleId: z.string().min(1),
+  comment: z.string().max(2000).optional().nullable(),
+  createdAt: z.string().min(1),
+  gmEntryId: z.string().min(1),
+  id: z.string().min(1),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  playerId: z.string().optional().nullable(),
+  playerLoginId: z.string().min(1),
+  sentiment: z.enum(FEEDBACK_SENTIMENT_ENUM),
+  turnId: z.string().min(1),
+  turnSequence: z.number().int().nonnegative(),
+  updatedAt: z.string().min(1),
+});
+
+export type PlayerFeedbackRecord = z.infer<typeof PlayerFeedbackRecordSchema>;
+
+export const LlmTraceSchema = z.object({
+  auditId: z.string().min(1),
+  nodeId: z.string().min(1),
+  requestId: z.string().min(1),
+});
+
+export type LlmTrace = z.infer<typeof LlmTraceSchema>;
+
 const TEMPLATE_ID_ENUM = [...PromptTemplateIds] as [PromptTemplateId, ...PromptTemplateId[]];
 const REVIEW_TAG_ENUM = [...AUDIT_REVIEW_TAGS] as [AuditReviewTag, ...AuditReviewTag[]];
 const REVIEW_SEVERITY_ENUM = [...AUDIT_REVIEW_SEVERITIES] as [
@@ -35,33 +69,34 @@ const REVIEW_STATUS_ENUM = [...AUDIT_REVIEW_STATUSES] as [
 
 export const AuditReviewRecordSchema = z.object({
   auditId: z.string().min(1),
-  storageKey: z.string().min(1),
+  completedAt: z.string().optional().nullable(),
+  createdAt: z.string().min(1),
+  draftAt: z.string().optional().nullable(),
   nodeId: z.string().optional().nullable(),
-  templateId: z.enum(TEMPLATE_ID_ENUM).optional().nullable(),
+  notes: z.string().optional().nullable(),
   reviewerLoginId: z.string().min(1),
   reviewerName: z.string().optional().nullable(),
   status: z.enum(REVIEW_STATUS_ENUM),
-  notes: z.string().optional().nullable(),
+  storageKey: z.string().min(1),
   tags: z.array(z.enum(REVIEW_TAG_ENUM)).default([]),
-  createdAt: z.string().min(1),
+  templateId: z.enum(TEMPLATE_ID_ENUM).optional().nullable(),
   updatedAt: z.string().min(1),
-  completedAt: z.string().optional().nullable(),
-  draftAt: z.string().optional().nullable(),
 });
 
 export type AuditReviewRecord = z.infer<typeof AuditReviewRecordSchema>;
 
 export const AuditLogEntrySchema = z.object({
-  id: z.string().min(1),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
+  id: z.string().min(1),
+  metadata: z.record(z.string(), z.any()).optional().nullable(),
   nodeId: z.string().optional().nullable(),
+  playerFeedback: z.array(PlayerFeedbackRecordSchema).optional(),
   playerId: z.string().optional().nullable(),
   providerId: z.string().min(1),
-  metadata: z.record(z.string(), z.any()).optional().nullable(),
   request: z.record(z.string(), z.any()),
-  response: z.any(),
   requestContextId: z.string().optional().nullable(),
+  response: z.any(),
   storageKey: z.string().min(1),
 });
 
@@ -69,35 +104,36 @@ export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditQueueItemSchema = z.object({
   auditId: z.string().min(1),
-  storageKey: z.string().min(1),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
   nodeId: z.string().optional().nullable(),
-  templateId: z.enum(TEMPLATE_ID_ENUM).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  playerFeedback: z.array(PlayerFeedbackRecordSchema).optional(),
   playerId: z.string().optional().nullable(),
-  requestContextId: z.string().optional().nullable(),
   providerId: z.string().optional().nullable(),
+  requestContextId: z.string().optional().nullable(),
   reviewerLoginId: z.string().optional().nullable(),
   reviewerName: z.string().optional().nullable(),
   status: z.enum(REVIEW_STATUS_ENUM),
-  notes: z.string().optional().nullable(),
+  storageKey: z.string().min(1),
   tags: z.array(z.enum(REVIEW_TAG_ENUM)),
+  templateId: z.enum(TEMPLATE_ID_ENUM).optional().nullable(),
 });
 
 export type AuditQueueItem = z.infer<typeof AuditQueueItemSchema>;
 
 export const AuditProposalRecordSchema = z.object({
-  id: z.string().min(1),
-  templateId: z.enum(TEMPLATE_ID_ENUM),
-  summary: z.string().min(1),
-  rationale: z.string().min(1),
-  suggestedChange: z.string().optional().nullable(),
-  tags: z.array(z.enum(REVIEW_TAG_ENUM)).default([]),
-  severity: z.enum(REVIEW_SEVERITY_ENUM),
   confidence: z.number().min(0).max(1),
   createdAt: z.string().min(1),
+  id: z.string().min(1),
   linkedReviewIds: z.array(z.string().min(1)).default([]),
+  rationale: z.string().min(1),
   reviewCount: z.number().int().nonnegative(),
+  severity: z.enum(REVIEW_SEVERITY_ENUM),
+  suggestedChange: z.string().optional().nullable(),
+  summary: z.string().min(1),
+  tags: z.array(z.enum(REVIEW_TAG_ENUM)).default([]),
+  templateId: z.enum(TEMPLATE_ID_ENUM),
 });
 
 export type AuditProposalRecord = z.infer<typeof AuditProposalRecordSchema>;

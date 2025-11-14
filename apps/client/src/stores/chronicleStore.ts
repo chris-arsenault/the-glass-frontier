@@ -51,12 +51,15 @@ const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): C
   attributeKey: extras?.attributeKey ?? null,
   entry,
   gmSummary: extras?.gmSummary ?? null,
+  gmTrace: extras?.gmTrace ?? null,
   inventoryDelta: extras?.inventoryDelta ?? null,
   playerIntent: extras?.playerIntent ?? null,
   skillCheckPlan: extras?.skillCheckPlan ?? null,
   skillCheckResult: extras?.skillCheckResult ?? null,
   skillKey: extras?.skillKey ?? null,
   skillProgress: extras?.skillProgress ?? null,
+  turnId: extras?.turnId ?? null,
+  turnSequence: extras?.turnSequence ?? null,
 });
 
 const upsertChatEntry = (
@@ -72,11 +75,14 @@ const upsertChatEntry = (
       attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
       entry,
       gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
+      gmTrace: extras?.gmTrace ?? updated[index].gmTrace,
       inventoryDelta: extras?.inventoryDelta ?? updated[index].inventoryDelta,
       playerIntent: extras?.playerIntent ?? updated[index].playerIntent,
       skillCheckPlan: extras?.skillCheckPlan ?? updated[index].skillCheckPlan,
       skillCheckResult: extras?.skillCheckResult ?? updated[index].skillCheckResult,
       skillKey: extras?.skillKey ?? updated[index].skillKey,
+      turnId: extras?.turnId ?? updated[index].turnId,
+      turnSequence: extras?.turnSequence ?? updated[index].turnSequence,
     };
     return updated;
   }
@@ -90,12 +96,15 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
     const extras = {
       attributeKey,
       gmSummary: turn.gmSummary ?? null,
+      gmTrace: turn.gmTrace ?? null,
       inventoryDelta: turn.inventoryDelta ?? null,
       playerIntent: turn.playerIntent ?? null,
       skillCheckPlan: turn.skillCheckPlan ?? null,
       skillCheckResult: turn.skillCheckResult ?? null,
       skillKey,
       skillProgress: null,
+      turnId: turn.id ?? null,
+      turnSequence: turn.turnSequence ?? null,
     };
     const turnEntries: ChatMessage[] = [];
     if (turn.playerMessage) {
@@ -134,12 +143,15 @@ const createSeedChatMessage = (seedText: string): ChatMessage => ({
     role: 'gm',
   },
   gmSummary: 'Chronicle seed',
+  gmTrace: null,
   inventoryDelta: null,
   playerIntent: null,
   skillCheckPlan: null,
   skillCheckResult: null,
   skillKey: null,
   skillProgress: null,
+  turnId: null,
+  turnSequence: null,
 });
 
 const deriveTitleFromSeed = (seedText: string): string => {
@@ -259,12 +271,15 @@ const applyTurnProgressEvent = (
   const extras: Partial<ChatMessage> = {
     attributeKey: payload.playerIntent?.attribute ?? null,
     gmSummary: payload.gmSummary ?? null,
+    gmTrace: payload.gmTrace ?? null,
     inventoryDelta: payload.inventoryDelta ?? null,
     playerIntent: payload.playerIntent ?? null,
     skillCheckPlan: payload.skillCheckPlan ?? null,
     skillCheckResult: payload.skillCheckResult ?? null,
     skillKey: payload.playerIntent?.skill ?? null,
     skillProgress: null,
+    turnId: null,
+    turnSequence: event.turnSequence ?? null,
   };
 
   if (payload.gmMessage) {
@@ -670,12 +685,15 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         const extras = {
           attributeKey: turn.playerIntent?.attribute ?? null,
           gmSummary: turn.gmSummary ?? null,
+          gmTrace: turn.gmTrace ?? null,
           inventoryDelta: turn.inventoryDelta ?? null,
           playerIntent: turn.playerIntent ?? null,
           skillCheckPlan: turn.skillCheckPlan ?? null,
           skillCheckResult: turn.skillCheckResult ?? null,
           skillKey: turn.playerIntent?.skill ?? null,
           skillProgress: skillBadges.length > 0 ? skillBadges : null,
+          turnId: turn.id ?? null,
+          turnSequence: turn.turnSequence ?? null,
         };
 
         const updatedMessages = prev.messages.map((message) =>

@@ -47,5 +47,12 @@
     "summary": "Stabilized LLM proxy requests",
     "details": "Typed the chronicle API's LLM client against the proxy schema, added JSON coercion heuristics for fenced or double-encoded responses, and automatically retries the proxy when parsing still fails.",
     "type": "bugfix"
+  },
+  {
+    "id": "2025-11-13-gm-feedback",
+    "releasedAt": "2025-11-13",
+    "summary": "Players can react to GM stories",
+    "details": "Added a Give Feedback button to GM replies so players can share a quick sentiment and note. Submissions piggyback on the audit API so moderators see feedback alongside narrative request logs.",
+    "type": "feature"
   }
 ]
