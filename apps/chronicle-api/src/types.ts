@@ -51,6 +51,7 @@ export type GraphContext = {
   gmMessage?: TranscriptEntry;
   gmSummary?: string;
   gmTrace?: LlmTrace | null;
+  handlerId?: string;
   chronicleShouldClose?: boolean;
   updatedCharacter?: Character | null;
   locationPlan?: LocationPlan | null;
@@ -60,6 +61,11 @@ export type GraphContext = {
   inventoryPreview?: Inventory | null;
   inventoryRegistry?: ImbuedRegistry | null;
   beatDelta?: BeatDelta | null;
+  resolvedIntentConfidence?: number;
+  resolvedIntentType?: Intent['intentType'];
+  advancesTimeline?: boolean;
+  executedNodes?: string[];
+  worldDeltaTags?: string[];
 }
 
 export type LangGraphLlmLike = {

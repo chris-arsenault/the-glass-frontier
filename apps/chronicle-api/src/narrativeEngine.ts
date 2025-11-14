@@ -23,13 +23,18 @@ import { randomUUID } from 'node:crypto';
 
 import { ChronicleClosureEmitter, type ChronicleClosurePublisher } from './closureEmitter';
 import {
+  ActionResolverNode,
   BeatTrackerNode,
   CheckPlannerNode,
+  ClarificationResponderNode,
   GmSummaryNode,
   IntentIntakeNode,
+  InquiryResponderNode,
   InventoryDeltaNode,
   LocationDeltaNode,
-  NarrativeWeaverNode,
+  PlanningNarratorNode,
+  PossibilityAdvisorNode,
+  ReflectionWeaverNode,
   UpdateCharacterNode,
 } from './langGraph/nodes';
 import { LangGraphOrchestrator } from './langGraph/orchestrator';
@@ -182,11 +187,34 @@ class NarrativeEngine {
   }
 
   #createGraph(): LangGraphOrchestrator {
+    const actionResolver = new ActionResolverNode();
+    const inquiryResponder = new InquiryResponderNode();
+    const clarificationResponder = new ClarificationResponderNode();
+    const possibilityAdvisor = new PossibilityAdvisorNode();
+    const planningNarrator = new PlanningNarratorNode();
+    const reflectionWeaver = new ReflectionWeaverNode();
+    const handlerNodes = [
+      actionResolver,
+      inquiryResponder,
+      clarificationResponder,
+      possibilityAdvisor,
+      planningNarrator,
+      reflectionWeaver,
+    ];
     return new LangGraphOrchestrator(
       [
-        new IntentIntakeNode(),
-        new CheckPlannerNode(),
-        new NarrativeWeaverNode(),
+        {
+          next: ['check-planner'],
+          node: new IntentIntakeNode(),
+        },
+        {
+          next: handlerNodes.map((node) => node.id),
+          node: new CheckPlannerNode(),
+        },
+        ...handlerNodes.map((node) => ({
+          next: ['location-delta'],
+          node,
+        })),
         new LocationDeltaNode(this.locationGraphStore),
         new GmSummaryNode(),
         new BeatTrackerNode(this.worldStateStore),
@@ -251,12 +279,15 @@ class NarrativeEngine {
     turnSequence: number;
   }): GraphContext {
     return {
+      advancesTimeline: false,
       beatDelta: null,
       chronicle: chronicleState,
       chronicleId,
       chronicleShouldClose: false,
+      executedNodes: [],
       failure: false,
       gmTrace: null,
+      handlerId: undefined,
       inventoryDelta: null,
       inventoryPreview: null,
       inventoryRegistry: null,
@@ -264,9 +295,12 @@ class NarrativeEngine {
       llm: this.createLlmClient(authorizationHeader),
       pendingEquip: pendingEquip ?? [],
       playerMessage,
+      resolvedIntentConfidence: undefined,
+      resolvedIntentType: undefined,
       telemetry: this.telemetry,
       templates: templateRuntime,
       turnSequence,
+      worldDeltaTags: [],
     };
   }
 
@@ -318,20 +352,26 @@ class NarrativeEngine {
     const combinedSystemMessage = systemMessage ?? graphResult.systemMessage;
     const failure = Boolean(graphResult.failure || combinedSystemMessage);
     return {
+      advancesTimeline: graphResult.advancesTimeline,
       beatDelta: graphResult.beatDelta ?? undefined,
       chronicleId,
+      executedNodes: graphResult.executedNodes ?? undefined,
       failure,
       gmMessage: graphResult.gmMessage,
       gmSummary: graphResult.gmSummary,
       gmTrace: graphResult.gmTrace ?? undefined,
+      handlerId: graphResult.handlerId,
       id: randomUUID(),
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
       playerIntent: graphResult.playerIntent,
       playerMessage,
+      resolvedIntentConfidence: graphResult.resolvedIntentConfidence,
+      resolvedIntentType: graphResult.resolvedIntentType ?? graphResult.playerIntent?.intentType,
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage: combinedSystemMessage,
       turnSequence,
+      worldDeltaTags: graphResult.worldDeltaTags ?? undefined,
     };
   }
 

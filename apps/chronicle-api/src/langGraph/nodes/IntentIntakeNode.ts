@@ -1,5 +1,6 @@
 import type { Intent } from '@glass-frontier/dto';
 import { Attribute } from '@glass-frontier/dto';
+import { IntentType as IntentTypeSchema } from '@glass-frontier/dto';
 import { z } from 'zod';
 
 import type { GraphContext } from '../../types.js';
@@ -16,8 +17,12 @@ const IntentResponseSchema = z.object({
   attribute: z.string().optional(),
   beatDirective: BeatDirectiveSchema.optional(),
   creativeSpark: z.boolean().optional(),
+  handlerHints: z.array(z.string()).optional(),
   intentSummary: z.string().optional(),
+  intentType: IntentTypeSchema.optional(),
   requiresCheck: z.boolean().optional(),
+  routerConfidence: z.number().min(0).max(1).optional(),
+  routerRationale: z.string().optional(),
   skill: z.string().optional(),
   tone: z.string().optional(),
 });
@@ -50,10 +55,18 @@ class IntentIntakeNode implements GraphNode {
     }
 
     const playerIntent = this.#buildIntent(context, response, content);
+    const resolvedIntentType = playerIntent.intentType ?? this.#applyHeuristics(content);
+    const resolvedConfidence = this.#normalizeConfidence(response.routerConfidence);
 
     return {
       ...context,
-      playerIntent,
+      playerIntent: {
+        ...playerIntent,
+        intentType: resolvedIntentType,
+        routerConfidence: resolvedConfidence,
+      },
+      resolvedIntentConfidence: resolvedConfidence ?? context.resolvedIntentConfidence,
+      resolvedIntentType: resolvedIntentType ?? context.resolvedIntentType,
     };
   }
 
@@ -96,17 +109,22 @@ class IntentIntakeNode implements GraphNode {
     const creativeSpark = response.creativeSpark ?? false;
     const intentSummary = this.#deriveSummary(response.intentSummary, message);
     const attribute = this.#deriveAttribute(context, skill, response.attribute);
+    const handlerHints = this.#normalizeStringArray(response.handlerHints);
 
     return {
       attribute,
       beatDirective: this.#buildBeatDirective(context, response.beatDirective),
       creativeSpark,
+      handlerHints: handlerHints ?? undefined,
       intentSummary,
+      intentType: response.intentType,
       metadata: {
         tags: [],
         timestamp: Date.now(),
       },
       requiresCheck,
+      routerConfidence: this.#normalizeConfidence(response.routerConfidence),
+      routerRationale: this.#normalizeString(response.routerRationale) ?? undefined,
       skill,
       tone,
     };
@@ -174,6 +192,19 @@ class IntentIntakeNode implements GraphNode {
     return Attribute.safeParse(candidate).success ? candidate : null;
   }
 
+  #normalizeConfidence(value?: number): number | undefined {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return undefined;
+    }
+    if (value < 0) {
+      return 0;
+    }
+    if (value > 1) {
+      return 1;
+    }
+    return value;
+  }
+
   #buildBeatDirective(
     context: GraphContext,
     directive?: z.infer<typeof BeatDirectiveSchema> | null
@@ -224,6 +255,63 @@ class IntentIntakeNode implements GraphNode {
       .map((beat) => beat?.id)
       .filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
     return new Set(ids);
+  }
+
+  #applyHeuristics(message: string): Intent['intentType'] {
+    const normalized = message.toLowerCase();
+    if (this.#matchesAction(normalized)) {
+      return 'action';
+    }
+    if (this.#matchesInquiry(normalized)) {
+      return 'inquiry';
+    }
+    if (this.#matchesClarification(normalized)) {
+      return 'clarification';
+    }
+    if (this.#matchesPossibility(normalized)) {
+      return 'possibility';
+    }
+    if (this.#matchesPlanning(normalized)) {
+      return 'planning';
+    }
+    if (this.#matchesReflection(normalized)) {
+      return 'reflection';
+    }
+    return 'action';
+  }
+
+  #matchesAction(message: string): boolean {
+    return /\b(i|we)\s+(try|attack|push|steal|dive|grab|run|leap|strike)\b/.test(message);
+  }
+
+  #matchesInquiry(message: string): boolean {
+    return /^(what|who|where|how|can i see|describe)/.test(message);
+  }
+
+  #matchesClarification(message: string): boolean {
+    return /\b(wait|remind me|did we|what was my)\b/.test(message);
+  }
+
+  #matchesPossibility(message: string): boolean {
+    return /\b(could|would it be possible|can we|what if)\b/.test(message);
+  }
+
+  #matchesPlanning(message: string): boolean {
+    return /\b(prepare|rest|travel|set up|plan|camp)\b/.test(message);
+  }
+
+  #matchesReflection(message: string): boolean {
+    return /\b(i feel|i think|i pray|i reflect|my heart)\b/.test(message);
+  }
+
+  #normalizeStringArray(values?: string[] | null): string[] | null {
+    if (!Array.isArray(values)) {
+      return null;
+    }
+    const normalized = values
+      .map((entry) => this.#normalizeString(entry))
+      .filter((entry): entry is string => entry !== null);
+    return normalized.length > 0 ? normalized : null;
   }
 }
 

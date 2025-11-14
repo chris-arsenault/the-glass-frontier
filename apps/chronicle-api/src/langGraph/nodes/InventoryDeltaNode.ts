@@ -22,7 +22,8 @@ class InventoryDeltaNode implements GraphNode {
     if (
       context.failure === true ||
       context.chronicle.character === undefined ||
-      context.chronicle.character === null
+      context.chronicle.character === null ||
+      !this.#allowsDelta(context)
     ) {
       return context;
     }
@@ -241,6 +242,10 @@ class InventoryDeltaNode implements GraphNode {
     };
   }
 
+  #allowsDelta(context: GraphContext): boolean {
+    const type = context.resolvedIntentType ?? context.playerIntent?.intentType;
+    return type === 'action' || type === 'planning';
+  }
 }
 
 export { InventoryDeltaNode };

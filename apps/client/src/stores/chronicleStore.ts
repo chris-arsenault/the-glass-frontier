@@ -50,10 +50,14 @@ const generateId = () => {
 };
 
 const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): ChatMessage => ({
+  advancesTimeline: extras?.advancesTimeline ?? null,
   attributeKey: extras?.attributeKey ?? null,
   entry,
+  executedNodes: extras?.executedNodes ?? null,
   gmSummary: extras?.gmSummary ?? null,
   gmTrace: extras?.gmTrace ?? null,
+  handlerId: extras?.handlerId ?? null,
+  intentType: extras?.intentType ?? null,
   inventoryDelta: extras?.inventoryDelta ?? null,
   playerIntent: extras?.playerIntent ?? null,
   skillCheckPlan: extras?.skillCheckPlan ?? null,
@@ -62,6 +66,7 @@ const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): C
   skillProgress: extras?.skillProgress ?? null,
   turnId: extras?.turnId ?? null,
   turnSequence: extras?.turnSequence ?? null,
+  worldDeltaTags: extras?.worldDeltaTags ?? null,
 });
 
 const upsertChatEntry = (
@@ -74,10 +79,14 @@ const upsertChatEntry = (
     const updated = [...messages];
     updated[index] = {
       ...updated[index],
+      advancesTimeline: extras?.advancesTimeline ?? updated[index].advancesTimeline,
       attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
       entry,
+      executedNodes: extras?.executedNodes ?? updated[index].executedNodes,
       gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
       gmTrace: extras?.gmTrace ?? updated[index].gmTrace,
+      handlerId: extras?.handlerId ?? updated[index].handlerId,
+      intentType: extras?.intentType ?? updated[index].intentType,
       inventoryDelta: extras?.inventoryDelta ?? updated[index].inventoryDelta,
       playerIntent: extras?.playerIntent ?? updated[index].playerIntent,
       skillCheckPlan: extras?.skillCheckPlan ?? updated[index].skillCheckPlan,
@@ -85,6 +94,7 @@ const upsertChatEntry = (
       skillKey: extras?.skillKey ?? updated[index].skillKey,
       turnId: extras?.turnId ?? updated[index].turnId,
       turnSequence: extras?.turnSequence ?? updated[index].turnSequence,
+      worldDeltaTags: extras?.worldDeltaTags ?? updated[index].worldDeltaTags,
     };
     return updated;
   }
@@ -96,9 +106,14 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
     const skillKey = turn.playerIntent?.skill ?? null;
     const attributeKey = turn.playerIntent?.attribute ?? null;
     const extras = {
+      advancesTimeline:
+        typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
       attributeKey,
+      executedNodes: turn.executedNodes ?? null,
       gmSummary: turn.gmSummary ?? null,
       gmTrace: turn.gmTrace ?? null,
+      handlerId: turn.handlerId ?? null,
+      intentType: turn.resolvedIntentType ?? turn.playerIntent?.intentType ?? null,
       inventoryDelta: turn.inventoryDelta ?? null,
       playerIntent: turn.playerIntent ?? null,
       skillCheckPlan: turn.skillCheckPlan ?? null,
@@ -107,6 +122,7 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
       skillProgress: null,
       turnId: turn.id ?? null,
       turnSequence: turn.turnSequence ?? null,
+      worldDeltaTags: turn.worldDeltaTags ?? null,
     };
     const turnEntries: ChatMessage[] = [];
     if (turn.playerMessage) {
@@ -289,21 +305,34 @@ const applyTurnProgressEvent = (
       message.entry.id === state.pendingPlayerMessageId
         ? {
           ...message,
+          advancesTimeline:
+              typeof payload.advancesTimeline === 'boolean'
+                ? payload.advancesTimeline
+                : message.advancesTimeline ?? null,
           attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+          executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
+          handlerId: payload.handlerId ?? message.handlerId ?? null,
+          intentType: payload.resolvedIntentType ?? payload.playerIntent?.intentType ?? message.intentType ?? null,
           inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
           playerIntent: payload.playerIntent ?? message.playerIntent,
           skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
           skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
           skillKey: payload.playerIntent?.skill ?? message.skillKey,
+          worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
         }
         : message
     );
   }
 
   const extras: Partial<ChatMessage> = {
+    advancesTimeline:
+      typeof payload.advancesTimeline === 'boolean' ? payload.advancesTimeline : null,
     attributeKey: payload.playerIntent?.attribute ?? null,
+    executedNodes: payload.executedNodes ?? null,
     gmSummary: payload.gmSummary ?? null,
     gmTrace: payload.gmTrace ?? null,
+    handlerId: payload.handlerId ?? null,
+    intentType: payload.resolvedIntentType ?? payload.playerIntent?.intentType ?? null,
     inventoryDelta: payload.inventoryDelta ?? null,
     playerIntent: payload.playerIntent ?? null,
     skillCheckPlan: payload.skillCheckPlan ?? null,
@@ -312,6 +341,7 @@ const applyTurnProgressEvent = (
     skillProgress: null,
     turnId: null,
     turnSequence: event.turnSequence ?? null,
+    worldDeltaTags: payload.worldDeltaTags ?? null,
   };
 
   if (payload.gmMessage) {

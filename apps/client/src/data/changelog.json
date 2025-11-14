@@ -82,5 +82,12 @@
     "summary": "Chronicle closures now generate epilogues",
     "details": "When a chronicle is closed we enqueue a new chronicle-closer Lambda that fabricates a short-story recap, high-level location events, and character bio notes via SQS so completed runs get preserved across the world state.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-15-multi-intent-dag",
+    "releasedAt": "2025-11-15",
+    "summary": "GM turns now adapt to six intent styles",
+    "details": "The narrative engine now classifies each player message as an action, inquiry, clarification, possibility check, planning beat, or reflection, branches through a new decision-graph, renders dedicated prompt templates, and only applies world deltas when the turn truly advances time. The chat UI now surfaces intent/timeline badges plus world-change traces so players can see how each response impacted the story.",
+    "type": "feature"
   }
 ]

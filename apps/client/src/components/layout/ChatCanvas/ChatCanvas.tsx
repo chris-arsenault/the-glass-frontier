@@ -44,6 +44,27 @@ const describeBeatDirectiveTag = (
   return 'Beat · Independent';
 };
 
+const formatIntentBadgeLabel = (intentType: ChatMessage['intentType']): string | null => {
+  if (!intentType) {
+    return null;
+  }
+  return intentType.replace(/^\w/, (char) => char.toUpperCase());
+};
+
+const describeTimelineBadge = (advancesTimeline: ChatMessage['advancesTimeline']): string | null => {
+  if (typeof advancesTimeline !== 'boolean') {
+    return null;
+  }
+  return advancesTimeline ? 'Advances timeline' : 'Holds moment';
+};
+
+const describeWorldDeltaTags = (tags: ChatMessage['worldDeltaTags']): string | null => {
+  if (!Array.isArray(tags) || tags.length === 0) {
+    return null;
+  }
+  return tags.join(', ');
+};
+
 const readFeedbackCache = (): Record<string, true> => {
   if (typeof window === 'undefined') {
     return {};
@@ -255,6 +276,9 @@ export function ChatCanvas() {
               entry.role === 'player'
                 ? describeBeatDirectiveTag(playerIntent?.beatDirective, beatLookup)
                 : null;
+            const intentLabel = formatIntentBadgeLabel(chatMessage.intentType ?? null);
+            const timelineLabel = describeTimelineBadge(chatMessage.advancesTimeline ?? null);
+            const deltaLabel = describeWorldDeltaTags(chatMessage.worldDeltaTags ?? null);
 
             return (
               <article
@@ -285,6 +309,12 @@ export function ChatCanvas() {
                     ) : null}
                     {entry.role === 'gm' ? (
                       <>
+                        {intentLabel ? (
+                          <span className="chat-entry-intent-tag">{intentLabel}</span>
+                        ) : null}
+                        {timelineLabel ? (
+                          <span className="chat-entry-timeline-tag">{timelineLabel}</span>
+                        ) : null}
                         <SkillCheckBadge
                           plan={skillCheckPlan}
                           result={skillCheckResult}
@@ -361,6 +391,14 @@ export function ChatCanvas() {
                             </span>
                           ))}
                         </div>
+                      ) : null}
+                      {deltaLabel ? (
+                        <p className="chat-entry-delta-note">World shifts: {deltaLabel}</p>
+                      ) : null}
+                      {chatMessage.executedNodes?.length ? (
+                        <p className="chat-entry-node-trace">
+                          GM pipeline: {chatMessage.executedNodes.join(' → ')}
+                        </p>
                       ) : null}
                     </>
                   ) : entry.role === 'player' ? (

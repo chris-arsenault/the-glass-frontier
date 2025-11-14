@@ -19,7 +19,9 @@ export type ChronicleLifecycle = 'open' | 'closed';
 export type DirectoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export type ChatMessage = {
+  advancesTimeline?: boolean | null;
   entry: TranscriptEntry;
+  executedNodes?: string[] | null;
   skillCheckPlan?: SkillCheckPlan | null;
   skillCheckResult?: SkillCheckResult | null;
   skillKey?: string | null;
@@ -31,6 +33,9 @@ export type ChatMessage = {
   turnSequence?: number | null;
   skillProgress?: SkillProgressBadge[] | null;
   inventoryDelta?: InventoryDelta | null;
+  intentType?: Intent['intentType'] | null;
+  handlerId?: string | null;
+  worldDeltaTags?: string[] | null;
 }
 
 export type SkillProgressBadge =

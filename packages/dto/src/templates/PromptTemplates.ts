@@ -1,14 +1,20 @@
 import { z } from 'zod';
 
 export const PromptTemplateIds = [
-  'intent-intake',
-  'check-planner',
-  'narrative-weaver',
-  'location-delta',
-  'gm-summary',
-  'inventory-arbiter',
-  'chronicle-seed',
+  'action-resolver',
   'beat-director',
+  'check-planner',
+  'chronicle-seed',
+  'clarification-retriever',
+  'gm-summary',
+  'inquiry-describer',
+  'intent-intake',
+  'inventory-arbiter',
+  'location-delta',
+  'narrative-weaver',
+  'planning-narrator',
+  'possibility-advisor',
+  'reflection-weaver',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -26,8 +32,18 @@ export const PromptTemplateDescriptor = z.object({
 export type PromptTemplateDescriptor = z.infer<typeof PromptTemplateDescriptor>;
 
 const OUTPUT_FORMAT_SECTION = '## Output Format';
+const GUIDANCE_SECTION = '## Guidance';
 
 export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplateDescriptor> = {
+  'action-resolver': {
+    description: 'Resolves decisive player actions with consequences and hooks.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: '## Story Craft',
+    id: 'action-resolver',
+    label: 'Action Resolver',
+    officialObjectKey: 'official/action-resolver.hbs',
+    supportsVariants: true,
+  },
   'beat-director': {
     description: 'Evaluates and updates chronicle beats using player and GM context.',
     editableEndToken: '## Output Format',
@@ -49,10 +65,19 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   'chronicle-seed': {
     description: 'Generates short chronicle hooks based on a location and tone prompt.',
     editableEndToken: '## Output Requirements',
-    editableStartToken: '## Guidance',
+    editableStartToken: GUIDANCE_SECTION,
     id: 'chronicle-seed',
     label: 'Chronicle Seeds',
     officialObjectKey: 'official/chronicle-seed.hbs',
+    supportsVariants: true,
+  },
+  'clarification-retriever': {
+    description: 'Answers short factual clarification questions crisply.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: GUIDANCE_SECTION,
+    id: 'clarification-retriever',
+    label: 'Clarification Retriever',
+    officialObjectKey: 'official/clarification-retriever.hbs',
     supportsVariants: true,
   },
   'gm-summary': {
@@ -62,6 +87,15 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'gm-summary',
     label: 'GM Summary',
     officialObjectKey: 'official/gm-summary.hbs',
+    supportsVariants: true,
+  },
+  'inquiry-describer': {
+    description: 'Provides sensory-rich scene description for inquiry turns.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: GUIDANCE_SECTION,
+    id: 'inquiry-describer',
+    label: 'Inquiry Describer',
+    officialObjectKey: 'official/inquiry-describer.hbs',
     supportsVariants: true,
   },
   'intent-intake': {
@@ -98,6 +132,33 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'narrative-weaver',
     label: 'Narrative Weaver',
     officialObjectKey: 'official/narrative-weaver.hbs',
+    supportsVariants: true,
+  },
+  'planning-narrator': {
+    description: 'Summarizes transitional planning/prep scenes with light deltas.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: GUIDANCE_SECTION,
+    id: 'planning-narrator',
+    label: 'Planning Narrator',
+    officialObjectKey: 'official/planning-narrator.hbs',
+    supportsVariants: true,
+  },
+  'possibility-advisor': {
+    description: 'Enumerates viable options, costs, and risks without resolving them.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: GUIDANCE_SECTION,
+    id: 'possibility-advisor',
+    label: 'Possibility Advisor',
+    officialObjectKey: 'official/possibility-advisor.hbs',
+    supportsVariants: true,
+  },
+  'reflection-weaver': {
+    description: 'Crafts introspective reflection prose without state changes.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: GUIDANCE_SECTION,
+    id: 'reflection-weaver',
+    label: 'Reflection Weaver',
+    officialObjectKey: 'official/reflection-weaver.hbs',
     supportsVariants: true,
   },
 };

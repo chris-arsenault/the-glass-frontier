@@ -63,11 +63,7 @@ export class LocationDeltaNode implements GraphNode {
   async execute(context: GraphContext): Promise<GraphContext> {
     const gmMessageContent = context.gmMessage?.content;
     const characterId = context.chronicle.character?.id;
-    if (
-      context.failure === true ||
-      !isNonEmptyString(gmMessageContent) ||
-      !isNonEmptyString(characterId)
-    ) {
+    if (!this.#isRunnable(context, gmMessageContent, characterId)) {
       return context;
     }
 
@@ -375,6 +371,24 @@ export class LocationDeltaNode implements GraphNode {
       ops.push({ edge: { dst: targetId, kind: 'CONTAINS', src: parentId }, op: 'CREATE_EDGE' });
       break;
     }
+  }
+
+  #shouldApplyDelta(context: GraphContext): boolean {
+    const type = context.resolvedIntentType ?? context.playerIntent?.intentType;
+    return type === 'action' || type === 'planning';
+  }
+
+  #isRunnable(
+    context: GraphContext,
+    gmMessageContent?: string | null,
+    characterId?: string | null
+  ): boolean {
+    return (
+      context.failure !== true &&
+      this.#shouldApplyDelta(context) &&
+      isNonEmptyString(gmMessageContent) &&
+      isNonEmptyString(characterId)
+    );
   }
 }
 
