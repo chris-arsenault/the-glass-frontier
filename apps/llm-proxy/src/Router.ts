@@ -40,9 +40,20 @@ const chatCompletionInputSchema = z
     model: z.string(),
     prompt: z.any().optional(),
     provider: z.string().optional(),
+    reasoning: z
+      .object({
+        effort: z.enum(['minimal', 'low', 'medium', 'high']),
+      })
+      .optional(),
     requestId: z.string().optional(),
     stream: z.boolean().optional(),
     temperature: z.number().optional(),
+    text: z
+      .object({
+        format: z.object({}).passthrough().optional(),
+        verbosity: z.enum(['low', 'medium', 'high']).optional(),
+      })
+      .optional(),
   })
   .passthrough();
 

@@ -7,11 +7,18 @@ import {
   type InventoryStoreDelta,
   type InventoryStoreOp,
 } from '@glass-frontier/persistence';
+import { zodTextFormat } from 'openai/helpers/zod';
 
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeInventoryDeltaPrompt } from '../prompts/prompts';
 import { convertFlatDelta, describeStoreOperations } from './inventoryDeltaHelpers';
+
+const INVENTORY_DELTA_FORMAT = zodTextFormat(InventoryDelta, 'inventory_delta_response');
+const INVENTORY_DELTA_TEXT = {
+  format: INVENTORY_DELTA_FORMAT,
+  verbosity: 'low' as const,
+};
 
 class InventoryDeltaNode implements GraphNode {
   readonly id = 'inventory-delta';
@@ -163,7 +170,9 @@ class InventoryDeltaNode implements GraphNode {
         maxTokens: 400,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
+        reasoning: { effort: 'minimal' as const },
         temperature: 0.1,
+        text: INVENTORY_DELTA_TEXT,
       });
       const parsed = InventoryDelta.safeParse(result.json);
       if (!parsed.success) {

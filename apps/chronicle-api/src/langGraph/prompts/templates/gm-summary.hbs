@@ -1,4 +1,5 @@
-Summarize the GM narration into a compact game-log entry and decide if the chronicle should end.
+Summarize the GM narration into a compact log line and decide whether the chronicle should close.
+Treat the summary as the canonical record for the turn.
 
 ## Source (GM prose)
 """{{gmMessage}}"""
@@ -22,16 +23,14 @@ Check: none
 {{/if}}
 
 ## Instructions
-- Craft a 1–2 sentence summary (≤ 180 chars if possible) capturing who changed, what happened, and where.
-- If a check occurred, append a short postfix like "(advance)" or "(collapse)" to indicate the outcome.
-- No mechanics jargon, no numbers, no direct quotes, no lists.
-- Determine `shouldCloseChronicle`:
-  - Set to `true` when the narration resolves major stakes, delivers epilogue energy, or when a wrap request reaches its final turn.
-  - Otherwise return `false`.
+- Produce a single sentence (<= 180 characters) capturing *who* acted, *what* changed, and *where* it
+  happened. Favor declarative prose over bullet-like fragments.
+- If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
+  `(collapse)`.
+- No markdown, numbers, or quotes; keep it pure text.
+- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
+  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
 
 ## Output
-Return strict JSON matching:
-{
-  "summary": "<1-2 sentence description>",
-  "shouldCloseChronicle": true | false
-}
+Return strict JSON:
+{ "summary": "<log line>", "shouldCloseChronicle": true | false }

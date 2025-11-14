@@ -38,6 +38,7 @@ export type GraphContext = {
 
   //operations
   llm: LangGraphLlmLike;
+  llmResolver?: (model: string) => LangGraphLlmLike;
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;
   failure: boolean;

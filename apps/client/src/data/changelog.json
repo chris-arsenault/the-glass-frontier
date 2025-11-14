@@ -89,5 +89,12 @@
     "summary": "GM turns now adapt to six intent styles",
     "details": "The narrative engine now classifies each player message as an action, inquiry, clarification, possibility check, planning beat, or reflection, branches through a new decision-graph, renders dedicated prompt templates, and only applies world deltas when the turn truly advances time. The chat UI now surfaces intent/timeline badges plus world-change traces so players can see how each response impacted the story.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-16-intent-dag-upgrade",
+    "releasedAt": "2025-11-16",
+    "summary": "Intent DAG now uses dedicated classifiers",
+    "details": "Split the router into intent, beat, and skill detector nodes that run gpt-5-nano through the revamped llmResolver, rewrote every prompt template (especially intent intake) to match the new DAG contracts, documented the node/parameter flow in apps/chronicle-api/src/langGraph/README.md, and migrated the llm proxy plus client to the OpenAI responses API with reasoning/text knobs so classifier nodes stay lean.",
+    "type": "improvement"
   }
 ]

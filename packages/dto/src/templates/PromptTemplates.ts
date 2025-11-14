@@ -8,13 +8,14 @@ export const PromptTemplateIds = [
   'clarification-retriever',
   'gm-summary',
   'inquiry-describer',
+  'intent-beat-detector',
   'intent-intake',
   'inventory-arbiter',
   'location-delta',
-  'narrative-weaver',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
+  'skill-detector',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -98,6 +99,15 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/inquiry-describer.hbs',
     supportsVariants: true,
   },
+  'intent-beat-detector': {
+    description: 'Determines whether the current intent advances, spawns, or ignores a beat.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: GUIDANCE_SECTION,
+    id: 'intent-beat-detector',
+    label: 'Intent Beat Detector',
+    officialObjectKey: 'official/intent-beat-detector.hbs',
+    supportsVariants: true,
+  },
   'intent-intake': {
     description: 'Parses the player\'s utterance into actionable intent metadata.',
     editableEndToken: OUTPUT_FORMAT_SECTION,
@@ -125,15 +135,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/location-delta.hbs',
     supportsVariants: true,
   },
-  'narrative-weaver': {
-    description: 'Crafts the GM\'s prose response using mechanical context when present.',
-    editableEndToken: '## Output Requirements',
-    editableStartToken: '## Storytelling Directives',
-    id: 'narrative-weaver',
-    label: 'Narrative Weaver',
-    officialObjectKey: 'official/narrative-weaver.hbs',
-    supportsVariants: true,
-  },
   'planning-narrator': {
     description: 'Summarizes transitional planning/prep scenes with light deltas.',
     editableEndToken: OUTPUT_FORMAT_SECTION,
@@ -159,6 +160,15 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'reflection-weaver',
     label: 'Reflection Weaver',
     officialObjectKey: 'official/reflection-weaver.hbs',
+    supportsVariants: true,
+  },
+  'skill-detector': {
+    description: 'Maps player intents to the best-fit skill and attribute pairing.',
+    editableEndToken: '## Output',
+    editableStartToken: '## Rules',
+    id: 'skill-detector',
+    label: 'Skill Detector',
+    officialObjectKey: 'official/skill-detector.hbs',
     supportsVariants: true,
   },
 };

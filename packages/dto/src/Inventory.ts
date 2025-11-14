@@ -120,14 +120,14 @@ export const PendingEquip = z.union([
 export type PendingEquip = z.infer<typeof PendingEquip>;
 
 export const InventoryDeltaOp = z.object({
-  amount: z.number().int().positive().optional(),
-  bucket: z.enum(InventoryCollectionBuckets).optional(),
-  hook: z.string().optional(),
-  name: z.string().min(1).optional(),
+  amount: z.number().int().positive().optional().nullable(),
+  bucket: z.enum(InventoryCollectionBuckets).optional().nullable(),
+  hook: z.string().optional().nullable(),
+  name: z.string().min(1).optional().nullable(),
   op: z.enum(['equip', 'unequip', 'add', 'remove', 'consume', 'spend_shard']),
-  purpose: z.string().optional(),
-  seed: z.string().optional(),
-  slot: Slot.optional(),
+  purpose: z.string().optional().nullable(),
+  seed: z.string().optional().nullable(),
+  slot: Slot.optional().nullable(),
 });
 export type InventoryDeltaOp = z.infer<typeof InventoryDeltaOp>;
 
@@ -141,11 +141,11 @@ export type InventoryDelta = z.infer<typeof InventoryDelta>;
 export const ImbuedRegistryEntry = z.object({
   attribute: Attribute,
   bonus: z.number().int(),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   key: z.string().min(1),
   name: z.string().min(1),
   slot: Slot,
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional().nullable(),
 });
 export type ImbuedRegistryEntry = z.infer<typeof ImbuedRegistryEntry>;
 

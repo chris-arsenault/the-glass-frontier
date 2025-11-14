@@ -2,6 +2,7 @@ import type { BeatDelta, ChronicleBeat, Intent } from '@glass-frontier/dto';
 import { ChronicleBeatStatus } from '@glass-frontier/dto';
 import type { WorldStateStore } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
 import type { GraphContext } from '../../types.js';
@@ -9,18 +10,47 @@ import type { GraphNode } from '../orchestrator.js';
 import { composeBeatDirectorPrompt } from '../prompts/prompts';
 
 const BeatUpdateSchema = z.object({
-  beatId: z.string().min(1),
-  description: z.string().optional(),
-  status: ChronicleBeatStatus.optional(),
+  beatId: z.string().min(1).describe('ID of the beat being updated.'),
+  description: z
+    .string()
+    .min(1)
+    .describe('Optional 1-2 sentence update describing how the beat shifted this turn.')
+    .optional()
+    .nullable(),
+  status: ChronicleBeatStatus.describe('Optional new status for the beat.')
+    .optional()
+    .nullable(),
 });
 
 const BeatDecisionSchema = z.object({
-  focusBeatId: z.string().nullable().optional(),
-  newBeatDescription: z.string().nullable().optional(),
-  newBeatTitle: z.string().nullable().optional(),
-  shouldStartNewBeat: z.boolean().optional(),
-  updates: z.array(BeatUpdateSchema).optional(),
+  focusBeatId: z
+    .string()
+    .min(1)
+    .nullable()
+    .describe('Beat that should become the current focus; null when no beats exist.'),
+  newBeatDescription: z
+    .string()
+    .min(1)
+    .nullable()
+    .describe('Description for a newly spawned beat if one should start.'),
+  newBeatTitle: z
+    .string()
+    .min(1)
+    .nullable()
+    .describe('Title for a newly spawned beat if one should start.'),
+  shouldStartNewBeat: z
+    .boolean()
+    .describe('True when the current turn should seed a brand new beat.'),
+  updates: z
+    .array(BeatUpdateSchema)
+    .describe('List of updates to apply to existing beats; use an empty array when none changed.'),
 });
+
+const BEAT_DECISION_FORMAT = zodTextFormat(BeatDecisionSchema, 'beat_director_decision');
+const BEAT_DECISION_TEXT = {
+  format: BEAT_DECISION_FORMAT,
+  verbosity: 'low' as const,
+};
 
 type BeatDecision = z.infer<typeof BeatDecisionSchema>;
 type BeatUpdate = z.infer<typeof BeatUpdateSchema>;
@@ -63,7 +93,9 @@ class BeatTrackerNode implements GraphNode {
         maxTokens: 600,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
+        reasoning: { effort: 'minimal' as const },
         temperature: 0.15,
+        text: BEAT_DECISION_TEXT,
       });
       const parsed = BeatDecisionSchema.safeParse(response.json);
       return parsed.success ? parsed.data : null;

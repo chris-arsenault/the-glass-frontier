@@ -1,10 +1,6 @@
 'use strict';
 
 import OpenAI, { APIError } from 'openai';
-import type {
-  ChatCompletionCreateParams,
-  ChatCompletionMessageParam,
-} from 'openai/resources/chat/completions';
 import { Response } from 'undici';
 
 import type { Payload } from '../Payload';
@@ -12,7 +8,8 @@ import { BaseProvider } from './BaseProvider';
 import { ProviderError } from './ProviderError';
 
 type ModelAdapter = (request: Record<string, unknown>, body: Record<string, unknown>) => void;
-const defaultOpenAIEndpoint = 'https://api.openai.com/v1/chat/completions';
+type ResponsesCreateParams = Parameters<OpenAI['responses']['create']>[0];
+const defaultOpenAIEndpoint = 'https://api.openai.com/v1/responses';
 
 const sanitizeEnv = (value?: string): string =>
   typeof value === 'string' ? value.trim() : '';
@@ -26,42 +23,40 @@ const MODEL_ADAPTERS = new Map<string, ModelAdapter>([
   [
     'gpt-4.1-mini',
     (req, body) => {
-      const tokens =
-        typeof body.max_completion_tokens === 'number'
-          ? body.max_completion_tokens
-          : typeof body.max_tokens === 'number'
-            ? body.max_tokens
-            : undefined;
+      const tokens = extractMaxTokens(body);
       if (tokens !== undefined) {
-        req.max_completion_tokens = tokens;
-        delete req.max_tokens;
+        req.max_output_tokens = tokens;
       }
     },
   ],
   [
     'gpt-5-nano',
     (req, body) => {
-      const tokens =
-        typeof body.max_completion_tokens === 'number'
-          ? body.max_completion_tokens
-          : typeof body.max_tokens === 'number'
-            ? body.max_tokens
-            : undefined;
-      if (tokens !== undefined) {
-        req.max_completion_tokens = tokens;
-      }
-      delete req.max_tokens;
+      const tokens = extractMaxTokens(body);
+      req.max_output_tokens = Math.max(tokens ?? 5000, 5000);
       delete req.temperature;
     },
   ],
 ]);
 
 const DEFAULT_ADAPTER: ModelAdapter = (req, body) => {
-  if (typeof body.max_tokens === 'number') {
-    req.max_tokens = body.max_tokens;
-  } else if (typeof body.max_completion_tokens === 'number') {
-    req.max_tokens = body.max_completion_tokens;
+  const tokens = extractMaxTokens(body);
+  if (tokens !== undefined) {
+    req.max_output_tokens = tokens;
   }
+};
+
+const extractMaxTokens = (body: Record<string, unknown>): number | undefined => {
+  if (typeof body.max_output_tokens === 'number') {
+    return body.max_output_tokens;
+  }
+  if (typeof body.max_tokens === 'number') {
+    return body.max_tokens;
+  }
+  if (typeof body.max_completion_tokens === 'number') {
+    return body.max_completion_tokens;
+  }
+  return undefined;
 };
 
 class OpenAIProvider extends BaseProvider {
@@ -97,44 +92,31 @@ class OpenAIProvider extends BaseProvider {
   }
 
   preparePayload(payload: Payload): Payload {
-    const sanitized = payload.sanitizePayload();
-    const body = sanitized.body;
-
-    const hasMessages = Array.isArray(body.messages);
-    const prompt = body.prompt;
-    const promptValue = typeof prompt === 'string' ? prompt.trim() : '';
-
-    if (!hasMessages && promptValue.length > 0) {
-      body.messages = [{ content: promptValue, role: 'user' }];
-      delete body.prompt;
-    }
-
-    return sanitized;
+    return payload.sanitizePayload();
   }
 
   async execute(payload: Payload, signal?: AbortSignal): Promise<Response> {
     const body = payload.body as Record<string, unknown>;
-    const messages = this.buildMessages(body);
+    const input = this.buildInput(body);
 
-    if (messages.length === 0) {
+    if (input.length === 0) {
       throw new ProviderError({
-        code: 'openai_missing_messages',
-        details: { message: 'missing_messages' },
-        message: 'OpenAI chat completions require at least one message.',
+        code: 'openai_missing_input',
+        details: { message: 'missing_input' },
+        message: 'OpenAI responses require at least one input message.',
         retryable: false,
         status: 400,
       });
     }
 
     try {
-      const completion = await this.#client.chat.completions.create(
-        this.#buildRequest(body, messages),
-        {
-          signal,
-        }
-      );
+      const request = this.#buildRequest(body, input);
+      const completion = await this.#client.responses.create(request, {
+        signal,
+      });
+      const normalized = this.#toChatCompletionPayload(completion);
 
-      return new Response(JSON.stringify(completion), {
+      return new Response(JSON.stringify(normalized), {
         headers: { 'content-type': 'application/json' },
         status: 200,
       });
@@ -148,10 +130,10 @@ class OpenAIProvider extends BaseProvider {
     }
   }
 
-  private buildMessages(body: Record<string, unknown>): ChatCompletionMessageParam[] {
+  private buildInput(body: Record<string, unknown>): Array<Record<string, unknown>> {
     const rawMessages = body.messages;
     if (Array.isArray(rawMessages) && rawMessages.length > 0) {
-      return rawMessages as ChatCompletionMessageParam[];
+      return rawMessages as Array<Record<string, unknown>>;
     }
 
     const prompt = body.prompt;
@@ -215,11 +197,11 @@ class OpenAIProvider extends BaseProvider {
 
   #buildRequest(
     body: Record<string, unknown>,
-    messages: ChatCompletionMessageParam[]
-  ): ChatCompletionCreateParams {
+    input: Array<Record<string, unknown>>
+  ): ResponsesCreateParams {
     const modelKey = typeof body.model === 'string' ? body.model : '';
-    const request: Record<string, unknown> = {
-      messages,
+    const request: ResponsesCreateParams = {
+      input,
       model: modelKey,
       stream: false,
     };
@@ -227,11 +209,81 @@ class OpenAIProvider extends BaseProvider {
     if (typeof body.temperature === 'number') {
       request.temperature = body.temperature;
     }
+    if (body.reasoning !== undefined) {
+      request.reasoning = body.reasoning;
+    }
+    if (body.text !== undefined) {
+      request.text = body.text;
+    }
 
     const adapter = MODEL_ADAPTERS.get(modelKey) ?? DEFAULT_ADAPTER;
     adapter(request, body);
 
-    return request as ChatCompletionCreateParams;
+    return request;
+  }
+
+  #toChatCompletionPayload(response: Record<string, unknown>): Record<string, unknown> {
+    const text = this.#extractText(response);
+    const usage = this.coerceRecord(response.usage);
+    const stopReason = this.#extractStopReason(response);
+    return {
+      choices: [
+        {
+          finish_reason: stopReason,
+          index: 0,
+          message: { content: text, role: 'assistant' },
+        },
+      ],
+      usage,
+    };
+  }
+
+  #extractText(payload: Record<string, unknown>): string {
+    const parts: string[] = [];
+    parts.push(...this.#collectText(payload.output_text));
+    if (parts.length == 0) {
+      parts.push(...this.#collectText(payload.output));
+    }
+    return parts.join('').trim();
+  }
+
+  #collectText(source: unknown): string[] {
+    if (Array.isArray(source)) {
+      return source.flatMap((entry) => this.#collectTextFromEntry(entry));
+    }
+    if (typeof source === 'string') {
+      return [source];
+    }
+    return [];
+  }
+
+  #collectTextFromEntry(entry: unknown): string[] {
+    if (entry === null || typeof entry !== 'object') {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    const parts: string[] = [];
+    const text = record.text;
+    if (typeof text === 'string') {
+      parts.push(text);
+    }
+    const content = record.content;
+    if (Array.isArray(content)) {
+      for (const segment of content) {
+        if (segment !== null && typeof segment === 'object') {
+          const segText = (segment as Record<string, unknown>).text;
+          if (typeof segText === 'string') {
+            parts.push(segText);
+          }
+        }
+      }
+    }
+    return parts;
+  }
+
+  #extractStopReason(payload: Record<string, unknown>): string {
+    const candidate = payload.stop_reason;
+    return typeof candidate === 'string' && candidate.length > 0 ? candidate : 'stop';
   }
 }
 

@@ -19,6 +19,11 @@ const JSON_PARSE_RECOVERY_ATTEMPTS = 2;
 const JSON_NESTED_PARSE_LIMIT = 3;
 const JSON_WRAPPER_CHARS = new Set(['\'', '"', '`']);
 
+type TextOptions = {
+  format?: Record<string, unknown>;
+  verbosity?: 'low' | 'medium' | 'high';
+};
+
 type LlmInvokeOptions = {
   prompt?: string;
   system?: string;
@@ -27,6 +32,8 @@ type LlmInvokeOptions = {
   maxTokens?: number;
   metadata?: InvocationMetadata;
   requestId?: string;
+  reasoning?: { effort: 'minimal' | 'low' | 'medium' | 'high' };
+  text?: TextOptions;
 };
 
 type ExecuteResult = {
@@ -150,7 +157,16 @@ class LangGraphLlmClient {
     attempts: number;
     requestId: string;
   }> {
-    const payload = { ...this.#buildPayload(options), response_format: { type: 'json_object' } };
+    const payload = { ...this.#buildPayload(options) };
+    const hasStructuredFormat =
+      payload.text !== undefined &&
+      payload.text !== null &&
+      typeof payload.text === 'object' &&
+      'format' in payload.text &&
+      payload.text.format !== undefined;
+    if (!hasStructuredFormat) {
+      payload.response_format = { type: 'json_object' };
+    }
     let totalAttempts = 0;
     let lastOutput: unknown;
 
@@ -192,9 +208,11 @@ class LangGraphLlmClient {
     maxTokens = 450,
     messages,
     prompt,
+    reasoning,
     requestId,
     system,
     temperature = 0.7,
+    text,
   }: LlmInvokeOptions): ChatCompletionInput {
     const sequence = Array.isArray(messages) ? [...messages] : [];
 
@@ -210,7 +228,7 @@ class LangGraphLlmClient {
       throw new Error('llm_payload_requires_prompt_or_messages');
     }
 
-    return {
+    const payload: ChatCompletionInput = {
       max_tokens: maxTokens,
       messages: sequence,
       model: this.#model,
@@ -218,6 +236,23 @@ class LangGraphLlmClient {
       stream: false,
       temperature,
     };
+    return this.#applyOutputSettings(payload, { reasoning, text });
+  }
+
+  #applyOutputSettings(
+    payload: ChatCompletionInput,
+    options: { reasoning?: LlmInvokeOptions['reasoning']; text?: LlmInvokeOptions['text'] }
+  ): ChatCompletionInput {
+    if (options.reasoning !== undefined) {
+      payload.reasoning = options.reasoning;
+    }
+    if (options.text !== undefined) {
+      payload.text = {
+        ...(payload.text ?? {}),
+        ...options.text,
+      };
+    }
+    return payload;
   }
 
   async #execute({
