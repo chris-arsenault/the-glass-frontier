@@ -138,7 +138,22 @@ class InventoryDeltaNode implements GraphNode {
     if (!this.#validateDeltaMetadata(delta, baseline, context)) {
       return null;
     }
-    return convertFlatDelta(delta, inventory, registry);
+    try {
+      return convertFlatDelta(delta, inventory, registry);
+    } catch (error) {
+      context.telemetry?.recordToolError?.({
+        attempt: 0,
+        chronicleId: context.chronicleId,
+        message: error instanceof Error ? error.message : 'unknown',
+        operation: 'llm.inventory-delta.convert',
+        referenceId: null,
+      });
+      return {
+        displayOps: [],
+        inventory,
+        storeOps: [],
+      };
+    }
   }
 
   async #fetchInventoryDelta(context: GraphContext, prompt: string): Promise<InventoryDelta | null> {

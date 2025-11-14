@@ -290,8 +290,14 @@ const applyTurnProgressEvent = (
     nextMessages = upsertChatEntry(nextMessages, payload.systemMessage, extras);
   }
 
+  const shouldClose = payload.chronicleShouldClose === true;
   return {
     ...state,
+    chronicleRecord:
+      shouldClose && state.chronicleRecord
+        ? { ...state.chronicleRecord, status: 'closed' }
+        : state.chronicleRecord,
+    chronicleStatus: shouldClose ? 'closed' : state.chronicleStatus,
     messages: nextMessages,
   };
 };
@@ -345,6 +351,55 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       transportError: null,
       turnSequence: 0,
     }));
+  },
+
+  async setChronicleWrapTarget(shouldWrap) {
+    const chronicleId = get().chronicleId;
+    if (!chronicleId) {
+      const nextError = new Error('Select or create a chronicle before toggling wrap-up.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+    if (get().chronicleStatus === 'closed') {
+      const nextError = new Error('Chronicle is closed. Toggle unavailable.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+    const identity = resolveLoginIdentity();
+    const currentTurnSequence = Math.max(get().turnSequence, 0);
+    const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
+
+    try {
+      const result = await trpcClient.setChronicleTargetEnd.mutate({
+        chronicleId,
+        loginId: identity.loginId,
+        targetEndTurn,
+      });
+      const updatedChronicle = result?.chronicle ?? null;
+      set((prev) => ({
+        ...prev,
+        availableChronicles:
+          updatedChronicle !== null
+            ? mergeChronicleRecord(prev.availableChronicles, updatedChronicle)
+            : prev.availableChronicles,
+        chronicleRecord: updatedChronicle ?? prev.chronicleRecord,
+        transportError: null,
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to update chronicle wrap state.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
   },
 
   clearPendingEquipQueue() {
@@ -648,6 +703,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }));
       throw error;
     }
+    if (get().chronicleStatus === 'closed') {
+      const error = new Error('Chronicle is closed. No further turns can be sent.');
+      set((prev) => ({
+        ...prev,
+        transportError: error,
+      }));
+      throw error;
+    }
 
     const playerEntry = buildPlayerEntry(trimmed);
     const pendingEquipQueue = get().pendingEquip;
@@ -668,7 +731,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { character, location, turn } = await trpcClient.postMessage.mutate({
+      const { character, location, turn, chronicleStatus } = await trpcClient.postMessage.mutate({
         chronicleId,
         content: playerEntry,
         pendingEquip: pendingEquipQueue,
@@ -718,6 +781,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, extras);
         }
 
+        const shouldCloseChronicle = chronicleStatus === 'closed';
         return {
           ...prev,
           availableCharacters: character
@@ -725,6 +789,11 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             : prev.availableCharacters,
           character: nextCharacter,
           connectionState: 'connected',
+          chronicleRecord:
+            shouldCloseChronicle && prev.chronicleRecord
+              ? { ...prev.chronicleRecord, status: 'closed' }
+              : prev.chronicleRecord,
+          chronicleStatus: chronicleStatus ?? prev.chronicleStatus,
           isSending: false,
           location: location ?? prev.location,
           messages: nextMessages,

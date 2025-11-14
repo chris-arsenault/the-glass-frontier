@@ -50,6 +50,7 @@ export type GraphContext = {
   gmMessage?: TranscriptEntry;
   gmSummary?: string;
   gmTrace?: LlmTrace | null;
+  chronicleShouldClose?: boolean;
   updatedCharacter?: Character | null;
   locationPlan?: LocationPlan | null;
   locationSummary?: LocationSummary | null;
