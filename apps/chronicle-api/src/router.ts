@@ -29,6 +29,7 @@ const toneSchema = z.object({
 
 const createChronicleInputSchema = z
   .object({
+    beatsEnabled: z.boolean().optional(),
     characterId: z.string().min(1),
     chronicleId: z.string().uuid().optional(),
     location: locationDetailsSchema.optional(),
@@ -133,8 +134,8 @@ export const appRouter = t.router({
       });
       return {
         character: result.updatedCharacter,
-        location: result.locationSummary,
         chronicleStatus: result.chronicleStatus,
+        location: result.locationSummary,
         turn: result.turn,
       };
     }),
@@ -188,6 +189,7 @@ async function createChronicleHandler(
   });
 
   const chronicle = await ctx.worldStateStore.ensureChronicle({
+    beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,
     locationId: locationRoot.locationId,

@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
 import { Metadata } from '../Metadata';
+import { ChronicleBeat } from './ChronicleBeat';
 
 export const Chronicle = z.object({
+  beats: z.array(ChronicleBeat).default([]),
+  beatsEnabled: z.boolean().default(true),
   characterId: z.string().min(1).optional(),
   id: z.string().min(1),
   locationId: z.string().min(1),

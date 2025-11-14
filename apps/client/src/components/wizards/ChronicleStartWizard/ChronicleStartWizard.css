@@ -491,6 +491,18 @@
   border-radius: 0.5rem;
 }
 
+.beat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.beat-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
 .summary-title {
   margin: 0;
   color: #f8fafc;

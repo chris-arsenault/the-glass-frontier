@@ -1,3 +1,4 @@
+import type { ChronicleBeat } from '@glass-frontier/dto';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,9 +17,23 @@ const CharacterIcon = () => (
   </svg>
 );
 
+const formatBeatStatus = (status: ChronicleBeat['status']): string => {
+  switch (status) {
+  case 'succeeded':
+    return 'Succeeded';
+  case 'failed':
+    return 'Failed';
+  default:
+    return 'In Progress';
+  }
+};
+
 export function SessionManager() {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const availableChronicles = useChronicleStore((state) => state.availableChronicles);
+  const beats = useChronicleStore((state) => state.beats);
+  const beatsEnabled = useChronicleStore((state) => state.beatsEnabled);
+  const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
@@ -301,6 +316,46 @@ export function SessionManager() {
 
       {directoryError ? <p className="session-manager-error">{directoryError.message}</p> : null}
       {error ? <p className="session-manager-error">{error}</p> : null}
+
+      <div className="session-manager-section">
+        <div className="session-manager-section-header">
+          <div className="session-manager-section-title">
+            <h4>Chronicle Beats</h4>
+            <p className="session-manager-hint">Long-horizon goals for the loaded chronicle.</p>
+          </div>
+        </div>
+        {!currentChronicleId ? (
+          <p className="session-manager-empty">Load a chronicle to view beats.</p>
+        ) : beatsEnabled === false ? (
+          <p className="session-manager-empty">Beats are disabled for this chronicle.</p>
+        ) : beats.length === 0 ? (
+          <p className="session-manager-empty">
+            The GM will establish the opening beat after the first turn.
+          </p>
+        ) : (
+          <ul className="session-manager-beat-list">
+            {beats.map((beat) => (
+              <li
+                key={beat.id}
+                className={`session-manager-beat${beat.id === focusedBeatId ? ' session-manager-beat-focused' : ''}`}
+                data-status={beat.status}
+                tabIndex={0}
+              >
+                <div className="session-manager-beat-header">
+                  <span className="session-manager-beat-title">{beat.title}</span>
+                  <span className="session-manager-beat-status">
+                    {formatBeatStatus(beat.status)}
+                  </span>
+                </div>
+                <div className="session-manager-beat-detail" role="note" aria-hidden="true">
+                  <span className="session-manager-beat-detail-label">Details</span>
+                  <p>{beat.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

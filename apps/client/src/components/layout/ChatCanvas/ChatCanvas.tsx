@@ -1,5 +1,5 @@
-import type { PlayerFeedbackSentiment } from '@glass-frontier/dto';
-import { useEffect, useRef, useState } from 'react';
+import type { PlayerFeedbackSentiment, Intent } from '@glass-frontier/dto';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -25,6 +25,23 @@ const FEEDBACK_LABELS: Record<PlayerFeedbackSentiment, string> = {
   negative: 'Needs work',
   neutral: 'It was okay',
   positive: 'Loved it',
+};
+
+const describeBeatDirectiveTag = (
+  directive: Intent['beatDirective'] | null | undefined,
+  lookup: Map<string, string>
+): string | null => {
+  if (!directive) {
+    return null;
+  }
+  if (directive.kind === 'existing') {
+    const title = directive.targetBeatId ? lookup.get(directive.targetBeatId) : null;
+    return `Beat · ${title ?? 'Tracked goal'}`;
+  }
+  if (directive.kind === 'new') {
+    return 'Beat · New thread';
+  }
+  return 'Beat · Independent';
 };
 
 const readFeedbackCache = (): Record<string, true> => {
@@ -60,6 +77,7 @@ export function ChatCanvas() {
   const chronicleId = useChronicleStore((state) => state.chronicleId);
   const loginId = useChronicleStore((state) => state.loginId);
   const isWaitingForGm = useChronicleStore((state) => state.isSending);
+  const beats = useChronicleStore((state) => state.beats);
   const expandedMessages = useUiStore((state) => state.expandedMessages);
   const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
   const toggleMessageExpansion = useUiStore((state) => state.toggleMessageExpansion);
@@ -71,6 +89,16 @@ export function ChatCanvas() {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const beatLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    beats.forEach((beat) => {
+      if (beat && typeof beat.id === 'string') {
+        map.set(beat.id, beat.title);
+      }
+    });
+    return map;
+  }, [beats]);
+
   const markFeedbackSubmitted = (auditId: string) => {
     setFeedbackCache((prev) => {
       if (prev[auditId]) {
@@ -223,6 +251,10 @@ export function ChatCanvas() {
                 : new Date();
             const displayRole =
               entry.role === 'player' ? 'Player' : entry.role === 'gm' ? 'GM' : 'System';
+            const beatDirectiveLabel =
+              entry.role === 'player'
+                ? describeBeatDirectiveTag(playerIntent?.beatDirective, beatLookup)
+                : null;
 
             return (
               <article
@@ -247,6 +279,9 @@ export function ChatCanvas() {
                       <span className="chat-entry-spark" title="Creative Spark awarded">
                         ★
                       </span>
+                    ) : null}
+                    {entry.role === 'player' && beatDirectiveLabel ? (
+                      <span className="chat-entry-beat-tag">{beatDirectiveLabel}</span>
                     ) : null}
                     {entry.role === 'gm' ? (
                       <>

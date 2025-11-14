@@ -108,6 +108,16 @@
   font-size: 0.75rem;
 }
 
+.chat-entry-beat-tag {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cbd5f5;
+}
+
 .chat-entry-player .chat-entry-content {
   color: #f9a8d4;
 }

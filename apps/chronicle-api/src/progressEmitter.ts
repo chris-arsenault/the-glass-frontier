@@ -22,11 +22,12 @@ export type TurnProgressPublisher = {
 }
 
 const buildPayload = (context: GraphContext): TurnProgressPayload => ({
+  beatDelta: context.beatDelta ?? undefined,
+  chronicleShouldClose: context.chronicleShouldClose ?? undefined,
   failure: context.failure,
   gmMessage: context.gmMessage,
   gmSummary: context.gmSummary,
   gmTrace: context.gmTrace ?? undefined,
-  chronicleShouldClose: context.chronicleShouldClose ?? undefined,
   inventoryDelta: context.inventoryDelta ?? undefined,
   playerIntent: context.playerIntent,
   skillCheckPlan: context.skillCheckPlan,

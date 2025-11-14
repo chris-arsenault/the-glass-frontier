@@ -1,11 +1,13 @@
 import type {
   Character,
   Chronicle,
+  ChronicleBeat,
   LocationSummary,
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
   PendingEquip,
+  BeatDelta,
 } from '@glass-frontier/dto';
 import { createEmptyInventory } from '@glass-frontier/dto';
 import { formatTurnJobId } from '@glass-frontier/utils';
@@ -189,6 +191,36 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
   return [character, ...filtered];
 };
 
+const upsertBeatRecord = (beats: ChronicleBeat[], candidate: ChronicleBeat): ChronicleBeat[] => {
+  const index = beats.findIndex((beat) => beat.id === candidate.id);
+  if (index >= 0) {
+    const next = [...beats];
+    next[index] = candidate;
+    return next;
+  }
+  return [...beats, candidate];
+};
+
+const applyBeatStateDelta = (
+  beats: ChronicleBeat[],
+  delta?: BeatDelta | null
+): { beats: ChronicleBeat[]; focusBeatId: string | null } => {
+  if (!delta) {
+    return { beats, focusBeatId: null };
+  }
+  let nextBeats = beats;
+  for (const entry of delta.updated ?? []) {
+    nextBeats = upsertBeatRecord(nextBeats, entry);
+  }
+  for (const entry of delta.created ?? []) {
+    nextBeats = upsertBeatRecord(nextBeats, entry);
+  }
+  return {
+    beats: nextBeats,
+    focusBeatId: delta.focusBeatId ?? null,
+  };
+};
+
 const DEFAULT_MOMENTUM = { ceiling: 3, current: 0, floor: -2 };
 
 const deriveSkillProgressBadges = (
@@ -291,13 +323,18 @@ const applyTurnProgressEvent = (
   }
 
   const shouldClose = payload.chronicleShouldClose === true;
+  const beatResult = applyBeatStateDelta(state.beats, payload.beatDelta);
   return {
     ...state,
+    beats: beatResult.beats,
     chronicleRecord:
       shouldClose && state.chronicleRecord
         ? { ...state.chronicleRecord, status: 'closed' }
-        : state.chronicleRecord,
+        : state.chronicleRecord
+          ? { ...state.chronicleRecord, beats: beatResult.beats }
+          : state.chronicleRecord,
     chronicleStatus: shouldClose ? 'closed' : state.chronicleStatus,
+    focusedBeatId: beatResult.focusBeatId ?? state.focusedBeatId,
     messages: nextMessages,
   };
 };
@@ -305,6 +342,8 @@ const applyTurnProgressEvent = (
 const createBaseState = () => ({
   availableCharacters: [] as Character[],
   availableChronicles: [] as Chronicle[],
+  beats: [] as ChronicleBeat[],
+  beatsEnabled: true,
   character: null as Character | null,
   chronicleId: null as string | null,
   chronicleRecord: null as Chronicle | null,
@@ -312,6 +351,7 @@ const createBaseState = () => ({
   connectionState: 'idle' as const,
   directoryError: null as Error | null,
   directoryStatus: 'idle' as const,
+  focusedBeatId: null as string | null,
   isOffline: false,
   isSending: false,
   location: null as LocationSummary | null,
@@ -335,11 +375,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   clearActiveChronicle() {
     set((prev) => ({
       ...prev,
+      beats: [],
+      beatsEnabled: true,
       character: null,
       chronicleId: null,
       chronicleRecord: null,
       chronicleStatus: 'open',
       connectionState: 'idle',
+      focusedBeatId: null,
       isSending: false,
       location: null,
       messages: [],
@@ -351,55 +394,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       transportError: null,
       turnSequence: 0,
     }));
-  },
-
-  async setChronicleWrapTarget(shouldWrap) {
-    const chronicleId = get().chronicleId;
-    if (!chronicleId) {
-      const nextError = new Error('Select or create a chronicle before toggling wrap-up.');
-      set((prev) => ({
-        ...prev,
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
-    if (get().chronicleStatus === 'closed') {
-      const nextError = new Error('Chronicle is closed. Toggle unavailable.');
-      set((prev) => ({
-        ...prev,
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
-    const identity = resolveLoginIdentity();
-    const currentTurnSequence = Math.max(get().turnSequence, 0);
-    const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
-
-    try {
-      const result = await trpcClient.setChronicleTargetEnd.mutate({
-        chronicleId,
-        loginId: identity.loginId,
-        targetEndTurn,
-      });
-      const updatedChronicle = result?.chronicle ?? null;
-      set((prev) => ({
-        ...prev,
-        availableChronicles:
-          updatedChronicle !== null
-            ? mergeChronicleRecord(prev.availableChronicles, updatedChronicle)
-            : prev.availableChronicles,
-        chronicleRecord: updatedChronicle ?? prev.chronicleRecord,
-        transportError: null,
-      }));
-    } catch (error) {
-      const nextError =
-        error instanceof Error ? error : new Error('Failed to update chronicle wrap state.');
-      set((prev) => ({
-        ...prev,
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
   },
 
   clearPendingEquipQueue() {
@@ -453,6 +447,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     const title = details.title?.trim() ?? '';
     const locationName = details.locationName?.trim() ?? '';
     const locationAtmosphere = details.locationAtmosphere?.trim() ?? '';
+    const beatsEnabled = details.beatsEnabled ?? true;
 
     if (!targetCharacterId) {
       throw new Error('Select a character before starting a chronicle.');
@@ -463,6 +458,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
     try {
       const result = await trpcClient.createChronicle.mutate({
+        beatsEnabled,
         characterId: targetCharacterId,
         location: {
           atmosphere: locationAtmosphere,
@@ -491,6 +487,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     const identity = resolveLoginIdentity();
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const trimmedSeed = details.seedText?.trim() ?? '';
+    const beatsEnabled = details.beatsEnabled ?? true;
     if (!targetCharacterId) {
       throw new Error('Select a character before starting a chronicle.');
     }
@@ -506,6 +503,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         ? details.title.trim()
         : deriveTitleFromSeed(trimmedSeed);
       const result = await trpcClient.createChronicle.mutate({
+        beatsEnabled,
         characterId: targetCharacterId,
         locationId: details.locationId,
         loginId: identity.loginId,
@@ -577,6 +575,10 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }
 
       const messageHistory = flattenTurns(chronicleState.turns ?? []);
+      const chronicleBeats = chronicleState.chronicle?.beats ?? [];
+      const beatsEnabled = chronicleState.chronicle?.beatsEnabled !== false;
+      const initialFocusBeatId =
+        chronicleBeats.find((beat) => beat.status === 'in_progress')?.id ?? null;
       if (
         messageHistory.length === 0 &&
         chronicleState.chronicle?.seedText &&
@@ -590,11 +592,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           chronicleState.chronicle && prev.availableChronicles
             ? mergeChronicleRecord(prev.availableChronicles, chronicleState.chronicle)
             : prev.availableChronicles,
+        beats: chronicleBeats,
+        beatsEnabled,
         character: chronicleState.character ?? null,
         chronicleId: chronicleState.chronicleId,
         chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
         chronicleStatus: chronicleState.chronicle?.status ?? 'open',
         connectionState: 'connected',
+        focusedBeatId: initialFocusBeatId,
         location: chronicleState.location ?? null,
         loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
         messages: messageHistory,
@@ -731,7 +736,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { character, location, turn, chronicleStatus } = await trpcClient.postMessage.mutate({
+      const { character, chronicleStatus, location, turn } = await trpcClient.postMessage.mutate({
         chronicleId,
         content: playerEntry,
         pendingEquip: pendingEquipQueue,
@@ -744,6 +749,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         const nextMomentumTrend = character
           ? (deriveMomentumTrend(prev.character, character) ?? prev.momentumTrend)
           : prev.momentumTrend;
+        const beatResult = applyBeatStateDelta(prev.beats, turn.beatDelta);
 
         const extras = {
           attributeKey: turn.playerIntent?.attribute ?? null,
@@ -787,13 +793,18 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           availableCharacters: character
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
+          beats: beatResult.beats,
+          beatsEnabled: prev.beatsEnabled,
           character: nextCharacter,
-          connectionState: 'connected',
           chronicleRecord:
             shouldCloseChronicle && prev.chronicleRecord
-              ? { ...prev.chronicleRecord, status: 'closed' }
-              : prev.chronicleRecord,
+              ? { ...prev.chronicleRecord, beats: beatResult.beats, status: 'closed' }
+              : prev.chronicleRecord
+                ? { ...prev.chronicleRecord, beats: beatResult.beats }
+                : prev.chronicleRecord,
           chronicleStatus: chronicleStatus ?? prev.chronicleStatus,
+          connectionState: 'connected',
+          focusedBeatId: beatResult.focusBeatId ?? prev.focusedBeatId,
           isSending: false,
           location: location ?? prev.location,
           messages: nextMessages,
@@ -819,6 +830,55 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         pendingPlayerMessageId:
           prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
         pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+  },
+
+  async setChronicleWrapTarget(shouldWrap) {
+    const chronicleId = get().chronicleId;
+    if (!chronicleId) {
+      const nextError = new Error('Select or create a chronicle before toggling wrap-up.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+    if (get().chronicleStatus === 'closed') {
+      const nextError = new Error('Chronicle is closed. Toggle unavailable.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+    const identity = resolveLoginIdentity();
+    const currentTurnSequence = Math.max(get().turnSequence, 0);
+    const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
+
+    try {
+      const result = await trpcClient.setChronicleTargetEnd.mutate({
+        chronicleId,
+        loginId: identity.loginId,
+        targetEndTurn,
+      });
+      const updatedChronicle = result?.chronicle ?? null;
+      set((prev) => ({
+        ...prev,
+        availableChronicles:
+          updatedChronicle !== null
+            ? mergeChronicleRecord(prev.availableChronicles, updatedChronicle)
+            : prev.availableChronicles,
+        chronicleRecord: updatedChronicle ?? prev.chronicleRecord,
+        transportError: null,
+      }));
+    } catch (error) {
+      const nextError =
+        error instanceof Error ? error : new Error('Failed to update chronicle wrap state.');
+      set((prev) => ({
+        ...prev,
         transportError: nextError,
       }));
       throw nextError;

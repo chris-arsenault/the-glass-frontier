@@ -7,6 +7,7 @@ import {
   type Inventory,
   type PendingEquip,
   type ImbuedRegistry,
+  type ChronicleBeat,
 } from '@glass-frontier/dto';
 import type { PromptTemplateId } from '@glass-frontier/dto';
 
@@ -31,6 +32,15 @@ type NarrationPromptOptions = {
   rawUtterance: string;
   templates: PromptTemplateRuntime;
   turnSequence: number;
+};
+
+type BeatDirectorPromptOptions = {
+  chronicle: ChronicleState;
+  gmMessage: string;
+  gmSummary?: string | null;
+  playerIntent: Intent;
+  playerUtterance: string;
+  templates: PromptTemplateRuntime;
 };
 
 const ATTRIBUTE_LIST = Attribute.options.join(', ');
@@ -69,10 +79,16 @@ export function composeIntentPrompt({
 }): Promise<string> {
   const charTags = summarizeTags(chronicle?.character?.tags, 'No tags');
   const skillsLine = summarizeSkills(chronicle?.character?.skills);
+  const activeBeats = summarizeActiveBeats(chronicle);
+  const beatsSection =
+    activeBeats.length === 0
+      ? 'No chronicle beats are currently defined.'
+      : formatBeatSection(activeBeats);
 
   return renderTemplate(templates, 'intent-intake', {
     attributeList: ATTRIBUTE_LIST,
     attributeQuotedList: ATTRIBUTE_QUOTED_LIST,
+    beatsSection,
     characterName: chronicle?.character?.name ?? 'Unknown',
     characterTags: charTags,
     locale: describeLocation(chronicle),
@@ -80,15 +96,16 @@ export function composeIntentPrompt({
     promptHeader:
       'You are The Glass Frontier LangGraph GM. Maintain collaborative tone, highlight stakes transparently, and respect prohibited capabilities.',
     skillsLine,
+    totalBeatCount: activeBeats.length,
   });
 }
 
 export function composeNarrationPrompt(options: NarrationPromptOptions): Promise<string> {
-  return renderTemplate(
-    options.templates,
-    'narrative-weaver',
-    buildNarrationPayload(options)
-  );
+  return renderTemplate(options.templates, 'narrative-weaver', buildNarrationPayload(options));
+}
+
+export function composeBeatDirectorPrompt(options: BeatDirectorPromptOptions): Promise<string> {
+  return renderTemplate(options.templates, 'beat-director', buildBeatDirectorPayload(options));
 }
 
 function buildCheckPlannerPayload(intent: Intent, chronicle: ChronicleState): TemplatePayload {
@@ -123,7 +140,21 @@ function buildNarrationPayload(options: NarrationPromptOptions): TemplatePayload
   return {
     ...buildNarrationBase(options),
     ...buildNarrationMechanics(options),
+    ...buildNarrationBeatData(options),
     ...buildNarrationWrapUpData(options),
+  };
+}
+
+function buildBeatDirectorPayload(options: BeatDirectorPromptOptions): TemplatePayload {
+  const beats = describeBeats(options.chronicle);
+  return {
+    beatCount: beats.length,
+    beats,
+    gmMessage: truncateSnippet(options.gmMessage, 850),
+    gmSummary: truncateSnippet(options.gmSummary ?? '', 400),
+    intentDirective: summarizeIntentDirective(options.chronicle, options.playerIntent),
+    intentSummary: options.playerIntent.intentSummary,
+    playerUtterance: truncateSnippet(options.playerUtterance, 850),
   };
 }
 
@@ -148,6 +179,23 @@ function buildNarrationMechanics(options: NarrationPromptOptions): TemplatePaylo
   return {
     ...buildNarrationCheckData(options, useComplications),
     ...buildNarrationIntentData(options),
+  };
+}
+
+function buildNarrationBeatData(options: NarrationPromptOptions): TemplatePayload {
+  const activeBeats = describeBeats(options.chronicle).filter(
+    (beat) => beat.status === 'in_progress'
+  );
+  const beatDirectiveNote = summarizeNarrationBeatDirective(
+    activeBeats,
+    options.intent.beatDirective
+  );
+  return {
+    activeBeatLines: activeBeats.map(
+      (beat, index) => `${index + 1}. ${beat.title} — ${beat.description}`
+    ),
+    beatDirectiveNote,
+    hasActiveBeats: activeBeats.length > 0,
   };
 }
 
@@ -234,6 +282,35 @@ function summarizeSkills(skills?: Record<string, unknown> | null): string {
   return names.length > 0 ? names.join(', ') : 'None';
 }
 
+function summarizeActiveBeats(
+  chronicle: ChronicleState
+): Array<{ id: string; title: string; description: string }> {
+  const beats = chronicle?.chronicle?.beats;
+  if (!Array.isArray(beats) || beats.length === 0) {
+    return [];
+  }
+  return beats
+    .filter((beat): beat is ChronicleBeat => {
+      if (beat === undefined || beat === null) {
+        return false;
+      }
+      return beat.status === 'in_progress';
+    })
+    .map((beat) => ({
+      description: beat.description,
+      id: beat.id,
+      title: beat.title,
+    }));
+}
+
+function formatBeatSection(
+  beats: Array<{ id: string; title: string; description: string }>
+): string {
+  return beats
+    .map((beat, index) => `${index + 1}. ${beat.title} (id: ${beat.id}) — ${beat.description}`)
+    .join('\n');
+}
+
 function buildSkillLine(intent: Intent): string | null {
   if (!isNonEmptyString(intent.skill)) {
     return null;
@@ -241,6 +318,49 @@ function buildSkillLine(intent: Intent): string | null {
   return isNonEmptyString(intent.attribute)
     ? `${intent.skill} (${intent.attribute})`
     : intent.skill;
+}
+
+function describeBeats(
+  chronicle: ChronicleState
+): Array<{ id: string; title: string; status: string; description: string }> {
+  const beats = chronicle?.chronicle?.beats;
+  if (!Array.isArray(beats) || beats.length === 0) {
+    return [];
+  }
+  return beats
+    .filter((beat): beat is ChronicleBeat => {
+      if (beat === undefined || beat === null) {
+        return false;
+      }
+      return typeof beat.id === 'string' && typeof beat.title === 'string';
+    })
+    .map((beat) => ({
+      description: beat.description,
+      id: beat.id,
+      status: beat.status,
+      title: beat.title,
+    }));
+}
+
+function summarizeIntentDirective(chronicle: ChronicleState, intent: Intent): string {
+  const directive = intent.beatDirective;
+  if (directive === undefined || directive === null) {
+    return 'Player intent did not explicitly target a beat.';
+  }
+  if (directive.kind === 'new') {
+    return `Player is signaling a new beat: ${directive.summary ?? 'new thread forming'}.`;
+  }
+  if (directive.kind === 'independent') {
+    return 'Player intent is independent of existing beats.';
+  }
+  if (directive.kind === 'existing') {
+    const title = describeBeats(chronicle).find((beat) => beat.id === directive.targetBeatId)?.title;
+    if (typeof title === 'string' && title.length > 0) {
+      return `Player is acting on "${title}" (${directive.targetBeatId}).`;
+    }
+    return `Player referenced beat ${directive.targetBeatId}.`;
+  }
+  return 'Player intent did not explicitly target a beat.';
 }
 
 function resolveCharacterName(chronicle: ChronicleState): string {
@@ -257,7 +377,7 @@ function buildRecentEventsSummary(chronicle: ChronicleState): string {
   }
   const snippets = chronicle.turns
     .slice(-10)
-    .map((turn) => `${turn.gmSummary ?? ''} - ${turn.playerIntent?.intentSummary ?? ''}`.trim())
+    .map((turn) => `${turn.gmMessage?.content ?? ''} - ${turn.playerMessage.content ?? ''}`.trim())
     .filter((snippet) => snippet.length > 0);
   if (snippets.length === 0) {
     return chronicle.chronicle?.seedText ?? 'no prior events noted';
@@ -354,3 +474,23 @@ const collectComplicationSeeds = (check?: SkillCheckPlan): string[] => {
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
+
+function summarizeNarrationBeatDirective(
+  activeBeats: ReturnType<typeof describeBeats>,
+  directive: Intent['beatDirective']
+): string | null {
+  if (directive === undefined || directive === null) {
+    return null;
+  }
+  if (directive.kind === 'new') {
+    return 'A new long-horizon beat was signaled—introduce and progress it quickly so it can close soon.';
+  }
+  if (directive.kind === 'existing') {
+    const match = activeBeats.find((beat) => beat.id === directive.targetBeatId);
+    if (match !== undefined) {
+      return `The player is acting on "${match.title}". Aim to advance it decisively toward resolution in this narration.`;
+    }
+    return 'The player referenced an existing beat. Progress whichever beat best fits their intent toward closure.';
+  }
+  return null;
+}

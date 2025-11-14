@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Legacy location graph store pending modularization */
 import type { S3Client } from '@aws-sdk/client-s3';
 import type {
   LocationGraphSnapshot,

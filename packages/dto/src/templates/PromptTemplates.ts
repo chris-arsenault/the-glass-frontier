@@ -8,6 +8,7 @@ export const PromptTemplateIds = [
   'gm-summary',
   'inventory-arbiter',
   'chronicle-seed',
+  'beat-director',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -27,6 +28,15 @@ export type PromptTemplateDescriptor = z.infer<typeof PromptTemplateDescriptor>;
 const OUTPUT_FORMAT_SECTION = '## Output Format';
 
 export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplateDescriptor> = {
+  'beat-director': {
+    description: 'Evaluates and updates chronicle beats using player and GM context.',
+    editableEndToken: '## Output Format',
+    editableStartToken: '## Instructions',
+    id: 'beat-director',
+    label: 'Beat Director',
+    officialObjectKey: 'official/beat-director.hbs',
+    supportsVariants: true,
+  },
   'check-planner': {
     description: 'Determines mechanical framing for risky actions and complications.',
     editableEndToken: OUTPUT_FORMAT_SECTION,

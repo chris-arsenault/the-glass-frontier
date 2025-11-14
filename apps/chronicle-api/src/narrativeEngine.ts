@@ -20,6 +20,7 @@ import { randomUUID } from 'node:crypto';
 
 import { LangGraphLlmClient } from './langGraph/llmClient';
 import {
+  BeatTrackerNode,
   CheckPlannerNode,
   GmSummaryNode,
   IntentIntakeNode,
@@ -63,6 +64,7 @@ class NarrativeEngine {
     this.graph = this.#createGraph();
   }
 
+  /* eslint-disable-next-line complexity, max-lines-per-function */
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
@@ -100,7 +102,7 @@ class NarrativeEngine {
       turnSequence,
     });
 
-    if (graphResult.chronicleShouldClose && chronicleState.chronicle?.status !== 'closed') {
+    if (graphResult.chronicleShouldClose === true && chronicleState.chronicle?.status !== 'closed') {
       await this.#closeChronicle(chronicleState.chronicle);
       chronicleStatus = 'closed';
     }
@@ -115,7 +117,7 @@ class NarrativeEngine {
     const updatedCharacter = graphResult.updatedCharacter ?? chronicleState.character ?? null;
     const locationSummary = graphResult.locationSummary ?? null;
 
-    return { locationSummary, turn, updatedCharacter, chronicleStatus };
+    return { chronicleStatus, locationSummary, turn, updatedCharacter };
   }
 
   private createLlmClient(authorizationHeader?: string): LangGraphLlmClient {
@@ -172,6 +174,7 @@ class NarrativeEngine {
         new NarrativeWeaverNode(),
         new LocationDeltaNode(this.locationGraphStore),
         new GmSummaryNode(),
+        new BeatTrackerNode(this.worldStateStore),
         new InventoryDeltaNode(this.imbuedRegistryStore),
         new UpdateCharacterNode(this.worldStateStore, this.locationGraphStore),
       ],
@@ -233,10 +236,11 @@ class NarrativeEngine {
     turnSequence: number;
   }): GraphContext {
     return {
+      beatDelta: null,
       chronicle: chronicleState,
       chronicleId,
-      failure: false,
       chronicleShouldClose: false,
+      failure: false,
       gmTrace: null,
       inventoryDelta: null,
       inventoryPreview: null,
@@ -299,6 +303,7 @@ class NarrativeEngine {
     const combinedSystemMessage = systemMessage ?? graphResult.systemMessage;
     const failure = Boolean(graphResult.failure || combinedSystemMessage);
     return {
+      beatDelta: graphResult.beatDelta ?? undefined,
       chronicleId,
       failure,
       gmMessage: graphResult.gmMessage,
@@ -316,7 +321,7 @@ class NarrativeEngine {
   }
 
   async #closeChronicle(record?: Chronicle | null): Promise<void> {
-    if (!record || record.status === 'closed') {
+    if (record === undefined || record === null || record.status === 'closed') {
       return;
     }
     await this.worldStateStore.upsertChronicle({

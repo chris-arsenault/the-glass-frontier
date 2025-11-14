@@ -6,8 +6,15 @@ import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeIntentPrompt } from '../prompts/prompts';
 
+const BeatDirectiveSchema = z.object({
+  kind: z.enum(['independent', 'existing', 'new']).optional(),
+  summary: z.string().optional(),
+  targetBeatId: z.string().nullable().optional(),
+});
+
 const IntentResponseSchema = z.object({
   attribute: z.string().optional(),
+  beatDirective: BeatDirectiveSchema.optional(),
   creativeSpark: z.boolean().optional(),
   intentSummary: z.string().optional(),
   requiresCheck: z.boolean().optional(),
@@ -92,6 +99,7 @@ class IntentIntakeNode implements GraphNode {
 
     return {
       attribute,
+      beatDirective: this.#buildBeatDirective(context, response.beatDirective),
       creativeSpark,
       intentSummary,
       metadata: {
@@ -164,6 +172,58 @@ class IntentIntakeNode implements GraphNode {
       return null;
     }
     return Attribute.safeParse(candidate).success ? candidate : null;
+  }
+
+  #buildBeatDirective(
+    context: GraphContext,
+    directive?: z.infer<typeof BeatDirectiveSchema> | null
+  ): Intent['beatDirective'] | undefined {
+    if (directive === undefined || directive === null || directive.kind === undefined) {
+      return undefined;
+    }
+    const kind = this.#normalizeBeatDirectiveKind(directive.kind);
+    if (kind === null) {
+      return undefined;
+    }
+    const summary = this.#normalizeString(directive.summary) ?? undefined;
+    if (kind === 'existing') {
+      const beatId = this.#normalizeBeatId(context, directive.targetBeatId);
+      if (beatId === null) {
+        return undefined;
+      }
+      return { kind, summary, targetBeatId: beatId };
+    }
+    return { kind, summary };
+  }
+
+  #normalizeBeatDirectiveKind(
+    value?: z.infer<typeof BeatDirectiveSchema>['kind']
+  ): 'existing' | 'new' | 'independent' | null {
+    if (value === 'existing' || value === 'new' || value === 'independent') {
+      return value;
+    }
+    return null;
+  }
+
+  #normalizeBeatId(context: GraphContext, candidate?: string | null): string | null {
+    const normalized = this.#normalizeString(candidate);
+    if (normalized === null) {
+      return null;
+    }
+    const openIds = this.#getOpenBeatIds(context);
+    return openIds.has(normalized) ? normalized : null;
+  }
+
+  #getOpenBeatIds(context: GraphContext): Set<string> {
+    const beats = context.chronicle.chronicle?.beats;
+    if (!Array.isArray(beats) || beats.length === 0) {
+      return new Set();
+    }
+    const ids = beats
+      .filter((beat) => beat?.status === 'in_progress')
+      .map((beat) => beat?.id)
+      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+    return new Set(ids);
   }
 }
 

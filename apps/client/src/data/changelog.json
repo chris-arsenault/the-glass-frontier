@@ -68,5 +68,12 @@
     "summary": "Wrap-up turns now end chronicles",
     "details": "GM summaries now emit JSON with a closure signal, so once the story lands the chronicle flips to closed, the API blocks more turns, and the client disables Send/Wrap for that session.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-13-chronicle-beats",
+    "releasedAt": "2025-11-13",
+    "summary": "Chronicle beats anchor long-term goals",
+    "details": "Chronicle creation now lets you enable beat tracking (on by default), the GM automatically seeds and resolves beats with title/description/status updates, and the client surfaces active beats under the navigation so players can see which story arcs are in progress.",
+    "type": "feature"
   }
 ]

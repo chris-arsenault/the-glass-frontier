@@ -22,8 +22,8 @@ class NarrativeWeaverNode implements GraphNode {
       intent: context.playerIntent,
       outcomeTier: context.skillCheckResult?.outcomeTier,
       rawUtterance: trimmedUtterance,
-      turnSequence: context.turnSequence,
       templates: context.templates,
+      turnSequence: context.turnSequence,
     });
     const narration = await this.#generateNarration(context, prompt);
     if (narration === null) {

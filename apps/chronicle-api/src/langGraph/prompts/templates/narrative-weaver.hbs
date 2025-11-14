@@ -13,6 +13,15 @@ Chronicle Theme Seed:
 No chronicle seed supplied; improvise cohesively.
 {{/if}}
 
+{{#if hasActiveBeats}}
+Active Chronicle Beats:
+{{#each activeBeatLines}}
+- {{this}}
+{{/each}}
+{{else}}
+Active Chronicle Beats: None logged. Seed achievable goals.
+{{/if}}
+
 Recent Events:
 {{recentEvents}}
 
@@ -36,6 +45,9 @@ Recent Events:
 - **End each passage** with a changed state, decision point, or tension that invites a natural next action.
 - Stay in-world and cinematic; no meta talk or mechanical jargon.
 - {{#if creativeSpark}}Creative Spark present — amplify flair, imagery, and style.{{else}}If `creativeSpark` is true, amplify flair, imagery, and style.{{/if}}
+{{#if beatDirectiveNote}}
+- **Beat Priority:** {{beatDirectiveNote}}
+{{/if}}
 
 {{#if wrapUpRequested}}
 ### Wrap-Up Request
