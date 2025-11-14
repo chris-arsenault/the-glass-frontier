@@ -30,6 +30,7 @@ module "chronicle_lambda" {
     TURN_PROGRESS_QUEUE_URL  = aws_sqs_queue.turn_progress.url
     LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
     PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
+    CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
   }
 
   http_api_config = {
@@ -148,6 +149,30 @@ module "llm_proxy_lambda" {
   }
 }
 
+module "chronicle_closer_lambda" {
+  source = "./modules/lambda-function"
+
+  function_name        = "${local.name_prefix}-chronicle-closer"
+  source_dir           = local.chronicle_closer_dist_dir
+  artifact_output_path = "${local.artifacts_dir}/chronicle-closer.zip"
+  role_arn             = aws_iam_role.lambda["chronicle_closer_lambda"].arn
+  handler              = "handler.handler"
+  runtime              = var.lambda_node_version
+  memory_size          = 512
+  timeout              = 60
+  log_retention_days   = 14
+  tags                 = local.tags
+
+  environment_variables = {
+    NODE_ENV                 = var.environment
+    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
+    NARRATIVE_S3_PREFIX      = "${var.environment}/"
+    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
+    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
+    LLM_PROXY_URL            = "https://${local.api_domain}/llm"
+  }
+}
+
 module "webservice_connect_lambda" {
   source = "./modules/lambda-function"
 
@@ -201,6 +226,13 @@ module "webservice_disconnect_lambda" {
     execution_arn = aws_apigatewayv2_api.progress_ws.execution_arn
     route_key     = "$disconnect"
   }
+}
+
+resource "aws_lambda_event_source_mapping" "chronicle_closer_queue" {
+  event_source_arn = aws_sqs_queue.chronicle_closure.arn
+  function_name    = module.chronicle_closer_lambda.arn
+  batch_size       = 5
+  maximum_batching_window_in_seconds = 5
 }
 
 module "webservice_subscribe_lambda" {

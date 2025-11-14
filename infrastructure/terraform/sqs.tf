@@ -14,3 +14,20 @@ resource "aws_sqs_queue" "turn_progress" {
 
   tags = local.tags
 }
+
+resource "aws_sqs_queue" "chronicle_closure_dlq" {
+  name                      = "${local.name_prefix}-chronicle-closure-dlq"
+  message_retention_seconds = 1209600
+  tags                      = local.tags
+}
+
+resource "aws_sqs_queue" "chronicle_closure" {
+  name                       = "${local.name_prefix}-chronicle-closure"
+  visibility_timeout_seconds = 60
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.chronicle_closure_dlq.arn
+    maxReceiveCount     = 5
+  })
+
+  tags = local.tags
+}

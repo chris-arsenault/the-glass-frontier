@@ -55,6 +55,28 @@ export default defineConfig({
   build: {
     outDir: './dist',
     emptyOutDir: true,
+    minify: 'esbuild',
+    target: 'es2020',
+    sourcemap: false,
+    // Drop dev noise and help DCE
+    rollupOptions: {
+      // Fine-tune Rollup tree-shake
+      treeshake: {
+        // treat unused imports as side-effect free
+        moduleSideEffects: false,
+        // allow property reads on pure objects to be removed
+        propertyReadSideEffects: false,
+        // try harder across modules
+        tryCatchDeoptimization: false
+      },
+      output: {
+        // ensure deterministic chunks; helpful when auditing
+        manualChunks: undefined
+      }
+    },
+    // Remove dev-only artifacts
+    // (esbuild handles minification and DCE of dead branches)
+    terserOptions: undefined,
   },
   resolve: {
     alias: {

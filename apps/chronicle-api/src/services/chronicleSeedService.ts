@@ -1,8 +1,8 @@
 import type { ChronicleSeed, LocationPlace } from '@glass-frontier/dto';
+import { LangGraphLlmClient } from '@glass-frontier/llm-client';
 import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
 
-import { LangGraphLlmClient } from '../langGraph/llmClient';
 import { PromptTemplateRuntime } from '../langGraph/prompts/templateRuntime';
 
 type GenerateSeedRequest = {

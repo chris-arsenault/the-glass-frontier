@@ -1,5 +1,6 @@
 import type {
   LocationEdgeKind,
+  LocationEvent,
   LocationGraphSnapshot,
   LocationPlan,
   LocationPlace,
@@ -73,4 +74,16 @@ export type LocationGraphStore = {
     parentId?: string | null;
     segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
   }) => Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
+
+  appendLocationEvents: (input: {
+    locationId: string;
+    events: Array<{
+      chronicleId: string;
+      summary: string;
+      scope?: string;
+      metadata?: Record<string, unknown>;
+    }>;
+  }) => Promise<LocationEvent[]>;
+
+  listLocationEvents: (input: { locationId: string }) => Promise<LocationEvent[]>;
 }

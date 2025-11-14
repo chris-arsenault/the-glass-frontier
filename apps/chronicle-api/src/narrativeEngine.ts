@@ -5,7 +5,10 @@ import type {
   LocationSummary,
   PendingEquip,
   Chronicle,
+  ChronicleClosureEvent,
+  ChronicleSummaryKind,
 } from '@glass-frontier/dto';
+import { LangGraphLlmClient } from '@glass-frontier/llm-client';
 import type { PromptTemplateManager } from '@glass-frontier/persistence';
 import {
   createWorldStateStore,
@@ -18,16 +21,16 @@ import {
 import { formatTurnJobId, log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
-import { LangGraphLlmClient } from './langGraph/llmClient';
+import { ChronicleClosureEmitter, type ChronicleClosurePublisher } from './closureEmitter';
 import {
   BeatTrackerNode,
   CheckPlannerNode,
   GmSummaryNode,
   IntentIntakeNode,
+  InventoryDeltaNode,
   LocationDeltaNode,
   NarrativeWeaverNode,
   UpdateCharacterNode,
-  InventoryDeltaNode,
 } from './langGraph/nodes';
 import { LangGraphOrchestrator } from './langGraph/orchestrator';
 import { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
@@ -40,8 +43,15 @@ type NarrativeEngineOptions = {
   locationGraphStore?: LocationGraphStore;
   imbuedRegistryStore?: ImbuedRegistryStore;
   progressEmitter?: TurnProgressPublisher;
+  closureEmitter?: ChronicleClosurePublisher;
   templateManager: PromptTemplateManager;
 };
+
+const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = [
+  'chronicle_story',
+  'location_events',
+  'character_bio',
+];
 
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStore;
@@ -51,6 +61,7 @@ class NarrativeEngine {
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
   readonly progressEmitter?: TurnProgressPublisher;
+  readonly closureEmitter?: ChronicleClosurePublisher;
   readonly templateManager: PromptTemplateManager;
 
   constructor(options?: NarrativeEngineOptions) {
@@ -61,6 +72,7 @@ class NarrativeEngine {
     this.telemetry = new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.progressEmitter = options?.progressEmitter ?? createProgressEmitterFromEnv();
+    this.closureEmitter = options?.closureEmitter ?? createClosureEmitterFromEnv();
     this.graph = this.#createGraph();
   }
 
@@ -103,7 +115,10 @@ class NarrativeEngine {
     });
 
     if (graphResult.chronicleShouldClose === true && chronicleState.chronicle?.status !== 'closed') {
-      await this.#closeChronicle(chronicleState.chronicle);
+      await this.#closeChronicle({
+        chronicleState,
+        closingTurnSequence: turn.turnSequence,
+      });
       chronicleStatus = 'closed';
     }
 
@@ -320,7 +335,11 @@ class NarrativeEngine {
     };
   }
 
-  async #closeChronicle(record?: Chronicle | null): Promise<void> {
+  async #closeChronicle(input: {
+    chronicleState: ChronicleState;
+    closingTurnSequence: number;
+  }): Promise<void> {
+    const record = input.chronicleState.chronicle;
     if (record === undefined || record === null || record.status === 'closed') {
       return;
     }
@@ -328,6 +347,29 @@ class NarrativeEngine {
       ...record,
       status: 'closed',
     });
+    await this.#emitClosureEvent({
+      chronicle: record,
+      closingTurnSequence: input.closingTurnSequence,
+    });
+  }
+
+  async #emitClosureEvent(input: {
+    chronicle: Chronicle;
+    closingTurnSequence: number;
+  }): Promise<void> {
+    if (this.closureEmitter === undefined) {
+      return;
+    }
+    const event: ChronicleClosureEvent = {
+      characterId: input.chronicle.characterId ?? undefined,
+      chronicleId: input.chronicle.id,
+      locationId: input.chronicle.locationId,
+      loginId: input.chronicle.loginId,
+      requestedAt: Date.now(),
+      summaryKinds: CLOSURE_SUMMARY_KINDS,
+      turnSequence: input.closingTurnSequence,
+    };
+    await this.closureEmitter.publish(event);
   }
 }
 
@@ -341,6 +383,22 @@ function createProgressEmitterFromEnv(): TurnProgressPublisher | undefined {
     return new TurnProgressEmitter(trimmed);
   } catch (error) {
     log('warn', 'Failed to initialize progress emitter', {
+      reason: error instanceof Error ? error.message : 'unknown',
+    });
+    return undefined;
+  }
+}
+
+function createClosureEmitterFromEnv(): ChronicleClosurePublisher | undefined {
+  const queueUrl = process.env.CHRONICLE_CLOSURE_QUEUE_URL;
+  if (!isNonEmptyString(queueUrl)) {
+    return undefined;
+  }
+  const trimmed = queueUrl.trim();
+  try {
+    return new ChronicleClosureEmitter(trimmed);
+  } catch (error) {
+    log('warn', 'Failed to initialize chronicle closure emitter', {
       reason: error instanceof Error ? error.message : 'unknown',
     });
     return undefined;

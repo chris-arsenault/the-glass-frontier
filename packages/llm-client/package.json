@@ -1,5 +1,5 @@
 {
-  "name": "@glass-frontier/dto",
+  "name": "@glass-frontier/llm-client",
   "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,19 +13,12 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b --clean",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "test": "vitest run"
+    "lint:fix": "eslint . --fix"
   },
-  "keywords": [
-    "glass-frontier",
-    "narrative-engine",
-    "langgraph"
-  ],
-  "author": "Tsonu",
-  "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "zod": "^4.1.12"
+    "@trpc/client": "^11.7.1",
+    "@glass-frontier/utils": "workspace:*"
   }
 }

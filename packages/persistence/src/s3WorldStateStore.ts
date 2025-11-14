@@ -376,10 +376,12 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
         ? true
         : Boolean(chronicle.beatsEnabled);
     const beats = Array.isArray(chronicle.beats) ? chronicle.beats : [];
+    const summaries = Array.isArray(chronicle.summaries) ? chronicle.summaries : [];
     return {
       ...chronicle,
       beats,
       beatsEnabled,
+      summaries,
     };
   }
 
@@ -407,6 +409,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       metadata: undefined,
       seedText: isNonEmptyString(seed) ? seed : undefined,
       status: params.status ?? 'open',
+      summaries: [],
       title: isNonEmptyString(title) ? title : 'Untitled Chronicle',
     };
   }
