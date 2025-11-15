@@ -8,6 +8,8 @@ import {
 import { fromEnv } from '@aws-sdk/credential-providers';
 import { Readable } from 'node:stream';
 
+import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/utils';
+
 type TransformableBody = {
   transformToString: (encoding: BufferEncoding) => Promise<string> | string;
 };
@@ -84,12 +86,15 @@ export abstract class HybridObjectStore {
 
     const credentials = hasAwsCredentials() ? fromEnv() : undefined;
 
+    const endpoint = resolveAwsEndpoint('s3');
+    const region = options.region ?? resolveAwsRegion();
     this.#client =
       options.client ??
       new S3Client({
         credentials,
-        region:
-          options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+        forcePathStyle: shouldForcePathStyle(),
+        region,
+        ...(endpoint ? { endpoint } : {}),
       });
   }
 

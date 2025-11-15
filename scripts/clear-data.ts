@@ -5,9 +5,11 @@ import {
   BatchWriteItemCommand,
   type WriteRequest
 } from "@aws-sdk/client-dynamodb";
+import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from "@glass-frontier/utils";
 
-const region =
-  process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? process.env.AWS_REGION_NAME ?? "us-east-1";
+const region = resolveAwsRegion();
+const s3Endpoint = resolveAwsEndpoint("s3");
+const dynamoEndpoint = resolveAwsEndpoint("dynamodb");
 
 const narrativeBucket = requireEnv("NARRATIVE_S3_BUCKET");
 const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? "";
@@ -23,7 +25,11 @@ async function main() {
 }
 
 async function clearS3(options: { bucket: string; prefix?: string }) {
-  const client = new S3Client({ region });
+  const client = new S3Client({
+    endpoint: s3Endpoint,
+    forcePathStyle: shouldForcePathStyle(),
+    region
+  });
   const prefix = options.prefix?.replace(/^\/+|\/+$/g, "");
   console.log(
     "Clearing S3 bucket=%s prefix=%s",
@@ -70,7 +76,10 @@ async function clearS3(options: { bucket: string; prefix?: string }) {
 }
 
 async function clearDynamo(tableName: string, label: string) {
-  const client = new DynamoDBClient({ region });
+  const client = new DynamoDBClient({
+    endpoint: dynamoEndpoint,
+    region
+  });
   console.log("Clearing DynamoDB table=%s (%s)", tableName, label);
 
   let lastEvaluatedKey: Record<string, any> | undefined;

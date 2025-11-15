@@ -5,6 +5,7 @@ import {
   DeleteItemCommand,
   type AttributeValue,
 } from '@aws-sdk/client-dynamodb';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
 
 export type HybridIndexRepositoryOptions = {
   tableName: string;
@@ -22,11 +23,13 @@ export abstract class HybridIndexRepository {
     }
 
     this.#tableName = options.tableName;
+    const region = options.region ?? resolveAwsRegion();
+    const endpoint = resolveAwsEndpoint('dynamodb');
     this.#client =
       options.client ??
       new DynamoDBClient({
-        region:
-          options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+        endpoint,
+        region,
       });
   }
 

@@ -1,0 +1,24 @@
+services:
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      - SERVICES=s3,dynamodb,sqs
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - '4566:4566'
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - 'localstack-data:/var/lib/localstack'
+
+  openai-mock:
+    image: wiremock/wiremock:latest
+    command: ['--verbose', '--global-response-templating']
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./tests/mocks/openai/__files:/home/wiremock/__files
+      - ./tests/mocks/openai/mappings:/home/wiremock/mappings
+
+volumes:
+  localstack-data:

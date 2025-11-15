@@ -1,6 +1,7 @@
 'use strict';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
 import type { S3Client } from '@aws-sdk/client-s3';
 
 import { LocationGraphIndexRepository } from './locationGraphIndexRepository';
@@ -29,12 +30,7 @@ const resolveMandatoryString = (
 };
 
 const resolveRegion = (options?: { region?: string }): string => {
-  return (
-    options?.region ??
-    process.env.AWS_REGION ??
-    process.env.AWS_DEFAULT_REGION ??
-    'us-east-1'
-  );
+  return options?.region ?? resolveAwsRegion();
 };
 
 const resolveBucket = (options?: CreateLocationGraphStoreOptions): string =>
@@ -61,7 +57,13 @@ const createIndexRepository = (
   region: string,
   dynamoClient?: DynamoDBClient
 ): LocationGraphIndexRepository => {
-  const client = dynamoClient ?? new DynamoDBClient({ region });
+  const endpoint = resolveAwsEndpoint('dynamodb');
+  const client =
+    dynamoClient ??
+    new DynamoDBClient({
+      endpoint,
+      region,
+    });
   return new LocationGraphIndexRepository({
     client,
     tableName,

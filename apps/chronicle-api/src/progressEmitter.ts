@@ -1,6 +1,6 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import type { TurnProgressEvent, TurnProgressPayload } from '@glass-frontier/dto';
-import { log } from '@glass-frontier/utils';
+import { log, resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
 
 import type { GraphContext } from './types';
 
@@ -59,7 +59,16 @@ export class TurnProgressEmitter implements TurnProgressPublisher {
       throw new Error('TURN_PROGRESS_QUEUE_URL is required to emit progress events');
     }
     this.queueUrl = normalizedQueueUrl;
-    this.client = client ?? new SQSClient({});
+    if (client !== undefined) {
+      this.client = client;
+    } else {
+      const region = resolveAwsRegion();
+      const endpoint = resolveAwsEndpoint('sqs');
+      this.client = new SQSClient({
+        endpoint,
+        region,
+      });
+    }
   }
 
   async publish(update: TurnProgressUpdate): Promise<void> {

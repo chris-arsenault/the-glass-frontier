@@ -1,5 +1,5 @@
 import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
-import { log } from '@glass-frontier/utils';
+import { log, resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
 
 type UsageRecord = Map<string, number>;
 
@@ -9,7 +9,16 @@ class TokenUsageTracker {
 
   private constructor(tableName: string, client?: DynamoDBClient) {
     this.#tableName = tableName;
-    this.#client = client ?? new DynamoDBClient({});
+    if (client !== undefined) {
+      this.#client = client;
+      return;
+    }
+    const region = resolveAwsRegion();
+    const endpoint = resolveAwsEndpoint('dynamodb');
+    this.#client = new DynamoDBClient({
+      endpoint,
+      region,
+    });
   }
 
   static fromEnv(): TokenUsageTracker | null {
