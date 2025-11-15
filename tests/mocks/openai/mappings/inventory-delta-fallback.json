@@ -1,0 +1,22 @@
+{
+  "priority": 5,
+  "scenarioName": "inventory-delta-flow",
+  "requiredScenarioState": "InventoryPrimed",
+  "newScenarioState": "InventoryPrimed",
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'inventory_delta_response')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "inventory-delta-fallback.json"
+  }
+}

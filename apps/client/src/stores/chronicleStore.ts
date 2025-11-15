@@ -838,6 +838,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
         const extras = {
           attributeKey: turn.playerIntent?.attribute ?? null,
+          executedNodes: turn.executedNodes ?? null,
           gmSummary: turn.gmSummary ?? null,
           gmTrace: turn.gmTrace ?? null,
           inventoryDelta: turn.inventoryDelta ?? null,
@@ -855,6 +856,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             ? {
               ...message,
               attributeKey: extras.attributeKey,
+              executedNodes: extras.executedNodes,
               inventoryDelta: extras.inventoryDelta,
               playerIntent: extras.playerIntent,
               skillCheckPlan: extras.skillCheckPlan,

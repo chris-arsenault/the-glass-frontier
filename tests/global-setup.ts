@@ -35,6 +35,7 @@ const sharedEnv: Record<string, string> = {
   SERVICE_NAME: 'llm-proxy',
   VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
   VITE_COGNITO_CLIENT_ID: 'local-e2e',
+  PLAYWRIGHT_RESET_ENABLED: '1',
 };
 
 const waitResources = [

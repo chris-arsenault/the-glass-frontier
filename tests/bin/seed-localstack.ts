@@ -11,6 +11,18 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { createLocationGraphStore } from '../../packages/persistence/src/createLocationGraphStore';
+import {
+  LOCATION_ROOT_SEED,
+  PLAYWRIGHT_CHARACTER_ID,
+  PLAYWRIGHT_CHRONICLE_ID,
+  PLAYWRIGHT_LOGIN_ID,
+  buildPlaywrightCharacterRecord,
+  buildPlaywrightChronicleRecord,
+  buildPlaywrightLoginRecord,
+  seedPlaywrightLocationGraph,
+} from '../../apps/chronicle-api/src/playwright/fixtures';
+
 const credentials = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? 'test',
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? 'test',
@@ -29,10 +41,6 @@ const locationIndexTable = process.env.LOCATION_GRAPH_DDB_TABLE ?? 'gf-e2e-locat
 const usageTable = process.env.LLM_PROXY_USAGE_TABLE ?? 'gf-e2e-llm-usage';
 const turnProgressQueue = queueUrlFromEnv('TURN_PROGRESS_QUEUE_URL', 'gf-e2e-turn-progress');
 const closureQueue = queueUrlFromEnv('CHRONICLE_CLOSURE_QUEUE_URL', 'gf-e2e-chronicle-closure');
-const SEEDED_LOGIN_ID = 'playwright-e2e';
-const SEEDED_CHARACTER_ID = '11111111-2222-4333-8444-555555555555';
-const SEEDED_CHRONICLE_ID = 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee';
-const SEEDED_LOCATION_ID = '99999999-8888-4777-8666-555555555555';
 
 function queueUrlFromEnv(envVar: string, fallbackName: string): { name: string } {
   const explicit = process.env[envVar];
@@ -64,6 +72,12 @@ async function main(): Promise<void> {
     endpoint: sqsEndpoint,
     region,
   });
+  const locationGraphStore = createLocationGraphStore({
+    bucket: narrativeBucket,
+    indexTable: locationIndexTable,
+    prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+    region,
+  });
 
   await ensureBucket(s3, narrativeBucket);
   await ensureBucket(s3, promptBucket);
@@ -76,7 +90,7 @@ async function main(): Promise<void> {
 
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
-  await seedPlaywrightChronicle(s3, dynamo);
+  await seedPlaywrightChronicle(s3, dynamo, locationGraphStore);
 }
 
 async function ensureBucket(client: S3Client, bucket: string): Promise<void> {
@@ -270,118 +284,72 @@ async function waitForTableActive(
   throw new Error(`Table ${tableName} did not become active`);
 }
 
-async function seedPlaywrightChronicle(s3: S3Client, dynamo: DynamoDBClient): Promise<void> {
+async function seedPlaywrightChronicle(
+  s3: S3Client,
+  dynamo: DynamoDBClient,
+  locationGraphStore: ReturnType<typeof createLocationGraphStore>
+): Promise<void> {
   const prefix = sanitizePrefix(process.env.NARRATIVE_S3_PREFIX);
   const objectKey = (relative: string): string => (prefix.length > 0 ? `${prefix}/${relative}` : relative);
-  const loginRecord = {
-    email: 'playwright@example.com',
-    id: SEEDED_LOGIN_ID,
-    loginName: SEEDED_LOGIN_ID,
-  };
-  const inventory = {
-    consumables: [],
-    data_shards: [],
-    gear: {},
-    imbued_items: [],
-    relics: [],
-    revision: 0,
-    supplies: [],
-  };
-  const characterRecord = {
-    archetype: 'Recon',
-    attributes: {
-      attunement: 'standard',
-      finesse: 'standard',
-      focus: 'standard',
-      ingenuity: 'standard',
-      presence: 'standard',
-      resolve: 'standard',
-      vitality: 'standard',
-    },
-    bio: 'Seeded character for Playwright tests.',
-    id: SEEDED_CHARACTER_ID,
-    inventory,
-    loginId: SEEDED_LOGIN_ID,
-    momentum: {
-      ceiling: 2,
-      current: 0,
-      floor: -2,
-    },
-    name: 'Playwright Scout',
-    pronouns: 'they/them',
-    skills: {
-      fieldcraft: {
-        attribute: 'focus',
-        name: 'Fieldcraft',
-        tier: 'apprentice',
-        xp: 0,
-      },
-    },
-    tags: ['playwright'],
-  };
-  const chronicleRecord = {
-    beats: [],
-    beatsEnabled: true,
-    characterId: SEEDED_CHARACTER_ID,
-    id: SEEDED_CHRONICLE_ID,
-    locationId: SEEDED_LOCATION_ID,
-    loginId: SEEDED_LOGIN_ID,
-    status: 'open',
-    summaries: [],
-    title: 'Playwright Chronicle',
-  };
+  const loginRecord = buildPlaywrightLoginRecord();
+  const characterRecord = buildPlaywrightCharacterRecord();
+  const chronicleRecord = buildPlaywrightChronicleRecord();
 
-  await writeJson(s3, objectKey(`logins/${SEEDED_LOGIN_ID}.json`), loginRecord);
+  await writeJson(s3, objectKey(`logins/${PLAYWRIGHT_LOGIN_ID}.json`), loginRecord);
   await writeJson(
     s3,
-    objectKey(`characters/${SEEDED_LOGIN_ID}/${SEEDED_CHARACTER_ID}.json`),
+    objectKey(`characters/${PLAYWRIGHT_LOGIN_ID}/${PLAYWRIGHT_CHARACTER_ID}.json`),
     characterRecord
   );
   await writeJson(
     s3,
-    objectKey(`chronicles/${SEEDED_LOGIN_ID}/${SEEDED_CHRONICLE_ID}.json`),
+    objectKey(`chronicles/${PLAYWRIGHT_LOGIN_ID}/${PLAYWRIGHT_CHRONICLE_ID}.json`),
     chronicleRecord
   );
 
-  await putIndexRecord(dynamo, toPk('login', SEEDED_LOGIN_ID), toSk('character', SEEDED_CHARACTER_ID), {
-    targetId: SEEDED_CHARACTER_ID,
+  await putIndexRecord(dynamo, toPk('login', PLAYWRIGHT_LOGIN_ID), toSk('character', PLAYWRIGHT_CHARACTER_ID), {
+    targetId: PLAYWRIGHT_CHARACTER_ID,
     targetType: 'character',
   });
-  await putIndexRecord(dynamo, toPk('character', SEEDED_CHARACTER_ID), toSk('login', SEEDED_LOGIN_ID), {
-    targetId: SEEDED_LOGIN_ID,
+  await putIndexRecord(dynamo, toPk('character', PLAYWRIGHT_CHARACTER_ID), toSk('login', PLAYWRIGHT_LOGIN_ID), {
+    targetId: PLAYWRIGHT_LOGIN_ID,
     targetType: 'login',
   });
-  await putIndexRecord(dynamo, toPk('login', SEEDED_LOGIN_ID), toSk('chronicle', SEEDED_CHRONICLE_ID), {
-    targetId: SEEDED_CHRONICLE_ID,
+  await putIndexRecord(dynamo, toPk('login', PLAYWRIGHT_LOGIN_ID), toSk('chronicle', PLAYWRIGHT_CHRONICLE_ID), {
+    targetId: PLAYWRIGHT_CHRONICLE_ID,
     targetType: 'chronicle',
   });
   await putIndexRecord(
     dynamo,
-    toPk('chronicle', SEEDED_CHRONICLE_ID),
-    toSk('login', SEEDED_LOGIN_ID),
+    toPk('chronicle', PLAYWRIGHT_CHRONICLE_ID),
+    toSk('login', PLAYWRIGHT_LOGIN_ID),
     {
-      targetId: SEEDED_LOGIN_ID,
+      targetId: PLAYWRIGHT_LOGIN_ID,
       targetType: 'login',
     }
   );
   await putIndexRecord(
     dynamo,
-    toPk('chronicle', SEEDED_CHRONICLE_ID),
-    toSk('character', SEEDED_CHARACTER_ID),
+    toPk('chronicle', PLAYWRIGHT_CHRONICLE_ID),
+    toSk('character', PLAYWRIGHT_CHARACTER_ID),
     {
-      targetId: SEEDED_CHARACTER_ID,
+      targetId: PLAYWRIGHT_CHARACTER_ID,
       targetType: 'character',
     }
   );
   await putIndexRecord(
     dynamo,
-    toPk('chronicle', SEEDED_CHRONICLE_ID),
-    toSk('location', SEEDED_LOCATION_ID),
+    toPk('chronicle', PLAYWRIGHT_CHRONICLE_ID),
+    toSk('location', LOCATION_ROOT_SEED.id),
     {
-      targetId: SEEDED_LOCATION_ID,
+      targetId: LOCATION_ROOT_SEED.id,
       targetType: 'location',
     }
   );
+  await seedPlaywrightLocationGraph(locationGraphStore, {
+    characterId: PLAYWRIGHT_CHARACTER_ID,
+    locationId: LOCATION_ROOT_SEED.id,
+  });
 }
 
 const toPk = (prefix: 'login' | 'character' | 'chronicle' | 'location' | 'turn', id: string) =>

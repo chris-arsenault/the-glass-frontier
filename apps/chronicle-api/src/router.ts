@@ -15,6 +15,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 import type { Context } from './context';
+import { resetPlaywrightFixtures } from './playwright/resetFixtures';
 
 type EnsureChronicleResult = Awaited<
   ReturnType<Context['worldStateStore']['ensureChronicle']>
@@ -214,6 +215,13 @@ export const appRouter = t.router({
       });
       return { chronicle: updated };
     }),
+  resetPlaywrightFixtures: t.procedure.mutation(async ({ ctx }) => {
+    if (process.env.PLAYWRIGHT_RESET_ENABLED !== '1') {
+      throw new Error('Playwright reset disabled');
+    }
+    await resetPlaywrightFixtures(ctx);
+    return { ok: true };
+  }),
 
   submitBugReport: t.procedure
     .input(

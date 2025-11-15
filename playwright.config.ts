@@ -6,11 +6,12 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
+  workers: 1,
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'retain-on-failure',
-    video: 'retain-on-failure'
+    video: 'on'
   },
   // Entire system is brought up by global setup (LocalStack, 5 APIs, SQS Lambda, mocks, FE)
   webServer: undefined,

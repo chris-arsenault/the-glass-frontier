@@ -1,5 +1,8 @@
 {
   "priority": 1,
+  "scenarioName": "inventory-delta-flow",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "InventoryPrimed",
   "request": {
     "method": "POST",
     "urlPath": "/v1/responses",
@@ -14,6 +17,6 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "inventory-delta.json"
+    "bodyFileName": "inventory-delta-turn-1.json"
   }
 }

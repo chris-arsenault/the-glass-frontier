@@ -1,0 +1,22 @@
+{
+  "priority": 5,
+  "scenarioName": "location-delta-flow",
+  "requiredScenarioState": "PrismTraversal",
+  "newScenarioState": "PrismTraversal",
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'location_delta_decision')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "location-delta-fallback.json"
+  }
+}
