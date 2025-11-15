@@ -84,6 +84,13 @@
     "type": "feature"
   },
   {
+    "id": "2025-11-14-bug-moderation",
+    "releasedAt": "2025-11-14",
+    "summary": "Moderators can triage bug reports",
+    "details": "Added a bug moderation workspace with a MUI data grid and modal so admins can review every bug report, capture backlog labels, add internal notes, and update the bug store status without leaving the client.",
+    "type": "feature"
+  },
+  {
     "id": "2025-11-15-multi-intent-dag",
     "releasedAt": "2025-11-15",
     "summary": "GM turns now adapt to six intent styles",

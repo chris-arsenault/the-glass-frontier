@@ -1,10 +1,17 @@
 import { z } from 'zod';
 
-export const BUG_REPORT_STATUSES = ['open', 'triaged', 'closed'] as const;
+export const BUG_REPORT_STATUSES = ['open', 'closed', 'backloged', 'will not fix'] as const;
 
-export type BugReportStatus = (typeof BUG_REPORT_STATUSES)[number];
+const BugReportStatusSchema = z
+  .enum(BUG_REPORT_STATUSES)
+  .or(z.literal('triaged'))
+  .transform((value) => (value === 'triaged' ? 'backloged' : value));
+
+export type BugReportStatus = z.infer<typeof BugReportStatusSchema>;
 
 export const BugReportSchema = z.object({
+  adminNotes: z.string().max(4000).nullable().optional(),
+  backlogItem: z.string().max(240).nullable().optional(),
   characterId: z.string().uuid().nullable(),
   chronicleId: z.string().uuid().nullable(),
   createdAt: z.string(),
@@ -13,7 +20,7 @@ export const BugReportSchema = z.object({
   loginId: z.string().min(1),
   metadata: z.record(z.string(), z.any()).optional(),
   playerId: z.string().min(1).nullable(),
-  status: z.enum(BUG_REPORT_STATUSES),
+  status: BugReportStatusSchema,
   summary: z.string().min(4).max(240),
   updatedAt: z.string(),
 });

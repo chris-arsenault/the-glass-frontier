@@ -40,6 +40,15 @@ const AuditIcon = () => (
   </svg>
 );
 
+const BugIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      fill="currentColor"
+      d="M18 11h1a1 1 0 1 0 0-2h-1.08a6.08 6.08 0 0 0-1.3-2.52l1.47-1.47-1.42-1.42-1.65 1.65A5.94 5.94 0 0 0 12 4a5.94 5.94 0 0 0-3.02.75L7.33 3.1 5.91 4.52l1.47 1.47A6.08 6.08 0 0 0 6.08 9H5a1 1 0 1 0 0 2h1v2H5a1 1 0 0 0 0 2h1.08a6.08 6.08 0 0 0 1.3 2.52L5.91 18l1.42 1.42 1.65-1.65A5.94 5.94 0 0 0 12 20a5.94 5.94 0 0 0 3.02-.75l1.65 1.65 1.42-1.42-1.47-1.47a6.08 6.08 0 0 0 1.3-2.52H19a1 1 0 0 0 0-2h-1v-2Z"
+    />
+  </svg>
+);
+
 const LocationIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path
@@ -151,6 +160,11 @@ export function PlayerMenu(): JSX.Element {
 
   const handleAuditShortcut = () => {
     void navigate('/moderation/audit');
+    close();
+  };
+
+  const handleBugModerationShortcut = () => {
+    void navigate('/moderation/bugs');
     close();
   };
 
@@ -338,6 +352,21 @@ export function PlayerMenu(): JSX.Element {
                   <span className="player-menu-link-title">LLM Audit Review</span>
                   <span className="player-menu-link-subtitle">
                     Inspect requests, capture reviews, and proposals
+                  </span>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="player-menu-link-button"
+                onClick={handleBugModerationShortcut}
+              >
+                <span className="player-menu-link-icon" aria-hidden="true">
+                  <BugIcon />
+                </span>
+                <div className="player-menu-link-text">
+                  <span className="player-menu-link-title">Bug Moderation</span>
+                  <span className="player-menu-link-subtitle">
+                    Review bug reports and capture admin notes
                   </span>
                 </div>
               </button>

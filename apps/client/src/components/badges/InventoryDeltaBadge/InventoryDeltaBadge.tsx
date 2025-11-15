@@ -32,6 +32,23 @@ type Row = {
   amount?: number | null;
 };
 
+type InventoryOp = NonNullable<InventoryDelta['ops']>[number];
+
+type MetaResolver = (op: InventoryOp, amount: number | null) => string | null;
+
+const metaResolvers: Record<string, MetaResolver> = {
+  add: (op) => op.hook ?? op.purpose ?? op.seed ?? null,
+  consume: (_op, amount) =>
+    typeof amount === 'number' && amount > 0 ? `x${amount}` : null,
+  remove: (op) => op.hook ?? op.purpose ?? op.seed ?? null,
+  spend_shard: (op) => op.purpose ?? op.seed ?? null,
+};
+
+const resolveMetaLabel = (op: InventoryOp, amount: number | null): string | null => {
+  const resolver = metaResolvers[op.op];
+  return resolver ? resolver(op, amount) : null;
+};
+
 const formatRows = (delta: InventoryDelta): Row[] => {
   if (!delta.ops?.length) {
     return [];
@@ -46,21 +63,7 @@ const formatRows = (delta: InventoryDelta): Row[] => {
         op: op.op,
         slot: op.slot ? slotLabels[op.slot] ?? op.slot : null,
       };
-      if (op.op === 'add' || op.op === 'remove') {
-        if (op.hook) {
-          base.meta = op.hook;
-        } else if (op.purpose) {
-          base.meta = op.purpose;
-        } else if (op.seed) {
-          base.meta = op.seed;
-        }
-      }
-      if (op.op === 'spend_shard') {
-        base.meta = op.purpose ?? op.seed ?? null;
-      }
-      if (op.op === 'consume' && base.amount) {
-        base.meta = `x${base.amount}`;
-      }
+      base.meta = resolveMetaLabel(op as InventoryOp, base.amount ?? null);
       return base;
     })
     .filter((row) => row.name);

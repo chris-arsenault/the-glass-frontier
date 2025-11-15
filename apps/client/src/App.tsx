@@ -13,6 +13,7 @@ import { CreateCharacterModal } from './components/modals/CreateCharacterModal/C
 import { PlayerSettingsModal } from './components/modals/PlayerSettingsModal/PlayerSettingsModal';
 import { UserGuideModal } from './components/modals/UserGuideModal/UserGuideModal';
 import { AuditReviewPage } from './components/moderation/AuditReviewPage/AuditReviewPage';
+import { BugModerationPage } from './components/moderation/BugModerationPage/BugModerationPage';
 import { LocationMaintenancePage } from './components/moderation/LocationMaintenancePage/LocationMaintenancePage';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
 import { LandingPage } from './components/pages/LandingPage/LandingPage';
@@ -237,6 +238,7 @@ export function App(): JSX.Element {
             <Route path="/chronicle" element={<Navigate to="/" replace />} />
             <Route path="/chronicles/start" element={<ChronicleStartWizard />} />
             <Route path="/moderation/audit" element={<AuditReviewPage />} />
+            <Route path="/moderation/bugs" element={<BugModerationPage />} />
             <Route path="/moderation/locations" element={<LocationMaintenancePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

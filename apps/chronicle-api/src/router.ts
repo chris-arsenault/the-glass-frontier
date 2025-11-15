@@ -5,6 +5,7 @@ import {
   PendingEquip,
   type Character,
   BugReportSubmissionSchema,
+  BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
   type TokenUsagePeriod,
 } from '@glass-frontier/dto';
@@ -149,6 +150,11 @@ export const appRouter = t.router({
       return { usage };
     }),
 
+  listBugReports: t.procedure.query(async ({ ctx }) => {
+    const reports = await ctx.bugReportStore.listReports();
+    return { reports };
+  }),
+
   listCharacters: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
@@ -225,6 +231,24 @@ export const appRouter = t.router({
         loginId: input.loginId,
         playerId: input.playerId ?? null,
         summary: input.summary,
+      });
+      return { report };
+    }),
+
+  updateBugReport: t.procedure
+    .input(
+      z.object({
+        adminNotes: z.string().max(4000).nullable().optional(),
+        backlogItem: z.string().max(240).nullable().optional(),
+        reportId: z.string().uuid(),
+        status: z.enum(BUG_REPORT_STATUSES).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const report = await ctx.bugReportStore.updateReport(input.reportId, {
+        adminNotes: input.adminNotes,
+        backlogItem: input.backlogItem,
+        status: input.status,
       });
       return { report };
     }),

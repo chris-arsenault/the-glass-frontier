@@ -16,6 +16,23 @@ export type CreateBugReportPayload = {
   playerId?: string | null;
 };
 
+export type UpdateBugReportPayload = {
+  adminNotes?: string | null;
+  backlogItem?: string | null;
+  status?: BugReport['status'];
+};
+
+const normalizeOptionalText = (value?: string | null): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 export class BugReportStore extends HybridObjectStore {
   constructor(options: { bucket: string; prefix?: string | null; region?: string }) {
     super({
@@ -28,6 +45,8 @@ export class BugReportStore extends HybridObjectStore {
   async createReport(payload: CreateBugReportPayload): Promise<BugReport> {
     const now = new Date().toISOString();
     const report: BugReport = {
+      adminNotes: null,
+      backlogItem: null,
       characterId: payload.characterId ?? null,
       chronicleId: payload.chronicleId ?? null,
       createdAt: now,
@@ -41,6 +60,31 @@ export class BugReportStore extends HybridObjectStore {
       updatedAt: now,
     };
     await this.setJson(this.#reportKey(report.id), report);
+    return report;
+  }
+
+  async updateReport(reportId: string, payload: UpdateBugReportPayload): Promise<BugReport> {
+    const existing = await this.getReport(reportId);
+    if (existing === null) {
+      throw new Error('Bug report not found.');
+    }
+    const now = new Date().toISOString();
+    const normalizedAdminNotes = normalizeOptionalText(payload.adminNotes);
+    const normalizedBacklogItem = normalizeOptionalText(payload.backlogItem);
+    const report: BugReport = {
+      ...existing,
+      adminNotes:
+        normalizedAdminNotes === undefined
+          ? existing.adminNotes ?? null
+          : normalizedAdminNotes,
+      backlogItem:
+        normalizedBacklogItem === undefined
+          ? existing.backlogItem ?? null
+          : normalizedBacklogItem,
+      status: payload.status ?? existing.status,
+      updatedAt: now,
+    };
+    await this.setJson(this.#reportKey(reportId), report);
     return report;
   }
 
