@@ -26,12 +26,22 @@ import { useUiStore } from './stores/uiStore';
 import './App.css';
 
 const SiteHeader = (): JSX.Element => {
+  const navigate = useNavigate();
   const openChangelog = useUiStore((state) => state.openChangelogModal);
   const openBugReport = useUiStore((state) => state.openBugReportModal);
   const openGuide = useUiStore((state) => state.openGuideModal);
 
   return (
     <header className="app-global-header">
+      <button
+        type="button"
+        className="session-home-button"
+        onClick={() => {
+          void navigate('/');
+        }}
+      >
+        Home
+      </button>
       <div className="session-meta">
         <div className="session-meta-actions">
           <button type="button" className="session-report-button" onClick={openBugReport}>
@@ -197,6 +207,14 @@ const ChronicleRoute = (): JSX.Element => {
   return <ChatExperience />;
 };
 
+const LegacyChronicleRedirect = (): JSX.Element => {
+  const { chronicleId } = useParams();
+  if (!chronicleId) {
+    return <Navigate to="/" replace />;
+  }
+  return <Navigate to={`/chron/${chronicleId}`} replace />;
+};
+
 export function App(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   useLoginResources(isAuthenticated);
@@ -213,7 +231,9 @@ export function App(): JSX.Element {
         <div className="app-route-surface">
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/chronicle/:chronicleId" element={<ChronicleRoute />} />
+            <Route path="/chron/:chronicleId" element={<ChronicleRoute />} />
+            <Route path="/chron" element={<Navigate to="/" replace />} />
+            <Route path="/chronicle/:chronicleId" element={<LegacyChronicleRedirect />} />
             <Route path="/chronicle" element={<Navigate to="/" replace />} />
             <Route path="/chronicles/start" element={<ChronicleStartWizard />} />
             <Route path="/moderation/audit" element={<AuditReviewPage />} />

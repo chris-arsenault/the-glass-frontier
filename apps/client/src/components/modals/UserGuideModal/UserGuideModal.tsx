@@ -13,6 +13,18 @@ type GuideSection = {
 
 const GUIDE_SECTIONS: GuideSection[] = [
   {
+    id: 'how-to-play',
+    steps: [
+      'Treat Glass Frontier as player-authored fiction: unlike a traditional TTRPG with a GM-owned plot, you are the storyteller who decides what you attempt, what unfolds, and how the world bends to your momentum.',
+      'State what you do, why it matters, and how nearby NPCs or factions might react—guiding the GM so they can add texture, skill outcomes, and twists instead of pushing a prewritten agenda.',
+      'List the gear, tags, or allies you bring to bear each turn. If you do not mention them, the GM will assume they are irrelevant.',
+      'Do not wait for the GM to offer opportunities; pitch the scene, declare bold moves, and let the GM respond with consequences, tone, and surprises.',
+    ],
+    summary:
+      'How this differs from classic TTRPGs: the GM is a narrative amplifier, and you drive the fiction.',
+    title: 'How to Play',
+  },
+  {
     id: 'landing',
     steps: [
       'Check the briefing cards for what changed since your last run, recent chronicles, and roadmap signals.',
@@ -46,7 +58,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       'Pick a location from the world graph, choose tone cues, then select or draft a seed prompt.',
       'Use location shards from your inventory to bootstrap curated chronicles instantly.',
-      'Once created, you are redirected straight into the new chronicle at /chronicle/:id.',
+      'Once created, you are redirected straight into the new chronicle at /chron/:id.',
     ],
     summary: 'Guided flow for starting a new chronicle with curated locations and prompts.',
     title: 'Chronicle Start Wizard',

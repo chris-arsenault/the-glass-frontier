@@ -72,7 +72,7 @@ export const useChronicleShardHandler = ({
           resetWizard();
           setShardMessage(null);
           if (chronicleId) {
-            void navigate(`/chronicle/${chronicleId}`, { replace: true });
+            void navigate(`/chron/${chronicleId}`, { replace: true });
           } else {
             goToDefaultSurface(true);
           }

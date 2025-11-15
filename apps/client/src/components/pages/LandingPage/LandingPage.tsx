@@ -61,7 +61,7 @@ export function LandingPage(): JSX.Element {
     setLoadingChronicleId(chronicleId);
     try {
       await hydrateChronicle(chronicleId);
-      void navigate(`/chronicle/${chronicleId}`);
+      void navigate(`/chron/${chronicleId}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to load chronicle. Try again.';

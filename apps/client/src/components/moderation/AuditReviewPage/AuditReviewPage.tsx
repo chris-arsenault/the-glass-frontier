@@ -20,7 +20,7 @@ export function AuditReviewPage(): JSX.Element {
   const reviewActions = useReviewActions(access.loginId, store.saveReview);
 
   if (!access.canModerate) {
-    const redirectTarget = access.activeChronicleId ? `/chronicle/${access.activeChronicleId}` : '/';
+    const redirectTarget = access.activeChronicleId ? `/chron/${access.activeChronicleId}` : '/';
     return <Navigate to={redirectTarget} replace />;
   }
 
@@ -67,7 +67,7 @@ const useModeratorAccess = () => {
   const navigate = useNavigate();
   const goBackToPlayerSurface = useCallback(() => {
     if (activeChronicleId) {
-      void navigate(`/chronicle/${activeChronicleId}`);
+      void navigate(`/chron/${activeChronicleId}`);
     } else {
       void navigate('/');
     }

@@ -84,7 +84,7 @@ export function LocationMaintenancePage(): JSX.Element {
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const goBackToPlayerSurface = useCallback(() => {
     if (activeChronicleId) {
-      void navigate(`/chronicle/${activeChronicleId}`);
+      void navigate(`/chron/${activeChronicleId}`);
     } else {
       void navigate('/');
     }
@@ -167,7 +167,7 @@ export function LocationMaintenancePage(): JSX.Element {
   }, []);
 
   if (!canModerate) {
-    const redirectTarget = activeChronicleId ? `/chronicle/${activeChronicleId}` : '/';
+    const redirectTarget = activeChronicleId ? `/chron/${activeChronicleId}` : '/';
     return <Navigate to={redirectTarget} replace />;
   }
 

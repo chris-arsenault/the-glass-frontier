@@ -101,7 +101,7 @@
     "id": "2025-11-16-chronicle-landing-ux",
     "releasedAt": "2025-11-16",
     "summary": "Landing briefs, player guide, and bug reporting",
-    "details": "Added a briefing-style landing page with news, recent features, global chronicle signals, and a quick-continue panel so players see what's new before diving in. Chronicle chat now lives at /chronicle/:id with route-driven hydration, plus a new in-app player guide, live token-usage readout, and system bug report modal so players can find help or flag issues without leaving the client.",
+    "details": "Added a briefing-style landing page with news, recent features, global chronicle signals, and a quick-continue panel so players see what's new before diving in. Chronicle chat now lives at /chron/:id with route-driven hydration, plus a new in-app player guide, live token-usage readout, and system bug report modal so players can find help or flag issues without leaving the client.",
     "type": "feature"
   },
   {
@@ -110,5 +110,19 @@
     "summary": "Shifted landing and login copy to solo characters",
     "details": "Updated the home, landing, login, and player guide surfaces so they highlight individual characters instead of team-focused language, including feed data, system update summaries, and onboarding messaging. Also restructured the login screen into a stacked briefing column so the hero copy, centered sign-in form, and primer flow vertically on every device.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-17-token-usage-widget",
+    "releasedAt": "2025-11-17",
+    "summary": "Player menu now shows LLM token usage",
+    "details": "Wired the chronicle API Lambda to the LLM proxy's DynamoDB usage table and granted it read access, so the player menu widget can finally show per-login token consumption instead of an empty state. Also simplified the UI to a compact table with shorthand headers so the stats sit cleanly inside the player menu.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2025-11-17-chron-route",
+    "releasedAt": "2025-11-17",
+    "summary": "Chronicle routes moved to /chron/:id",
+    "details": "Shifted the SPA chronicle path to /chron/:id so browser refreshes no longer collide with the /chronicle API proxy. Added legacy redirects plus updated every navigation surface, guide text, and landing copy so deep links keep working.",
+    "type": "bugfix"
   }
 ]

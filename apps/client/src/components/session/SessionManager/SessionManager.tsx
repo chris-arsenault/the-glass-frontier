@@ -93,7 +93,7 @@ export function SessionManager() {
     setIsWorking(true);
     try {
       await hydrateChronicle(chronicleId);
-      void navigate(`/chronicle/${chronicleId}`);
+      void navigate(`/chron/${chronicleId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load chronicle.');
     } finally {

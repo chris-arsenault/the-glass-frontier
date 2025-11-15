@@ -257,7 +257,7 @@ export function ChronicleStartWizard() {
   const goToDefaultSurface = useCallback(
     (replace = false) => {
       if (activeChronicleId) {
-        void navigate(`/chronicle/${activeChronicleId}`, replace ? { replace: true } : undefined);
+        void navigate(`/chron/${activeChronicleId}`, replace ? { replace: true } : undefined);
       } else {
         void navigate('/', replace ? { replace: true } : undefined);
       }
@@ -312,7 +312,7 @@ export function ChronicleStartWizard() {
       nextParams.delete('shard');
       setSearchParams(nextParams, { replace: true });
       if (chronicleId) {
-        void navigate(`/chronicle/${chronicleId}`, { replace: true });
+        void navigate(`/chron/${chronicleId}`, { replace: true });
       } else {
         console.warn('Chronicle created but id was not returned; wizard closed without hydration.');
         goToDefaultSurface(true);

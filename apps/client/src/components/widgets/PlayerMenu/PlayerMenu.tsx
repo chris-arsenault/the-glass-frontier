@@ -87,13 +87,6 @@ const formatTokenCount = (value: number): string => {
   return '0';
 };
 
-const formatUsageDate = (value: string): string => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return '';
-  }
-  return parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-};
 
 export function PlayerMenu(): JSX.Element {
   const loginName = useChronicleStore((state) => state.loginName);
@@ -265,20 +258,8 @@ export function PlayerMenu(): JSX.Element {
             <p className="player-menu-info-primary">{locationDetails.edge}</p>
           </div>
         </div>
-        <div className="player-menu-usage-card">
-          <div className="player-menu-usage-header">
-            <div>
-              <p className="player-menu-pill-label">LLM Tokens</p>
-              <p className="player-menu-usage-period">
-                {usagePreview ? usagePreview.period : loginId ? 'No usage yet' : 'Login unknown'}
-              </p>
-            </div>
-            {usagePreview?.updatedAt ? (
-              <span className="player-menu-usage-updated">
-                {formatUsageDate(usagePreview.updatedAt)}
-              </span>
-            ) : null}
-          </div>
+        <div className="player-menu-usage-row">
+          <p className="player-menu-pill-label">Total Token Usage</p>
           {usageState === 'loading' ? (
             <p className="player-menu-usage-note">Loading usage…</p>
           ) : usageState === 'error' ? (
@@ -286,22 +267,30 @@ export function PlayerMenu(): JSX.Element {
               Unable to load usage{usageError ? ` · ${usageError}` : ''}.
             </p>
           ) : usagePreview ? (
-            <div className="player-menu-usage-grid">
-              <div className="player-menu-usage-stat">
-                <span className="player-menu-usage-label">Requests</span>
-                <span className="player-menu-usage-value">
-                  {formatTokenCount(usagePreview.totalRequests)}
-                </span>
-              </div>
-              {topMetrics.map((metric) => (
-                <div key={metric.key} className="player-menu-usage-stat">
-                  <span className="player-menu-usage-label">{metric.key}</span>
-                  <span className="player-menu-usage-value">
-                    {formatTokenCount(metric.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <table className="player-menu-usage-table" aria-label="LLM token usage">
+              <thead>
+                <tr>
+                  <th className="player-menu-usage-label">Req</th>
+                  {topMetrics.map((metric) => (
+                    <th key={`header-${metric.key}`} className="player-menu-usage-label">
+                      {metric.key.slice(0, 4).toUpperCase()}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="player-menu-usage-value">
+                    {formatTokenCount(usagePreview.totalRequests)}
+                  </td>
+                  {topMetrics.map((metric) => (
+                    <td key={`value-${metric.key}`} className="player-menu-usage-value">
+                      {formatTokenCount(metric.value)}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           ) : (
             <p className="player-menu-usage-note">Usage data will appear after your next session.</p>
           )}
