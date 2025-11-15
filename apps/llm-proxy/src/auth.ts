@@ -39,7 +39,8 @@ const extractClaimsFromAuthorizer = (authorizer: unknown): ClaimMap | undefined 
 };
 
 export function resolvePlayerIdFromEvent(event: APIGatewayProxyEventV2): string | undefined {
-  const claims = extractClaimsFromAuthorizer(event.requestContext?.authorizer);
+  const requestContext = event.requestContext as unknown as { authorizer?: unknown };
+  const claims = extractClaimsFromAuthorizer(requestContext?.authorizer);
   const fromClaims = extractPlayerIdFromClaims(claims);
   if (fromClaims !== undefined) {
     return fromClaims;

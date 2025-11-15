@@ -1,5 +1,5 @@
 import { DynamoDBClient, QueryCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
-import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 import type { TokenUsageMetric, TokenUsagePeriod } from '@glass-frontier/dto';
 import { TokenUsagePeriodSchema } from '@glass-frontier/dto';
 

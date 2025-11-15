@@ -21,6 +21,7 @@
     "@aws-sdk/client-dynamodb": "^3.930.0",
     "@aws-sdk/client-s3": "^3.930.0",
     "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/node-utils": "workspace:*",
     "@trpc/server": "^11.7.1",
     "openai": "^6.8.1",
     "tsup": "^8.5.1",

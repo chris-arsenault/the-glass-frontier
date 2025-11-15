@@ -1,15 +1,27 @@
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
-import type { GraphContext } from '../../types.js';
+import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeGMSummaryPrompt } from '../prompts/prompts';
 
 const SummaryResponseSchema = z.object({
-  shouldCloseChronicle: z.boolean().optional(),
+  shouldCloseChronicle: z.boolean(),
   summary: z.string().min(1),
 });
 
 type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
+
+const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+const SUMMARY_RESPONSE_FORMAT = zodTextFormat(SummaryResponseSchema, 'gm_summary_response');
+const SUMMARY_TEXT_SETTINGS = {
+  format: SUMMARY_RESPONSE_FORMAT,
+  verbosity: 'low' as const,
+};
+
+const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
+  context.llmResolver?.(CLASSIFIER_MODEL) ?? context.llm;
 
 class GmSummaryNode implements GraphNode {
   readonly id = 'gm-summary';
@@ -57,11 +69,14 @@ class GmSummaryNode implements GraphNode {
 
   async #summarize(context: GraphContext, prompt: string): Promise<SummaryResponse | null> {
     try {
-      const result = await context.llm.generateJson({
+      const classifier = resolveClassifierLlm(context);
+      const result = await classifier.generateJson({
         maxTokens: 350,
         metadata: { chronicleId: context.chronicleId, nodeId: this.id },
         prompt,
+        reasoning: CLASSIFIER_REASONING.reasoning,
         temperature: 0.2,
+        text: SUMMARY_TEXT_SETTINGS,
       });
       const parsed = SummaryResponseSchema.safeParse(result.json);
       if (!parsed.success) {

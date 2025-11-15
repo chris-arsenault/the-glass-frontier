@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"advantage\":\"none\",\"complicationSeeds\":[\"Equipment strain\",\"Lingering echo\"],\"rationale\":\"Mock planner rationale.\",\"riskLevel\":\"standard\"}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"advantage\":\"none\",\"complicationSeeds\":[\"Equipment strain\",\"Lingering echo\"],\"rationale\":\"Mock planner rationale.\",\"riskLevel\":\"standard\"}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 10,
+    "output_tokens": 10,
+    "total_tokens": 20
+  }
+}

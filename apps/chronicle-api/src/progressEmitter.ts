@@ -1,6 +1,7 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import type { TurnProgressEvent, TurnProgressPayload } from '@glass-frontier/dto';
-import { log, resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
+import { log } from '@glass-frontier/utils';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 import type { GraphContext } from './types';
 

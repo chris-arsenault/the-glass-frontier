@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "MOCK: The GM describes the scout slipping past the humming consoles."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "MOCK: The GM describes the scout slipping past the humming consoles."
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 8,
+    "total_tokens": 20
+  }
+}

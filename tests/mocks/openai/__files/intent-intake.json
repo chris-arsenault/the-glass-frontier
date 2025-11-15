@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Survey the vault antechamber\",\"intentType\":\"action\",\"requiresCheck\":true,\"routerConfidence\":0.92,\"routerRationale\":\"mock-classifier\",\"tone\":\"focused\"}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Survey the vault antechamber\",\"intentType\":\"action\",\"requiresCheck\":true,\"routerConfidence\":0.92,\"routerRationale\":\"mock-classifier\",\"tone\":\"focused\"}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 12,
+    "total_tokens": 24
+  }
+}

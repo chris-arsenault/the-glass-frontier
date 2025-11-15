@@ -24,6 +24,9 @@ importers:
       '@aws-sdk/client-sqs':
         specifier: ^3.930.0
         version: 3.930.0
+      '@aws-sdk/credential-providers':
+        specifier: ^3.930.0
+        version: 3.930.0
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.1
@@ -111,6 +114,9 @@ importers:
       '@glass-frontier/llm-client':
         specifier: workspace:*
         version: link:../../packages/llm-client
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../../packages/node-utils
       '@glass-frontier/persistence':
         specifier: workspace:*
         version: link:../../packages/persistence
@@ -279,6 +285,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.930.0
         version: 3.930.0
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../../packages/node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -369,6 +378,9 @@ importers:
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../../packages/dto
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../../packages/node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -401,6 +413,12 @@ importers:
         specifier: ^11.7.1
         version: 11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3)
 
+  packages/node-utils:
+    dependencies:
+      '@aws-sdk/credential-providers':
+        specifier: ^3.930.0
+        version: 3.930.0
+
   packages/persistence:
     dependencies:
       '@aws-sdk/client-dynamodb':
@@ -415,6 +433,9 @@ importers:
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../dto
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../utils

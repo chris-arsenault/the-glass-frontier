@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"focusBeatId\":null,\"newBeatDescription\":null,\"newBeatTitle\":null,\"shouldStartNewBeat\":false,\"updates\":[]}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"focusBeatId\":null,\"newBeatDescription\":null,\"newBeatTitle\":null,\"shouldStartNewBeat\":false,\"updates\":[]}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 6,
+    "output_tokens": 6,
+    "total_tokens": 12
+  }
+}

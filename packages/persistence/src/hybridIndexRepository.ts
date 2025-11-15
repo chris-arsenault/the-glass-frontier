@@ -5,7 +5,7 @@ import {
   DeleteItemCommand,
   type AttributeValue,
 } from '@aws-sdk/client-dynamodb';
-import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
+import { resolveAwsCredentials, resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 export type HybridIndexRepositoryOptions = {
   tableName: string;
@@ -25,9 +25,11 @@ export abstract class HybridIndexRepository {
     this.#tableName = options.tableName;
     const region = options.region ?? resolveAwsRegion();
     const endpoint = resolveAwsEndpoint('dynamodb');
+    const credentials = resolveAwsCredentials();
     this.#client =
       options.client ??
       new DynamoDBClient({
+        credentials,
         endpoint,
         region,
       });

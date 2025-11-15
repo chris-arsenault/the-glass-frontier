@@ -5,10 +5,14 @@ import {
   DeleteObjectCommand,
   paginateListObjectsV2,
 } from '@aws-sdk/client-s3';
-import { fromEnv } from '@aws-sdk/credential-providers';
 import { Readable } from 'node:stream';
 
-import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/utils';
+import {
+  resolveAwsCredentials,
+  resolveAwsEndpoint,
+  resolveAwsRegion,
+  shouldForcePathStyle,
+} from '@glass-frontier/node-utils';
 
 type TransformableBody = {
   transformToString: (encoding: BufferEncoding) => Promise<string> | string;
@@ -37,12 +41,6 @@ const hasArrayBuffer = (input: unknown): input is ArrayBufferBody => {
   }
   const candidate = (input as { arrayBuffer?: unknown }).arrayBuffer;
   return typeof candidate === 'function';
-};
-
-const hasAwsCredentials = (): boolean => {
-  const accessKey = process.env.AWS_ACCESS_KEY_ID ?? '';
-  const secretKey = process.env.AWS_SECRET_ACCESS_KEY ?? '';
-  return accessKey.trim().length > 0 && secretKey.trim().length > 0;
 };
 
 const normalizePrefix = (prefix?: string | null): string => {
@@ -84,7 +82,7 @@ export abstract class HybridObjectStore {
     this.#bucket = options.bucket;
     this.#prefix = normalizePrefix(options.prefix ?? null);
 
-    const credentials = hasAwsCredentials() ? fromEnv() : undefined;
+    const credentials = resolveAwsCredentials();
 
     const endpoint = resolveAwsEndpoint('s3');
     const region = options.region ?? resolveAwsRegion();

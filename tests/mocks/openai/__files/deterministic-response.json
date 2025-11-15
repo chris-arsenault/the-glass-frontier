@@ -8,5 +8,15 @@
     "input_tokens": 32,
     "output_tokens": 16,
     "total_tokens": 48
-  }
+  },
+  "output": [
+    {
+      "content": [
+        {
+          "text": "MOCK: deterministic reply for test."
+        }
+      ],
+      "role": "assistant"
+    }
+  ]
 }

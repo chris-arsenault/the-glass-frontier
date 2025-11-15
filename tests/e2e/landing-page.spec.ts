@@ -1,23 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-const authenticate = async (page: Page) => {
-  await page.evaluate(async () => {
-    const module = await import('/src/stores/authStore.ts');
-    module.useAuthStore.setState({
-      challengeUser: null,
-      error: null,
-      isAuthenticated: true,
-      isAuthenticating: false,
-      newPasswordRequired: false,
-      tokens: {
-        accessToken: 'test-access-token',
-        idToken: 'test-id-token',
-        refreshToken: 'test-refresh-token',
-      },
-      username: 'playwright-e2e',
-    });
-  });
-};
+import { authenticate } from './utils';
 
 test.describe('Landing page', () => {
   test('is accessible once authenticated', async ({ page }) => {

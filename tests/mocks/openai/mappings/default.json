@@ -1,4 +1,5 @@
 {
+  "priority": 10,
   "request": {
     "method": "POST",
     "urlPath": "/v1/responses"
@@ -8,6 +9,6 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "deterministic-response.json"
+    "bodyFileName": "default-response.json"
   }
 }

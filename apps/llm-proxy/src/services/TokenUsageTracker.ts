@@ -1,5 +1,6 @@
 import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
-import { log, resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
+import { log } from '@glass-frontier/utils';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 type UsageRecord = Map<string, number>;
 

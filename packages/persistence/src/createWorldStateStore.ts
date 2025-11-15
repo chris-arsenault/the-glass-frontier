@@ -3,7 +3,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import type { S3Client } from '@aws-sdk/client-s3';
 
-import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/utils';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 import { S3WorldStateStore } from './s3WorldStateStore';
 import { WorldIndexRepository } from './worldIndexRepository';

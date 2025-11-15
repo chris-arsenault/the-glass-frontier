@@ -1,0 +1,32 @@
+{
+  "name": "@glass-frontier/node-utils",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "dist/types"],
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "glass-frontier",
+    "narrative-engine",
+    "langgraph"
+  ],
+  "author": "Tsonu",
+  "license": "Polyform-Noncommercial-1.0.0",
+  "dependencies": {
+    "@aws-sdk/credential-providers": "^3.930.0"
+  }
+}

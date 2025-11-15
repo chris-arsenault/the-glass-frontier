@@ -23,7 +23,7 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({
     httpBatchLink({
       fetch: authenticatedFetch,
       headers() {
-        const token = useAuthStore.getState().tokens?.idToken;
+        const token = useAuthStore.getState().tokens?.idToken
         if (typeof token === 'string' && token.length > 0) {
           return { Authorization: `Bearer ${token}` };
         }

@@ -27,6 +27,7 @@
     "@glass-frontier/persistence": "workspace:*",
     "@glass-frontier/skill-check-resolver": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/node-utils": "workspace:*",
     "@trpc/client": "^11.7.1",
     "@trpc/server": "^11.7.1",
     "handlebars": "^4.7.8",

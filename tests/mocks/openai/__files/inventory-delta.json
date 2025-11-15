@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"nextRevision\":0,\"ops\":[],\"prevRevision\":0}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"nextRevision\":0,\"ops\":[],\"prevRevision\":0}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 4,
+    "output_tokens": 4,
+    "total_tokens": 8
+  }
+}

@@ -122,7 +122,9 @@ class Router {
     context?: { playerId?: string; requestId?: string }
   ): Promise<unknown> {
     const { metadata, payloadBody } = this.extractInvocationParts(body);
-    const payload = new Payload(payloadBody);
+    const payload = new Payload(
+      metadata !== undefined ? { ...payloadBody, metadata } : payloadBody
+    );
     const providers = this.registry.providerOrder();
 
     if (providers.length === 0) {
@@ -168,7 +170,7 @@ class Router {
     const attemptCtx: ProviderAttemptContext = {
       attempt: index + 1,
       providerId: provider.id,
-    };
+    }
 
     const { evaluation, preparedPayload } = await this.executeProviderAttempt(
       provider,

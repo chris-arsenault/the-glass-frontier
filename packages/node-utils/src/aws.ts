@@ -1,3 +1,6 @@
+
+import { fromEnv } from '@aws-sdk/credential-providers';
+
 const isNonEmptyString = (value: unknown): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
 };
@@ -59,4 +62,13 @@ export const shouldForcePathStyle = (): boolean => {
     return true;
   }
   return resolveAwsEndpoint('s3') !== undefined;
+};
+
+export const resolveAwsCredentials = (): ReturnType<typeof fromEnv> | undefined =>
+  hasExplicitAwsCredentials() ? fromEnv() : undefined;
+
+const hasExplicitAwsCredentials = (): boolean => {
+  const accessKey = process.env.AWS_ACCESS_KEY_ID ?? '';
+  const secretKey = process.env.AWS_SECRET_ACCESS_KEY ?? '';
+  return accessKey.trim().length > 0 && secretKey.trim().length > 0;
 };
