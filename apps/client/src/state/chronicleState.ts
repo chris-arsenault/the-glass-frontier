@@ -94,6 +94,7 @@ export type ChronicleState = {
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
   pendingEquip: PendingEquip[];
+  recentChronicles: string[];
   playerSettings: PlayerSettings;
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
   playerSettingsError: Error | null;

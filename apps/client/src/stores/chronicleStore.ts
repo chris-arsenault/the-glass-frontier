@@ -24,8 +24,8 @@ import type {
   ChronicleSeedCreationDetails,
   ChronicleStore,
   MomentumTrend,
-  SkillProgressBadge,
   PlayerSettings,
+  SkillProgressBadge,
 } from '../state/chronicleState';
 import { decodeJwtPayload } from '../utils/jwt';
 import { useAuthStore } from './authStore';
@@ -51,6 +51,15 @@ const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
 const normalizePlayerSettings = (preferences?: PlayerPreferences | null): PlayerSettings => ({
   feedbackVisibility: preferences?.feedbackVisibility ?? DEFAULT_PLAYER_SETTINGS.feedbackVisibility,
 });
+
+type ChronicleSnapshot = {
+  character: Character | null;
+  chronicle: (Chronicle & { beats?: ChronicleBeat[]; seedText?: string | null }) | null;
+  chronicleId: string;
+  location: LocationSummary | null;
+  turnSequence?: number | null;
+  turns?: Turn[];
+};
 
 const generateId = () => {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -613,10 +622,11 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }));
 
     try {
-      const chronicleState = await trpcClient.getChronicle.query({ chronicleId });
-      if (!chronicleState) {
+      const chronicleSnapshot = await trpcClient.getChronicle.query({ chronicleId });
+      if (!chronicleSnapshot) {
         throw new Error('Chronicle not found.');
       }
+      const chronicleState: ChronicleSnapshot = chronicleSnapshot;
 
       const messageHistory = flattenTurns(chronicleState.turns ?? []);
       const chronicleBeats = chronicleState.chronicle?.beats ?? [];

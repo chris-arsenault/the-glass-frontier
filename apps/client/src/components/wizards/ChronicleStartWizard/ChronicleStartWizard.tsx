@@ -5,7 +5,7 @@ import type {
   ChronicleSeed,
   DataShard,
 } from '@glass-frontier/dto';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
@@ -103,40 +103,41 @@ export function ChronicleStartWizard() {
     [selectedSeedId, seeds]
   );
 
-  const bootstrapShardLocation = async (
-    stack: LocationBreadcrumbEntry[]
-  ): Promise<string | null> => {
-    if (!stack.length) {
-      return null;
-    }
-    const knownIndex = [...stack].reverse().findIndex((entry) => entry.id);
-    let parentId: string | undefined;
-    let baseIndex = 0;
-    if (knownIndex >= 0) {
-      const realIndex = stack.length - 1 - knownIndex;
-      parentId = stack[realIndex].id;
-      baseIndex = realIndex + 1;
-    }
-    const pending = stack.slice(baseIndex);
-    if (!pending.length && parentId) {
-      return parentId;
-    }
-    if (!pending.length) {
-      return null;
-    }
-    const segments = pending.map((entry) => ({
-      description: undefined,
-      kind: entry.kind,
-      name: entry.name,
-      tags: [],
-    }));
-    const result = await locationClient.createLocationChain.mutate({
-      parentId,
-      segments,
-    });
-    await loadGraph(result.anchor.locationId);
-    return result.anchor.id;
-  };
+  const bootstrapShardLocation = useCallback(
+    async (stack: LocationBreadcrumbEntry[]): Promise<string | null> => {
+      if (!stack.length) {
+        return null;
+      }
+      const knownIndex = [...stack].reverse().findIndex((entry) => entry.id);
+      let parentId: string | undefined;
+      let baseIndex = 0;
+      if (knownIndex >= 0) {
+        const realIndex = stack.length - 1 - knownIndex;
+        parentId = stack[realIndex].id;
+        baseIndex = realIndex + 1;
+      }
+      const pending = stack.slice(baseIndex);
+      if (!pending.length && parentId) {
+        return parentId;
+      }
+      if (!pending.length) {
+        return null;
+      }
+      const segments = pending.map((entry) => ({
+        description: undefined,
+        kind: entry.kind,
+        name: entry.name,
+        tags: [],
+      }));
+      const result = await locationClient.createLocationChain.mutate({
+        parentId,
+        segments,
+      });
+      await loadGraph(result.anchor.locationId);
+      return result.anchor.id;
+    },
+    [loadGraph]
+  );
 
   useEffect(() => {
     if (!customTitle) {
@@ -155,7 +156,56 @@ export function ChronicleStartWizard() {
     (step === 'seeds' && hasSeedPayload) ||
     step === 'create';
 
-  const loadRoots = async () => {
+  const handlePlaceSelection = useCallback(
+    async (placeId: string) => {
+      setActivePlaceId(placeId);
+      try {
+        const details = await locationClient.getLocationPlace.query({ placeId });
+        setInspector({ breadcrumb: details.breadcrumb, place: details.place });
+        setSelectedLocation({
+          breadcrumb: details.breadcrumb,
+          id: details.place.id,
+          name: details.place.name,
+        });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to load location details.';
+        setInspector({ breadcrumb: [], place: null });
+        setSelectedLocation(null);
+        setGraphError(message);
+      }
+    },
+    [setSelectedLocation]
+  );
+
+  const loadGraph = useCallback(
+    async (locationId: string) => {
+      setIsGraphLoading(true);
+      setGraphError(null);
+      try {
+        const snapshot = await locationClient.getLocationGraph.query({ locationId });
+        setGraph(snapshot);
+        setActivePlaceId(locationId);
+        await handlePlaceSelection(locationId);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to load graph.';
+        setGraphError(message);
+      } finally {
+        setIsGraphLoading(false);
+      }
+    },
+    [handlePlaceSelection]
+  );
+
+  const handleRootSelection = useCallback(
+    async (locationId: string) => {
+      setSelectedRootId(locationId);
+      await loadGraph(locationId);
+    },
+    [loadGraph]
+  );
+
+  const loadRoots = useCallback(async () => {
     setIsLoadingRoots(true);
     setRootError(null);
     try {
@@ -170,51 +220,11 @@ export function ChronicleStartWizard() {
     } finally {
       setIsLoadingRoots(false);
     }
-  };
+  }, [handleRootSelection, selectedRootId]);
 
   useEffect(() => {
     void loadRoots().catch(() => undefined);
-  }, []);
-
-  const loadGraph = async (locationId: string) => {
-    setIsGraphLoading(true);
-    setGraphError(null);
-    try {
-      const snapshot = await locationClient.getLocationGraph.query({ locationId });
-      setGraph(snapshot);
-      setActivePlaceId(locationId);
-      await handlePlaceSelection(locationId);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to load graph.';
-      setGraphError(message);
-    } finally {
-      setIsGraphLoading(false);
-    }
-  };
-
-  const handleRootSelection = async (locationId: string) => {
-    setSelectedRootId(locationId);
-    await loadGraph(locationId);
-  };
-
-  const handlePlaceSelection = async (placeId: string) => {
-    setActivePlaceId(placeId);
-    try {
-      const details = await locationClient.getLocationPlace.query({ placeId });
-      setInspector({ breadcrumb: details.breadcrumb, place: details.place });
-      setSelectedLocation({
-        breadcrumb: details.breadcrumb,
-        id: details.place.id,
-        name: details.place.name,
-      });
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to load location details.';
-      setInspector({ breadcrumb: [], place: null });
-      setSelectedLocation(null);
-      setGraphError(message);
-    }
-  };
+  }, [loadRoots]);
 
   const selectedCharacterName = useMemo(() => {
     const targetId = preferredCharacterId;
@@ -320,6 +330,13 @@ export function ChronicleStartWizard() {
     selectedSeed,
     selectedCharacterName,
     beatsEnabled,
+    chooseSeed,
+    handlePlaceSelection,
+    handleRootSelection,
+    setBeatsEnabled,
+    setCustomSeed,
+    setSeeds,
+    setToneNotes,
   ]);
 
   const handleNext = () => {
@@ -335,13 +352,16 @@ export function ChronicleStartWizard() {
     }
   };
 
-  const goToDefaultSurface = (replace = false) => {
-    if (activeChronicleId) {
-      void navigate(`/chronicle/${activeChronicleId}`, replace ? { replace: true } : undefined);
-    } else {
-      void navigate('/', replace ? { replace: true } : undefined);
-    }
-  };
+  const goToDefaultSurface = useCallback(
+    (replace = false) => {
+      if (activeChronicleId) {
+        void navigate(`/chronicle/${activeChronicleId}`, replace ? { replace: true } : undefined);
+      } else {
+        void navigate('/', replace ? { replace: true } : undefined);
+      }
+    },
+    [activeChronicleId, navigate]
+  );
 
   const handleBack = () => {
     if (step === 'tone') {
@@ -504,6 +524,7 @@ export function ChronicleStartWizard() {
     setShardMessage,
     setStep,
     beatsEnabled,
+    goToDefaultSurface,
   ]);
 
   return (
