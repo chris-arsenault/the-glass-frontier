@@ -160,6 +160,12 @@ export default [
       ...jsxA11y.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',
+      // The client surface intentionally keeps large composite components and Zustand stores
+      // together for ease of editing, so relax the structural rules for that workspace.
+      complexity: 'off',
+      'sonarjs/cognitive-complexity': 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',

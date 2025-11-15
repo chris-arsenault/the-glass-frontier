@@ -483,7 +483,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         directoryStatus: prev.directoryStatus === 'idle' ? 'ready' : prev.directoryStatus,
         preferredCharacterId: stored.id,
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError = error instanceof Error ? error : new Error('Failed to create character.');
       set((prev) => ({
         ...prev,
@@ -526,7 +526,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         preferredCharacterId: targetCharacterId,
       }));
       return get().hydrateChronicle(result.chronicle.id);
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
       set((prev) => ({
         ...prev,
@@ -570,7 +570,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         preferredCharacterId: targetCharacterId,
       }));
       return get().hydrateChronicle(result.chronicle.id);
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
       set((prev) => ({
         ...prev,
@@ -599,7 +599,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       if (isActive) {
         get().clearActiveChronicle();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError =
         error instanceof Error ? error : new Error('Failed to delete chronicle.');
       set((prev) => ({
@@ -622,11 +622,13 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }));
 
     try {
-      const chronicleSnapshot = await trpcClient.getChronicle.query({ chronicleId });
+      const chronicleSnapshot = (await trpcClient.getChronicle.query({
+        chronicleId,
+      })) as ChronicleSnapshot | null;
       if (!chronicleSnapshot) {
         throw new Error('Chronicle not found.');
       }
-      const chronicleState: ChronicleSnapshot = chronicleSnapshot;
+      const chronicleState = chronicleSnapshot;
 
       const messageHistory = flattenTurns(chronicleState.turns ?? []);
       const chronicleBeats = chronicleState.chronicle?.beats ?? [];
@@ -664,7 +666,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }));
 
       return chronicleState.chronicleId;
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError =
         error instanceof Error ? error : new Error('Failed to connect to the narrative engine.');
       set((prev) => ({
@@ -693,7 +695,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         playerSettings: normalizePlayerSettings(result.preferences),
         playerSettingsStatus: 'ready',
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError =
         error instanceof Error ? error : new Error('Failed to load player settings.');
       set((prev) => ({
@@ -757,7 +759,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         preferredCharacterId:
           prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId,
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError =
         error instanceof Error ? error : new Error('Failed to load character directory.');
       set((prev) => ({
@@ -903,7 +905,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
         };
       });
-    } catch (error) {
+    } catch (error: unknown) {
       progressStream.markComplete(jobId);
       const nextError = error instanceof Error ? error : new Error('Failed to send player intent.');
       set((prev) => ({
@@ -957,7 +959,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         chronicleRecord: updatedChronicle ?? prev.chronicleRecord,
         transportError: null,
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError =
         error instanceof Error ? error : new Error('Failed to update chronicle wrap state.');
       set((prev) => ({
@@ -1003,7 +1005,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         playerSettings: normalizePlayerSettings(result.preferences),
         playerSettingsStatus: 'ready',
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const nextError =
         error instanceof Error ? error : new Error('Failed to update player settings.');
       set((prev) => ({

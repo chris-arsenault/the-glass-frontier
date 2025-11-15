@@ -11,7 +11,11 @@ import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { locationClient } from '../../../lib/locationClient';
 import { trpcClient } from '../../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
-import { useChronicleStartStore, type SelectedLocationSummary } from '../../../stores/chronicleStartWizardStore';
+import {
+  useChronicleStartStore,
+  type ChronicleWizardStep,
+  type SelectedLocationSummary,
+} from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
 import { useChronicleShardHandler } from './hooks/useChronicleShardHandler';

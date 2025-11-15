@@ -94,7 +94,7 @@ const filterReports = (
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 };
 
-const useColumns = (): GridColDef<GridRow>[] =>
+const useColumns = (): Array<GridColDef<GridRow>> =>
   useMemo(
     () => [
       { field: 'summary', flex: 1.6, headerName: 'Summary', minWidth: 220 },
@@ -115,7 +115,6 @@ const useColumns = (): GridColDef<GridRow>[] =>
         field: 'createdAtLabel',
         headerName: 'Created',
         minWidth: 210,
-        valueGetter: (params) => params.row.createdAtLabel,
       },
     ],
     []

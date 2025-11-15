@@ -146,7 +146,7 @@ export const RelationshipDialog = ({
           <label>
             Relationship type
             <select value={kind} onChange={(event) => setKind(event.target.value as LocationEdgeKindType)}>
-              {EDGE_KIND_OPTIONS.map((entry) => (
+              {EDGE_KIND_OPTIONS.map((entry: LocationEdgeKindType) => (
                 <option key={entry} value={entry}>
                   {entry}
                 </option>

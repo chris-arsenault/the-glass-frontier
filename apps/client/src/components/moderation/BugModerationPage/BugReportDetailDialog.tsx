@@ -9,7 +9,7 @@ import {
   MenuItem,
   TextField,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { formatBugStatus } from './statusLabels';
 
@@ -57,21 +57,9 @@ export function BugReportDetailDialog({
   onSave,
   report,
 }: DetailDialogProps) {
-  const [status, setStatus] = useState<BugReportStatus>('open');
-  const [adminNotes, setAdminNotes] = useState('');
-  const [backlogItem, setBacklogItem] = useState('');
-
-  useEffect(() => {
-    if (!report) {
-      setStatus('open');
-      setAdminNotes('');
-      setBacklogItem('');
-      return;
-    }
-    setStatus(report.status);
-    setAdminNotes(report.adminNotes ?? '');
-    setBacklogItem(report.backlogItem ?? '');
-  }, [report]);
+  const [status, setStatus] = useState<BugReportStatus>(() => report?.status ?? 'open');
+  const [adminNotes, setAdminNotes] = useState(() => report?.adminNotes ?? '');
+  const [backlogItem, setBacklogItem] = useState(() => report?.backlogItem ?? '');
 
   const canSave = Boolean(report) && !isSaving;
 

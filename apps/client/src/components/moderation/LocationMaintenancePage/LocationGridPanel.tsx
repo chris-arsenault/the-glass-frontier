@@ -202,7 +202,7 @@ export const LocationGridPanel = ({
 
   const handleRowSelectionModelChange = useCallback(
     (model: GridRowSelectionModel) => {
-      const first = model.ids.values().next().value;
+      const first = Array.from(model.ids.values())[0];
       if (typeof first === 'string') {
         onSelectPlace(first);
       }

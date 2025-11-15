@@ -39,8 +39,6 @@ export const useBugModerationStore = create<BugModerationStoreState>((set, get) 
   filters: defaultFilters,
   isLoading: false,
   isSaving: false,
-  reports: [],
-  selectedReportId: null,
   loadReports: async () => {
     set({ error: null, isLoading: true });
     try {
@@ -54,6 +52,8 @@ export const useBugModerationStore = create<BugModerationStoreState>((set, get) 
   refreshReports: async () => {
     await get().loadReports();
   },
+  reports: [],
+  selectedReportId: null,
   selectReport: (reportId) => set({ selectedReportId: reportId }),
   setFilters: (updates) =>
     set((state) => ({

@@ -1,10 +1,11 @@
+import type { BugReportStatus } from '@glass-frontier/dto';
 import React, { useEffect, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
-import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useBugModerationStore } from '../../../stores/bugModerationStore';
+import { useChronicleStore } from '../../../stores/chronicleStore';
 import './BugModerationPage.css';
 import { BugReportDetailDialog } from './BugReportDetailDialog';
 import { BugReportsGrid } from './BugReportsGrid';
@@ -16,8 +17,8 @@ const selectBugModerationState = (state: ReturnType<typeof useBugModerationStore
   isSaving: state.isSaving,
   loadReports: state.loadReports,
   reports: state.reports,
-  selectReport: state.selectReport,
   selectedReportId: state.selectedReportId,
+  selectReport: state.selectReport,
   setFilters: state.setFilters,
   updateReport: state.updateReport,
 });
@@ -33,8 +34,8 @@ export function BugModerationPage(): JSX.Element {
     isSaving,
     loadReports,
     reports,
-    selectReport,
     selectedReportId,
+    selectReport,
     setFilters,
     updateReport,
   } = useBugModerationStore(useShallow(selectBugModerationState));
@@ -111,21 +112,19 @@ export function BugModerationPage(): JSX.Element {
         filters={filters}
         isLoading={isLoading}
         onFilterChange={setFilters}
-        onSelectReport={(reportId) => selectReport(reportId)}
+        onSelectReport={selectReport}
         reports={reports}
         selectedReportId={selectedReportId}
       />
       <BugReportDetailDialog
         error={error}
+        key={selectedReport?.id ?? 'BugReportDetailDialog'}
         isOpen={Boolean(selectedReportId)}
         isSaving={isSaving}
         onClose={handleCloseDialog}
-        onSave={async ({ adminNotes, backlogItem, status }) => {
-          await handleSaveDetail({ adminNotes, backlogItem, status });
-        }}
+        onSave={handleSaveDetail}
         report={selectedReport}
       />
     </div>
   );
 }
-import type { BugReportStatus } from '@glass-frontier/dto';

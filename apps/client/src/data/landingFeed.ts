@@ -65,24 +65,24 @@ export const landingNews: LandingNewsItem[] = [
 
 export const recentChronicleFeed: RecentChronicleItem[] = [
   {
-    completedAt: '2025-11-16T04:20:00Z',
     character: 'Ayo',
+    completedAt: '2025-11-16T04:20:00Z',
     hook: 'Ayo uncovered the rain-split docks ritual brokers and sealed their pact circle before the eclipse hit.',
     id: 'chronicle-neon-silence',
     location: 'Rain-Split Docks · Bastion Rim',
     title: 'A Silence of Neon',
   },
   {
-    completedAt: '2025-11-15T18:05:00Z',
     character: 'Cael',
+    completedAt: '2025-11-15T18:05:00Z',
     hook: 'Cael negotiated a ceasefire with the Folded Choir, trading intent diagrams for refugee passages.',
     id: 'chronicle-sundered-veil',
     location: 'Choir Reliquary · Ember Steppes',
     title: 'The Sundered Veil',
   },
   {
-    completedAt: '2025-11-15T09:51:00Z',
     character: 'Jun',
+    completedAt: '2025-11-15T09:51:00Z',
     hook: 'Jun guided the White Stag caravan through an anti-sky storm and sanctified a new resonant path.',
     id: 'chronicle-firmament',
     location: 'The Petrified Firmament',

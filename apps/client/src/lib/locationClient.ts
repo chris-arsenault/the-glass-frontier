@@ -2,7 +2,7 @@ import type { LocationRouter } from '@glass-frontier/location-api';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 
 import { useAuthStore } from '../stores/authStore';
-import { getConfigValue } from '../utils/runtimeConfig';
+import { getConfigValue, getEnvValue } from '../utils/runtimeConfig';
 import { authenticatedFetch } from './authenticatedFetch';
 
 const hasValue = (value: string | undefined): value is string => {
@@ -10,7 +10,7 @@ const hasValue = (value: string | undefined): value is string => {
 };
 
 const resolveLocationTrpcUrl = (): string => {
-  const apiTarget = getConfigValue('VITE_API_TARGET') ?? import.meta.env.VITE_API_TARGET;
+  const apiTarget = getConfigValue('VITE_API_TARGET') ?? getEnvValue('VITE_API_TARGET');
   if (hasValue(apiTarget)) {
     return `${apiTarget.replace(/\/$/, '')}/location`;
   }

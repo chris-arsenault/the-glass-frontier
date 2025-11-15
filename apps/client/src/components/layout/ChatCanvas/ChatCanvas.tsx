@@ -100,8 +100,11 @@ const readFeedbackCache = (): Record<string, true> => {
     if (typeof raw !== 'string') {
       return {};
     }
-    const parsed = JSON.parse(raw) as Record<string, true>;
-    return parsed !== null && typeof parsed === 'object' ? parsed : {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed !== null && typeof parsed === 'object') {
+      return parsed as Record<string, true>;
+    }
+    return {};
   } catch {
     return {};
   }
@@ -133,7 +136,7 @@ export function ChatCanvas() {
   const showBadges = isAtLeast('badges');
   const showNarrative = isAtLeast('narrative');
   const showAll = isAtLeast('all');
-  const streamRef = useRef(null);
+  const streamRef = useRef<HTMLDivElement | null>(null);
   const [feedbackCache, setFeedbackCache] = useState<Record<string, true>>(() => readFeedbackCache());
   const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(null);
   const [feedbackSentiment, setFeedbackSentiment] = useState<PlayerFeedbackSentiment>('positive');
@@ -258,7 +261,7 @@ export function ChatCanvas() {
       });
       markFeedbackSubmitted(feedbackTarget.auditId);
       closeFeedbackModal();
-    } catch (error) {
+    } catch (error: unknown) {
       setFeedbackError(error instanceof Error ? error.message : 'Unable to submit feedback.');
       setIsSubmittingFeedback(false);
     }
