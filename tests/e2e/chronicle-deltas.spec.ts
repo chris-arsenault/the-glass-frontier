@@ -20,6 +20,7 @@ test.describe('Chronicle deltas', () => {
   test('tracks multi-turn location transitions and inventory changes', async ({ page }) => {
     const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
     const locationPill = page.locator('.location-pill-value');
+    const locationPath = page.locator('.location-pill-path');
 
     await expect(locationPill).toContainText('Luminous Quay');
 
@@ -57,6 +58,12 @@ test.describe('Chronicle deltas', () => {
 
     await sendTurn(page, chatInput, 'Return to the Luminous Quay observation deck.');
     await expect(locationPill).toContainText('Luminous Quay', { timeout: 15_000 });
+    const breadcrumbText = ((await locationPath.textContent()) ?? '').replace(/\s+/g, ' ').trim();
+    if (breadcrumbText !== 'Luminous Quay') {
+      throw new Error(
+        `Location breadcrumb failed to return home (expected "Luminous Quay", saw "${breadcrumbText}")`
+      );
+    }
 
     await sendTurn(page, chatInput, 'Stride onto the Prism Walk and signal the towers.');
     await expect(locationPill).toContainText('Prism Walk', { timeout: 15_000 });
