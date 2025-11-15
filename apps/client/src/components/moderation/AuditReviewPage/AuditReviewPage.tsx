@@ -1,685 +1,226 @@
-import {
-  AUDIT_REVIEW_TAGS,
-  PROMPT_TEMPLATE_DESCRIPTORS,
-  PromptTemplateIds,
-  type AuditLogEntry,
-  type AuditReviewStatus,
-  type PromptTemplateId,
-} from '@glass-frontier/dto';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
-import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PROMPT_TEMPLATE_DESCRIPTORS } from '@glass-frontier/dto';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
-import { useAuditReviewStore, type AuditFilters } from '../../../stores/auditReviewStore';
+import { useAuditReviewStore } from '../../../stores/auditReviewStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './AuditReviewPage.css';
-
-type JsonValue = Record<string, unknown> | null | undefined;
-
-const STATUS_LABELS: Record<string, string> = {
-  completed: 'Completed',
-  in_progress: 'In Progress',
-  unreviewed: 'Unreviewed',
-};
-
-const formatTag = (tag: string): string =>
-  tag
-    .split('_')
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ');
-
-const formatFeedbackTimestamp = (value?: string | null): string => {
-  if (typeof value !== 'string') {
-    return 'Unknown date';
-  }
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) {
-    return 'Unknown date';
-  }
-  return new Date(parsed).toLocaleString();
-};
-
-const formatDate = (timestamp: number | string): string => {
-  const date = typeof timestamp === 'number' ? new Date(timestamp) : new Date(timestamp);
-  if (Number.isNaN(date.getTime())) {
-    return 'Unknown';
-  }
-  return date.toLocaleString();
-};
-
-const coerceString = (value: unknown): string | null => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
-  return null;
-};
-
-const extractSegmentText = (segment: unknown): string | null => {
-  const direct = coerceString(segment);
-  if (direct !== null) {
-    return direct;
-  }
-  if (
-    segment !== null &&
-    typeof segment === 'object' &&
-    'text' in (segment as Record<string, unknown>)
-  ) {
-    return coerceString((segment as { text?: unknown }).text);
-  }
-  return null;
-};
-
-const extractMessageContent = (value: unknown): string | null => {
-  const direct = coerceString(value);
-  if (direct !== null) {
-    return direct;
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      const text = extractSegmentText(entry);
-      if (text !== null) {
-        return text;
-      }
-    }
-  }
-  return null;
-};
-
-const extractRequestPreview = (request: JsonValue): string | null => {
-  if (request === null || typeof request !== 'object') {
-    return null;
-  }
-  const messages = Array.isArray((request as { messages?: unknown }).messages)
-    ? ((request as { messages?: unknown }).messages as Array<{ content?: unknown }>)
-    : [];
-  const first = messages.at(0);
-  return extractMessageContent(first?.content ?? null);
-};
-
-const extractResponsePreview = (response: unknown): string | null => {
-  if (response === null || typeof response !== 'object') {
-    return null;
-  }
-  const choices = Array.isArray((response as { choices?: unknown }).choices)
-    ? ((response as { choices?: unknown }).choices as Array<{ message?: { content?: unknown } }>)
-    : [];
-  const first = choices.at(0);
-  return extractMessageContent(first?.message?.content ?? null);
-};
-
-type QueueFiltersProps = {
-  filters: AuditFilters;
-  isBusy: boolean;
-  onApply: () => void;
-  onChange: (updates: Partial<AuditFilters>) => void;
-};
-
-const QueueFilters = ({ filters, isBusy, onApply, onChange }: QueueFiltersProps) => {
-  const handleStatusToggle = (status: AuditReviewStatus) => {
-    const next = filters.status.includes(status)
-      ? filters.status.filter((entry) => entry !== status)
-      : [...filters.status, status];
-    onChange({ status: next });
-  };
-
-  return (
-    <div className="audit-filters">
-      <div className="audit-filter-group">
-        <label htmlFor="audit-filter-player">Player ID</label>
-        <input
-          id="audit-filter-player"
-          type="text"
-          value={filters.playerId}
-          onChange={(event) => onChange({ playerId: event.target.value })}
-          placeholder="player-login-id"
-        />
-      </div>
-      <div className="audit-filter-group">
-        <label htmlFor="audit-filter-search">Search</label>
-        <input
-          id="audit-filter-search"
-          type="text"
-          value={filters.search}
-          onChange={(event) => onChange({ search: event.target.value })}
-          placeholder="context id, metadata…"
-        />
-      </div>
-      <div className="audit-filter-row">
-        <div className="audit-filter-group">
-          <label htmlFor="audit-filter-start">Start Date</label>
-          <input
-            id="audit-filter-start"
-            type="date"
-            value={filters.startDate ?? ''}
-            onChange={(event) => onChange({ startDate: event.target.value || null })}
-          />
-        </div>
-        <div className="audit-filter-group">
-          <label htmlFor="audit-filter-end">End Date</label>
-          <input
-            id="audit-filter-end"
-            type="date"
-            value={filters.endDate ?? ''}
-            onChange={(event) => onChange({ endDate: event.target.value || null })}
-          />
-        </div>
-      </div>
-      <div className="audit-filter-group">
-        <label htmlFor="audit-filter-template">Prompt Template</label>
-        <select
-          id="audit-filter-template"
-          value={filters.templateId ?? ''}
-          onChange={(event) =>
-            onChange({
-              templateId:
-                (event.target.value as PromptTemplateId | '') === ''
-                  ? null
-                  : (event.target.value as PromptTemplateId),
-            })
-          }
-        >
-          <option value="">All templates</option>
-          {PromptTemplateIds.map((templateId) => (
-            <option key={templateId} value={templateId}>
-              {PROMPT_TEMPLATE_DESCRIPTORS[templateId].label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="audit-filter-group">
-        <span>Status</span>
-        <div className="audit-filter-status-options">
-          {Object.entries(STATUS_LABELS).map(([status, label]) => (
-            <label key={status} className="audit-filter-checkbox">
-              <input
-                type="checkbox"
-                checked={filters.status.includes(status as AuditReviewStatus)}
-                onChange={() => handleStatusToggle(status as AuditReviewStatus)}
-              />
-              <span>{label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-      <button type="button" className="audit-filter-apply" onClick={onApply} disabled={isBusy}>
-        {isBusy ? 'Applying…' : 'Apply Filters'}
-      </button>
-    </div>
-  );
-};
-
-type AuditGridRow = {
-  createdAt: number | string;
-  id: string;
-  playerId: string;
-  providerId: string;
-  status: AuditReviewStatus;
-  templateLabel: string;
-};
+import { AuditProposalsPanel } from './AuditProposalsPanel';
+import { AuditQueuePanel } from './AuditQueuePanel';
+import { ReviewDialog } from './ReviewDialog';
 
 export function AuditReviewPage(): JSX.Element {
+  const access = useModeratorAccess();
+  const store = useAuditReviewState();
+  const modal = useReviewModal(store.selectItem);
+  useAuditReviewSync(access.canModerate, store.loadQueue, store.refreshProposals);
+  const detailTemplateLabel = useTemplateLabel(store.selectedItem);
+  const reviewActions = useReviewActions(access.loginId, store.saveReview);
+
+  if (!access.canModerate) {
+    const redirectTarget = access.activeChronicleId ? `/chron/${access.activeChronicleId}` : '/';
+    return <Navigate to={redirectTarget} replace />;
+  }
+
+  return (
+    <AuditReviewLayout
+      access={access}
+      detailTemplateLabel={detailTemplateLabel}
+      modal={modal}
+      reviewActions={reviewActions}
+      store={store}
+    />
+  );
+}
+
+const selectAuditReviewState = (state: ReturnType<typeof useAuditReviewStore.getState>) => ({
+  cursor: state.cursor,
+  detail: state.detail,
+  draft: state.draft,
+  error: state.error,
+  filters: state.filters,
+  generateProposals: state.generateProposals,
+  isLoading: state.isLoading,
+  isLoadingMore: state.isLoadingMore,
+  items: state.items,
+  loadMore: state.loadMore,
+  loadQueue: state.loadQueue,
+  proposalGenerating: state.proposalGenerating,
+  proposalLoading: state.proposalLoading,
+  proposals: state.proposals,
+  refreshProposals: state.refreshProposals,
+  saveReview: state.saveReview,
+  selectedItem: state.selectedItem,
+  selectItem: state.selectItem,
+  setFilters: state.setFilters,
+  updateDraft: state.updateDraft,
+});
+
+const useAuditReviewState = () => useAuditReviewStore(useShallow(selectAuditReviewState));
+
+const useModeratorAccess = () => {
   const canModerate = useCanModerate();
   const loginId = useChronicleStore((state) => state.loginId);
+  const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const navigate = useNavigate();
-  const {
-    cursor,
-    detail,
-    draft,
-    error,
-    filters,
-    generateProposals,
-    isLoading,
-    isLoadingMore,
-    items,
-    loadMore,
-    loadQueue,
-    proposalGenerating,
-    proposalLoading,
-    proposals,
-    refreshProposals,
-    saveReview,
-    selectedItem,
-    selectItem,
-    setFilters,
-    updateDraft,
-  } = useAuditReviewStore(
-    useShallow((state) => ({
-      cursor: state.cursor,
-      detail: state.detail,
-      draft: state.draft,
-      error: state.error,
-      filters: state.filters,
-      generateProposals: state.generateProposals,
-      isLoading: state.isLoading,
-      isLoadingMore: state.isLoadingMore,
-      items: state.items,
-      loadMore: state.loadMore,
-      loadQueue: state.loadQueue,
-      proposalGenerating: state.proposalGenerating,
-      proposalLoading: state.proposalLoading,
-      proposals: state.proposals,
-      refreshProposals: state.refreshProposals,
-      saveReview: state.saveReview,
-      selectedItem: state.selectedItem,
-      selectItem: state.selectItem,
-      setFilters: state.setFilters,
-      updateDraft: state.updateDraft,
-    }))
-  );
+  const goBackToPlayerSurface = useCallback(() => {
+    if (activeChronicleId) {
+      void navigate(`/chron/${activeChronicleId}`);
+    } else {
+      void navigate('/');
+    }
+  }, [activeChronicleId, navigate]);
+  return { activeChronicleId, canModerate, goBackToPlayerSurface, loginId };
+};
 
-  const [reviewModalKey, setReviewModalKey] = useState<string | null>(null);
-
-  const rows = useMemo<AuditGridRow[]>(
-    () =>
-      items.map((item) => ({
-        createdAt: item.createdAt,
-        id: item.storageKey,
-        playerId: item.playerId ?? 'n/a',
-        providerId: item.providerId ?? 'n/a',
-        status: item.status,
-        templateLabel: item.templateId
-          ? PROMPT_TEMPLATE_DESCRIPTORS[item.templateId].label
-          : item.nodeId ?? 'Unknown',
-      })),
-    [items]
-  );
-
-  const handleOpenReview = useCallback(
+const useReviewModal = (selectItem: (key: string | null) => Promise<void>) => {
+  const [modalKey, setModalKey] = useState<string | null>(null);
+  const openReview = useCallback(
     (storageKey: string) => {
       void selectItem(storageKey);
-      setReviewModalKey(storageKey);
+      setModalKey(storageKey);
     },
     [selectItem]
   );
+  const closeReview = useCallback(() => {
+    setModalKey(null);
+    void selectItem(null);
+  }, [selectItem]);
+  return { closeReview, modalKey, openReview };
+};
 
-  const columns = useMemo<Array<GridColDef<AuditGridRow>>>(
-    () => [
-      { field: 'templateLabel', flex: 1.5, headerName: 'Template / Node' },
-      { field: 'playerId', flex: 1, headerName: 'Player' },
-      { field: 'providerId', flex: 1, headerName: 'Provider' },
-      {
-        field: 'status',
-        headerName: 'Status',
-        renderCell: (params) => (
-          <span className={`audit-chip status-${params.row.status}`}>
-            {STATUS_LABELS[params.row.status]}
-          </span>
-        ),
-        width: 140,
-      },
-      {
-        field: 'createdAt',
-        headerName: 'Created',
-        renderCell: (params: GridRenderCellParams<AuditGridRow>) => (
-          <span>
-            {formatDate(params?.row?.createdAt)}
-          </span>
-        ),
-        width: 200,
-      },
-      {
-        field: 'actions',
-        filterable: false,
-        headerName: 'Review',
-        renderCell: (params: GridRenderCellParams<AuditGridRow>) => (
-          <button type="button" className="audit-grid-link" onClick={() => handleOpenReview(params.row.id)}>
-            Open Review
-          </button>
-        ),
-        sortable: false,
-        width: 160,
-      },
-    ],
-    [handleOpenReview]
-  );
-
+const useAuditReviewSync = (
+  enabled: boolean,
+  loadQueue: () => Promise<void>,
+  refreshProposals: () => Promise<void>
+) => {
   useEffect(() => {
-    if (!canModerate) {
+    if (!enabled) {
       return;
     }
     void loadQueue();
     void refreshProposals();
-  }, [canModerate, loadQueue, refreshProposals]);
+  }, [enabled, loadQueue, refreshProposals]);
+};
 
-  if (!canModerate) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleSaveDraft = () => {
+const useReviewActions = (
+  loginId: string | null,
+  saveReview: (loginId: string, status: 'in_progress' | 'completed') => Promise<void>
+) => {
+  const saveDraft = useCallback(() => {
     if (!loginId) {
       return;
     }
     void saveReview(loginId, 'in_progress');
-  };
-
-  const handleComplete = () => {
+  }, [loginId, saveReview]);
+  const complete = useCallback(() => {
     if (!loginId) {
       return;
     }
     void saveReview(loginId, 'completed');
-  };
+  }, [loginId, saveReview]);
+  return { complete, saveDraft };
+};
 
-  const detailTemplateLabel = selectedItem?.templateId
-    ? PROMPT_TEMPLATE_DESCRIPTORS[selectedItem.templateId].label
-    : selectedItem?.nodeId ?? 'Unknown';
+const useTemplateLabel = (selectedItem: ReturnType<typeof selectAuditReviewState>['selectedItem']) =>
+  useMemo(() => {
+    if (selectedItem?.templateId) {
+      return PROMPT_TEMPLATE_DESCRIPTORS[selectedItem.templateId].label;
+    }
+    return selectedItem?.nodeId ?? 'Unknown';
+  }, [selectedItem]);
 
-  return (
-    <div className="audit-page">
-      <header className="audit-page-header">
-        <div>
-          <h1>LLM Audit Review</h1>
-          <p>Browse archived requests, capture moderator reviews, and inspect template proposals.</p>
-        </div>
-        <div className="audit-header-actions">
-          <button type="button" onClick={() => navigate('/')}>
-            Back to Chronicle
-          </button>
-          <button type="button" onClick={() => void loadQueue()} disabled={isLoading}>
-            {isLoading ? 'Refreshing…' : 'Refresh Queue'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void generateProposals()}
-            disabled={proposalGenerating}
-          >
-            {proposalGenerating ? 'Generating…' : 'Generate Proposals'}
-          </button>
-        </div>
-      </header>
-      {error ? <p className="audit-error">{error}</p> : null}
-      <div className="audit-layout">
-        <section className="audit-panel audit-queue-panel">
-          <div className="audit-panel-header">
-            <h2>Review Queue</h2>
-            <span className="audit-count">{items.length} items</span>
-          </div>
-          <QueueFilters
-            filters={filters}
-            isBusy={isLoading}
-            onApply={() => void loadQueue()}
-            onChange={setFilters}
-          />
-          <div className="audit-grid-wrapper">
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              autoHeight
-              disableColumnFilter
-              disableDensitySelector
-              hideFooterSelectedRowCount
-              loading={isLoading}
-              paginationModel={{ page: 0, pageSize: 25 }}
-              pageSizeOptions={[25]}
-            />
-          </div>
-          <div className="audit-panel-footer">
-            <button type="button" onClick={() => void loadMore()} disabled={!cursor || isLoadingMore}>
-              {isLoadingMore ? 'Loading…' : cursor ? 'Load More' : 'End of Queue'}
-            </button>
-          </div>
-        </section>
-        <aside className="audit-panel audit-proposals-panel">
-          <div className="audit-panel-header">
-            <h2>Template Proposals</h2>
-            <div className="audit-panel-actions">
-              <button
-                type="button"
-                onClick={() => void generateProposals()}
-                disabled={proposalGenerating}
-              >
-                {proposalGenerating ? 'Generating…' : 'Generate'}
-              </button>
-              <button type="button" onClick={() => void refreshProposals()} disabled={proposalLoading}>
-                {proposalLoading ? 'Refreshing…' : 'Refresh'}
-              </button>
-            </div>
-          </div>
-          {proposals.length === 0 ? (
-            <p className="audit-placeholder">No proposals generated yet.</p>
-          ) : (
-            <ul className="audit-proposal-list">
-              {proposals.map((proposal) => (
-                <li key={proposal.id} className="audit-proposal-item">
-                  <div className="audit-proposal-head">
-                    <p className="audit-proposal-title">
-                      {PROMPT_TEMPLATE_DESCRIPTORS[proposal.templateId].label}
-                    </p>
-                    <span className={`audit-chip severity-${proposal.severity}`}>
-                      {proposal.severity}
-                    </span>
-                  </div>
-                  <p className="audit-proposal-summary">{proposal.summary}</p>
-                  <p className="audit-proposal-meta">
-                    {formatDate(proposal.createdAt)} · {proposal.reviewCount} reviews · {(proposal.confidence * 100).toFixed(0)}% confidence
-                  </p>
-                  {proposal.tags.length > 0 ? (
-                    <div className="audit-proposal-tags">
-                      {proposal.tags.map((tag) => (
-                        <span key={tag} className="audit-chip tag-chip">
-                          {formatTag(tag)}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
-      </div>
-      <ReviewDialog
-        detail={detail}
-        draft={draft}
-        isOpen={Boolean(reviewModalKey)}
-        isSaving={isLoading}
-        loginId={loginId}
-        onCancel={() => {
-          setReviewModalKey(null);
-          void selectItem(null);
-        }}
-        onComplete={handleComplete}
-        onSaveDraft={handleSaveDraft}
-        templateLabel={detailTemplateLabel}
-        updateDraft={updateDraft}
+type AuditReviewLayoutProps = {
+  access: ReturnType<typeof useModeratorAccess>;
+  detailTemplateLabel: string;
+  modal: ReturnType<typeof useReviewModal>;
+  reviewActions: ReturnType<typeof useReviewActions>;
+  store: ReturnType<typeof useAuditReviewState>;
+};
+
+const AuditReviewLayout = ({
+  access,
+  detailTemplateLabel,
+  modal,
+  reviewActions,
+  store,
+}: AuditReviewLayoutProps) => (
+  <div className="audit-page">
+    <AuditReviewHeader
+      goBackToPlayerSurface={access.goBackToPlayerSurface}
+      isLoading={store.isLoading}
+      onGenerateProposals={() => void store.generateProposals()}
+      onRefreshQueue={() => void store.loadQueue()}
+      proposalGenerating={store.proposalGenerating}
+    />
+    {store.error ? <p className="audit-error">{store.error}</p> : null}
+    <div className="audit-layout">
+      <AuditQueuePanel
+        cursor={store.cursor}
+        filters={store.filters}
+        isLoading={store.isLoading}
+        isLoadingMore={store.isLoadingMore}
+        items={store.items}
+        onApplyFilters={() => void store.loadQueue()}
+        onChangeFilters={store.setFilters}
+        onLoadMore={() => void store.loadMore()}
+        onOpenReview={modal.openReview}
+      />
+      <AuditProposalsPanel
+        proposals={store.proposals}
+        proposalGenerating={store.proposalGenerating}
+        proposalLoading={store.proposalLoading}
+        onGenerate={() => void store.generateProposals()}
+        onRefresh={() => void store.refreshProposals()}
       />
     </div>
-  );
-}
+    <ReviewDialog
+      detail={store.detail}
+      draft={store.draft}
+      isOpen={Boolean(modal.modalKey)}
+      isSaving={store.isLoading}
+      loginId={access.loginId}
+      onCancel={modal.closeReview}
+      onComplete={reviewActions.complete}
+      onSaveDraft={reviewActions.saveDraft}
+      templateLabel={detailTemplateLabel}
+      updateDraft={store.updateDraft}
+    />
+  </div>
+);
 
-type ReviewDialogProps = {
-  detail: AuditLogEntry | null;
-  draft: { notes: string; tags: string[] };
-  isOpen: boolean;
-  isSaving: boolean;
-  loginId: string | null;
-  onCancel: () => void;
-  onComplete: () => void;
-  onSaveDraft: () => void;
-  templateLabel: string;
-  updateDraft: (updates: Partial<{ notes: string; tags: string[] }>) => void;
+type AuditReviewHeaderProps = {
+  goBackToPlayerSurface: () => void;
+  isLoading: boolean;
+  onGenerateProposals: () => void;
+  onRefreshQueue: () => void;
+  proposalGenerating: boolean;
 };
 
-const ReviewDialog = ({
-  detail,
-  draft,
-  isOpen,
-  isSaving,
-  loginId,
-  onCancel,
-  onComplete,
-  onSaveDraft,
-  templateLabel,
-  updateDraft,
-}: ReviewDialogProps) => {
-  const feedbackEntries = detail?.playerFeedback ?? [];
-  const hasFeedback = feedbackEntries.length > 0;
-
-  if (!detail) {
-    return (
-      <Dialog open={isOpen} onClose={onCancel} fullWidth maxWidth="md">
-        <DialogTitle>Review</DialogTitle>
-        <DialogContent>
-          <p className="audit-placeholder">Loading record…</p>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onCancel}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
-  }
-
-  return (
-    <Dialog open={isOpen} onClose={onCancel} fullWidth maxWidth="md">
-      <DialogTitle>Review · {templateLabel}</DialogTitle>
-      <DialogContent className="audit-dialog-content">
-        <div className="audit-body">
-          <div>
-            <h3>Request Payload</h3>
-            <pre className="audit-blob">
-              {extractRequestPreview(detail.request) ?? 'No message content available.'}
-            </pre>
-          </div>
-          <div>
-            <h3>Response Payload</h3>
-            <pre className="audit-blob">
-              {extractResponsePreview(detail.response) ?? 'No message content available.'}
-            </pre>
-          </div>
-        </div>
-        <section className="audit-feedback-panel">
-          <div className="audit-feedback-header">
-            <h3>Player Feedback</h3>
-            <span className="audit-feedback-count">
-              {hasFeedback ? `${feedbackEntries.length} submission${feedbackEntries.length === 1 ? '' : 's'}` : 'None yet'}
-            </span>
-          </div>
-          {hasFeedback ? (
-            <ul className="audit-feedback-list">
-              {feedbackEntries.map((entry) => {
-                const hasSkillExpectation =
-                  entry.expectedSkillCheck !== null && entry.expectedSkillCheck !== undefined;
-                const hasLocationExpectation =
-                  entry.expectedLocationChange !== null && entry.expectedLocationChange !== undefined;
-                const hasInventoryExpectation =
-                  entry.expectedInventoryDelta !== null && entry.expectedInventoryDelta !== undefined;
-                const hasSkillNotes = Boolean(entry.expectedSkillNotes?.trim().length);
-                const hasLocationNotes = Boolean(entry.expectedLocationNotes?.trim().length);
-                const hasInventoryNotes = Boolean(entry.expectedInventoryNotes?.trim().length);
-                const showExpectations = Boolean(
-                  entry.expectedIntentType ||
-                    hasSkillExpectation ||
-                    hasLocationExpectation ||
-                    hasInventoryExpectation ||
-                    hasSkillNotes ||
-                    hasLocationNotes ||
-                    hasInventoryNotes
-                );
-                return (
-                  <li key={entry.id} className="audit-feedback-item">
-                    <div className="audit-feedback-meta">
-                      <span className={`audit-chip sentiment-${entry.sentiment}`}>
-                        {entry.sentiment}
-                      </span>
-                      <span>{entry.playerLoginId}</span>
-                      <span>{formatFeedbackTimestamp(entry.createdAt)}</span>
-                    </div>
-                    {showExpectations ? (
-                      <div className="audit-feedback-expectations">
-                        {entry.expectedIntentType ? (
-                          <div className="audit-feedback-expectation-row">
-                            <span>Expected intent type</span>
-                            <strong>{entry.expectedIntentType}</strong>
-                          </div>
-                        ) : null}
-                        {hasSkillExpectation ? (
-                          <div className="audit-feedback-expectation-row">
-                            <span>Expected skill check</span>
-                            <strong>{entry.expectedSkillCheck ? 'True' : 'False'}</strong>
-                            {hasSkillNotes ? (
-                              <p className="audit-feedback-note">
-                                {entry.expectedSkillNotes}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {hasLocationExpectation ? (
-                          <div className="audit-feedback-expectation-row">
-                            <span>Expected location change</span>
-                            <strong>{entry.expectedLocationChange ? 'True' : 'False'}</strong>
-                            {hasLocationNotes ? (
-                              <p className="audit-feedback-note">
-                                {entry.expectedLocationNotes}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {hasInventoryExpectation ? (
-                          <div className="audit-feedback-expectation-row">
-                            <span>Expected inventory delta</span>
-                            <strong>{entry.expectedInventoryDelta ? 'True' : 'False'}</strong>
-                            {hasInventoryNotes ? (
-                              <p className="audit-feedback-note">
-                                {entry.expectedInventoryNotes}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    <p className="audit-feedback-comment">
-                      {entry.comment?.trim().length ? entry.comment : 'No additional context provided.'}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="audit-placeholder">No player feedback has been recorded for this response.</p>
-          )}
-        </section>
-        <label className="audit-dialog-notes">
-          Notes
-          <textarea
-            rows={4}
-            value={draft.notes}
-            onChange={(event) => updateDraft({ notes: event.target.value })}
-          />
-        </label>
-        <div className="audit-dialog-tags">
-          <p>Tags</p>
-          <div className="audit-tag-grid">
-            {AUDIT_REVIEW_TAGS.map((tag) => (
-              <label key={tag} className="audit-filter-checkbox">
-                <input
-                  type="checkbox"
-                  checked={draft.tags.includes(tag)}
-                  onChange={(event) => {
-                    const next = event.target.checked
-                      ? [...draft.tags, tag]
-                      : draft.tags.filter((entry) => entry !== tag);
-                    updateDraft({ tags: next });
-                  }}
-                />
-                <span>{formatTag(tag)}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel}>Close</Button>
-        <Button onClick={onSaveDraft} disabled={!loginId || isSaving}>
-          {isSaving ? 'Saving…' : 'Save Draft'}
-        </Button>
-        <Button onClick={onComplete} variant="contained" disabled={!loginId || isSaving}>
-          {isSaving ? 'Saving…' : 'Save'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+const AuditReviewHeader = ({
+  goBackToPlayerSurface,
+  isLoading,
+  onGenerateProposals,
+  onRefreshQueue,
+  proposalGenerating,
+}: AuditReviewHeaderProps) => (
+  <header className="audit-page-header">
+    <div>
+      <h1>LLM Audit Review</h1>
+      <p>Browse archived requests, capture moderator reviews, and inspect template proposals.</p>
+    </div>
+    <div className="audit-header-actions">
+      <button type="button" onClick={goBackToPlayerSurface}>
+        Back to Chronicle
+      </button>
+      <button type="button" onClick={onRefreshQueue} disabled={isLoading}>
+        {isLoading ? 'Refreshing…' : 'Refresh Queue'}
+      </button>
+      <button type="button" onClick={onGenerateProposals} disabled={proposalGenerating}>
+        {proposalGenerating ? 'Generating…' : 'Generate Proposals'}
+      </button>
+    </div>
+  </header>
+);

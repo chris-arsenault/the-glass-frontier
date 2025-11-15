@@ -220,3 +220,45 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.player-menu-usage-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid rgb(148 163 184 / 25%);
+  border-bottom: 1px solid rgb(148 163 184 / 25%);
+  margin: 0.6rem 0;
+}
+
+.player-menu-usage-label {
+  color: #94a3b8;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.player-menu-usage-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.player-menu-usage-table th,
+.player-menu-usage-table td {
+  padding: 0.15rem 0.25rem;
+  text-align: left;
+}
+
+.player-menu-usage-value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  text-align: left;
+}
+
+.player-menu-usage-note {
+  margin: 0;
+  color: #cbd5f5;
+  font-size: 0.75rem;
+}

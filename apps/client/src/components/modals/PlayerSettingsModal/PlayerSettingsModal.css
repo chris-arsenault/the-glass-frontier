@@ -1,0 +1,62 @@
+.player-settings-modal {
+  width: min(560px, 95vw);
+}
+
+.player-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.player-settings-description {
+  margin: 0;
+  color: #cbd5f5;
+}
+
+.player-settings-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.player-settings-slider {
+  width: 100%;
+}
+
+.player-settings-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.player-settings-level h3 {
+  margin: 0 0 0.25rem;
+}
+
+.player-settings-level p {
+  margin: 0;
+  color: #e2e8f0;
+}
+
+.player-settings-status {
+  margin: 0;
+  color: #bae6fd;
+}
+
+.player-settings-error {
+  margin: 0;
+  color: #fca5a5;
+}
+
+.player-settings-close {
+  align-self: flex-end;
+  padding: 0.5rem 1.2rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgb(148 163 184 / 40%);
+  background: transparent;
+  color: #f8fafc;
+  cursor: pointer;
+}

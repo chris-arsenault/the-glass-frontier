@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 import { useUiStore } from '../../../stores/uiStore';
 import { CharacterOverview } from '../../overview/CharacterOverview/CharacterOverview';

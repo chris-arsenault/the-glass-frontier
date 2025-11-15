@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import changelogEntries from '../../../data/changelog.json';
 import { useUiStore } from '../../../stores/uiStore';

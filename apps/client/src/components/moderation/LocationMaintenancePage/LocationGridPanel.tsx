@@ -6,7 +6,7 @@ import type {
   GridRenderCellParams,
   GridRowSelectionModel,
 } from '@mui/x-data-grid';
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import type { LocationFilters, UpdatePlacePayload } from '../../../stores/locationMaintenanceStore';
 import {
@@ -202,7 +202,7 @@ export const LocationGridPanel = ({
 
   const handleRowSelectionModelChange = useCallback(
     (model: GridRowSelectionModel) => {
-      const first = model.ids.values().next().value;
+      const first = Array.from(model.ids.values())[0];
       if (typeof first === 'string') {
         onSelectPlace(first);
       }

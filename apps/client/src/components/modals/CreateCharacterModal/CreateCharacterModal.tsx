@@ -4,7 +4,7 @@ import type {
   AttributeTier as AttributeTierValue,
   SkillTier as SkillTierValue,
 } from '@glass-frontier/dto';
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import type { CharacterCreationDraft } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';

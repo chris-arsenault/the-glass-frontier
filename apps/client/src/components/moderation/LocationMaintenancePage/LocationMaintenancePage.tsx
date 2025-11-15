@@ -2,11 +2,12 @@ import type {
   LocationEdgeKind as LocationEdgeKindType,
   LocationPlace,
 } from '@glass-frontier/dto';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
+import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useLocationMaintenanceStore } from '../../../stores/locationMaintenanceStore';
 import { CreateChildDialog } from './CreateChildDialog';
 import { DescriptionDialog } from './DescriptionDialog';
@@ -79,6 +80,15 @@ export function LocationMaintenancePage(): JSX.Element {
       void loadRoots();
     }
   }, [canModerate, loadRoots]);
+
+  const activeChronicleId = useChronicleStore((state) => state.chronicleId);
+  const goBackToPlayerSurface = useCallback(() => {
+    if (activeChronicleId) {
+      void navigate(`/chron/${activeChronicleId}`);
+    } else {
+      void navigate('/');
+    }
+  }, [activeChronicleId, navigate]);
 
   const handleOpenRelationships = useCallback(
     (row: LocationGridRow) => {
@@ -157,7 +167,8 @@ export function LocationMaintenancePage(): JSX.Element {
   }, []);
 
   if (!canModerate) {
-    return <Navigate to="/" replace />;
+    const redirectTarget = activeChronicleId ? `/chron/${activeChronicleId}` : '/';
+    return <Navigate to={redirectTarget} replace />;
   }
 
   const childDialogParent: LocationPlace | null = childParentId
@@ -176,7 +187,7 @@ export function LocationMaintenancePage(): JSX.Element {
           <p>Review, edit, and connect locations across the world graph.</p>
         </div>
         <div className="lm-page-actions">
-          <button type="button" onClick={() => navigate('/')}>Back to Chronicle</button>
+          <button type="button" onClick={goBackToPlayerSurface}>Back to Chronicle</button>
           <button type="button" onClick={() => void refreshGraph()} disabled={isLoadingGraph}>
             {isLoadingGraph ? 'Refreshing…' : 'Refresh Graph'}
           </button>

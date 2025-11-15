@@ -25,6 +25,7 @@ module "chronicle_lambda" {
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
     NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
+    LLM_PROXY_USAGE_TABLE    = aws_dynamodb_table.llm_usage.name
     LLM_PROXY_URL            = "https://${local.api_domain}/llm"
     DOMAIN_NAME              = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL  = aws_sqs_queue.turn_progress.url

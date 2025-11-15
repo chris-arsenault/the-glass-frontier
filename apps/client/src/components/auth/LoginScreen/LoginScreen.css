@@ -1,15 +1,71 @@
 .login-screen {
   display: flex;
-  padding: 2rem;
+  flex-direction: column;
+  padding: 3rem 1.5rem;
   background: radial-gradient(circle at top, rgb(59 130 246 / 20%), transparent 50%) #050b18;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  gap: 2.5rem;
+  box-sizing: border-box;
+}
+
+.login-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: min(720px, 100%);
+  padding: 2rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgb(148 163 184 / 30%);
+  background: linear-gradient(135deg, rgb(15 23 42 / 95%), rgb(10 12 24 / 90%));
+  box-shadow:
+    inset 0 0 0 1px rgb(94 234 212 / 8%),
+    0 25px 70px rgb(2 6 23 / 65%);
+}
+
+.login-hero-eyebrow {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+}
+
+.login-hero-title {
+  margin: 0.35rem 0 0.75rem;
+  font-size: 2.4rem;
+  line-height: 1.2;
+}
+
+.login-hero-lore,
+.login-hero-plain {
+  margin: 0 0 1rem;
+  color: #cbd5f5;
+  font-size: 1rem;
+}
+
+.login-hero-plain {
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.login-primer {
+  background: linear-gradient(135deg, rgb(10 12 24 / 90%), rgb(15 23 42 / 95%));
+}
+
+.login-form-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .login-card {
   display: flex;
-  width: min(420px, 90vw);
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
   padding: 2rem;
   background: rgb(15 23 42 / 90%);
   border: 1px solid rgb(148 163 184 / 30%);
@@ -62,4 +118,10 @@
   font-size: 1rem;
   font-weight: 600;
   margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .login-hero {
+    padding: 1.5rem;
+  }
 }

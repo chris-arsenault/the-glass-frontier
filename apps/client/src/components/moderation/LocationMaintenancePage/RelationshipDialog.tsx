@@ -6,7 +6,7 @@ import type {
 } from '@glass-frontier/dto';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { EDGE_KIND_OPTIONS } from './locationUtils';
 
@@ -146,7 +146,7 @@ export const RelationshipDialog = ({
           <label>
             Relationship type
             <select value={kind} onChange={(event) => setKind(event.target.value as LocationEdgeKindType)}>
-              {EDGE_KIND_OPTIONS.map((entry) => (
+              {EDGE_KIND_OPTIONS.map((entry: LocationEdgeKindType) => (
                 <option key={entry} value={entry}>
                   {entry}
                 </option>

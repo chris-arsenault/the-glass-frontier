@@ -1,9 +1,13 @@
-import type { LocationPlace } from '@glass-frontier/dto';
+import type { LocationPlace, Player, PlayerPreferences } from '@glass-frontier/dto';
 import {
   Character as CharacterSchema,
   TranscriptEntry,
   PendingEquip,
   type Character,
+  BugReportSubmissionSchema,
+  BUG_REPORT_STATUSES,
+  PlayerPreferencesSchema,
+  type TokenUsagePeriod,
 } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { initTRPC } from '@trpc/server';
@@ -17,6 +21,9 @@ type EnsureChronicleResult = Awaited<
 >;
 
 const t = initTRPC.context<Context>().create();
+const normalizePlayerPreferences = (prefs?: PlayerPreferences | null): PlayerPreferences => ({
+  feedbackVisibility: prefs?.feedbackVisibility ?? 'all',
+});
 const locationDetailsSchema = z.object({
   atmosphere: z.string().min(1),
   locale: z.string().min(1),
@@ -48,6 +55,21 @@ const createChronicleInputSchema = z
   );
 
 type CreateChronicleInput = z.infer<typeof createChronicleInputSchema>;
+
+const ensurePlayerRecord = async (ctx: Context, loginId: string): Promise<Player> => {
+  const existing = await ctx.worldStateStore.getPlayer(loginId);
+  if (existing !== null && existing !== undefined) {
+    if (existing.templateOverrides === undefined) {
+      existing.templateOverrides = {};
+    }
+    return existing;
+  }
+  const blank: Player = {
+    loginId,
+    templateOverrides: {},
+  };
+  return ctx.worldStateStore.upsertPlayer(blank);
+};
 
 export const appRouter = t.router({
   createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
@@ -104,6 +126,34 @@ export const appRouter = t.router({
   getChronicle: t.procedure
     .input(z.object({ chronicleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => augmentChronicleSnapshot(ctx, input.chronicleId)),
+
+  getPlayerSettings: t.procedure
+    .input(z.object({ loginId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const player = await ensurePlayerRecord(ctx, input.loginId);
+      return { preferences: normalizePlayerPreferences(player.preferences) };
+    }),
+
+  getTokenUsageSummary: t.procedure
+    .input(
+      z.object({
+        limit: z.number().int().positive().max(12).optional(),
+        loginId: z.string().min(1),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      if (ctx.tokenUsageStore === null) {
+        return { usage: [] as TokenUsagePeriod[] };
+      }
+      const limit = Math.min(input.limit ?? 6, 12);
+      const usage = await ctx.tokenUsageStore.listUsage(input.loginId, limit);
+      return { usage };
+    }),
+
+  listBugReports: t.procedure.query(async ({ ctx }) => {
+    const reports = await ctx.bugReportStore.listReports();
+    return { reports };
+  }),
 
   listCharacters: t.procedure
     .input(z.object({ loginId: z.string().min(1) }))
@@ -163,6 +213,62 @@ export const appRouter = t.router({
         targetEndTurn: normalizedTarget,
       });
       return { chronicle: updated };
+    }),
+
+  submitBugReport: t.procedure
+    .input(
+      BugReportSubmissionSchema.extend({
+        characterId: z.string().uuid().optional().nullable(),
+        chronicleId: z.string().uuid().optional().nullable(),
+        loginId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const report = await ctx.bugReportStore.createReport({
+        characterId: input.characterId ?? null,
+        chronicleId: input.chronicleId ?? null,
+        details: input.details,
+        loginId: input.loginId,
+        playerId: input.playerId ?? null,
+        summary: input.summary,
+      });
+      return { report };
+    }),
+
+  updateBugReport: t.procedure
+    .input(
+      z.object({
+        adminNotes: z.string().max(4000).nullable().optional(),
+        backlogItem: z.string().max(240).nullable().optional(),
+        reportId: z.string().uuid(),
+        status: z.enum(BUG_REPORT_STATUSES).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const report = await ctx.bugReportStore.updateReport(input.reportId, {
+        adminNotes: input.adminNotes,
+        backlogItem: input.backlogItem,
+        status: input.status,
+      });
+      return { report };
+    }),
+
+  updatePlayerSettings: t.procedure
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        preferences: PlayerPreferencesSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const player = await ensurePlayerRecord(ctx, input.loginId);
+      const preferences = normalizePlayerPreferences(input.preferences);
+      const updated: Player = {
+        ...player,
+        preferences,
+      };
+      await ctx.worldStateStore.upsertPlayer(updated);
+      return { preferences };
     }),
 
 });

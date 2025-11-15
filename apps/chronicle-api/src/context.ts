@@ -7,22 +7,30 @@ import {
   type LocationGraphStore,
   type ImbuedRegistryStore,
   PromptTemplateManager,
+  BugReportStore,
+  TokenUsageStore,
 } from '@glass-frontier/persistence';
 
 import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
+const narrativeBucket = process.env.NARRATIVE_S3_BUCKET;
+if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) {
+  throw new Error('NARRATIVE_S3_BUCKET must be configured for the narrative service');
+}
+const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
+
 const worldStateStore = createWorldStateStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+  bucket: narrativeBucket,
+  prefix: narrativePrefix,
 });
 const locationGraphStore = createLocationGraphStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+  bucket: narrativeBucket,
+  prefix: narrativePrefix,
 });
 const imbuedRegistryStore: ImbuedRegistryStore = createImbuedRegistryStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+  bucket: narrativeBucket,
+  prefix: narrativePrefix,
 });
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
 if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
@@ -42,25 +50,41 @@ const engine = new NarrativeEngine({
   templateManager,
   worldStateStore,
 });
+const bugReportStore = new BugReportStore({
+  bucket: narrativeBucket,
+  prefix: narrativePrefix,
+});
+
+const tokenUsageStore = (() => {
+  const tableName = process.env.LLM_PROXY_USAGE_TABLE;
+  if (typeof tableName !== 'string' || tableName.trim().length === 0) {
+    return null;
+  }
+  return new TokenUsageStore({ tableName: tableName.trim() });
+})();
 
 export type Context = {
-  worldStateStore: WorldStateStore;
-  locationGraphStore: LocationGraphStore;
-  imbuedRegistryStore: ImbuedRegistryStore;
-  engine: NarrativeEngine;
-  templateManager: PromptTemplateManager;
-  seedService: ChronicleSeedService;
   authorizationHeader?: string;
+  bugReportStore: BugReportStore;
+  engine: NarrativeEngine;
+  imbuedRegistryStore: ImbuedRegistryStore;
+  locationGraphStore: LocationGraphStore;
+  seedService: ChronicleSeedService;
+  templateManager: PromptTemplateManager;
+  tokenUsageStore: TokenUsageStore | null;
+  worldStateStore: WorldStateStore;
 };
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
   return {
     authorizationHeader: options?.authorizationHeader,
+    bugReportStore,
     engine,
     imbuedRegistryStore,
     locationGraphStore,
     seedService,
     templateManager,
+    tokenUsageStore,
     worldStateStore,
   };
 }

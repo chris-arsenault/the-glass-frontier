@@ -7,15 +7,15 @@ import {
 } from 'amazon-cognito-identity-js';
 import { create } from 'zustand';
 
-import { getConfigValue } from '../utils/runtimeConfig';
+import { getConfigValue, getEnvValue } from '../utils/runtimeConfig';
 
 const hasStringValue = (value: string | undefined): value is string => {
   return typeof value === 'string' && value.length > 0;
 };
 
 const poolId =
-  getConfigValue('VITE_COGNITO_USER_POOL_ID') ?? import.meta.env.VITE_COGNITO_USER_POOL_ID;
-const clientId = getConfigValue('VITE_COGNITO_CLIENT_ID') ?? import.meta.env.VITE_COGNITO_CLIENT_ID;
+  getConfigValue('VITE_COGNITO_USER_POOL_ID') ?? getEnvValue('VITE_COGNITO_USER_POOL_ID');
+const clientId = getConfigValue('VITE_COGNITO_CLIENT_ID') ?? getEnvValue('VITE_COGNITO_CLIENT_ID');
 
 const resolvedPoolId = hasStringValue(poolId) ? poolId : undefined;
 const resolvedClientId = hasStringValue(clientId) ? clientId : undefined;

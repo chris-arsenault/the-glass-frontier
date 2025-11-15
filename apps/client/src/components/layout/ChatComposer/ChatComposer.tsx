@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { LocationOverview } from '../../overview/LocationOverview/LocationOverview';

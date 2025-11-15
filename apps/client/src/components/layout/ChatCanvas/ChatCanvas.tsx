@@ -9,6 +9,7 @@ import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
+import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
 import './ChatCanvas.css';
 
 type FeedbackTarget = {
@@ -99,8 +100,11 @@ const readFeedbackCache = (): Record<string, true> => {
     if (typeof raw !== 'string') {
       return {};
     }
-    const parsed = JSON.parse(raw) as Record<string, true>;
-    return parsed !== null && typeof parsed === 'object' ? parsed : {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed !== null && typeof parsed === 'object') {
+      return parsed as Record<string, true>;
+    }
+    return {};
   } catch {
     return {};
   }
@@ -128,7 +132,11 @@ export function ChatCanvas() {
   const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
   const toggleMessageExpansion = useUiStore((state) => state.toggleMessageExpansion);
   const resetExpandedMessages = useUiStore((state) => state.resetExpandedMessages);
-  const streamRef = useRef(null);
+  const { isAtLeast } = useFeedbackVisibility();
+  const showBadges = isAtLeast('badges');
+  const showNarrative = isAtLeast('narrative');
+  const showAll = isAtLeast('all');
+  const streamRef = useRef<HTMLDivElement | null>(null);
   const [feedbackCache, setFeedbackCache] = useState<Record<string, true>>(() => readFeedbackCache());
   const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(null);
   const [feedbackSentiment, setFeedbackSentiment] = useState<PlayerFeedbackSentiment>('positive');
@@ -253,7 +261,7 @@ export function ChatCanvas() {
       });
       markFeedbackSubmitted(feedbackTarget.auditId);
       closeFeedbackModal();
-    } catch (error) {
+    } catch (error: unknown) {
       setFeedbackError(error instanceof Error ? error.message : 'Unable to submit feedback.');
       setIsSubmittingFeedback(false);
     }
@@ -374,34 +382,38 @@ export function ChatCanvas() {
                     </span>
                   </div>
                   <div className="chat-entry-aside">
-                    {entry.role === 'player' && playerIntent?.tone ? (
+                    {entry.role === 'player' && showNarrative && playerIntent?.tone ? (
                       <span className="chat-entry-tone">{playerIntent.tone}</span>
                     ) : null}
-                    {entry.role === 'player' && playerIntentLabel ? (
+                    {entry.role === 'player' && showNarrative && playerIntentLabel ? (
                       <span className="chat-entry-intent-tag" title="Detected intent type">
                         {playerIntentLabel}
                       </span>
                     ) : null}
-                    {entry.role === 'player' && playerIntent?.creativeSpark ? (
+                    {entry.role === 'player' && showNarrative && playerIntent?.creativeSpark ? (
                       <span className="chat-entry-spark" title="Creative Spark awarded">
                         ★
                       </span>
                     ) : null}
-                    {entry.role === 'player' && beatDirectiveLabel ? (
+                    {entry.role === 'player' && showNarrative && beatDirectiveLabel ? (
                       <span className="chat-entry-beat-tag">{beatDirectiveLabel}</span>
                     ) : null}
                     {entry.role === 'gm' ? (
                       <>
-                        {timelineLabel ? (
+                        {showAll && timelineLabel ? (
                           <span className="chat-entry-timeline-tag">{timelineLabel}</span>
                         ) : null}
-                        <SkillCheckBadge
-                          plan={skillCheckPlan}
-                          result={skillCheckResult}
-                          skillKey={skillKey}
-                          attributeKey={attributeKey}
-                        />
-                        <InventoryDeltaBadge delta={chatMessage.inventoryDelta} />
+                        {showBadges ? (
+                          <>
+                            <SkillCheckBadge
+                              plan={skillCheckPlan}
+                              result={skillCheckResult}
+                              skillKey={skillKey}
+                              attributeKey={attributeKey}
+                            />
+                            <InventoryDeltaBadge delta={chatMessage.inventoryDelta} />
+                          </>
+                        ) : null}
                         {hasSubmitted ? (
                           <span className="chat-entry-feedback-status">Feedback sent</span>
                         ) : (
@@ -458,7 +470,7 @@ export function ChatCanvas() {
                             'GM summary unavailable.'}
                         </p>
                       )}
-                      {skillProgress?.length ? (
+                      {showBadges && skillProgress?.length ? (
                         <div className="skill-progress-badges" aria-live="polite">
                           {skillProgress.map((badge, badgeIndex) => (
                             <span
@@ -472,10 +484,10 @@ export function ChatCanvas() {
                           ))}
                         </div>
                       ) : null}
-                      {deltaLabel ? (
+                      {showAll && deltaLabel ? (
                         <p className="chat-entry-delta-note">World shifts: {deltaLabel}</p>
                       ) : null}
-                      {chatMessage.executedNodes?.length ? (
+                      {showAll && chatMessage.executedNodes?.length ? (
                         <p className="chat-entry-node-trace">
                           GM pipeline: {chatMessage.executedNodes.join(' → ')}
                         </p>

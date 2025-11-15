@@ -1,7 +1,7 @@
 import type { LocationPlace } from '@glass-frontier/dto';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 import { decodeTags } from './locationUtils';
 
