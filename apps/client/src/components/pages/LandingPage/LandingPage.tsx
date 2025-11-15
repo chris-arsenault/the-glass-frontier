@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import changelogEntries from '../../../data/changelog.json';
 import {
-  landingNews,
   recentChronicleFeed,
-  systemsUpdates,
-  updateSnippets,
 } from '../../../data/landingFeed';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import type { ChangelogEntry } from '../../../types/changelog';
@@ -40,14 +37,7 @@ export function LandingPage(): JSX.Element {
   const featureHighlights = useMemo(() => {
     return (changelogEntries as ChangelogEntry[])
       .filter((entry) => entry.type === 'feature')
-      .slice(-3)
-      .reverse();
-  }, []);
-
-  const recentOtherUpdates = useMemo(() => {
-    return (changelogEntries as ChangelogEntry[])
-      .filter((entry) => entry.type !== 'feature')
-      .slice(-3)
+      .slice(-4)
       .reverse();
   }, []);
 
@@ -96,7 +86,20 @@ export function LandingPage(): JSX.Element {
             <article key={entry.id} className="landing-feature-card">
               <p className="landing-feature-date">{formatDate(entry.releasedAt)}</p>
               <h3>{entry.summary}</h3>
-              <p>{entry.details}</p>
+              <div
+                className="landing-feature-details-wrapper"
+                tabIndex={0}
+                aria-describedby={`feature-tooltip-${entry.id}`}
+              >
+                <p className="landing-feature-details">{entry.details}</p>
+                <div
+                  className="landing-feature-tooltip"
+                  role="tooltip"
+                  id={`feature-tooltip-${entry.id}`}
+                >
+                  {entry.details}
+                </div>
+              </div>
               <span className="landing-feature-pill">Feature</span>
             </article>
           ))}
@@ -166,28 +169,6 @@ export function LandingPage(): JSX.Element {
         )}
       </section>
 
-      <section className="landing-panel landing-news">
-        <header className="landing-panel-header">
-          <div>
-            <p className="landing-eyebrow">News</p>
-            <h2>Latest dispatches</h2>
-          </div>
-          <p>Pulse checks from the Chronicle network.</p>
-        </header>
-        <ul className="landing-news-list">
-          {landingNews.map((item) => (
-            <li key={item.id}>
-              <p className="landing-news-meta">
-                <span>{item.category}</span>
-                <span>{formatDate(item.publishedAt, { day: 'numeric', month: 'short' })}</span>
-              </p>
-              <h3>{item.headline}</h3>
-              <p>{item.summary}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <div className="landing-split-grid">
         <section className="landing-panel">
           <header className="landing-panel-header">
@@ -195,7 +176,10 @@ export function LandingPage(): JSX.Element {
               <p className="landing-eyebrow">Chronicles</p>
               <h2>Recently completed</h2>
             </div>
-            <p>Signals gathered from global runs.</p>
+            <div className="landing-panel-header-note">
+              <p className="landing-coming-soon">In development</p>
+              <p>Signals gathered from global runs.</p>
+            </div>
           </header>
           <ul className="landing-chronicle-list">
             {recentChronicleFeed.map((item) => (
@@ -231,73 +215,6 @@ export function LandingPage(): JSX.Element {
               Realtime roster coming soon
             </button>
           </div>
-        </section>
-      </div>
-
-      <section className="landing-panel">
-        <header className="landing-panel-header">
-          <div>
-            <p className="landing-eyebrow">Systems</p>
-            <h2>Roadmap snapshots</h2>
-          </div>
-        </header>
-        <div className="landing-status-grid">
-          {systemsUpdates.map((item) => (
-            <article key={item.id} className="landing-status-card">
-              <p className="landing-status-meta">
-                <span>{item.status.replace('-', ' ')}</span>
-                <span>{formatDate(item.updatedAt)}</span>
-              </p>
-              <h3>{item.label}</h3>
-              <p>{item.summary}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <div className="landing-split-grid">
-        <section className="landing-panel">
-          <header className="landing-panel-header">
-            <div>
-              <p className="landing-eyebrow">Updates</p>
-              <h2>Improvements & fixes</h2>
-            </div>
-          </header>
-          <ul className="landing-update-list">
-            {recentOtherUpdates.map((entry) => (
-              <li key={entry.id}>
-                <p className="landing-update-date">{formatDate(entry.releasedAt)}</p>
-                <div>
-                  <h3>{entry.summary}</h3>
-                  <p>{entry.details}</p>
-                  <span className={`landing-update-pill landing-update-pill-${entry.type}`}>
-                    {entry.type}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="landing-panel">
-          <header className="landing-panel-header">
-            <div>
-              <p className="landing-eyebrow">Signals</p>
-              <h2>Update stream</h2>
-            </div>
-          </header>
-          <ul className="landing-snippet-list">
-            {updateSnippets.map((snippet) => (
-              <li key={snippet.id}>
-                <p className="landing-snippet-meta">
-                  <span>{snippet.tag}</span>
-                  <span>{formatDate(snippet.updatedAt)}</span>
-                </p>
-                <h3>{snippet.title}</h3>
-                <p>{snippet.description}</p>
-              </li>
-            ))}
-          </ul>
         </section>
       </div>
     </div>
