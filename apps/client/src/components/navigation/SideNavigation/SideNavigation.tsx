@@ -1,5 +1,7 @@
-import { SessionManager } from '../../session/SessionManager/SessionManager';
+import React from 'react';
+
 import './SideNavigation.css';
+import { SessionManager } from '../../session/SessionManager/SessionManager';
 
 export function SideNavigation() {
   return (

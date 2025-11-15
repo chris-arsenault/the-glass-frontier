@@ -1,4 +1,5 @@
 import type { LocationPlace } from '@glass-frontier/dto';
+import React from 'react';
 
 type RootSelectorBarProps = {
   isLoading: boolean;

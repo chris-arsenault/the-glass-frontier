@@ -1,0 +1,86 @@
+.bug-report-modal {
+  width: min(640px, 95vw);
+}
+
+.bug-report-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bug-report-intro {
+  margin: 0 0 0.5rem;
+  color: #cbd5f5;
+}
+
+.bug-report-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.bug-report-input,
+.bug-report-textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgb(148 163 184 / 40%);
+  background: rgb(15 23 42 / 80%);
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.bug-report-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.bug-report-context {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.bug-report-error {
+  margin: 0;
+  color: #fda4af;
+}
+
+.bug-report-success {
+  margin: 0;
+  color: #a7f3d0;
+}
+
+.bug-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.bug-report-cancel,
+.bug-report-submit {
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.bug-report-cancel {
+  border-color: rgb(148 163 184 / 50%);
+  background: transparent;
+  color: #e2e8f0;
+}
+
+.bug-report-submit {
+  background: linear-gradient(135deg, rgb(236 72 153 / 90%), rgb(59 130 246 / 90%));
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.bug-report-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

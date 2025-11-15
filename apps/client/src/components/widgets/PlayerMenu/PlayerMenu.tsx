@@ -1,5 +1,5 @@
 import type { LocationSummary, TokenUsagePeriod } from '@glass-frontier/dto';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';

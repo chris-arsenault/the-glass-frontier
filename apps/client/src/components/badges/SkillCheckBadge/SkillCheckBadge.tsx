@@ -1,4 +1,5 @@
 import type { Attribute, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/dto';
+import React from 'react';
 
 import './SkillCheckBadge.css';
 

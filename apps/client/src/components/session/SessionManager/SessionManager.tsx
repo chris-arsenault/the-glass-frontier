@@ -1,5 +1,5 @@
 import type { ChronicleBeat } from '@glass-frontier/dto';
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';

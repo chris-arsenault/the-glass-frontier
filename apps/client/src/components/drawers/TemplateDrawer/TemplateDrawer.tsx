@@ -1,5 +1,5 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useChronicleStore } from '../../../stores/chronicleStore';

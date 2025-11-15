@@ -1,4 +1,5 @@
 import type { MomentumState } from '@glass-frontier/dto';
+import React from 'react';
 
 import type { MomentumTrend } from '../../../state/chronicleState';
 import './MomentumIndicator.css';

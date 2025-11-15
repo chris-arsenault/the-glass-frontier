@@ -6,7 +6,7 @@ import type {
   GridRenderCellParams,
   GridRowSelectionModel,
 } from '@mui/x-data-grid';
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import type { LocationFilters, UpdatePlacePayload } from '../../../stores/locationMaintenanceStore';
 import {

@@ -1,0 +1,75 @@
+.user-guide-modal {
+  width: min(720px, 95vw);
+}
+
+.user-guide-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+
+.user-guide-intro {
+  margin: 0;
+  color: #cbd5f5;
+}
+
+.user-guide-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-guide-section {
+  border: 1px solid rgb(99 102 241 / 25%);
+  border-radius: 0.85rem;
+  background: rgb(15 23 42 / 80%);
+}
+
+.user-guide-summary {
+  display: flex;
+  width: 100%;
+  padding: 1rem;
+  background: none;
+  border: none;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  gap: 1rem;
+}
+
+.user-guide-summary h3 {
+  margin: 0 0 0.25rem;
+}
+
+.user-guide-summary p {
+  margin: 0;
+  color: #cbd5f5;
+  font-size: 0.95rem;
+}
+
+.user-guide-summary span {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.user-guide-content {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid rgb(99 102 241 / 20%);
+}
+
+.user-guide-content ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #e2e8f0;
+}
+
+.user-guide-content li {
+  line-height: 1.4;
+}

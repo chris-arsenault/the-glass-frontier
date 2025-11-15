@@ -1,4 +1,5 @@
 import type { InventoryDelta } from '@glass-frontier/dto';
+import React from 'react';
 
 import './InventoryDeltaBadge.css';
 

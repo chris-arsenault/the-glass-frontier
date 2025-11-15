@@ -6,7 +6,7 @@ import type {
 } from '@glass-frontier/dto';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { EDGE_KIND_OPTIONS } from './locationUtils';
 

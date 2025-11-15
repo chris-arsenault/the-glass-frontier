@@ -1,5 +1,7 @@
-import { useChronicleStore } from '../../../stores/chronicleStore';
+import React from 'react';
+
 import './ChronicleHeader.css';
+import { useChronicleStore } from '../../../stores/chronicleStore';
 
 const formatStatus = (state: string): string => {
   switch (state) {
