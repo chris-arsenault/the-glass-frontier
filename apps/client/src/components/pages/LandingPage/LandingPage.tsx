@@ -206,7 +206,7 @@ export function LandingPage(): JSX.Element {
                   </p>
                   <h3>{item.title}</h3>
                   <p className="landing-chronicle-meta">{item.location}</p>
-                  <p className="landing-chronicle-crew">Crew: {item.crew}</p>
+                  <p className="landing-chronicle-character">Character: {item.character}</p>
                   <p className="landing-chronicle-hook">{item.hook}</p>
                 </div>
               </li>
@@ -225,7 +225,7 @@ export function LandingPage(): JSX.Element {
           <div className="landing-placeholder">
             <p>
               A live roster of ready players will appear here once the presence service ships. For
-              now, coordinate with your crew in Discord or ping a moderator to sync up.
+              now, coordinate with your GM in Discord or ping a moderator to sync up.
             </p>
             <button type="button" disabled className="landing-disabled-button">
               Realtime roster coming soon

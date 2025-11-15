@@ -11,7 +11,7 @@ export const BugReportSchema = z.object({
   details: z.string().min(10).max(4000),
   id: z.string().uuid(),
   loginId: z.string().min(1),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   playerId: z.string().min(1).nullable(),
   status: z.enum(BUG_REPORT_STATUSES),
   summary: z.string().min(4).max(240),

@@ -9,7 +9,7 @@ export type LandingNewsItem = {
 export type RecentChronicleItem = {
   id: string;
   title: string;
-  crew: string;
+  character: string;
   hook: string;
   location: string;
   completedAt: string;
@@ -59,31 +59,31 @@ export const landingNews: LandingNewsItem[] = [
     id: 'news-audio-cues',
     publishedAt: DATE_NOV_14_2025,
     summary:
-      'A lightweight audio service now renders ambient beds that match chronicle mood streams. Private alpha crews will evaluate the loop timing this week.',
+      'A lightweight audio service now renders ambient beds that match chronicle mood streams. Private alpha pilots will evaluate the loop timing this week.',
   },
 ];
 
 export const recentChronicleFeed: RecentChronicleItem[] = [
   {
     completedAt: '2025-11-16T04:20:00Z',
-    crew: 'Ayo, Mina, Rhys',
-    hook: 'Uncovered the rain-split docks ritual brokers and sealed their pact circle before the eclipse hit.',
+    character: 'Ayo',
+    hook: 'Ayo uncovered the rain-split docks ritual brokers and sealed their pact circle before the eclipse hit.',
     id: 'chronicle-neon-silence',
     location: 'Rain-Split Docks · Bastion Rim',
     title: 'A Silence of Neon',
   },
   {
     completedAt: '2025-11-15T18:05:00Z',
-    crew: 'Cael, Myrr, the Ghost of Dala',
-    hook: 'Negotiated a ceasefire with the Folded Choir, trading intent diagrams for refugee passages.',
+    character: 'Cael',
+    hook: 'Cael negotiated a ceasefire with the Folded Choir, trading intent diagrams for refugee passages.',
     id: 'chronicle-sundered-veil',
     location: 'Choir Reliquary · Ember Steppes',
     title: 'The Sundered Veil',
   },
   {
     completedAt: '2025-11-15T09:51:00Z',
-    crew: 'Jun, Lyrix, Saf',
-    hook: 'Guided the White Stag caravan through an anti-sky storm and sanctified a new resonant path.',
+    character: 'Jun',
+    hook: 'Jun guided the White Stag caravan through an anti-sky storm and sanctified a new resonant path.',
     id: 'chronicle-firmament',
     location: 'The Petrified Firmament',
     title: 'Fragments of the Firmament',
@@ -95,7 +95,7 @@ export const systemsUpdates: SystemsUpdateItem[] = [
     id: 'systems-reputation-tracks',
     label: 'Reputation tracks',
     status: 'rolling-out',
-    summary: 'Crew reputation now gates loaner gear and influences GM-favor prompts across chronicles.',
+    summary: 'Character reputation now gates loaner gear and influences GM-favor prompts across chronicles.',
     updatedAt: DATE_NOV_16_2025,
   },
   {

@@ -101,7 +101,14 @@
     "id": "2025-11-16-chronicle-landing-ux",
     "releasedAt": "2025-11-16",
     "summary": "Landing briefs, player guide, and bug reporting",
-    "details": "Added a briefing-style landing page with news, recent features, global chronicle signals, and a quick-continue panel so players see what's new before diving in. Chronicle chat now lives at /chronicle/:id with route-driven hydration, plus a new in-app player guide, live token-usage readout, and system bug report modal so crews can find help or flag issues without leaving the client.",
+    "details": "Added a briefing-style landing page with news, recent features, global chronicle signals, and a quick-continue panel so players see what's new before diving in. Chronicle chat now lives at /chronicle/:id with route-driven hydration, plus a new in-app player guide, live token-usage readout, and system bug report modal so players can find help or flag issues without leaving the client.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-17-solo-character-language",
+    "releasedAt": "2025-11-17",
+    "summary": "Shifted landing and login copy to solo characters",
+    "details": "Updated the home, landing, login, and player guide surfaces so they highlight individual characters instead of team-focused language, including feed data, system update summaries, and onboarding messaging. Also restructured the login screen into a stacked briefing column so the hero copy, centered sign-in form, and primer flow vertically on every device.",
+    "type": "improvement"
   }
 ]

@@ -34,7 +34,6 @@ const SiteHeader = (): JSX.Element => {
     <header className="app-global-header">
       <div className="session-meta">
         <div className="session-meta-actions">
-          <PlayerMenu />
           <button type="button" className="session-report-button" onClick={openBugReport}>
             Report Bug
           </button>
@@ -65,6 +64,7 @@ const SiteHeader = (): JSX.Element => {
               />
             </svg>
           </button>
+          <PlayerMenu />
         </div>
       </div>
     </header>

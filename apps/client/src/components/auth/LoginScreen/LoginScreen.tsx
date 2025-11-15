@@ -5,24 +5,26 @@ import './LoginScreen.css';
 
 export function LoginScreen() {
   const viewModel = useLoginViewModel();
+  const authPanel = viewModel.newPasswordRequired ? (
+    <PasswordUpdateForm
+      defaultUsername={viewModel.fallbackUsername}
+      error={viewModel.error}
+      isAuthenticating={viewModel.isAuthenticating}
+      onSubmit={viewModel.handlePasswordUpdate}
+    />
+  ) : (
+    <LoginForm
+      error={viewModel.error}
+      isAuthenticating={viewModel.isAuthenticating}
+      onSubmit={viewModel.handleLogin}
+    />
+  );
 
   return (
     <div className="login-screen">
       <LoginHero />
-      {viewModel.newPasswordRequired ? (
-        <PasswordUpdateForm
-          defaultUsername={viewModel.fallbackUsername}
-          error={viewModel.error}
-          isAuthenticating={viewModel.isAuthenticating}
-          onSubmit={viewModel.handlePasswordUpdate}
-        />
-      ) : (
-        <LoginForm
-          error={viewModel.error}
-          isAuthenticating={viewModel.isAuthenticating}
-          onSubmit={viewModel.handleLogin}
-        />
-      )}
+      <div className="login-form-shell">{authPanel}</div>
+      <LoginPrimer />
     </div>
   );
 }
@@ -32,14 +34,19 @@ const LoginHero = () => (
     <p className="login-hero-eyebrow">Welcome to</p>
     <h1 className="login-hero-title">The Glass Frontier</h1>
     <p className="login-hero-lore">
-      Across the frontier, skylines fracture into endless shards of possibility. Crews follow
+      Across the frontier, skylines fracture into endless shards of possibility. Solo agents follow
       resonant trails, bargain with mythic factions, and stitch their legends into a living
       atlas—one turn, one risk, one whispered intent at a time.
     </p>
+  </section>
+);
+
+const LoginPrimer = () => (
+  <section className="login-hero login-primer" aria-label="How play works">
     <p className="login-hero-plain">
-      Out of character: Glass Frontier is an LLM-guided, shared-world narrative experience. Gather
-      your crew, feed the GM your intent, and weave collaborative stories that persist across
-      chronicles, characters, and seasons.
+      The Glass Frontier is an LLM-guided, shared-world narrative experience. Chart your path, feed
+      the GM your intent, and weave collaborative stories that persist across chronicles,
+      characters, and seasons.
     </p>
   </section>
 );
@@ -66,7 +73,6 @@ const LoginForm = ({ error, isAuthenticating, onSubmit }: LoginFormProps) => {
 
   return (
     <form className="login-card" onSubmit={handleSubmit}>
-      <h1 className="login-title">Sign in to The Glass Frontier</h1>
       <label className="login-label" htmlFor="login-username">
         Username
       </label>

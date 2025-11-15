@@ -28,7 +28,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Toggle wrap-up to signal you want a chronicle to end in roughly three turns.',
       'Use the beat list to keep track of long-term goals established by the GM.',
     ],
-    summary: 'Real-time storytelling surface where you trade turns with the GM for your crew.',
+    summary: 'Real-time storytelling surface where you trade turns with the GM for your character.',
     title: 'Chronicle Chat',
   },
   {
