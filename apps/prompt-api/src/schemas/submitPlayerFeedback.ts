@@ -1,4 +1,5 @@
-import { IntentType as IntentTypeSchema, PLAYER_FEEDBACK_SENTIMENTS } from '@glass-frontier/dto';
+import { PLAYER_FEEDBACK_SENTIMENTS } from '@glass-frontier/dto';
+import { IntentType as IntentTypeSchema } from '@glass-frontier/dto/narrative/IntentType';
 import { z } from 'zod';
 
 const feedbackSentimentSchema = z.enum(PLAYER_FEEDBACK_SENTIMENTS);

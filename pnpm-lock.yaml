@@ -399,6 +399,9 @@ importers:
       '@glass-frontier/persistence':
         specifier: workspace:*
         version: link:../../packages/persistence
+      '@glass-frontier/worldstate':
+        specifier: workspace:*
+        version: link:../../packages/worldstate
       '@trpc/server':
         specifier: ^11.7.1
         version: 11.7.1(typescript@5.9.3)

@@ -2,9 +2,10 @@ import {
   AuditFeedbackStore,
   AuditLogStore,
   AuditModerationStore,
-  createWorldStateStore,
-  PromptTemplateManager,
 } from '@glass-frontier/persistence';
+import { DynamoWorldStateStore } from '@glass-frontier/worldstate/persistence';
+
+import { PromptTemplateManager } from './templateManager/PromptTemplateManager';
 
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
 if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
@@ -16,10 +17,20 @@ if (typeof auditBucket !== 'string' || auditBucket.trim().length === 0) {
   throw new Error('LLM_PROXY_ARCHIVE_BUCKET must be configured for the audit review API.');
 }
 
-const worldStateStore = createWorldStateStore({
-  bucket: process.env.WORLD_STATE_S3_BUCKET,
-  prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
-  worldIndexTable: process.env.WORLD_STATE_TABLE_NAME,
+const worldStateBucket = process.env.WORLD_STATE_S3_BUCKET;
+if (typeof worldStateBucket !== 'string' || worldStateBucket.trim().length === 0) {
+  throw new Error('WORLD_STATE_S3_BUCKET must be configured for the prompt API.');
+}
+
+const worldStateTable = process.env.WORLD_STATE_TABLE_NAME;
+if (typeof worldStateTable !== 'string' || worldStateTable.trim().length === 0) {
+  throw new Error('WORLD_STATE_TABLE_NAME must be configured for the prompt API.');
+}
+
+const worldStateStore = new DynamoWorldStateStore({
+  bucketName: worldStateBucket.trim(),
+  tableName: worldStateTable.trim(),
+  s3Prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
 });
 
 const templateManager = new PromptTemplateManager({
