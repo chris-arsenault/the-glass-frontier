@@ -46,7 +46,7 @@ test.describe('Player menu moderation shortcuts', () => {
     const locationPanel = await openPlayerMenu(page);
     await locationPanel.getByRole('button', { name: 'Location Maintenance' }).click();
     await expect(page.getByRole('heading', { name: 'Location Maintenance' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Luminous Quay/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Luminous Quay/i }).first()).toBeVisible();
     await page.getByRole('button', { name: 'Back to Chronicle' }).click();
   });
 });

@@ -65,10 +65,7 @@ export class LocationDeltaNode implements GraphNode {
       if (planResult === null || planResult.plan.ops.length === 0) {
         return context;
       }
-      console.log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-      console.log(planResult)
-      console.log(planResult.plan.ops)
-      console.log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
       if (planResult.applyImmediately) {
         const summary = await this.#applyPlanImmediately(context, planResult.plan);
         if (summary !== null) {
@@ -98,9 +95,7 @@ export class LocationDeltaNode implements GraphNode {
       context.playerMessage?.content ?? ''
     );
     const prompt = await composeLocationDeltaPrompt(context.templates, promptInput);
-    console.log(prompt)
     const decision = await this.#requestDecision(context, promptInput.currentId, prompt);
-    console.log(decision)
     if (decision === null) {
       return null;
     }

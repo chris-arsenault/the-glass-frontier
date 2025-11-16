@@ -51,7 +51,7 @@ export const locationRouter = t.router({
   createLocationChain: t.procedure
     .input(
       z.object({
-        parentId: z.string().uuid().optional(),
+        parentId: z.uuid().optional(),
         segments: z.array(locationSegmentSchema).min(1).max(5),
       })
     )
@@ -80,7 +80,7 @@ export const locationRouter = t.router({
         description: z.string().max(500).optional(),
         kind: z.string().min(1),
         name: z.string().min(1),
-        parentId: z.string().uuid().optional(),
+        parentId: z.uuid().optional(),
         tags: z.array(z.string()).max(12).optional(),
       })
     )
