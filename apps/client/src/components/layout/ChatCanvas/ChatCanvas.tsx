@@ -1,4 +1,5 @@
-import type { PlayerFeedbackSentiment, Intent } from '@glass-frontier/dto';
+import type { PlayerFeedbackSentiment } from '@glass-frontier/dto';
+import type { Intent } from '@glass-frontier/worldstate/dto';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';

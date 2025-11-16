@@ -37,6 +37,7 @@
     "@aws-sdk/client-s3": "^3.930.0",
     "@aws-sdk/credential-providers": "^3.930.0",
     "@aws-sdk/client-sqs": "^3.930.0",
+    "@glass-frontier/worldstate": "workspace:*",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.1",

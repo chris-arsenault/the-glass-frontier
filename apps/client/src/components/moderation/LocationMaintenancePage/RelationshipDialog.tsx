@@ -3,7 +3,7 @@ import type {
   LocationEdgeKind as LocationEdgeKindType,
   LocationGraphSnapshot,
   LocationPlace,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import type { FormEvent } from 'react';
 import React, { useMemo, useState } from 'react';

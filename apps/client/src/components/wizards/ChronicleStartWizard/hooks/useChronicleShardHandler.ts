@@ -1,4 +1,4 @@
-import type { DataShard, LocationBreadcrumbEntry } from '@glass-frontier/dto';
+import type { LocationBreadcrumbEntry } from '@glass-frontier/worldstate/dto';
 import { useEffect, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 
@@ -9,17 +9,26 @@ import type {
   SelectedLocationSummary,
 } from '../../../../stores/chronicleStartWizardStore';
 
-type ChronicleHookShard = Extract<DataShard, { kind: 'chronicle_hook' }>;
+export type ChronicleShard = {
+  id: string;
+  name: string;
+  type: 'chronicle_hook' | 'chronicle_active';
+  seed?: string;
+  locationId?: string;
+  locationStack?: LocationBreadcrumbEntry[];
+};
 
-const isChronicleHookShard = (shard: DataShard): shard is ChronicleHookShard =>
-  shard.kind === 'chronicle_hook';
+type ChronicleHookShard = Extract<ChronicleShard, { type: 'chronicle_hook' }>;
+
+const isChronicleHookShard = (shard: ChronicleShard): shard is ChronicleHookShard =>
+  shard.type === 'chronicle_hook';
 
 type UseChronicleShardHandlerOptions = {
   beatsEnabled: boolean;
   bootstrapShardLocation: (stack: LocationBreadcrumbEntry[]) => Promise<string | null>;
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   goToDefaultSurface: (replace?: boolean) => void;
-  inventoryShards: DataShard[];
+  inventoryShards: ChronicleShard[];
   navigate: NavigateFunction;
   preferredCharacterId: string | null;
   resetWizard: () => void;

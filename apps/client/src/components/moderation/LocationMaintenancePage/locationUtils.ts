@@ -1,5 +1,5 @@
-import type { LocationGraphSnapshot, LocationPlace } from '@glass-frontier/dto';
-import { LocationEdgeKind as LocationEdgeKindEnum } from '@glass-frontier/dto';
+import type { LocationGraphSnapshot, LocationPlace } from '@glass-frontier/worldstate/dto';
+import { LocationEdgeKindSchema } from '@glass-frontier/worldstate/dto';
 
 import type {
   LocationEdgeKind as LocationEdgeKindType,
@@ -7,7 +7,7 @@ import type {
 } from '../../../stores/locationMaintenanceStore';
 
 export const ROOT_FILTER_VALUE = '__root__';
-export const EDGE_KIND_OPTIONS = LocationEdgeKindEnum.options as readonly LocationEdgeKindType[];
+export const EDGE_KIND_OPTIONS = LocationEdgeKindSchema.options as readonly LocationEdgeKindType[];
 
 export const toTagString = (tags: string[]): string => tags.join(', ');
 

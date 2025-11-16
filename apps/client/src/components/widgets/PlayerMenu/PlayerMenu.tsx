@@ -1,4 +1,5 @@
-import type { LocationSummary, TokenUsagePeriod } from '@glass-frontier/dto';
+import type { TokenUsagePeriod } from '@glass-frontier/dto';
+import type { LocationSummary } from '@glass-frontier/worldstate/dto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 

@@ -1,4 +1,4 @@
-import type { LocationPlace } from '@glass-frontier/dto';
+import type { LocationPlace } from '@glass-frontier/worldstate/dto';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import type { FormEvent } from 'react';
 import React, { useState } from 'react';

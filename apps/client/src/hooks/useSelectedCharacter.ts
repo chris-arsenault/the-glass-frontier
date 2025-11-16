@@ -1,4 +1,4 @@
-import type { Character } from '@glass-frontier/dto';
+import type { Character } from '@glass-frontier/worldstate/dto';
 import { useMemo } from 'react';
 
 import { useChronicleStore } from '../stores/chronicleStore';

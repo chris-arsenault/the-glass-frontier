@@ -1,4 +1,8 @@
-import type { Attribute, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/dto';
+import type {
+  CharacterAttributeKey,
+  SkillCheckPlan,
+  SkillCheckResult,
+} from '@glass-frontier/worldstate/dto';
 import React from 'react';
 
 import './SkillCheckBadge.css';
@@ -15,26 +19,20 @@ type SkillCheckBadgeProps = {
   plan?: SkillCheckPlan | null;
   result?: SkillCheckResult | null;
   skillKey?: string | null;
-  attributeKey?: Attribute | null;
-}
+  attributeKey?: CharacterAttributeKey | null;
+};
 
-const formatAdvantage = (
-  plan?: SkillCheckPlan | null,
-  result?: SkillCheckResult | null
-): string => {
-  if (plan?.advantage) {
-    if (plan.advantage === 'none') {
-      return 'Standard';
-    }
-    return plan.advantage[0].toUpperCase() + plan.advantage.slice(1);
+const formatRiskLevel = (plan?: SkillCheckPlan | null): string => {
+  if (!plan?.riskLevel) {
+    return 'Standard';
   }
-  if (result?.advantage) {return 'Advantage';}
-  if (result?.disadvantage) {return 'Disadvantage';}
-  return 'Standard';
+  return plan.riskLevel[0].toUpperCase() + plan.riskLevel.slice(1);
 };
 
 const formatMomentumDelta = (result?: SkillCheckResult | null): string => {
-  if (!result) {return '0';}
+  if (!result) {
+    return '0';
+  }
   const delta = MOMENTUM_DELTA[result.outcomeTier] ?? 0;
   return delta >= 0 ? `+${delta}` : `${delta}`;
 };
@@ -44,10 +42,15 @@ export function SkillCheckBadge({ attributeKey, plan, result, skillKey }: SkillC
     return null;
   }
 
-  const advantageText = formatAdvantage(plan, result);
-  const skillText = skillKey ?? 'Unknown skill';
-  const attributeText = attributeKey ?? 'Unknown attribute';
+  const riskLevel = formatRiskLevel(plan);
+  const difficultyText = plan?.difficulty ?? 'Standard';
+  const skillText = plan?.skill ?? skillKey ?? 'Unknown skill';
+  const attributeText = plan?.attribute ?? attributeKey ?? 'Unspecified';
   const momentumDelta = formatMomentumDelta(result);
+  const complications =
+    result.complications && result.complications.length > 0
+      ? result.complications.join(', ')
+      : 'None';
 
   return (
     <div className="skill-check-badge">
@@ -68,8 +71,8 @@ export function SkillCheckBadge({ attributeKey, plan, result, skillKey }: SkillC
         <p className="skill-check-title">Skill Check</p>
         <dl className="skill-check-list">
           <div>
-            <dt>Advantage</dt>
-            <dd>{advantageText}</dd>
+            <dt>Risk</dt>
+            <dd>{riskLevel}</dd>
           </div>
           <div>
             <dt>Skill</dt>
@@ -80,8 +83,8 @@ export function SkillCheckBadge({ attributeKey, plan, result, skillKey }: SkillC
             <dd>{attributeText}</dd>
           </div>
           <div>
-            <dt>Total Roll</dt>
-            <dd>{result.dieSum}</dd>
+            <dt>Difficulty</dt>
+            <dd>{difficultyText}</dd>
           </div>
           <div>
             <dt>Outcome</dt>
@@ -94,6 +97,10 @@ export function SkillCheckBadge({ attributeKey, plan, result, skillKey }: SkillC
           <div>
             <dt>Momentum Δ</dt>
             <dd>{momentumDelta}</dd>
+          </div>
+          <div>
+            <dt>Complications</dt>
+            <dd>{complications}</dd>
           </div>
         </dl>
       </div>

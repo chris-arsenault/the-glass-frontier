@@ -1,4 +1,4 @@
-import type { TurnProgressEvent } from '@glass-frontier/dto';
+import type { TurnProgressEvent } from '@glass-frontier/dto/narrative/TurnProgressEvent';
 
 import { getConfigValue } from '../utils/runtimeConfig';
 

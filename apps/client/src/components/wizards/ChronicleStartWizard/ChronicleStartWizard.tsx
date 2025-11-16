@@ -1,9 +1,11 @@
+import type { ChronicleSeed } from '@glass-frontier/dto';
 import type {
+  Character,
+  InventoryEntry,
+  LocationBreadcrumbEntry,
   LocationGraphSnapshot,
   LocationPlace,
-  ChronicleSeed,
-  DataShard,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -18,7 +20,7 @@ import {
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
-import { useChronicleShardHandler } from './hooks/useChronicleShardHandler';
+import { useChronicleShardHandler, type ChronicleShard } from './hooks/useChronicleShardHandler';
 import {
   useLocationExplorer,
   type LocationInspectorState,
@@ -36,7 +38,68 @@ const toneOptions = [
 ];
 
 type SeedStatus = 'idle' | 'loading' | 'error';
-const EMPTY_SHARDS: DataShard[] = [];
+const EMPTY_SHARDS: ChronicleShard[] = [];
+
+type ShardMetadata = {
+  kind?: string;
+  seed?: string;
+  locationId?: string;
+  locationStack?: unknown;
+};
+
+const coerceLocationStack = (value: unknown): LocationBreadcrumbEntry[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const entries = value.filter(
+    (entry): entry is LocationBreadcrumbEntry =>
+      typeof entry?.id === 'string' &&
+      typeof entry?.name === 'string' &&
+      typeof entry?.kind === 'string'
+  );
+  return entries.length > 0 ? entries : undefined;
+};
+
+const deriveShardKind = (
+  entry: InventoryEntry,
+  metadata: ShardMetadata
+): ChronicleShard['type'] | null => {
+  const metaKind = metadata.kind;
+  if (metaKind === 'chronicle_hook' || metaKind === 'chronicle_active') {
+    return metaKind;
+  }
+  const tagKind = entry.tags.find((tag) => tag === 'chronicle_hook' || tag === 'chronicle_active');
+  if (tagKind === 'chronicle_hook' || tagKind === 'chronicle_active') {
+    return tagKind;
+  }
+  return null;
+};
+
+const toChronicleShard = (entry: InventoryEntry): ChronicleShard | null => {
+  const metadata = (entry.metadata ?? {}) as ShardMetadata;
+  const kind = deriveShardKind(entry, metadata);
+  if (!kind) {
+    return null;
+  }
+  return {
+    id: entry.id,
+    locationId: typeof metadata.locationId === 'string' ? metadata.locationId : undefined,
+    locationStack: coerceLocationStack(metadata.locationStack),
+    name: entry.name,
+    seed: typeof metadata.seed === 'string' ? metadata.seed : undefined,
+    type: kind,
+  };
+};
+
+const collectChronicleShards = (character: Character | null): ChronicleShard[] => {
+  if (!character?.inventory) {
+    return EMPTY_SHARDS;
+  }
+  const entries = [...character.inventory.carried, ...character.inventory.stored];
+  return entries
+    .map((entry) => toChronicleShard(entry))
+    .filter((shard): shard is ChronicleShard => shard !== null);
+};
 
 export function ChronicleStartWizard() {
   const navigate = useNavigate();
@@ -59,7 +122,7 @@ export function ChronicleStartWizard() {
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const selectedCharacter = useSelectedCharacter();
-  const inventoryShards: DataShard[] = selectedCharacter?.inventory?.data_shards ?? EMPTY_SHARDS;
+  const inventoryShards = useMemo(() => collectChronicleShards(selectedCharacter), [selectedCharacter]);
 
   const {
     activePlaceId,

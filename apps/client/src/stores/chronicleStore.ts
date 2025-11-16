@@ -1,16 +1,15 @@
 import type {
+  BeatDelta,
   Character,
+  CharacterDraft,
   Chronicle,
   ChronicleBeat,
   LocationSummary,
   TranscriptEntry,
   Turn,
-  TurnProgressEvent,
-  PendingEquip,
-  BeatDelta,
-  PlayerPreferences,
-} from '@glass-frontier/dto';
-import { createEmptyInventory } from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
+import type { PendingEquip, PlayerPreferences } from '@glass-frontier/dto';
+import type { TurnProgressEvent } from '@glass-frontier/dto/narrative/TurnProgressEvent';
 import { formatTurnJobId } from '@glass-frontier/utils';
 import { create } from 'zustand';
 
@@ -28,6 +27,7 @@ import type {
   SkillProgressBadge,
 } from '../state/chronicleState';
 import { decodeJwtPayload } from '../utils/jwt';
+import { createEmptyInventory } from '../utils/worldstateDefaults';
 import { useAuthStore } from './authStore';
 
 const resolveLoginIdentity = (): { loginId: string; loginName: string } => {
@@ -256,7 +256,7 @@ const applyBeatStateDelta = (
   };
 };
 
-const DEFAULT_MOMENTUM = { ceiling: 3, current: 0, floor: -2 };
+const DEFAULT_MOMENTUM = { ceiling: 2, current: 0, floor: -2 };
 
 const deriveSkillProgressBadges = (
   previous: Character | null,
@@ -270,7 +270,7 @@ const deriveSkillProgressBadges = (
     const prior = previous.skills?.[name];
     if (!prior) {
       badges.push({
-        attribute: skill.attribute,
+        attribute: null,
         skill: name,
         tier: skill.tier,
         type: 'skill-gain',
@@ -458,24 +458,20 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
   async createCharacterProfile(draft: CharacterCreationDraft) {
     const identity = resolveLoginIdentity();
-    const character: Character = {
+    const characterDraft: CharacterDraft = {
       archetype: draft.archetype,
       attributes: draft.attributes,
-      id: generateId(),
-      inventory: createEmptyInventory(),
       loginId: identity.loginId,
       momentum: DEFAULT_MOMENTUM,
       name: draft.name,
-      pronouns: draft.pronouns,
-      skills: Object.entries(draft.skills).reduce<Character['skills']>((acc, [name, skill]) => {
-        acc[name] = { ...skill, xp: 0 };
-        return acc;
-      }, {}),
+      inventory: createEmptyInventory(),
       tags: [],
+      pronouns: draft.pronouns,
+      skills: draft.skills,
     };
 
     try {
-      const { character: stored } = await trpcClient.createCharacter.mutate(character);
+      const { character: stored } = await trpcClient.createCharacter.mutate(characterDraft);
       set((prev) => ({
         ...prev,
         availableCharacters: mergeCharacterRecord(prev.availableCharacters, stored),
@@ -711,10 +707,10 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     set((prev) => {
       const filtered = prev.pendingEquip.filter((item) => item.slot !== entry.slot);
       const existing = prev.pendingEquip.find((item) => item.slot === entry.slot);
-      if (!isUnequipEntry(entry) && prev.character?.inventory?.gear?.[entry.slot]?.id === entry.itemId && !existing) {
+      if (!isUnequipEntry(entry) && prev.character?.inventory?.equipped?.[entry.slot]?.id === entry.itemId && !existing) {
         return prev;
       }
-      if (isUnequipEntry(entry) && !prev.character?.inventory?.gear?.[entry.slot] && !existing) {
+      if (isUnequipEntry(entry) && !prev.character?.inventory?.equipped?.[entry.slot] && !existing) {
         return prev;
       }
       const sameAction =

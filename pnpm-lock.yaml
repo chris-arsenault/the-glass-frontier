@@ -30,6 +30,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.1
+      '@glass-frontier/worldstate':
+        specifier: workspace:*
+        version: link:packages/worldstate
       '@playwright/test':
         specifier: ^1.56.1
         version: 1.56.1
@@ -126,6 +129,9 @@ importers:
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@glass-frontier/worldstate':
+        specifier: workspace:*
+        version: link:../../packages/worldstate
       '@trpc/client':
         specifier: ^11.7.1
         version: 11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3)
@@ -197,6 +203,9 @@ importers:
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@glass-frontier/worldstate':
+        specifier: workspace:*
+        version: link:../../packages/worldstate
       '@mui/icons-material':
         specifier: ^7.3.5
         version: 7.3.5(@mui/material@7.3.5(@emotion/react@11.14.0(@types/react@19.2.4)(react@19.2.0))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.4)(react@19.2.0))(@types/react@19.2.4)(react@19.2.0))(@types/react@19.2.4)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@types/react@19.2.4)(react@19.2.0)

@@ -1,4 +1,4 @@
-import type { ChronicleBeat } from '@glass-frontier/dto';
+import type { ChronicleBeat } from '@glass-frontier/worldstate/dto';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 

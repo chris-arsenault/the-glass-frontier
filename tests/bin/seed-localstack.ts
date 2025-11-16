@@ -1,4 +1,4 @@
-import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
+import {CreateBucketCommand, PutObjectCommand, S3Client} from '@aws-sdk/client-s3';
 import {
   CreateTableCommand,
   DescribeTableCommand,
@@ -147,55 +147,55 @@ async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<
 async function ensureWorldStateTable(client: DynamoDBClient, tableName: string): Promise<void> {
   await ensureTable(client, {
     AttributeDefinitions: [
-      { AttributeName: 'pk', AttributeType: 'S' },
-      { AttributeName: 'sk', AttributeType: 'S' },
-      { AttributeName: 'character_login_pk', AttributeType: 'S' },
-      { AttributeName: 'character_login_sk', AttributeType: 'S' },
-      { AttributeName: 'chronicle_login_pk', AttributeType: 'S' },
-      { AttributeName: 'chronicle_login_sk', AttributeType: 'S' },
-      { AttributeName: 'character_chronicle_pk', AttributeType: 'S' },
-      { AttributeName: 'character_chronicle_sk', AttributeType: 'S' },
-      { AttributeName: 'location_place_pk', AttributeType: 'S' },
-      { AttributeName: 'location_place_sk', AttributeType: 'S' },
+      { AttributeName: 'PK', AttributeType: 'S' },
+      { AttributeName: 'SK', AttributeType: 'S' },
+      { AttributeName: 'GSI1PK', AttributeType: 'S' },
+      { AttributeName: 'GSI1SK', AttributeType: 'S' },
+      { AttributeName: 'GSI2PK', AttributeType: 'S' },
+      { AttributeName: 'GSI2SK', AttributeType: 'S' },
+      { AttributeName: 'GSI3PK', AttributeType: 'S' },
+      { AttributeName: 'GSI3SK', AttributeType: 'S' },
+      { AttributeName: 'GSI4PK', AttributeType: 'S' },
+      { AttributeName: 'GSI4SK', AttributeType: 'S' },
     ],
     BillingMode: 'PAY_PER_REQUEST',
     GlobalSecondaryIndexes: [
       {
-        IndexName: 'character_login',
+        IndexName: 'GSI1',
         KeySchema: [
-          { AttributeName: 'character_login_pk', KeyType: 'HASH' },
-          { AttributeName: 'character_login_sk', KeyType: 'RANGE' },
+          { AttributeName: 'GSI1PK', KeyType: 'HASH' },
+          { AttributeName: 'GSI1SK', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
       },
       {
-        IndexName: 'chronicle_login',
+        IndexName: 'GSI2',
         KeySchema: [
-          { AttributeName: 'chronicle_login_pk', KeyType: 'HASH' },
-          { AttributeName: 'chronicle_login_sk', KeyType: 'RANGE' },
+          { AttributeName: 'GSI2PK', KeyType: 'HASH' },
+          { AttributeName: 'GSI2SK', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
       },
       {
-        IndexName: 'character_chronicle',
+        IndexName: 'GSI3',
         KeySchema: [
-          { AttributeName: 'character_chronicle_pk', KeyType: 'HASH' },
-          { AttributeName: 'character_chronicle_sk', KeyType: 'RANGE' },
+          { AttributeName: 'GSI3PK', KeyType: 'HASH' },
+          { AttributeName: 'GSI3SK', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
       },
       {
-        IndexName: 'location_place',
+        IndexName: 'GSI4',
         KeySchema: [
-          { AttributeName: 'location_place_pk', KeyType: 'HASH' },
-          { AttributeName: 'location_place_sk', KeyType: 'RANGE' },
+          { AttributeName: 'GSI4PK', KeyType: 'HASH' },
+          { AttributeName: 'GSI4SK', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
       },
     ],
     KeySchema: [
-      { AttributeName: 'pk', KeyType: 'HASH' },
-      { AttributeName: 'sk', KeyType: 'RANGE' },
+      { AttributeName: 'PK', KeyType: 'HASH' },
+      { AttributeName: 'SK', KeyType: 'RANGE' },
     ],
     TableName: tableName,
   });

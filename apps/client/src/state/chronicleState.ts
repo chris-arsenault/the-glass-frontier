@@ -1,19 +1,18 @@
 import type {
-  Attribute,
+  AttributeTier,
   Character,
+  CharacterAttributeKey,
   Chronicle,
   ChronicleBeat,
   Intent,
+  InventoryDelta,
+  LlmTrace,
   LocationSummary,
   SkillCheckPlan,
   SkillCheckResult,
-  SkillTier,
   TranscriptEntry,
-  PendingEquip,
-  InventoryDelta,
-  LlmTrace,
-  PlayerFeedbackVisibilityLevel,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
+import type { PendingEquip, PlayerFeedbackVisibilityLevel } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
 export type ChronicleLifecycle = 'open' | 'closed';
@@ -26,7 +25,7 @@ export type ChatMessage = {
   skillCheckPlan?: SkillCheckPlan | null;
   skillCheckResult?: SkillCheckResult | null;
   skillKey?: string | null;
-  attributeKey?: Attribute | null;
+  attributeKey?: CharacterAttributeKey | null;
   playerIntent?: Intent | null;
   gmSummary?: string | null;
   gmTrace?: LlmTrace | null;
@@ -43,13 +42,13 @@ export type SkillProgressBadge =
   | {
       type: 'skill-gain';
       skill: string;
-      tier: SkillTier;
-      attribute?: Attribute | null;
+      tier: AttributeTier;
+      attribute?: CharacterAttributeKey | null;
     }
   | {
       type: 'skill-tier-up';
       skill: string;
-      tier: SkillTier;
+      tier: AttributeTier;
     };
 
 export type MomentumDirection = 'up' | 'down' | 'flat';
@@ -125,7 +124,7 @@ export type CharacterCreationDraft = {
   pronouns: string;
   attributes: Character['attributes'];
   skills: Character['skills'];
-}
+};
 
 export type ChronicleCreationDetails = {
   characterId?: string | null;

@@ -1,4 +1,4 @@
-import type { MomentumState } from '@glass-frontier/dto';
+import type { MomentumState } from '@glass-frontier/worldstate/dto';
 import React from 'react';
 
 import type { MomentumTrend } from '../../../state/chronicleState';

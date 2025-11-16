@@ -1,9 +1,9 @@
 import type {
   LocationBreadcrumbEntry,
+  LocationEdgeKind,
   LocationGraphSnapshot,
   LocationPlace,
-  LocationEdgeKind,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
 import { create } from 'zustand';
 
 import { locationClient } from '../lib/locationClient';

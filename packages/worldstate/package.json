@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./dto": {
+      "types": "./dist/dto/index.d.ts",
+      "import": "./dist/dto/index.js"
     }
   },
   "scripts": {

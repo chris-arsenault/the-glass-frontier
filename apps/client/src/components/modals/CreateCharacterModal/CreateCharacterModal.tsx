@@ -1,9 +1,9 @@
-import { Attribute, AttributeTier, SkillTier } from '@glass-frontier/dto';
-import type {
-  Attribute as AttributeName,
-  AttributeTier as AttributeTierValue,
-  SkillTier as SkillTierValue,
-} from '@glass-frontier/dto';
+import {
+  AttributeTierSchema,
+  CharacterAttributeKeySchema,
+  type AttributeTier,
+  type CharacterAttributeKey,
+} from '@glass-frontier/worldstate/dto';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import type { CharacterCreationDraft } from '../../../state/chronicleState';
@@ -15,25 +15,26 @@ import './CreateCharacterModal.css';
 type SkillDraft = {
   id: string;
   name: string;
-  tier: SkillTierValue;
-  attribute: AttributeName;
+  tier: AttributeTier;
 };
 
-const createDefaultAttributes = (): Record<AttributeName, AttributeTierValue> => ({
-  attunement: 'standard',
-  finesse: 'standard',
-  focus: 'standard',
-  ingenuity: 'standard',
-  presence: 'standard',
-  resolve: 'standard',
-  vitality: 'standard',
-});
+const ATTRIBUTE_KEYS = CharacterAttributeKeySchema.options;
+const DEFAULT_TIER: AttributeTier = 'rook';
+
+const createDefaultAttributes = (): Record<CharacterAttributeKey, AttributeTier> => {
+  return ATTRIBUTE_KEYS.reduce(
+    (acc, key) => {
+      acc[key] = DEFAULT_TIER;
+      return acc;
+    },
+    {} as Record<CharacterAttributeKey, AttributeTier>
+  );
+};
 
 const createSkillDraft = (): SkillDraft => ({
-  attribute: 'focus',
   id: typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}`,
   name: '',
-  tier: 'apprentice',
+  tier: DEFAULT_TIER,
 });
 
 export function CreateCharacterModal() {
@@ -46,7 +47,7 @@ export function CreateCharacterModal() {
   const [archetype, setArchetype] = useState('');
   const [pronouns, setPronouns] = useState('');
   const [attributes, setAttributes] =
-    useState<Record<AttributeName, AttributeTierValue>>(createDefaultAttributes);
+    useState<Record<CharacterAttributeKey, AttributeTier>>(createDefaultAttributes);
   const [skills, setSkills] = useState<SkillDraft[]>([createSkillDraft()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,9 +67,9 @@ export function CreateCharacterModal() {
     }
   }, [isOpen]);
 
-  const attributeOptions = useMemo(() => Attribute.options, []);
-  const attributeTierOptions = useMemo(() => AttributeTier.options, []);
-  const skillTierOptions = useMemo(() => SkillTier.options, []);
+  const attributeOptions = useMemo(() => ATTRIBUTE_KEYS, []);
+  const attributeTierOptions = useMemo(() => AttributeTierSchema.options, []);
+  const skillTierOptions = attributeTierOptions;
 
   const handleSkillChange = (id: string, field: keyof Omit<SkillDraft, 'id'>, value: string) => {
     setSkills((prev) =>
@@ -76,7 +77,7 @@ export function CreateCharacterModal() {
         skill.id === id
           ? {
             ...skill,
-            [field]: value,
+            [field]: field === 'tier' ? (value as AttributeTier) : value,
           }
           : skill
       )
@@ -104,10 +105,9 @@ export function CreateCharacterModal() {
         .filter((skill) => skill.name.trim().length > 0)
         .reduce<CharacterCreationDraft['skills']>((acc, skill) => {
           acc[skill.name.trim()] = {
-            attribute: skill.attribute as AttributeName,
             name: skill.name.trim(),
-            tier: skill.tier as SkillTierValue,
-            xp: 0,
+            tags: [],
+            tier: skill.tier,
           };
           return acc;
         }, {}),
@@ -179,11 +179,11 @@ export function CreateCharacterModal() {
                 <label key={attribute} className="form-field">
                   <span>{attribute}</span>
                   <select
-                    value={attributes[attribute as AttributeName]}
+                    value={attributes[attribute as CharacterAttributeKey]}
                     onChange={(event) =>
                       setAttributes((prev) => ({
                         ...prev,
-                        [attribute as AttributeName]: event.target.value as AttributeTierValue,
+                        [attribute as CharacterAttributeKey]: event.target.value as AttributeTier,
                       }))
                     }
                   >
@@ -221,18 +221,6 @@ export function CreateCharacterModal() {
                     {skillTierOptions.map((tier) => (
                       <option key={tier} value={tier}>
                         {tier}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={skill.attribute}
-                    onChange={(event) =>
-                      handleSkillChange(skill.id, 'attribute', event.target.value)
-                    }
-                  >
-                    {attributeOptions.map((attribute) => (
-                      <option key={attribute} value={attribute}>
-                        {attribute}
                       </option>
                     ))}
                   </select>

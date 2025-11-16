@@ -1,49 +1,43 @@
-import {
-  createEmptyInventory,
-  type Character,
-  type PendingEquip,
-  type Slot,
-} from '@glass-frontier/dto';
+import type { Character, Inventory, InventoryEntry } from '@glass-frontier/worldstate/dto';
+import type { PendingEquip, Slot } from '@glass-frontier/dto';
 import { type ReactNode, useCallback, useMemo } from 'react';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import type { MomentumTrend } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndicator';
+import { createEmptyInventory } from '../../../utils/worldstateDefaults';
 import './CharacterOverview.css';
 
 const slotOrder: Slot[] = ['outfit', 'headgear', 'armament', 'module'];
 
 type NormalizedSkill = {
-  attribute?: string | null;
   name: string;
   tier: string;
-  xp: number;
+  lastAdvancedAt?: string | null;
 };
 
-type InventoryState = ReturnType<typeof createEmptyInventory>;
+type InventoryState = Inventory;
 
 type CharacterOverviewProps = {
   showEmptyState?: boolean;
 };
 
 const getTierRank = (tier: string): number => {
-  if (tier === 'legend') {
+  switch (tier) {
+  case 'legend':
     return 5;
-  }
-  if (tier === 'virtuoso') {
+  case 'virtuoso':
     return 4;
-  }
-  if (tier === 'artisan') {
+  case 'adept':
     return 3;
-  }
-  if (tier === 'apprentice') {
+  case 'rook':
     return 2;
-  }
-  if (tier === 'fool') {
+  case 'fool':
     return 1;
+  default:
+    return 0;
   }
-  return 0;
 };
 
 const getSlotLabel = (slot: Slot): string => {
@@ -62,40 +56,29 @@ const getSlotLabel = (slot: Slot): string => {
   return slot;
 };
 
-const getEquippedItem = (
-  inventory: InventoryState,
-  slot: Slot
-): InventoryState['gear'][Slot] | null => {
-  const { armament, headgear, module, outfit } = inventory.gear;
-  if (slot === 'armament') {
-    return armament ?? null;
-  }
-  if (slot === 'headgear') {
-    return headgear ?? null;
-  }
-  if (slot === 'module') {
-    return module ?? null;
-  }
-  if (slot === 'outfit') {
-    return outfit ?? null;
-  }
-  return null;
+const getEquippedItem = (inventory: InventoryState, slot: Slot): InventoryEntry | null => {
+  const entry = inventory.equipped?.[slot];
+  return entry ?? null;
 };
 
 const computeTopSkills = (character: Character | null): NormalizedSkill[] => {
-  if (character === null || character.skills === undefined) {
+  if (!character || !character.skills) {
     return [];
   }
   return Object.entries(character.skills)
     .map(([name, skill]) => ({
-      attribute: skill.attribute,
+      lastAdvancedAt: skill.lastAdvancedAt ?? null,
       name,
       tier: skill.tier,
-      xp: skill.xp ?? 0,
     }))
     .sort((a, b) => {
       const tierDiff = getTierRank(b.tier) - getTierRank(a.tier);
-      return tierDiff !== 0 ? tierDiff : b.xp - a.xp;
+      if (tierDiff !== 0) {
+        return tierDiff;
+      }
+      const aTime = a.lastAdvancedAt ? Date.parse(a.lastAdvancedAt) : 0;
+      const bTime = b.lastAdvancedAt ? Date.parse(b.lastAdvancedAt) : 0;
+      return bTime - aTime;
     })
     .slice(0, 4);
 };
@@ -108,9 +91,17 @@ const buildPendingBySlot = (entries: PendingEquip[]): Map<Slot, PendingEquip> =>
   return map;
 };
 
-const buildImbuedIndex = (inventory: InventoryState): Map<string, string> => {
+const buildInventoryIndex = (inventory: InventoryState): Map<string, string> => {
   const map = new Map<string, string>();
-  for (const item of inventory.imbued_items) {
+  Object.values(inventory.equipped ?? {}).forEach((entry) => {
+    if (entry) {
+      map.set(entry.id, entry.name);
+    }
+  });
+  for (const item of inventory.carried ?? []) {
+    map.set(item.id, item.name);
+  }
+  for (const item of inventory.stored ?? []) {
     map.set(item.id, item.name);
   }
   return map;
@@ -368,7 +359,7 @@ const useCharacterOverviewState = (): OverviewData => {
 
   const pendingBySlot = useMemo(() => buildPendingBySlot(pendingEquip), [pendingEquip]);
 
-  const imbuedIndex = useMemo(() => buildImbuedIndex(inventory), [inventory]);
+  const inventoryIndex = useMemo(() => buildInventoryIndex(inventory), [inventory]);
 
   const describePending = useCallback(
     (entry?: PendingEquip): string | null => {
@@ -378,10 +369,10 @@ const useCharacterOverviewState = (): OverviewData => {
       if ('unequip' in entry && entry.unequip) {
         return 'Queued: unequip';
       }
-      const label = imbuedIndex.get(entry.itemId) ?? 'Queued item';
+      const label = entry.itemId ? inventoryIndex.get(entry.itemId) ?? 'Queued item' : 'Queued item';
       return `Queued: ${label}`;
     },
-    [imbuedIndex]
+    [inventoryIndex]
   );
 
   return {
@@ -397,148 +388,44 @@ const useCharacterOverviewState = (): OverviewData => {
   };
 };
 
-const ImbuedItemsSection = ({
-  inventory,
-  pendingBySlot,
-  queueEquipChange,
+const InventoryListSection = ({
+  entries,
+  emptyMessage,
+  title,
 }: {
-  inventory: InventoryState;
-  pendingBySlot: Map<Slot, PendingEquip>;
-  queueEquipChange: (entry: PendingEquip) => void;
+  entries: InventoryEntry[];
+  emptyMessage: string;
+  title: string;
 }): JSX.Element => (
-  <InventorySection
-    title="Imbued Items"
-    hasItems={inventory.imbued_items.length > 0}
-    emptyMessage="No imbued items cataloged."
-  >
+  <InventorySection title={title} hasItems={entries.length > 0} emptyMessage={emptyMessage}>
     <ul className="inventory-list">
-      {inventory.imbued_items.map((item) => {
-        const pendingEntry = pendingBySlot.get(item.slot);
-        const isQueued =
-          pendingEntry !== undefined &&
-          !('unequip' in pendingEntry && pendingEntry.unequip) &&
-          'itemId' in pendingEntry &&
-          pendingEntry.itemId === item.id;
-        return (
-          <li key={item.id} className="inventory-list-item">
-            <div>
-              <p className="inventory-item-name">{item.name}</p>
-              <p className="inventory-item-meta">{getSlotLabel(item.slot)}</p>
-            </div>
-            <button
-              type="button"
-              className={`inventory-equip-button${isQueued ? ' queued' : ''}`}
-              onClick={() => queueEquipChange({ itemId: item.id, slot: item.slot })}
-            >
-              {isQueued ? 'Queued' : 'Equip'}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
-  </InventorySection>
-);
-
-const RelicsSection = ({ inventory }: { inventory: InventoryState }): JSX.Element => (
-  <InventorySection
-    title="Relics"
-    hasItems={inventory.relics.length > 0}
-    emptyMessage="No relics recorded."
-  >
-    <ul className="inventory-list">
-      {inventory.relics.map((relic) => (
-        <li key={relic.id} className="inventory-list-item">
-          <div>
-            <p className="inventory-item-name">{relic.name}</p>
-            <p className="inventory-item-meta">{relic.hook}</p>
-          </div>
-          {relic.unknown_usage === true ? (
-            <span className="pending-chip chip-muted">??</span>
-          ) : null}
-        </li>
-      ))}
-    </ul>
-  </InventorySection>
-);
-
-const DataShardsSection = ({ inventory }: { inventory: InventoryState }): JSX.Element => (
-  <InventorySection
-    title="Data Shards"
-    hasItems={inventory.data_shards.length > 0}
-    emptyMessage="No data shards on hand."
-  >
-    <ul className="inventory-list">
-      {inventory.data_shards.map((shard) => (
-        <li key={shard.id} className="inventory-list-item">
-          <div>
-            <p className="inventory-item-name">{shard.name}</p>
-            <p className="inventory-item-meta">
-              {shard.kind === 'chronicle_active' ? shard.purpose : shard.seed}
-            </p>
-          </div>
-          <span className="inventory-tag">{shard.kind.replace('chronicle_', '')}</span>
-        </li>
-      ))}
-    </ul>
-  </InventorySection>
-);
-
-const ConsumablesSection = ({ inventory }: { inventory: InventoryState }): JSX.Element => (
-  <InventorySection
-    title="Consumables"
-    hasItems={inventory.consumables.length > 0}
-    emptyMessage="No consumables stocked."
-  >
-    <ul className="inventory-list">
-      {inventory.consumables.map((item) => (
+      {entries.map((item) => (
         <li key={item.id} className="inventory-list-item">
           <div>
             <p className="inventory-item-name">{item.name}</p>
+            {item.tags.length > 0 ? (
+              <p className="inventory-item-meta">{item.tags.join(', ')}</p>
+            ) : null}
           </div>
-          <span className="inventory-tag">x{item.count}</span>
+          {item.quantity > 1 ? <span className="inventory-tag">x{item.quantity}</span> : null}
         </li>
       ))}
     </ul>
   </InventorySection>
 );
 
-const SuppliesSection = ({ inventory }: { inventory: InventoryState }): JSX.Element => (
-  <InventorySection
-    title="Supplies"
-    hasItems={inventory.supplies.length > 0}
-    emptyMessage="No supplies logged."
-  >
-    <ul className="inventory-list">
-      {inventory.supplies.map((item) => (
-        <li key={item.id} className="inventory-list-item">
-          <div>
-            <p className="inventory-item-name">{item.name}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  </InventorySection>
-);
-
-const InventoryLists = ({
-  inventory,
-  pendingBySlot,
-  queueEquipChange,
-}: {
-  inventory: InventoryState;
-  pendingBySlot: Map<Slot, PendingEquip>;
-  queueEquipChange: (entry: PendingEquip) => void;
-}): JSX.Element => (
+const InventoryLists = ({ inventory }: { inventory: InventoryState }): JSX.Element => (
   <>
-    <ImbuedItemsSection
-      inventory={inventory}
-      pendingBySlot={pendingBySlot}
-      queueEquipChange={queueEquipChange}
+    <InventoryListSection
+      entries={inventory.carried}
+      title="Carried Items"
+      emptyMessage="No items carried."
     />
-    <RelicsSection inventory={inventory} />
-    <DataShardsSection inventory={inventory} />
-    <ConsumablesSection inventory={inventory} />
-    <SuppliesSection inventory={inventory} />
+    <InventoryListSection
+      entries={inventory.stored}
+      title="Stored Items"
+      emptyMessage="No stored equipment."
+    />
   </>
 );
 
@@ -571,11 +458,7 @@ export function CharacterOverview({
         clearPendingEquipQueue={overview.clearPendingEquipQueue}
       />
 
-      <InventoryLists
-        inventory={overview.inventory}
-        pendingBySlot={overview.pendingBySlot}
-        queueEquipChange={overview.queueEquipChange}
-      />
+      <InventoryLists inventory={overview.inventory} />
     </section>
   );
 }

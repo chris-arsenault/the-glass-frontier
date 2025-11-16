@@ -1,7 +1,7 @@
 import type {
   LocationEdgeKind as LocationEdgeKindType,
   LocationPlace,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';

@@ -1,4 +1,4 @@
-import type { InventoryDelta } from '@glass-frontier/dto';
+import type { InventoryDelta } from '@glass-frontier/worldstate/dto';
 import React from 'react';
 
 import './InventoryDeltaBadge.css';
@@ -37,11 +37,10 @@ type InventoryOp = NonNullable<InventoryDelta['ops']>[number];
 type MetaResolver = (op: InventoryOp, amount: number | null) => string | null;
 
 const metaResolvers: Record<string, MetaResolver> = {
-  add: (op) => op.hook ?? op.purpose ?? op.seed ?? null,
-  consume: (_op, amount) =>
-    typeof amount === 'number' && amount > 0 ? `x${amount}` : null,
-  remove: (op) => op.hook ?? op.purpose ?? op.seed ?? null,
-  spend_shard: (op) => op.purpose ?? op.seed ?? null,
+  add: (op) => op.hook ?? null,
+  consume: (_op, amount) => (typeof amount === 'number' && amount > 0 ? `x${amount}` : null),
+  remove: (op) => op.hook ?? null,
+  spend_shard: (op) => op.hook ?? null,
 };
 
 const resolveMetaLabel = (op: InventoryOp, amount: number | null): string | null => {

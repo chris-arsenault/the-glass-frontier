@@ -1,4 +1,4 @@
-import type { LocationGraphSnapshot, LocationPlace } from '@glass-frontier/dto';
+import type { LocationGraphSnapshot, LocationPlace } from '@glass-frontier/worldstate/dto';
 import { DataGrid } from '@mui/x-data-grid';
 import type {
   GridColDef,

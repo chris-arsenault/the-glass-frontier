@@ -1,4 +1,4 @@
-import type { LocationPlace } from '@glass-frontier/dto';
+import type { LocationPlace } from '@glass-frontier/worldstate/dto';
 import React from 'react';
 
 type RootSelectorBarProps = {

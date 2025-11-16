@@ -2,7 +2,7 @@ import type {
   LocationBreadcrumbEntry,
   LocationGraphSnapshot,
   LocationPlace,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate/dto';
 import { useCallback, useEffect, useState } from 'react';
 
 import { locationClient } from '../../../../lib/locationClient';

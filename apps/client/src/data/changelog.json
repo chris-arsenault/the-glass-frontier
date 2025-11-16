@@ -138,5 +138,12 @@
     "summary": "Chronicle API now runs on the v2 world state",
     "details": "Rewired the chronicle Lambda to use the new @glass-frontier/worldstate package for characters, chronicles, turns, locations, and beat tracking; rebuilt the router, narrative engine, and seed service to read/write the Dynamo/S3-backed store directly; refreshed the Playwright fixtures; and shipped general-purpose patch APIs so future services can build on the same persistence layer.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-client-worldstate-migration",
+    "releasedAt": "2025-11-21",
+    "summary": "Client UI now consumes world state v2 DTOs",
+    "details": "Repointed the chronicle store, chat canvas, character panels, start wizard, and location maintenance UI to the new @glass-frontier/worldstate/dto contracts so characters, turns, intents, and locations all share the same schemas as the upgraded chronicle API. The player UI now renders the v2 inventory/skill data, reads location breadcrumbs from the shared store, and boots shard-based chronicles through the new metadata-aware workflow.",
+    "type": "improvement"
   }
 ]
