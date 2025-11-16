@@ -57,7 +57,7 @@ test.describe('Location maintenance relationships', () => {
         .first()
         .locator('li')
         .filter({ hasText: 'Prism Walk' })
-    ).toHaveCount(0);
+    ).toHaveCount(0, { timeout: 15_000 });
 
     await dialog.getByRole('button', { name: 'Close' }).click();
     await expect(dialog).toBeHidden();

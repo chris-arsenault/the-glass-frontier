@@ -108,7 +108,7 @@ const normalizeEdgeKind = (value: string): LocationEdgeKind => {
   if ((EDGE_KIND_VALUES as readonly string[]).includes(candidate)) {
     return candidate;
   }
-  return 'CONNECTED_TO';
+  return EDGE_KIND_VALUES[0];
 };
 
 const submitPlaceUpdate = async (placeId: string, payload: UpdatePlacePayload) => {

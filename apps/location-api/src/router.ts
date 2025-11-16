@@ -135,10 +135,10 @@ export const locationRouter = t.router({
   removeLocationEdge: t.procedure
     .input(
       z.object({
-        dst: z.string().uuid(),
-        kind: z.nativeEnum(LocationEdgeKind),
-        locationId: z.string().uuid(),
-        src: z.string().uuid(),
+        dst: z.uuid(),
+        kind: LocationEdgeKind,
+        locationId: z.uuid(),
+        src: z.uuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
