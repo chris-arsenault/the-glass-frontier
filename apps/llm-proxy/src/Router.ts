@@ -170,7 +170,7 @@ class Router {
     const attemptCtx: ProviderAttemptContext = {
       attempt: index + 1,
       providerId: provider.id,
-    }
+    };
 
     const { evaluation, preparedPayload } = await this.executeProviderAttempt(
       provider,

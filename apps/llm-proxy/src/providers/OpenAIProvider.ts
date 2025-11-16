@@ -201,11 +201,11 @@ class OpenAIProvider extends BaseProvider {
     const modelKey = typeof body.model === 'string' ? body.model : '';
     const request: ResponsesCreateParams = {
       input: input as never,
-      model: modelKey,
-      stream: false,
       metadata: {
         nodeId: body.metadata.nodeId
-      }
+      },
+      model: modelKey,
+      stream: false
     };
 
     if (typeof body.temperature === 'number') {

@@ -177,8 +177,8 @@ export const locationRouter = t.router({
       return withMutationTelemetry(
         'update-place',
         {
-          placeId: input.placeId,
           parentId: input.parentId ?? null,
+          placeId: input.placeId,
         },
         async () => {
           const place = await ctx.locationGraphStore.updatePlace({

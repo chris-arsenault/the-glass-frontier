@@ -1,8 +1,8 @@
 'use strict';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 import type { S3Client } from '@aws-sdk/client-s3';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 import { LocationGraphIndexRepository } from './locationGraphIndexRepository';
 import type { LocationGraphStore } from './locationGraphStore';

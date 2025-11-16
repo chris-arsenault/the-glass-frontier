@@ -1,6 +1,6 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { log } from '@glass-frontier/utils';
 import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
+import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
 type ArchiveRecord = {

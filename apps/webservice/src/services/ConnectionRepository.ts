@@ -6,8 +6,8 @@ import {
   PutCommand,
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { log } from '@glass-frontier/utils';
 import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
+import { log } from '@glass-frontier/utils';
 
 import { websocketConfig } from './env';
 

@@ -13,8 +13,8 @@ import {
   type PlayerTemplateSlot,
   type PlayerTemplateVariant,
 } from '@glass-frontier/dto';
-import type { WorldStateStore } from '@glass-frontier/persistence';
 import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
+import type { WorldStateStore } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
 
 import {
