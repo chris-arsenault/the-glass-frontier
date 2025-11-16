@@ -14,6 +14,7 @@ import {
   DynamoWorldStateStore,
   type WorldStateStoreV2,
 } from '@glass-frontier/worldstate';
+import { createAwsDynamoClient, createAwsS3Client } from '@glass-frontier/node-utils';
 
 import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
@@ -28,10 +29,15 @@ if (typeof worldStateTable !== 'string' || worldStateTable.trim().length === 0) 
   throw new Error('WORLD_STATE_TABLE_NAME must be configured for the narrative service');
 }
 
+const sharedDynamoClient = createAwsDynamoClient();
+const sharedS3Client = createAwsS3Client();
+
 const worldStateStore: WorldStateStoreV2 = new DynamoWorldStateStore({
   bucketName: worldStateBucket,
   tableName: worldStateTable,
   s3Prefix: worldStatePrefix,
+  dynamoClient: sharedDynamoClient,
+  s3Client: sharedS3Client,
 });
 const playerStore: LegacyWorldStateStore = createLegacyWorldStateStore({
   bucket: worldStateBucket,

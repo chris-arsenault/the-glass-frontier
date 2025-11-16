@@ -16,10 +16,17 @@ export function LocationOverview() {
   }
 
   const breadcrumb = location.breadcrumb.map((entry) => entry.name).join(' › ');
-  const status = location.status.join(', ');
-  const tagSnippet = location.tags.slice(0, 3).join(', ');
+  const status = (location.status ?? []).join(', ');
+  const tagSnippet = (location.tags ?? []).slice(0, 3).join(', ');
+  const rawCertainty = (location as { certainty?: string | number | undefined })?.certainty;
   const certaintyLabel =
-    location.certainty === 'exact' ? 'fixed position' : location.certainty.toUpperCase();
+    typeof rawCertainty === 'string'
+      ? rawCertainty === 'exact'
+        ? 'fixed position'
+        : rawCertainty.toUpperCase()
+      : typeof rawCertainty === 'number'
+        ? `${Math.round(rawCertainty * 100)}% certainty`
+        : null;
   const meta = [status, certaintyLabel].filter(Boolean).join(' · ');
   const detail = location.description || tagSnippet || 'Exploring new ground.';
 

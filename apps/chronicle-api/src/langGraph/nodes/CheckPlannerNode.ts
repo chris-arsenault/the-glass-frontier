@@ -8,6 +8,8 @@ import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode, GraphNodeResult } from '../orchestrator.js';
 import { composeCheckRulesPrompt } from '../prompts/prompts';
 
+const RiskLevelEnumSchema = z.enum(['controlled', 'standard', 'risky', 'desperate']);
+
 const PlannerPlanSchema = z.object({
   advantage: z
     .enum(['advantage', 'disadvantage', 'none'])
@@ -142,8 +144,11 @@ class CheckPlannerNode implements GraphNode {
     };
   }
 
-  #toSkillCheckPlan(plan: PlannerPlan): SkillCheckPlan {
+  #toSkillCheckPlan(plan: PlannerPlan, context: GraphContext): SkillCheckPlan {
+    const fallbackSkill = this.#resolveSkillLabel(context.playerIntent);
     return {
+      skill: fallbackSkill,
+      attribute: context.playerIntent?.attribute,
       advantage: plan.advantage,
       complicationSeeds: plan.complicationSeeds,
       metadata: {
@@ -289,7 +294,7 @@ class CheckPlannerNode implements GraphNode {
     }
 
     const plan = this.#mergePlan(overrides);
-    const skillCheckPlan = this.#toSkillCheckPlan(plan);
+    const skillCheckPlan = this.#toSkillCheckPlan(plan, context);
     const flags = this.#buildFlags(context.playerIntent!, plan.advantage);
     const skillCheckResult = this.#resolveSkillCheck({
       character: context.chronicle.character!,
@@ -299,6 +304,16 @@ class CheckPlannerNode implements GraphNode {
       riskLevel: plan.riskLevel,
     });
     return { skillCheckPlan, skillCheckResult };
+  }
+
+  #resolveSkillLabel(intent?: GraphContext['playerIntent']): string {
+    if (typeof intent?.skill === 'string' && intent.skill.trim().length > 0) {
+      return intent.skill.trim();
+    }
+    if (typeof intent?.summary === 'string' && intent.summary.trim().length > 0) {
+      return intent.summary.trim();
+    }
+    return 'untrained action';
   }
 }
 

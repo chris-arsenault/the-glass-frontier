@@ -4,6 +4,7 @@ import {
   AuditModerationStore,
 } from '@glass-frontier/persistence';
 import { DynamoWorldStateStore } from '@glass-frontier/worldstate/persistence';
+import { createAwsDynamoClient, createAwsS3Client } from '@glass-frontier/node-utils';
 
 import { PromptTemplateManager } from './templateManager/PromptTemplateManager';
 
@@ -31,6 +32,8 @@ const worldStateStore = new DynamoWorldStateStore({
   bucketName: worldStateBucket.trim(),
   tableName: worldStateTable.trim(),
   s3Prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
+  dynamoClient: createAwsDynamoClient(),
+  s3Client: createAwsS3Client(),
 });
 
 const templateManager = new PromptTemplateManager({

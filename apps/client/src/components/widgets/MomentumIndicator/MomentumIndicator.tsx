@@ -5,10 +5,10 @@ import type { MomentumTrend } from '../../../state/chronicleState';
 import './MomentumIndicator.css';
 
 type MomentumIndicatorProps = {
-  momentum: MomentumState;
+  momentum?: MomentumState | null;
   trend: MomentumTrend | null;
   label?: string;
-}
+};
 
 type MomentumDirection = MomentumTrend['direction']; // convenience alias
 
@@ -19,6 +19,9 @@ const SYMBOLS: Record<MomentumDirection, string> = {
 };
 
 export function MomentumIndicator({ label, momentum, trend }: MomentumIndicatorProps) {
+  if (!momentum) {
+    return null;
+  }
   const direction = trend?.direction ?? 'flat';
   const symbol = SYMBOLS[direction];
   const title = `${label ?? 'Momentum'} ${momentum.current} (floor ${momentum.floor}, ceiling ${momentum.ceiling})`;

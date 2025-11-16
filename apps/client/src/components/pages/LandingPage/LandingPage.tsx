@@ -18,8 +18,8 @@ const formatDate = (value: string, options?: Intl.DateTimeFormatOptions): string
 
 export function LandingPage(): JSX.Element {
   const navigate = useNavigate();
-  const availableChronicles = useChronicleStore((state) => state.availableChronicles);
-  const availableCharacters = useChronicleStore((state) => state.availableCharacters);
+  const availableChronicles = useChronicleStore((state) => state.availableChronicles ?? []);
+  const availableCharacters = useChronicleStore((state) => state.availableCharacters ?? []);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
   const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);

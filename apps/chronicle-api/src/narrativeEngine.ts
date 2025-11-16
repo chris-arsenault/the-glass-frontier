@@ -20,6 +20,7 @@ import {
   DynamoWorldStateStore,
   type WorldStateStoreV2,
 } from '@glass-frontier/worldstate';
+import { createAwsDynamoClient, createAwsS3Client } from '@glass-frontier/node-utils';
 import { formatTurnJobId, log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -190,6 +191,8 @@ class NarrativeEngine {
       bucketName: bucket,
       tableName: table,
       s3Prefix: prefix,
+      dynamoClient: createAwsDynamoClient(),
+      s3Client: createAwsS3Client(),
     });
   }
 

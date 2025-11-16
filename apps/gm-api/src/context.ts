@@ -1,4 +1,5 @@
 import { DynamoWorldStateStore, type WorldStateStoreV2 } from '@glass-frontier/worldstate';
+import { createAwsDynamoClient, createAwsS3Client } from '@glass-frontier/node-utils';
 
 import { GmEngine } from './gmEngine';
 import { WorldstateSessionFactory } from './worldstateSession';
@@ -23,6 +24,8 @@ const worldStateStore: WorldStateStoreV2 = new DynamoWorldStateStore({
   bucketName,
   s3Prefix,
   tableName,
+  dynamoClient: createAwsDynamoClient(),
+  s3Client: createAwsS3Client(),
 });
 
 const gmEngine = new GmEngine();

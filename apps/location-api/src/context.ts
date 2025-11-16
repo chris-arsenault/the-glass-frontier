@@ -1,5 +1,6 @@
 import { DynamoWorldStateStore } from '@glass-frontier/worldstate';
 import type { WorldStateStoreV2 } from '@glass-frontier/worldstate';
+import { createAwsDynamoClient, createAwsS3Client } from '@glass-frontier/node-utils';
 
 const required = (value: string | undefined | null, name: string): string => {
   if (value?.trim()) return value;
@@ -10,6 +11,8 @@ const worldStateStore: WorldStateStoreV2 = new DynamoWorldStateStore({
   bucketName: required(process.env.WORLD_STATE_S3_BUCKET, 'WORLD_STATE_S3_BUCKET'),
   tableName: required(process.env.WORLD_STATE_TABLE_NAME, 'WORLD_STATE_TABLE_NAME'),
   s3Prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
+  dynamoClient: createAwsDynamoClient(),
+  s3Client: createAwsS3Client(),
 });
 
 export type Context = {

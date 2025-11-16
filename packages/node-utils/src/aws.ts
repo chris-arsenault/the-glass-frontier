@@ -1,4 +1,6 @@
 
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
 import { fromEnv } from '@aws-sdk/credential-providers';
 
 const isNonEmptyString = (value: unknown): value is string => {
@@ -71,4 +73,29 @@ const hasExplicitAwsCredentials = (): boolean => {
   const accessKey = process.env.AWS_ACCESS_KEY_ID ?? '';
   const secretKey = process.env.AWS_SECRET_ACCESS_KEY ?? '';
   return accessKey.trim().length > 0 && secretKey.trim().length > 0;
+};
+
+type ClientOptions = { region?: string };
+
+export const createAwsDynamoClient = (options?: ClientOptions): DynamoDBClient => {
+  const region = options?.region ?? resolveAwsRegion();
+  const endpoint = resolveAwsEndpoint('dynamodb');
+  const credentials = resolveAwsCredentials();
+  return new DynamoDBClient({
+    region,
+    ...(endpoint ? { endpoint } : {}),
+    ...(credentials ? { credentials } : {}),
+  });
+};
+
+export const createAwsS3Client = (options?: ClientOptions): S3Client => {
+  const region = options?.region ?? resolveAwsRegion();
+  const endpoint = resolveAwsEndpoint('s3');
+  const credentials = resolveAwsCredentials();
+  return new S3Client({
+    forcePathStyle: shouldForcePathStyle(),
+    region,
+    ...(endpoint ? { endpoint } : {}),
+    ...(credentials ? { credentials } : {}),
+  });
 };

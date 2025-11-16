@@ -136,20 +136,24 @@ const CharacterHeader = ({ character, momentumTrend }: HeaderProps): JSX.Element
 );
 
 type AttributesPanelProps = {
-  attributes: Character['attributes'];
+  attributes?: Character['attributes'] | null;
 };
 
 const AttributesPanel = ({ attributes }: AttributesPanelProps): JSX.Element => (
   <div>
     <h3 className="panel-label">Attributes</h3>
-    <dl className="panel-list">
-      {Object.entries(attributes).map(([key, value]) => (
-        <div key={key} className="panel-list-row">
-          <dt>{key}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
+    {attributes ? (
+      <dl className="panel-list">
+        {Object.entries(attributes).map(([key, value]) => (
+          <div key={key} className="panel-list-row">
+            <dt>{key}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    ) : (
+      <p className="session-panel-empty">Attributes unavailable.</p>
+    )}
   </div>
 );
 

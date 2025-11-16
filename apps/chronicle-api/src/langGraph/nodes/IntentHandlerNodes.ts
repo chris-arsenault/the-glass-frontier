@@ -61,9 +61,12 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       advancesTimeline: this.#config.advancesTimeline,
       gmMessage: transcript,
       gmTrace: {
-        auditId: narration.requestId,
-        nodeId: this.id,
+        provider: narration.provider,
         requestId: narration.requestId,
+        metadata: {
+          nodeId: this.id,
+          chronicleId: context.chronicleId,
+        },
       },
       handlerId: this.id,
       resolvedIntentType: this.#config.intentType,
@@ -90,7 +93,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
   async #generateNarration(
     context: GraphContext,
     prompt: string
-  ): Promise<{ text: string; requestId: string } | null> {
+  ): Promise<{ text: string; requestId: string; provider: string } | null> {
     try {
       const requestId = this.#buildRequestId(context);
       const result = await context.llm.generateText({
@@ -104,7 +107,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       if (!isNonEmptyString(text)) {
         return null;
       }
-      return { requestId: result.requestId, text };
+      return { provider: result.provider, requestId: result.requestId, text };
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,

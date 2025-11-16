@@ -160,9 +160,9 @@ export type WorldStateStoreOptions = {
   s3Prefix?: string;
   defaultPageSize?: number;
   turnChunkSize?: number;
-  dynamoClient?: DynamoDBClient;
+  dynamoClient: DynamoDBClient;
   documentClient?: DynamoDBDocumentClient;
-  s3Client?: S3Client;
+  s3Client: S3Client;
   indexes?: Partial<typeof DEFAULT_INDEXES>;
 };
 
@@ -304,10 +304,10 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     this.#bucketName = options.bucketName;
     this.#docClient =
       options.documentClient ??
-      DynamoDBDocumentClient.from(options.dynamoClient ?? new DynamoDBClient({}), {
+      DynamoDBDocumentClient.from(options.dynamoClient, {
         marshallOptions: { removeUndefinedValues: true },
       });
-    this.#s3 = options.s3Client ?? new S3Client({});
+    this.#s3 = options.s3Client;
     this.#keys = new WorldStateKeyFactory(options.s3Prefix);
     this.#pageSize = options.defaultPageSize ?? DEFAULT_PAGE_SIZE;
     this.#turnChunkSize = options.turnChunkSize ?? DEFAULT_TURN_CHUNK_SIZE;

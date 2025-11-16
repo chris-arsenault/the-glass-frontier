@@ -9,6 +9,7 @@ import {
   DynamoWorldStateStore,
   type WorldStateStoreV2,
 } from '@glass-frontier/worldstate';
+import { createAwsDynamoClient, createAwsS3Client } from '@glass-frontier/node-utils';
 import { LangGraphLlmClient } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
@@ -44,6 +45,8 @@ const defaultWorldStateStore = new DynamoWorldStateStore({
   tableName: requireEnv(process.env.WORLD_STATE_TABLE_NAME, 'WORLD_STATE_TABLE_NAME'),
   bucketName: requireEnv(process.env.WORLD_STATE_S3_BUCKET, 'WORLD_STATE_S3_BUCKET'),
   s3Prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
+  dynamoClient: createAwsDynamoClient(),
+  s3Client: createAwsS3Client(),
 });
 
 class ChronicleClosureProcessor {

@@ -744,16 +744,19 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         trpcClient.listChronicles.query({ loginId: identity.loginId }),
       ]);
 
+      const characterList = Array.isArray(characters) ? characters : characters?.items ?? [];
+      const chronicleList = Array.isArray(chronicles) ? chronicles : chronicles?.items ?? [];
+
       set((prev) => ({
         ...prev,
-        availableCharacters: characters ?? [],
-        availableChronicles: chronicles ?? [],
+        availableCharacters: characterList,
+        availableChronicles: chronicleList,
         directoryError: null,
         directoryStatus: 'ready',
         loginId: identity.loginId,
         loginName: identity.loginName,
         preferredCharacterId:
-          prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId,
+          prev.preferredCharacterId ?? characterList[0]?.id ?? prev.preferredCharacterId,
       }));
     } catch (error: unknown) {
       const nextError =
