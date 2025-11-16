@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"action\":\"no_change\",\"destination\":\"Prism Walk\",\"link\":\"same\"}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"action\":\"no_change\",\"destination\":\"Prism Walk\",\"link\":\"same\"}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 6,
+    "output_tokens": 10,
+    "total_tokens": 16
+  }
+}

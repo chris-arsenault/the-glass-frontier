@@ -24,6 +24,8 @@
       "@glass-frontier/dto/*": ["packages/dto/src/*"],
       "@glass-frontier/utils": ["packages/utils/src/index.ts"],
       "@glass-frontier/utils/*": ["packages/utils/src/*"],
+      "@glass-frontier/node-utils": ["packages/node-utils/src/index.ts"],
+      "@glass-frontier/node-utils/*": ["packages/node-utils/src/*"],
       "@glass-frontier/skill-check-resolver": ["packages/skill-check-resolver/src/index.ts"],
       "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
       "@glass-frontier/persistence": ["packages/persistence/src/index.ts"],

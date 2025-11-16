@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "MOCK: default response."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "MOCK: default response."
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 4,
+    "output_tokens": 2,
+    "total_tokens": 6
+  }
+}

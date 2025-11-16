@@ -13,6 +13,7 @@ import {
   type PlayerTemplateSlot,
   type PlayerTemplateVariant,
 } from '@glass-frontier/dto';
+import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
 import type { WorldStateStore } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
 
@@ -88,9 +89,12 @@ export class PromptTemplateManager {
     this.#bucket = bucket;
     this.#playerPrefix = this.#normalizePrefix(playerPrefixInput);
     this.#worldState = options.worldStateStore;
+    const region = options.region ?? resolveAwsRegion();
+    const endpoint = resolveAwsEndpoint('s3');
     this.#client = new S3Client({
-      region:
-        options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+      forcePathStyle: shouldForcePathStyle(),
+      region,
+      ...(endpoint ? { endpoint } : {}),
     });
   }
 

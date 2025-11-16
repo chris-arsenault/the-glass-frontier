@@ -122,7 +122,9 @@ class Router {
     context?: { playerId?: string; requestId?: string }
   ): Promise<unknown> {
     const { metadata, payloadBody } = this.extractInvocationParts(body);
-    const payload = new Payload(payloadBody);
+    const payload = new Payload(
+      metadata !== undefined ? { ...payloadBody, metadata } : payloadBody
+    );
     const providers = this.registry.providerOrder();
 
     if (providers.length === 0) {

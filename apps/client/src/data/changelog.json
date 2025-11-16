@@ -117,5 +117,19 @@
     "summary": "Player menu now shows LLM token usage",
     "details": "Wired the chronicle API Lambda to the LLM proxy's DynamoDB usage table and granted it read access, so the player menu widget can finally show per-login token consumption instead of an empty state. Also simplified the UI to a compact table with shorthand headers so the stats sit cleanly inside the player menu.",
     "type": "bugfix"
+  },
+  {
+    "id": "2025-11-18-playwright-isolated-stack",
+    "releasedAt": "2025-11-18",
+    "summary": "Playwright now boots a fully mocked stack",
+    "details": "Added a dockerised LocalStack + WireMock harness, seeded the hybrid storage buckets/tables, and wired Playwright global setup to run the dev servers so we can run deterministic landing-page coverage without touching shared dev persistence or OpenAI.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-19-playwright-deltas-and-moderation",
+    "releasedAt": "2025-11-19",
+    "summary": "Playwright now validates deltas and moderator surfaces",
+    "details": "Seeded richer location/inventory fixtures, scripted deterministic location-delta responses, and expanded the Playwright suite so it walks the GM pipeline, exercises multi-turn location plans, inspects character sheets, captures feedback/bug reports, and validates the LLM audit, bug moderation, and location maintenance workspaces end-to-end.",
+    "type": "improvement"
   }
 ]

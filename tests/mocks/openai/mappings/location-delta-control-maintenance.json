@@ -1,0 +1,22 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'location_delta_decision')]"
+      },
+      {
+        "matchesJsonPath": "$[?(@.input[0].content contains '#loc:maintenance')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "location-delta-control-maintenance.json"
+  }
+}

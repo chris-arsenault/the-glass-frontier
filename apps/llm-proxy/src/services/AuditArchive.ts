@@ -1,4 +1,5 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -21,7 +22,17 @@ class AuditArchive {
 
   private constructor(bucket: string, client?: S3Client) {
     this.#bucket = bucket;
-    this.#client = client ?? new S3Client({});
+    if (client !== undefined) {
+      this.#client = client;
+      return;
+    }
+    const region = resolveAwsRegion();
+    const endpoint = resolveAwsEndpoint('s3');
+    this.#client = new S3Client({
+      endpoint,
+      forcePathStyle: shouldForcePathStyle(),
+      region,
+    });
   }
 
   static fromEnv(): AuditArchive | null {

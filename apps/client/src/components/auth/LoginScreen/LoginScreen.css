@@ -120,6 +120,13 @@
   margin-top: 0.5rem;
 }
 
+.login-button-secondary {
+  background: transparent;
+  border: 1px solid rgb(148 163 184 / 60%);
+  color: #e2e8f0;
+  margin-top: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .login-hero {
     padding: 1.5rem;

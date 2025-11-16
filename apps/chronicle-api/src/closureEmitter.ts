@@ -1,6 +1,7 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import type { ChronicleClosureEvent } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 type ChronicleClosurePublisher = {
   publish: (event: ChronicleClosureEvent) => Promise<void>;
@@ -16,7 +17,16 @@ class ChronicleClosureEmitter implements ChronicleClosurePublisher {
       throw new Error('CHRONICLE_CLOSURE_QUEUE_URL is required');
     }
     this.#queueUrl = normalized;
-    this.#client = client ?? new SQSClient({});
+    if (client !== undefined) {
+      this.#client = client;
+      return;
+    }
+    const region = resolveAwsRegion();
+    const endpoint = resolveAwsEndpoint('sqs');
+    this.#client = new SQSClient({
+      endpoint,
+      region,
+    });
   }
 
   async publish(event: ChronicleClosureEvent): Promise<void> {

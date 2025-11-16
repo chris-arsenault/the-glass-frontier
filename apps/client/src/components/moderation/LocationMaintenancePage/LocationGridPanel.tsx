@@ -164,6 +164,7 @@ export const LocationGridPanel = ({
           <button
             type="button"
             className="lm-grid-link"
+            aria-label={`Manage relationships for ${params.row.name}`}
             onClick={(event) => {
               event.stopPropagation();
               onOpenRelationships(params.row);

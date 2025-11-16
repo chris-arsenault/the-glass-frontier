@@ -9,5 +9,5 @@
     "declarationMap": false
   },
   "include": ["src"],
-  "references": [{ "path": "../dto" }, { "path": "../utils" }]
+  "references": [{ "path": "../dto" }, { "path": "../utils" },  { "path": "../node-utils" }]
 }

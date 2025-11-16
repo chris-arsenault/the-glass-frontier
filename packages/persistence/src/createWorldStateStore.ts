@@ -2,6 +2,7 @@
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import type { S3Client } from '@aws-sdk/client-s3';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 import { S3WorldStateStore } from './s3WorldStateStore';
 import { WorldIndexRepository } from './worldIndexRepository';
@@ -34,12 +35,7 @@ const resolvePrefix = (options?: CreateWorldStateStoreOptions): string | undefin
 };
 
 const resolveRegion = (options?: { region?: string }): string => {
-  return (
-    options?.region ??
-    process.env.AWS_REGION ??
-    process.env.AWS_DEFAULT_REGION ??
-    'us-east-1'
-  );
+  return options?.region ?? resolveAwsRegion();
 };
 
 const createWorldIndex = (
@@ -47,7 +43,13 @@ const createWorldIndex = (
   region: string,
   dynamoClient?: DynamoDBClient
 ): WorldIndexRepository => {
-  const client = dynamoClient ?? new DynamoDBClient({ region });
+  const endpoint = resolveAwsEndpoint('dynamodb');
+  const client =
+    dynamoClient ??
+    new DynamoDBClient({
+      endpoint,
+      region,
+    });
   return new WorldIndexRepository({
     client,
     tableName,

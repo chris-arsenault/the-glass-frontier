@@ -1,0 +1,22 @@
+{
+  "id": "resp-mock-1",
+  "output_text": [
+    "MOCK: deterministic reply for test."
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 32,
+    "output_tokens": 16,
+    "total_tokens": 48
+  },
+  "output": [
+    {
+      "content": [
+        {
+          "text": "MOCK: deterministic reply for test."
+        }
+      ],
+      "role": "assistant"
+    }
+  ]
+}

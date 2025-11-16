@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"summary\":\"MOCK SUMMARY: The sensors quiet and the vault stays sealed.\",\"shouldCloseChronicle\":false}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"summary\":\"MOCK SUMMARY: The sensors quiet and the vault stays sealed.\",\"shouldCloseChronicle\":false}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 8,
+    "output_tokens": 8,
+    "total_tokens": 16
+  }
+}

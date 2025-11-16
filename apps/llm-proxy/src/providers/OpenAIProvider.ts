@@ -33,7 +33,7 @@ const MODEL_ADAPTERS = new Map<string, ModelAdapter>([
     'gpt-5-nano',
     (req, body) => {
       const tokens = extractMaxTokens(body);
-      req.max_output_tokens = Math.max(tokens ?? 5000, 5000);
+      req.max_output_tokens = Math.max(tokens ?? 500, 500);
       delete req.temperature;
     },
   ],
@@ -98,7 +98,6 @@ class OpenAIProvider extends BaseProvider {
   async execute(payload: Payload, signal?: AbortSignal): Promise<Response> {
     const body = payload.body as Record<string, unknown>;
     const input = this.buildInput(body);
-
     if (input.length === 0) {
       throw new ProviderError({
         code: 'openai_missing_input',
@@ -114,7 +113,7 @@ class OpenAIProvider extends BaseProvider {
       const completion = await this.#client.responses.create(request, {
         signal,
       });
-      const normalized = this.#toChatCompletionPayload(completion);
+      const normalized = this.#toChatCompletionPayload(completion as unknown as Record<string, unknown>);
 
       return new Response(JSON.stringify(normalized), {
         headers: { 'content-type': 'application/json' },
@@ -158,8 +157,8 @@ class OpenAIProvider extends BaseProvider {
       code: upstreamType,
       details,
       message: upstreamMessage,
-      retryable: error.status >= 500,
-      status: error.status,
+      retryable: (error.status ?? 500) >= 500,
+      status: error.status ?? 500,
     });
   }
 
@@ -201,23 +200,26 @@ class OpenAIProvider extends BaseProvider {
   ): ResponsesCreateParams {
     const modelKey = typeof body.model === 'string' ? body.model : '';
     const request: ResponsesCreateParams = {
-      input,
+      input: input as never,
+      metadata: {
+        nodeId: body.metadata.nodeId
+      },
       model: modelKey,
-      stream: false,
+      stream: false
     };
 
     if (typeof body.temperature === 'number') {
       request.temperature = body.temperature;
     }
     if (body.reasoning !== undefined) {
-      request.reasoning = body.reasoning;
+      request.reasoning = body.reasoning as never;
     }
-    if (body.text !== undefined) {
-      request.text = body.text;
+    if (body.text !== undefined && body.text !== null) {
+      request.text = body.text as never;
     }
 
     const adapter = MODEL_ADAPTERS.get(modelKey) ?? DEFAULT_ADAPTER;
-    adapter(request, body);
+    adapter(request as never, body);
 
     return request;
   }

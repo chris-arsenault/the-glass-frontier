@@ -6,6 +6,7 @@ import {
   PutCommand,
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
 
 import { websocketConfig } from './env';
@@ -13,7 +14,14 @@ import { websocketConfig } from './env';
 const connectionKey = (id: string): string => `CONNECTION#${id}`;
 const jobKey = (id: string): string => `JOB#${id}`;
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const dynamoRegion = resolveAwsRegion();
+const dynamoEndpoint = resolveAwsEndpoint('dynamodb');
+const client = DynamoDBDocumentClient.from(
+  new DynamoDBClient({
+    endpoint: dynamoEndpoint,
+    region: dynamoRegion,
+  })
+);
 const hasText = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 

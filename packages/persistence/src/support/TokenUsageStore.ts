@@ -1,6 +1,7 @@
 import { DynamoDBClient, QueryCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
 import type { TokenUsageMetric, TokenUsagePeriod } from '@glass-frontier/dto';
 import { TokenUsagePeriodSchema } from '@glass-frontier/dto';
+import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
 type TokenUsageStoreOptions = {
   tableName: string;
@@ -21,11 +22,13 @@ export class TokenUsageStore {
       throw new Error('TokenUsageStore requires a DynamoDB table name.');
     }
     this.#tableName = options.tableName.trim();
+    const region = options.region ?? resolveAwsRegion();
+    const endpoint = resolveAwsEndpoint('dynamodb');
     this.#client =
       options.client ??
       new DynamoDBClient({
-        region:
-          options.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+        endpoint,
+        region,
       });
   }
 
