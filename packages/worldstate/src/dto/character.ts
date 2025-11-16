@@ -90,6 +90,16 @@ export const CharacterSchema = z.object({
   inventory: InventorySchema,
   lastTurnAt: z.string().datetime().optional(),
   locationState: CharacterLocationStateSchema.optional(),
+  chronicleLegacies: z
+    .array(
+      z.object({
+        chronicleId: z.string().min(1),
+        summary: z.string().min(1),
+        createdAt: z.string().datetime(),
+        metadata: MetadataSchema.optional(),
+      })
+    )
+    .default([]),
 
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -111,6 +121,16 @@ export const CharacterDraftSchema = z.object({
   momentum: MomentumStateSchema,
   inventory: InventorySchema.optional(),
   locationState: CharacterLocationStateSchema.optional(),
+  chronicleLegacies: z
+    .array(
+      z.object({
+        chronicleId: z.string().min(1),
+        summary: z.string().min(1),
+        createdAt: z.string().datetime(),
+        metadata: MetadataSchema.optional(),
+      })
+    )
+    .optional(),
   defaultChronicleId: z.string().optional(),
 });
 export type CharacterDraft = z.infer<typeof CharacterDraftSchema>;
