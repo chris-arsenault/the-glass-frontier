@@ -3,6 +3,14 @@ import { z } from 'zod';
 import { LocationBreadcrumbEntrySchema } from './location';
 import { MetadataSchema, TagArraySchema } from './shared';
 
+export const IntentBeatDirectiveSchema = z.object({
+  kind: z.enum(['existing', 'new', 'independent']),
+  targetBeatId: z.string().min(1).optional(),
+  summary: z.string().optional(),
+});
+
+export type IntentBeatDirective = z.infer<typeof IntentBeatDirectiveSchema>;
+
 export const TranscriptEntrySchema = z.object({
   id: z.string().min(1),
   role: z.enum(['player', 'gm', 'system', 'narrator']),
@@ -40,8 +48,10 @@ export const IntentSchema = z.object({
   skill: z.string().optional(),
   attribute: z.string().optional(),
   requiresCheck: z.boolean().default(false),
+  creativeSpark: z.boolean().default(false),
   handlerHints: z.array(z.string().min(1)).max(8).optional(),
   metadata: MetadataSchema.optional(),
+  beatDirective: IntentBeatDirectiveSchema.optional(),
 });
 
 export type Intent = z.infer<typeof IntentSchema>;

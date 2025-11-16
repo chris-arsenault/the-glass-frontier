@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ChronicleBeatSchema } from './chronicleBeat';
 import { ChronicleSummaryEntrySchema } from './chronicleSummaryEntry';
 import { MetadataSchema, TagArraySchema } from './shared';
 
@@ -34,7 +35,10 @@ export const ChronicleDraftSchema = ChronicleSummarySchema.extend({
   description: z.string().optional(),
   metadata: MetadataSchema.optional(),
   tags: TagArraySchema,
+  beatsEnabled: z.boolean().default(true),
+  beats: z.array(ChronicleBeatSchema).default([]),
   summaries: z.array(ChronicleSummaryEntrySchema).default([]),
+  seedText: z.string().optional(),
 });
 
 export type ChronicleDraft = z.infer<typeof ChronicleDraftSchema>;
@@ -46,7 +50,10 @@ export const ChronicleSchema = ChronicleSummarySchema.extend({
   description: z.string().optional(),
   metadata: MetadataSchema.optional(),
   tags: TagArraySchema,
+  beatsEnabled: z.boolean().default(true),
+  beats: z.array(ChronicleBeatSchema).default([]),
   summaries: z.array(ChronicleSummaryEntrySchema).default([]),
+  seedText: z.string().optional(),
 });
 
 export type Chronicle = z.infer<typeof ChronicleSchema>;

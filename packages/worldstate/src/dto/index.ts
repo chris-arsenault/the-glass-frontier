@@ -3,6 +3,7 @@ export * from './pagination';
 export * from './login';
 export * from './character';
 export * from './chronicle';
+export * from './chronicleBeat';
 export * from './chronicleSummaryEntry';
 export * from './chronicleClosureEvent';
 export * from './turn';
