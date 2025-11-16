@@ -38,6 +38,8 @@ export interface WorldStateStoreV2 {
   listCharacters(loginId: string, page?: PageOptions): Promise<CharacterConnection>;
 
   createChronicle(input: ChronicleDraft): Promise<Chronicle>;
+  updateChronicle(chronicle: Chronicle): Promise<Chronicle>;
+  deleteChronicle(chronicleId: string): Promise<void>;
   appendChronicleSummary(
     chronicleId: string,
     entry: ChronicleSummaryEntry

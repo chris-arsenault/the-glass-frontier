@@ -1,14 +1,21 @@
-import type { LocationPlace, Player, PlayerPreferences } from '@glass-frontier/dto';
+import type { Player, PlayerPreferences } from '@glass-frontier/dto';
 import {
-  Character as CharacterSchema,
-  TranscriptEntry,
   PendingEquip,
-  type Character,
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
   type TokenUsagePeriod,
 } from '@glass-frontier/dto';
+import {
+  CharacterDraftSchema,
+  ChronicleStatusSchema,
+  PageOptionsSchema,
+  TranscriptEntry,
+  TranscriptEntrySchema,
+  type Character,
+  type Chronicle,
+  type LocationSummary,
+} from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 import { initTRPC } from '@trpc/server';
 import { randomUUID } from 'node:crypto';
@@ -17,48 +24,31 @@ import { z } from 'zod';
 import type { Context } from './context';
 import { resetPlaywrightFixtures } from './playwright/resetFixtures';
 
-type EnsureChronicleResult = Awaited<
-  ReturnType<Context['worldStateStore']['ensureChronicle']>
->;
-
 const t = initTRPC.context<Context>().create();
 const normalizePlayerPreferences = (prefs?: PlayerPreferences | null): PlayerPreferences => ({
   feedbackVisibility: prefs?.feedbackVisibility ?? 'all',
 });
-const locationDetailsSchema = z.object({
-  atmosphere: z.string().min(1),
-  locale: z.string().min(1),
-});
-
 const toneSchema = z.object({
   toneChips: z.array(z.string()).max(8).optional(),
   toneNotes: z.string().max(240).optional(),
 });
 
-const createChronicleInputSchema = z
-  .object({
-    beatsEnabled: z.boolean().optional(),
-    characterId: z.string().min(1),
-    chronicleId: z.string().uuid().optional(),
-    location: locationDetailsSchema.optional(),
-    locationId: z.string().uuid().optional(),
-    loginId: z.string().min(1),
-    seedText: z.string().max(400).optional(),
-    status: z.enum(['open', 'closed']).optional(),
-    title: z.string().min(1),
-  })
-  .refine(
-    (payload) => Boolean(payload.locationId) || Boolean(payload.location),
-    {
-      message: 'Provide locationId or location details.',
-      path: ['locationId'],
-    }
-  );
+const createChronicleInputSchema = z.object({
+  beatsEnabled: z.boolean().optional(),
+  characterId: z.string().min(1),
+  chronicleId: z.string().uuid().optional(),
+  locationId: z.string().uuid(),
+  loginId: z.string().min(1),
+  seedText: z.string().max(400).optional(),
+  status: ChronicleStatusSchema.optional(),
+  tags: z.array(z.string().min(1)).max(8).optional(),
+  title: z.string().min(1),
+});
 
 type CreateChronicleInput = z.infer<typeof createChronicleInputSchema>;
 
 const ensurePlayerRecord = async (ctx: Context, loginId: string): Promise<Player> => {
-  const existing = await ctx.worldStateStore.getPlayer(loginId);
+  const existing = await ctx.playerStore.getPlayer(loginId);
   if (existing !== null && existing !== undefined) {
     if (existing.templateOverrides === undefined) {
       existing.templateOverrides = {};
@@ -69,13 +59,13 @@ const ensurePlayerRecord = async (ctx: Context, loginId: string): Promise<Player
     loginId,
     templateOverrides: {},
   };
-  return ctx.worldStateStore.upsertPlayer(blank);
+  return ctx.playerStore.upsertPlayer(blank);
 };
 
 export const appRouter = t.router({
-  createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
+  createCharacter: t.procedure.input(CharacterDraftSchema).mutation(async ({ ctx, input }) => {
     log('info', `Creating Character ${input.name}`);
-    const character = await ctx.worldStateStore.upsertCharacter(input);
+    const character = await ctx.worldStateStore.createCharacter(input);
     return { character };
   }),
   // POST /chronicles
@@ -157,19 +147,29 @@ export const appRouter = t.router({
   }),
 
   listCharacters: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        page: PageOptionsSchema.optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharacters(input.loginId, input.page)),
 
   listChronicles: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
+    .input(
+      z.object({
+        loginId: z.string().min(1),
+        page: PageOptionsSchema.optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listChronicles(input.loginId, input.page)),
 
   // POST /chronicles/:chronicleId/messages
   postMessage: t.procedure
     .input(
       z.object({
         chronicleId: z.string().uuid(),
-        content: TranscriptEntry, // tighten to your DTO schema
+        content: TranscriptEntrySchema,
         pendingEquip: z.array(PendingEquip).optional(),
       })
     )
@@ -209,7 +209,7 @@ export const appRouter = t.router({
       }
       const normalizedTarget =
         typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;
-      const updated = await ctx.worldStateStore.upsertChronicle({
+      const updated = await ctx.worldStateStore.updateChronicle({
         ...chronicle,
         targetEndTurn: normalizedTarget,
       });
@@ -275,7 +275,7 @@ export const appRouter = t.router({
         ...player,
         preferences,
       };
-      await ctx.worldStateStore.upsertPlayer(updated);
+      await ctx.playerStore.upsertPlayer(updated);
       return { preferences };
     }),
 
@@ -284,36 +284,25 @@ export const appRouter = t.router({
 async function createChronicleHandler(
   ctx: Context,
   input: CreateChronicleInput
-): Promise<{ chronicle: EnsureChronicleResult }> {
+): Promise<{ chronicle: Chronicle }> {
   const character = await requireCharacter(ctx, input.characterId);
   ensureCharacterOwnership(character, input.loginId);
-
   const chronicleId = input.chronicleId ?? randomUUID();
-  const existingPlace = await resolveExistingPlace(ctx, input.locationId);
-  ensureLocationSelection(existingPlace, input);
-  const localeDetails = resolveLocaleDetails(input, existingPlace);
-
-  const locationRoot = await ctx.locationGraphStore.ensureLocation({
-    characterId: input.characterId,
-    description: localeDetails.description,
-    kind: localeDetails.kind,
-    locationId: existingPlace?.locationId ?? input.locationId,
-    name: localeDetails.name,
-    tags: deriveLocationTags(localeDetails.description),
+  const location = await requireLocationSummary(ctx, input.locationId, {
+    loginId: input.loginId,
+    chronicleId,
   });
-
-  const chronicle = await ctx.worldStateStore.ensureChronicle({
-    beatsEnabled: input.beatsEnabled,
+  const chronicle = await ensureChronicleRecord(ctx, {
+    beatsEnabled: input.beatsEnabled ?? true,
     characterId: input.characterId,
     chronicleId,
-    locationId: locationRoot.locationId,
+    locationId: location.id,
     loginId: input.loginId,
     seedText: input.seedText,
-    status: input.status,
+    status: input.status ?? 'active',
+    tags: input.tags ?? location.tags ?? [],
     title: input.title,
   });
-
-  await maybeMoveCharacterToExistingPlace(ctx, input.characterId, existingPlace);
   log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
   return { chronicle };
 }
@@ -332,81 +321,55 @@ function ensureCharacterOwnership(character: Character, loginId: string): void {
   }
 }
 
-async function resolveExistingPlace(
+async function requireLocationSummary(
   ctx: Context,
-  locationId?: string
-): Promise<LocationPlace | null> {
-  if (!isNonEmptyString(locationId)) {
-    return null;
-  }
-  return ctx.locationGraphStore.getPlace(locationId);
-}
-
-function ensureLocationSelection(
-  existingPlace: LocationPlace | null,
-  input: CreateChronicleInput
-): void {
-  if (
-    isNonEmptyString(input.locationId) &&
-    existingPlace === null &&
-    input.location === undefined
-  ) {
+  locationId: string,
+  options: { loginId: string; chronicleId: string }
+): Promise<LocationSummary> {
+  const location = await ctx.worldStateStore.getLocation(locationId);
+  if (location === null) {
     throw new Error('Selected location was not found.');
   }
+  if (location.loginId !== options.loginId) {
+    throw new Error('Location does not belong to the requesting login.');
+  }
+  if (
+    isNonEmptyString(location.chronicleId) &&
+    location.chronicleId !== options.chronicleId
+  ) {
+    throw new Error('Location is already bound to another chronicle.');
+  }
+  return location;
 }
 
-function resolveLocaleDetails(
-  input: CreateChronicleInput,
-  existingPlace: LocationPlace | null
-): { description: string; kind: string; name: string } {
-  return {
-    description: resolveLocaleDescription(input, existingPlace),
-    kind: existingPlace?.kind ?? 'locale',
-    name: resolveLocaleName(input, existingPlace),
-  };
-}
-
-function resolveLocaleDescription(
-  input: CreateChronicleInput,
-  existingPlace: LocationPlace | null
-): string {
-  if (isNonEmptyString(input.location?.atmosphere)) {
-    return input.location.atmosphere.trim();
-  }
-  if (isNonEmptyString(existingPlace?.description)) {
-    return existingPlace.description;
-  }
-  return 'Atmosphere undisclosed.';
-}
-
-function resolveLocaleName(
-  input: CreateChronicleInput,
-  existingPlace: LocationPlace | null
-): string {
-  if (isNonEmptyString(input.location?.locale)) {
-    return input.location.locale.trim();
-  }
-  if (isNonEmptyString(existingPlace?.name)) {
-    return existingPlace.name;
-  }
-  return 'Uncatalogued Locale';
-}
-
-async function maybeMoveCharacterToExistingPlace(
+async function ensureChronicleRecord(
   ctx: Context,
-  characterId: string,
-  place: LocationPlace | null
-): Promise<void> {
-  if (place === null) {
-    return;
+  input: {
+    chronicleId: string;
+    loginId: string;
+    characterId: string;
+    title: string;
+    status: Chronicle['status'];
+    locationId?: string;
+    beatsEnabled?: boolean;
+    seedText?: string;
+    tags?: string[];
   }
-  await ctx.locationGraphStore.applyPlan({
-    characterId,
-    locationId: place.locationId,
-    plan: {
-      character_id: characterId,
-      ops: [{ dst_place_id: place.id, op: 'MOVE' }],
-    },
+): Promise<Chronicle> {
+  const existing = await ctx.worldStateStore.getChronicle(input.chronicleId);
+  if (existing) {
+    return existing;
+  }
+  return ctx.worldStateStore.createChronicle({
+    id: input.chronicleId,
+    loginId: input.loginId,
+    characterId: input.characterId,
+    title: input.title,
+    status: input.status,
+    locationId: input.locationId,
+    beatsEnabled: input.beatsEnabled ?? true,
+    seedText: input.seedText,
+    tags: input.tags ?? [],
   });
 }
 
@@ -414,31 +377,27 @@ async function augmentChronicleSnapshot(
   ctx: Context,
   chronicleId: string
 ): Promise<ChronicleState | null> {
-  const snapshot = await ctx.worldStateStore.getChronicleState(chronicleId);
+  const snapshot = await ctx.worldStateStore.getChronicleSnapshot(chronicleId);
   if (snapshot === null || snapshot === undefined) {
     return null;
   }
-  const characterId = snapshot.chronicle.characterId ?? snapshot.character?.id ?? null;
+  if (snapshot.chronicle === null) {
+    throw new Error('Chronicle not found.');
+  }
   const locationId = snapshot.chronicle.locationId;
-  if (isNonEmptyString(characterId) && isNonEmptyString(locationId)) {
-    snapshot.location =
-      (await ctx.locationGraphStore.summarizeCharacterLocation({
-        characterId,
-        locationId,
-      })) ?? null;
+  let location: LocationSummary | null = null;
+  if (isNonEmptyString(locationId)) {
+    location = (await ctx.worldStateStore.getLocation(locationId)) ?? null;
   }
-  return snapshot;
-}
-
-function deriveLocationTags(atmosphere: string): string[] {
-  if (!isNonEmptyString(atmosphere)) {
-    return [];
-  }
-  return atmosphere
-    .split(/[,.]/)
-    .map((part) => part.trim().toLowerCase())
-    .filter((part) => part.length > 1)
-    .slice(0, 6);
+  const latestTurn = snapshot.turns.at(-1);
+  return {
+    chronicleId,
+    character: snapshot.character ?? null,
+    chronicle: snapshot.chronicle,
+    location,
+    turnSequence: latestTurn?.turnSequence ?? 0,
+    turns: snapshot.turns,
+  };
 }
 
 const isNonEmptyString = (value: unknown): value is string =>

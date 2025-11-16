@@ -1,6 +1,7 @@
-import type { ChronicleSeed, LocationPlace } from '@glass-frontier/dto';
+import type { ChronicleSeed } from '@glass-frontier/dto';
 import { LangGraphLlmClient } from '@glass-frontier/llm-client';
-import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
+import type { PromptTemplateManager } from '@glass-frontier/persistence';
+import type { LocationSummary, WorldStateStoreV2 } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import { PromptTemplateRuntime } from '../langGraph/prompts/templateRuntime';
@@ -16,24 +17,24 @@ type GenerateSeedRequest = {
 
 export class ChronicleSeedService {
   readonly #templates: PromptTemplateManager;
-  readonly #locations: LocationGraphStore;
+  readonly #worldState: WorldStateStoreV2;
   readonly #llm: LangGraphLlmClient;
   readonly #clientCache = new Map<string, LangGraphLlmClient>();
 
   constructor(options: {
     templateManager: PromptTemplateManager;
-    locationGraphStore: LocationGraphStore;
+    worldStateStore: WorldStateStoreV2;
     llmClient?: LangGraphLlmClient;
   }) {
     this.#templates = options.templateManager;
-    this.#locations = options.locationGraphStore;
+    this.#worldState = options.worldStateStore;
     this.#llm = options.llmClient ?? new LangGraphLlmClient();
   }
 
   async generateSeeds(request: GenerateSeedRequest): Promise<ChronicleSeed[]> {
-    const place = await this.#ensurePlace(request.locationId);
-    const breadcrumb = await this.#buildBreadcrumb(place);
-    const tags = this.#collectTags(breadcrumb);
+    const summary = await this.#ensureLocation(request.locationId);
+    const breadcrumb = summary.breadcrumb.map((entry) => `${entry.name} (${entry.kind})`).join(' / ');
+    const tags = this.#collectTags(summary.tags);
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
     const runtime = new PromptTemplateRuntime({
       loginId: request.loginId,
@@ -41,10 +42,10 @@ export class ChronicleSeedService {
     });
 
     const prompt = await runtime.render('chronicle-seed', {
-      breadcrumb: breadcrumb.map((entry) => `${entry.name} (${entry.kind})`).join(' / '),
-      location_description: place.description ?? 'Uncatalogued locale.',
-      location_kind: place.kind,
-      location_name: place.name,
+      breadcrumb,
+      location_description: summary.description ?? 'Uncatalogued locale.',
+      location_kind: summary.breadcrumb.at(-1)?.kind ?? 'locale',
+      location_name: summary.name,
       requested,
       tags: tags.length > 0 ? tags.join(', ') : 'untagged',
       tone_chips: this.#formatToneChips(request.toneChips),
@@ -56,45 +57,36 @@ export class ChronicleSeedService {
     const response = await client.generateJson({
       maxTokens: 600,
       metadata: {
-        locationId: place.locationId,
+        locationId: summary.id,
         operation: 'chronicle-seed',
       },
       prompt,
       temperature: 0.65,
     });
 
-    return this.#normalizeSeeds(response.json, requested, place);
+    return this.#normalizeSeeds(response.json, requested, summary);
   }
 
-  async #ensurePlace(locationId: string): Promise<LocationPlace> {
-    const place = await this.#locations.getPlace(locationId);
-    if (place === undefined || place === null) {
+  async #ensureLocation(locationId: string): Promise<LocationSummary> {
+    const location = await this.#worldState.getLocation(locationId);
+    if (location === null) {
       throw new Error(`Location ${locationId} not found.`);
     }
-    return place;
+    return location;
   }
 
-  async #buildBreadcrumb(anchor: LocationPlace): Promise<LocationPlace[]> {
-    return this.#collectBreadcrumb(anchor, new Set<string>(), 0);
-  }
-
-  #collectTags(chain: LocationPlace[]): string[] {
+  #collectTags(source: string[]): string[] {
     const tags = new Set<string>();
-    for (const node of chain) {
-      const nodeTags = Array.isArray(node.tags)
-        ? node.tags.filter((tag): tag is string => typeof tag === 'string')
-        : [];
-      for (const tag of nodeTags) {
-        const trimmed = tag.trim().toLowerCase();
-        if (trimmed.length > 0) {
-          tags.add(trimmed);
-        }
+    for (const tag of source) {
+      const trimmed = tag.trim().toLowerCase();
+      if (trimmed.length > 0) {
+        tags.add(trimmed);
       }
     }
     return Array.from(tags).slice(0, 12);
   }
 
-  #normalizeSeeds(payload: unknown, requested: number, place: LocationPlace): ChronicleSeed[] {
+  #normalizeSeeds(payload: unknown, requested: number, location: LocationSummary): ChronicleSeed[] {
     const normalized: ChronicleSeed[] = [];
     for (const entry of this.#extractSeedEntries(payload)) {
       if (normalized.length >= requested) {
@@ -111,7 +103,7 @@ export class ChronicleSeedService {
         title: seed.title.slice(0, 80),
       });
     }
-    return this.#fillSeedShortfall(normalized, requested, place);
+    return this.#fillSeedShortfall(normalized, requested, location);
   }
 
   #extractSeedEntries(payload: unknown): unknown[] {
@@ -144,22 +136,22 @@ export class ChronicleSeedService {
   #fillSeedShortfall(
     seeds: ChronicleSeed[],
     requested: number,
-    place: LocationPlace
+    location: LocationSummary
   ): ChronicleSeed[] {
     const output = [...seeds];
     while (output.length < requested) {
-      output.push(this.#fallbackSeed(place, output.length + 1));
+      output.push(this.#fallbackSeed(location, output.length + 1));
     }
     return output;
   }
 
-  #fallbackSeed(place: LocationPlace, index: number): ChronicleSeed {
-    const tags = Array.isArray(place.tags) ? place.tags.slice(0, 3) : [];
+  #fallbackSeed(location: LocationSummary, index: number): ChronicleSeed {
+    const tags = location.tags.slice(0, 3);
     return {
       id: randomUUID(),
       tags,
-      teaser: `Rumors ripple through ${place.name}, drawing attention to a fresh anomaly hidden within its ${place.kind}.`,
-      title: `${place.name} Hook ${index}`.slice(0, 80),
+      teaser: `Rumors ripple through ${location.name}, drawing attention to a fresh anomaly hidden within its corridors.`,
+      title: `${location.name} Hook ${index}`.slice(0, 80),
     };
   }
 
@@ -212,30 +204,4 @@ export class ChronicleSeedService {
     return client;
   }
 
-  async #collectBreadcrumb(
-    node: LocationPlace | null,
-    visited: Set<string>,
-    depth: number
-  ): Promise<LocationPlace[]> {
-    if (node === null) {
-      return [];
-    }
-    if (visited.has(node.id) || depth >= 20) {
-      return [node];
-    }
-    visited.add(node.id);
-    const parentId =
-      typeof node.canonicalParentId === 'string' && node.canonicalParentId.length > 0
-        ? node.canonicalParentId
-        : null;
-    if (parentId === null) {
-      return [node];
-    }
-    const parentPlace = await this.#locations.getPlace(parentId);
-    if (parentPlace === undefined || parentPlace === null) {
-      return [node];
-    }
-    const path = await this.#collectBreadcrumb(parentPlace, visited, depth + 1);
-    return [...path, node];
-  }
 }

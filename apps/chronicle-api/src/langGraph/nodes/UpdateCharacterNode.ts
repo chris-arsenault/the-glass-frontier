@@ -1,24 +1,16 @@
-import { MOMENTUM_DELTA, type Attribute, type OutcomeTier } from '@glass-frontier/dto';
-import {
-  resolveInventoryDelta,
-  type WorldStateStore,
-  type LocationGraphStore,
-} from '@glass-frontier/persistence';
+import { MOMENTUM_DELTA, type OutcomeTier } from '@glass-frontier/dto';
+import { resolveInventoryDelta, type LocationGraphStore } from '@glass-frontier/persistence';
+import type { WorldStateStoreV2, Character } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 
-const XP_REWARDS: Record<string, number> = {
-  collapse: 2,
-  regress: 1,
-};
-
 class UpdateCharacterNode implements GraphNode {
   readonly id = 'character-update';
 
   constructor(
-    private readonly worldStateStore: WorldStateStore,
+    private readonly worldStateStore: WorldStateStoreV2,
     private readonly locationGraphStore?: LocationGraphStore
   ) {}
 
@@ -32,7 +24,7 @@ class UpdateCharacterNode implements GraphNode {
       return inventoryContext;
     }
 
-    const characterUpdateContext = await this.#applySkillUpdates(inventoryContext);
+    const characterUpdateContext = await this.#applyMomentumUpdate(inventoryContext);
     const locationUpdateContext = await this.#applyLocationPlan(characterUpdateContext);
 
     return locationUpdateContext;
@@ -53,7 +45,7 @@ class UpdateCharacterNode implements GraphNode {
         ...character,
         inventory: nextInventory,
       };
-      await this.worldStateStore.upsertCharacter(updatedCharacter);
+      await this.worldStateStore.updateCharacter(updatedCharacter);
       return {
         ...context,
         chronicle: {
@@ -73,15 +65,22 @@ class UpdateCharacterNode implements GraphNode {
     }
   }
 
-  async #applySkillUpdates(context: GraphContext): Promise<GraphContext> {
-    const progress = this.#evaluateSkillProgress(context);
-    if (progress === null) {
+  async #applyMomentumUpdate(context: GraphContext): Promise<GraphContext> {
+    if (context.playerIntent?.requiresCheck !== true) {
       return context;
     }
-    const updatedCharacter = await this.worldStateStore.applyCharacterProgress(progress);
-    if (updatedCharacter === null || updatedCharacter === undefined) {
+    const momentumDelta = this.#momentumDeltaFor(context.skillCheckResult?.outcomeTier);
+    if (momentumDelta === 0) {
       return context;
     }
+    const character = context.chronicle.character;
+    if (character === null || character === undefined) {
+      return context;
+    }
+    const updatedCharacter = await this.worldStateStore.updateCharacter({
+      ...character,
+      momentum: this.#applyMomentumDelta(character.momentum, momentumDelta),
+    });
     return {
       ...context,
       chronicle: {
@@ -89,62 +88,6 @@ class UpdateCharacterNode implements GraphNode {
         character: updatedCharacter,
       },
       updatedCharacter,
-    };
-  }
-
-  #evaluateSkillProgress(
-    context: GraphContext
-  ): { characterId: string; momentumDelta?: number; skill?: { attribute: Attribute; name: string; xpAward: number } } | null {
-    const characterId = context.chronicle.character?.id;
-    const intent = context.playerIntent;
-    if (!isNonEmptyString(characterId) || intent === undefined || intent.requiresCheck !== true) {
-      return null;
-    }
-    const { momentumDelta, xpAward } = this.#calculateProgressDeltas(context);
-    const skillUpdate = this.#buildSkillUpdate(context, intent, xpAward);
-    if (skillUpdate === undefined && momentumDelta === 0) {
-      return null;
-    }
-    return {
-      characterId,
-      momentumDelta: momentumDelta !== 0 ? momentumDelta : undefined,
-      skill: skillUpdate,
-    };
-  }
-
-  #calculateProgressDeltas(context: GraphContext): { momentumDelta: number; xpAward: number } {
-    const outcomeTier = context.skillCheckResult?.outcomeTier;
-    if (outcomeTier === undefined) {
-      return { momentumDelta: 0, xpAward: 0 };
-    }
-    return {
-      momentumDelta: this.#momentumDeltaFor(outcomeTier),
-      xpAward: this.#xpAwardFor(outcomeTier),
-    };
-  }
-
-  #buildSkillUpdate(
-    context: GraphContext,
-    intent: NonNullable<GraphContext['playerIntent']>,
-    xpAward: number
-  ): { attribute: Attribute; name: string; xpAward: number } | undefined {
-    const skillName = intent.skill;
-    if (
-      !isNonEmptyString(skillName) ||
-      intent.attribute === undefined ||
-      intent.attribute === null
-    ) {
-      return undefined;
-    }
-    const currentSkill = this.#getCharacterSkill(context, skillName);
-    const needsUnlock = currentSkill === null;
-    if (!needsUnlock && xpAward === 0) {
-      return undefined;
-    }
-    return {
-      attribute: intent.attribute,
-      name: skillName,
-      xpAward,
     };
   }
 
@@ -179,19 +122,6 @@ class UpdateCharacterNode implements GraphNode {
       });
       return context;
     }
-  }
-
-  #getCharacterSkill(context: GraphContext, skillName: string): unknown | null {
-    const skills = context.chronicle.character?.skills;
-    if (skills === undefined || skills === null) {
-      return null;
-    }
-    for (const [name, entry] of Object.entries(skills)) {
-      if (name === skillName) {
-        return entry ?? null;
-      }
-    }
-    return null;
   }
 
   #extractInventoryInputs(
@@ -229,6 +159,15 @@ class UpdateCharacterNode implements GraphNode {
     return { characterId, locationId, plan };
   }
 
+  #applyMomentumDelta(momentum: Character['momentum'], delta: number): Character['momentum'] {
+    const target = Math.max(momentum.floor, Math.min(momentum.ceiling, momentum.current + delta));
+    return {
+      ...momentum,
+      current: target,
+      lastUpdatedAt: new Date().toISOString(),
+    };
+  }
+
   #momentumDeltaFor(outcome: OutcomeTier): number {
     switch (outcome) {
     case 'breakthrough':
@@ -246,16 +185,6 @@ class UpdateCharacterNode implements GraphNode {
     }
   }
 
-  #xpAwardFor(outcome: OutcomeTier): number {
-    switch (outcome) {
-    case 'collapse':
-      return XP_REWARDS.collapse;
-    case 'regress':
-      return XP_REWARDS.regress;
-    default:
-      return 0;
-    }
-  }
 }
 
 const isNonEmptyString = (value: unknown): value is string =>

@@ -131,5 +131,12 @@
     "summary": "Playwright now validates deltas and moderator surfaces",
     "details": "Seeded richer location/inventory fixtures, scripted deterministic location-delta responses, and expanded the Playwright suite so it walks the GM pipeline, exercises multi-turn location plans, inspects character sheets, captures feedback/bug reports, and validates the LLM audit, bug moderation, and location maintenance workspaces end-to-end.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-20-chronicle-api-worldstate",
+    "releasedAt": "2025-11-20",
+    "summary": "Chronicle API now runs on the v2 world state",
+    "details": "Rewired the chronicle Lambda to use the new @glass-frontier/worldstate package for characters, chronicles, turns, locations, and beat tracking; rebuilt the router, narrative engine, and seed service to read/write the Dynamo/S3-backed store directly; refreshed the Playwright fixtures; and shipped general-purpose patch APIs so future services can build on the same persistence layer.",
+    "type": "improvement"
   }
 ]

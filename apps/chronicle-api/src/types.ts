@@ -3,18 +3,16 @@ import type {
   Chronicle,
   Intent,
   LocationSummary,
-  LocationPlan,
   SkillCheckPlan,
   SkillCheckResult,
   Turn,
   TranscriptEntry,
-  PendingEquip,
   InventoryDelta,
   Inventory,
-  ImbuedRegistry,
   LlmTrace,
   BeatDelta,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate';
+import type { LocationPlan, PendingEquip, ImbuedRegistry } from '@glass-frontier/dto';
 import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 
 import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';

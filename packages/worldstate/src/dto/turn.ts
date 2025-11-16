@@ -43,6 +43,7 @@ export const BeatDeltaSchema = z.object({
 export type BeatDelta = z.infer<typeof BeatDeltaSchema>;
 
 export const IntentSchema = z.object({
+  intentType: z.string().min(1).optional(),
   summary: z.string().default(''),
   tone: z.string().optional(),
   skill: z.string().optional(),

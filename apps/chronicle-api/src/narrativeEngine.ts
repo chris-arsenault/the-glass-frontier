@@ -3,21 +3,23 @@ import type {
   TranscriptEntry,
   Turn,
   LocationSummary,
-  PendingEquip,
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate';
+import type { PendingEquip } from '@glass-frontier/dto';
 import { LangGraphLlmClient } from '@glass-frontier/llm-client';
 import type { PromptTemplateManager } from '@glass-frontier/persistence';
 import {
-  createWorldStateStore,
   createLocationGraphStore,
-  type WorldStateStore,
   type LocationGraphStore,
   createImbuedRegistryStore,
   type ImbuedRegistryStore,
 } from '@glass-frontier/persistence';
+import {
+  DynamoWorldStateStore,
+  type WorldStateStoreV2,
+} from '@glass-frontier/worldstate';
 import { formatTurnJobId, log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -46,7 +48,7 @@ import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
 
 type NarrativeEngineOptions = {
-  worldStateStore?: WorldStateStore;
+  worldStateStore?: WorldStateStoreV2;
   locationGraphStore?: LocationGraphStore;
   imbuedRegistryStore?: ImbuedRegistryStore;
   progressEmitter?: TurnProgressPublisher;
@@ -61,7 +63,7 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = [
 ];
 
 class NarrativeEngine {
-  readonly worldStateStore: WorldStateStore;
+  readonly worldStateStore: WorldStateStoreV2;
   readonly locationGraphStore: LocationGraphStore;
   readonly imbuedRegistryStore: ImbuedRegistryStore;
   readonly telemetry: ChronicleTelemetry;
@@ -115,6 +117,7 @@ class NarrativeEngine {
 
     const turn = this.#buildTurn({
       chronicleId,
+      chronicleState,
       graphResult,
       playerMessage,
       systemMessage,
@@ -129,7 +132,7 @@ class NarrativeEngine {
       chronicleStatus = 'closed';
     }
 
-    await this.worldStateStore.addTurn(turn);
+    await this.worldStateStore.appendTurn(chronicleId, turn);
 
     log('info', 'Narrative engine resolved turn', {
       checkIssued: Boolean(graphResult.skillCheckPlan),
@@ -173,8 +176,21 @@ class NarrativeEngine {
     return manager;
   }
 
-  #resolveWorldStateStore(store?: WorldStateStore): WorldStateStore {
-    return store ?? createWorldStateStore();
+  #resolveWorldStateStore(store?: WorldStateStoreV2): WorldStateStoreV2 {
+    if (store) {
+      return store;
+    }
+    const bucket = process.env.WORLD_STATE_S3_BUCKET;
+    const table = process.env.WORLD_STATE_TABLE_NAME;
+    const prefix = process.env.WORLD_STATE_S3_PREFIX ?? undefined;
+    if (!isNonEmptyString(bucket) || !isNonEmptyString(table)) {
+      throw new Error('WORLD_STATE_S3_BUCKET and WORLD_STATE_TABLE_NAME must be configured');
+    }
+    return new DynamoWorldStateStore({
+      bucketName: bucket,
+      tableName: table,
+      s3Prefix: prefix,
+    });
   }
 
   #resolveLocationGraphStore(store?: LocationGraphStore): LocationGraphStore {
@@ -252,11 +268,24 @@ class NarrativeEngine {
   }
 
   async #loadChronicleState(chronicleId: string): Promise<ChronicleState> {
-    const state = await this.worldStateStore.getChronicleState(chronicleId);
-    if (!isDefined(state)) {
+    const snapshot = await this.worldStateStore.getChronicleSnapshot(chronicleId);
+    if (!snapshot || snapshot.chronicle === null) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
-    return state;
+    const locationId = snapshot.chronicle.locationId;
+    let location: LocationSummary | null = null;
+    if (isNonEmptyString(locationId)) {
+      location = (await this.worldStateStore.getLocation(locationId)) ?? null;
+    }
+    const lastTurn = snapshot.turns.at(-1);
+    return {
+      chronicleId,
+      chronicle: snapshot.chronicle,
+      character: snapshot.character ?? null,
+      location,
+      turns: snapshot.turns,
+      turnSequence: lastTurn?.turnSequence ?? 0,
+    };
   }
 
   #requireLoginId(state: ChronicleState): string {
@@ -275,7 +304,7 @@ class NarrativeEngine {
   }
 
   #ensureChronicleOpen(state: ChronicleState): void {
-    if (state.chronicle?.status === 'closed') {
+    if (state.chronicle?.status === 'completed' || state.chronicle?.status === 'archived') {
       throw new Error('Chronicle is closed.');
     }
   }
@@ -378,12 +407,14 @@ class NarrativeEngine {
 
   #buildTurn({
     chronicleId,
+    chronicleState,
     graphResult,
     playerMessage,
     systemMessage,
     turnSequence,
   }: {
     chronicleId: string;
+    chronicleState: ChronicleState;
     graphResult: GraphContext;
     playerMessage: TranscriptEntry;
     systemMessage?: TranscriptEntry;
@@ -391,17 +422,31 @@ class NarrativeEngine {
   }): Turn {
     const combinedSystemMessage = systemMessage ?? graphResult.systemMessage;
     const failure = Boolean(graphResult.failure || combinedSystemMessage);
+    const characterId =
+      chronicleState.chronicle.characterId ?? chronicleState.character?.id ?? null;
+    if (!isNonEmptyString(characterId)) {
+      throw new Error('Chronicle missing character reference for turn recording');
+    }
+    const loginId = chronicleState.chronicle.loginId;
+    if (!isNonEmptyString(loginId)) {
+      throw new Error('Chronicle missing login reference for turn recording');
+    }
+    const createdAt = new Date().toISOString();
     return {
+      id: randomUUID(),
+      chronicleId,
+      characterId,
+      loginId,
+      turnSequence,
+      createdAt,
       advancesTimeline: graphResult.advancesTimeline,
       beatDelta: graphResult.beatDelta ?? undefined,
-      chronicleId,
       executedNodes: graphResult.executedNodes ?? undefined,
       failure,
       gmMessage: graphResult.gmMessage,
       gmSummary: graphResult.gmSummary,
       gmTrace: graphResult.gmTrace ?? undefined,
       handlerId: graphResult.handlerId,
-      id: randomUUID(),
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
       playerIntent: graphResult.playerIntent,
       playerMessage,
@@ -410,7 +455,6 @@ class NarrativeEngine {
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage: combinedSystemMessage,
-      turnSequence,
       worldDeltaTags: graphResult.worldDeltaTags ?? undefined,
     };
   }
@@ -423,9 +467,9 @@ class NarrativeEngine {
     if (record === undefined || record === null || record.status === 'closed') {
       return;
     }
-    await this.worldStateStore.upsertChronicle({
+    await this.worldStateStore.updateChronicle({
       ...record,
-      status: 'closed',
+      status: 'completed',
     });
     await this.#emitClosureEvent({
       chronicle: record,

@@ -15,12 +15,13 @@ export const resetPlaywrightFixtures = async (ctx: Context): Promise<{ locationI
   const chronicle = buildPlaywrightChronicleRecord({ locationId });
 
   await ctx.worldStateStore.upsertLogin(login);
-  await ctx.worldStateStore.upsertCharacter(character);
+  await ctx.worldStateStore.createCharacter(character);
   await ctx.worldStateStore.deleteChronicle(chronicle.id);
-  await ctx.worldStateStore.upsertChronicle(chronicle);
+  await ctx.worldStateStore.createChronicle(chronicle);
 
-  await seedPlaywrightLocationGraph(ctx.locationGraphStore, {
-    characterId: character.id,
+  await seedPlaywrightLocationGraph(ctx.worldStateStore, {
+    loginId: login.id,
+    chronicleId: chronicle.id,
     locationId,
   });
 

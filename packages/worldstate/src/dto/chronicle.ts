@@ -39,6 +39,7 @@ export const ChronicleDraftSchema = ChronicleSummarySchema.extend({
   beats: z.array(ChronicleBeatSchema).default([]),
   summaries: z.array(ChronicleSummaryEntrySchema).default([]),
   seedText: z.string().optional(),
+  targetEndTurn: z.number().int().nonnegative().nullable().optional(),
 });
 
 export type ChronicleDraft = z.infer<typeof ChronicleDraftSchema>;
@@ -54,6 +55,7 @@ export const ChronicleSchema = ChronicleSummarySchema.extend({
   beats: z.array(ChronicleBeatSchema).default([]),
   summaries: z.array(ChronicleSummaryEntrySchema).default([]),
   seedText: z.string().optional(),
+  targetEndTurn: z.number().int().nonnegative().nullable().optional(),
 });
 
 export type Chronicle = z.infer<typeof ChronicleSchema>;

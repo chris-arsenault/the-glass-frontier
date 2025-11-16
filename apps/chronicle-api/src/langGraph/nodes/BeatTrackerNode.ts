@@ -1,6 +1,6 @@
-import type { BeatDelta, ChronicleBeat, Intent } from '@glass-frontier/dto';
-import { ChronicleBeatStatus } from '@glass-frontier/dto';
-import type { WorldStateStore } from '@glass-frontier/persistence';
+import type { BeatDelta, ChronicleBeat, Intent } from '@glass-frontier/worldstate';
+import { ChronicleBeatStatusSchema } from '@glass-frontier/worldstate';
+import type { WorldStateStoreV2 } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
@@ -17,7 +17,7 @@ const BeatUpdateSchema = z.object({
     .describe('Optional 1-2 sentence update describing how the beat shifted this turn.')
     .optional()
     .nullable(),
-  status: ChronicleBeatStatus.describe('Optional new status for the beat.')
+  status: ChronicleBeatStatusSchema.describe('Optional new status for the beat.')
     .optional()
     .nullable(),
 });
@@ -63,7 +63,7 @@ type BeatUpdate = z.infer<typeof BeatUpdateSchema>;
 class BeatTrackerNode implements GraphNode {
   readonly id = 'beat-tracker';
 
-  constructor(private readonly worldStateStore: WorldStateStore) {}
+  constructor(private readonly worldStateStore: WorldStateStoreV2) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (this.#shouldSkip(context)) {
@@ -330,7 +330,7 @@ class BeatTrackerNode implements GraphNode {
     }
     if (applied.shouldPersist) {
       try {
-        await this.worldStateStore.upsertChronicle(applied.chronicle);
+        await this.worldStateStore.updateChronicle(applied.chronicle);
       } catch (error) {
         context.telemetry?.recordToolError?.({
           attempt: 0,

@@ -5,6 +5,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   BatchGetCommand,
   BatchWriteCommand,
+  DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -12,6 +13,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -562,6 +564,96 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     return chronicle;
   }
 
+  async updateChronicle(chronicle: Chronicle): Promise<Chronicle> {
+    const meta = await this.#getChronicleMeta(chronicle.id);
+    if (!meta) {
+      throw new Error(`Chronicle ${chronicle.id} not found`);
+    }
+    const updated = ChronicleSchema.parse({ ...chronicle, updatedAt: nowIso() });
+    await writeJson(this.#s3, this.#bucketName, meta.documentKey, updated);
+    const summary = ChronicleSummarySchema.parse({
+      id: updated.id,
+      loginId: updated.loginId,
+      characterId: updated.characterId,
+      title: updated.title,
+      status: updated.status,
+      lastTurnPreview: updated.lastTurnPreview,
+      turnChunkCount: updated.turnChunkCount,
+      heroArtUrl: updated.heroArtUrl,
+    });
+    const item: ChronicleRow = {
+      PK: PK.tenant(summary.loginId),
+      SK: SK.chronicle(updated.id),
+      entityType: 'CHRONICLE',
+      chronicleId: updated.id,
+      loginId: summary.loginId,
+      characterId: summary.characterId,
+      title: summary.title,
+      status: summary.status,
+      lastTurnPreview: summary.lastTurnPreview,
+      turnChunkCount: summary.turnChunkCount ?? 0,
+      heroArtUrl: summary.heroArtUrl,
+      manifestKey: meta.manifestKey,
+      documentKey: meta.documentKey,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      GSI2PK: PK.chronicle(updated.id),
+      GSI2SK: PK.tenant(summary.loginId),
+      GSI3PK: PK.character(summary.characterId),
+      GSI3SK: PK.tenant(summary.loginId),
+    };
+    await this.#docClient.send(new PutCommand({ TableName: this.#tableName, Item: item }));
+    await this.#docClient.send(
+      new PutCommand({
+        TableName: this.#tableName,
+        Item: {
+          PK: PK.chronicle(updated.id),
+          SK: SK.meta,
+          entityType: 'CHRONICLE_META',
+          chronicleId: updated.id,
+          loginId: summary.loginId,
+          characterId: summary.characterId,
+          locationId: updated.locationId ?? null,
+          manifestKey: meta.manifestKey,
+          documentKey: meta.documentKey,
+        },
+      })
+    );
+    return updated;
+  }
+
+  async deleteChronicle(chronicleId: string): Promise<void> {
+    const meta = await this.#getChronicleMeta(chronicleId);
+    if (!meta) {
+      return;
+    }
+    await this.#docClient.send(
+      new DeleteCommand({
+        TableName: this.#tableName,
+        Key: { PK: PK.tenant(meta.loginId), SK: SK.chronicle(chronicleId) },
+      })
+    );
+    await this.#docClient.send(
+      new DeleteCommand({
+        TableName: this.#tableName,
+        Key: { PK: PK.chronicle(chronicleId), SK: SK.meta },
+      })
+    );
+    await this.#deleteTurnChunks(chronicleId, meta.manifestKey);
+    await this.#s3.send(
+      new DeleteObjectCommand({
+        Bucket: this.#bucketName,
+        Key: meta.documentKey,
+      })
+    );
+    await this.#s3.send(
+      new DeleteObjectCommand({
+        Bucket: this.#bucketName,
+        Key: meta.manifestKey,
+      })
+    );
+  }
+
   async appendChronicleSummary(
     chronicleId: string,
     entry: ChronicleSummaryEntry
@@ -985,6 +1077,30 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
         },
       },
     ]);
+  }
+
+  async #deleteTurnChunks(chronicleId: string, manifestKey: string): Promise<void> {
+    const manifest = await readJson<TurnChunkManifest>(this.#s3, this.#bucketName, manifestKey);
+    if (!manifest) {
+      return;
+    }
+    const deletes =
+      manifest.entries.map((entry) => ({
+        DeleteRequest: {
+          Key: { PK: PK.chronicle(chronicleId), SK: SK.turnChunk(entry.chunkIndex) },
+        },
+      })) ?? [];
+    if (deletes.length > 0) {
+      await this.#batchWrite(deletes);
+    }
+    for (const entry of manifest.entries) {
+      await this.#s3.send(
+        new DeleteObjectCommand({
+          Bucket: this.#bucketName,
+          Key: entry.chunkKey,
+        })
+      );
+    }
   }
 
   #emptyTurnManifest(chronicleId: string): TurnChunkManifest {

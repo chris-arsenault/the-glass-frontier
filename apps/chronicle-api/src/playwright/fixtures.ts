@@ -1,238 +1,160 @@
 import type {
-  Character,
-  Chronicle,
-  LocationPlace,
+  CharacterDraft,
+  ChronicleDraft,
+  LocationDraft,
+  LocationGraphSnapshot,
   Login,
-} from '@glass-frontier/dto';
-import type { LocationGraphStore } from '@glass-frontier/persistence';
-
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+  WorldStateStoreV2,
+} from '@glass-frontier/worldstate';
+import { randomUUID } from 'node:crypto';
 
 export const PLAYWRIGHT_LOGIN_ID = 'playwright-e2e';
 export const PLAYWRIGHT_CHARACTER_ID = '11111111-2222-4333-8444-555555555555';
 export const PLAYWRIGHT_CHRONICLE_ID = 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+export const PLAYWRIGHT_LOCATION_ID = '99999999-8888-4777-8666-555555555555';
 
-const BASE_LOGIN: Login = {
-  email: 'playwright@example.com',
-  id: PLAYWRIGHT_LOGIN_ID,
-  loginName: PLAYWRIGHT_LOGIN_ID,
+const nowIso = (): string => new Date().toISOString();
+
+export const buildPlaywrightLoginRecord = (): Login => {
+  const timestamp = nowIso();
+  return {
+    createdAt: timestamp,
+    id: PLAYWRIGHT_LOGIN_ID,
+    loginName: PLAYWRIGHT_LOGIN_ID,
+    updatedAt: timestamp,
+  };
 };
 
-const BASE_CHARACTER: Character = {
+export const buildPlaywrightCharacterRecord = (): CharacterDraft => ({
+  id: PLAYWRIGHT_CHARACTER_ID,
   archetype: 'Recon',
   attributes: {
-    attunement: 'standard',
-    finesse: 'standard',
-    focus: 'standard',
-    ingenuity: 'standard',
-    presence: 'standard',
-    resolve: 'standard',
-    vitality: 'standard',
+    resolve: 'rook',
+    cunning: 'rook',
+    vigor: 'rook',
+    focus: 'rook',
+    heart: 'rook',
   },
   bio: 'Seeded character for Playwright tests.',
-  chronicleId: PLAYWRIGHT_CHRONICLE_ID,
-  id: PLAYWRIGHT_CHARACTER_ID,
+  echoes: [],
   inventory: {
-    consumables: [
-      {
-        count: 2,
-        id: 'consumable-starlight',
-        name: 'Starlight Draught',
-      },
-    ],
-    data_shards: [
-      {
-        id: 'shard-vault-seed',
-        kind: 'chronicle_hook',
-        name: 'Vault Access Seed',
-        seed: 'Unlock the vigil gate',
-      },
-    ],
-    gear: {
-      armament: {
-        id: 'imbued-sunpiercer',
-        name: 'Sunpiercer Longarm',
-        slot: 'armament',
-      },
-      outfit: {
-        id: 'imbued-nullglass',
-        name: 'Nullglass Stealth Rig',
-        slot: 'outfit',
-      },
-    },
-    imbued_items: [
-      {
-        id: 'imbued-sunpiercer',
-        name: 'Sunpiercer Longarm',
-        registry_key: 'armament.sunpiercer',
-        slot: 'armament',
-      },
-      {
-        id: 'imbued-nullglass',
-        name: 'Nullglass Stealth Rig',
-        registry_key: 'outfit.nullglass',
-        slot: 'outfit',
-      },
-      {
-        id: 'imbued-obsidian',
-        name: 'Obsidian Halo',
-        registry_key: 'headgear.obsidian',
-        slot: 'headgear',
-      },
-    ],
-    relics: [
-      {
-        hook: 'Projects soft future glimpses',
-        id: 'relic-oracle-vessel',
-        name: 'Oracle Vessel',
-      },
-    ],
-    revision: 0,
-    supplies: [
-      {
-        id: 'supply-alloy-pack',
-        name: 'Alloy Pack',
-      },
-    ],
+    carried: [],
+    stored: [],
+    equipped: {},
+    capacity: 10,
   },
   loginId: PLAYWRIGHT_LOGIN_ID,
+  metadata: {},
   momentum: {
-    ceiling: 2,
     current: 0,
     floor: -2,
+    ceiling: 2,
   },
   name: 'Playwright Canary',
   pronouns: 'they/them',
   skills: {
     fieldcraft: {
-      attribute: 'focus',
       name: 'Fieldcraft',
-      tier: 'apprentice',
-      xp: 0,
+      tier: 'rook',
+      tags: [],
     },
   },
   tags: ['playwright'],
-};
+});
 
-const BASE_CHRONICLE: Chronicle = {
-  beats: [],
-  beatsEnabled: true,
-  characterId: PLAYWRIGHT_CHARACTER_ID,
-  id: PLAYWRIGHT_CHRONICLE_ID,
-  locationId: '99999999-8888-4777-8666-555555555555',
-  loginId: PLAYWRIGHT_LOGIN_ID,
-  status: 'open',
-  summaries: [],
-  title: 'Playwright Chronicle',
-};
-
-type LocationPlaceSeed = {
-  description: string;
-  kind: string;
-  name: string;
-  tags: string[];
-};
-
-export const LOCATION_ROOT_SEED: LocationPlaceSeed & { id: string } = {
-  description: 'Sunwashed gantry overlooking the orbital Quay.',
-  id: BASE_CHRONICLE.locationId,
-  kind: 'locale',
-  name: 'Luminous Quay',
-  tags: ['orbital', 'staging'],
-};
-
-export const LOCATION_CHILDREN_SEED: LocationPlaceSeed[] = [
-  {
-    description: 'Sensor gantries and maintenance access to the quay perimeter.',
-    kind: 'locale',
-    name: 'Auric Causeway',
-    tags: ['concourse'],
-  },
-  {
-    description: 'Pedestrian bridge lined with resonance spires.',
-    kind: 'locale',
-    name: 'Prism Walk',
-    tags: ['bridge'],
-  },
-];
-
-export const buildPlaywrightLoginRecord = (): Login => clone(BASE_LOGIN);
-export const buildPlaywrightCharacterRecord = (): Character => clone(BASE_CHARACTER);
 export const buildPlaywrightChronicleRecord = (
   options?: { locationId?: string }
-): Chronicle => {
-  const chronicle = clone(BASE_CHRONICLE);
-  if (typeof options?.locationId === 'string') {
-    chronicle.locationId = options.locationId;
-  }
-  return chronicle;
+): ChronicleDraft => ({
+  id: PLAYWRIGHT_CHRONICLE_ID,
+  characterId: PLAYWRIGHT_CHARACTER_ID,
+  loginId: PLAYWRIGHT_LOGIN_ID,
+  title: 'Playwright Chronicle',
+  status: 'active',
+  locationId: options?.locationId ?? PLAYWRIGHT_LOCATION_ID,
+  tags: ['playwright'],
+  beats: [],
+  beatsEnabled: true,
+  summaries: [],
+});
+
+const buildLocationSnapshot = (locationId: string): LocationGraphSnapshot => {
+  const rootPlaceId = `${locationId}-root`;
+  const auricId = `${locationId}-auric`;
+  const prismId = `${locationId}-prism`;
+  return {
+    locationId,
+    places: [
+      {
+        id: rootPlaceId,
+        name: 'Luminous Quay',
+        kind: 'locale',
+        description: 'Sunwashed gantry overlooking the orbital quay.',
+        tags: ['orbital', 'staging'],
+      },
+      {
+        id: auricId,
+        name: 'Auric Causeway',
+        kind: 'locale',
+        description: 'Sensor gantries and maintenance access to the quay perimeter.',
+        tags: ['concourse'],
+      },
+      {
+        id: prismId,
+        name: 'Prism Walk',
+        kind: 'locale',
+        description: 'Pedestrian bridge lined with resonance spires.',
+        tags: ['bridge'],
+      },
+    ],
+    edges: [
+      {
+        id: randomUUID(),
+        src: rootPlaceId,
+        dst: auricId,
+        kind: 'ADJACENT_TO',
+      },
+      {
+        id: randomUUID(),
+        src: rootPlaceId,
+        dst: prismId,
+        kind: 'ADJACENT_TO',
+      },
+    ],
+  };
+};
+
+const buildLocationDraft = (options: {
+  loginId: string;
+  chronicleId: string;
+  locationId: string;
+}): LocationDraft => {
+  const rootPlaceId = `${options.locationId}-root`;
+  return {
+    id: options.locationId,
+    loginId: options.loginId,
+    chronicleId: options.chronicleId,
+    name: 'Luminous Quay',
+    anchorPlaceId: rootPlaceId,
+    breadcrumb: [
+      {
+        id: rootPlaceId,
+        kind: 'locale',
+        name: 'Luminous Quay',
+      },
+    ],
+    description: 'Sunwashed gantry overlooking the orbital quay.',
+    status: [],
+    tags: ['orbital', 'staging'],
+    nodeCount: 3,
+    edgeCount: 2,
+    graphChunkCount: 1,
+    graph: buildLocationSnapshot(options.locationId),
+  };
 };
 
 export const seedPlaywrightLocationGraph = async (
-  store: LocationGraphStore,
-  options: { locationId: string; characterId: string }
-): Promise<{
-  root: LocationPlace;
-  places: Record<string, LocationPlace>;
-}> => {
-  const root = await store.ensureLocation({
-    characterId: options.characterId,
-    description: LOCATION_ROOT_SEED.description,
-    kind: LOCATION_ROOT_SEED.kind,
-    locationId: options.locationId,
-    name: LOCATION_ROOT_SEED.name,
-    tags: LOCATION_ROOT_SEED.tags,
-  });
-
-  const places: Record<string, LocationPlace> = {};
-  for (const child of LOCATION_CHILDREN_SEED) {
-    const place = await store.createPlace({
-      description: child.description,
-      kind: child.kind,
-      locationId: root.id,
-      name: child.name,
-      parentId: root.id,
-      tags: child.tags,
-    });
-    places[child.name] = place;
-  }
-
-  const auric = places['Auric Causeway'];
-  const prism = places['Prism Walk'];
-
-  if (auric && prism) {
-    await store.addEdge({
-      dst: prism.id,
-      kind: 'ADJACENT_TO',
-      locationId: root.id,
-      metadata: {},
-      src: auric.id,
-    });
-    await store.addEdge({
-      dst: auric.id,
-      kind: 'ADJACENT_TO',
-      locationId: root.id,
-      metadata: {},
-      src: prism.id,
-    });
-  }
-
-  await store.applyPlan({
-    characterId: options.characterId,
-    locationId: root.id,
-    plan: {
-      character_id: options.characterId,
-      notes: 'seed-anchor',
-      ops: auric
-        ? [
-            {
-              dst_place_id: auric.id,
-              op: 'MOVE',
-            },
-          ]
-        : [],
-    },
-  });
-
-  return { root, places };
+  store: WorldStateStoreV2,
+  options: { loginId: string; chronicleId: string; locationId: string }
+): Promise<void> => {
+  await store.createLocation(buildLocationDraft(options));
 };

@@ -1,15 +1,19 @@
 // context.ts
 import {
-  createWorldStateStore,
+  createWorldStateStore as createLegacyWorldStateStore,
   createLocationGraphStore,
   createImbuedRegistryStore,
-  type WorldStateStore,
+  type WorldStateStore as LegacyWorldStateStore,
   type LocationGraphStore,
   type ImbuedRegistryStore,
   PromptTemplateManager,
   BugReportStore,
   TokenUsageStore,
 } from '@glass-frontier/persistence';
+import {
+  DynamoWorldStateStore,
+  type WorldStateStoreV2,
+} from '@glass-frontier/worldstate';
 
 import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
@@ -24,7 +28,12 @@ if (typeof worldStateTable !== 'string' || worldStateTable.trim().length === 0) 
   throw new Error('WORLD_STATE_TABLE_NAME must be configured for the narrative service');
 }
 
-const worldStateStore = createWorldStateStore({
+const worldStateStore: WorldStateStoreV2 = new DynamoWorldStateStore({
+  bucketName: worldStateBucket,
+  tableName: worldStateTable,
+  s3Prefix: worldStatePrefix,
+});
+const playerStore: LegacyWorldStateStore = createLegacyWorldStateStore({
   bucket: worldStateBucket,
   prefix: worldStatePrefix,
   worldIndexTable: worldStateTable,
@@ -44,11 +53,11 @@ if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
 }
 const templateManager = new PromptTemplateManager({
   bucket: templateBucket.trim(),
-  worldStateStore,
+  worldStateStore: playerStore,
 });
 const seedService = new ChronicleSeedService({
-  locationGraphStore,
   templateManager,
+  worldStateStore,
 });
 const engine = new NarrativeEngine({
   imbuedRegistryStore,
@@ -78,7 +87,8 @@ export type Context = {
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;
   tokenUsageStore: TokenUsageStore | null;
-  worldStateStore: WorldStateStore;
+  worldStateStore: WorldStateStoreV2;
+  playerStore: Pick<LegacyWorldStateStore, 'getPlayer' | 'upsertPlayer'>;
 };
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
@@ -92,6 +102,7 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     templateManager,
     tokenUsageStore,
     worldStateStore,
+    playerStore,
   };
 }
 
