@@ -1,4 +1,4 @@
-import { Attribute } from '@glass-frontier/dto';
+import { CharacterAttributeKeySchema } from '@glass-frontier/worldstate';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
@@ -6,8 +6,12 @@ import type { GraphContext, LangGraphLlmLike } from '../../types';
 import type { GraphNode } from '../orchestrator';
 import { composeSkillDetectorPrompt } from '../prompts/prompts';
 
+const ATTRIBUTE_KEYS = CharacterAttributeKeySchema.options;
+
 const SkillDetectionSchema = z.object({
-  attribute: Attribute.describe('The attribute that best matches the described approach.'),
+  attribute: CharacterAttributeKeySchema.describe(
+    'The attribute that best matches the described approach.'
+  ),
   handlerHints: z
     .array(
       z

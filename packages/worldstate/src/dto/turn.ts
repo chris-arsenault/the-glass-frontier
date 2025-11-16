@@ -1,7 +1,18 @@
 import { z } from 'zod';
 
+import { CharacterAttributeKeySchema } from './character';
 import { LocationBreadcrumbEntrySchema } from './location';
 import { MetadataSchema, TagArraySchema } from './shared';
+
+export const IntentTypeSchema = z.enum([
+  'action',
+  'inquiry',
+  'clarification',
+  'possibility',
+  'planning',
+  'reflection',
+]);
+export type IntentType = z.infer<typeof IntentTypeSchema>;
 
 export const IntentBeatDirectiveSchema = z.object({
   kind: z.enum(['existing', 'new', 'independent']),
@@ -43,11 +54,11 @@ export const BeatDeltaSchema = z.object({
 export type BeatDelta = z.infer<typeof BeatDeltaSchema>;
 
 export const IntentSchema = z.object({
-  intentType: z.string().min(1).optional(),
+  intentType: IntentTypeSchema.optional(),
   summary: z.string().default(''),
   tone: z.string().optional(),
   skill: z.string().optional(),
-  attribute: z.string().optional(),
+  attribute: CharacterAttributeKeySchema.optional(),
   requiresCheck: z.boolean().default(false),
   creativeSpark: z.boolean().default(false),
   handlerHints: z.array(z.string().min(1)).max(8).optional(),
@@ -57,18 +68,24 @@ export const IntentSchema = z.object({
 
 export type Intent = z.infer<typeof IntentSchema>;
 
+export const RiskLevelSchema = z.enum(['controlled', 'standard', 'risky', 'desperate']);
+export type RiskLevel = z.infer<typeof RiskLevelSchema>;
+
 export const SkillCheckPlanSchema = z.object({
   skill: z.string().min(1),
-  attribute: z.string().min(1),
+  attribute: CharacterAttributeKeySchema.optional(),
   difficulty: z.string().optional(),
-  riskLevel: z.string().optional(),
+  riskLevel: RiskLevelSchema.optional(),
   metadata: MetadataSchema.optional(),
 });
 
 export type SkillCheckPlan = z.infer<typeof SkillCheckPlanSchema>;
 
+export const OutcomeTierSchema = z.enum(['breakthrough', 'advance', 'stall', 'regress', 'collapse']);
+export type OutcomeTier = z.infer<typeof OutcomeTierSchema>;
+
 export const SkillCheckResultSchema = z.object({
-  outcomeTier: z.string().min(1),
+  outcomeTier: OutcomeTierSchema,
   margin: z.number().optional(),
   complications: z.array(z.string().min(1)).optional(),
   metadata: MetadataSchema.optional(),
@@ -134,7 +151,7 @@ export const TurnSchema = z.object({
 
   playerMessage: TranscriptEntrySchema,
   playerIntent: IntentSchema.optional(),
-  resolvedIntentType: z.string().optional(),
+  resolvedIntentType: IntentTypeSchema.optional(),
   resolvedIntentConfidence: z.number().min(0).max(1).optional(),
 
   gmMessage: TranscriptEntrySchema.optional(),

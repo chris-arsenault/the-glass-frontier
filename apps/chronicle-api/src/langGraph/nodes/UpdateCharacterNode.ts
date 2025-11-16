@@ -1,6 +1,5 @@
-import { MOMENTUM_DELTA, type OutcomeTier } from '@glass-frontier/dto';
-import { resolveInventoryDelta, type LocationGraphStore } from '@glass-frontier/persistence';
-import type { WorldStateStoreV2, Character } from '@glass-frontier/worldstate';
+import { resolveInventoryDelta } from '@glass-frontier/persistence';
+import type { WorldStateStoreV2, Character, OutcomeTier } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types.js';
@@ -9,10 +8,7 @@ import type { GraphNode } from '../orchestrator.js';
 class UpdateCharacterNode implements GraphNode {
   readonly id = 'character-update';
 
-  constructor(
-    private readonly worldStateStore: WorldStateStoreV2,
-    private readonly locationGraphStore?: LocationGraphStore
-  ) {}
+  constructor(private readonly worldStateStore: WorldStateStoreV2) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure === true) {
@@ -24,10 +20,7 @@ class UpdateCharacterNode implements GraphNode {
       return inventoryContext;
     }
 
-    const characterUpdateContext = await this.#applyMomentumUpdate(inventoryContext);
-    const locationUpdateContext = await this.#applyLocationPlan(characterUpdateContext);
-
-    return locationUpdateContext;
+    return this.#applyMomentumUpdate(inventoryContext);
   }
 
   async #applyInventoryDelta(context: GraphContext): Promise<GraphContext> {
@@ -91,39 +84,6 @@ class UpdateCharacterNode implements GraphNode {
     };
   }
 
-  async #applyLocationPlan(context: GraphContext): Promise<GraphContext> {
-    if (this.locationGraphStore === undefined) {
-      return context;
-    }
-    const planInputs = this.#extractLocationPlanInputs(context);
-    if (planInputs === null) {
-      return context;
-    }
-    const { characterId, locationId, plan } = planInputs;
-    try {
-      await this.locationGraphStore.applyPlan({
-        characterId,
-        locationId,
-        plan,
-      });
-      const summary = await this.locationGraphStore.summarizeCharacterLocation({
-        characterId,
-        locationId,
-      });
-      return {
-        ...context,
-        locationSummary: summary ?? context.locationSummary ?? null,
-      };
-    } catch (error) {
-      log('warn', 'location-plan.apply.failed', {
-        chronicleId: context.chronicleId,
-        locationId: context.chronicle.chronicle.locationId,
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-      return context;
-    }
-  }
-
   #extractInventoryInputs(
     context: GraphContext
   ): { character: NonNullable<typeof context.chronicle.character>; storeDelta: NonNullable<typeof context.inventoryStoreDelta> } | null {
@@ -136,27 +96,6 @@ class UpdateCharacterNode implements GraphNode {
       return null;
     }
     return { character, storeDelta };
-  }
-
-  #extractLocationPlanInputs(
-    context: GraphContext
-  ): { characterId: string; locationId: string; plan: NonNullable<GraphContext['locationPlan']> } | null {
-    if (this.locationGraphStore === undefined) {
-      return null;
-    }
-    const plan = context.locationPlan;
-    const characterId = context.chronicle.character?.id;
-    const locationId = context.chronicle.chronicle.locationId;
-    if (
-      plan === undefined ||
-      plan === null ||
-      plan.ops.length === 0 ||
-      !isNonEmptyString(characterId) ||
-      !isNonEmptyString(locationId)
-    ) {
-      return null;
-    }
-    return { characterId, locationId, plan };
   }
 
   #applyMomentumDelta(momentum: Character['momentum'], delta: number): Character['momentum'] {
@@ -186,6 +125,14 @@ class UpdateCharacterNode implements GraphNode {
   }
 
 }
+
+const MOMENTUM_DELTA: Record<OutcomeTier, number> = {
+  breakthrough: 2,
+  advance: 1,
+  stall: 0,
+  regress: -1,
+  collapse: -2,
+};
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;

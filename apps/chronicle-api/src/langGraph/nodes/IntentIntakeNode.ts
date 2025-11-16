@@ -1,12 +1,17 @@
-import type { Intent } from '@glass-frontier/dto';
-import { Attribute } from '@glass-frontier/dto';
-import { IntentType as IntentTypeSchema } from '@glass-frontier/dto';
+import {
+  CharacterAttributeKeySchema,
+  IntentTypeSchema,
+  type Intent,
+  type IntentType,
+} from '@glass-frontier/worldstate';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
 import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeIntentPrompt } from '../prompts/prompts';
+
+const INTENT_TYPES = IntentTypeSchema.options;
 
 const IntentResponseSchema = z.object({
   creativeSpark: z
@@ -44,7 +49,10 @@ type IntentResponse = z.infer<typeof IntentResponseSchema>;
 
 const DEFAULT_SKILL = 'talk';
 const DEFAULT_TONE = 'narrative';
-const DEFAULT_ATTRIBUTE = Attribute.options[0];
+const ATTRIBUTE_KEYS = CharacterAttributeKeySchema.options;
+type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+const DEFAULT_ATTRIBUTE: AttributeKey = ATTRIBUTE_KEYS[0];
+type IntentTypeValue = IntentType;
 const CLASSIFIER_MODEL = 'gpt-5-nano';
 const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
 const INTENT_RESPONSE_FORMAT = zodTextFormat(IntentResponseSchema, 'intent_intake_response');
@@ -79,7 +87,7 @@ class IntentIntakeNode implements GraphNode {
 
     const playerIntent = this.#buildIntent(response, content);
     const resolvedIntentType =
-      this.#normalizeIntentType(playerIntent.intentType) ?? ('action' as Intent['intentType']);
+      this.#normalizeIntentType(playerIntent.intentType) ?? ('action' as IntentTypeValue);
     const resolvedConfidence = this.#normalizeConfidence(response.routerConfidence);
 
     return {
@@ -87,7 +95,6 @@ class IntentIntakeNode implements GraphNode {
       playerIntent: {
         ...playerIntent,
         intentType: resolvedIntentType,
-        routerConfidence: resolvedConfidence,
       },
       resolvedIntentConfidence: resolvedConfidence ?? context.resolvedIntentConfidence,
       resolvedIntentType,
@@ -137,21 +144,16 @@ class IntentIntakeNode implements GraphNode {
     const handlerHints = this.#normalizeStringArray(response.handlerHints);
 
     return {
-      attribute: DEFAULT_ATTRIBUTE,
       beatDirective: undefined,
       creativeSpark,
       handlerHints: handlerHints ?? undefined,
       intentSummary,
       intentType: this.#normalizeIntentType(response.intentType),
-      metadata: {
-        tags: [],
-        timestamp: Date.now(),
-      },
+      metadata: { timestamp: Date.now() },
       requiresCheck,
-      routerConfidence: this.#normalizeConfidence(response.routerConfidence),
-      routerRationale: this.#normalizeString(response.routerRationale) ?? undefined,
       skill: DEFAULT_SKILL,
       tone,
+      attribute: DEFAULT_ATTRIBUTE,
     };
   }
 
@@ -198,18 +200,12 @@ class IntentIntakeNode implements GraphNode {
     return normalized.length > 0 ? normalized : null;
   }
 
-  #normalizeIntentType(value?: Intent['intentType'] | null): Intent['intentType'] | undefined {
-    if (
-      value === 'action' ||
-      value === 'inquiry' ||
-      value === 'clarification' ||
-      value === 'possibility' ||
-      value === 'planning' ||
-      value === 'reflection'
-    ) {
-      return value;
+  #normalizeIntentType(value?: string | null): IntentTypeValue | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
     }
-    return undefined;
+    const normalized = value.trim().toLowerCase();
+    return INTENT_TYPES.find((entry) => entry === normalized) as IntentTypeValue | undefined;
   }
 }
 

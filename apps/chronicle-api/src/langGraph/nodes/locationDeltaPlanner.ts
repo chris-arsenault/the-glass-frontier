@@ -1,11 +1,12 @@
 import type {
-  LocationGraphSnapshot,
-  LocationPlan,
-  LocationPlanEdge,
-  LocationPlace,
-} from '@glass-frontier/dto';
+  Character,
+  CharacterLocationState,
+  LocationBreadcrumbEntry,
+  LocationNeighborSummary,
+  LocationSummary,
+  WorldStateStoreV2,
+} from '@glass-frontier/worldstate';
 
-const MAX_CHILDREN = 25;
 const MAX_NEIGHBORS = 25;
 
 export type DeltaDecision = {
@@ -26,53 +27,61 @@ export type PromptInput = {
 };
 
 export type PlannerContext = {
-  anchorPlace: LocationPlace;
   characterId: string;
-  chronicleId: string;
-  graph: LocationGraphSnapshot;
-  parentPlace: LocationPlace | null;
-  placeById: Map<string, LocationPlace>;
-  placeByName: Map<string, LocationPlace>;
-};
-
-export type PlanBuildResult = {
-  applyImmediately: boolean;
-  plan: LocationPlan;
-};
-
-export type TargetResolution = {
-  applyImmediately: boolean;
-  id: string;
-};
-
-export function buildPlannerContext(input: {
-  graph: LocationGraphSnapshot;
-  priorState: { anchorPlaceId?: string; locationId?: string } | null;
   locationId: string;
-  characterId: string;
-  chronicleId: string;
-}): PlannerContext | null {
-  if (!isNonEmptyString(input.characterId) || !isNonEmptyString(input.locationId)) {
+  currentName: string;
+  currentPlaceId: string;
+  currentBreadcrumb: LocationBreadcrumbEntry[];
+  parentName: string | null;
+  neighbors: Map<string, NeighborRef>;
+  children: string[];
+  adjacent: string[];
+  links: string[];
+};
+
+export type NeighborRef = {
+  placeId: string;
+  name: string;
+  breadcrumb: LocationBreadcrumbEntry[];
+};
+
+export type DecisionResolution =
+  | { kind: 'noop' }
+  | { kind: 'uncertain' }
+  | { kind: 'move'; target: NeighborRef };
+
+export async function buildPlannerContext(options: {
+  store: WorldStateStoreV2;
+  character: Character | null;
+  locationSummary: LocationSummary | null;
+  locationId: string | null | undefined;
+}): Promise<PlannerContext | null> {
+  const characterId = options.character?.id;
+  if (!isNonEmptyString(characterId) || !isNonEmptyString(options.locationId)) {
     return null;
   }
-  if (!isValidPriorState(input.priorState, input.locationId)) {
+  const locationSummary =
+    options.locationSummary ?? (await options.store.getLocation(options.locationId ?? ''));
+  if (!locationSummary) {
     return null;
   }
-  const anchorPlace = findAnchorPlace(input.graph, input.priorState.anchorPlaceId);
-  if (anchorPlace === null) {
+  const state = resolveLocationState(options.character, locationSummary);
+  if (!state) {
     return null;
   }
-  const placeById = buildPlaceIdIndex(input.graph);
-  const placeByName = buildPlaceNameIndex(input.graph);
-  const parentPlace = resolveParentPlace(anchorPlace, placeById);
+  const buckets = await fetchNeighborBuckets(options.store, state.locationId, state.placeId);
+  const neighbors = buildNeighborMap(buckets, state.parent);
   return {
-    anchorPlace,
-    characterId: input.characterId,
-    chronicleId: input.chronicleId,
-    graph: input.graph,
-    parentPlace,
-    placeById,
-    placeByName,
+    characterId,
+    locationId: state.locationId,
+    currentName: state.placeName,
+    currentPlaceId: state.placeId,
+    currentBreadcrumb: state.breadcrumb,
+    parentName: state.parent?.name ?? null,
+    neighbors,
+    children: buckets.children.map((entry) => entry.name),
+    adjacent: buckets.adjacent.map((entry) => entry.name),
+    links: buckets.links.map((entry) => entry.name),
   };
 }
 
@@ -81,326 +90,132 @@ export function buildPromptInput(
   gmResponse: string,
   playerIntent: string
 ): PromptInput {
-  const childNames = context.graph.places
-    .filter((place) => place.canonicalParentId === context.anchorPlace.id)
-    .slice(0, MAX_CHILDREN)
-    .map((place) => place.name);
-  const adjacentNames = collectNeighborNames(context.graph, context.anchorPlace.id, ['ADJACENT_TO']).slice(
-    0,
-    MAX_NEIGHBORS
-  );
-  const linkNames = collectNeighborNames(context.graph, context.anchorPlace.id, [
-    'LINKS_TO',
-    'DOCKED_TO',
-  ]).slice(0, MAX_NEIGHBORS);
   return {
-    adjacent: adjacentNames,
-    children: childNames,
-    current: context.anchorPlace.name,
-    currentId: context.anchorPlace.id,
+    adjacent: context.adjacent.slice(0, MAX_NEIGHBORS),
+    children: context.children.slice(0, MAX_NEIGHBORS),
+    current: context.currentName,
+    currentId: context.currentPlaceId,
     gmResponse,
-    links: linkNames,
-    parent: context.parentPlace?.name ?? null,
+    links: context.links.slice(0, MAX_NEIGHBORS),
+    parent: context.parentName,
     playerIntent,
   };
 }
 
-export function decisionToPlan(context: PlannerContext, decision: DeltaDecision): PlanBuildResult | null {
+export function resolveDecision(
+  context: PlannerContext,
+  decision: DeltaDecision
+): DecisionResolution {
   if (decision.action === 'no_change') {
-    return null;
+    return { kind: 'noop' };
   }
   if (decision.action === 'uncertain') {
-    return {
-      applyImmediately: false,
-      plan: buildUncertainPlan(context.characterId),
-    };
+    return { kind: 'uncertain' };
   }
-  const ops: LocationPlan['ops'] = [];
-  const target = resolveTargetReference({
-    context,
-    decision,
-    ops,
-  });
-  if (target === null) {
-    return null;
+  const target = context.neighbors.get(normalize(decision.destination));
+  if (!target) {
+    return { kind: 'uncertain' };
   }
-  ops.push({ dst_place_id: target.id, op: 'MOVE' });
-  return {
-    applyImmediately: target.applyImmediately,
-    plan: finalizeMovePlan(context.characterId, decision.destination, ops),
-  };
+  return { kind: 'move', target };
 }
 
-export function resolveTargetReference(input: {
-  context: PlannerContext;
-  decision: DeltaDecision;
-  ops: LocationPlan['ops'];
-}): TargetResolution | null {
-  const { anchorPlace, parentPlace, placeById, placeByName } = input.context;
-  const known = placeByName.get(normalizeName(input.decision.destination)) ?? null;
-
-  if (known !== null) {
-    const ancestorTarget =
-      known.id === anchorPlace.id || isAncestor(placeById, anchorPlace.id, known.id);
-    if (!ancestorTarget) {
-      appendEdgesForExistingTarget({
-        anchorId: anchorPlace.id,
-        link: input.decision.link,
-        ops: input.ops,
-        parentId: parentPlace?.id ?? anchorPlace.id,
-        target: known,
-      });
-    }
-    return { applyImmediately: ancestorTarget, id: known.id };
-  }
-
-  const tempId = createTempId(input.decision.destination);
-  input.ops.push({
-    op: 'CREATE_PLACE',
-    place: {
-      kind: inferKind(input.decision.link),
-      name: input.decision.destination,
-      tags: [],
-      temp_id: tempId,
-    },
-  });
-  appendEdgesForNewTarget({
-    anchorId: anchorPlace.id,
-    link: input.decision.link,
-    ops: input.ops,
-    parentId: parentPlace?.id ?? anchorPlace.id,
-    targetId: tempId,
-  });
-  return { applyImmediately: false, id: tempId };
-}
-
-export function appendEdgesForExistingTarget(input: {
-  anchorId: string;
-  link: DeltaDecision['link'];
-  ops: LocationPlan['ops'];
-  parentId: string;
-  target: LocationPlace;
-}): void {
-  const { anchorId, link, ops, parentId, target } = input;
-  switch (link) {
-  case 'inside':
-    ops.push({ edge: buildEdge(anchorId, target.id, 'CONTAINS'), op: 'CREATE_EDGE' });
-    break;
-  case 'adjacent':
-    ops.push({
-      edge: buildEdge(anchorId, target.id, 'ADJACENT_TO'),
-      op: 'CREATE_EDGE',
-    });
-    break;
-  case 'linked':
-    ops.push({ edge: buildEdge(anchorId, target.id, 'LINKS_TO'), op: 'CREATE_EDGE' });
-    break;
-  default:
-    ops.push({ edge: buildEdge(parentId, target.id, 'CONTAINS'), op: 'CREATE_EDGE' });
-    break;
-  }
-}
-
-function appendEdgesForNewTarget(input: {
-  anchorId: string;
-  link: DeltaDecision['link'];
-  ops: LocationPlan['ops'];
-  parentId: string;
-  targetId: string;
-}): void {
-  const { anchorId, link, ops, parentId, targetId } = input;
-  switch (link) {
-  case 'inside':
-    ops.push({ edge: buildEdge(anchorId, targetId, 'CONTAINS'), op: 'CREATE_EDGE' });
-    break;
-  case 'adjacent':
-    ops.push({ edge: buildEdge(parentId, targetId, 'CONTAINS'), op: 'CREATE_EDGE' });
-    ops.push({
-      edge: buildEdge(anchorId, targetId, 'ADJACENT_TO'),
-      op: 'CREATE_EDGE',
-    });
-    break;
-  case 'linked':
-    ops.push({ edge: buildEdge(anchorId, targetId, 'LINKS_TO'), op: 'CREATE_EDGE' });
-    break;
-  default:
-    ops.push({
-      edge: buildEdge(anchorId, targetId, 'ADJACENT_TO'),
-      op: 'CREATE_EDGE',
-    });
-    break;
-  }
-}
-
-const buildEdge = (
-  src: string,
-  dst: string,
-  kind: LocationPlanEdge['kind']
-): LocationPlanEdge => ({
-  dst,
-  kind,
-  src,
-});
-
-const isNonEmptyString = (value?: string | null): value is string =>
-  typeof value === 'string' && value.trim().length > 0;
-
-const isValidPriorState = (
-  priorState: { anchorPlaceId?: string; locationId?: string } | null,
-  locationId: string
-): priorState is { anchorPlaceId: string; locationId: string } => {
-  if (
-    priorState === null ||
-    typeof priorState.anchorPlaceId !== 'string' ||
-    typeof priorState.locationId !== 'string'
-  ) {
-    return false;
-  }
-  return priorState.locationId === locationId;
+type NeighborBuckets = {
+  children: LocationNeighborSummary[];
+  adjacent: LocationNeighborSummary[];
+  links: LocationNeighborSummary[];
 };
 
-const findAnchorPlace = (
-  graph: LocationGraphSnapshot,
-  anchorPlaceId: string
-): LocationPlace | null => graph.places.find((entry) => entry.id === anchorPlaceId) ?? null;
+const fetchNeighborBuckets = async (
+  store: WorldStateStoreV2,
+  locationId: string,
+  placeId: string
+): Promise<NeighborBuckets> => {
+  const [children, adjacent, links] = await Promise.all([
+    listNeighbors(store, locationId, placeId, ['CONTAINS']),
+    listNeighbors(store, locationId, placeId, ['ADJACENT_TO']),
+    listNeighbors(store, locationId, placeId, ['LINKS_TO', 'DOCKED_TO']),
+  ]);
+  return { children, adjacent, links };
+};
 
-const buildPlaceIdIndex = (graph: LocationGraphSnapshot): Map<string, LocationPlace> =>
-  new Map(graph.places.map((place) => [place.id, place]));
+const listNeighbors = async (
+  store: WorldStateStoreV2,
+  locationId: string,
+  placeId: string,
+  relationKinds: string[]
+): Promise<LocationNeighborSummary[]> => {
+  const res = await store.listLocationNeighbors(locationId, placeId, {
+    relationKinds,
+    limit: MAX_NEIGHBORS,
+    maxDepth: 1,
+  });
+  return res.items ?? [];
+};
 
-const buildPlaceNameIndex = (graph: LocationGraphSnapshot): Map<string, LocationPlace> => {
-  const map = new Map<string, LocationPlace>();
-  for (const place of graph.places) {
-    map.set(normalizeName(place.name), place);
+const buildNeighborMap = (
+  buckets: NeighborBuckets,
+  parent: NeighborRef | null
+): Map<string, NeighborRef> => {
+  const map = new Map<string, NeighborRef>();
+  const add = (entry: NeighborRef): void => {
+    map.set(normalize(entry.name), entry);
+  };
+  for (const bucket of [buckets.children, buckets.adjacent, buckets.links]) {
+    for (const entry of bucket) {
+      add({
+        placeId: entry.placeId,
+        name: entry.name,
+        breadcrumb: entry.breadcrumb,
+      });
+    }
+  }
+  if (parent) {
+    add(parent);
   }
   return map;
 };
 
-const resolveParentPlace = (
-  anchorPlace: LocationPlace,
-  placeById: Map<string, LocationPlace>
-): LocationPlace | null => {
-  if (!isNonEmptyString(anchorPlace.canonicalParentId)) {
+const resolveLocationState = (
+  character: Character | null,
+  summary: LocationSummary
+):
+  | (CharacterLocationState & {
+      parent: NeighborRef | null;
+      placeName: string;
+    })
+  | null => {
+  const state = character?.locationState;
+  if (state && state.locationId === summary.id) {
+    const parentEntry = state.breadcrumb.length > 1 ? state.breadcrumb[state.breadcrumb.length - 2] : null;
+    return {
+      ...state,
+      placeName: state.breadcrumb.at(-1)?.name ?? summary.name,
+      parent: parentEntry
+        ? {
+            placeId: parentEntry.id,
+            name: parentEntry.name,
+            breadcrumb: state.breadcrumb.slice(0, -1),
+          }
+        : null,
+    };
+  }
+  if (!isNonEmptyString(summary.anchorPlaceId)) {
     return null;
   }
-  return placeById.get(anchorPlace.canonicalParentId) ?? null;
+  return {
+    characterId: character?.id ?? '',
+    locationId: summary.id,
+    placeId: summary.anchorPlaceId,
+    certainty: 1,
+    breadcrumb: summary.breadcrumb,
+    updatedAt: new Date().toISOString(),
+    metadata: undefined,
+    placeName: summary.name,
+    parent: null,
+  };
 };
 
-const buildUncertainPlan = (characterId: string): LocationPlan => ({
-  character_id: characterId,
-  notes: 'location-uncertain',
-  ops: [
-    {
-      certainty: 'unknown',
-      note: 'GM response ambiguous',
-      op: 'SET_CERTAINTY',
-    },
-  ],
-});
+const normalize = (value: string): string => value.trim().toLowerCase();
 
-const finalizeMovePlan = (
-  characterId: string,
-  destination: string,
-  ops: LocationPlan['ops']
-): LocationPlan => ({
-  character_id: characterId,
-  notes: `move:${destination}`,
-  ops,
-});
-
-export const collectNeighborNames = (
-  graph: LocationGraphSnapshot,
-  anchorId: string,
-  kinds: LocationPlanEdge['kind'][]
-): string[] => {
-  const names: string[] = [];
-  for (const edge of graph.edges) {
-    if (!kinds.includes(edge.kind)) {
-      continue;
-    }
-    if (edge.src === anchorId) {
-      const target = graph.places.find((place) => place.id === edge.dst) ?? null;
-      if (target !== null) {
-        names.push(target.name);
-      }
-    } else if (edge.dst === anchorId) {
-      const target = graph.places.find((place) => place.id === edge.src) ?? null;
-      if (target !== null) {
-        names.push(target.name);
-      }
-    }
-  }
-  return dedupe(names);
-};
-
-const dedupe = (values: string[]): string[] => {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const value of values) {
-    const key = value.toLowerCase();
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    result.push(value);
-  }
-  return result;
-};
-
-export const normalizeName = (value: string): string => {
-  const lower = value.toLowerCase();
-  const stripped = lower.replace(/[^a-z0-9]+/g, '');
-  if (stripped.length > 0) {
-    return stripped;
-  }
-  return lower.trim();
-};
-
-const createTempId = (name: string): string => {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 32);
-  const normalizedSlug = slug.length > 0 ? slug : 'place';
-  const suffix = Math.random().toString(16).slice(2, 6);
-  return `temp-${normalizedSlug}-${suffix}`;
-};
-
-const inferKind = (link: DeltaDecision['link']): string => {
-  switch (link) {
-  case 'inside':
-    return 'room';
-  case 'linked':
-    return 'structure';
-  default:
-    return 'locale';
-  }
-};
-
-export const isAncestor = (
-  placeById: Map<string, LocationPlace>,
-  descendantId: string,
-  ancestorId: string
-): boolean => {
-  const visited = new Set<string>();
-  let cursorId: string | null = descendantId;
-  while (cursorId !== null) {
-    if (cursorId === ancestorId) {
-      return true;
-    }
-    const place = placeById.get(cursorId);
-    if (place === undefined) {
-      return false;
-    }
-    const parentId = place.canonicalParentId ?? null;
-    if (parentId === null) {
-      return false;
-    }
-    if (visited.has(parentId)) {
-      return false;
-    }
-    visited.add(parentId);
-    cursorId = parentId;
-  }
-  return false;
-};
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0;

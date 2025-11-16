@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 import { MetadataSchema, TagArraySchema } from './shared';
 
+export const CharacterAttributeKeySchema = z.enum([
+  'resolve',
+  'cunning',
+  'vigor',
+  'focus',
+  'heart',
+]);
+export type CharacterAttributeKey = z.infer<typeof CharacterAttributeKeySchema>;
+
 export const AttributeTierSchema = z.enum(['fool', 'rook', 'adept', 'virtuoso', 'legend']);
 export type AttributeTier = z.infer<typeof AttributeTierSchema>;
 

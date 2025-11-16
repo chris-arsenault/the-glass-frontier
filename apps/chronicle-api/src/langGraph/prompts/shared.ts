@@ -1,4 +1,7 @@
-import type { ChronicleBeat, Intent, IntentType, Turn } from '@glass-frontier/dto';
+import type { ChronicleBeat, Intent, Turn } from '@glass-frontier/worldstate';
+
+const INTENT_TYPES = ['action', 'inquiry', 'clarification', 'possibility', 'planning', 'reflection'] as const;
+type IntentType = (typeof INTENT_TYPES)[number];
 
 import type { ChronicleState } from '../../types';
 
@@ -118,24 +121,17 @@ const RECENCY_WEIGHT = 0.5;
 const IMPORTANCE_WEIGHT = 0.3;
 const TOPIC_WEIGHT = 0.2;
 
-const resolveIntentImportance = (intentType: IntentType | null): number | null => {
-  switch (intentType) {
-  case 'action':
-    return 1;
-  case 'planning':
-    return 0.9;
-  case 'possibility':
-    return 0.65;
-  case 'inquiry':
-    return 0.6;
-  case 'reflection':
-    return 0.5;
-  case 'clarification':
-    return 0.4;
-  default:
-    return null;
-  }
+const INTENT_IMPORTANCE: Record<IntentType, number> = {
+  action: 1,
+  planning: 0.9,
+  possibility: 0.65,
+  inquiry: 0.6,
+  reflection: 0.5,
+  clarification: 0.4,
 };
+
+const resolveIntentImportance = (intentType: IntentType | null): number | null =>
+  intentType ? INTENT_IMPORTANCE[intentType] ?? null : null;
 
 const resolveIntentType = (turn: Turn): IntentType | null => {
   if (turn.resolvedIntentType !== undefined && turn.resolvedIntentType !== null) {

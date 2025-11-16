@@ -1,5 +1,4 @@
-import type { LocationPlan, LocationSummary } from '@glass-frontier/dto';
-import type { LocationGraphStore } from '@glass-frontier/persistence';
+import type { WorldStateStoreV2 } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z, type ZodType } from 'zod';
@@ -8,12 +7,12 @@ import type { GraphContext, LangGraphLlmLike } from '../../types';
 import type { GraphNode } from '../orchestrator';
 import { composeLocationDeltaPrompt } from '../prompts/prompts';
 import {
+  type DecisionResolution,
   type DeltaDecision,
-  type PlanBuildResult,
   type PlannerContext,
   buildPlannerContext,
   buildPromptInput,
-  decisionToPlan,
+  resolveDecision,
 } from './locationDeltaPlanner';
 
 type Decision = DeltaDecision;
@@ -47,10 +46,10 @@ const isNonEmptyString = (value: unknown): value is string =>
 
 export class LocationDeltaNode implements GraphNode {
   readonly id = 'location-delta';
-  readonly #graphStore: LocationGraphStore;
+  readonly #worldStateStore: WorldStateStoreV2;
 
-  constructor(graphStore: LocationGraphStore) {
-    this.#graphStore = graphStore;
+  constructor(worldStateStore: WorldStateStoreV2) {
+    this.#worldStateStore = worldStateStore;
   }
 
   async execute(context: GraphContext): Promise<GraphContext> {
@@ -61,19 +60,22 @@ export class LocationDeltaNode implements GraphNode {
     }
 
     try {
-      const planResult = await this.#buildPlan(context);
-      if (planResult === null || planResult.plan.ops.length === 0) {
+      const plannerContext = await this.#resolvePlannerContext(context);
+      if (plannerContext === null) {
         return context;
       }
-
-      if (planResult.applyImmediately) {
-        const summary = await this.#applyPlanImmediately(context, planResult.plan);
-        if (summary !== null) {
-          return { ...context, locationPlan: null, locationSummary: summary };
-        }
+      const promptInput = buildPromptInput(
+        plannerContext,
+        context.gmMessage?.content ?? '',
+        context.playerMessage?.content ?? ''
+      );
+      const prompt = await composeLocationDeltaPrompt(context.templates, promptInput);
+      const decision = await this.#requestDecision(context, plannerContext.currentPlaceId, prompt);
+      if (decision === null) {
         return context;
       }
-      return { ...context, locationPlan: planResult.plan };
+      const resolution = resolveDecision(plannerContext, decision);
+      return await this.#applyResolution(context, plannerContext, resolution);
     } catch (error) {
       log('warn', 'location-delta-node.failed', {
         chronicleId: context.chronicleId,
@@ -83,42 +85,12 @@ export class LocationDeltaNode implements GraphNode {
     }
   }
 
-  async #buildPlan(context: GraphContext): Promise<PlanBuildResult | null> {
-    const plannerContext = await this.#resolvePlanContext(context);
-    if (plannerContext === null) {
-      return null;
-    }
-
-    const promptInput = buildPromptInput(
-      plannerContext,
-      context.gmMessage?.content ?? '',
-      context.playerMessage?.content ?? ''
-    );
-    const prompt = await composeLocationDeltaPrompt(context.templates, promptInput);
-    const decision = await this.#requestDecision(context, promptInput.currentId, prompt);
-    if (decision === null) {
-      return null;
-    }
-
-    return decisionToPlan(plannerContext, decision);
-  }
-
-  async #resolvePlanContext(context: GraphContext): Promise<PlannerContext | null> {
-    const locationId = context.chronicle.chronicle.locationId;
-    const characterId = context.chronicle.character?.id;
-    if (!isNonEmptyString(characterId) || !isNonEmptyString(locationId)) {
-      return null;
-    }
-    const [graph, priorState] = await Promise.all([
-      this.#graphStore.getLocationGraph(locationId),
-      this.#graphStore.getLocationState(characterId),
-    ]);
+  async #resolvePlannerContext(context: GraphContext): Promise<PlannerContext | null> {
     return buildPlannerContext({
-      characterId,
-      chronicleId: context.chronicleId,
-      graph,
-      locationId,
-      priorState,
+      store: this.#worldStateStore,
+      character: context.chronicle.character ?? null,
+      locationSummary: context.chronicle.location ?? null,
+      locationId: context.chronicle.chronicle.locationId,
     });
   }
 
@@ -159,6 +131,63 @@ export class LocationDeltaNode implements GraphNode {
     }
   }
 
+  async #applyResolution(
+    context: GraphContext,
+    planner: PlannerContext,
+    resolution: DecisionResolution
+  ): Promise<GraphContext> {
+    switch (resolution.kind) {
+    case 'noop':
+      return context;
+    case 'uncertain':
+      return { ...context, locationPlan: null };
+    case 'move':
+      return this.#applyMove(context, planner, resolution);
+    default:
+      return context;
+    }
+  }
+
+  async #applyMove(
+    context: GraphContext,
+    planner: PlannerContext,
+    resolution: Extract<DecisionResolution, { kind: 'move' }>
+  ): Promise<GraphContext> {
+    const timestamp = new Date().toISOString();
+    const updatedState = await this.#worldStateStore.updateLocationState({
+      characterId: planner.characterId,
+      locationId: planner.locationId,
+      placeId: resolution.target.placeId,
+      breadcrumb: resolution.target.breadcrumb,
+      certainty: 1,
+      updatedAt: timestamp,
+      metadata: { reason: 'location-delta-node' },
+    });
+    const updatedCharacter =
+      context.chronicle.character === null || context.chronicle.character === undefined
+        ? context.chronicle.character
+        : {
+            ...context.chronicle.character,
+            locationState: {
+              ...updatedState,
+              breadcrumb: resolution.target.breadcrumb,
+            },
+          };
+    log('info', 'location-delta-node.move-applied', {
+      chronicleId: context.chronicleId,
+      destination: resolution.target.name,
+    });
+    return {
+      ...context,
+      chronicle: {
+        ...context.chronicle,
+        character: updatedCharacter,
+      },
+      locationPlan: null,
+      locationSummary: context.chronicle.location ?? null,
+    };
+  }
+
   #shouldApplyDelta(context: GraphContext): boolean {
     const type = context.resolvedIntentType ?? context.playerIntent?.intentType;
     return type === 'action' || type === 'planning';
@@ -175,42 +204,5 @@ export class LocationDeltaNode implements GraphNode {
       isNonEmptyString(gmMessageContent) &&
       isNonEmptyString(characterId)
     );
-  }
-
-  async #applyPlanImmediately(
-    context: GraphContext,
-    plan: LocationPlan
-  ): Promise<LocationSummary | null> {
-    const characterId = context.chronicle.character?.id;
-    const locationId = context.chronicle.chronicle.locationId;
-    if (!isNonEmptyString(characterId) || !isNonEmptyString(locationId)) {
-      return null;
-    }
-    try {
-      await this.#graphStore.applyPlan({
-        characterId,
-        locationId,
-        plan,
-      });
-      const summary = await this.#graphStore.summarizeCharacterLocation({
-        characterId,
-        locationId,
-      });
-      if (summary !== null) {
-        log('info', 'location-plan.immediate-applied', {
-          chronicleId: context.chronicleId,
-          notes: plan.notes,
-          breadcrumb: summary.breadcrumb.map((entry) => entry.name),
-        });
-      }
-      return summary;
-    } catch (error) {
-      log('warn', 'location-delta-node.apply-immediate-failed', {
-        chronicleId: context.chronicleId,
-        locationId,
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-      return null;
-    }
   }
 }

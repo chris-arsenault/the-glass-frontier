@@ -1,5 +1,5 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import type { ChronicleClosureEvent } from '@glass-frontier/dto';
+import type { ChronicleClosureEvent } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 

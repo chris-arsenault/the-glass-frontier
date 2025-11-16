@@ -1,4 +1,4 @@
-import type { Intent, TranscriptEntry } from '@glass-frontier/dto';
+import type { Intent, TranscriptEntry } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import type { GraphContext } from '../../types';

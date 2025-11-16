@@ -1,5 +1,4 @@
-import { RiskLevel as RiskLevelSchema } from '@glass-frontier/dto';
-import type { SkillCheckPlan, SkillCheckRequest, RiskLevel } from '@glass-frontier/dto';
+import { RiskLevelSchema, type RiskLevel, type SkillCheckPlan } from '@glass-frontier/worldstate';
 import { SkillCheckResolver } from '@glass-frontier/skill-check-resolver';
 import { randomUUID } from 'node:crypto';
 import { zodTextFormat } from 'openai/helpers/zod';
@@ -44,6 +43,17 @@ type PlannerPlan = {
   complicationSeeds: string[];
   rationale: string;
   riskLevel: RiskLevel;
+};
+
+type SkillCheckRequest = {
+  attribute?: string;
+  character: NonNullable<GraphContext['chronicle']['character']>;
+  checkId: string;
+  chronicleId: string;
+  flags: string[];
+  metadata: { tags: string[]; timestamp: number };
+  riskLevel: RiskLevel;
+  skill?: string;
 };
 
 const FALLBACK_PLAN: PlannerPlan = {

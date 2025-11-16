@@ -1,197 +1,166 @@
-import type { LocationPlan, LocationPlace } from '@glass-frontier/dto';
-import { describe, expect, it } from 'vitest';
+import type {
+  Character,
+  LocationNeighborSummary,
+  LocationSummary,
+  WorldStateStoreV2,
+} from '@glass-frontier/worldstate';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
-  appendEdgesForExistingTarget,
   buildPlannerContext,
   buildPromptInput,
-  normalizeName,
-  resolveTargetReference,
+  resolveDecision,
   type DeltaDecision,
-  type PlannerContext,
-  isAncestor,
 } from '../locationDeltaPlanner';
 
-const createPlace = (input: {
-  id: string;
+const mockNeighbor = (input: {
+  placeId: string;
   name: string;
-  canonicalParentId?: string;
-}): LocationPlace => ({
-  canonicalParentId: input.canonicalParentId,
-  createdAt: Date.now(),
-  description: '',
-  id: input.id,
-  kind: 'locale',
+  relationKind: LocationNeighborSummary['relationKind'];
+}): LocationNeighborSummary => ({
   locationId: 'loc-1',
+  placeId: input.placeId,
+  relationKind: input.relationKind,
+  depth: 0,
   name: input.name,
+  breadcrumb: [
+    { id: 'root', kind: 'locale', name: 'Root' },
+    { id: input.placeId, kind: 'locale', name: input.name },
+  ],
   tags: [],
-  updatedAt: Date.now(),
 });
 
-const buildContext = (): PlannerContext => {
-  const root = createPlace({ id: 'root', name: 'Luminous Quay' });
-  const mid = createPlace({ id: 'mid', name: 'Auric Causeway', canonicalParentId: root.id });
-  const leaf = createPlace({
-    canonicalParentId: mid.id,
-    id: 'leaf',
-    name: 'Maintenance Bay',
-  });
-  const dock = createPlace({
-    canonicalParentId: root.id,
-    id: 'dock',
-    name: 'Docking Ring',
-  });
-  const graph = {
-    edges: [
-      { dst: 'dock', kind: 'ADJACENT_TO', locationId: 'loc-1', metadata: {}, src: 'mid' },
-      { dst: 'mid', kind: 'CONTAINS', locationId: 'loc-1', metadata: {}, src: 'root' },
-    ],
-    locationId: 'loc-1',
-    places: [root, mid, leaf, dock],
-  };
-  const placeById = new Map([
-    [root.id, root],
-    [mid.id, mid],
-    [leaf.id, leaf],
-    [dock.id, dock],
-  ]);
-  const placeByName = new Map([
-    [normalizeName(root.name), root],
-    [normalizeName(mid.name), mid],
-    [normalizeName(leaf.name), leaf],
-    [normalizeName(dock.name), dock],
-  ]);
-  return {
-    anchorPlace: leaf,
+const createStore = (neighbors: {
+  contains?: LocationNeighborSummary[];
+  adjacent?: LocationNeighborSummary[];
+  links?: LocationNeighborSummary[];
+}): WorldStateStoreV2 => ({
+  listLocationNeighbors: vi.fn(async (_loc, _place, options) => {
+    const kinds = options?.relationKinds ?? [];
+    if (kinds.includes('CONTAINS')) {
+      return { items: neighbors.contains ?? [], nextCursor: null };
+    }
+    if (kinds.includes('ADJACENT_TO')) {
+      return { items: neighbors.adjacent ?? [], nextCursor: null };
+    }
+    return { items: neighbors.links ?? [], nextCursor: null };
+  }),
+  getLocation: vi.fn(),
+} as unknown as WorldStateStoreV2);
+
+const character: Character = {
+  id: 'char-1',
+  loginId: 'login-1',
+  name: 'Hero',
+  pronouns: 'they/them',
+  archetype: 'Recon',
+  bio: '',
+  tags: [],
+  status: 'active',
+  metadata: {},
+  attributes: {
+    resolve: 'rook',
+    cunning: 'rook',
+    vigor: 'rook',
+    focus: 'rook',
+    heart: 'rook',
+  },
+  skills: {},
+  momentum: { current: 0, floor: -2, ceiling: 2 },
+  inventory: { carried: [], stored: [], equipped: {}, capacity: 10 },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  locationState: {
     characterId: 'char-1',
-    chronicleId: 'chron-1',
-    graph,
-    parentPlace: mid,
-    placeById,
-    placeByName,
-  };
+    locationId: 'loc-1',
+    placeId: 'mid',
+    breadcrumb: [
+      { id: 'root', kind: 'locale', name: 'Root' },
+      { id: 'mid', kind: 'locale', name: 'Anchor' },
+    ],
+    certainty: 1,
+    updatedAt: new Date().toISOString(),
+  },
+  echoes: [],
 };
 
-describe('locationDeltaPlanner helpers', () => {
-  describe('buildPlannerContext+buildPromptInput integration', () => {
-    it('captures parent info for leaf anchors', () => {
-      const base = buildContext();
-      const context = buildPlannerContext({
-        characterId: 'char-1',
-        chronicleId: 'chron-1',
-        graph: base.graph,
-        locationId: 'loc-1',
-        priorState: { anchorPlaceId: 'leaf', locationId: 'loc-1' },
-      });
-      expect(context).not.toBeNull();
-      const prompt = buildPromptInput(context!, 'GM text', 'Player intent');
-      expect(prompt.parent).toBe('Auric Causeway');
-      expect(prompt.children).toEqual([]);
-    });
+const locationSummary: LocationSummary = {
+  id: 'loc-1',
+  loginId: 'login-1',
+  chronicleId: 'chron-1',
+  name: 'Root',
+  anchorPlaceId: 'root',
+  breadcrumb: [{ id: 'root', kind: 'locale', name: 'Root' }],
+  description: 'test',
+  status: [],
+  tags: [],
+  nodeCount: 1,
+  edgeCount: 0,
+  graphChunkCount: 0,
+};
 
-    it('captures children and adjacency for interior anchors', () => {
-      const base = buildContext();
-      const context = buildPlannerContext({
-        characterId: 'char-1',
-        chronicleId: 'chron-1',
-        graph: base.graph,
-        locationId: 'loc-1',
-        priorState: { anchorPlaceId: 'mid', locationId: 'loc-1' },
-      });
-      expect(context).not.toBeNull();
-      const prompt = buildPromptInput(context!, 'GM text', 'Player intent');
-      expect(prompt.parent).toBe('Luminous Quay');
-      expect(prompt.children).toContain('Maintenance Bay');
-      expect(prompt.adjacent).toContain('Docking Ring');
+describe('locationDeltaPlanner (v2)', () => {
+  it('builds prompt input using neighbor buckets', async () => {
+    const store = createStore({
+      contains: [mockNeighbor({ placeId: 'child', name: 'Workshop', relationKind: 'CONTAINS' })],
+      adjacent: [mockNeighbor({ placeId: 'adj', name: 'Dock', relationKind: 'ADJACENT_TO' })],
+      links: [mockNeighbor({ placeId: 'link', name: 'Lift', relationKind: 'LINKS_TO' })],
     });
+    const planner = await buildPlannerContext({
+      store,
+      character,
+      locationSummary,
+      locationId: 'loc-1',
+    });
+    expect(planner).not.toBeNull();
+    const prompt = buildPromptInput(planner!, 'GM response', 'Player intent');
+    expect(prompt.current).toBe('Anchor');
+    expect(prompt.parent).toBe('Root');
+    expect(prompt.children).toContain('Workshop');
+    expect(prompt.adjacent).toContain('Dock');
+    expect(prompt.links).toContain('Lift');
   });
 
-  describe('resolveTargetReference', () => {
-    it('treats ancestor destinations as immediate without mutating ops', () => {
-      const context = buildContext();
-      const ops: LocationPlan['ops'] = [];
-      const decision: DeltaDecision = {
-        action: 'move',
-        destination: 'Luminous Quay',
-        link: 'same',
-      };
-
-      const result = resolveTargetReference({ context, decision, ops });
-
-      expect(result).not.toBeNull();
-      expect(result?.id).toBe('root');
-      expect(result?.applyImmediately).toBe(true);
-      expect(ops).toHaveLength(0);
+  it('resolves move decisions for known neighbors', async () => {
+    const target = mockNeighbor({
+      placeId: 'child',
+      name: 'Workshop',
+      relationKind: 'CONTAINS',
     });
-
-    it('adds adjacency edges when targeting a neighboring place', () => {
-      const context = buildContext();
-      const ops: LocationPlan['ops'] = [];
-      const decision: DeltaDecision = {
-        action: 'move',
-        destination: 'Docking Ring',
-        link: 'adjacent',
-      };
-
-      const result = resolveTargetReference({ context, decision, ops });
-
-      expect(result).not.toBeNull();
-      expect(result?.applyImmediately).toBe(false);
-      expect(ops).toHaveLength(1);
-      expect(ops[0]).toEqual({
-        edge: { dst: 'dock', kind: 'ADJACENT_TO', src: 'leaf' },
-        op: 'CREATE_EDGE',
-      });
+    const store = createStore({ contains: [target] });
+    const planner = await buildPlannerContext({
+      store,
+      character,
+      locationSummary,
+      locationId: 'loc-1',
     });
+    expect(planner).not.toBeNull();
+    const resolution = resolveDecision(planner!, {
+      action: 'move',
+      destination: 'Workshop',
+      link: 'inside',
+    });
+    expect(resolution.kind).toBe('move');
+    if (resolution.kind === 'move') {
+      expect(resolution.target.placeId).toBe('child');
+    }
   });
 
-  describe('appendEdgesForExistingTarget', () => {
-    it('creates containment edge from anchor when target is inside', () => {
-      const context = buildContext();
-      const ops: LocationPlan['ops'] = [];
-
-      appendEdgesForExistingTarget({
-        anchorId: context.anchorPlace.id,
-        link: 'inside',
-        ops,
-        parentId: context.parentPlace?.id ?? context.anchorPlace.id,
-        target: context.placeById.get('mid')!,
-      });
-
-      expect(ops).toEqual([
-        {
-          edge: { dst: 'mid', kind: 'CONTAINS', src: 'leaf' },
-          op: 'CREATE_EDGE',
-        },
-      ]);
+  it('returns uncertain when destination is unknown', async () => {
+    const store = createStore({ contains: [] });
+    const planner = await buildPlannerContext({
+      store,
+      character,
+      locationSummary,
+      locationId: 'loc-1',
     });
-
-    it('creates linked edges when destinations are connected structures', () => {
-      const context = buildContext();
-      const ops: LocationPlan['ops'] = [];
-
-      appendEdgesForExistingTarget({
-        anchorId: context.anchorPlace.id,
-        link: 'linked',
-        ops,
-        parentId: context.parentPlace?.id ?? context.anchorPlace.id,
-        target: context.placeById.get('root')!,
-      });
-
-      expect(ops).toEqual([
-        {
-          edge: { dst: 'root', kind: 'LINKS_TO', src: 'leaf' },
-          op: 'CREATE_EDGE',
-        },
-      ]);
-    });
-  });
-
-  describe('isAncestor', () => {
-    it('returns true for ancestor chain and false for peers', () => {
-      const context = buildContext();
-      expect(isAncestor(context.placeById, 'leaf', 'root')).toBe(true);
-      expect(isAncestor(context.placeById, 'leaf', 'dock')).toBe(false);
-    });
+    expect(planner).not.toBeNull();
+    const decision: DeltaDecision = {
+      action: 'move',
+      destination: 'Unknown Space',
+      link: 'adjacent',
+    };
+    const resolution = resolveDecision(planner!, decision);
+    expect(resolution.kind).toBe('uncertain');
   });
 });

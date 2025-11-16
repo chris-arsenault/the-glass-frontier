@@ -1,13 +1,5 @@
-import {
-  Attribute,
-  type Intent,
-  type SkillCheckPlan,
-  type SkillCheckResult,
-  type Inventory,
-  type PendingEquip,
-  type ImbuedRegistry,
-} from '@glass-frontier/dto';
-import type { PromptTemplateId } from '@glass-frontier/dto';
+import type { Intent, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/worldstate';
+import type { Inventory, PendingEquip, ImbuedRegistry, PromptTemplateId } from '@glass-frontier/dto';
 
 import type { ChronicleState } from '../../types';
 import {
@@ -61,8 +53,9 @@ type SkillDetectorPromptOptions = {
   templates: PromptTemplateRuntime;
 };
 
-const ATTRIBUTE_LIST = Attribute.options.join(', ');
-const ATTRIBUTE_QUOTED_LIST = Attribute.options.map((attr) => `"${attr}"`).join(', ');
+const ATTRIBUTE_KEYS = ['resolve', 'cunning', 'vigor', 'focus', 'heart'] as const;
+const ATTRIBUTE_LIST = ATTRIBUTE_KEYS.join(', ');
+const ATTRIBUTE_QUOTED_LIST = ATTRIBUTE_KEYS.map((attr) => `"${attr}"`).join(', ');
 type TemplatePayload = Record<string, unknown>;
 
 async function renderTemplate(

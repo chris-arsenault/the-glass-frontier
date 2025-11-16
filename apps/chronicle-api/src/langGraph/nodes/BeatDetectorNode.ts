@@ -1,4 +1,4 @@
-import type { Intent } from '@glass-frontier/dto';
+import type { Intent } from '@glass-frontier/worldstate';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 

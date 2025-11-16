@@ -1,9 +1,5 @@
-import type {
-  Intent,
-  PromptTemplateId,
-  SkillCheckPlan,
-  SkillCheckResult,
-} from '@glass-frontier/dto';
+import type { Intent, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/worldstate';
+import type { PromptTemplateId } from '@glass-frontier/dto';
 
 import type { ChronicleState } from '../../types';
 import {

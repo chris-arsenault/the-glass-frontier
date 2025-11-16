@@ -12,7 +12,7 @@ import type {
   LlmTrace,
   BeatDelta,
 } from '@glass-frontier/worldstate';
-import type { LocationPlan, PendingEquip, ImbuedRegistry } from '@glass-frontier/dto';
+import type { PendingEquip, ImbuedRegistry } from '@glass-frontier/dto';
 import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 
 import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
@@ -53,7 +53,6 @@ export type GraphContext = {
   handlerId?: string;
   chronicleShouldClose?: boolean;
   updatedCharacter?: Character | null;
-  locationPlan?: LocationPlan | null;
   locationSummary?: LocationSummary | null;
   inventoryDelta?: InventoryDelta | null;
   inventoryStoreDelta?: InventoryStoreDelta | null;

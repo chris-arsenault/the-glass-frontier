@@ -250,11 +250,11 @@ class NarrativeEngine {
           next: ['location-delta'],
           node,
         })),
-        new LocationDeltaNode(this.locationGraphStore),
+        new LocationDeltaNode(this.worldStateStore),
         new GmSummaryNode(),
         new BeatTrackerNode(this.worldStateStore),
         new InventoryDeltaNode(this.imbuedRegistryStore),
-        new UpdateCharacterNode(this.worldStateStore, this.locationGraphStore),
+        new UpdateCharacterNode(this.worldStateStore),
       ],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
