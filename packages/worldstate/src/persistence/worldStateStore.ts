@@ -24,6 +24,7 @@ import {
   CharacterSummarySchema,
   CharacterSummary,
   Character,
+  InventorySchema,
   Chronicle,
   ChronicleDraftSchema,
   ChronicleSchema,
@@ -166,8 +167,8 @@ type CharacterRow = {
   loginId: string;
   name: string;
   archetype: string;
-  heroArtUrl?: string;
-  lastPlayedAt?: string | null;
+  portraitUrl?: string;
+  lastTurnAt?: string | null;
   status: string;
   tags?: string[];
   createdAt: string;
@@ -345,14 +346,35 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     const draft = CharacterDraftSchema.parse(input);
     const id = draft.id ?? randomUUID();
     const now = nowIso();
-    const summary = CharacterSummarySchema.parse({ ...draft, id });
+    const inventory = InventorySchema.parse(draft.inventory ?? {});
     const character = CharacterSchema.parse({
-      ...summary,
+      id,
+      loginId: draft.loginId,
+      defaultChronicleId: draft.defaultChronicleId,
+      name: draft.name,
+      pronouns: draft.pronouns,
+      archetype: draft.archetype,
+      bio: draft.bio,
+      portraitUrl: draft.portraitUrl,
+      tags: draft.tags,
+      metadata: draft.metadata,
+      attributes: draft.attributes,
+      skills: draft.skills,
+      momentum: draft.momentum,
+      inventory,
+      locationState: draft.locationState,
       createdAt: now,
       updatedAt: now,
-      biography: draft.description,
-      metadata: draft.metadata,
-      payload: draft.payload,
+    });
+    const summary = CharacterSummarySchema.parse({
+      id: character.id,
+      loginId: character.loginId,
+      name: character.name,
+      archetype: character.archetype,
+      portraitUrl: character.portraitUrl,
+      status: character.status,
+      tags: character.tags,
+      lastTurnAt: character.lastTurnAt ?? null,
     });
     const documentKey = this.#keys.characterDocument(id);
     await writeJson(this.#s3, this.#bucketName, documentKey, character);
@@ -364,8 +386,8 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
       loginId: summary.loginId,
       name: summary.name,
       archetype: summary.archetype,
-      heroArtUrl: summary.heroArtUrl,
-      lastPlayedAt: summary.lastPlayedAt ?? null,
+      portraitUrl: summary.portraitUrl,
+      lastTurnAt: summary.lastTurnAt ?? null,
       status: summary.status,
       tags: summary.tags,
       createdAt: character.createdAt,
@@ -419,8 +441,8 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
         loginId: (item as CharacterRow).loginId,
         name: (item as CharacterRow).name,
         archetype: (item as CharacterRow).archetype,
-        heroArtUrl: (item as CharacterRow).heroArtUrl,
-        lastPlayedAt: (item as CharacterRow).lastPlayedAt,
+        portraitUrl: (item as CharacterRow).portraitUrl,
+        lastTurnAt: (item as CharacterRow).lastTurnAt,
         status: (item as CharacterRow).status,
         tags: (item as CharacterRow).tags ?? [],
       })

@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
 import { LocationEdgeKindSchema } from './locationCommon';
+import { MetadataSchema, TagArraySchema } from './shared';
 
 export const LocationPlaceSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   kind: z.string().min(1),
   description: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  tags: z.array(z.string().min(1)).default([]),
+  metadata: MetadataSchema.optional(),
+  tags: TagArraySchema,
 });
 
 export type LocationPlace = z.infer<typeof LocationPlaceSchema>;
@@ -18,7 +19,7 @@ export const LocationEdgeSchema = z.object({
   src: z.string().min(1),
   dst: z.string().min(1),
   kind: LocationEdgeKindSchema,
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: MetadataSchema.optional(),
 });
 
 export type LocationEdge = z.infer<typeof LocationEdgeSchema>;

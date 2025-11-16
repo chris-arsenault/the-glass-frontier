@@ -1,3 +1,4 @@
+export * from './shared';
 export * from './pagination';
 export * from './login';
 export * from './character';

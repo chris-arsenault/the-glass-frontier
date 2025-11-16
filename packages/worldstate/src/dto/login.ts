@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const LoginMetadataSchema = z.record(z.string(), z.unknown());
+import { MetadataSchema } from './shared';
 
 export const LoginSchema = z.object({
   id: z.string().min(1),
@@ -8,7 +8,7 @@ export const LoginSchema = z.object({
   email: z.string().email().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),
-  metadata: LoginMetadataSchema.optional(),
+  metadata: MetadataSchema.optional(),
 });
 
 export type Login = z.infer<typeof LoginSchema>;
