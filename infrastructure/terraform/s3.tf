@@ -19,13 +19,26 @@ resource "aws_dynamodb_table" "tf_locks" {
   tags = local.tags
 }
 
-module "narrative_data_bucket" {
+module "world_state_bucket" {
   source = "./modules/s3-bucket"
 
-  name              = "${local.name_prefix}-narrative-data"
+  name              = "${local.name_prefix}-world-state"
   enable_versioning = true
   enable_encryption = true
-  tags              = merge(local.tags, { Name = "${local.name_prefix}-narrative-data" })
+  tags              = merge(local.tags, { Name = "${local.name_prefix}-world-state" })
+}
+
+locals {
+  world_state_prefixes = ["characters/", "chronicles/", "locations/"]
+}
+
+resource "aws_s3_object" "world_state_prefix" {
+  for_each = toset(local.world_state_prefixes)
+
+  bucket       = module.world_state_bucket.id
+  key          = "${var.environment}/worldstate/v2/${each.value}"
+  content      = ""
+  content_type = "application/x-directory"
 }
 
 module "prompt_templates_bucket" {

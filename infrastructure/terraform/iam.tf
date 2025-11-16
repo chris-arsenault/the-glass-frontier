@@ -37,13 +37,13 @@ resource "aws_iam_role_policy_attachment" "chronicle_closer_sqs" {
 data "aws_iam_policy_document" "chronicle_s3" {
   statement {
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
-    resources = [module.narrative_data_bucket.arn, "${module.narrative_data_bucket.arn}/*"]
+    resources = [module.world_state_bucket.arn, "${module.world_state_bucket.arn}/*"]
   }
 }
 
 resource "aws_iam_policy" "chronicle_s3" {
-  name        = "${local.name_prefix}-chronicle-api-s3"
-  description = "Allow the chronicle lambda to read/write session data."
+  name        = "${local.name_prefix}-world-state-s3"
+  description = "Allow narrative lambdas to read/write world-state data."
   policy      = data.aws_iam_policy_document.chronicle_s3.json
 }
 
@@ -108,72 +108,47 @@ resource "aws_iam_role_policy_attachment" "prompt_api_templates" {
   policy_arn = aws_iam_policy.prompt_templates.arn
 }
 
-data "aws_iam_policy_document" "chronicle_dynamodb" {
+data "aws_iam_policy_document" "world_state_table" {
   statement {
     actions = [
       "dynamodb:GetItem",
       "dynamodb:PutItem",
       "dynamodb:Query",
       "dynamodb:BatchWriteItem",
-      "dynamodb:DeleteItem"
+      "dynamodb:DeleteItem",
+      "dynamodb:UpdateItem"
     ]
-    resources = [aws_dynamodb_table.world_index.arn]
+    resources = [
+      aws_dynamodb_table.world_state.arn,
+      "${aws_dynamodb_table.world_state.arn}/index/*"
+    ]
   }
 }
 
-resource "aws_iam_policy" "chronicle_dynamodb" {
-  name        = "${local.name_prefix}-chronicle-api-dynamodb"
-  description = "Allow the chronicle lambda to query/write world index pointers."
-  policy      = data.aws_iam_policy_document.chronicle_dynamodb.json
+resource "aws_iam_policy" "world_state_table" {
+  name        = "${local.name_prefix}-world-state-dynamodb"
+  description = "Allow lambdas to query/write world state records."
+  policy      = data.aws_iam_policy_document.world_state_table.json
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_dynamodb" {
   role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
+  policy_arn = aws_iam_policy.world_state_table.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prompt_api_dynamodb" {
   role       = aws_iam_role.lambda["prompt_api_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
+  policy_arn = aws_iam_policy.world_state_table.arn
 }
 
 resource "aws_iam_role_policy_attachment" "chronicle_closer_dynamodb" {
   role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
+  policy_arn = aws_iam_policy.world_state_table.arn
 }
 
-resource "aws_iam_role_policy_attachment" "location_api_location_index" {
+resource "aws_iam_role_policy_attachment" "location_api_world_state" {
   role       = aws_iam_role.lambda["location_api_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
-}
-
-data "aws_iam_policy_document" "location_graph_index" {
-  statement {
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:Query",
-      "dynamodb:BatchWriteItem",
-      "dynamodb:DeleteItem"
-    ]
-    resources = [aws_dynamodb_table.location_graph_index.arn]
-  }
-}
-
-resource "aws_iam_policy" "location_graph_index" {
-  name        = "${local.name_prefix}-location-graph-index"
-  description = "Allow the chronicle lambda to manage location graph indexes."
-  policy      = data.aws_iam_policy_document.location_graph_index.json
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_location_graph_index" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_closer_location_graph_index" {
-  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
+  policy_arn = aws_iam_policy.world_state_table.arn
 }
 
 data "aws_iam_policy_document" "llm_audit_storage" {

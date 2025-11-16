@@ -14,23 +14,29 @@ import {
 import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
-const narrativeBucket = process.env.NARRATIVE_S3_BUCKET;
-if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) {
-  throw new Error('NARRATIVE_S3_BUCKET must be configured for the narrative service');
+const worldStateBucket = process.env.WORLD_STATE_S3_BUCKET;
+if (typeof worldStateBucket !== 'string' || worldStateBucket.trim().length === 0) {
+  throw new Error('WORLD_STATE_S3_BUCKET must be configured for the narrative service');
 }
-const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
+const worldStatePrefix = process.env.WORLD_STATE_S3_PREFIX ?? undefined;
+const worldStateTable = process.env.WORLD_STATE_TABLE_NAME;
+if (typeof worldStateTable !== 'string' || worldStateTable.trim().length === 0) {
+  throw new Error('WORLD_STATE_TABLE_NAME must be configured for the narrative service');
+}
 
 const worldStateStore = createWorldStateStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+  bucket: worldStateBucket,
+  prefix: worldStatePrefix,
+  worldIndexTable: worldStateTable,
 });
 const locationGraphStore = createLocationGraphStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+  bucket: worldStateBucket,
+  indexTable: worldStateTable,
+  prefix: worldStatePrefix,
 });
 const imbuedRegistryStore: ImbuedRegistryStore = createImbuedRegistryStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+  bucket: worldStateBucket,
+  prefix: worldStatePrefix,
 });
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
 if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
@@ -51,8 +57,8 @@ const engine = new NarrativeEngine({
   worldStateStore,
 });
 const bugReportStore = new BugReportStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+  bucket: worldStateBucket,
+  prefix: worldStatePrefix,
 });
 
 const tokenUsageStore = (() => {

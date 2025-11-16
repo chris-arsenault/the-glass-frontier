@@ -36,19 +36,19 @@ const resolveRegion = (options?: { region?: string }): string => {
 const resolveBucket = (options?: CreateLocationGraphStoreOptions): string =>
   resolveMandatoryString(
     options?.bucket ?? null,
-    process.env.NARRATIVE_S3_BUCKET ?? null,
-    'Location graph store requires NARRATIVE_S3_BUCKET to be configured.'
+    process.env.WORLD_STATE_S3_BUCKET ?? null,
+    'Location graph store requires WORLD_STATE_S3_BUCKET to be configured.'
   );
 
 const resolveTableName = (options?: CreateLocationGraphStoreOptions): string =>
   resolveMandatoryString(
     options?.indexTable ?? null,
-    process.env.LOCATION_GRAPH_DDB_TABLE ?? null,
-    'Location graph store requires LOCATION_GRAPH_DDB_TABLE to be configured.'
+    process.env.WORLD_STATE_TABLE_NAME ?? null,
+    'Location graph store requires WORLD_STATE_TABLE_NAME to be configured.'
   );
 
 const resolvePrefix = (options?: CreateLocationGraphStoreOptions): string | undefined => {
-  const candidate = options?.prefix ?? process.env.NARRATIVE_S3_PREFIX ?? null;
+  const candidate = options?.prefix ?? process.env.WORLD_STATE_S3_PREFIX ?? null;
   return candidate !== null && candidate.trim().length > 0 ? candidate : undefined;
 };
 

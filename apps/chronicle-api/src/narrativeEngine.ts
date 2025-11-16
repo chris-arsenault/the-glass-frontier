@@ -182,8 +182,9 @@ class NarrativeEngine {
       return store;
     }
     return createLocationGraphStore({
-      bucket: process.env.NARRATIVE_S3_BUCKET,
-      prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+      bucket: process.env.WORLD_STATE_S3_BUCKET,
+      indexTable: process.env.WORLD_STATE_TABLE_NAME,
+      prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
     });
   }
 
@@ -192,8 +193,8 @@ class NarrativeEngine {
       return store;
     }
     return createImbuedRegistryStore({
-      bucket: process.env.NARRATIVE_S3_BUCKET,
-      prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+      bucket: process.env.WORLD_STATE_S3_BUCKET,
+      prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
     });
   }
 

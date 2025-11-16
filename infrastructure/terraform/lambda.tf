@@ -22,14 +22,13 @@ module "chronicle_lambda" {
 
   environment_variables = {
     NODE_ENV                 = var.environment
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
+    WORLD_STATE_S3_BUCKET    = module.world_state_bucket.id
+    WORLD_STATE_S3_PREFIX    = "${var.environment}/worldstate/v2/"
+    WORLD_STATE_TABLE_NAME   = aws_dynamodb_table.world_state.name
     LLM_PROXY_USAGE_TABLE    = aws_dynamodb_table.llm_usage.name
     LLM_PROXY_URL            = "https://${local.api_domain}/llm"
     DOMAIN_NAME              = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL  = aws_sqs_queue.turn_progress.url
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
     PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
   }
@@ -63,9 +62,9 @@ module "prompt_api_lambda" {
   environment_variables = {
     NODE_ENV               = var.environment
     DOMAIN_NAME            = local.cloudfront_domain
-    NARRATIVE_S3_BUCKET    = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX    = "${var.environment}/"
-    NARRATIVE_DDB_TABLE    = aws_dynamodb_table.world_index.name
+    WORLD_STATE_S3_BUCKET  = module.world_state_bucket.id
+    WORLD_STATE_S3_PREFIX  = "${var.environment}/worldstate/v2/"
+    WORLD_STATE_TABLE_NAME = aws_dynamodb_table.world_state.name
     PROMPT_TEMPLATE_BUCKET = module.prompt_templates_bucket.id
     LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
   }
@@ -99,9 +98,9 @@ module "location_api_lambda" {
   environment_variables = {
     NODE_ENV                 = var.environment
     DOMAIN_NAME              = local.cloudfront_domain
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
+    WORLD_STATE_S3_BUCKET    = module.world_state_bucket.id
+    WORLD_STATE_S3_PREFIX    = "${var.environment}/worldstate/v2/"
+    WORLD_STATE_TABLE_NAME   = aws_dynamodb_table.world_state.name
   }
 
   http_api_config = {
@@ -166,10 +165,9 @@ module "chronicle_closer_lambda" {
 
   environment_variables = {
     NODE_ENV                 = var.environment
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
+    WORLD_STATE_S3_BUCKET    = module.world_state_bucket.id
+    WORLD_STATE_S3_PREFIX    = "${var.environment}/worldstate/v2/"
+    WORLD_STATE_TABLE_NAME   = aws_dynamodb_table.world_state.name
     LLM_PROXY_URL            = "https://${local.api_domain}/llm"
   }
 }

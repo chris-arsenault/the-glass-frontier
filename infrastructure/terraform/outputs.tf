@@ -23,9 +23,9 @@ output "cognito_domain" {
   description = "Hostname for Cognito-hosted UI / auth."
 }
 
-output "narrative_data_bucket" {
-  value       = module.narrative_data_bucket.id
-  description = "S3 bucket used for session persistence."
+output "world_state_bucket" {
+  value       = module.world_state_bucket.id
+  description = "S3 bucket used for world state persistence."
 }
 
 output "prompt_template_bucket" {

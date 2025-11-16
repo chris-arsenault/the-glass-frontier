@@ -17,9 +17,9 @@ if (typeof auditBucket !== 'string' || auditBucket.trim().length === 0) {
 }
 
 const worldStateStore = createWorldStateStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
-  worldIndexTable: process.env.NARRATIVE_DDB_TABLE,
+  bucket: process.env.WORLD_STATE_S3_BUCKET,
+  prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
+  worldIndexTable: process.env.WORLD_STATE_TABLE_NAME,
 });
 
 const templateManager = new PromptTemplateManager({

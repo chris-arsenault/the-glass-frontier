@@ -30,7 +30,7 @@ const resolveRequiredString = (
 };
 
 const resolvePrefix = (options?: CreateWorldStateStoreOptions): string | undefined => {
-  const candidate = options?.prefix ?? process.env.NARRATIVE_S3_PREFIX ?? null;
+  const candidate = options?.prefix ?? process.env.WORLD_STATE_S3_PREFIX ?? null;
   return candidate !== null && candidate.trim().length > 0 ? candidate : undefined;
 };
 
@@ -60,13 +60,13 @@ export function createWorldStateStore(options?: CreateWorldStateStoreOptions): W
   const region = resolveRegion(options);
   const bucket = resolveRequiredString(
     options?.bucket ?? null,
-    process.env.NARRATIVE_S3_BUCKET ?? null,
-    'World state store requires NARRATIVE_S3_BUCKET to be configured.'
+    process.env.WORLD_STATE_S3_BUCKET ?? null,
+    'World state store requires WORLD_STATE_S3_BUCKET to be configured.'
   );
   const tableName = resolveRequiredString(
     options?.worldIndexTable ?? null,
-    process.env.NARRATIVE_DDB_TABLE ?? null,
-    'World state store requires NARRATIVE_DDB_TABLE to be configured.'
+    process.env.WORLD_STATE_TABLE_NAME ?? null,
+    'World state store requires WORLD_STATE_TABLE_NAME to be configured.'
   );
   const worldIndex = createWorldIndex(tableName, region, options?.dynamoClient);
 

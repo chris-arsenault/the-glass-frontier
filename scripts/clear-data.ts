@@ -11,16 +11,14 @@ const region = resolveAwsRegion();
 const s3Endpoint = resolveAwsEndpoint("s3");
 const dynamoEndpoint = resolveAwsEndpoint("dynamodb");
 
-const narrativeBucket = requireEnv("NARRATIVE_S3_BUCKET");
-const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? "";
-const worldIndexTable = requireEnv("NARRATIVE_DDB_TABLE");
-const locationIndexTable = requireEnv("LOCATION_GRAPH_DDB_TABLE");
+const worldStateBucket = requireEnv("WORLD_STATE_S3_BUCKET");
+const worldStatePrefix = process.env.WORLD_STATE_S3_PREFIX ?? "";
+const worldStateTable = requireEnv("WORLD_STATE_TABLE_NAME");
 
 async function main() {
   console.log("Clearing persistence stores in %s", region);
-  await clearS3({ bucket: narrativeBucket, prefix: narrativePrefix });
-  await clearDynamo(worldIndexTable, "world");
-  await clearDynamo(locationIndexTable, "location");
+  await clearS3({ bucket: worldStateBucket, prefix: worldStatePrefix });
+  await clearDynamo(worldStateTable, "world-state");
   console.log("Done");
 }
 

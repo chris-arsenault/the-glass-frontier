@@ -33,11 +33,10 @@ const s3Endpoint = resolveAwsEndpoint('AWS_S3_ENDPOINT');
 const dynamoEndpoint = resolveAwsEndpoint('AWS_DYNAMODB_ENDPOINT');
 const sqsEndpoint = resolveAwsEndpoint('AWS_SQS_ENDPOINT');
 
-const narrativeBucket = process.env.NARRATIVE_S3_BUCKET ?? 'gf-e2e-narrative';
+const worldStateBucket = process.env.WORLD_STATE_S3_BUCKET ?? 'gf-e2e-world-state';
 const promptBucket = process.env.PROMPT_TEMPLATE_BUCKET ?? 'gf-e2e-prompts';
 const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET ?? 'gf-e2e-audit';
-const worldIndexTable = process.env.NARRATIVE_DDB_TABLE ?? 'gf-e2e-world-index';
-const locationIndexTable = process.env.LOCATION_GRAPH_DDB_TABLE ?? 'gf-e2e-location-graph';
+const worldStateTable = process.env.WORLD_STATE_TABLE_NAME ?? 'gf-e2e-world-state';
 const usageTable = process.env.LLM_PROXY_USAGE_TABLE ?? 'gf-e2e-llm-usage';
 const turnProgressQueue = queueUrlFromEnv('TURN_PROGRESS_QUEUE_URL', 'gf-e2e-turn-progress');
 const closureQueue = queueUrlFromEnv('CHRONICLE_CLOSURE_QUEUE_URL', 'gf-e2e-chronicle-closure');
@@ -73,19 +72,18 @@ async function main(): Promise<void> {
     region,
   });
   const locationGraphStore = createLocationGraphStore({
-    bucket: narrativeBucket,
-    indexTable: locationIndexTable,
-    prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+    bucket: worldStateBucket,
+    indexTable: worldStateTable,
+    prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
     region,
   });
 
-  await ensureBucket(s3, narrativeBucket);
+  await ensureBucket(s3, worldStateBucket);
   await ensureBucket(s3, promptBucket);
   await ensureBucket(s3, auditBucket);
   await uploadPromptTemplates(s3, promptBucket);
 
-  await ensureWorldIndexTable(dynamo, worldIndexTable);
-  await ensureLocationIndexTable(dynamo, locationIndexTable);
+  await ensureWorldStateTable(dynamo, worldStateTable);
   await ensureUsageTable(dynamo, usageTable);
 
   await ensureQueue(sqs, turnProgressQueue.name);
@@ -146,28 +144,55 @@ async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<
   );
 }
 
-async function ensureWorldIndexTable(client: DynamoDBClient, tableName: string): Promise<void> {
+async function ensureWorldStateTable(client: DynamoDBClient, tableName: string): Promise<void> {
   await ensureTable(client, {
     AttributeDefinitions: [
       { AttributeName: 'pk', AttributeType: 'S' },
       { AttributeName: 'sk', AttributeType: 'S' },
+      { AttributeName: 'character_login_pk', AttributeType: 'S' },
+      { AttributeName: 'character_login_sk', AttributeType: 'S' },
+      { AttributeName: 'chronicle_login_pk', AttributeType: 'S' },
+      { AttributeName: 'chronicle_login_sk', AttributeType: 'S' },
+      { AttributeName: 'character_chronicle_pk', AttributeType: 'S' },
+      { AttributeName: 'character_chronicle_sk', AttributeType: 'S' },
+      { AttributeName: 'location_place_pk', AttributeType: 'S' },
+      { AttributeName: 'location_place_sk', AttributeType: 'S' },
     ],
     BillingMode: 'PAY_PER_REQUEST',
-    KeySchema: [
-      { AttributeName: 'pk', KeyType: 'HASH' },
-      { AttributeName: 'sk', KeyType: 'RANGE' },
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: 'character_login',
+        KeySchema: [
+          { AttributeName: 'character_login_pk', KeyType: 'HASH' },
+          { AttributeName: 'character_login_sk', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      },
+      {
+        IndexName: 'chronicle_login',
+        KeySchema: [
+          { AttributeName: 'chronicle_login_pk', KeyType: 'HASH' },
+          { AttributeName: 'chronicle_login_sk', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      },
+      {
+        IndexName: 'character_chronicle',
+        KeySchema: [
+          { AttributeName: 'character_chronicle_pk', KeyType: 'HASH' },
+          { AttributeName: 'character_chronicle_sk', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      },
+      {
+        IndexName: 'location_place',
+        KeySchema: [
+          { AttributeName: 'location_place_pk', KeyType: 'HASH' },
+          { AttributeName: 'location_place_sk', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      },
     ],
-    TableName: tableName,
-  });
-}
-
-async function ensureLocationIndexTable(client: DynamoDBClient, tableName: string): Promise<void> {
-  await ensureTable(client, {
-    AttributeDefinitions: [
-      { AttributeName: 'pk', AttributeType: 'S' },
-      { AttributeName: 'sk', AttributeType: 'S' },
-    ],
-    BillingMode: 'PAY_PER_REQUEST',
     KeySchema: [
       { AttributeName: 'pk', KeyType: 'HASH' },
       { AttributeName: 'sk', KeyType: 'RANGE' },
@@ -289,7 +314,7 @@ async function seedPlaywrightChronicle(
   dynamo: DynamoDBClient,
   locationGraphStore: ReturnType<typeof createLocationGraphStore>
 ): Promise<void> {
-  const prefix = sanitizePrefix(process.env.NARRATIVE_S3_PREFIX);
+  const prefix = sanitizePrefix(process.env.WORLD_STATE_S3_PREFIX);
   const objectKey = (relative: string): string => (prefix.length > 0 ? `${prefix}/${relative}` : relative);
   const loginRecord = buildPlaywrightLoginRecord();
   const characterRecord = buildPlaywrightCharacterRecord();
@@ -360,7 +385,7 @@ async function writeJson(client: S3Client, key: string, payload: unknown): Promi
   await client.send(
     new PutObjectCommand({
       Body: Buffer.from(JSON.stringify(payload, null, 2), 'utf-8'),
-      Bucket: narrativeBucket,
+      Bucket: worldStateBucket,
       ContentType: 'application/json',
       Key: key,
     })
@@ -381,7 +406,7 @@ async function putIndexRecord(
         targetId: { S: attributes.targetId },
         targetType: { S: attributes.targetType },
       },
-      TableName: worldIndexTable,
+      TableName: worldStateTable,
     })
   );
 }
