@@ -10,6 +10,7 @@
 - Preserve existing code style and do not overcomplicate code.
 - Do not introduce options or polymorphism unless required.
 - Choose sane defaults instead of configuration.
+- When refactoring, prioritize naming consistency and clarity even if it expands the diff; do not keep legacy names solely to minimize churn.
 - Skip feature flags/feature gating for prototype apps; ship the single canonical behavior unless explicitly asked otherwise.
 - Only add new environment variables when a value truly needs to be surfaced from Terraform; prefer hardcoded defaults in code for everything else.
 - Use the existing layers: persistence-related functionality belongs in `packages/persistence`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.

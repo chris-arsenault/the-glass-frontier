@@ -21,7 +21,8 @@
     "clear:data": "tsx scripts/clear-data.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:update-snapshots": "playwright test -u"
+    "test:e2e:update-snapshots": "playwright test -u",
+    "local": "tsx scripts/run-local-stack.ts"
   },
   "keywords": [
     "glass-frontier",

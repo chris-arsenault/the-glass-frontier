@@ -110,6 +110,11 @@ class OpenAIProvider extends BaseProvider {
 
     try {
       const request = this.#buildRequest(body, input);
+      if (request?.metadata?.nodeId == 'location-delta') {
+        console.log("requestrequestrequestrequestrequest")
+        console.log(request)
+        console.log("requestrequestrequestrequestrequest")
+      }
       const completion = await this.#client.responses.create(request, {
         signal,
       });

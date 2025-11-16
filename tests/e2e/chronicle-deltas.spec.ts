@@ -24,7 +24,11 @@ test.describe('Chronicle deltas', () => {
 
     await expect(locationPill).toContainText('Luminous Quay');
 
-    const gmEntry = await sendTurn(page, chatInput, 'Sweep the console banks for hidden sensors.');
+    const gmEntry = await sendTurn(
+      page,
+      chatInput,
+      '#loc:auric Sweep the console banks for hidden sensors.'
+    );
 
     await expect(locationPill).toContainText('Auric Causeway', { timeout: 15_000 });
 
@@ -53,10 +57,11 @@ test.describe('Chronicle deltas', () => {
     await expect(drawer.getByText('Signal Flares')).toBeVisible();
     await drawer.getByRole('button', { name: 'Close character sheet' }).click();
 
-    await sendTurn(page, chatInput, 'Descend into the maintenance bay and log its diagnostics.');
+    await sendTurn(page, chatInput, '#loc:maintenance Descend into the maintenance bay.');
     await expect(locationPill).toContainText('Maintenance Bay', { timeout: 15_000 });
 
-    await sendTurn(page, chatInput, 'Return to the Luminous Quay observation deck.');
+    await sendTurn(page, chatInput, '#loc:quay Return to the Luminous Quay observation deck.');
+    await expect(locationPill).not.toContainText('Maintenance Bay', { timeout: 15_000 });
     await expect(locationPill).toContainText('Luminous Quay', { timeout: 15_000 });
     const breadcrumbText = ((await locationPath.textContent()) ?? '').replace(/\s+/g, ' ').trim();
     if (breadcrumbText !== 'Luminous Quay') {
@@ -65,7 +70,7 @@ test.describe('Chronicle deltas', () => {
       );
     }
 
-    await sendTurn(page, chatInput, 'Stride onto the Prism Walk and signal the towers.');
+    await sendTurn(page, chatInput, '#loc:prism Stride onto the Prism Walk and signal the towers.');
     await expect(locationPill).toContainText('Prism Walk', { timeout: 15_000 });
 
     const menu = await openPlayerMenu(page);

@@ -1,8 +1,5 @@
 {
-  "priority": 5,
-  "scenarioName": "location-delta-flow",
-  "requiredScenarioState": "PrismTraversal",
-  "newScenarioState": "PrismTraversal",
+  "priority": 10,
   "request": {
     "method": "POST",
     "urlPath": "/v1/responses",

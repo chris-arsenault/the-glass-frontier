@@ -17,6 +17,8 @@ export function LoginScreen() {
       error={viewModel.error}
       isAuthenticating={viewModel.isAuthenticating}
       onSubmit={viewModel.handleLogin}
+      onLocalLogin={viewModel.handleLocalLogin}
+      showLocalLogin={viewModel.canLocalLogin}
     />
   );
 
@@ -60,9 +62,11 @@ type LoginFormProps = {
   error: string | null;
   isAuthenticating: boolean;
   onSubmit: (credentials: LoginCredentials) => void | Promise<void>;
+  onLocalLogin?: () => void;
+  showLocalLogin?: boolean;
 };
 
-const LoginForm = ({ error, isAuthenticating, onSubmit }: LoginFormProps) => {
+const LoginForm = ({ error, isAuthenticating, onLocalLogin, onSubmit, showLocalLogin }: LoginFormProps) => {
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
 
@@ -108,6 +112,16 @@ const LoginForm = ({ error, isAuthenticating, onSubmit }: LoginFormProps) => {
       <button type="submit" className="login-button" disabled={isAuthenticating}>
         {isAuthenticating ? 'Signing in…' : 'Sign In'}
       </button>
+      {showLocalLogin ? (
+        <button
+          type="button"
+          className="login-button login-button-secondary"
+          onClick={onLocalLogin}
+          disabled={isAuthenticating}
+        >
+          Quick Sign-In (Local Moderator)
+        </button>
+      ) : null}
     </form>
   );
 };
@@ -194,6 +208,14 @@ const PasswordField = ({ disabled, id, label, onChange, value }: PasswordFieldPr
   </>
 );
 
+const LOCAL_AUTH_ENABLED = String(import.meta.env.VITE_COGNITO_CLIENT_ID ?? '').toLowerCase() === 'local-e2e';
+
+const encodeSegment = (payload: Record<string, unknown>) => {
+  const json = JSON.stringify(payload);
+  const encoded = btoa(json);
+  return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/u, '');
+};
+
 const useLoginViewModel = () => {
   const {
     completeNewPassword,
@@ -234,10 +256,32 @@ const useLoginViewModel = () => {
     [completeNewPassword]
   );
 
+  const handleLocalLogin = useCallback(() => {
+    if (!LOCAL_AUTH_ENABLED) {
+      return;
+    }
+    const idToken = `${encodeSegment({ alg: 'none', typ: 'JWT' })}.${encodeSegment({ 'cognito:groups': ['moderator'], sub: 'playwright-e2e' })}.signature`;
+    useAuthStore.setState({
+      challengeUser: null,
+      error: null,
+      isAuthenticated: true,
+      isAuthenticating: false,
+      newPasswordRequired: false,
+      tokens: {
+        accessToken: 'test-access-token',
+        idToken,
+        refreshToken: 'test-refresh-token',
+      },
+      username: 'playwright-e2e',
+    });
+  }, []);
+
   return {
+    canLocalLogin: LOCAL_AUTH_ENABLED,
     error,
     fallbackUsername,
     handleLogin,
+    handleLocalLogin,
     handlePasswordUpdate,
     isAuthenticating,
     newPasswordRequired,
