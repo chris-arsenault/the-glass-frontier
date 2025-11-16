@@ -1,0 +1,68 @@
+import { z } from 'zod';
+
+import { LocationEdgeKindSchema } from './locationCommon';
+import { LocationGraphSnapshotSchema } from './locationGraph';
+
+export const LocationBreadcrumbEntrySchema = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export type LocationBreadcrumbEntry = z.infer<typeof LocationBreadcrumbEntrySchema>;
+
+export const LocationSummarySchema = z.object({
+  id: z.string().min(1),
+  loginId: z.string().min(1),
+  chronicleId: z.string().min(1),
+  name: z.string().min(1),
+  anchorPlaceId: z.string().min(1),
+  breadcrumb: z.array(LocationBreadcrumbEntrySchema).nonempty(),
+  description: z.string().optional(),
+  status: z.array(z.string().min(1)).default([]),
+  tags: z.array(z.string().min(1)).default([]),
+  nodeCount: z.number().int().nonnegative().default(0),
+  edgeCount: z.number().int().nonnegative().default(0),
+  graphChunkCount: z.number().int().nonnegative().default(0),
+});
+
+export type LocationSummary = z.infer<typeof LocationSummarySchema>;
+
+export const LocationDraftSchema = LocationSummarySchema.extend({
+  id: z.string().uuid().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  graph: LocationGraphSnapshotSchema.optional(),
+});
+
+export type LocationDraft = z.infer<typeof LocationDraftSchema>;
+
+export const LocationSchema = LocationSummarySchema.extend({
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type Location = z.infer<typeof LocationSchema>;
+
+export const LocationStateSchema = z.object({
+  characterId: z.string().min(1),
+  locationId: z.string().min(1),
+  placeId: z.string().min(1),
+  certainty: z.number().min(0).max(1).default(1),
+  updatedAt: z.string().datetime(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type LocationState = z.infer<typeof LocationStateSchema>;
+
+export const LocationNeighborSummarySchema = z.object({
+  locationId: z.string().min(1),
+  placeId: z.string().min(1),
+  relationKind: LocationEdgeKindSchema,
+  depth: z.number().int().nonnegative().default(0),
+  name: z.string().min(1),
+  tags: z.array(z.string().min(1)).default([]),
+  breadcrumb: z.array(LocationBreadcrumbEntrySchema).nonempty(),
+});
+
+export type LocationNeighborSummary = z.infer<typeof LocationNeighborSummarySchema>;

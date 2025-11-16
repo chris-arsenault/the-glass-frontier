@@ -451,6 +451,21 @@ importers:
 
   packages/utils: {}
 
+  packages/worldstate:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.930.0
+        version: 3.930.0
+      '@aws-sdk/client-s3':
+        specifier: ^3.930.0
+        version: 3.930.0
+      '@aws-sdk/lib-dynamodb':
+        specifier: ^3.930.0
+        version: 3.930.0(@aws-sdk/client-dynamodb@3.930.0)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
 packages:
 
   '@aws-crypto/crc32@5.2.0':
@@ -4698,6 +4713,9 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zod@4.1.12:
     resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
@@ -10122,6 +10140,8 @@ snapshots:
   zod-validation-error@4.0.2(zod@4.1.12):
     dependencies:
       zod: 4.1.12
+
+  zod@3.25.76: {}
 
   zod@4.1.12: {}
 
