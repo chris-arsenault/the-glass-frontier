@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"action\":\"move\",\"destination\":\"Prism Walk\",\"link\":\"adjacent\"}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"action\":\"move\",\"destination\":\"Prism Walk\",\"link\":\"adjacent\"}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 8,
+    "output_tokens": 12,
+    "total_tokens": 20
+  }
+}
