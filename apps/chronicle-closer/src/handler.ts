@@ -1,5 +1,5 @@
-import type { ChronicleClosureEvent } from '@glass-frontier/dto';
-import { ChronicleClosureEventSchema } from '@glass-frontier/dto';
+import type { ChronicleClosureEvent } from '@glass-frontier/worldstate';
+import { ChronicleClosureEventSchema } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 import type { SQSHandler, SQSRecord } from 'aws-lambda';
 

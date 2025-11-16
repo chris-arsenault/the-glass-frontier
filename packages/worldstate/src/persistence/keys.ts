@@ -53,4 +53,8 @@ export class WorldStateKeyFactory {
   locationState(locationId: string, characterId: string): string {
     return this.#path('locations', locationId, 'states', `${characterId}.json`);
   }
+
+  locationEvents(locationId: string): string {
+    return this.#path('locations', locationId, 'events.json');
+  }
 }

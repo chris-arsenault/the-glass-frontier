@@ -9,10 +9,9 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
-    "@glass-frontier/persistence": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
     "tsup": "^8.5.1",
     "zod": "^4.1.12"
   },

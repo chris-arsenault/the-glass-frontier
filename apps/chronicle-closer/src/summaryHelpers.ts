@@ -2,17 +2,15 @@ import type {
   Character,
   Chronicle,
   ChronicleSummaryKind,
-  InventoryDeltaOp,
-  LocationSummary,
+  Location,
   Turn,
-} from '@glass-frontier/dto';
+} from '@glass-frontier/worldstate';
 import { z } from 'zod';
 
 export type SummaryContext = {
   chronicle: Chronicle;
   character: Character | null;
-  locationName: string;
-  locationSummary: LocationSummary | null;
+  location: Location | null;
   beatLines: string[];
   inventoryHighlights: string[];
   skillHighlights: string[];
@@ -49,8 +47,8 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
   const skillBlock = formatListBlock('Skill checks', context.skillHighlights);
   const inventoryBlock = formatListBlock('Inventory changes', context.inventoryHighlights);
   const locationDetails = [
-    context.locationName,
-    context.locationSummary?.description ?? null,
+    context.location?.name ?? 'Unknown Location',
+    context.location?.description ?? null,
   ]
     .filter(Boolean)
     .join(' — ');
@@ -79,7 +77,7 @@ export const buildLocationEventsPrompt = (context: SummaryContext): string => {
     'Return JSON shaped exactly like: {"locations":[{"name":"PLACE","events":["Sentence one.","Sentence two."]}]}',
     'Each event MUST be 1-2 sentences in third-person past tense and describe the outcome or change that location experienced.',
     `Beats guidance: ${beats}`,
-    `Location context: ${context.locationName} ${context.locationSummary?.description ?? ''}`.trim(),
+    `Location context: ${context.location?.name ?? 'Unknown'} ${context.location?.description ?? ''}`.trim(),
     'Transcript timeline:',
     context.transcript,
   ].join('\n');
@@ -122,9 +120,9 @@ const buildTranscript = (turns: Turn[]): string => {
 
 const formatTurn = (turn: Turn): string => {
   const lines = [`Turn ${turn.turnSequence + 1}`];
-  appendIf(lines, 'Player', truncate(turn.playerMessage?.content));
-  appendIf(lines, 'Intent', turn.playerIntent?.intentSummary ?? '');
-  appendIf(lines, 'GM', truncate(turn.gmMessage?.content));
+  appendIf(lines, 'Player', truncate(turn.playerMessage?.content ?? ''));
+  appendIf(lines, 'Intent', turn.playerIntent?.summary ?? '');
+  appendIf(lines, 'GM', truncate(turn.gmMessage?.content ?? ''));
   appendIf(lines, 'GM Summary', turn.gmSummary?.trim() ?? '');
   const inventory = describeInventoryDelta(turn);
   if (inventory.length > 0) {
@@ -162,7 +160,7 @@ const collectSkillHighlights = (turns: Turn[]): string[] => {
 
 const describeInventoryDelta = (turn: Turn): string[] => {
   const delta = turn.inventoryDelta;
-  if (delta === undefined || delta === null || delta.ops.length === 0) {
+  if (!delta || delta.ops.length === 0) {
     return [];
   }
   return delta.ops
@@ -170,11 +168,9 @@ const describeInventoryDelta = (turn: Turn): string[] => {
     .filter((entry): entry is string => entry !== null);
 };
 
-const inventoryOpHandlers: Partial<
-Record<
-  InventoryDeltaOp['op'],
-  (op: InventoryDeltaOp, target: string) => string
->
+const inventoryOpHandlers: Record<
+  string,
+  (op: { amount?: number; bucket?: string; slot?: string }, target: string) => string
 > = {
   add: (op, target) =>
     `Added ${formatAmount(op.amount)} ${target} to ${op.bucket ?? 'inventory'}`,
@@ -185,7 +181,7 @@ Record<
   unequip: (op, _target) => `Unequipped ${op.slot ?? 'gear slot'}`,
 };
 
-const describeInventoryOp = (op: InventoryDeltaOp): string | null => {
+const describeInventoryOp = (op: Turn['inventoryDelta']['ops'][number]): string | null => {
   const target = op.name ?? op.hook ?? 'item';
   const handler = inventoryOpHandlers[op.op];
   if (typeof handler !== 'function') {
@@ -207,11 +203,9 @@ const describeSkillCheck = (turn: Turn): string | null => {
   });
 };
 
-const hasSkillPlan = (turn: Turn): boolean =>
-  turn.skillCheckPlan !== undefined && turn.skillCheckPlan !== null;
+const hasSkillPlan = (turn: Turn): boolean => turn.skillCheckPlan !== undefined;
 
-const hasSkillResult = (turn: Turn): boolean =>
-  turn.skillCheckResult !== undefined && turn.skillCheckResult !== null;
+const hasSkillResult = (turn: Turn): boolean => turn.skillCheckResult !== undefined;
 
 const resolveSkillBundle = (turn: Turn): string => {
   const skill = turn.playerIntent?.skill ?? 'unknown skill';
@@ -225,7 +219,7 @@ const resolveOutcome = (turn: Turn): string =>
   turn.skillCheckResult?.outcomeTier ?? 'none';
 
 const resolveIntentSummary = (turn: Turn): string => {
-  const summary = turn.playerIntent?.intentSummary;
+  const summary = turn.playerIntent?.summary;
   return typeof summary === 'string' && summary.trim().length > 0
     ? summary
     : 'No explicit intent summary';

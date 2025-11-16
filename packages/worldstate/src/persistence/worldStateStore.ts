@@ -30,8 +30,12 @@ import {
   ChronicleSchema,
   ChronicleSummary,
   ChronicleSummarySchema,
+  ChronicleSummaryEntry,
+  ChronicleSummaryEntrySchema,
   Location,
   LocationDraftSchema,
+  LocationEvent,
+  LocationEventSchema,
   LocationGraphChunk,
   LocationGraphChunkSchema,
   LocationGraphManifest,
@@ -59,6 +63,7 @@ import {
   TurnSummarySchema,
 } from '../dto';
 import type { CharacterDraft, ChronicleDraft, LocationDraft } from '../dto';
+import type { ChronicleSnapshotV2 } from './snapshots';
 import type {
   CharacterConnection,
   ChronicleConnection,
@@ -405,6 +410,50 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     return character;
   }
 
+  async updateCharacter(character: Character): Promise<Character> {
+    const row = await this.#getCharacterRow(character.id);
+    if (!row) {
+      throw new Error(`Character ${character.id} not found`);
+    }
+    const updated = CharacterSchema.parse({ ...character, updatedAt: nowIso() });
+    await writeJson(this.#s3, this.#bucketName, row.documentKey, updated);
+    const summary = CharacterSummarySchema.parse({
+      id: updated.id,
+      loginId: updated.loginId,
+      name: updated.name,
+      archetype: updated.archetype,
+      portraitUrl: updated.portraitUrl,
+      status: updated.status,
+      tags: updated.tags,
+      lastTurnAt: updated.lastTurnAt ?? null,
+    });
+    const item: CharacterRow = {
+      PK: PK.tenant(summary.loginId),
+      SK: SK.character(updated.id),
+      entityType: 'CHARACTER',
+      characterId: updated.id,
+      loginId: summary.loginId,
+      name: summary.name,
+      archetype: summary.archetype,
+      portraitUrl: summary.portraitUrl,
+      lastTurnAt: summary.lastTurnAt ?? null,
+      status: summary.status,
+      tags: summary.tags,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      documentKey: row.documentKey,
+      GSI1PK: PK.character(updated.id),
+      GSI1SK: PK.tenant(summary.loginId),
+    };
+    await this.#docClient.send(
+      new PutCommand({
+        TableName: this.#tableName,
+        Item: item,
+      })
+    );
+    return updated;
+  }
+
   async getCharacter(characterId: string): Promise<Character | null> {
     const res = await this.#docClient.send(
       new QueryCommand({
@@ -513,6 +562,32 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     return chronicle;
   }
 
+  async appendChronicleSummary(
+    chronicleId: string,
+    entry: ChronicleSummaryEntry
+  ): Promise<Chronicle | null> {
+    const parsedEntry = ChronicleSummaryEntrySchema.parse(entry);
+    const meta = await this.#getChronicleMeta(chronicleId);
+    if (!meta) return null;
+    const chronicle = await readJson<Chronicle>(this.#s3, this.#bucketName, meta.documentKey);
+    if (!chronicle) return null;
+    const updated: Chronicle = ChronicleSchema.parse({
+      ...chronicle,
+      summaries: [...(chronicle.summaries ?? []), parsedEntry],
+      updatedAt: nowIso(),
+    });
+    await writeJson(this.#s3, this.#bucketName, meta.documentKey, updated);
+    await this.#docClient.send(
+      new UpdateCommand({
+        TableName: this.#tableName,
+        Key: { PK: PK.tenant(meta.loginId), SK: SK.chronicle(chronicleId) },
+        UpdateExpression: 'SET updatedAt = :updated',
+        ExpressionAttributeValues: { ':updated': updated.updatedAt },
+      })
+    );
+    return updated;
+  }
+
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
     const res = await this.#docClient.send(
       new GetCommand({
@@ -553,6 +628,14 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
       items,
       nextCursor: Cursor.encode(res.LastEvaluatedKey as Record<string, unknown>),
     };
+  }
+
+  async getChronicleSnapshot(chronicleId: string): Promise<ChronicleSnapshotV2 | null> {
+    const chronicle = await this.getChronicle(chronicleId);
+    if (!chronicle) return null;
+    const character = chronicle.characterId ? await this.getCharacter(chronicle.characterId) : null;
+    const turns = await this.#loadAllChronicleTurns(chronicleId);
+    return { chronicle, character, turns };
   }
 
   async appendTurn(chronicleId: string, turn: Turn): Promise<Turn> {
@@ -832,6 +915,40 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     };
   }
 
+  async listLocationEvents(locationId: string): Promise<LocationEvent[]> {
+    const key = this.#keys.locationEvents(locationId);
+    const events = await readJson<LocationEvent[]>(this.#s3, this.#bucketName, key);
+    return Array.isArray(events) ? events.map((event) => LocationEventSchema.parse(event)) : [];
+  }
+
+  async appendLocationEvents(input: {
+    locationId: string;
+    events: Array<{
+      chronicleId: string;
+      summary: string;
+      scope?: string;
+      metadata?: Record<string, unknown>;
+    }>;
+  }): Promise<LocationEvent[]> {
+    if (input.events.length === 0) return [];
+    const key = this.#keys.locationEvents(input.locationId);
+    const existing = (await readJson<LocationEvent[]>(this.#s3, this.#bucketName, key)) ?? [];
+    const now = Date.now();
+    const appended = input.events.map((event, index) =>
+      LocationEventSchema.parse({
+        id: randomUUID(),
+        locationId: input.locationId,
+        chronicleId: event.chronicleId,
+        summary: event.summary,
+        scope: event.scope,
+        metadata: event.metadata,
+        createdAt: new Date(now + index).toISOString(),
+      })
+    );
+    await writeJson(this.#s3, this.#bucketName, key, [...existing, ...appended]);
+    return appended;
+  }
+
   async addLocationNeighborEdge(input: {
     locationId: string;
     src: LocationPlace;
@@ -976,6 +1093,30 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     );
     if (!res.Item) return null;
     return { loginId: res.Item.loginId as string };
+  }
+
+  async #getCharacterRow(characterId: string): Promise<CharacterRow | null> {
+    const res = await this.#docClient.send(
+      new QueryCommand({
+        TableName: this.#tableName,
+        IndexName: this.#indexes.characterById,
+        KeyConditionExpression: '#gsi = :pk',
+        ExpressionAttributeNames: { '#gsi': 'GSI1PK' },
+        ExpressionAttributeValues: { ':pk': PK.character(characterId) },
+        Limit: 1,
+      })
+    );
+    return (res.Items?.[0] as CharacterRow | undefined) ?? null;
+  }
+
+  async #getChronicleMeta(chronicleId: string): Promise<ChronicleMetaRow | null> {
+    const res = await this.#docClient.send(
+      new GetCommand({
+        TableName: this.#tableName,
+        Key: { PK: PK.chronicle(chronicleId), SK: SK.meta },
+      })
+    );
+    return (res.Item as ChronicleMetaRow | undefined) ?? null;
   }
 
   async #getLocationMetadata(locationId: string): Promise<LocationRow | null> {
@@ -1198,5 +1339,30 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
       }
     }
     return results;
+  }
+
+  async #loadAllChronicleTurns(chronicleId: string): Promise<Turn[]> {
+    const turns: Turn[] = [];
+    let cursor: Record<string, unknown> | undefined;
+    do {
+      const res = await this.#docClient.send(
+        new QueryCommand({
+          TableName: this.#tableName,
+          KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+          ExpressionAttributeNames: { '#pk': 'PK', '#sk': 'SK' },
+          ExpressionAttributeValues: { ':pk': PK.chronicle(chronicleId), ':sk': 'TURN_CHUNK#' },
+          ExclusiveStartKey: cursor,
+        })
+      );
+      for (const item of res.Items ?? []) {
+        const pointer = item as ChronicleTurnChunkRow;
+        const chunk = await readJson<TurnChunk>(this.#s3, this.#bucketName, pointer.chunkKey);
+        if (chunk?.turns) {
+          turns.push(...chunk.turns);
+        }
+      }
+      cursor = res.LastEvaluatedKey as Record<string, unknown> | undefined;
+    } while (cursor);
+    return turns.sort((a, b) => a.turnSequence - b.turnSequence);
   }
 }

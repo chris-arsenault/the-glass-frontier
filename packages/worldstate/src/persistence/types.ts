@@ -5,9 +5,11 @@ import type {
   Chronicle,
   ChronicleDraft,
   ChronicleSummary,
+  ChronicleSummaryEntry,
   Connection,
   Location,
   LocationDraft,
+  LocationEvent,
   LocationGraphChunk,
   LocationNeighborSummary,
   LocationPlace,
@@ -17,6 +19,7 @@ import type {
   PageOptions,
   Turn,
 } from '../dto';
+import type { ChronicleSnapshotV2 } from './snapshots';
 
 export type CharacterConnection = Connection<CharacterSummary>;
 export type ChronicleConnection = Connection<ChronicleSummary>;
@@ -30,12 +33,18 @@ export interface WorldStateStoreV2 {
   getLogin(loginId: string): Promise<Login | null>;
 
   createCharacter(input: CharacterDraft): Promise<Character>;
+  updateCharacter(character: Character): Promise<Character>;
   getCharacter(characterId: string): Promise<Character | null>;
   listCharacters(loginId: string, page?: PageOptions): Promise<CharacterConnection>;
 
   createChronicle(input: ChronicleDraft): Promise<Chronicle>;
+  appendChronicleSummary(
+    chronicleId: string,
+    entry: ChronicleSummaryEntry
+  ): Promise<Chronicle | null>;
   getChronicle(chronicleId: string): Promise<Chronicle | null>;
   listChronicles(loginId: string, page?: PageOptions): Promise<ChronicleConnection>;
+  getChronicleSnapshot(chronicleId: string): Promise<ChronicleSnapshotV2 | null>;
 
   appendTurn(chronicleId: string, turn: Turn): Promise<Turn>;
   listChronicleTurns(
@@ -70,4 +79,14 @@ export interface WorldStateStoreV2 {
     dstPlaceId: string;
     relationKind: string;
   }): Promise<void>;
+  listLocationEvents(locationId: string): Promise<LocationEvent[]>;
+  appendLocationEvents(input: {
+    locationId: string;
+    events: Array<{
+      chronicleId: string;
+      summary: string;
+      scope?: string;
+      metadata?: Record<string, unknown>;
+    }>;
+  }): Promise<LocationEvent[]>;
 }

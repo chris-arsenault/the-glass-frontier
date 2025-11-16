@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ChronicleSummaryEntrySchema } from './chronicleSummaryEntry';
 import { MetadataSchema, TagArraySchema } from './shared';
 
 export const ChronicleStatusSchema = z.enum(['draft', 'active', 'paused', 'completed', 'archived']);
@@ -33,6 +34,7 @@ export const ChronicleDraftSchema = ChronicleSummarySchema.extend({
   description: z.string().optional(),
   metadata: MetadataSchema.optional(),
   tags: TagArraySchema,
+  summaries: z.array(ChronicleSummaryEntrySchema).default([]),
 });
 
 export type ChronicleDraft = z.infer<typeof ChronicleDraftSchema>;
@@ -44,6 +46,7 @@ export const ChronicleSchema = ChronicleSummarySchema.extend({
   description: z.string().optional(),
   metadata: MetadataSchema.optional(),
   tags: TagArraySchema,
+  summaries: z.array(ChronicleSummaryEntrySchema).default([]),
 });
 
 export type Chronicle = z.infer<typeof ChronicleSchema>;
