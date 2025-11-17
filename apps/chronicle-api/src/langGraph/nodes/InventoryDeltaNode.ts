@@ -106,7 +106,6 @@ class InventoryDeltaNode implements GraphNode {
         text: INVENTORY_DELTA_TEXT,
       });
       const parsed = InventoryDeltaSchema.safeParse(result.json);
-      console.log(parsed)
       if (!parsed.success) {
         context.telemetry?.recordToolError({
           attempt: 0,

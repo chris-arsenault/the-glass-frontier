@@ -92,6 +92,35 @@ const describeWorldDeltaTags = (tags: ChatMessage['worldDeltaTags']): string | n
   return tags.join(', ');
 };
 
+const resolveAuditId = (trace: ChatMessage['gmTrace']): string | null => {
+  if (!trace) {
+    return null;
+  }
+  const raw = typeof trace.auditId === 'string' && trace.auditId.length > 0
+    ? trace.auditId
+    : trace.requestId;
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const resolveIntentSummary = (intent: ChatMessage['playerIntent']): string | null => {
+  if (!intent) {
+    return null;
+  }
+  const candidate = (intent as ChatMessage['playerIntent'] & { intentSummary?: unknown }).intentSummary;
+  if (typeof candidate === 'string') {
+    const trimmed = candidate.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  const fallback = typeof intent.summary === 'string' ? intent.summary.trim() : '';
+  return fallback.length > 0 ? fallback : null;
+};
+
 const readFeedbackCache = (): Record<string, true> => {
   if (typeof window === 'undefined') {
     return {};
@@ -191,7 +220,7 @@ export function ChatCanvas() {
   };
 
   const openFeedbackModal = (message: ChatMessage) => {
-    const auditId = message.gmTrace?.auditId ?? null;
+    const auditId = resolveAuditId(message.gmTrace ?? null);
     const turnSequence = typeof message.turnSequence === 'number' ? message.turnSequence : null;
     if (!auditId || !message.turnId || turnSequence === null) {
       return;
@@ -343,7 +372,8 @@ export function ChatCanvas() {
               skillKey,
               skillProgress,
             } = chatMessage;
-            const auditId = chatMessage.gmTrace?.auditId ?? null;
+            const playerIntentSummary = resolveIntentSummary(playerIntent);
+            const auditId = resolveAuditId(chatMessage.gmTrace ?? null);
             const hasSubmitted = auditId ? feedbackCache[auditId] === true : false;
             const hasTurnSequence = typeof chatMessage.turnSequence === 'number';
             const canSubmitFeedback =
@@ -467,7 +497,7 @@ export function ChatCanvas() {
                       ) : (
                         <p className="chat-entry-summary">
                           {chatMessage.gmSummary ??
-                            playerIntent?.intentSummary ??
+                            playerIntentSummary ??
                             'GM summary unavailable.'}
                         </p>
                       )}
@@ -496,15 +526,12 @@ export function ChatCanvas() {
                     </>
                   ) : entry.role === 'player' ? (
                     isExpanded(entry.id) ? (
-                      <p
-                        className="chat-entry-content"
-                        title={playerIntent?.intentSummary ?? undefined}
-                      >
+                      <p className="chat-entry-content" title={playerIntentSummary ?? undefined}>
                         {entry.content}
                       </p>
                     ) : (
                       <p className="chat-entry-summary">
-                        {playerIntent?.intentSummary ?? entry.content}
+                        {playerIntentSummary ?? entry.content}
                       </p>
                     )
                   ) : (

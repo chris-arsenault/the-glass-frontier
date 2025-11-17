@@ -36,9 +36,8 @@ test.describe('Chronicle deltas', () => {
     await expect(badge).toBeVisible();
     await badge.hover();
     const deltaRows = gmEntry.locator('.inventory-delta-row');
-    await expect(deltaRows).toHaveCount(6);
-    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-equip')).toContainText('Obsidian Halo');
-    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-unequip')).toContainText('Nullglass Stealth Rig');
+    await expect(deltaRows).toHaveCount(3);
+    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-add')).toContainText('Auric Loom');
     await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-remove')).toContainText('Vault Access Seed');
     await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-consume')).toContainText('Starlight Draught');
     await expect(gmEntry.locator('.inventory-delta-row').filter({ hasText: 'Auric Loom' })).toHaveCount(1);
@@ -47,14 +46,10 @@ test.describe('Chronicle deltas', () => {
     await page.getByRole('button', { name: 'Toggle character sheet' }).click();
     const drawer = page.locator('.character-drawer.open');
     await expect(drawer).toBeVisible();
-    await expect(drawer.locator('.gear-slot-card').filter({ hasText: 'Headgear' })).toContainText('Obsidian Halo');
-    await expect(drawer.locator('.gear-slot-card').filter({ hasText: 'Outfit' })).toContainText('Empty slot');
-    await expect(drawer.getByRole('heading', { name: 'Relics' }).locator('..')).toContainText('Auric Loom');
-    await expect(drawer.getByRole('heading', { name: 'Data Shards' }).locator('..')).toContainText(
-      'No data shards on hand.'
-    );
-    await expect(drawer.getByText('Starlight Draught')).toBeVisible();
-    await expect(drawer.getByText('Signal Flares')).toBeVisible();
+    const inventoryCards = drawer.locator('.inventory-kind-card');
+    await expect(inventoryCards).toHaveCount(4);
+    await expect(inventoryCards.filter({ hasText: 'Relics' })).toContainText('Auric Loom');
+    await expect(inventoryCards.filter({ hasText: 'Consumables' })).toContainText('Starlight Draught');
     await drawer.getByRole('button', { name: 'Close character sheet' }).click();
 
     await sendTurn(page, chatInput, '#loc:maintenance Descend into the maintenance bay.');

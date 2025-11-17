@@ -112,6 +112,8 @@ export const InventoryDeltaSchema = z.object({
 export type InventoryDelta = z.infer<typeof InventoryDeltaSchema>;
 
 export const LlmTraceSchema = z.object({
+  auditId: z.string().min(1).optional(),
+  nodeId: z.string().min(1).optional(),
   provider: z.string().min(1),
   requestId: z.string().min(1),
   promptTokens: z.number().int().nonnegative().optional(),

@@ -987,7 +987,6 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
 
   async updateLocationState(state: LocationState): Promise<LocationState> {
     const parsed = LocationStateSchema.parse(state);
-    console.log(parsed)
     const key = this.#keys.locationState(parsed.locationId, parsed.characterId);
     await writeJson(this.#s3, this.#bucketName, key, parsed);
     await this.#docClient.send(

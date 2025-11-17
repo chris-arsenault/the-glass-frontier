@@ -61,6 +61,8 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       advancesTimeline: this.#config.advancesTimeline,
       gmMessage: transcript,
       gmTrace: {
+        auditId: narration.requestId,
+        nodeId: this.id,
         provider: narration.provider,
         requestId: narration.requestId,
         metadata: {

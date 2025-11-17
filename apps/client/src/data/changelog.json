@@ -173,5 +173,12 @@
     "summary": "Inventory deltas now follow the simplified schema",
     "details": "Chronicle turns, badges, and closure summaries now use the streamlined inventory list—LLM prompts emit add/remove/update/consume ops, the narrative engine applies them directly, the obsolete pending equip queue is gone, and the client surfaces the new entries with quantities and tags.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-23-share-feedback-fix",
+    "releasedAt": "2025-11-23",
+    "summary": "Share Feedback button works again",
+    "details": "GM turns now carry audit/request identifiers in their traces and the chat UI falls back to the request id when older turns are missing data, so the Share Feedback button no longer stays disabled and players can submit sentiment notes for every GM reply.",
+    "type": "bugfix"
   }
 ]

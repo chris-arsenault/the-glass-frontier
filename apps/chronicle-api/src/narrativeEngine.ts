@@ -132,6 +132,7 @@ class NarrativeEngine {
     log('info', 'Narrative engine resolved turn', {
       checkIssued: Boolean(graphResult.skillCheckPlan),
       chronicleId,
+      success: !graphResult.failure
     });
 
     const updatedCharacter = graphResult.updatedCharacter ?? chronicleState.character ?? null;
