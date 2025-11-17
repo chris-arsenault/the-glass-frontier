@@ -1,5 +1,8 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import type { TurnProgressEvent, TurnProgressPayload } from '@glass-frontier/dto';
+import type {
+  TurnProgressEvent,
+  TurnProgressPayload,
+} from '@glass-frontier/worldstate/dto/turnProgressEvent';
 import { log } from '@glass-frontier/utils';
 import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 

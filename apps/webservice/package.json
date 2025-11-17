@@ -12,9 +12,9 @@
     "@aws-sdk/client-apigatewaymanagementapi": "^3.930.0",
     "@aws-sdk/client-dynamodb": "^3.930.0",
     "@aws-sdk/lib-dynamodb": "^3.930.0",
-    "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
     "jose": "^6.1.1",
     "tsup": "^8.5.1"
   },

@@ -28,6 +28,6 @@
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
     "@glass-frontier/utils": "workspace:*",
-    "@glass-frontier/dto": "workspace:*"
+    "@glass-frontier/worldstate": "workspace:*"
   }
 }

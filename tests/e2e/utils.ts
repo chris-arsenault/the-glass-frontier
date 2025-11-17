@@ -1,6 +1,8 @@
 import { expect } from '@playwright/test';
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
 
+import type { PlayerFeedbackVisibilityLevel } from '@glass-frontier/dto';
+
 export const GM_RESPONSE_TEXT =
   'MOCK: The GM describes the scout slipping past the humming consoles.';
 
@@ -82,6 +84,26 @@ export const sendTurn = async (page: Page, chatInput: Locator, message: string) 
   await page.getByTestId('chat-submit').click();
   await expect(page.getByText(GM_RESPONSE_TEXT)).toBeVisible({ timeout: 15_000 });
   return page.locator('.chat-entry-gm').last();
+};
+
+export const ensureFeedbackVisibility = async (
+  page: Page,
+  level: PlayerFeedbackVisibilityLevel = 'all'
+) => {
+  await page.evaluate(
+    async (visibility) => {
+      const module = await import('/src/stores/chronicleStore.ts');
+      module.useChronicleStore.setState((prev) => ({
+        ...prev,
+        playerSettings: {
+          ...prev.playerSettings,
+          feedbackVisibility: visibility,
+        },
+        playerSettingsStatus: 'ready',
+      }));
+    },
+    level
+  );
 };
 
 export const openPlayerMenu = async (page: Page) => {

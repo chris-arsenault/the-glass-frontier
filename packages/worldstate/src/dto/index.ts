@@ -11,3 +11,4 @@ export * from './location';
 export * from './locationGraph';
 export * from './locationCommon';
 export * from './locationEvent';
+export * from './turnProgressEvent';

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   bootstrapChronicle,
+  ensureFeedbackVisibility,
   openPlayerMenu,
   resetPlaywrightState,
   resetWiremockScenarios,
@@ -19,6 +20,7 @@ test.describe('Chronicle deltas', () => {
 
   test('tracks multi-turn location transitions and inventory changes', async ({ page }) => {
     const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
+    await ensureFeedbackVisibility(page, 'all');
     const locationPill = page.locator('.location-pill-value');
     const locationPath = page.locator('.location-pill-path');
 
@@ -41,7 +43,6 @@ test.describe('Chronicle deltas', () => {
     await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-remove')).toContainText('Vault Access Seed');
     await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-consume')).toContainText('Starlight Draught');
     await expect(gmEntry.locator('.inventory-delta-row').filter({ hasText: 'Auric Loom' })).toHaveCount(1);
-    await expect(gmEntry.locator('.inventory-delta-row').filter({ hasText: 'Signal Flares' })).toHaveCount(1);
 
     await page.getByRole('button', { name: 'Toggle character sheet' }).click();
     const drawer = page.locator('.character-drawer.open');

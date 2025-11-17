@@ -1,4 +1,4 @@
-import type { SkillCheckRequest } from '@glass-frontier/dto';
+import type { SkillCheckRequest } from './types.js';
 import { randomInt } from 'node:crypto';
 
 export type AdvantageMode = 'advantage' | 'keepDrop';

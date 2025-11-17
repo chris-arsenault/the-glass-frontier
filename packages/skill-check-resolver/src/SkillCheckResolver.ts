@@ -1,28 +1,16 @@
-import type {
-  SkillCheckRequest,
-  SkillCheckResult,
-  MomentumState,
-  OutcomeTier,
-} from '@glass-frontier/dto';
-import {
-  attributeModifierFromName,
-  MOMENTUM_DELTA,
-  RISK_LEVEL_MAP,
-  type RiskLevel,
-  skillModifierFromSkillName,
-  TIER_THRESHOLDS,
-} from '@glass-frontier/dto';
+import type { MomentumState, OutcomeTier, RiskLevel } from '@glass-frontier/worldstate/dto';
 import { clamp } from '@glass-frontier/utils';
 
 import { DiceRoller } from './DiceRoller';
+import {
+  MOMENTUM_DELTA,
+  RISK_LEVEL_MAP,
+  TIER_THRESHOLDS,
+  attributeModifierFromName,
+  skillModifierFromSkillName,
+} from './skillMath.js';
 import { CheckRequestTelemetry } from './telemetry';
-
-const momentumDeltaByTier = new Map<OutcomeTier, number>(
-  Object.entries(MOMENTUM_DELTA) as Array<[OutcomeTier, number]>
-);
-const riskThresholdByLevel = new Map<RiskLevel, number>(
-  Object.entries(RISK_LEVEL_MAP) as Array<[RiskLevel, number]>
-);
+import type { SkillCheckRequest, SkillCheckResult } from './types.js';
 
 class SkillCheckResolver {
   request: SkillCheckRequest;
@@ -73,7 +61,7 @@ class SkillCheckResolver {
   }
 
   computeMomentum(current: MomentumState, tier: OutcomeTier): number {
-    const delta = momentumDeltaByTier.get(tier) ?? 0;
+    const delta = MOMENTUM_DELTA[tier] ?? 0;
     return clamp(current.current + delta, current.floor, current.ceiling);
   }
 
@@ -87,7 +75,7 @@ class SkillCheckResolver {
   }
 
   private resolveRiskThreshold(level: RiskLevel): number {
-    return riskThresholdByLevel.get(level) ?? riskThresholdByLevel.get('standard') ?? RISK_LEVEL_MAP.standard;
+    return RISK_LEVEL_MAP[level] ?? RISK_LEVEL_MAP.standard;
   }
 }
 

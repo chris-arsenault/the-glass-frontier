@@ -9,7 +9,7 @@ import type {
   Turn,
 } from '@glass-frontier/worldstate/dto';
 import type { PlayerPreferences } from '@glass-frontier/dto';
-import type { TurnProgressEvent } from '@glass-frontier/dto/narrative/TurnProgressEvent';
+import type { TurnProgressEvent } from '@glass-frontier/worldstate/dto/turnProgressEvent';
 import { formatTurnJobId } from '@glass-frontier/utils';
 import { create } from 'zustand';
 

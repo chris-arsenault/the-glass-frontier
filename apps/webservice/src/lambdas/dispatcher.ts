@@ -1,5 +1,5 @@
 import { ApiGatewayManagementApi, GoneException } from '@aws-sdk/client-apigatewaymanagementapi';
-import { TurnProgressEventSchema } from '@glass-frontier/dto';
+import { TurnProgressEventSchema } from '@glass-frontier/worldstate/dto/turnProgressEvent';
 import { log } from '@glass-frontier/utils';
 import type { SQSHandler, SQSRecord } from 'aws-lambda';
 

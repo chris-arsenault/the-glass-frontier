@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Player } from '@glass-frontier/dto';
+
 import type { Context } from '../context';
 import {
   buildPlaywrightCharacterRecord,
@@ -24,6 +26,15 @@ export const resetPlaywrightFixtures = async (ctx: Context): Promise<{ locationI
     chronicleId: chronicle.id,
     locationId,
   });
+
+  const defaultPlayerRecord: Player = {
+    loginId: login.id,
+    preferences: {
+      feedbackVisibility: 'all',
+    },
+    templateOverrides: {},
+  };
+  await ctx.playerStore.upsertPlayer(defaultPlayerRecord);
 
   return { locationId };
 };

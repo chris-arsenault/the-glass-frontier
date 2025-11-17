@@ -1,6 +1,7 @@
-import type { SkillCheckRequest, SkillCheckResult } from '@glass-frontier/dto';
 import type { ErrorInfo } from '@glass-frontier/utils';
 import { log } from '@glass-frontier/utils';
+
+import type { SkillCheckRequest, SkillCheckResult } from './types.js';
 
 class CheckRequestTelemetry {
   request: SkillCheckRequest;
