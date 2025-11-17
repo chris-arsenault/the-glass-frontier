@@ -48,7 +48,8 @@ export type NeighborRef = {
 export type DecisionResolution =
   | { kind: 'noop' }
   | { kind: 'uncertain' }
-  | { kind: 'move'; target: NeighborRef };
+  | { kind: 'move'; target: NeighborRef }
+  | { kind: 'create'; destination: string; link: DeltaDecision['link'] };
 
 export async function buildPlannerContext(options: {
   store: WorldStateStoreV2;
@@ -112,9 +113,14 @@ export function resolveDecision(
   if (decision.action === 'uncertain') {
     return { kind: 'uncertain' };
   }
-  const target = context.neighbors.get(normalize(decision.destination));
+  const normalizedDestination = decision.destination.trim();
+  const target = context.neighbors.get(normalize(normalizedDestination));
   if (!target) {
-    return { kind: 'uncertain' };
+    return {
+      kind: 'create',
+      destination: normalizedDestination,
+      link: decision.link,
+    };
   }
   return { kind: 'move', target };
 }

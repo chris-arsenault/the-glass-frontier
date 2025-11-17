@@ -3,6 +3,7 @@ import type {
   Chronicle,
   ChronicleSummaryKind,
   Location,
+  LocationBreadcrumbEntry,
   Turn,
 } from '@glass-frontier/worldstate';
 import { z } from 'zod';
@@ -11,6 +12,7 @@ export type SummaryContext = {
   chronicle: Chronicle;
   character: Character | null;
   location: Location | null;
+  locationChunks: LocationSummaryChunk[];
   beatLines: string[];
   inventoryHighlights: string[];
   skillHighlights: string[];
@@ -71,14 +73,23 @@ export const buildLocationEventsPrompt = (context: SummaryContext): string => {
     context.beatLines.length === 0
       ? 'No beats were logged.'
       : context.beatLines.map((line, index) => `${index + 1}. ${line}`).join(' ');
+  const chunkPayload = serializeLocationChunks(context.locationChunks);
+  const chunkGuidance =
+    context.locationChunks.length === 0
+      ? 'No structured location chunks were captured; fall back to the transcript when necessary.'
+      : 'Use only the provided locationChunks when referring to specific locations—do not invent new place names.';
   return [
     `Produce a JSON summary of high-level events for the chronicle '${chronicle.title}'.`,
     'Group events by distinct places or sub-locations mentioned in the transcript.',
     'Return JSON shaped exactly like: {"locations":[{"name":"PLACE","events":["Sentence one.","Sentence two."]}]}',
     'Each event MUST be 1-2 sentences in third-person past tense and describe the outcome or change that location experienced.',
+    'Every name in the output must match an existing locationChunks.placeName value exactly.',
     `Beats guidance: ${beats}`,
+    chunkGuidance,
     `Location context: ${context.location?.name ?? 'Unknown'} ${context.location?.description ?? ''}`.trim(),
-    'Transcript timeline:',
+    'locationChunks JSON:',
+    chunkPayload,
+    'Transcript timeline (reference only):',
     context.transcript,
   ].join('\n');
 };
@@ -102,12 +113,14 @@ export type TurnArtifacts = {
   transcript: string;
   inventoryHighlights: string[];
   skillHighlights: string[];
+  locationChunks: LocationSummaryChunk[];
 };
 
 export const buildTurnArtifacts = (turns: Turn[]): TurnArtifacts => ({
   inventoryHighlights: collectInventoryHighlights(turns),
   skillHighlights: collectSkillHighlights(turns),
   transcript: buildTranscript(turns),
+  locationChunks: buildLocationChunks(turns),
 });
 
 const buildTranscript = (turns: Turn[]): string => {
@@ -295,6 +308,76 @@ export const sanitizeSentence = (value: string): string => {
 export type LocationEventFragment = {
   name: string;
   summary: string;
+};
+
+export type LocationSummaryChunk = {
+  locationId: string;
+  placeId: string;
+  placeName: string;
+  placeKind: string;
+  breadcrumb: LocationBreadcrumbEntry[];
+  turns: LocationSummaryChunkTurn[];
+};
+
+type LocationSummaryChunkTurn = {
+  gmMessage?: string;
+  gmSummary?: string;
+  playerIntent?: string;
+  playerMessage?: string;
+  turnSequence: number;
+  worldDeltaTags?: string[];
+};
+
+const buildLocationChunks = (turns: Turn[]): LocationSummaryChunk[] => {
+  const map = new Map<string, LocationSummaryChunk>();
+  for (const turn of turns) {
+    const ctx = turn.locationContext;
+    const key = ctx?.placeId ?? `unknown-${turn.turnSequence}`;
+    const chunk =
+      map.get(key) ??
+      ({
+        locationId: ctx?.locationId ?? 'unknown-location',
+        placeId: ctx?.placeId ?? key,
+        placeName: ctx?.placeName ?? 'Unknown Location',
+        placeKind: ctx?.placeKind ?? 'unknown',
+        breadcrumb: ctx?.breadcrumb ?? [],
+        turns: [],
+      } satisfies LocationSummaryChunk);
+    if (!map.has(key)) {
+      map.set(key, chunk);
+    }
+    chunk.turns.push({
+      gmMessage: turn.gmMessage?.content,
+      gmSummary: turn.gmSummary,
+      playerIntent: turn.playerIntent?.summary,
+      playerMessage: turn.playerMessage?.content,
+      turnSequence: turn.turnSequence,
+      worldDeltaTags: turn.worldDeltaTags,
+    });
+  }
+  return Array.from(map.values());
+};
+
+const serializeLocationChunks = (chunks: LocationSummaryChunk[]): string => {
+  if (chunks.length === 0) {
+    return '[]';
+  }
+  const payload = chunks.map((chunk) => ({
+    locationId: chunk.locationId,
+    placeId: chunk.placeId,
+    placeName: chunk.placeName,
+    placeKind: chunk.placeKind,
+    breadcrumb: chunk.breadcrumb.map((entry) => entry.name),
+    turns: chunk.turns.map((turn) => ({
+      turn: turn.turnSequence + 1,
+      playerIntent: turn.playerIntent ?? null,
+      playerMessage: truncate(turn.playerMessage ?? '', 220),
+      gmSummary: truncate(turn.gmSummary ?? '', 220),
+      gmMessage: truncate(turn.gmMessage ?? '', 220),
+      worldDeltaTags: turn.worldDeltaTags ?? [],
+    })),
+  }));
+  return JSON.stringify(payload, null, 2);
 };
 
 export const flattenLocationEvents = (

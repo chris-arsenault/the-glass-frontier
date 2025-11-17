@@ -9,6 +9,8 @@ import type {
   Connection,
   Location,
   LocationDraft,
+  LocationPatch,
+  LocationPlacePatch,
   LocationEvent,
   LocationGraphChunk,
   LocationNeighborSummary,
@@ -57,6 +59,9 @@ export interface WorldStateStoreV2 {
   batchGetChronicleSummaries(ids: string[]): Promise<Map<string, ChronicleSummary>>;
 
   createLocation(input: LocationDraft): Promise<LocationSummary>;
+  updateLocation(input: LocationPatch): Promise<LocationSummary>;
+  updateLocationPlace(input: LocationPlacePatch): Promise<LocationPlace>;
+  updateLocation(input: LocationPatch): Promise<LocationSummary>;
   getLocation(locationId: string): Promise<Location | null>;
   listLocations(loginId: string, page?: PageOptions): Promise<LocationConnection>;
   listLocationGraph(

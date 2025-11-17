@@ -125,6 +125,7 @@ export const LocationContextSchema = z.object({
   locationId: z.string().min(1),
   placeId: z.string().min(1),
   placeName: z.string().min(1),
+  placeKind: z.string().min(1),
   breadcrumb: z.array(LocationBreadcrumbEntrySchema).nonempty(),
   certainty: z.number().min(0).max(1).default(1),
 });

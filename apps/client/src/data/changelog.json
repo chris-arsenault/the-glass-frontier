@@ -145,5 +145,26 @@
     "summary": "Client UI now consumes world state v2 DTOs",
     "details": "Repointed the chronicle store, chat canvas, character panels, start wizard, and location maintenance UI to the new @glass-frontier/worldstate/dto contracts so characters, turns, intents, and locations all share the same schemas as the upgraded chronicle API. The player UI now renders the v2 inventory/skill data, reads location breadcrumbs from the shared store, and boots shard-based chronicles through the new metadata-aware workflow.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-location-delta-auto-insert",
+    "releasedAt": "2025-11-21",
+    "summary": "GM turns can hop to brand-new locations again",
+    "details": "When the GM invents a location that isn't on the graph yet, the chronicle API now spawns a placeholder node, links it to the current anchor based on the classifier's link type, moves the character there, and includes the updated breadcrumb in the turn response so the UI immediately reflects the new destination.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2025-11-21-closure-location-chunks",
+    "releasedAt": "2025-11-21",
+    "summary": "Chronicle closure summaries honor real locations",
+    "details": "Each turn now records its exact location context, and the chronicle-closer feeds those concrete breadcrumbs into the per-location summarizer so epilogues and location event logs only reference actual places instead of guessing from raw transcripts.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-location-maintenance-login",
+    "releasedAt": "2025-11-21",
+    "summary": "Location maintenance works for logged-in users again",
+    "details": "The moderator UI now scopes every listLocations call to the active login, pages through graph chunks via cursors, and pushes edge mutations through the v2 worldstate APIs—so add/remove operations persist immediately instead of silently failing.",
+    "type": "bugfix"
   }
 ]

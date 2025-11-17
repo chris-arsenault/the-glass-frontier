@@ -72,6 +72,7 @@ export class LocationDeltaNode extends LlmClassifierNode<LocationDeltaDecision> 
       locationId: normalized.locationId,
       placeId: normalized.placeId,
       placeName: normalized.placeName ?? before?.placeName ?? 'Unknown',
+      placeKind: normalized.placeKind ?? before?.placeKind ?? 'unknown',
     };
   }
 
@@ -94,6 +95,7 @@ export class LocationDeltaNode extends LlmClassifierNode<LocationDeltaDecision> 
       locationId: after.locationId,
       placeId: after.placeId,
       placeName: typeof after.placeName === 'string' ? after.placeName : undefined,
+      placeKind: typeof after.placeKind === 'string' ? after.placeKind : undefined,
     };
   }
 

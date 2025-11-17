@@ -2,14 +2,18 @@ import type { LocationPlace } from '@glass-frontier/worldstate/dto';
 import React from 'react';
 
 type RootSelectorBarProps = {
+  hasMoreRoots: boolean;
   isLoading: boolean;
+  onLoadMoreRoots: () => void;
   onSelectRoot: (rootId: string) => void;
   roots: LocationPlace[];
   selectedRootId: string | null;
 };
 
 export const RootSelectorBar = ({
+  hasMoreRoots,
   isLoading,
+  onLoadMoreRoots,
   onSelectRoot,
   roots,
   selectedRootId,
@@ -36,6 +40,16 @@ export const RootSelectorBar = ({
             </button>
           ))
         )}
+        {hasMoreRoots ? (
+          <button
+            type="button"
+            className="lm-root-more"
+            onClick={onLoadMoreRoots}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Loading…' : 'Load more'}
+          </button>
+        ) : null}
       </div>
     </div>
   );

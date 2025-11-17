@@ -2,6 +2,8 @@ import type {
   Character,
   Chronicle,
   Intent,
+  LocationContext,
+  LocationDelta,
   LocationSummary,
   SkillCheckPlan,
   SkillCheckResult,
@@ -59,6 +61,9 @@ export type GraphContext = {
   inventoryPreview?: Inventory | null;
   inventoryRegistry?: ImbuedRegistry | null;
   beatDelta?: BeatDelta | null;
+  locationContext?: LocationContext | null;
+  locationDelta?: LocationDelta | null;
+  locationPlan?: unknown;
   resolvedIntentConfidence?: number;
   resolvedIntentType?: Intent['intentType'];
   advancesTimeline?: boolean;

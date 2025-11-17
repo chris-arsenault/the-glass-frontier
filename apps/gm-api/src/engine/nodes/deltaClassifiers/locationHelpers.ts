@@ -25,5 +25,6 @@ export const deriveLocationContext = (
     locationId: state.locationId,
     placeId: state.placeId,
     placeName: state.breadcrumb[state.breadcrumb.length - 1]?.name ?? 'Unknown',
+    placeKind: state.breadcrumb[state.breadcrumb.length - 1]?.kind ?? 'unknown',
   };
 };

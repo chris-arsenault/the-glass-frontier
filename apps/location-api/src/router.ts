@@ -1,7 +1,10 @@
 import {
   LocationDraftSchema,
   LocationEdgeKindSchema,
+  LocationPlaceSchema,
+  LocationPlacePatchSchema,
   LocationStateSchema,
+  LocationPatchSchema,
   PageOptionsSchema,
 } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
@@ -74,6 +77,72 @@ export const locationRouter = t.router({
         maxDepth: input.maxDepth,
         relationKinds: input.relationKinds,
       })
+    ),
+
+  updateLocation: t.procedure
+    .input(LocationPatchSchema)
+    .mutation(async ({ ctx, input }) =>
+      withMutationTelemetry(
+        'update-location',
+        { locationId: input.id },
+        () => ctx.worldStateStore.updateLocation(input)
+      )
+    ),
+
+  updateLocationPlace: t.procedure
+    .input(LocationPlacePatchSchema)
+    .mutation(async ({ ctx, input }) =>
+      withMutationTelemetry(
+        'update-location-place',
+        { locationId: input.locationId, placeId: input.placeId },
+        () => ctx.worldStateStore.updateLocationPlace(input)
+      )
+    ),
+
+  removeLocationNeighborEdge: t.procedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        srcPlaceId: z.string().min(1),
+        dstPlaceId: z.string().min(1),
+        relationKind: LocationEdgeKindSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) =>
+      withMutationTelemetry(
+        'remove-location-neighbor-edge',
+        { locationId: input.locationId, relationKind: input.relationKind },
+        () =>
+          ctx.worldStateStore.removeLocationNeighborEdge({
+            locationId: input.locationId,
+            relationKind: input.relationKind,
+            srcPlaceId: input.srcPlaceId,
+            dstPlaceId: input.dstPlaceId,
+          })
+      )
+    ),
+
+  addLocationNeighborEdge: t.procedure
+    .input(
+      z.object({
+        locationId: z.string().min(1),
+        relationKind: LocationEdgeKindSchema,
+        srcPlace: LocationPlaceSchema,
+        dstPlace: LocationPlaceSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) =>
+      withMutationTelemetry(
+        'add-location-neighbor-edge',
+        { locationId: input.locationId, relationKind: input.relationKind },
+        () =>
+          ctx.worldStateStore.addLocationNeighborEdge({
+            locationId: input.locationId,
+            relationKind: input.relationKind,
+            src: input.srcPlace,
+            dst: input.dstPlace,
+          })
+      )
     ),
 });
 

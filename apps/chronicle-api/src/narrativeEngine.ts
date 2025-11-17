@@ -47,6 +47,7 @@ import { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 import { TurnProgressEmitter, type TurnProgressPublisher } from './progressEmitter';
 import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
+import { deriveLocationContextFromState } from './locationContext';
 
 type NarrativeEngineOptions = {
   worldStateStore?: WorldStateStoreV2;
@@ -330,6 +331,10 @@ class NarrativeEngine {
     turnSequence: number;
   }): GraphContext {
     const llmResolver = this.#createLlmResolver(authorizationHeader);
+    const initialLocationContext = deriveLocationContextFromState(
+      chronicleState.character?.locationState ?? null,
+      chronicleState.location ?? null
+    );
     return {
       advancesTimeline: false,
       beatDelta: null,
@@ -340,6 +345,8 @@ class NarrativeEngine {
       failure: false,
       gmTrace: null,
       handlerId: undefined,
+      locationContext: initialLocationContext,
+      locationDelta: null,
       inventoryDelta: null,
       inventoryPreview: null,
       inventoryRegistry: null,
@@ -435,6 +442,12 @@ class NarrativeEngine {
       throw new Error('Chronicle missing login reference for turn recording');
     }
     const createdAt = new Date().toISOString();
+    const fallbackLocationContext = deriveLocationContextFromState(
+      graphResult.chronicle.character?.locationState ?? chronicleState.character?.locationState ?? null,
+      graphResult.chronicle.location ?? chronicleState.location ?? null
+    );
+    const locationContext = graphResult.locationContext ?? fallbackLocationContext ?? undefined;
+    const locationDelta = graphResult.locationDelta ?? undefined;
     return {
       id: randomUUID(),
       chronicleId,
@@ -459,6 +472,8 @@ class NarrativeEngine {
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage: combinedSystemMessage,
       worldDeltaTags: graphResult.worldDeltaTags ?? undefined,
+      locationContext,
+      locationDelta,
     };
   }
 

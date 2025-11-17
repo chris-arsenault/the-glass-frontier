@@ -103,7 +103,7 @@ class ChronicleClosureProcessor {
     const chronicle = snapshot.chronicle;
     const location = await this.#resolveLocation(chronicle);
     const beatLines = buildBeatLines(chronicle);
-    const { inventoryHighlights, skillHighlights, transcript } = buildTurnArtifacts(
+    const { inventoryHighlights, skillHighlights, transcript, locationChunks } = buildTurnArtifacts(
       snapshot.turns
     );
     return {
@@ -112,6 +112,7 @@ class ChronicleClosureProcessor {
       chronicle,
       inventoryHighlights,
       location,
+      locationChunks,
       skillHighlights,
       transcript,
     };

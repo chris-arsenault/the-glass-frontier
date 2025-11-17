@@ -105,19 +105,21 @@ export const useChronicleShardHandler = ({
         setShardMessage('Preparing shard locations…');
         setIsShardProcessing(true);
         try {
-          const placeId = await bootstrapShardLocation(shard.locationStack);
-          if (placeId) {
-            const details = await locationClient.getLocationPlace.query({ placeId });
+         const placeId = await bootstrapShardLocation(shard.locationStack);
+         if (placeId) {
+            const summary = await locationClient.getLocation.query({ locationId: placeId });
             try {
               await selectPlace(placeId);
             } catch {
               // ignore place selection failure, user can retry manually
             }
-            setSelectedLocation({
-              breadcrumb: details.breadcrumb,
-              id: placeId,
-              name: details.place.name,
-            });
+            if (summary) {
+              setSelectedLocation({
+                breadcrumb: summary.breadcrumb,
+                id: summary.anchorPlaceId,
+                name: summary.name,
+              });
+            }
             setStep('tone');
             setShardMessage(null);
           } else {

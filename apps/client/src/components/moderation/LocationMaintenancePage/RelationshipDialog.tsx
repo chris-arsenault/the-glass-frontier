@@ -13,7 +13,7 @@ import { EDGE_KIND_OPTIONS } from './locationUtils';
 type RelationshipDialogProps = {
   graph: LocationGraphSnapshot | null;
   isMutating: boolean;
-  onAdd: (input: { kind: LocationEdgeKindType; targetId: string }) => Promise<void>;
+  onAdd: (input: { kind: LocationEdgeKindType; target: LocationPlace }) => Promise<void>;
   onClose: () => void;
   onRemove: (input: { kind: LocationEdgeKindType; targetId: string }) => Promise<void>;
   onSelectPlace: (placeId: string) => Promise<void>;
@@ -63,7 +63,11 @@ export const RelationshipDialog = ({
     if (!targetId) {
       return;
     }
-    await onAdd({ kind, targetId });
+    const targetPlace = placeMap.get(targetId);
+    if (!targetPlace) {
+      return;
+    }
+    await onAdd({ kind, target: targetPlace });
     setTargetId('');
   };
 

@@ -2,11 +2,17 @@ import type {
   LocationBreadcrumbEntry,
   LocationEdgeKind,
   LocationGraphSnapshot,
+  LocationGraphChunk,
   LocationPlace,
 } from '@glass-frontier/worldstate/dto';
 import { create } from 'zustand';
 
 import { locationClient } from '../lib/locationClient';
+import { mergeLocationGraphChunks } from '../utils/locationGraph';
+import { resolveLoginIdentity } from '../utils/loginIdentity';
+
+const ROOT_PAGE_LIMIT = 25;
+const GRAPH_CHUNK_LIMIT = 25;
 
 export type LocationFilters = {
   kind: string | null;
@@ -27,7 +33,12 @@ export type UpdatePlacePayload = {
   tags?: string[];
 };
 
-type RelationshipInput = {
+type AddRelationshipInput = {
+  kind: LocationEdgeKind;
+  target: LocationPlace;
+};
+
+type RemoveRelationshipInput = {
   kind: LocationEdgeKind;
   targetId: string;
 };
@@ -39,21 +50,53 @@ type ChildPlaceInput = {
   tags: string[];
 };
 
+const fetchRootsPage = async (cursor?: string | null) => {
+  const { loginId } = resolveLoginIdentity();
+  return locationClient.listLocations.query({
+    loginId,
+    page: {
+      cursor: cursor ?? undefined,
+      limit: ROOT_PAGE_LIMIT,
+    },
+  });
+};
+
+const fetchGraphPage = async (locationId: string, cursor?: string | null) => {
+  return locationClient.listLocationGraph.query({
+    locationId,
+    chunkSize: GRAPH_CHUNK_LIMIT,
+    page: cursor ? { cursor } : undefined,
+  });
+};
+
+const generatePlaceId = (): string => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 type LocationMaintenanceStoreState = {
-  addRelationship: (input: RelationshipInput) => Promise<void>;
+  addRelationship: (input: AddRelationshipInput) => Promise<void>;
   clearError: () => void;
   createChildPlace: (input: ChildPlaceInput) => Promise<void>;
   error: string | null;
   filters: LocationFilters;
+  graphCursor: string | null;
   graph: LocationGraphSnapshot | null;
+  hasMoreGraphChunks: boolean;
+  hasMoreRoots: boolean;
   isCreatingChild: boolean;
   isLoadingGraph: boolean;
   isLoadingRoots: boolean;
   isMutatingEdge: boolean;
   isSavingPlace: boolean;
   loadRoots: () => Promise<void>;
+  loadMoreGraphChunks: () => Promise<void>;
+  loadMoreRoots: () => Promise<void>;
   refreshGraph: () => Promise<void>;
-  removeRelationship: (input: RelationshipInput) => Promise<void>;
+  removeRelationship: (input: RemoveRelationshipInput) => Promise<void>;
+  rootsCursor: string | null;
   roots: LocationPlace[];
   selectPlace: (placeId: string) => Promise<void>;
   selectRoot: (rootId: string) => Promise<void>;
@@ -111,8 +154,14 @@ const normalizeEdgeKind = (value: string): LocationEdgeKind => {
   return EDGE_KIND_VALUES[0];
 };
 
-const submitPlaceUpdate = async (placeId: string, payload: UpdatePlacePayload) => {
+const submitPlaceUpdate = async (
+  locationId: string,
+  placeId: string,
+  payload: UpdatePlacePayload
+) => {
   return locationClient.updateLocationPlace.mutate({
+    locationId,
+    placeId,
     description:
       payload.description === null
         ? ''
@@ -121,30 +170,30 @@ const submitPlaceUpdate = async (placeId: string, payload: UpdatePlacePayload) =
           : payload.description,
     kind: normalizeString(payload.kind),
     name: normalizeString(payload.name),
-    parentId: payload.parentId ?? undefined,
-    placeId,
     tags: payload.tags ? normalizeTags(payload.tags) : undefined,
   });
 };
 
 export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>((set, get) => {
   return {
-    addRelationship: async ({ kind, targetId }) => {
+    addRelationship: async ({ kind, target }) => {
       const selectedPlaceId = get().selectedPlaceId;
       const rootId = get().selectedRootId;
-      if (!selectedPlaceId || !rootId) {
+      const sourceDetail = get().selectedDetail;
+      if (!selectedPlaceId || !rootId || !sourceDetail) {
         return;
       }
       set({ error: null, isMutatingEdge: true });
       try {
-        const snapshot = await locationClient.addLocationEdge.mutate({
-          dst: targetId,
-          kind: normalizeEdgeKind(kind),
+        await locationClient.addLocationNeighborEdge.mutate({
+          dstPlace: target,
+          relationKind: normalizeEdgeKind(kind),
           locationId: rootId,
-          metadata: { createdVia: 'maintenance-ui' },
-          src: selectedPlaceId,
+          srcPlace: sourceDetail.place,
         });
-        set({ graph: snapshot, isMutatingEdge: false });
+        set({ isMutatingEdge: false });
+        await get().refreshGraph();
+        await get().refreshGraph();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to add relationship.';
         set({ error: message, isMutatingEdge: false });
@@ -152,22 +201,30 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
     },
     clearError: () => set({ error: null }),
     createChildPlace: async ({ description, kind, name, tags }) => {
-      const selectedPlaceId = get().selectedPlaceId;
-      if (!selectedPlaceId) {
+      const parent = get().selectedDetail?.place;
+      const rootId = get().selectedRootId;
+      if (!parent || !rootId) {
         return;
       }
       set({ error: null, isCreatingChild: true });
+      const newPlace: LocationPlace = {
+        id: generatePlaceId(),
+        name: name.trim(),
+        kind: kind.trim() || 'locale',
+        description: normalizeString(description),
+        tags: normalizeTags(tags),
+        metadata: {},
+      };
       try {
-        const result = await locationClient.createLocationPlace.mutate({
-          description: normalizeString(description),
-          kind,
-          name,
-          parentId: selectedPlaceId,
-          tags: normalizeTags(tags),
+        await locationClient.addLocationNeighborEdge.mutate({
+          locationId: rootId,
+          relationKind: 'CONTAINS',
+          srcPlace: parent,
+          dstPlace: newPlace,
         });
         set({ isCreatingChild: false });
         await get().refreshGraph();
-        await get().selectPlace(result.place.id);
+        await get().selectPlace(newPlace.id);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to create location.';
         set({ error: message, isCreatingChild: false });
@@ -176,16 +233,31 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
     error: null,
     filters: defaultFilters,
     graph: null,
+    graphCursor: null,
+    hasMoreGraphChunks: false,
+    hasMoreRoots: true,
     isCreatingChild: false,
     isLoadingGraph: false,
     isLoadingRoots: false,
     isMutatingEdge: false,
     isSavingPlace: false,
     loadRoots: async () => {
-      set({ error: null, isLoadingRoots: true });
+      set({
+        error: null,
+        hasMoreRoots: true,
+        isLoadingRoots: true,
+        roots: [],
+        rootsCursor: null,
+      });
       try {
-        const roots = await locationClient.listLocations.query({ limit: 100 });
-        set({ isLoadingRoots: false, roots });
+        const connection = await fetchRootsPage();
+        const roots = connection.items ?? [];
+        set({
+          isLoadingRoots: false,
+          roots,
+          rootsCursor: connection.nextCursor ?? null,
+          hasMoreRoots: Boolean(connection.nextCursor),
+        });
         if (roots.length > 0 && !get().selectedRootId) {
           await get().selectRoot(roots[0].id);
         }
@@ -194,13 +266,36 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
         set({ error: message, isLoadingRoots: false });
       }
     },
+    loadMoreRoots: async () => {
+      const cursor = get().rootsCursor;
+      if (!cursor || !get().hasMoreRoots || get().isLoadingRoots) {
+        return;
+      }
+      set({ error: null, isLoadingRoots: true });
+      try {
+        const connection = await fetchRootsPage(cursor);
+        set((state) => ({
+          isLoadingRoots: false,
+          roots: state.roots.concat(connection.items ?? []),
+          rootsCursor: connection.nextCursor ?? null,
+          hasMoreRoots: Boolean(connection.nextCursor),
+        }));
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to load locations.';
+        set({ error: message, isLoadingRoots: false });
+      }
+    },
     quickUpdatePlace: async (placeId, payload) => {
       set({ error: null });
+      const rootId = get().selectedRootId;
+      if (!rootId) return;
       try {
-        const detail = await submitPlaceUpdate(placeId, payload);
+        const updatedPlace = await submitPlaceUpdate(rootId, placeId, payload);
         set((state) => ({
           selectedDetail:
-            state.selectedDetail?.place.id === placeId ? detail : state.selectedDetail,
+            state.selectedDetail?.place.id === placeId
+              ? { breadcrumb: state.selectedDetail.breadcrumb, place: updatedPlace }
+              : state.selectedDetail,
         }));
         await get().refreshGraph();
       } catch (error: unknown) {
@@ -214,10 +309,41 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
       if (!rootId) {
         return;
       }
+      set({
+        error: null,
+        graph: null,
+        graphCursor: null,
+        hasMoreGraphChunks: true,
+        isLoadingGraph: true,
+      });
+      try {
+        const connection = await fetchGraphPage(rootId);
+        set({
+          graph: mergeLocationGraphChunks(null, connection.items ?? []),
+          graphCursor: connection.nextCursor ?? null,
+          hasMoreGraphChunks: Boolean(connection.nextCursor),
+          isLoadingGraph: false,
+        });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to load graph.';
+        set({ error: message, isLoadingGraph: false });
+      }
+    },
+    loadMoreGraphChunks: async () => {
+      const rootId = get().selectedRootId;
+      const cursor = get().graphCursor;
+      if (!rootId || !cursor || !get().hasMoreGraphChunks || get().isLoadingGraph) {
+        return;
+      }
       set({ error: null, isLoadingGraph: true });
       try {
-        const snapshot = await locationClient.getLocationGraph.query({ locationId: rootId });
-        set({ graph: snapshot, isLoadingGraph: false });
+        const connection = await fetchGraphPage(rootId, cursor);
+        set((state) => ({
+          graph: mergeLocationGraphChunks(state.graph, connection.items ?? []),
+          graphCursor: connection.nextCursor ?? null,
+          hasMoreGraphChunks: Boolean(connection.nextCursor),
+          isLoadingGraph: false,
+        }));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to load graph.';
         set({ error: message, isLoadingGraph: false });
@@ -231,31 +357,35 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
       }
       set({ error: null, isMutatingEdge: true });
       try {
-        const snapshot = await locationClient.removeLocationEdge.mutate({
-          dst: targetId,
-          kind: normalizeEdgeKind(kind),
+        await locationClient.removeLocationNeighborEdge.mutate({
+          dstPlaceId: targetId,
+          relationKind: normalizeEdgeKind(kind),
           locationId: rootId,
-          src: selectedPlaceId,
+          srcPlaceId: selectedPlaceId,
         });
-        set({ graph: snapshot, isMutatingEdge: false });
+        set({ isMutatingEdge: false });
+        await get().refreshGraph();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to remove relationship.';
         set({ error: message, isMutatingEdge: false });
       }
     },
     roots: [],
+    rootsCursor: null,
     selectedDetail: null,
     selectedPlaceId: null,
     selectedRootId: null,
     selectPlace: async (placeId) => {
       set({ selectedPlaceId: placeId });
-      try {
-        const detail = await locationClient.getLocationPlace.query({ placeId });
-        set({ selectedDetail: detail });
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Failed to load location.';
-        set({ error: message });
-      }
+      const place = get().graph?.places.find((entry) => entry.id === placeId) ?? null;
+      set({
+        selectedDetail: place
+          ? {
+            breadcrumb: [{ id: place.id, kind: place.kind, name: place.name }],
+            place,
+          }
+          : null,
+      });
     },
     selectRoot: async (rootId) => {
       set({ selectedDetail: null, selectedPlaceId: null, selectedRootId: rootId });
@@ -267,13 +397,23 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
       })),
     updatePlace: async (payload) => {
       const selectedPlaceId = get().selectedPlaceId;
+      const rootId = get().selectedRootId;
       if (!selectedPlaceId) {
         return;
       }
       set({ error: null, isSavingPlace: true });
       try {
-        const place = await submitPlaceUpdate(selectedPlaceId, payload);
-        set({ isSavingPlace: false, selectedDetail: place });
+        if (!rootId) {
+          throw new Error('Select a location root first.');
+        }
+        const place = await submitPlaceUpdate(rootId, selectedPlaceId, payload);
+        set((state) => ({
+          isSavingPlace: false,
+          selectedDetail:
+            state.selectedDetail?.place.id === selectedPlaceId
+              ? { breadcrumb: state.selectedDetail.breadcrumb, place }
+              : state.selectedDetail,
+        }));
         await get().refreshGraph();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to update location.';

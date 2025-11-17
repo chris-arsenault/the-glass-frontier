@@ -36,6 +36,7 @@ import {
   ChronicleSummaryEntrySchema,
   Location,
   LocationDraftSchema,
+  LocationPatchSchema,
   LocationEvent,
   LocationEventSchema,
   LocationGraphChunk,
@@ -45,6 +46,10 @@ import {
   LocationGraphSnapshot,
   LocationGraphSnapshotSchema,
   LocationPlace,
+  LocationPlaceSchema,
+  LocationPlacePatchSchema,
+  LocationEdgeKindSchema,
+  LocationEdgeKind,
   LocationNeighborSummary,
   LocationNeighborSummarySchema,
   LocationSchema,
@@ -64,7 +69,7 @@ import {
   TurnSummary,
   TurnSummarySchema,
 } from '../dto';
-import type { CharacterDraft, ChronicleDraft, LocationDraft } from '../dto';
+import type { CharacterDraft, ChronicleDraft, LocationDraft, LocationPatch, LocationPlacePatch } from '../dto';
 import type { ChronicleSnapshotV2 } from './snapshots';
 import type {
   CharacterConnection,
@@ -874,6 +879,49 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     return readJson<Location>(this.#s3, this.#bucketName, meta.documentKey);
   }
 
+  async updateLocation(input: LocationPatch): Promise<LocationSummary> {
+    const patch = LocationPatchSchema.parse(input);
+    const meta = await this.#getLocationMetadata(patch.id);
+    if (!meta) {
+      throw new Error(`Location ${patch.id} not found`);
+    }
+    const existing = await readJson<Location>(this.#s3, this.#bucketName, meta.documentKey);
+    if (!existing) {
+      throw new Error(`Location ${patch.id} document missing`);
+    }
+    const updated: Location = LocationSchema.parse({
+      ...existing,
+      description: patch.description ?? existing.description,
+      name: patch.name ?? existing.name,
+      tags: patch.tags ?? existing.tags,
+      updatedAt: nowIso(),
+    });
+    await writeJson(this.#s3, this.#bucketName, meta.documentKey, updated);
+    const row: LocationRow = {
+      PK: PK.tenant(updated.loginId),
+      SK: SK.location(updated.id),
+      entityType: 'LOCATION',
+      locationId: updated.id,
+      loginId: updated.loginId,
+      chronicleId: updated.chronicleId,
+      name: updated.name,
+      anchorPlaceId: updated.anchorPlaceId,
+      breadcrumb: updated.breadcrumb,
+      description: updated.description,
+      status: updated.status,
+      tags: updated.tags,
+      nodeCount: meta.nodeCount,
+      edgeCount: meta.edgeCount,
+      graphChunkCount: meta.graphChunkCount,
+      documentKey: meta.documentKey,
+      manifestKey: meta.manifestKey,
+      createdAt: meta.createdAt,
+      updatedAt: updated.updatedAt,
+    };
+    await this.#docClient.send(new PutCommand({ TableName: this.#tableName, Item: row }));
+    return LocationSummarySchema.parse(updated);
+  }
+
   async listLocations(loginId: string, page?: PageOptions): Promise<LocationConnection> {
     const limit = page?.limit ?? this.#pageSize;
     const cursorKey = Cursor.decode(page?.cursor);
@@ -939,6 +987,7 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
 
   async updateLocationState(state: LocationState): Promise<LocationState> {
     const parsed = LocationStateSchema.parse(state);
+    console.log(parsed)
     const key = this.#keys.locationState(parsed.locationId, parsed.characterId);
     await writeJson(this.#s3, this.#bucketName, key, parsed);
     await this.#docClient.send(
@@ -956,6 +1005,54 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
       })
     );
     return parsed;
+  }
+
+  async updateLocationPlace(input: LocationPlacePatch): Promise<LocationPlace> {
+    const patch = LocationPlacePatchSchema.parse(input);
+    const manifest = await this.#loadGraphManifest(patch.locationId);
+    for (let i = 0; i < manifest.entries.length; i += 1) {
+      const entry = manifest.entries[i];
+      const chunk = await readJson<LocationGraphChunk>(this.#s3, this.#bucketName, entry.chunkKey);
+      if (!chunk) {
+        continue;
+      }
+      const index = chunk.places.findIndex((place) => place.id === patch.placeId);
+      if (index === -1) {
+        continue;
+      }
+      const existing = chunk.places[index];
+      const updatedPlace = LocationPlaceSchema.parse({
+        ...existing,
+        name: patch.name ?? existing.name,
+        kind: patch.kind ?? existing.kind,
+        description: patch.description === undefined ? existing.description : patch.description,
+        tags: patch.tags ?? existing.tags,
+      });
+      chunk.places[index] = updatedPlace;
+      chunk.updatedAt = nowIso();
+      chunk.nodeCount = chunk.places.length;
+      await writeJson(
+        this.#s3,
+        this.#bucketName,
+        entry.chunkKey,
+        LocationGraphChunkSchema.parse(chunk)
+      );
+      manifest.entries[i] = {
+        ...entry,
+        nodeCount: chunk.nodeCount,
+        edgeCount: chunk.edgeCount,
+        updatedAt: chunk.updatedAt,
+      };
+      manifest.updatedAt = chunk.updatedAt;
+      await this.#persistGraphManifest(patch.locationId, manifest);
+      await this.#upsertGraphChunkRow(patch.locationId, manifest.entries[i]);
+      const snapshot = await this.#loadGraphSnapshot(patch.locationId);
+      if (snapshot) {
+        await this.#replaceNeighborPointers(patch.locationId, snapshot);
+      }
+      return updatedPlace;
+    }
+    throw new Error(`Place ${patch.placeId} not found in location ${patch.locationId}`);
   }
 
   async listLocationNeighbors(
@@ -1057,6 +1154,7 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     const dstRow = this.#buildNeighborRow(input.locationId, input.dst.id, input.src.id, input.relationKind, placeMap);
     if (dstRow) requests.push({ PutRequest: { Item: dstRow } });
     await this.#batchWrite(requests);
+    await this.#syncGraphEdgeAddition(input.locationId, placeMap.get(input.src.id), placeMap.get(input.dst.id), input.relationKind);
   }
 
   async removeLocationNeighborEdge(input: {
@@ -1077,6 +1175,69 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
         },
       },
     ]);
+    await this.#syncGraphEdgeRemoval(input.locationId, input.srcPlaceId, input.dstPlaceId, input.relationKind);
+  }
+
+  async #syncGraphEdgeAddition(
+    locationId: string,
+    src?: LocationPlace,
+    dst?: LocationPlace,
+    relationKind?: string
+  ): Promise<void> {
+    if (!src || !dst || !relationKind) {
+      return;
+    }
+    const normalizedKind = LocationEdgeKindSchema.parse(relationKind);
+    const normalizedSrc = LocationPlaceSchema.parse({
+      description: src.description ?? undefined,
+      kind: src.kind,
+      metadata: src.metadata ?? undefined,
+      name: src.name,
+      id: src.id,
+      tags: src.tags ?? [],
+    });
+    const normalizedDst = LocationPlaceSchema.parse({
+      description: dst.description ?? undefined,
+      kind: dst.kind,
+      metadata: dst.metadata ?? undefined,
+      name: dst.name,
+      id: dst.id,
+      tags: dst.tags ?? [],
+    });
+    await this.#mutatePrimaryGraphChunk(locationId, (chunk) => {
+      let changed = false;
+      if (!chunk.places.some((place) => place.id === normalizedSrc.id)) {
+        chunk.places.push(normalizedSrc);
+        changed = true;
+      }
+      if (!chunk.places.some((place) => place.id === normalizedDst.id)) {
+        chunk.places.push(normalizedDst);
+        changed = true;
+      }
+      changed = this.#ensureGraphEdge(chunk, normalizedSrc.id, normalizedDst.id, normalizedKind) || changed;
+      return changed;
+    });
+  }
+
+  async #syncGraphEdgeRemoval(
+    locationId: string,
+    srcPlaceId: string,
+    dstPlaceId: string,
+    relationKind: string
+  ): Promise<void> {
+    const normalizedKind = LocationEdgeKindSchema.parse(relationKind);
+    await this.#mutatePrimaryGraphChunk(locationId, (chunk) => {
+      const initialLength = chunk.edges.length;
+      chunk.edges = chunk.edges.filter(
+        (edge) =>
+          !(
+            edge.src === srcPlaceId &&
+            edge.dst === dstPlaceId &&
+            edge.kind === normalizedKind
+          )
+      );
+      return chunk.edges.length !== initialLength;
+    });
   }
 
   async #deleteTurnChunks(chronicleId: string, manifestKey: string): Promise<void> {
@@ -1411,6 +1572,56 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     }
   }
 
+  async #mutatePrimaryGraphChunk(
+    locationId: string,
+    mutator: (chunk: LocationGraphChunk) => boolean
+  ): Promise<void> {
+    const manifest = await this.#loadGraphManifest(locationId);
+    const entry = manifest.entries[0];
+    if (!entry) {
+      return;
+    }
+    const chunk = await readJson<LocationGraphChunk>(this.#s3, this.#bucketName, entry.chunkKey);
+    if (!chunk) {
+      return;
+    }
+    const changed = mutator(chunk);
+    if (!changed) {
+      return;
+    }
+    chunk.nodeCount = chunk.places.length;
+    chunk.edgeCount = chunk.edges.length;
+    chunk.updatedAt = nowIso();
+    await writeJson(this.#s3, this.#bucketName, entry.chunkKey, LocationGraphChunkSchema.parse(chunk));
+    entry.nodeCount = chunk.nodeCount;
+    entry.edgeCount = chunk.edgeCount;
+    entry.updatedAt = chunk.updatedAt;
+    manifest.updatedAt = chunk.updatedAt;
+    await this.#persistGraphManifest(locationId, manifest);
+    await this.#upsertGraphChunkRow(locationId, entry);
+  }
+
+  #ensureGraphEdge(
+    chunk: LocationGraphChunk,
+    srcId: string,
+    dstId: string,
+    relationKind: LocationEdgeKind
+  ): boolean {
+    const exists = chunk.edges.some(
+      (edge) => edge.src === srcId && edge.dst === dstId && edge.kind === relationKind
+    );
+    if (exists) {
+      return false;
+    }
+    chunk.edges.push({
+      id: randomUUID(),
+      src: srcId,
+      dst: dstId,
+      kind: relationKind,
+    });
+    return true;
+  }
+
   async #batchWrite(
     requests: Array<
       { PutRequest: { Item: Record<string, unknown> } } | { DeleteRequest: { Key: Record<string, unknown> } }
@@ -1480,5 +1691,27 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
       cursor = res.LastEvaluatedKey as Record<string, unknown> | undefined;
     } while (cursor);
     return turns.sort((a, b) => a.turnSequence - b.turnSequence);
+  }
+
+  async #loadGraphSnapshot(locationId: string): Promise<LocationGraphSnapshot | null> {
+    const manifest = await this.#loadGraphManifest(locationId);
+    if (manifest.entries.length === 0) {
+      return null;
+    }
+    const places: LocationPlace[] = [];
+    const edges: LocationGraphSnapshot['edges'] = [];
+    for (const entry of manifest.entries) {
+      const chunk = await readJson<LocationGraphChunk>(this.#s3, this.#bucketName, entry.chunkKey);
+      if (!chunk) {
+        continue;
+      }
+      places.push(...chunk.places);
+      edges.push(...chunk.edges);
+    }
+    return LocationGraphSnapshotSchema.parse({
+      locationId,
+      places,
+      edges,
+    });
   }
 }

@@ -37,6 +37,26 @@ export const LocationDraftSchema = LocationSummarySchema.extend({
 
 export type LocationDraft = z.infer<typeof LocationDraftSchema>;
 
+export const LocationPlacePatchSchema = z.object({
+  locationId: z.string().min(1),
+  placeId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  kind: z.string().min(1).optional(),
+  description: z.string().optional(),
+  tags: TagArraySchema.optional(),
+});
+
+export type LocationPlacePatch = z.infer<typeof LocationPlacePatchSchema>;
+
+export const LocationPatchSchema = z.object({
+  id: z.string().min(1),
+  description: z.string().optional(),
+  name: z.string().optional(),
+  tags: TagArraySchema.optional(),
+});
+
+export type LocationPatch = z.infer<typeof LocationPatchSchema>;
+
 export const LocationSchema = LocationSummarySchema.extend({
   metadata: MetadataSchema.optional(),
   createdAt: z.string().datetime(),

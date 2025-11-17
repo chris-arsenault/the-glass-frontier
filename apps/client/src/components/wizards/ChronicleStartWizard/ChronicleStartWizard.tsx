@@ -129,10 +129,14 @@ export function ChronicleStartWizard() {
     bootstrapShardLocation,
     graph,
     graphError,
+    hasMoreGraphChunks,
+    hasMoreRoots,
     inspector,
     isGraphLoading,
     isLoadingRoots,
     listViewFallback,
+    loadMoreGraphChunks,
+    loadMoreRoots,
     refreshRoots,
     rootError,
     roots,
@@ -211,11 +215,15 @@ export function ChronicleStartWizard() {
           roots={roots}
           isLoadingRoots={isLoadingRoots}
           rootError={rootError}
+          hasMoreRoots={hasMoreRoots}
+          onLoadMoreRoots={() => void loadMoreRoots()}
           selectedRootId={selectedRootId}
           onSelectRoot={selectRoot}
           graph={graph}
           graphError={graphError}
           isGraphLoading={isGraphLoading}
+          hasMoreGraph={hasMoreGraphChunks}
+          onLoadMoreGraph={() => void loadMoreGraphChunks()}
           activePlaceId={activePlaceId}
           onSelectPlace={selectPlace}
           inspector={inspector}
@@ -432,10 +440,11 @@ export function ChronicleStartWizard() {
       {subModalOpen && inspector.place ? (
         <AddLocationModal
           parent={inspector.place}
+          locationId={selectedRootId ?? inspector.place.id}
           onClose={() => setSubModalOpen(false)}
           onCreated={(placeId) => {
             setSubModalOpen(false);
-            const rootId = inspector.place?.locationId ?? placeId;
+            const rootId = selectedRootId ?? placeId;
             selectRoot(rootId).catch(() => undefined);
             selectPlace(placeId).catch(() => undefined);
             refreshRoots().catch(() => undefined);
@@ -498,11 +507,15 @@ type LocationStepProps = {
   roots: LocationPlace[];
   isLoadingRoots: boolean;
   rootError: string | null;
+  hasMoreRoots: boolean;
+  onLoadMoreRoots: () => void;
   selectedRootId: string | null;
   onSelectRoot: (locationId: string) => void;
   graph: LocationGraphSnapshot | null;
   graphError: string | null;
   isGraphLoading: boolean;
+  hasMoreGraph: boolean;
+  onLoadMoreGraph: () => void;
   activePlaceId: string | null;
   onSelectPlace: (placeId: string) => void;
   inspector: LocationInspectorState;
@@ -516,10 +529,14 @@ function LocationStep({
   activePlaceId,
   graph,
   graphError,
+  hasMoreGraph,
+  hasMoreRoots,
   inspector,
   isGraphLoading,
   isLoadingRoots,
   listViewFallback,
+  onLoadMoreGraph,
+  onLoadMoreRoots,
   onOpenChainModal,
   onOpenSubModal,
   onSelectPlace,
@@ -570,6 +587,16 @@ function LocationStep({
             </li>
           ))}
         </ul>
+        {hasMoreRoots ? (
+          <button
+            type="button"
+            className="location-root load-more"
+            disabled={isLoadingRoots}
+            onClick={onLoadMoreRoots}
+          >
+            {isLoadingRoots ? 'Loading…' : 'Load more locations'}
+          </button>
+        ) : null}
       </aside>
       <div className="location-main">
         <div className="location-map-header">
@@ -604,6 +631,16 @@ function LocationStep({
           ))}
           {!filteredNodes.length && graph ? <p>No nodes match this search.</p> : null}
         </div>
+        {hasMoreGraph ? (
+          <button
+            type="button"
+            className="location-root load-more"
+            disabled={isGraphLoading}
+            onClick={onLoadMoreGraph}
+          >
+            {isGraphLoading ? 'Loading…' : 'Load more nodes'}
+          </button>
+        ) : null}
       </div>
       <div className="location-inspector">
         {inspector.place ? (
@@ -905,11 +942,12 @@ function CreateStep({
 
 type AddLocationModalProps = {
   parent: LocationPlace;
+  locationId: string;
   onClose: () => void;
   onCreated: (placeId: string) => void;
 }
 
-function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps) {
+function AddLocationModal({ locationId, onClose, onCreated, parent }: AddLocationModalProps) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState('locale');
   const [tags, setTags] = useState('');
@@ -925,17 +963,26 @@ function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps)
     setIsSaving(true);
     setError(null);
     try {
-      const created = await locationClient.createLocationPlace.mutate({
-        description: description.trim() || undefined,
-        kind: kind.trim() || 'locale',
+      const newPlace = {
+        id: typeof crypto?.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         name: name.trim(),
-        parentId: parent.id,
+        kind: kind.trim() || 'locale',
+        description: description.trim() || undefined,
         tags: tags
           .split(',')
           .map((tag) => tag.trim())
           .filter(Boolean),
+        metadata: {},
+      };
+      await locationClient.addLocationNeighborEdge.mutate({
+        locationId,
+        relationKind: 'CONTAINS',
+        srcPlace: parent,
+        dstPlace: newPlace,
       });
-      onCreated(created.place.id);
+      onCreated(newPlace.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create location.';
       setError(message);

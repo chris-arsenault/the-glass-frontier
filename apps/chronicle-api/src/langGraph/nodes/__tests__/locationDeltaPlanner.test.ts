@@ -146,7 +146,7 @@ describe('locationDeltaPlanner (v2)', () => {
     }
   });
 
-  it('returns uncertain when destination is unknown', async () => {
+  it('requests creation when destination is unknown', async () => {
     const store = createStore({ contains: [] });
     const planner = await buildPlannerContext({
       store,
@@ -161,6 +161,10 @@ describe('locationDeltaPlanner (v2)', () => {
       link: 'adjacent',
     };
     const resolution = resolveDecision(planner!, decision);
-    expect(resolution.kind).toBe('uncertain');
+    expect(resolution.kind).toBe('create');
+    if (resolution.kind === 'create') {
+      expect(resolution.destination).toBe('Unknown Space');
+      expect(resolution.link).toBe('adjacent');
+    }
   });
 });

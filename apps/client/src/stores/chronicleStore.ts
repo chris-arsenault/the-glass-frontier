@@ -26,23 +26,8 @@ import type {
   PlayerSettings,
   SkillProgressBadge,
 } from '../state/chronicleState';
-import { decodeJwtPayload } from '../utils/jwt';
 import { createEmptyInventory } from '../utils/worldstateDefaults';
-import { useAuthStore } from './authStore';
-
-const resolveLoginIdentity = (): { loginId: string; loginName: string } => {
-  const authState = useAuthStore.getState();
-  const username = authState.username?.trim();
-  if (username) {
-    return { loginId: username, loginName: username };
-  }
-  const payload = decodeJwtPayload(authState.tokens?.idToken);
-  const sub = typeof payload?.sub === 'string' ? payload.sub : null;
-  if (sub) {
-    return { loginId: sub, loginName: sub };
-  }
-  throw new Error('Login identity unavailable. Please reauthenticate.');
-};
+import { resolveLoginIdentity } from '../utils/loginIdentity';
 
 const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   feedbackVisibility: 'all',

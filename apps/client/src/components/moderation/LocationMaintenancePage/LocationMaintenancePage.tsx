@@ -27,10 +27,14 @@ export function LocationMaintenancePage(): JSX.Element {
     error,
     filters,
     graph,
+    hasMoreGraphChunks,
+    hasMoreRoots,
     isCreatingChild,
     isLoadingGraph,
     isLoadingRoots,
     isMutatingEdge,
+    loadMoreGraphChunks,
+    loadMoreRoots,
     loadRoots,
     quickUpdatePlace,
     refreshGraph,
@@ -50,10 +54,14 @@ export function LocationMaintenancePage(): JSX.Element {
       error: state.error,
       filters: state.filters,
       graph: state.graph,
+      hasMoreGraphChunks: state.hasMoreGraphChunks,
+      hasMoreRoots: state.hasMoreRoots,
       isCreatingChild: state.isCreatingChild,
       isLoadingGraph: state.isLoadingGraph,
       isLoadingRoots: state.isLoadingRoots,
       isMutatingEdge: state.isMutatingEdge,
+      loadMoreGraphChunks: state.loadMoreGraphChunks,
+      loadMoreRoots: state.loadMoreRoots,
       loadRoots: state.loadRoots,
       quickUpdatePlace: state.quickUpdatePlace,
       refreshGraph: state.refreshGraph,
@@ -124,7 +132,7 @@ export function LocationMaintenancePage(): JSX.Element {
   );
 
   const handleAddRelationship = useCallback(
-    async (input: { kind: LocationEdgeKindType; targetId: string }) => {
+    async (input: { kind: LocationEdgeKindType; target: LocationPlace }) => {
       await addRelationship(input);
     },
     [addRelationship]
@@ -202,11 +210,24 @@ export function LocationMaintenancePage(): JSX.Element {
         </div>
       ) : null}
       <RootSelectorBar
+        hasMoreRoots={hasMoreRoots}
         isLoading={isLoadingRoots}
+        onLoadMoreRoots={() => void loadMoreRoots()}
         onSelectRoot={(rootId) => void selectRoot(rootId)}
         roots={roots}
         selectedRootId={selectedRootId}
       />
+      {hasMoreGraphChunks ? (
+        <div className="lm-load-more">
+          <button
+            type="button"
+            onClick={() => void loadMoreGraphChunks()}
+            disabled={isLoadingGraph}
+          >
+            {isLoadingGraph ? 'Loading more nodes…' : 'Load more nodes'}
+          </button>
+        </div>
+      ) : null}
       <div className="lm-layout">
         <LocationGridPanel
           filters={filters}
