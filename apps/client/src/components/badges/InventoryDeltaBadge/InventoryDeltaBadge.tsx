@@ -3,18 +3,10 @@ import React from 'react';
 
 import './InventoryDeltaBadge.css';
 
-const slotLabels: Record<string, string> = {
-  armament: 'Armament',
-  headgear: 'Headgear',
-  module: 'Module',
-  outfit: 'Outfit',
-};
-
-const bucketLabels: Record<string, string> = {
-  consumables: 'Consumables',
-  data_shards: 'Data Shards',
-  imbued_items: 'Imbued',
-  relics: 'Relics',
+const kindLabels: Record<string, string> = {
+  consumable: 'Consumable',
+  gear: 'Gear',
+  relic: 'Relic',
   supplies: 'Supplies',
 };
 
@@ -25,27 +17,53 @@ type InventoryDeltaBadgeProps = {
 type Row = {
   id: string;
   op: string;
-  slot?: string | null;
-  bucket?: string | null;
+  kind?: string | null;
   name?: string | null;
   meta?: string | null;
-  amount?: number | null;
 };
 
 type InventoryOp = NonNullable<InventoryDelta['ops']>[number];
 
-type MetaResolver = (op: InventoryOp, amount: number | null) => string | null;
+type MetaResolver = (op: InventoryOp) => string | null;
 
-const metaResolvers: Record<string, MetaResolver> = {
-  add: (op) => op.hook ?? null,
-  consume: (_op, amount) => (typeof amount === 'number' && amount > 0 ? `x${amount}` : null),
-  remove: (op) => op.hook ?? null,
-  spend_shard: (op) => op.hook ?? null,
+const metaResolvers: Record<InventoryOp['op'], MetaResolver> = {
+  add: (op) => {
+    if (typeof op.quantity === 'number' && op.quantity > 1) {
+      return `x${op.quantity}`;
+    }
+    return null;
+  },
+  remove: () => null,
+  consume: (op) => {
+    const amount = Math.max(op.quantityDelta ?? 1, 1);
+    const remaining = typeof op.quantity === 'number' ? ` (${op.quantity} left)` : '';
+    return `x${amount}${remaining}`;
+  },
+  update: (op) => {
+    const details: string[] = [];
+    if (op.quantityDelta !== undefined) {
+      const delta = op.quantityDelta >= 0 ? `+${op.quantityDelta}` : `${op.quantityDelta}`;
+      details.push(`Δ${delta}`);
+    }
+    if (op.quantity !== undefined) {
+      details.push(`total ${op.quantity}`);
+    }
+    if (Array.isArray(op.tags) && op.tags.length > 0) {
+      details.push(`tags: ${op.tags.join(', ')}`);
+    }
+    if (op.description !== undefined) {
+      details.push('description');
+    }
+    if (op.effect !== undefined) {
+      details.push('effect');
+    }
+    return details.length > 0 ? details.join(' · ') : null;
+  },
 };
 
-const resolveMetaLabel = (op: InventoryOp, amount: number | null): string | null => {
+const resolveMetaLabel = (op: InventoryOp): string | null => {
   const resolver = metaResolvers[op.op];
-  return resolver ? resolver(op, amount) : null;
+  return resolver ? resolver(op) : null;
 };
 
 const formatRows = (delta: InventoryDelta): Row[] => {
@@ -55,14 +73,12 @@ const formatRows = (delta: InventoryDelta): Row[] => {
   return delta.ops
     .map((op, index) => {
       const base: Row = {
-        amount: op.amount ?? null,
-        bucket: op.bucket ? bucketLabels[op.bucket] ?? op.bucket : null,
         id: `${op.op}-${index}`,
+        kind: op.kind ? kindLabels[op.kind] ?? op.kind : null,
         name: op.name ?? null,
         op: op.op,
-        slot: op.slot ? slotLabels[op.slot] ?? op.slot : null,
       };
-      base.meta = resolveMetaLabel(op as InventoryOp, base.amount ?? null);
+      base.meta = resolveMetaLabel(op as InventoryOp);
       return base;
     })
     .filter((row) => row.name);
@@ -81,7 +97,7 @@ export function InventoryDeltaBadge({ delta }: InventoryDeltaBadgeProps) {
   }
 
   const ariaLabel = `Inventory changes: ${rows
-    .map((row) => `${row.op} ${row.name}${row.slot ? ` (${row.slot})` : ''}`)
+    .map((row) => `${row.op} ${row.name}${row.kind ? ` (${row.kind})` : ''}`)
     .join('; ')}`;
 
   return (
@@ -97,8 +113,7 @@ export function InventoryDeltaBadge({ delta }: InventoryDeltaBadgeProps) {
             className={`inventory-delta-row inventory-delta-${getOpClassName(row.op)}`}
           >
             <span className="delta-op">{row.op}</span>
-            {row.slot ? <span className="delta-slot">{row.slot}</span> : null}
-            {row.bucket ? <span className="delta-bucket">{row.bucket}</span> : null}
+            {row.kind ? <span className="delta-kind">{row.kind}</span> : null}
             <strong className="delta-name">{row.name}</strong>
             {row.meta ? <em className="delta-meta">{row.meta}</em> : null}
           </div>

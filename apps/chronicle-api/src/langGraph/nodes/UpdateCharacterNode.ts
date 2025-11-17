@@ -1,6 +1,4 @@
-import { resolveInventoryDelta } from '@glass-frontier/persistence';
 import type { WorldStateStoreV2, Character, OutcomeTier } from '@glass-frontier/worldstate';
-import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
@@ -24,21 +22,23 @@ class UpdateCharacterNode implements GraphNode {
   }
 
   async #applyInventoryDelta(context: GraphContext): Promise<GraphContext> {
-    const inputs = this.#extractInventoryInputs(context);
-    if (inputs === null) {
+    const preview = context.inventoryPreview;
+    const character = context.chronicle.character;
+    const hasDelta = context.inventoryDelta?.ops?.length ?? 0;
+    if (
+      character === undefined ||
+      character === null ||
+      preview === undefined ||
+      preview === null ||
+      hasDelta === 0
+    ) {
       return context;
     }
-
-    const { character, storeDelta } = inputs;
     try {
-      const nextInventory = resolveInventoryDelta(character.inventory, storeDelta, {
-        registry: context.inventoryRegistry ?? null,
-      });
-      const updatedCharacter = {
+      const updatedCharacter = await this.worldStateStore.updateCharacter({
         ...character,
-        inventory: nextInventory,
-      };
-      await this.worldStateStore.updateCharacter(updatedCharacter);
+        inventory: preview,
+      });
       return {
         ...context,
         chronicle: {
@@ -84,20 +84,6 @@ class UpdateCharacterNode implements GraphNode {
     };
   }
 
-  #extractInventoryInputs(
-    context: GraphContext
-  ): { character: NonNullable<typeof context.chronicle.character>; storeDelta: NonNullable<typeof context.inventoryStoreDelta> } | null {
-    const storeDelta = context.inventoryStoreDelta;
-    if (storeDelta === undefined || storeDelta === null || storeDelta.ops.length === 0) {
-      return null;
-    }
-    const character = context.chronicle.character;
-    if (character === undefined || character === null) {
-      return null;
-    }
-    return { character, storeDelta };
-  }
-
   #applyMomentumDelta(momentum: Character['momentum'], delta: number): Character['momentum'] {
     const target = Math.max(momentum.floor, Math.min(momentum.ceiling, momentum.current + delta));
     return {
@@ -133,8 +119,5 @@ const MOMENTUM_DELTA: Record<OutcomeTier, number> = {
   regress: -1,
   collapse: -2,
 };
-
-const isNonEmptyString = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim().length > 0;
 
 export { UpdateCharacterNode };

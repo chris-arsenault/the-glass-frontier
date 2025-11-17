@@ -1,6 +1,5 @@
 import type { Player, PlayerPreferences } from '@glass-frontier/dto';
 import {
-  PendingEquip,
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
@@ -170,7 +169,6 @@ export const appRouter = t.router({
       z.object({
         chronicleId: z.string().uuid(),
         content: TranscriptEntrySchema,
-        pendingEquip: z.array(PendingEquip).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -181,7 +179,6 @@ export const appRouter = t.router({
       const playerEntry = { ...input.content, role: 'player' as const };
       const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
         authorizationHeader: ctx.authorizationHeader,
-        pendingEquip: input.pendingEquip ?? [],
       });
       return {
         character: result.updatedCharacter,

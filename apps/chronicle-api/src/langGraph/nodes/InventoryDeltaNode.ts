@@ -1,20 +1,13 @@
-import type { ImbuedRegistry, Inventory } from '@glass-frontier/dto';
-import { InventoryDelta } from '@glass-frontier/dto';
-import type { ImbuedRegistryStore } from '@glass-frontier/persistence';
-import {
-  applyPendingEquipQueue,
-  normalizeInventory,
-  type InventoryStoreDelta,
-  type InventoryStoreOp,
-} from '@glass-frontier/persistence';
+import type { Inventory, InventoryDelta as InventoryDeltaType } from '@glass-frontier/worldstate/dto';
+import { InventoryDeltaSchema } from '@glass-frontier/worldstate/dto';
 import { zodTextFormat } from 'openai/helpers/zod';
 
 import type { GraphContext, LangGraphLlmLike } from '../../types.js';
 import type { GraphNode } from '../orchestrator.js';
 import { composeInventoryDeltaPrompt } from '../prompts/prompts';
-import { convertFlatDelta, describeStoreOperations } from './inventoryDeltaHelpers';
+import { applyInventoryDelta } from './inventoryDeltaHelpers';
 
-const INVENTORY_DELTA_FORMAT = zodTextFormat(InventoryDelta, 'inventory_delta_response');
+const INVENTORY_DELTA_FORMAT = zodTextFormat(InventoryDeltaSchema, 'inventory_delta_response');
 const INVENTORY_DELTA_TEXT = {
   format: INVENTORY_DELTA_FORMAT,
   verbosity: 'low' as const,
@@ -28,8 +21,6 @@ const resolveClassifierLlm = (context: GraphContext): LangGraphLlmLike =>
 class InventoryDeltaNode implements GraphNode {
   readonly id = 'inventory-delta';
 
-  constructor(private readonly registryStore: ImbuedRegistryStore) {}
-
   async execute(context: GraphContext): Promise<GraphContext> {
     if (
       context.failure === true ||
@@ -40,78 +31,24 @@ class InventoryDeltaNode implements GraphNode {
       return context;
     }
 
-    const registry = await this.#loadRegistry(context);
-    if (registry === null) {
+    const baseline = Array.isArray(context.chronicle.character.inventory)
+      ? context.chronicle.character.inventory
+      : [];
+
+    if (!this.#shouldInvokeLlm(context)) {
+      return { ...context, inventoryPreview: baseline };
+    }
+
+    const llmResult = await this.#applyLlmDelta({ baseline, context });
+    if (llmResult === null) {
       return { ...context, failure: true };
     }
 
-    const baseline = normalizeInventory(context.chronicle.character.inventory);
-    const pendingEquip = context.pendingEquip ?? [];
-    const pendingResult = this.#applyPendingEquip(baseline, pendingEquip, registry);
-
-    let workingInventory = pendingResult.inventory;
-    let storeOps: InventoryStoreOp[] = [...pendingResult.storeOps];
-    let displayOps: InventoryDelta['ops'] = [...pendingResult.displayOps];
-
-    if (this.#shouldInvokeLlm(context)) {
-      const llmResult = await this.#applyLlmDelta({
-        baseline,
-        context,
-        inventory: workingInventory,
-        pendingEquip,
-        registry,
-      });
-      if (llmResult === null) {
-        return { ...context, failure: true };
-      }
-      workingInventory = llmResult.inventory;
-      storeOps = storeOps.concat(llmResult.storeOps);
-      displayOps = displayOps.concat(llmResult.displayOps);
+    if (llmResult.ops.length === 0) {
+      return { ...context, inventoryPreview: baseline };
     }
 
-    return this.#buildResponse(context, {
-      baseline,
-      displayOps,
-      registry,
-      storeOps,
-      workingInventory,
-    });
-  }
-
-  async #materializeRegistry(): Promise<ImbuedRegistry> {
-    const entries = await this.registryStore.listEntries();
-    const registry: ImbuedRegistry = {};
-    for (const entry of entries) {
-      registry[entry.key] = entry;
-    }
-    return registry;
-  }
-
-  async #loadRegistry(context: GraphContext): Promise<ImbuedRegistry | null> {
-    try {
-      return await this.#materializeRegistry();
-    } catch (error) {
-      context.telemetry?.recordToolError({
-        attempt: 0,
-        chronicleId: context.chronicleId,
-        message: error instanceof Error ? error.message : 'unknown',
-        operation: 'inventory-registry.load',
-      });
-      return null;
-    }
-  }
-
-  #applyPendingEquip(
-    baseline: Inventory,
-    pendingEquip: GraphContext['pendingEquip'],
-    registry: ImbuedRegistry
-  ): { inventory: Inventory; storeOps: InventoryStoreOp[]; displayOps: InventoryDelta['ops'] } {
-    const { inventory, ops } = applyPendingEquipQueue(baseline, pendingEquip, { registry });
-    return {
-      displayOps: describeStoreOperations(ops, baseline, registry),
-      inventory,
-      storeOps: ops,
-    };
+    return this.#buildResponse(context, llmResult);
   }
 
   #shouldInvokeLlm(context: GraphContext): boolean {
@@ -125,51 +62,39 @@ class InventoryDeltaNode implements GraphNode {
   async #applyLlmDelta({
     baseline,
     context,
-    inventory,
-    pendingEquip,
-    registry,
   }: {
     baseline: Inventory;
     context: GraphContext;
-    inventory: Inventory;
-    pendingEquip: GraphContext['pendingEquip'];
-    registry: ImbuedRegistry;
-  }): Promise<{ inventory: Inventory; storeOps: InventoryStoreOp[]; displayOps: InventoryDelta['ops'] } | null> {
+  }): Promise<ReturnType<typeof applyInventoryDelta> | null> {
     const prompt = await composeInventoryDeltaPrompt({
       gmMessage: context.gmMessage?.content ?? '',
       gmSummary: context.gmSummary ?? '',
       intent: context.playerIntent!,
-      inventory,
-      pendingEquip,
-      registry,
+      inventory: baseline,
       templates: context.templates,
     });
     const delta = await this.#fetchInventoryDelta(context, prompt);
     if (delta === null) {
       return null;
     }
-    if (!this.#validateDeltaMetadata(delta, baseline, context)) {
-      return null;
-    }
     try {
-      return convertFlatDelta(delta, inventory, registry);
+      return applyInventoryDelta(baseline, delta);
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,
         chronicleId: context.chronicleId,
         message: error instanceof Error ? error.message : 'unknown',
-        operation: 'llm.inventory-delta.convert',
+        operation: 'llm.inventory-delta.apply',
         referenceId: null,
       });
       return {
-        displayOps: [],
-        inventory,
-        storeOps: [],
+        inventory: baseline,
+        ops: [],
       };
     }
   }
 
-  async #fetchInventoryDelta(context: GraphContext, prompt: string): Promise<InventoryDelta | null> {
+  async #fetchInventoryDelta(context: GraphContext, prompt: string): Promise<InventoryDeltaType | null> {
     const classifier = resolveClassifierLlm(context);
     try {
       const result = await classifier.generateJson({
@@ -180,7 +105,8 @@ class InventoryDeltaNode implements GraphNode {
         temperature: 0.1,
         text: INVENTORY_DELTA_TEXT,
       });
-      const parsed = InventoryDelta.safeParse(result.json);
+      const parsed = InventoryDeltaSchema.safeParse(result.json);
+      console.log(parsed)
       if (!parsed.success) {
         context.telemetry?.recordToolError({
           attempt: 0,
@@ -202,58 +128,15 @@ class InventoryDeltaNode implements GraphNode {
     }
   }
 
-  #validateDeltaMetadata(delta: InventoryDelta, baseline: Inventory, context: GraphContext): boolean {
-    if (delta.prevRevision !== baseline.revision) {
-      context.telemetry?.recordToolError({
-        attempt: 0,
-        chronicleId: context.chronicleId,
-        message: `prevRevision mismatch expected=${baseline.revision} got=${delta.prevRevision}`,
-        operation: 'llm.inventory-delta.conflict',
-      });
-      return false;
-    }
-    if (delta.nextRevision < delta.prevRevision) {
-      context.telemetry?.recordToolError({
-        attempt: 0,
-        chronicleId: context.chronicleId,
-        message: `nextRevision regression prev=${delta.prevRevision} next=${delta.nextRevision}`,
-        operation: 'llm.inventory-delta.revision',
-      });
-      return false;
-    }
-    return true;
-  }
-
   #buildResponse(
     context: GraphContext,
-    params: {
-      baseline: Inventory;
-      workingInventory: Inventory;
-      registry: ImbuedRegistry;
-      storeOps: InventoryStoreOp[];
-      displayOps: InventoryDelta['ops'];
-    }
+    params: ReturnType<typeof applyInventoryDelta>
   ): GraphContext {
-    const { baseline, displayOps, registry, storeOps, workingInventory } = params;
-    const hasChanges = storeOps.length > 0;
-    const nextRevision = hasChanges ? baseline.revision + 1 : baseline.revision;
-    const displayDelta: InventoryDelta = {
-      nextRevision,
-      ops: displayOps,
-      prevRevision: baseline.revision,
-    };
-    const storeDelta: InventoryStoreDelta = {
-      nextRevision,
-      ops: storeOps,
-      prevRevision: baseline.revision,
-    };
-
+    const { inventory, ops } = params;
     return {
       ...context,
-      inventoryDelta: displayDelta,
-      inventoryPreview: workingInventory,
-      inventoryRegistry: registry,
-      inventoryStoreDelta: storeDelta,
+      inventoryDelta: { ops },
+      inventoryPreview: inventory,
     };
   }
 

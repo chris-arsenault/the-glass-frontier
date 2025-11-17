@@ -166,5 +166,12 @@
     "summary": "Location maintenance works for logged-in users again",
     "details": "The moderator UI now scopes every listLocations call to the active login, pages through graph chunks via cursors, and pushes edge mutations through the v2 worldstate APIs—so add/remove operations persist immediately instead of silently failing.",
     "type": "bugfix"
+  },
+  {
+    "id": "2025-11-22-inventory-delta-refresh",
+    "releasedAt": "2025-11-22",
+    "summary": "Inventory deltas now follow the simplified schema",
+    "details": "Chronicle turns, badges, and closure summaries now use the streamlined inventory list—LLM prompts emit add/remove/update/consume ops, the narrative engine applies them directly, the obsolete pending equip queue is gone, and the client surfaces the new entries with quantities and tags.",
+    "type": "improvement"
   }
 ]

@@ -7,14 +7,11 @@ import type {
   ChronicleClosureEvent,
   ChronicleSummaryKind,
 } from '@glass-frontier/worldstate';
-import type { PendingEquip } from '@glass-frontier/dto';
 import { LangGraphLlmClient } from '@glass-frontier/llm-client';
 import type { PromptTemplateManager } from '@glass-frontier/persistence';
 import {
   createLocationGraphStore,
   type LocationGraphStore,
-  createImbuedRegistryStore,
-  type ImbuedRegistryStore,
 } from '@glass-frontier/persistence';
 import {
   DynamoWorldStateStore,
@@ -52,7 +49,6 @@ import { deriveLocationContextFromState } from './locationContext';
 type NarrativeEngineOptions = {
   worldStateStore?: WorldStateStoreV2;
   locationGraphStore?: LocationGraphStore;
-  imbuedRegistryStore?: ImbuedRegistryStore;
   progressEmitter?: TurnProgressPublisher;
   closureEmitter?: ChronicleClosurePublisher;
   templateManager: PromptTemplateManager;
@@ -67,7 +63,6 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = [
 class NarrativeEngine {
   readonly worldStateStore: WorldStateStoreV2;
   readonly locationGraphStore: LocationGraphStore;
-  readonly imbuedRegistryStore: ImbuedRegistryStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: LangGraphOrchestrator;
   readonly defaultLlm: LangGraphLlmClient;
@@ -79,7 +74,6 @@ class NarrativeEngine {
     this.templateManager = this.#requireTemplateManager(options);
     this.worldStateStore = this.#resolveWorldStateStore(options?.worldStateStore);
     this.locationGraphStore = this.#resolveLocationGraphStore(options?.locationGraphStore);
-    this.imbuedRegistryStore = this.#resolveImbuedRegistryStore(options?.imbuedRegistryStore);
     this.telemetry = new ChronicleTelemetry();
     this.defaultLlm = new LangGraphLlmClient();
     this.progressEmitter = options?.progressEmitter ?? createProgressEmitterFromEnv();
@@ -91,7 +85,7 @@ class NarrativeEngine {
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
-    options?: { authorizationHeader?: string; pendingEquip?: PendingEquip[] }
+    options?: { authorizationHeader?: string }
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
@@ -109,7 +103,6 @@ class NarrativeEngine {
       authorizationHeader: options?.authorizationHeader,
       chronicleId,
       chronicleState,
-      pendingEquip: options?.pendingEquip,
       playerMessage,
       templateRuntime,
       turnSequence,
@@ -208,16 +201,6 @@ class NarrativeEngine {
     });
   }
 
-  #resolveImbuedRegistryStore(store?: ImbuedRegistryStore): ImbuedRegistryStore {
-    if (isDefined(store)) {
-      return store;
-    }
-    return createImbuedRegistryStore({
-      bucket: process.env.WORLD_STATE_S3_BUCKET,
-      prefix: process.env.WORLD_STATE_S3_PREFIX ?? undefined,
-    });
-  }
-
   #createGraph(): LangGraphOrchestrator {
     const actionResolver = new ActionResolverNode();
     const beatDetector = new BeatDetectorNode();
@@ -257,7 +240,7 @@ class NarrativeEngine {
         new LocationDeltaNode(this.worldStateStore),
         new GmSummaryNode(),
         new BeatTrackerNode(this.worldStateStore),
-        new InventoryDeltaNode(this.imbuedRegistryStore),
+        new InventoryDeltaNode(),
         new UpdateCharacterNode(this.worldStateStore),
       ],
       this.telemetry,
@@ -317,7 +300,6 @@ class NarrativeEngine {
     authorizationHeader,
     chronicleId,
     chronicleState,
-    pendingEquip,
     playerMessage,
     templateRuntime,
     turnSequence,
@@ -325,7 +307,6 @@ class NarrativeEngine {
     authorizationHeader?: string;
     chronicleId: string;
     chronicleState: ChronicleState;
-    pendingEquip?: PendingEquip[];
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
@@ -349,11 +330,8 @@ class NarrativeEngine {
       locationDelta: null,
       inventoryDelta: null,
       inventoryPreview: null,
-      inventoryRegistry: null,
-      inventoryStoreDelta: null,
       llm: llmResolver(''),
       llmResolver,
-      pendingEquip: pendingEquip ?? [],
       playerMessage,
       resolvedIntentConfidence: undefined,
       resolvedIntentType: undefined,

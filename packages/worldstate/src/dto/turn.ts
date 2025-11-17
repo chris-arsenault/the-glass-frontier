@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { CharacterAttributeKeySchema } from './character';
+import { CharacterAttributeKeySchema, InventoryEntryKindSchema } from './character';
 import { LocationBreadcrumbEntrySchema } from './location';
 import { MetadataSchema, TagArraySchema } from './shared';
 
@@ -93,15 +93,15 @@ export const SkillCheckResultSchema = z.object({
 
 export type SkillCheckResult = z.infer<typeof SkillCheckResultSchema>;
 
-export const InventoryDeltaOpSchema = z.object({
-  op: z.enum(['add', 'remove', 'equip', 'unequip', 'consume', 'spend_shard']),
-  name: z.string().optional(),
-  hook: z.string().optional(),
-  amount: z.number().optional(),
-  bucket: z.string().optional(),
-  slot: z.string().optional(),
-  metadata: MetadataSchema.optional(),
-});
+export const InventoryDeltaOpSchema = z
+  .object({
+    op: z.enum(['add', 'remove', 'update', 'consume']),
+    name: z.string().min(1),
+    kind: InventoryEntryKindSchema.optional().nullable(),
+    description: z.string().min(1).optional().nullable(),
+    effect: z.string().min(1).optional().nullable(),
+    quantity: z.number().int().nonnegative().optional().nullable(),
+  });
 
 export type InventoryDeltaOp = z.infer<typeof InventoryDeltaOpSchema>;
 

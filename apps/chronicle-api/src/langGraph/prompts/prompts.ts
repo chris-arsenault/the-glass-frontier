@@ -1,5 +1,5 @@
 import type { Intent, SkillCheckPlan, SkillCheckResult } from '@glass-frontier/worldstate';
-import type { Inventory, PendingEquip, ImbuedRegistry, PromptTemplateId } from '@glass-frontier/dto';
+import type { Inventory, ImbuedRegistry, PromptTemplateId } from '@glass-frontier/dto';
 
 import type { ChronicleState } from '../../types';
 import {
@@ -237,8 +237,6 @@ export function composeInventoryDeltaPrompt({
   gmSummary,
   intent,
   inventory,
-  pendingEquip,
-  registry,
   templates,
 }: {
   templates: PromptTemplateRuntime;
@@ -246,8 +244,7 @@ export function composeInventoryDeltaPrompt({
   gmMessage: string;
   gmSummary?: string | null;
   intent: Intent;
-  pendingEquip: PendingEquip[];
-  registry: ImbuedRegistry;
+  registry?: ImbuedRegistry;
 }): Promise<string> {
   return renderTemplate(templates, 'inventory-arbiter', {
     gm_narration: truncateSnippet(gmMessage, 900),
@@ -256,9 +253,5 @@ export function composeInventoryDeltaPrompt({
     intent_skill: intent.skill ?? null,
     intent_summary: intent.intentSummary,
     inventory_json: JSON.stringify(inventory, null, 2),
-    pending_equip_json: JSON.stringify(pendingEquip ?? []),
-    registry_json: JSON.stringify(registry ?? {}, null, 2),
-    revision: inventory.revision,
-    revision_next: inventory.revision + 1,
   });
 }

@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"nextRevision\":1,\"ops\":[{\"op\":\"equip\",\"slot\":\"headgear\",\"name\":\"Obsidian Halo\"},{\"op\":\"unequip\",\"slot\":\"outfit\",\"name\":\"Nullglass Stealth Rig\"},{\"op\":\"add\",\"bucket\":\"relics\",\"name\":\"Auric Loom\",\"hook\":\"Translates auric pulses into safe harmonics\"},{\"op\":\"remove\",\"bucket\":\"data_shards\",\"name\":\"Vault Access Seed\"},{\"op\":\"consume\",\"bucket\":\"consumables\",\"name\":\"Starlight Draught\",\"amount\":1},{\"op\":\"add\",\"bucket\":\"supplies\",\"name\":\"Signal Flares\"}],\"prevRevision\":0}"
+          "text": "{\"ops\":[{\"op\":\"add\",\"name\":\"Auric Loom\",\"kind\":\"relic\",\"description\":\"Translates auric pulses into safe harmonics\",\"quantity\":1},{\"op\":\"remove\",\"name\":\"Vault Access Seed\",\"kind\":\"supplies\"},{\"op\":\"consume\",\"name\":\"Starlight Draught\",\"kind\":\"consumable\",\"quantity\":1}]}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"nextRevision\":1,\"ops\":[{\"op\":\"equip\",\"slot\":\"headgear\",\"name\":\"Obsidian Halo\"},{\"op\":\"unequip\",\"slot\":\"outfit\",\"name\":\"Nullglass Stealth Rig\"},{\"op\":\"add\",\"bucket\":\"relics\",\"name\":\"Auric Loom\",\"hook\":\"Translates auric pulses into safe harmonics\"},{\"op\":\"remove\",\"bucket\":\"data_shards\",\"name\":\"Vault Access Seed\"},{\"op\":\"consume\",\"bucket\":\"consumables\",\"name\":\"Starlight Draught\",\"amount\":1},{\"op\":\"add\",\"bucket\":\"supplies\",\"name\":\"Signal Flares\"}],\"prevRevision\":0}"
+    "{\"ops\":[{\"op\":\"add\",\"name\":\"Auric Loom\",\"kind\":\"relic\",\"description\":\"Translates auric pulses into safe harmonics\",\"quantity\":1},{\"op\":\"remove\",\"name\":\"Vault Access Seed\",\"kind\":\"supplies\"},{\"op\":\"consume\",\"name\":\"Starlight Draught\",\"kind\":\"consumable\",\"quantity\":1}]}"
   ],
   "stop_reason": "stop",
   "usage": {

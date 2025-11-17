@@ -1,6 +1,9 @@
-import type { Character, Inventory, InventoryEntry } from '@glass-frontier/worldstate/dto';
-import type { PendingEquip, Slot } from '@glass-frontier/dto';
-import { type ReactNode, useCallback, useMemo } from 'react';
+import type {
+  Character,
+  InventoryEntry,
+  InventoryEntryKind,
+} from '@glass-frontier/worldstate/dto';
+import { useMemo } from 'react';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import type { MomentumTrend } from '../../../state/chronicleState';
@@ -9,7 +12,13 @@ import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndic
 import { createEmptyInventory } from '../../../utils/worldstateDefaults';
 import './CharacterOverview.css';
 
-const slotOrder: Slot[] = ['outfit', 'headgear', 'armament', 'module'];
+const kindOrder: InventoryEntryKind[] = ['gear', 'relic', 'consumable', 'supplies'];
+const kindLabels: Record<InventoryEntryKind, string> = {
+  gear: 'Gear',
+  relic: 'Relics',
+  consumable: 'Consumables',
+  supplies: 'Supplies',
+};
 
 type NormalizedSkill = {
   name: string;
@@ -17,11 +26,11 @@ type NormalizedSkill = {
   lastAdvancedAt?: string | null;
 };
 
-type InventoryState = Inventory;
-
 type CharacterOverviewProps = {
   showEmptyState?: boolean;
 };
+
+type InventoryGroups = Record<InventoryEntryKind, InventoryEntry[]>;
 
 const getTierRank = (tier: string): number => {
   switch (tier) {
@@ -38,27 +47,6 @@ const getTierRank = (tier: string): number => {
   default:
     return 0;
   }
-};
-
-const getSlotLabel = (slot: Slot): string => {
-  if (slot === 'armament') {
-    return 'Armament';
-  }
-  if (slot === 'headgear') {
-    return 'Headgear';
-  }
-  if (slot === 'module') {
-    return 'Module';
-  }
-  if (slot === 'outfit') {
-    return 'Outfit';
-  }
-  return slot;
-};
-
-const getEquippedItem = (inventory: InventoryState, slot: Slot): InventoryEntry | null => {
-  const entry = inventory.equipped?.[slot];
-  return entry ?? null;
 };
 
 const computeTopSkills = (character: Character | null): NormalizedSkill[] => {
@@ -81,30 +69,6 @@ const computeTopSkills = (character: Character | null): NormalizedSkill[] => {
       return bTime - aTime;
     })
     .slice(0, 4);
-};
-
-const buildPendingBySlot = (entries: PendingEquip[]): Map<Slot, PendingEquip> => {
-  const map = new Map<Slot, PendingEquip>();
-  for (const entry of entries) {
-    map.set(entry.slot, entry);
-  }
-  return map;
-};
-
-const buildInventoryIndex = (inventory: InventoryState): Map<string, string> => {
-  const map = new Map<string, string>();
-  Object.values(inventory.equipped ?? {}).forEach((entry) => {
-    if (entry) {
-      map.set(entry.id, entry.name);
-    }
-  });
-  for (const item of inventory.carried ?? []) {
-    map.set(item.id, item.name);
-  }
-  for (const item of inventory.stored ?? []) {
-    map.set(item.id, item.name);
-  }
-  return map;
 };
 
 const CharacterEmptyState = (): JSX.Element => (
@@ -197,241 +161,92 @@ const TagsPanel = ({ tags }: TagsPanelProps): JSX.Element | null => {
   );
 };
 
-type GearLoadoutSectionProps = {
-  clearPendingEquipQueue: () => void;
-  describePending: (entry?: PendingEquip) => string | null;
-  inventory: InventoryState;
-  pendingBySlot: Map<Slot, PendingEquip>;
-  pendingEquip: PendingEquip[];
-  queueEquipChange: (entry: PendingEquip) => void;
+const groupInventoryByKind = (entries: InventoryEntry[]): InventoryGroups => {
+  const buckets: InventoryGroups = {
+    gear: [],
+    relic: [],
+    consumable: [],
+    supplies: [],
+  };
+  for (const entry of entries) {
+    if (buckets[entry.kind]) {
+      buckets[entry.kind].push(entry);
+    }
+  }
+  return buckets;
 };
 
-type GearSlotCardProps = {
-  describePending: (entry?: PendingEquip) => string | null;
-  equipped: ReturnType<typeof getEquippedItem>;
-  pendingEntry: PendingEquip | undefined;
-  queueEquipChange: (entry: PendingEquip) => void;
-  slot: Slot;
-};
+const formatQuantity = (value?: number | null): number | null =>
+  typeof value === 'number' && value > 1 ? value : null;
 
-const GearSlotCard = ({
-  describePending,
-  equipped,
-  pendingEntry,
-  queueEquipChange,
-  slot,
-}: GearSlotCardProps): JSX.Element => {
-  const pendingLabel = describePending(pendingEntry);
-  const hasPendingLabel = typeof pendingLabel === 'string' && pendingLabel.length > 0;
-  const isUnequipDisabled = equipped === null && pendingEntry === undefined;
+const InventoryKindSection = ({
+  entries,
+  kind,
+}: {
+  entries: InventoryEntry[];
+  kind: InventoryEntryKind;
+}): JSX.Element => {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  const label = kindLabels[kind];
   return (
-    <div className="gear-slot-card">
-      <div className="gear-slot-header">
-        <span className="gear-slot-title">{getSlotLabel(slot)}</span>
-        {hasPendingLabel ? <span className="pending-chip">{pendingLabel}</span> : null}
+    <div className="inventory-kind-card">
+      <div className="inventory-kind-header">
+        <p className="inventory-kind-title">{label}</p>
       </div>
-      <div className="gear-slot-body">
-        {equipped !== null ? (
-          <p className="gear-item-name">{equipped.name}</p>
-        ) : (
-          <p className="session-panel-empty">Empty slot</p>
-        )}
-      </div>
-      <div className="gear-slot-actions">
-        <button
-          type="button"
-          className="session-card-button-secondary"
-          onClick={() => queueEquipChange({ slot, unequip: true })}
-          disabled={isUnequipDisabled}
-        >
-          Unequip
-        </button>
-      </div>
-    </div>
-  );
-};
-
-type PendingEquipListProps = {
-  describePending: (entry?: PendingEquip) => string | null;
-  pendingEquip: PendingEquip[];
-};
-
-const PendingEquipList = ({
-  describePending,
-  pendingEquip,
-}: PendingEquipListProps): JSX.Element => (
-  <ul className="pending-equip-list">
-    {pendingEquip.map((entry) => {
-      const key =
-        'unequip' in entry && entry.unequip
-          ? `${entry.slot}-unequip`
-          : `${entry.slot}-${entry.itemId}`;
-      const label = describePending(entry);
-      return (
-        <li key={key}>
-          <span className="pending-equip-slot">{getSlotLabel(entry.slot)}:</span>{' '}
-          <span className="pending-equip-action">{label}</span>
-        </li>
-      );
-    })}
-  </ul>
-);
-
-const GearLoadoutSection = ({
-  clearPendingEquipQueue,
-  describePending,
-  inventory,
-  pendingBySlot,
-  pendingEquip,
-  queueEquipChange,
-}: GearLoadoutSectionProps): JSX.Element => {
-  const hasPending = pendingEquip.length > 0;
-  return (
-    <div className="inventory-section">
-      <div className="inventory-header">
-        <h3 className="panel-label">Gear Loadout</h3>
-        {hasPending ? (
-          <button type="button" className="inventory-reset-button" onClick={clearPendingEquipQueue}>
-            Clear queued changes
-          </button>
-        ) : null}
-      </div>
-
-      <div className="gear-grid">
-        {slotOrder.map((slot) => (
-          <GearSlotCard
-            key={slot}
-            describePending={describePending}
-            equipped={getEquippedItem(inventory, slot)}
-            pendingEntry={pendingBySlot.get(slot)}
-            queueEquipChange={queueEquipChange}
-            slot={slot}
-          />
-        ))}
-      </div>
-
-      {hasPending ? (
-        <PendingEquipList describePending={describePending} pendingEquip={pendingEquip} />
+      {safeEntries.length === 0 ? (
+        <p className="session-panel-empty">No {label.toLowerCase()}.</p>
       ) : (
-        <p className="inventory-hint">Queue gear changes to apply them on your next message.</p>
+        <ul className="inventory-kind-list">
+          {safeEntries.map((item) => (
+            <li key={item.id} className="inventory-kind-item">
+              <span className="inventory-item-name">{item.name}</span>
+              {formatQuantity(item.quantity) !== null ? (
+                <span className="inventory-tag">x{formatQuantity(item.quantity)}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
 };
 
-type InventorySectionProps = {
-  children: ReactNode;
-  emptyMessage: string;
-  hasItems: boolean;
-  title: string;
-};
-
-const InventorySection = ({
-  children,
-  emptyMessage,
-  hasItems,
-  title,
-}: InventorySectionProps): JSX.Element => (
+const InventoryGrid = ({ groups }: { groups: InventoryGroups }): JSX.Element => (
   <div className="inventory-section">
-    <h3 className="panel-label">{title}</h3>
-    {hasItems ? children : <p className="session-panel-empty">{emptyMessage}</p>}
+    <div className="inventory-header">
+      <h3 className="panel-label">Inventory</h3>
+    </div>
+    <div className="inventory-kind-grid">
+      {kindOrder.map((kind) => (
+        <InventoryKindSection key={kind} kind={kind} entries={groups[kind]} />
+      ))}
+    </div>
   </div>
 );
 
-type OverviewData = {
-  character: Character | null;
-  clearPendingEquipQueue: () => void;
-  describePending: (entry?: PendingEquip) => string | null;
-  inventory: InventoryState;
-  momentumTrend: MomentumTrend | null;
-  pendingBySlot: Map<Slot, PendingEquip>;
-  pendingEquip: PendingEquip[];
-  queueEquipChange: (entry: PendingEquip) => void;
-  topSkills: NormalizedSkill[];
-};
-
-const useCharacterOverviewState = (): OverviewData => {
+const useCharacterOverviewState = () => {
   const character = useSelectedCharacter();
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
-  const pendingEquip = useChronicleStore((state) => state.pendingEquip);
-  const queueEquipChange = useChronicleStore((state) => state.queueEquipChange);
-  const clearPendingEquipQueue = useChronicleStore((state) => state.clearPendingEquipQueue);
 
-  const inventory = useMemo(() => character?.inventory ?? createEmptyInventory(), [character]);
+  const inventoryEntries = useMemo<InventoryEntry[]>(() => {
+    const entries = character?.inventory;
+    return Array.isArray(entries) ? entries : createEmptyInventory();
+  }, [character]);
+
+  const inventoryGroups = useMemo(
+    () => groupInventoryByKind(inventoryEntries),
+    [inventoryEntries]
+  );
 
   const topSkills = useMemo<NormalizedSkill[]>(() => computeTopSkills(character), [character]);
 
-  const pendingBySlot = useMemo(() => buildPendingBySlot(pendingEquip), [pendingEquip]);
-
-  const inventoryIndex = useMemo(() => buildInventoryIndex(inventory), [inventory]);
-
-  const describePending = useCallback(
-    (entry?: PendingEquip): string | null => {
-      if (entry === undefined) {
-        return null;
-      }
-      if ('unequip' in entry && entry.unequip) {
-        return 'Queued: unequip';
-      }
-      const label = entry.itemId ? inventoryIndex.get(entry.itemId) ?? 'Queued item' : 'Queued item';
-      return `Queued: ${label}`;
-    },
-    [inventoryIndex]
-  );
-
   return {
     character: character ?? null,
-    clearPendingEquipQueue,
-    describePending,
-    inventory,
+    inventoryGroups,
     momentumTrend,
-    pendingBySlot,
-    pendingEquip,
-    queueEquipChange,
     topSkills,
   };
 };
-
-const InventoryListSection = ({
-  entries,
-  emptyMessage,
-  title,
-}: {
-  entries: InventoryEntry[];
-  emptyMessage: string;
-  title: string;
-}): JSX.Element => (
-  <InventorySection title={title} hasItems={entries.length > 0} emptyMessage={emptyMessage}>
-    <ul className="inventory-list">
-      {entries.map((item) => (
-        <li key={item.id} className="inventory-list-item">
-          <div>
-            <p className="inventory-item-name">{item.name}</p>
-            {item.tags.length > 0 ? (
-              <p className="inventory-item-meta">{item.tags.join(', ')}</p>
-            ) : null}
-          </div>
-          {item.quantity > 1 ? <span className="inventory-tag">x{item.quantity}</span> : null}
-        </li>
-      ))}
-    </ul>
-  </InventorySection>
-);
-
-const InventoryLists = ({ inventory }: { inventory: InventoryState }): JSX.Element => (
-  <>
-    <InventoryListSection
-      entries={inventory.carried}
-      title="Carried Items"
-      emptyMessage="No items carried."
-    />
-    <InventoryListSection
-      entries={inventory.stored}
-      title="Stored Items"
-      emptyMessage="No stored equipment."
-    />
-  </>
-);
 
 export function CharacterOverview({
   showEmptyState = true,
@@ -453,16 +268,7 @@ export function CharacterOverview({
 
       <TagsPanel tags={overview.character.tags} />
 
-      <GearLoadoutSection
-        inventory={overview.inventory}
-        pendingEquip={overview.pendingEquip}
-        pendingBySlot={overview.pendingBySlot}
-        describePending={overview.describePending}
-        queueEquipChange={overview.queueEquipChange}
-        clearPendingEquipQueue={overview.clearPendingEquipQueue}
-      />
-
-      <InventoryLists inventory={overview.inventory} />
+      <InventoryGrid groups={overview.inventoryGroups} />
     </section>
   );
 }

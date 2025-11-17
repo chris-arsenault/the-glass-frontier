@@ -2,10 +2,8 @@
 import {
   createWorldStateStore as createLegacyWorldStateStore,
   createLocationGraphStore,
-  createImbuedRegistryStore,
   type WorldStateStore as LegacyWorldStateStore,
   type LocationGraphStore,
-  type ImbuedRegistryStore,
   PromptTemplateManager,
   BugReportStore,
   TokenUsageStore,
@@ -49,10 +47,6 @@ const locationGraphStore = createLocationGraphStore({
   indexTable: worldStateTable,
   prefix: worldStatePrefix,
 });
-const imbuedRegistryStore: ImbuedRegistryStore = createImbuedRegistryStore({
-  bucket: worldStateBucket,
-  prefix: worldStatePrefix,
-});
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
 if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
   throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
@@ -66,7 +60,6 @@ const seedService = new ChronicleSeedService({
   worldStateStore,
 });
 const engine = new NarrativeEngine({
-  imbuedRegistryStore,
   locationGraphStore,
   templateManager,
   worldStateStore,
@@ -88,7 +81,6 @@ export type Context = {
   authorizationHeader?: string;
   bugReportStore: BugReportStore;
   engine: NarrativeEngine;
-  imbuedRegistryStore: ImbuedRegistryStore;
   locationGraphStore: LocationGraphStore;
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;
@@ -102,7 +94,6 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     authorizationHeader: options?.authorizationHeader,
     bugReportStore,
     engine,
-    imbuedRegistryStore,
     locationGraphStore,
     seedService,
     templateManager,

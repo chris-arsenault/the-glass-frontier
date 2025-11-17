@@ -37,12 +37,32 @@ export const buildPlaywrightCharacterRecord = (): CharacterDraft => ({
   },
   bio: 'Seeded character for Playwright tests.',
   echoes: [],
-  inventory: {
-    carried: [],
-    stored: [],
-    equipped: {},
-    capacity: 10,
-  },
+  inventory: [
+    {
+      id: "ova",
+      kind: "relic",
+      name: "Oracle Vessel",
+      description: "Unlock the Vigil Gate",
+      quantity: 1,
+      tags: []
+    },
+    {
+      id: "vas",
+      kind: "supplies",
+      name: "Vault Access Seed",
+      description: "Unlock the Vigil Gate",
+      quantity: 1,
+      tags: []
+    },
+    {
+      id: "sd",
+      kind: "consumable",
+      name: "Starlight Draught",
+      description: "Unlock the Vigil Gate",
+      quantity: 3,
+      tags: []
+    }
+  ],
   loginId: PLAYWRIGHT_LOGIN_ID,
   metadata: {},
   momentum: {

@@ -14,8 +14,6 @@ import type {
   LlmTrace,
   BeatDelta,
 } from '@glass-frontier/worldstate';
-import type { PendingEquip, ImbuedRegistry } from '@glass-frontier/dto';
-import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 
 import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
 
@@ -34,7 +32,6 @@ export type GraphContext = {
   turnSequence: number;
   chronicle: ChronicleState;
   playerMessage: TranscriptEntry;
-  pendingEquip: PendingEquip[];
 
   //operations
   llm: LangGraphLlmLike;
@@ -57,9 +54,7 @@ export type GraphContext = {
   updatedCharacter?: Character | null;
   locationSummary?: LocationSummary | null;
   inventoryDelta?: InventoryDelta | null;
-  inventoryStoreDelta?: InventoryStoreDelta | null;
   inventoryPreview?: Inventory | null;
-  inventoryRegistry?: ImbuedRegistry | null;
   beatDelta?: BeatDelta | null;
   locationContext?: LocationContext | null;
   locationDelta?: LocationDelta | null;

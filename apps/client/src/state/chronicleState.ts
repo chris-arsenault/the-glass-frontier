@@ -12,7 +12,7 @@ import type {
   SkillCheckResult,
   TranscriptEntry,
 } from '@glass-frontier/worldstate/dto';
-import type { PendingEquip, PlayerFeedbackVisibilityLevel } from '@glass-frontier/dto';
+import type { PlayerFeedbackVisibilityLevel } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
 export type ChronicleLifecycle = 'open' | 'closed';
@@ -92,7 +92,6 @@ export type ChronicleState = {
   momentumTrend: MomentumTrend | null;
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
-  pendingEquip: PendingEquip[];
   recentChronicles: string[];
   playerSettings: PlayerSettings;
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -109,8 +108,6 @@ export type ChronicleStore = {
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
-  queueEquipChange: (entry: PendingEquip) => void;
-  clearPendingEquipQueue: () => void;
   clearActiveChronicle: () => void;
   setChronicleWrapTarget: (shouldWrap: boolean) => Promise<void>;
   resetStore: () => void;

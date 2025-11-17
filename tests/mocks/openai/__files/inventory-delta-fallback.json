@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"nextRevision\":1,\"ops\":[],\"prevRevision\":1}"
+          "text": "{\"ops\":[]}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"nextRevision\":1,\"ops\":[],\"prevRevision\":1}"
+    "{\"ops\":[]}"
   ],
   "stop_reason": "stop",
   "usage": {

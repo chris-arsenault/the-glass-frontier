@@ -181,26 +181,61 @@ const describeInventoryDelta = (turn: Turn): string[] => {
     .filter((entry): entry is string => entry !== null);
 };
 
+const kindLabels: Record<string, string> = {
+  relic: 'Relic',
+  consumable: 'Consumable',
+  supplies: 'Supplies',
+  gear: 'Gear',
+};
+
 const inventoryOpHandlers: Record<
-  string,
-  (op: { amount?: number; bucket?: string; slot?: string }, target: string) => string
+  Turn['inventoryDelta']['ops'][number]['op'],
+  (op: Turn['inventoryDelta']['ops'][number]) => string
 > = {
-  add: (op, target) =>
-    `Added ${formatAmount(op.amount)} ${target} to ${op.bucket ?? 'inventory'}`,
-  consume: (op, target) => `Consumed ${formatAmount(op.amount)} ${target}`,
-  equip: (op, target) => `Equipped ${target} on ${op.slot ?? 'slot'}`,
-  remove: (op, target) => `Removed ${target} from ${op.bucket ?? 'inventory'}`,
-  spend_shard: (_op, target) => `Spent chronicle shard ${target}`,
-  unequip: (op, _target) => `Unequipped ${op.slot ?? 'gear slot'}`,
+  add: (op) => {
+    const kind = op.kind ? `${kindLabels[op.kind] ?? op.kind} ` : '';
+    const qty = typeof op.quantity === 'number' && op.quantity > 1 ? ` (x${op.quantity})` : '';
+    return `Added ${kind}${op.name}${qty}`;
+  },
+  remove: (op) => {
+    const kind = op.kind ? `${kindLabels[op.kind] ?? op.kind} ` : '';
+    return `Removed ${kind}${op.name}`;
+  },
+  consume: (op) => {
+    const amount = Math.max(op.quantityDelta ?? 1, 1);
+    const remaining = typeof op.quantity === 'number' ? ` (${op.quantity} remaining)` : '';
+    return `Consumed x${amount} ${op.name}${remaining}`;
+  },
+  update: (op) => {
+    const details: string[] = [];
+    if (op.quantityDelta !== undefined) {
+      const delta = op.quantityDelta >= 0 ? `+${op.quantityDelta}` : `${op.quantityDelta}`;
+      details.push(`quantity ${delta}`);
+    }
+    if (op.quantity !== undefined) {
+      details.push(`total ${op.quantity}`);
+    }
+    if (op.description !== undefined) {
+      details.push('description updated');
+    }
+    if (op.effect !== undefined) {
+      details.push('effect updated');
+    }
+    if (Array.isArray(op.tags)) {
+      details.push(`tags: ${op.tags.join(', ')}`);
+    }
+    return details.length > 0
+      ? `Updated ${op.name} (${details.join('; ')})`
+      : `Updated ${op.name}`;
+  },
 };
 
 const describeInventoryOp = (op: Turn['inventoryDelta']['ops'][number]): string | null => {
-  const target = op.name ?? op.hook ?? 'item';
   const handler = inventoryOpHandlers[op.op];
   if (typeof handler !== 'function') {
     return null;
   }
-  return handler(op, target);
+  return handler(op);
 };
 
 const describeSkillCheck = (turn: Turn): string | null => {
@@ -288,13 +323,6 @@ const truncate = (value?: string | null, limit = 600): string => {
     return trimmed;
   }
   return `${trimmed.slice(0, limit - 3)}...`;
-};
-
-const formatAmount = (value?: number): string => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return `${value}x`;
-  }
-  return '1x';
 };
 
 export const sanitizeSentence = (value: string): string => {

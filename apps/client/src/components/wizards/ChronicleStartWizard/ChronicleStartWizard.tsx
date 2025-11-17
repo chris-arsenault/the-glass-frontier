@@ -92,11 +92,10 @@ const toChronicleShard = (entry: InventoryEntry): ChronicleShard | null => {
 };
 
 const collectChronicleShards = (character: Character | null): ChronicleShard[] => {
-  if (!character?.inventory) {
+  if (!Array.isArray(character?.inventory)) {
     return EMPTY_SHARDS;
   }
-  const entries = [...character.inventory.carried, ...character.inventory.stored];
-  return entries
+  return character.inventory
     .map((entry) => toChronicleShard(entry))
     .filter((shard): shard is ChronicleShard => shard !== null);
 };
