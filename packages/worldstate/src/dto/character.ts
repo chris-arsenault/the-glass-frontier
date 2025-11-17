@@ -43,22 +43,22 @@ export type Skill = z.infer<typeof SkillSchema>;
 export const CharacterSkillsSchema = z.record(z.string().min(1), SkillSchema).default({});
 export type CharacterSkills = z.infer<typeof CharacterSkillsSchema>;
 
+export const InventoryEntryKindSchema = z.enum(['relic', 'consumable', 'supplies', 'gear']);
+export type InventoryEntryKind = z.infer<typeof InventoryEntryKindSchema>;
+
 export const InventoryEntrySchema = z.object({
   id: z.string().min(1),
+  kind: InventoryEntryKindSchema,
   name: z.string().min(1),
+  description: z.string().min(1),
+  effect: z.string().min(1).optional(),
   quantity: z.number().int().nonnegative().default(1),
   tags: TagArraySchema,
   metadata: MetadataSchema.optional(),
 });
 export type InventoryEntry = z.infer<typeof InventoryEntrySchema>;
 
-export const InventorySchema = z.object({
-  carried: z.array(InventoryEntrySchema).default([]),
-  stored: z.array(InventoryEntrySchema).default([]),
-  equipped: z.record(z.string().min(1), InventoryEntrySchema).default({}),
-  capacity: z.number().int().nonnegative().default(10),
-  metadata: MetadataSchema.optional(),
-});
+export const InventorySchema = z.array(InventoryEntrySchema).default([]);
 export type Inventory = z.infer<typeof InventorySchema>;
 
 export const CharacterLocationStateSchema = z.object({

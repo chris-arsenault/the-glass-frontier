@@ -358,7 +358,7 @@ export class DynamoWorldStateStore implements WorldStateStoreV2 {
     const draft = CharacterDraftSchema.parse(input);
     const id = draft.id ?? randomUUID();
     const now = nowIso();
-    const inventory = InventorySchema.parse(draft.inventory ?? {});
+    const inventory = InventorySchema.parse(draft.inventory ?? []);
     const character = CharacterSchema.parse({
       id,
       loginId: draft.loginId,
