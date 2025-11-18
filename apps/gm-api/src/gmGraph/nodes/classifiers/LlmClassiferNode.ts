@@ -1,9 +1,7 @@
 import type { ZodObject } from 'zod';
 
 import { GraphNode } from '../graphNode';
-import type { StructuredLlmClient } from '../structuredLlmClient';
 import { PromptComposer } from '../../../prompts/prompts';
-import { Classifier } from '@glass-frontier/llm-client/'
 import { zodTextFormat } from 'openai/helpers/zod';
 import {GraphContext} from "../../../types";
 
@@ -27,7 +25,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
   ) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
-    const composer = new PromptComposer(context.templates)
+
     if (context.failure) {
       context.telemetry?.recordToolNotRun?.({
         chronicleId: context.chronicleId,
@@ -37,7 +35,10 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
       return context;
     }
     try {
+      const composer = new PromptComposer(context.templates)
+      console.log(composer)
       const prompt = await composer.buildPrompt(this.options.id, context);
+      console.log(prompt);
       const json = await context.llm.generate({
         max_tokens: CLASSIFIER_MAX_TOKEN,
         model: CLASSIFIER_MODEL,
@@ -51,7 +52,9 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
           verbosity: 'low' as const
         }
       }, 'json');
-      const parsed = this.options.schema.safeParse(json)
+      console.log(json.message);
+      const parsed = this.options.schema.safeParse(json.message).data
+      console.log(parsed);
       return this.options.applyResult(context, parsed);
     } catch (error) {
       context.telemetry?.recordToolError?.({

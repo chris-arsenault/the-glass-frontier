@@ -5,7 +5,7 @@ import {trimBeatsList, trimBreadcrumbList, trimSkillsList} from "./contextFormat
 export type ChronicleFragmentTypes = "character" | "location" | "beats" | "user-message"
 
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
-  "intent-intake": ['user-message', 'character', 'location', 'beats'],
+  "intent-classifier": ['user-message', 'character', 'location', 'beats'],
 }
 
 export function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {

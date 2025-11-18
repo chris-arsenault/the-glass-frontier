@@ -49,6 +49,10 @@ function applyIntent(context, result: IntentResponse)  {
     routerRationale: result.routerRationale,
     tone: result.tone,
   };
+  console.log("result");
+  console.log(result);
+  console.log("intent");
+  console.log(intent);
   return {
     ...context,
     playerIntent: intent,

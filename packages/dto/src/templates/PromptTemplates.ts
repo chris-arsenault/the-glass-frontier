@@ -9,6 +9,7 @@ export const PromptTemplateIds = [
   'gm-summary',
   'inquiry-describer',
   'intent-beat-detector',
+  'intent-classifier',
   'intent-intake',
   'inventory-arbiter',
   'location-delta',
@@ -115,6 +116,15 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'intent-intake',
     label: 'Intent Intake',
     officialObjectKey: 'official/intent-intake.hbs',
+    supportsVariants: true,
+  },
+  'intent-classifier': {
+    description: 'Parses the player\'s utterance into actionable intent metadata.',
+    editableEndToken: OUTPUT_FORMAT_SECTION,
+    editableStartToken: '## Decision Rules',
+    id: 'intent-classifier',
+    label: 'Intent Classifier',
+    officialObjectKey: 'official/intent-classifier.hbs',
     supportsVariants: true,
   },
   'inventory-arbiter': {

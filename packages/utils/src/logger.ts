@@ -24,6 +24,8 @@ function isSilent(): boolean {
 export type Loggable = string | number | boolean;
 export type LoggableMetadata = Record<string, Loggable>;
 
+
+
 function log(
   level: LogLevel,
   message: string,

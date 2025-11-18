@@ -1,7 +1,7 @@
 import { OpenAIProvider } from "./OpenAIProvider";
 import { LLMRequest, LLMResponse } from "./types";
 import { setTimeout } from "timers/promises";
-import { log, LoggableMetadata } from "@glass-frontier/utils";
+import {isNonEmptyString, log, LoggableMetadata} from "@glass-frontier/utils";
 
 import { LLMSuccessHandler } from "./services/successHandler";
 import {AuditArchive} from "@glass-frontier/llm-client/services/AuditArchive";
@@ -39,6 +39,9 @@ export class RetryLLMClient {
       if (format === 'json') {
         response.message = JSON.parse(response.message);
       }
+      console.log("final response")
+      console.log(response)
+      console.log("final response")
       await this.#successHandler.handleSuccess(response);
       return response;
     } catch(error) {
@@ -63,10 +66,13 @@ export class RetryLLMClient {
     const controller = new AbortController();
     setTimeout(DEFAULT_TIMEOUT_MS, () => controller.abort());
     try {
-      const response = this.#provider.execute(request, controller.signal);
+      const response = await this.#provider.execute(request, controller.signal);
+      console.log(response)
       const record = response as Record<string, unknown>;
+      console.log(record)
       const usage = record.usage as Record<string, any> ?? {};
-      const message = record.content.filter((c) => c.type === 'output_text')[0].text;
+      console.log(usage)
+      const message = record.output_text;
 
       return {
         attempts: attempt + 1,
