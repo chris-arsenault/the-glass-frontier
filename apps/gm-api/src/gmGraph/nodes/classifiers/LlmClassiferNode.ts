@@ -14,9 +14,10 @@ type LlmClassifierOptions<TParsed> = {
   telemetryTag?: string;
 };
 
-const CLASSIFIER_MAX_TOKEN = 500;
+const CLASSIFIER_MAX_TOKEN = 1000;
 const CLASSIFIER_MODEL = 'gpt-5-nano';
-const CLASSIFIER_REASONING = { reasoning: { effort: 'minimal' as const } };
+const CLASSIFIER_REASONING = { reasoning: { effort: 'low' as const } };
+const CLASSIFIER_VERBOSITY = 'low'
 
 export class LlmClassifierNode<TParsed> implements GraphNode {
   id = 'general-classifier';
@@ -24,6 +25,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
   constructor(
     private readonly options: LlmClassifierOptions<TParsed>,
   ) {}
+
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure || !this.options.shouldRun(context)) {
@@ -47,11 +49,13 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
         reasoning: CLASSIFIER_REASONING.reasoning,
         text: {
           format: zodTextFormat(this.options.schema, this.options.schemaName),
-          verbosity: 'low' as const
+          verbosity: CLASSIFIER_VERBOSITY as const
         }
       }, 'json');
       console.log(json.message);
-      const parsed = this.options.schema.safeParse(json.message).data
+      const tryParsed = this.options.schema.safeParse(json.message)
+      console.log(tryParsed);
+      const parsed = tryParsed.data
       console.log(parsed);
       return this.options.applyResult(context, parsed);
     } catch (error) {

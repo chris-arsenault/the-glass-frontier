@@ -9,9 +9,7 @@
       "role": "assistant"
     }
   ],
-  "output_text": [
-    "MOCK: The GM describes the scout slipping past the humming consoles."
-  ],
+  "output_text":"MOCK: The GM describes the scout slipping past the humming consoles.",
   "stop_reason": "stop",
   "usage": {
     "input_tokens": 12,

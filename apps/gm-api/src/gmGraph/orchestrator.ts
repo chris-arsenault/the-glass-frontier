@@ -43,6 +43,8 @@ class GmGraphOrchestrator {
     options?: { progressEmitter?: TurnProgressPublisher }
   ) {
     const descriptors = this.#buildNodeDescriptors(nodes);
+    console.log("descriptors")
+    console.log(descriptors)
     descriptors.forEach((descriptor) => {
       this.#descriptors.set(descriptor.nodeId, descriptor);
     });
@@ -78,7 +80,12 @@ class GmGraphOrchestrator {
           continue;
         }
         const { descriptor, result } = entry;
-        executed.push(descriptor.nodeId);
+        let ranNode = descriptor.nodeId;
+        if (ranNode == "gm-response-node") {
+          ranNode += ` (${result.context.playerIntent?.intentType})`
+        }
+
+        executed.push(ranNode);
         context = result.context;
 
         if (context.failure) {
@@ -90,6 +97,8 @@ class GmGraphOrchestrator {
         targets.forEach((target) => {
           queue.push({ nodeId: target, context: result.context });
         });
+        console.log("queue")
+        console.log(queue)
       }
     }
 

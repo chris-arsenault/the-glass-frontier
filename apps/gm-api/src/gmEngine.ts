@@ -22,7 +22,7 @@ import {
 } from './eventEmitters/closureEmitter';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
-import { BeatDirectorNode } from './gmGraph/nodes/classifiers/BeatDirectorNode';
+import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
 import { GmGraphOrchestrator } from './gmGraph/orchestrator';
 import { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { type TurnProgressPublisher } from './eventEmitters/progressEmitter';
@@ -33,6 +33,11 @@ import {RetryLLMClient} from "@glass-frontier/llm-client";
 import {CheckPlannerNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode";
 import {GmSummaryNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode";
 import {CheckRunnerNode} from "@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode";
+import {
+  ActionResolverNode,
+  ClarificationResponderNode, GmResponseNode,
+  InquiryResponderNode, PlanningNarratorNode, PossibilityAdvisorNode, ReflectionWeaverNode
+} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes";
 
 type GmEngineOptions = {
   worldStateStore: WorldStateStore;
@@ -127,13 +132,15 @@ class GmEngine {
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
     const beatDetector = new BeatDetectorNode();
-    const beatDirector = new BeatDirectorNode();
+    const beatDirector = new BeatTrackerNode();
     const checkPlanner = new CheckPlannerNode();
     const gmSummaryNode = new GmSummaryNode();
     const checkRunner = new CheckRunnerNode();
+    const gmResponseNode = new GmResponseNode();
 
     return new GmGraphOrchestrator(
-      [intentClassifier, beatDetector, checkPlanner, checkRunner, beatDirector, gmSummaryNode],
+      [intentClassifier, beatDetector, checkPlanner, checkRunner,
+        gmResponseNode, beatDirector, gmSummaryNode],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );
@@ -255,10 +262,9 @@ class GmEngine {
       chronicleId,
       executedNodes: graphResult.executedNodes ?? undefined,
       failure,
-      gmMessage: graphResult.gmMessage,
+      gmResponse: graphResult.gmResponse,
       gmSummary: graphResult.gmSummary,
       gmTrace: graphResult.gmTrace ?? undefined,
-      handlerId: graphResult.handlerId,
       id: randomUUID(),
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
       playerIntent: graphResult.playerIntent,
@@ -266,8 +272,7 @@ class GmEngine {
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage: combinedSystemMessage,
-      turnSequence,
-      worldDeltaTags: graphResult.worldDeltaTags ?? undefined,
+      turnSequence
     };
   }
 

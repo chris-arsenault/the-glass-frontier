@@ -37,7 +37,7 @@ const NewBeatSchema = z
   .nullable()
   .describe("Beat details if spawning new; else null.");
 
-const BeatDecisionSchema = z.object({
+const BeatTrackerSchema = z.object({
   turnEffect: BeatTurnEffect.describe("Overall effect of this turn."),
   focusBeatId: z
     .string()
@@ -49,19 +49,19 @@ const BeatDecisionSchema = z.object({
     .describe("Only beats that changed; empty array if none.")
 });
 
-type BeatDecision = z.infer<typeof BeatDecisionSchema>;
+type BeatTracker = z.infer<typeof BeatTrackerSchema>;
 
-class BeatDirectorNode extends LlmClassifierNode<BeatDecision> {
-  readonly id = 'beat-director';
+class BeatTrackerNode extends LlmClassifierNode<BeatTracker> {
+  readonly id = 'beat-tracker';
 
   constructor() {
     super({
-      id: 'beat-director',
-      schema: BeatDecisionSchema,
-      schemaName: 'beat_decision_schema',
+      id: 'beat-tracker',
+      schema: BeatTrackerSchema,
+      schemaName: 'beat_tracker_schema',
       applyResult: (context, result) => this.#applyDecision(context, result),
       shouldRun: (context) => !this.#shouldSkip(context),
-      telemetryTag: 'llm.beat-director'
+      telemetryTag: 'llm.beat-tracker'
     })
   }
 
@@ -128,4 +128,4 @@ class BeatDirectorNode extends LlmClassifierNode<BeatDecision> {
 
 }
 
-export { BeatDirectorNode }
+export { BeatTrackerNode }

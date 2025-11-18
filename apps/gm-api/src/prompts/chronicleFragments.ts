@@ -2,14 +2,22 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import {GraphContext} from "../types";
 import {trimBeatsList, trimBreadcrumbList, trimSkillsList} from "./contextFormaters";
-export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" | "gm-response" | "skill-check" | "user-message"
+export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" |
+  "gm-response" | "skill-check" | "user-message" | "recent-events" | "tone" | "wrap"
 
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
   "intent-classifier": ['character', 'location', 'beats'],
   "intent-beat-detector": ['intent', 'beats'],
-  "beat-director": ['intent', 'beats', 'gm-response'],
+  "beat-tracker": ['intent', 'beats', 'gm-response'],
   "check-planner": ['intent', 'character', 'location'],
   "gm-summary": ['intent', 'character', 'skill-check'],
+  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
+  "action-resolver-wrap": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'wrap'],
+  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
+  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
+  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
+  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
+  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
 }
 
 export function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
@@ -26,6 +34,12 @@ export function extractFragment(fragmentType: ChronicleFragmentTypes, context: G
       return gmResponseFragment(context);
     case 'skill-check':
       return skillCheckFragment(context);
+    case 'recent-events':
+      return recentEventsFragment(context);
+    case 'tone':
+      return toneFragment(context);
+    case 'wrap':
+      return wrapFragment(context);
     default:
       return {};
   }
@@ -60,6 +74,10 @@ function intentFragment(context: GraphContext): any {
   }
 }
 
+function toneFragment(context: GraphContext): any {
+  return `*IMPORTANT*:The player has requested this tone for the narration: ${context.playerIntent?.tone}}`
+}
+
 function skillCheckFragment(context: GraphContext): any {
   return {
     skill: context.skillCheckPlan?.skill,
@@ -73,3 +91,14 @@ function gmResponseFragment(context: GraphContext): any {
   return context.gmResponse?.content
 }
 
+function recentEventsFragment(context: GraphContext): any {
+  context.chronicleState.turns.slice(-10).map((turn, index) => {
+    return `${index + 1} P: ${turn.playerIntent?.intentSummary}\n   G: ${turn.gmSummary}`
+  })
+}
+
+function wrapFragment(context: GraphContext): any {
+  return {
+    turnsLeft: context.chronicleState.chronicle.targetEndTurn - context.turnSequence
+  }
+}

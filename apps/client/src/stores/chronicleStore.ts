@@ -148,8 +148,8 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
     if (turn.playerMessage) {
       turnEntries.push(toChatMessage(turn.playerMessage, extras));
     }
-    if (turn.gmMessage) {
-      turnEntries.push(toChatMessage(turn.gmMessage, extras));
+    if (turn.gmResponse) {
+      turnEntries.push(toChatMessage(turn.gmResponse, extras));
     }
     if (turn.systemMessage) {
       turnEntries.push(toChatMessage(turn.systemMessage, extras));
@@ -364,8 +364,8 @@ const applyTurnProgressEvent = (
     worldDeltaTags: payload.worldDeltaTags ?? null,
   };
 
-  if (payload.gmMessage) {
-    nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, extras);
+  if (payload.gmResponse) {
+    nextMessages = upsertChatEntry(nextMessages, payload.gmResponse, extras);
   }
 
   if (payload.systemMessage) {
@@ -868,8 +868,8 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         );
 
         let nextMessages = updatedMessages;
-        if (turn.gmMessage) {
-          nextMessages = upsertChatEntry(nextMessages, turn.gmMessage, extras);
+        if (turn.gmResponse) {
+          nextMessages = upsertChatEntry(nextMessages, turn.gmResponse, extras);
         }
         if (turn.systemMessage) {
           nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, extras);

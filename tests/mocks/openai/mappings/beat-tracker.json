@@ -5,7 +5,7 @@
     "urlPath": "/v1/responses",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$[?(@.text.format.name == 'beat_tracker_response')]"
+        "matchesJsonPath": "$[?(@.text.format.name == 'beat_tracker_schema')]"
       }
     ]
   },

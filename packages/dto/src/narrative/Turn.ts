@@ -14,7 +14,7 @@ export const TurnSchema = z.object({
   chronicleId: z.string().min(1),
   executedNodes: z.array(z.string().min(1)).max(48).optional(),
   failure: z.boolean(),
-  gmMessage: TranscriptEntry.optional(),
+  gmResponse: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
   gmTrace: LlmTraceSchema.optional(),
   handlerId: z.string().optional(),

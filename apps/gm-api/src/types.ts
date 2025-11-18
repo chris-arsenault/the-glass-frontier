@@ -53,6 +53,7 @@ export type GraphContext = {
   skillCheckResult?: SkillCheckResult;
   gmSummary?: string,
   shouldCloseChronicle?: boolean;
+  advancesTimeline?: boolean;
 }
 
 export type TelemetryLike = {
