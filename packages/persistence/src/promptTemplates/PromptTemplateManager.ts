@@ -74,12 +74,11 @@ export class PromptTemplateManager {
   readonly #playerCache = new Map<string, Map<PromptTemplateId, { variantId: string; body: string }>>();
 
   constructor(options: {
-    bucket: string;
     worldStateStore: WorldStateStore;
     playerPrefix?: string;
     region?: string;
   }) {
-    const bucket = options.bucket.trim();
+    const bucket = process.env.PROMPT_TEMPLATE_BUCKET?.trim() || "";
     if (bucket.length === 0) {
       throw new Error('PromptTemplateManager requires a template bucket.');
     }

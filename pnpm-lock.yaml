@@ -277,32 +277,44 @@ importers:
         specifier: ~7.2.2
         version: 7.2.2(@types/node@24.10.1)(tsx@4.20.6)
 
-  apps/llm-proxy:
+  apps/gm-api:
     dependencies:
-      '@aws-sdk/client-dynamodb':
+      '@aws-sdk/client-sqs':
         specifier: ^3.930.0
         version: 3.930.0
-      '@aws-sdk/client-s3':
-        specifier: ^3.930.0
-        version: 3.930.0
+      '@glass-frontier/dto':
+        specifier: workspace:*
+        version: link:../../packages/dto
+      '@glass-frontier/llm-client':
+        specifier: workspace:*
+        version: link:../../packages/llm-client
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../../packages/node-utils
+      '@glass-frontier/persistence':
+        specifier: workspace:*
+        version: link:../../packages/persistence
+      '@glass-frontier/skill-check-resolver':
+        specifier: workspace:*
+        version: link:../../packages/skill-check-resolver
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@trpc/client':
+        specifier: ^11.7.1
+        version: 11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/server':
         specifier: ^11.7.1
         version: 11.7.1(typescript@5.9.3)
+      handlebars:
+        specifier: ^4.7.8
+        version: 4.7.8
       openai:
         specifier: ^6.8.1
         version: 6.8.1(zod@4.1.12)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.3)
-      undici:
-        specifier: ^7.16.0
-        version: 7.16.0
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -310,6 +322,9 @@ importers:
       '@types/aws-lambda':
         specifier: ^8.10.158
         version: 8.10.158
+      '@types/express':
+        specifier: ^5.0.5
+        version: 5.0.5
       eslint:
         specifier: ^9.39.1
         version: 9.39.1
@@ -406,12 +421,21 @@ importers:
 
   packages/llm-client:
     dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.930.0
+        version: 3.930.0
+      '@aws-sdk/client-s3':
+        specifier: ^3.930.0
+        version: 3.930.0
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../utils
-      '@trpc/client':
-        specifier: ^11.7.1
-        version: 11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3)
+      openai:
+        specifier: ^6.8.1
+        version: 6.8.1(zod@4.1.12)
 
   packages/node-utils:
     dependencies:
@@ -4473,10 +4497,6 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
-
-  undici@7.16.0:
-    resolution: {integrity: sha512-QEg3HPMll0o3t2ourKwOeUAZ159Kn9mx5pnzHRQO8+Wixmh88YdZRiIwat0iNzNNXn0yoEtXJqFpyW7eM8BV7g==}
-    engines: {node: '>=20.18.1'}
 
   unfetch@4.2.0:
     resolution: {integrity: sha512-F9p7yYCn6cIW9El1zi0HI6vqpeIvBsr3dSuRO6Xuppb1u5rXpCPmMvLSyECLhybr9isec8Ohl0hPekMVrEinDA==}
@@ -9891,8 +9911,6 @@ snapshots:
       which-boxed-primitive: 1.1.1
 
   undici-types@7.16.0: {}
-
-  undici@7.16.0: {}
 
   unfetch@4.2.0: {}
 

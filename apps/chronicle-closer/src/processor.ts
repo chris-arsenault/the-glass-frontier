@@ -4,7 +4,7 @@ import type {
   ChronicleSummaryKind,
   LocationSummary,
 } from '@glass-frontier/dto';
-import { LangGraphLlmClient } from '@glass-frontier/llm-client';
+import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import {
   createLocationGraphStore,
   createWorldStateStore,
@@ -39,16 +39,16 @@ const SUMMARY_HANDLERS: ChronicleSummaryKind[] = [
 class ChronicleClosureProcessor {
   readonly #worldStateStore: WorldStateStore;
   readonly #locationGraphStore: LocationGraphStore;
-  readonly #llm: LangGraphLlmClient;
+  readonly #llm: RetryLLMClient;
 
   constructor(options?: {
     worldStateStore?: WorldStateStore;
     locationGraphStore?: LocationGraphStore;
-    llmClient?: LangGraphLlmClient;
+    llmClient?: RetryLLMClient;
   }) {
     this.#worldStateStore = options?.worldStateStore ?? createWorldStateStore();
     this.#locationGraphStore = options?.locationGraphStore ?? createLocationGraphStore();
-    this.#llm = options?.llmClient ?? new LangGraphLlmClient();
+    this.#llm = options?.llmClient ?? createLLMClient();
   }
 
   async process(event: ChronicleClosureEvent): Promise<void> {
@@ -140,7 +140,7 @@ class ChronicleClosureProcessor {
       return;
     }
     const prompt = buildChronicleStoryPrompt(context);
-    const result = await this.#llm.generateText({
+    const result = await this.#llm.generate({
       maxTokens: 550,
       metadata: {
         chronicleId: chronicle.id,
@@ -148,7 +148,7 @@ class ChronicleClosureProcessor {
       },
       prompt,
       temperature: 0.35,
-    });
+    }, 'string');
     const summary = result.text.trim();
     if (summary.length === 0) {
       return;

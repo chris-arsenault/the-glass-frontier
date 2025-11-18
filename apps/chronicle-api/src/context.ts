@@ -11,7 +11,6 @@ import {
   TokenUsageStore,
 } from '@glass-frontier/persistence';
 
-import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
 const narrativeBucket = process.env.NARRATIVE_S3_BUCKET;
@@ -44,12 +43,7 @@ const seedService = new ChronicleSeedService({
   locationGraphStore,
   templateManager,
 });
-const engine = new NarrativeEngine({
-  imbuedRegistryStore,
-  locationGraphStore,
-  templateManager,
-  worldStateStore,
-});
+
 const bugReportStore = new BugReportStore({
   bucket: narrativeBucket,
   prefix: narrativePrefix,
@@ -66,7 +60,6 @@ const tokenUsageStore = (() => {
 export type Context = {
   authorizationHeader?: string;
   bugReportStore: BugReportStore;
-  engine: NarrativeEngine;
   imbuedRegistryStore: ImbuedRegistryStore;
   locationGraphStore: LocationGraphStore;
   seedService: ChronicleSeedService;
@@ -79,7 +72,6 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
   return {
     authorizationHeader: options?.authorizationHeader,
     bugReportStore,
-    engine,
     imbuedRegistryStore,
     locationGraphStore,
     seedService,

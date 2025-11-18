@@ -21,12 +21,13 @@ function isSilent(): boolean {
   return process.env.LOG_SILENT === '1';
 }
 
-type Loggable = string | number | boolean;
+export type Loggable = string | number | boolean;
+export type LoggableMetadata = Record<string, Loggable>;
 
 function log(
   level: LogLevel,
   message: string,
-  metadata: Record<string, Loggable> = {}
+  metadata: LoggableMetadata = {}
 ): void {
   if (isSilent()) {
     return;

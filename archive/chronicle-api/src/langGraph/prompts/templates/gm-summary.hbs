@@ -1,0 +1,36 @@
+Summarize the GM narration into a compact log line and decide whether the chronicle should close.
+Treat the summary as the canonical record for the turn.
+
+## Source (GM prose)
+"""{{gmMessage}}"""
+
+## Context
+Intent: {{intentSummary}}
+{{#if skillLine}}Skill: {{skillLine}}{{/if}}
+{{#if hasCheck}}
+Check: difficulty={{checkDifficulty}}, advantage={{checkAdvantage}}, outcome={{checkOutcome}}
+{{else}}
+Check: none
+{{/if}}
+
+{{#if wrapUpRequested}}
+### Wrap-Up Signal
+- The player requested closure with target turn {{wrapTargetTurn}}.
+- {{#if wrapIsFinalTurn}}This is the requested final turn; treat the story as ending now.{{else}}There are {{wrapTurnsRemaining}} requested turn(s) remaining to conclude.{{/if}}
+{{else}}
+### Wrap-Up Signal
+- No explicit wrap request is active; only close if the narration clearly ends the current arc.
+{{/if}}
+
+## Instructions
+- Produce a single sentence (<= 180 characters) capturing *who* acted, *what* changed, and *where* it
+  happened. Favor declarative prose over bullet-like fragments.
+- If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
+  `(collapse)`.
+- No markdown, numbers, or quotes; keep it pure text.
+- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
+  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
+
+## Output
+Return strict JSON:
+{ "summary": "<log line>", "shouldCloseChronicle": true | false }

@@ -1,9 +1,9 @@
 import type { ChronicleSeed, LocationPlace } from '@glass-frontier/dto';
-import { LangGraphLlmClient } from '@glass-frontier/llm-client';
+import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
 
-import { PromptTemplateRuntime } from '../langGraph/prompts/templateRuntime';
+import { PromptTemplateRuntime } from '../prompts/templateRuntime';
 
 type GenerateSeedRequest = {
   loginId: string;
@@ -17,17 +17,17 @@ type GenerateSeedRequest = {
 export class ChronicleSeedService {
   readonly #templates: PromptTemplateManager;
   readonly #locations: LocationGraphStore;
-  readonly #llm: LangGraphLlmClient;
-  readonly #clientCache = new Map<string, LangGraphLlmClient>();
+  readonly #llm: RetryLLMClient;
+  readonly #clientCache = new Map<string, RetryLLMClient>();
 
   constructor(options: {
     templateManager: PromptTemplateManager;
     locationGraphStore: LocationGraphStore;
-    llmClient?: LangGraphLlmClient;
+    llmClient?: RetryLLMClient;
   }) {
     this.#templates = options.templateManager;
     this.#locations = options.locationGraphStore;
-    this.#llm = options.llmClient ?? new LangGraphLlmClient();
+    this.#llm = options.llmClient ?? createLLMClient();
   }
 
   async generateSeeds(request: GenerateSeedRequest): Promise<ChronicleSeed[]> {
@@ -53,7 +53,7 @@ export class ChronicleSeedService {
 
     const client = this.#resolveClient(request.authorizationHeader);
 
-    const response = await client.generateJson({
+    const response = await client.generate({
       maxTokens: 600,
       metadata: {
         locationId: place.locationId,
@@ -61,7 +61,7 @@ export class ChronicleSeedService {
       },
       prompt,
       temperature: 0.65,
-    });
+    }, 'json');
 
     return this.#normalizeSeeds(response.json, requested, place);
   }
@@ -196,7 +196,7 @@ export class ChronicleSeedService {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  #resolveClient(authorizationHeader?: string): LangGraphLlmClient {
+  #resolveClient(authorizationHeader?: string): RetryLLMClient {
     const sanitized = this.#sanitizeHeader(authorizationHeader);
     if (sanitized === null) {
       return this.#llm;
@@ -205,9 +205,7 @@ export class ChronicleSeedService {
     if (cached !== undefined) {
       return cached;
     }
-    const client = new LangGraphLlmClient({
-      defaultHeaders: { Authorization: sanitized },
-    });
+    const client = createLLMClient()
     this.#clientCache.set(sanitized, client);
     return client;
   }
