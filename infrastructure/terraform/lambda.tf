@@ -21,16 +21,15 @@ module "chronicle_lambda" {
   tags                 = local.tags
 
   environment_variables = {
-    NODE_ENV                 = var.environment
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
-    LLM_PROXY_USAGE_TABLE    = aws_dynamodb_table.llm_usage.name
-    LLM_PROXY_URL            = "https://${local.api_domain}/llm"
-    DOMAIN_NAME              = local.cloudfront_domain
-    TURN_PROGRESS_QUEUE_URL  = aws_sqs_queue.turn_progress.url
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
-    PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
+    NODE_ENV                    = var.environment
+    NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
+    NARRATIVE_S3_PREFIX         = "${var.environment}/"
+    NARRATIVE_DDB_TABLE         = aws_dynamodb_table.world_index.name
+    LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
+    DOMAIN_NAME                 = local.cloudfront_domain
+    TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
+    LOCATION_GRAPH_DDB_TABLE    = aws_dynamodb_table.location_graph_index.name
+    PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
   }
 
@@ -61,12 +60,12 @@ module "prompt_api_lambda" {
   tags                 = local.tags
 
   environment_variables = {
-    NODE_ENV               = var.environment
-    DOMAIN_NAME            = local.cloudfront_domain
-    NARRATIVE_S3_BUCKET    = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX    = "${var.environment}/"
-    NARRATIVE_DDB_TABLE    = aws_dynamodb_table.world_index.name
-    PROMPT_TEMPLATE_BUCKET = module.prompt_templates_bucket.id
+    NODE_ENV                 = var.environment
+    DOMAIN_NAME              = local.cloudfront_domain
+    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
+    NARRATIVE_S3_PREFIX      = "${var.environment}/"
+    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
+    PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
     LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
   }
 
@@ -116,13 +115,13 @@ module "location_api_lambda" {
   }
 }
 
-module "llm_proxy_lambda" {
+module "gm_api_lambda" {
   source = "./modules/lambda-function"
 
-  function_name        = "${local.name_prefix}-llm-proxy"
-  source_dir           = local.llm_dist_dir
-  artifact_output_path = "${local.artifacts_dir}/llm-proxy.zip"
-  role_arn             = aws_iam_role.lambda["llm_lambda"].arn
+  function_name        = "${local.name_prefix}-gm-api"
+  source_dir           = local.gm_api_dist_dir
+  artifact_output_path = "${local.artifacts_dir}/gm-api.zip"
+  role_arn             = aws_iam_role.lambda["gm_lambda"].arn
   handler              = "handler.handler"
   runtime              = var.lambda_node_version
   memory_size          = 512
@@ -131,12 +130,18 @@ module "llm_proxy_lambda" {
   tags                 = local.tags
 
   environment_variables = {
-    NODE_ENV                 = var.environment
-    SERVICE_NAME             = "llm-proxy"
-    DOMAIN_NAME              = local.api_domain
-    OPENAI_API_KEY           = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
-    LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
-    LLM_PROXY_USAGE_TABLE    = aws_dynamodb_table.llm_usage.name
+    NODE_ENV                    = var.environment
+    DOMAIN_NAME                 = local.cloudfront_domain
+    NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
+    NARRATIVE_S3_PREFIX         = "${var.environment}/"
+    NARRATIVE_DDB_TABLE         = aws_dynamodb_table.world_index.name
+    LOCATION_GRAPH_DDB_TABLE    = aws_dynamodb_table.location_graph_index.name
+    PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
+    TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
+    CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
+    LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
+    LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
+    OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
   }
 
   http_api_config = {
@@ -145,7 +150,8 @@ module "llm_proxy_lambda" {
     authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
     authorization_type = "JWT"
     routes = [
-      { route_key = "POST /llm/{proxy+}" }
+      { route_key = "POST /gm/{proxy+}" },
+      { route_key = "GET /gm/{proxy+}" }
     ]
   }
 }
@@ -170,7 +176,6 @@ module "chronicle_closer_lambda" {
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
     NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
     LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
-    LLM_PROXY_URL            = "https://${local.api_domain}/llm"
   }
 }
 
@@ -230,9 +235,9 @@ module "webservice_disconnect_lambda" {
 }
 
 resource "aws_lambda_event_source_mapping" "chronicle_closer_queue" {
-  event_source_arn = aws_sqs_queue.chronicle_closure.arn
-  function_name    = module.chronicle_closer_lambda.arn
-  batch_size       = 5
+  event_source_arn                   = aws_sqs_queue.chronicle_closure.arn
+  function_name                      = module.chronicle_closer_lambda.arn
+  batch_size                         = 5
   maximum_batching_window_in_seconds = 5
 }
 

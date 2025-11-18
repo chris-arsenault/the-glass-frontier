@@ -197,6 +197,9 @@ importers:
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../../packages/dto
+      '@glass-frontier/gm-api':
+        specifier: workspace:*
+        version: link:../gm-api
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils

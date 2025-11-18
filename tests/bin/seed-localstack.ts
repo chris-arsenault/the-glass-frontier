@@ -122,7 +122,6 @@ async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<
     'apps',
     'chronicle-api',
     'src',
-    'langGraph',
     'prompts',
     'templates'
   );

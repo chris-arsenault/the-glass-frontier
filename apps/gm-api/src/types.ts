@@ -18,7 +18,7 @@ import type {
 import type { InventoryStoreDelta } from '@glass-frontier/persistence';
 
 import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
-import {LLMRequest, LLMResponse} from "@glass-frontier/llm-client";
+import {LLMRequest, LLMResponse, RetryLLMClient} from "@glass-frontier/llm-client";
 import {LLMResponseFormat} from "@glass-frontier/llm-client/retryController";
 
 export type ChronicleState = {
@@ -38,33 +38,14 @@ export type GraphContext = {
   playerMessage: TranscriptEntry;
 
   //operations
-  llm: LangGraphLlmLike;
+  llm: RetryLLMClient;
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;
   failure: boolean;
   systemMessage?: TranscriptEntry;
 
   //stage results
-  sceneFrame?: Record<string, unknown>;
   playerIntent?: Intent;
-  skillCheckResult?: SkillCheckResult;
-  skillCheckPlan?: SkillCheckPlan;
-  gmMessage?: TranscriptEntry;
-  gmSummary?: string;
-  gmTrace?: LlmTrace | null;
-  handlerId?: string;
-  chronicleShouldClose?: boolean;
-  updatedCharacter?: Character | null;
-  locationPlan?: LocationPlan | null;
-  locationSummary?: LocationSummary | null;
-  inventoryDelta?: InventoryDelta | null;
-  inventoryStoreDelta?: InventoryStoreDelta | null;
-  inventoryPreview?: Inventory | null;
-  inventoryRegistry?: ImbuedRegistry | null;
-  beatDelta?: BeatDelta | null;
-  advancesTimeline?: boolean;
-  executedNodes?: string[];
-  worldDeltaTags?: string[];
 }
 
 export type TelemetryLike = {

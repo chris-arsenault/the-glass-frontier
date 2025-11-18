@@ -52,6 +52,11 @@ resource "aws_iam_role_policy_attachment" "chronicle_s3" {
   policy_arn = aws_iam_policy.chronicle_s3.arn
 }
 
+resource "aws_iam_role_policy_attachment" "gm_s3" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_s3.arn
+}
+
 resource "aws_iam_role_policy_attachment" "chronicle_closer_s3" {
   role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
   policy_arn = aws_iam_policy.chronicle_s3.arn
@@ -72,6 +77,11 @@ resource "aws_iam_policy" "chronicle_closure_queue" {
 
 resource "aws_iam_role_policy_attachment" "chronicle_closure_queue" {
   role       = aws_iam_role.lambda["chronicle_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_closure_queue.arn
+}
+
+resource "aws_iam_role_policy_attachment" "gm_closure_queue" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.chronicle_closure_queue.arn
 }
 
@@ -100,6 +110,11 @@ resource "aws_iam_policy" "prompt_templates" {
 
 resource "aws_iam_role_policy_attachment" "chronicle_prompt_templates" {
   role       = aws_iam_role.lambda["chronicle_lambda"].name
+  policy_arn = aws_iam_policy.prompt_templates.arn
+}
+
+resource "aws_iam_role_policy_attachment" "gm_prompt_templates" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.prompt_templates.arn
 }
 
@@ -137,6 +152,11 @@ resource "aws_iam_role_policy_attachment" "prompt_api_dynamodb" {
   policy_arn = aws_iam_policy.chronicle_dynamodb.arn
 }
 
+resource "aws_iam_role_policy_attachment" "gm_dynamodb" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
+}
+
 resource "aws_iam_role_policy_attachment" "chronicle_closer_dynamodb" {
   role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
   policy_arn = aws_iam_policy.chronicle_dynamodb.arn
@@ -171,6 +191,11 @@ resource "aws_iam_role_policy_attachment" "chronicle_location_graph_index" {
   policy_arn = aws_iam_policy.location_graph_index.arn
 }
 
+resource "aws_iam_role_policy_attachment" "gm_location_graph_index" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
+  policy_arn = aws_iam_policy.location_graph_index.arn
+}
+
 resource "aws_iam_role_policy_attachment" "chronicle_closer_location_graph_index" {
   role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
   policy_arn = aws_iam_policy.location_graph_index.arn
@@ -185,17 +210,17 @@ data "aws_iam_policy_document" "llm_audit_storage" {
 
 resource "aws_iam_policy" "llm_audit_storage" {
   name        = "${local.name_prefix}-llm-audit-storage"
-  description = "Allow the LLM proxy to archive request/response pairs in S3."
+  description = "Allow narrative services to archive LLM request/response pairs in S3."
   policy      = data.aws_iam_policy_document.llm_audit_storage.json
-}
-
-resource "aws_iam_role_policy_attachment" "llm_audit_storage" {
-  role       = aws_iam_role.lambda["llm_lambda"].name
-  policy_arn = aws_iam_policy.llm_audit_storage.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prompt_api_audit_storage" {
   role       = aws_iam_role.lambda["prompt_api_lambda"].name
+  policy_arn = aws_iam_policy.llm_audit_storage.arn
+}
+
+resource "aws_iam_role_policy_attachment" "gm_audit_storage" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.llm_audit_storage.arn
 }
 
@@ -212,12 +237,12 @@ data "aws_iam_policy_document" "llm_usage_table" {
 
 resource "aws_iam_policy" "llm_usage_table" {
   name        = "${local.name_prefix}-llm-usage-table"
-  description = "Allow the LLM proxy to record per-player token usage."
+  description = "Allow narrative services to record per-player token usage."
   policy      = data.aws_iam_policy_document.llm_usage_table.json
 }
 
-resource "aws_iam_role_policy_attachment" "llm_usage_table" {
-  role       = aws_iam_role.lambda["llm_lambda"].name
+resource "aws_iam_role_policy_attachment" "gm_llm_usage_table" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.llm_usage_table.arn
 }
 
@@ -305,5 +330,10 @@ resource "aws_iam_policy" "chronicle_progress_queue" {
 
 resource "aws_iam_role_policy_attachment" "chronicle_progress_queue" {
   role       = aws_iam_role.lambda["chronicle_lambda"].name
+  policy_arn = aws_iam_policy.chronicle_progress_queue.arn
+}
+
+resource "aws_iam_role_policy_attachment" "gm_progress_queue" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.chronicle_progress_queue.arn
 }

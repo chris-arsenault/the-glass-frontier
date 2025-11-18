@@ -131,5 +131,12 @@
     "summary": "Playwright now validates deltas and moderator surfaces",
     "details": "Seeded richer location/inventory fixtures, scripted deterministic location-delta responses, and expanded the Playwright suite so it walks the GM pipeline, exercises multi-turn location plans, inspects character sheets, captures feedback/bug reports, and validates the LLM audit, bug moderation, and location maintenance workspaces end-to-end.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-20-gm-api-routing",
+    "releasedAt": "2025-11-20",
+    "summary": "GM API now handles player intents",
+    "details": "Refactored the client’s send-and-wrap flows and updated the API Gateway/Lambda wiring so player turns now hit the dedicated gm-api while the chronicle service continues handling directory and setup endpoints.",
+    "type": "improvement"
   }
 ]

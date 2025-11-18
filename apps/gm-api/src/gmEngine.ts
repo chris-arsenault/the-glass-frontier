@@ -99,14 +99,14 @@ class GmEngine {
       systemMessage,
       turnSequence,
     });
-
-    if (graphResult.chronicleShouldClose === true && chronicleState.chronicle?.status !== 'closed') {
-      await this.#closeChronicle({
-        chronicleState,
-        closingTurnSequence: turn.turnSequence,
-      });
-      chronicleStatus = 'closed';
-    }
+    //
+    // if (graphResult.chronicleShouldClose === true && chronicleState.chronicle?.status !== 'closed') {
+    //   await this.#closeChronicle({
+    //     chronicleState,
+    //     closingTurnSequence: turn.turnSequence,
+    //   });
+    //   chronicleStatus = 'closed';
+    // }
 
     await this.worldStateStore.addTurn(turn);
 
@@ -170,7 +170,6 @@ class GmEngine {
   #buildGraphInput({
     chronicleId,
     chronicleState,
-    pendingEquip,
     playerMessage,
     templateRuntime,
     turnSequence,
@@ -178,33 +177,21 @@ class GmEngine {
     authorizationHeader?: string;
     chronicleId: string;
     chronicleState: ChronicleState;
-    pendingEquip?: PendingEquip[];
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
   }): GraphContext {
     return {
-      advancesTimeline: false,
-      beatDelta: null,
-      chronicle: chronicleState,
       chronicleId,
-      chronicleShouldClose: false,
-      executedNodes: [],
-      failure: false,
-      gmTrace: null,
-      handlerId: undefined,
-      inventoryDelta: null,
-      inventoryPreview: null,
-      inventoryRegistry: null,
-      inventoryStoreDelta: null,
-      llm: llmResolver(''),
-      llmResolver,
-      pendingEquip: pendingEquip ?? [],
+      turnSequence,
+      chronicleState,
       playerMessage,
+      llm: this.llm,
       telemetry: this.telemetry,
       templates: templateRuntime,
-      turnSequence,
-      worldDeltaTags: [],
+      failure: false,
+      systemMessage: undefined,
+      playerIntent: undefined,
     };
   }
 

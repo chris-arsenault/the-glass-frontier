@@ -14,6 +14,7 @@ import { createEmptyInventory } from '@glass-frontier/dto';
 import { formatTurnJobId } from '@glass-frontier/utils';
 import { create } from 'zustand';
 
+import { gmClient } from '../lib/gmClient';
 import { progressStream } from '../lib/progressStream';
 import { trpcClient } from '../lib/trpcClient';
 import type {
@@ -821,7 +822,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { character, chronicleStatus, location, turn } = await trpcClient.postMessage.mutate({
+      const { character, chronicleStatus, location, turn } = await gmClient.postMessage.mutate({
         chronicleId,
         content: playerEntry,
         pendingEquip: pendingEquipQueue,
@@ -946,7 +947,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
 
     try {
-      const result = await trpcClient.setChronicleTargetEnd.mutate({
+      const result = await gmClient.setChronicleTargetEnd.mutate({
         chronicleId,
         loginId: identity.loginId,
         targetEndTurn,

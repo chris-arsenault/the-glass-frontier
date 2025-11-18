@@ -5,7 +5,7 @@ import type { IncomingMessage } from 'http';
 import { createContext } from './context';
 import { appRouter } from './router';
 
-const port = Number(process.env.PORT ?? process.env.NARRATIVE_PORT ?? 7000);
+const port = Number(process.env.PORT ?? process.env.GM_API_PORT ?? 7001);
 const server = createHTTPServer({
   createContext: ({ req }) => createContext({ authorizationHeader: getAuthorizationHeader(req) }),
   router: appRouter,

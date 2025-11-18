@@ -16,8 +16,6 @@
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
-      "@glass-frontier/llm-proxy": ["apps/llm-proxy/src/app.ts"],
-      "@glass-frontier/llm-proxy/*": ["apps/llm-proxy/src/*"],
       "@glass-frontier/llm-client": ["packages/llm-client/src/index.ts"],
       "@glass-frontier/llm-client/*": ["packages/llm-client/src/*"],
       "@glass-frontier/dto": ["packages/dto/src/index.ts"],
@@ -35,7 +33,9 @@
       "@glass-frontier/prompt-api": ["apps/prompt-api/src/index.ts"],
       "@glass-frontier/prompt-api/*": ["apps/prompt-api/src/*"],
       "@glass-frontier/location-api": ["apps/location-api/src/index.ts"],
-      "@glass-frontier/location-api/*": ["apps/location-api/src/*"]
+      "@glass-frontier/location-api/*": ["apps/location-api/src/*"],
+      "@glass-frontier/gm-api": ["apps/gm-api/src/index.ts"],
+      "@glass-frontier/gm-api/*": ["apps/gm-api/src/*"]
     }
   }
 }

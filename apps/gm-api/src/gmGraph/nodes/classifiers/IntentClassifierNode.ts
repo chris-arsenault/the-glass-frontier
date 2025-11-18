@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Intent, IntentType as IntentTypeSchema  } from '@glass-frontier/dto';
+import  { type Intent, IntentType  } from '@glass-frontier/dto';
 import { LlmClassifierNode } from "./LlmClassiferNode";
 
 const IntentResponseSchema = z.object({
@@ -19,7 +19,7 @@ const IntentResponseSchema = z.object({
     .string()
     .min(1)
     .describe('Concise paraphrase of the player’s request (≤ 140 characters).'),
-  intentType: IntentTypeSchema.describe('One of the canonical Glass Frontier intent types.'),
+  intentType: IntentType.describe('One of the canonical Glass Frontier intent types.'),
   requiresCheck: z
     .boolean()
     .describe('True when the move is risky, contested, or otherwise requires a skill check.'),

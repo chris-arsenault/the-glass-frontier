@@ -31,8 +31,7 @@ const sharedEnv: Record<string, string> = {
   NARRATIVE_PORT: '7000',
   PROMPT_API_PORT: '7400',
   LOCATION_API_PORT: '7300',
-  LLM_PROXY_PORT: '8082',
-  SERVICE_NAME: 'llm-proxy',
+  GM_API_PORT: '7001',
   VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
   VITE_COGNITO_CLIENT_ID: 'local-e2e',
   PLAYWRIGHT_RESET_ENABLED: '1',
@@ -43,9 +42,9 @@ const waitResources = [
   'http-get://localhost:8080/__admin',
   'http-get://localhost:5173',
   'tcp:7000',
+  'tcp:7001',
   'tcp:7300',
   'tcp:7400',
-  'tcp:8082',
 ];
 
 const withEnv = (): NodeJS.ProcessEnv => ({ ...process.env, ...sharedEnv });
