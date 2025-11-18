@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"Mock: track sensor echoes\",\"targetBeatId\":null}}"
+          "text": "{\"kind\":\"independent\",\"summary\":\"Mock: track sensor echoes\",\"targetBeatId\":null}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"Mock: track sensor echoes\",\"targetBeatId\":null}}"
+    "{\"kind\":\"independent\",\"summary\":\"Mock: track sensor echoes\",\"targetBeatId\":null}"
   ],
   "stop_reason": "stop",
   "usage": {

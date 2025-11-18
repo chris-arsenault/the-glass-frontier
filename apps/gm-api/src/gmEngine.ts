@@ -20,9 +20,9 @@ import {
   type ChronicleClosurePublisher,
   createClosureEmitterFromEnv
 } from './eventEmitters/closureEmitter';
-import {
-  IntentClassifierNode
-} from './gmGraph/nodes';
+import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
+import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
+import { BeatDirectorNode } from './gmGraph/nodes/classifiers/BeatDirectorNode';
 import { GmGraphOrchestrator } from './gmGraph/orchestrator';
 import { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { type TurnProgressPublisher } from './eventEmitters/progressEmitter';
@@ -123,10 +123,11 @@ class GmEngine {
 
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
+    const beatDetector = new BeatDetectorNode();
+    const beatDirector = new BeatDirectorNode();
+
     return new GmGraphOrchestrator(
-      [
-        intentClassifier
-      ],
+      [intentClassifier, beatDetector, beatDirector],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );

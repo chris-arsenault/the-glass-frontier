@@ -120,9 +120,7 @@ async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<
   const templatesDir = path.resolve(
     process.cwd(),
     'apps',
-    'chronicle-api',
-    'src',
-    'prompts',
+    'prompt-api',
     'templates'
   );
   const files = await readdir(templatesDir);

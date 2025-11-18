@@ -41,7 +41,7 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       schema: IntentResponseSchema,
       schemaName: 'intent_response_schema',
       applyResult: (context, result) => this.#applyIntent(context, result),
-      shouldRun: (context) => return true,
+      shouldRun: (context) => {return true},
       telemetryTag: 'llm.intent-classifier'
     })
   }
