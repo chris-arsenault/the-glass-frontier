@@ -35,13 +35,11 @@
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.930.0",
     "@aws-sdk/client-s3": "^3.930.0",
-    "@aws-sdk/credential-providers": "^3.930.0",
     "@aws-sdk/client-sqs": "^3.930.0",
+    "@aws-sdk/credential-providers": "^3.930.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.1",
-    "execa": "^9.3.0",
-    "wait-on": "^8.0.2",
     "@vitest/coverage-v8": "^4.0.8",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
@@ -54,6 +52,8 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-sonarjs": "^3.0.5",
     "eslint-plugin-unicorn": "^62.0.0",
+    "execa": "^9.3.0",
+    "nodemon": "^3.1.11",
     "playwright": "^1.56.1",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
@@ -61,7 +61,8 @@
     "turbo": "^2.6.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "wait-on": "^8.0.2"
   },
   "dependencies": {
     "cors": "^2.8.5",
