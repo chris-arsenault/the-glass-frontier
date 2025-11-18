@@ -1,18 +1,6 @@
 You determine the most appropriate skill + attribute pairing for the player’s current intent. Only
 emit JSON—no prose.
 
-## Player Utterance
-"""{{playerMessage}}"""
-
-## Intent Snapshot
-- Type: {{intentType}}
-- Summary: {{intentSummary}}
-
-## Character Sheet
-- Tags: {{characterTags}}
-- Known skills: {{skillsLine}}
-- Locale: {{locale}}
-
 ## Rules
 1. Prefer an existing skill when the name fits the described action. Only invent a new concise label
    (≤ 2 words) when absolutely necessary.

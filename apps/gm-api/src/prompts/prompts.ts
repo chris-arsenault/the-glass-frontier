@@ -1,8 +1,17 @@
 import { Prompt } from "@glass-frontier/llm-client";
-import { extractFragment, templateFragmentMapping } from "./chronicleFragments";
+import {ChronicleFragmentTypes, extractFragment, templateFragmentMapping} from "./chronicleFragments";
 import { GraphContext } from "../types";
 import { PromptTemplateRuntime } from "./templateRuntime";
+import type {PromptTemplateId} from "@glass-frontier/dto";
 
+type MessageOrder = 'player' | 'gm' | 'both';
+const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
+  "intent-classifier": 'player',
+  "intent-beat-detector": 'player',
+  "beat-director": 'both',
+  "check-planner": 'player',
+  "gm-summary": 'gm',
+}
 class PromptComposer {
   #templateRuntime: PromptTemplateRuntime;
   constructor(
@@ -16,23 +25,34 @@ class PromptComposer {
       instructions: await this.#instructions(templateId),
       input: []
     }
-    prompt.input.push({
-      role: 'developer',
-      content: {
-        type: 'text',
-        text: await this.#developerMessage(templateId, context)
-      }
-    })
-    if (this.#sendUserMessage(templateId)) {
+    const order = messageOrder[templateId];
+    if (order == 'player' || order == 'both') {
       prompt.input.push({
         role: 'user',
-        content: {
-          type: 'text',
+        content: [{
+          type: 'input_text',
           text: this.#userMessage(context)
-        }
-      })
+        }]
+      });
     }
+    if (order == 'gm' || order == 'both') {
+      prompt.input.push({
+        role: order == 'gm' ? 'user' : 'developer',
+        content: [{
+          type: 'input_text',
+          text: this.#gmMessage(context)
+        }]
+      });
+    }
+    prompt.input.push({
+      role: 'developer',
+      content: [{
+        type: 'input_text',
+        text: await this.#developerMessage(templateId, context)
+      }]
+    })
 
+    console.log(this.#userMessage(context));
     return prompt;
   }
 
@@ -52,12 +72,13 @@ class PromptComposer {
     return devMessageList.join('\n')
 
   }
-  #sendUserMessage(templateId): boolean{
-    const fragments = templateFragmentMapping[templateId]
-    return 'user-message' in fragments;
-  }
+
   #userMessage(context: GraphContext) {
     return context.playerMessage.content
+  }
+
+  #gmMessage(context: GraphContext) {
+    return context.gmResponse?.content
   }
 }
 

@@ -2,12 +2,14 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import {GraphContext} from "../types";
 import {trimBeatsList, trimBreadcrumbList, trimSkillsList} from "./contextFormaters";
-export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" | 'gm-response' | "user-message"
+export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" | "gm-response" | "skill-check" | "user-message"
 
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
-  "intent-classifier": ['user-message', 'character', 'location', 'beats'],
-  "intent-beat-detector": ['user-message', 'intent', 'beats'],
-  "beat-director": ['user-message', 'intent', 'beats', 'gm-response'],
+  "intent-classifier": ['character', 'location', 'beats'],
+  "intent-beat-detector": ['intent', 'beats'],
+  "beat-director": ['intent', 'beats', 'gm-response'],
+  "check-planner": ['intent', 'character', 'location'],
+  "gm-summary": ['intent', 'character', 'skill-check'],
 }
 
 export function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
@@ -22,6 +24,8 @@ export function extractFragment(fragmentType: ChronicleFragmentTypes, context: G
       return intentFragment(context);
     case 'gm-response':
       return gmResponseFragment(context);
+    case 'skill-check':
+      return skillCheckFragment(context);
     default:
       return {};
   }
@@ -56,6 +60,16 @@ function intentFragment(context: GraphContext): any {
   }
 }
 
-function gmResponseFragment(context: GraphContext): any {
-  return context.gmResponse.content
+function skillCheckFragment(context: GraphContext): any {
+  return {
+    skill: context.skillCheckPlan?.skill,
+    riskLevel: context.skillCheckPlan?.riskLevel,
+    advantage: context.skillCheckResult?.advantage,
+    outcome: context.skillCheckResult?.outcomeTier
+  }
 }
+
+function gmResponseFragment(context: GraphContext): any {
+  return context.gmResponse?.content
+}
+

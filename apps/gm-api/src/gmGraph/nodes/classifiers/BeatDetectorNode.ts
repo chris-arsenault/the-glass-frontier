@@ -1,10 +1,7 @@
-import type {Intent, IntentBeatDirective} from '@glass-frontier/dto';
-import { zodTextFormat } from 'openai/helpers/zod';
+import type { IntentBeatDirective} from '@glass-frontier/dto';
 import { z } from 'zod';
 
-import type { GraphContext, LangGraphLlmLike } from '../../types';
-import type { GraphNode } from '../orchestrator';
-import { composeIntentBeatDetectorPrompt } from '../prompts/prompts';
+import type { GraphContext,  } from '../../../types';
 import {LlmClassifierNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LlmClassiferNode";
 
 const BeatDirectiveSchema = z.object({
@@ -33,14 +30,12 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
       schema: BeatDirectiveSchema,
       schemaName: 'intent_beat_detector',
       applyResult: (context, result) => this.#applyBeatDirective(context, result),
-      shouldRun: (context) => context.playerIntent !== undefined,
+      shouldRun: (context) => { return context.playerIntent !== undefined },
       telemetryTag: 'llm.intent-beat-detector'
     })
   }
 
-  #normalizeDirective(
-    directive: BeatDirective
-  ): IntentBeatDirective {
+  #normalizeDirective(directive: BeatDirective): IntentBeatDirective {
     if (directive.kind === 'existing') {
       return directive;
     }
@@ -50,12 +45,12 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
     }
   }
 
-  #applyBeatDirective(context, result: BeatDirective): GraphContext  {
+  #applyBeatDirective(context: GraphContext, result: BeatDirective): GraphContext  {
     const beatDirective: IntentBeatDirective = this.#normalizeDirective(result)
     return {
       ...context,
       playerIntent: {
-        ...context.playerIntent,
+        ...context?.playerIntent,
         beatDirective,
       },
     };

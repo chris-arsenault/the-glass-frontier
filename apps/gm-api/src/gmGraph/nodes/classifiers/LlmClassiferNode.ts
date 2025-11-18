@@ -40,12 +40,10 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
       const prompt = await composer.buildPrompt(this.options.id, context);
       console.log(prompt);
       const json = await context.llm.generate({
-        max_tokens: CLASSIFIER_MAX_TOKEN,
+        max_output_tokens: CLASSIFIER_MAX_TOKEN,
         model: CLASSIFIER_MODEL,
-        instructions: prompt.instructions,
-        input: prompt.input,
+        ...prompt,
         metadata: { chronicleId: context.chronicleId, nodeId: this.options.id },
-        prompt,
         reasoning: CLASSIFIER_REASONING.reasoning,
         text: {
           format: zodTextFormat(this.options.schema, this.options.schemaName),

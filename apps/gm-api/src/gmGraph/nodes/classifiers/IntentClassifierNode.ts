@@ -21,9 +21,6 @@ const IntentResponseSchema = z.object({
     .min(1)
     .describe('Concise paraphrase of the player’s request (≤ 140 characters).'),
   intentType: IntentType.describe('One of the canonical Glass Frontier intent types.'),
-  requiresCheck: z
-    .boolean()
-    .describe('True when the move is risky, contested, or otherwise requires a skill check.'),
   routerRationale: z
     .string()
     .min(1)

@@ -30,6 +30,9 @@ import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
 import {createProgressEmitterFromEnv} from "./eventEmitters/progressEmitter";
 import {RetryLLMClient} from "@glass-frontier/llm-client";
+import {CheckPlannerNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode";
+import {GmSummaryNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode";
+import {CheckRunnerNode} from "@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode";
 
 type GmEngineOptions = {
   worldStateStore: WorldStateStore;
@@ -125,9 +128,12 @@ class GmEngine {
     const intentClassifier = new IntentClassifierNode();
     const beatDetector = new BeatDetectorNode();
     const beatDirector = new BeatDirectorNode();
+    const checkPlanner = new CheckPlannerNode();
+    const gmSummaryNode = new GmSummaryNode();
+    const checkRunner = new CheckRunnerNode();
 
     return new GmGraphOrchestrator(
-      [intentClassifier, beatDetector, beatDirector],
+      [intentClassifier, beatDetector, checkPlanner, checkRunner, beatDirector, gmSummaryNode],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );

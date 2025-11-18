@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { Character } from '../Character';
-import { Attribute, OutcomeTier, RiskLevel } from '../mechanics';
+import {Attribute, OutcomeTier, RiskLevel, Skill} from '../mechanics';
 import { Metadata } from '../Metadata';
 
 /** SkillCheckResult */
@@ -26,6 +26,10 @@ export const SkillCheckPlan = z.object({
   metadata: Metadata,
   rationale: z.string().min(1),
   riskLevel: RiskLevel,
+  attribute: Attribute,
+  skill: z.string().min(1),
+  requiresCheck: z.boolean(),
+  creativeSpark: z.boolean(),
 });
 export type SkillCheckPlan = z.infer<typeof SkillCheckPlan>;
 

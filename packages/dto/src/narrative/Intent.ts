@@ -1,8 +1,6 @@
 import { z } from 'zod';
 
-import { Attribute } from '../mechanics';
 import { Metadata } from '../Metadata';
-import { IntentBeatDirective } from './ChronicleBeat';
 import { IntentType as IntentTypeSchema } from './IntentType';
 
 export const Intent = z.object({

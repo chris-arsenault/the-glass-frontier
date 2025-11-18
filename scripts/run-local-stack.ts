@@ -1,7 +1,9 @@
 import { execa } from 'execa';
 import waitOn from 'wait-on';
 
-const sharedEnv: Record<string, string> = {
+type StackMode = 'mock-openai' | 'live-openai';
+
+const MOCK_ENV: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
   AWS_SECRET_ACCESS_KEY: 'test',
   AWS_REGION: 'us-east-1',
@@ -32,9 +34,14 @@ const sharedEnv: Record<string, string> = {
   PLAYWRIGHT_RESET_ENABLED: '1',
 };
 
-const waitResources = [
-  'tcp:4566',
-  'http-get://localhost:8080/__admin',
+const LIVE_OPENAI_ENV: Record<string, string> = {
+  ...MOCK_ENV,
+  OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? 'https://api.openai.com/v1',
+  OPENAI_CLIENT_BASE: process.env.OPENAI_CLIENT_BASE ?? 'https://api.openai.com/v1',
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+};
+
+const APP_WAIT_RESOURCES = [
   'http-get://localhost:5173',
   'tcp:7000',
   'tcp:7001',
@@ -42,7 +49,29 @@ const waitResources = [
   'tcp:7400',
 ];
 
-const withEnv = (): NodeJS.ProcessEnv => ({ ...process.env, ...sharedEnv });
+function resolveMode(): StackMode {
+  const flag = process.argv.find((entry) => entry?.startsWith('--mode='));
+  if (flag) {
+    const value = flag.split('=')[1];
+    if (value === 'live-openai') {
+      return 'live-openai';
+    }
+  }
+  if (process.env.LOCAL_STACK_MODE === 'live-openai') {
+    return 'live-openai';
+  }
+  return 'mock-openai';
+}
+
+function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
+  if (mode === 'live-openai') {
+    if (!LIVE_OPENAI_ENV.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY must be set for live-openai mode.');
+    }
+    return { ...process.env, ...LIVE_OPENAI_ENV, LOCAL_STACK_MODE: mode };
+  }
+  return { ...process.env, ...MOCK_ENV, LOCAL_STACK_MODE: mode };
+}
 
 let shuttingDown = false;
 let devProcess: ReturnType<typeof execa> | null = null;
@@ -51,28 +80,38 @@ async function main(): Promise<void> {
   process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
 
+  const mode = resolveMode();
+  const env = buildEnv(mode);
+
   await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
     stdio: 'inherit',
   });
 
+  const baseWait = ['tcp:4566'];
+  const mockOpenAiWait = mode === 'mock-openai' ? ['http-get://localhost:8080/__admin'] : [];
+
   await waitOn({
-    resources: ['tcp:4566', 'http-get://localhost:8080/__admin'],
+    resources: [...baseWait, ...mockOpenAiWait],
     timeout: 120_000,
   });
 
   await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
-    env: withEnv(),
+    env,
     stdio: 'inherit',
   });
 
   devProcess = execa('pnpm', ['dev'], {
-    env: withEnv(),
+    env,
     stdio: 'inherit',
   });
   devProcess.catch(() => undefined);
 
-  await waitOn({ resources: waitResources, timeout: 180_000 }).catch(() => undefined);
-  console.log('Local stack is running. Press Ctrl+C to stop.');
+  const runtimeWait = [...APP_WAIT_RESOURCES];
+  if (mode === 'mock-openai') {
+    runtimeWait.unshift('http-get://localhost:8080/__admin');
+  }
+  await waitOn({ resources: runtimeWait, timeout: 180_000 }).catch(() => undefined);
+  console.log(`Local stack (${mode}) is running. Press Ctrl+C to stop.`);
 
   try {
     await devProcess;

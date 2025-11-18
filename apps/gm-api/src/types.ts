@@ -49,6 +49,10 @@ export type GraphContext = {
   playerIntent?: Intent;
   beatDelta?: BeatDelta;
   gmResponse?: TranscriptEntry
+  skillCheckPlan?: SkillCheckPlan;
+  skillCheckResult?: SkillCheckResult;
+  gmSummary?: string,
+  shouldCloseChronicle?: boolean;
 }
 
 export type TelemetryLike = {

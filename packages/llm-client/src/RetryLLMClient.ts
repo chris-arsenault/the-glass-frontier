@@ -34,8 +34,8 @@ export class RetryLLMClient {
 
   async generate(request: LLMRequest, format: LLMResponseFormat, requestId: string = "", attempt: number = 0): Promise<LLMResponse> {
     requestId = this.#ensureRequestId(requestId);
+    const response = await this.#execWithRetry(request, requestId,  attempt);
     try {
-      const response = await this.#execWithRetry(request, requestId,  attempt);
       if (format === 'json') {
         response.message = JSON.parse(response.message);
       }
@@ -119,10 +119,10 @@ export class RetryLLMClient {
   }
 
   #isBadRequest(error: unknown) {
-    return false;
+    return error?.status === 400;
   }
 
   #createBadRequestError(error: any): Error {
-    return new Error(`llm_bad_request (${this.#provider.id}): shit broke yo`.slice(0, 500));
+    return new Error(`llm_bad_request (${this.#provider.id}): ${error.message}`.slice(0, 500));
   }
 }
