@@ -7,11 +7,10 @@
   "scripts": {
     "start": "TARGET=local tsup && node dist/server.local.js",
     "dev": "NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec \"tsx src/server_local.ts\"",
-    "build": "TARGET=lambda tsup && pnpm copy:templates",
+    "build": "TARGET=lambda tsup",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "vitest run",
-    "copy:templates": "node ./scripts/copy-templates.mjs"
+    "test": "vitest run"
   },
   "keywords": [
     "glass-frontier",
