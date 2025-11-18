@@ -14,6 +14,7 @@ export function trimBeatsList(beats: ChronicleBeat[]) {
       id: b.id,
       title: b.title,
       description: b.description,
+      status: b.status,
   }})
 }
 

@@ -14,8 +14,8 @@ export const ChronicleBeat = z.object({
 
 export const IntentBeatDirective = z.object({
   kind: z.enum(['independent', 'existing', 'new']).default('independent'),
-  summary: z.string().optional(),
-  targetBeatId: z.string().min(1).optional(),
+  summary: z.string(),
+  targetBeatId: z.string().min(1).optional().nullable(),
 });
 
 export const BeatDelta = z.object({

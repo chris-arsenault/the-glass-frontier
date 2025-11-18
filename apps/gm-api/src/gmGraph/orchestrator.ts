@@ -1,4 +1,4 @@
-import {isNonEmptyString, log} from '@glass-frontier/utils';
+import { log } from '@glass-frontier/utils';
 
 import type { TurnProgressPublisher, TurnProgressStatus } from '../eventEmitters/progressEmitter';
 import type { ChronicleTelemetry } from '../telemetry';
@@ -7,9 +7,9 @@ import type { GraphContext } from '../types.js';
 export type GraphNodeResult =
   | GraphContext
   | {
-  context: GraphContext;
-  next?: string | string[] | null;
-};
+      context: GraphContext;
+      next?: string[];
+    };
 
 export type GraphNode = {
   readonly id: string;
@@ -19,9 +19,9 @@ export type GraphNode = {
 export type GraphNodeConfig =
   | GraphNode
   | {
-  node: GraphNode;
-  next?: string[];
-};
+      node: GraphNode;
+      next?: string[];
+    };
 
 type NodeDescriptor = {
   next?: string[];
@@ -42,49 +42,55 @@ class GmGraphOrchestrator {
     telemetry: ChronicleTelemetry,
     options?: { progressEmitter?: TurnProgressPublisher }
   ) {
-    if (nodes.length === 0) {
-      throw new Error('LangGraphOrchestrator requires at least one node');
-    }
     const descriptors = this.#buildNodeDescriptors(nodes);
     descriptors.forEach((descriptor) => {
       this.#descriptors.set(descriptor.nodeId, descriptor);
     });
     this.#entryNodeId = descriptors[0]?.nodeId ?? '';
-    if (!isNonEmptyString(this.#entryNodeId)) {
-      throw new Error('LangGraphOrchestrator requires nodes with stable ids.');
-    }
     this.#telemetry = telemetry;
     this.#progressEmitter = options?.progressEmitter;
   }
 
   async run(initialContext: GraphContext, options?: { jobId?: string }): Promise<GraphContext> {
     const jobId = options?.jobId;
-    const visited = new Set<string>();
+    let context: GraphContext = initialContext;
     const executed: string[] = [];
-    const queue: string[] = [this.#entryNodeId];
-    let context: GraphContext = { ...initialContext };
+    let queue: Array<{ nodeId: string; context: GraphContext }> = [
+      { nodeId: this.#entryNodeId, context: initialContext },
+    ];
 
     while (queue.length > 0) {
-      const nodeId = queue.shift();
-      if (!isNonEmptyString(nodeId) || visited.has(nodeId)) {
-        continue;
-      }
-      const descriptor = this.#descriptors.get(nodeId);
-      if (descriptor === undefined) {
-        continue;
-      }
-      // eslint-disable-next-line no-await-in-loop
-      const execution = await this.#executeNode(descriptor, context, jobId);
-      context = execution.context;
-      executed.push(nodeId);
-      visited.add(nodeId);
+      const batch = queue;
+      queue = [];
+      const executions = await Promise.all(
+        batch.map(async ({ nodeId, context: nodeContext }) => {
+          const descriptor = this.#descriptors.get(nodeId);
+          if (!descriptor) {
+            return null;
+          }
+          const result = await this.#executeNode(descriptor, nodeContext, jobId);
+          return { descriptor, result };
+        })
+      );
 
-      if (context.failure) {
-        break;
-      }
+      for (const entry of executions) {
+        if (!entry) {
+          continue;
+        }
+        const { descriptor, result } = entry;
+        executed.push(descriptor.nodeId);
+        context = result.context;
 
-      const nextTargets = this.#resolveNextTargets(execution.next, descriptor.next);
-      queue.unshift(...nextTargets.filter((target) => !visited.has(target)));
+        if (context.failure) {
+          queue = [];
+          break;
+        }
+
+        const targets = result.next ?? descriptor.next ?? [];
+        targets.forEach((target) => {
+          queue.push({ nodeId: target, context: result.context });
+        });
+      }
     }
 
     if (executed.length > 0) {
@@ -109,7 +115,7 @@ class GmGraphOrchestrator {
       context: GraphContext;
     }
   ): Promise<void> {
-    if (!isNonEmptyString(jobId) || this.#progressEmitter === undefined) {
+    if (!jobId || this.#progressEmitter === undefined) {
       return;
     }
     try {
@@ -165,7 +171,7 @@ class GmGraphOrchestrator {
     descriptor: NodeDescriptor,
     context: GraphContext,
     jobId: string | undefined
-  ): Promise<{ context: GraphContext; next?: string[] }> {
+  ): Promise<GraphNodeResult> {
     const { node, nodeId, step, total } = descriptor;
     await this.#notifyStatus({
       context,
@@ -178,7 +184,7 @@ class GmGraphOrchestrator {
 
     try {
       const execution = await node.execute(context);
-      const normalized = this.#normalizeResult(execution);
+      const normalized = this.#unwrapResult(execution);
       const status: TurnProgressStatus = normalized.context.failure ? 'error' : 'success';
       await this.#notifyStatus({
         context: normalized.context,
@@ -203,74 +209,28 @@ class GmGraphOrchestrator {
     }
   }
 
-  #normalizeResult(result: GraphNodeResult): { context: GraphContext; next?: string[] } {
-    if (this.#isGraphContext(result)) {
-      return { context: result };
-    }
-    const structured = result as { context?: GraphContext | null; next?: string | string[] | null };
-    if (structured.context === undefined || structured.context === null) {
-      throw new Error('Graph node must return a context.');
-    }
-    return {
-      context: structured.context,
-      next: this.#normalizeTargets(structured.next),
-    };
-  }
-
   #buildNodeDescriptors(initializers: GraphNodeConfig[]): NodeDescriptor[] {
-    const nodes = initializers.map((entry) =>
-      this.#isGraphNode(entry)
-        ? { next: undefined, node: entry }
-        : { next: this.#normalizeTargets(entry.next), node: entry.node }
+    const resolved = initializers.map((entry) =>
+      'execute' in entry ? { node: entry, next: undefined } : entry
     );
-    const normalizedNodes = nodes.map((entry, index, list) => {
-      if (entry.next !== undefined && entry.next.length > 0) {
-        return entry;
-      }
-      const nextId = list[index + 1]?.node.id;
-      if (isNonEmptyString(nextId)) {
-        return { next: [nextId], node: entry.node };
-      }
-      return entry;
+    const total = resolved.length;
+    return resolved.map((entry, index) => {
+      const fallback = resolved[index + 1]?.node.id;
+      return {
+        next: entry.next ?? (fallback ? [fallback] : undefined),
+        node: entry.node,
+        nodeId: entry.node.id,
+        step: index + 1,
+        total,
+      };
     });
-    const total = normalizedNodes.length;
-    return normalizedNodes.map((entry, index) => ({
-      next: entry.next,
-      node: entry.node,
-      nodeId: isNonEmptyString(entry.node.id) ? entry.node.id : `node-${index}`,
-      step: index + 1,
-      total,
-    }));
   }
 
-  #normalizeTargets(input?: string | string[] | null): string[] {
-    if (typeof input === 'string') {
-      return isNonEmptyString(input) ? [input.trim()] : [];
+  #unwrapResult(result: GraphNodeResult): { context: GraphContext; next?: string[] } {
+    if (typeof (result as { context?: GraphContext }).context === 'object') {
+      return result as { context: GraphContext; next?: string[] };
     }
-    if (Array.isArray(input)) {
-      return input
-        .map((candidate) => (isNonEmptyString(candidate) ? candidate.trim() : null))
-        .filter((candidate): candidate is string => candidate !== null);
-    }
-    return [];
-  }
-
-  #resolveNextTargets(
-    override?: string[],
-    fallback?: string[]
-  ): string[] {
-    const overrideTargets = this.#normalizeTargets(override);
-    if (overrideTargets.length > 0) {
-      return overrideTargets;
-    }
-    return this.#normalizeTargets(fallback);
-  }
-  #isGraphContext(result: GraphNodeResult): result is GraphContext {
-    return typeof (result as GraphContext)?.chronicleId === 'string';
-  }
-
-  #isGraphNode(entry: GraphNodeConfig): entry is GraphNode {
-    return typeof (entry as GraphNode).execute === 'function';
+    return { context: result as GraphContext };
   }
 }
 

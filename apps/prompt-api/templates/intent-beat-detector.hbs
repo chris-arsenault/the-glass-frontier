@@ -1,16 +1,6 @@
 You evaluate whether the player’s current intent advances an existing beat, launches a new one, or
 remains independent. Output JSON only—no prose.
 
-## Player Utterance
-"""{{playerMessage}}"""
-
-## Intent Snapshot
-- Type: {{intentType}}
-- Summary: {{intentSummary}}
-
-## Chronicle Beats ({{totalBeatCount}})
-{{beatsSection}}
-
 ## Guidance
 - Existing beats are long-horizon threads. Only target one when the intent clearly progresses or
   resolves it.

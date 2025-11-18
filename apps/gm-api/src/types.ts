@@ -43,9 +43,12 @@ export type GraphContext = {
   templates: PromptTemplateRuntime;
   failure: boolean;
   systemMessage?: TranscriptEntry;
+  shouldUpdate: boolean;
 
   //stage results
   playerIntent?: Intent;
+  beatDelta?: BeatDelta;
+  gmResponse?: TranscriptEntry
 }
 
 export type TelemetryLike = {

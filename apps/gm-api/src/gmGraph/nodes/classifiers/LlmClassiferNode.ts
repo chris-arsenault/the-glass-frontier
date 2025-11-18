@@ -10,6 +10,7 @@ type LlmClassifierOptions<TParsed> = {
   schema: ZodObject;
   schemaName: string,
   applyResult: (context: GraphContext, result: TParsed) => GraphContext;
+  shouldRun: (context: GraphContext) => boolean;
   telemetryTag?: string;
 };
 
@@ -25,8 +26,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
   ) {}
 
   async execute(context: GraphContext): Promise<GraphContext> {
-
-    if (context.failure) {
+    if (context.failure || !this.options.shouldRun(context)) {
       context.telemetry?.recordToolNotRun?.({
         chronicleId: context.chronicleId,
 

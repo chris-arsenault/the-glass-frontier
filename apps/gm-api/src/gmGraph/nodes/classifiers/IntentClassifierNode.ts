@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import  { type Intent, IntentType  } from '@glass-frontier/dto';
 import { LlmClassifierNode } from "./LlmClassiferNode";
+import {GraphContext} from "@glass-frontier/gm-api/types";
 
 const IntentResponseSchema = z.object({
   creativeSpark: z
@@ -32,34 +33,6 @@ const IntentResponseSchema = z.object({
 
 type IntentResponse = z.infer<typeof IntentResponseSchema>;
 
-const DEFAULT_SKILL = 'improvise';
-const DEFAULT_TONE = 'narrative';
-const DEFAULT_ATTRIBUTE = 'focus';
-
-function applyIntent(context, result: IntentResponse)  {
-  const intent: Intent = {
-    creativeSpark: result.creativeSpark,
-    handlerHints: result.handlerHints,
-    intentSummary: result.intentSummary,
-    intentType: result.intentType,
-    metadata: {
-      source: 'intent-classifier',
-      timestamp: Date.now(),
-    },
-    routerRationale: result.routerRationale,
-    tone: result.tone,
-  };
-  console.log("result");
-  console.log(result);
-  console.log("intent");
-  console.log(intent);
-  return {
-    ...context,
-    playerIntent: intent,
-    resolvedIntentType: intent.intentType,
-  };
-}
-
 class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
   readonly id = 'intent-classifier';
   constructor() {
@@ -67,9 +40,29 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       id: 'intent-classifier',
       schema: IntentResponseSchema,
       schemaName: 'intent_response_schema',
-      applyResult: (context, result) => applyIntent(context, result),
+      applyResult: (context, result) => this.#applyIntent(context, result),
+      shouldRun: (context) => return true,
       telemetryTag: 'llm.intent-classifier'
     })
+  }
+
+  #applyIntent(context, result: IntentResponse): GraphContext  {
+    const intent: Intent = {
+      creativeSpark: result.creativeSpark,
+      handlerHints: result.handlerHints,
+      intentSummary: result.intentSummary,
+      intentType: result.intentType,
+      metadata: {
+        source: 'intent-classifier',
+        timestamp: Date.now(),
+      },
+      routerRationale: result.routerRationale,
+      tone: result.tone,
+    };
+    return {
+      ...context,
+      playerIntent: intent,
+    };
   }
 }
 
