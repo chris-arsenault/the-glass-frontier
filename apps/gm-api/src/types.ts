@@ -3,23 +3,18 @@ import type {
   Chronicle,
   Intent,
   LocationSummary,
-  LocationPlan,
   SkillCheckPlan,
   SkillCheckResult,
   Turn,
   TranscriptEntry,
-  PendingEquip,
-  InventoryDelta,
-  Inventory,
-  ImbuedRegistry,
-  LlmTrace,
   BeatDelta,
 } from '@glass-frontier/dto';
-import type { InventoryStoreDelta } from '@glass-frontier/persistence';
+import type { LocationGraphStore} from '@glass-frontier/persistence';
 
-import type { PromptTemplateRuntime } from './langGraph/prompts/templateRuntime';
-import {LLMRequest, LLMResponse, RetryLLMClient} from "@glass-frontier/llm-client";
-import {LLMResponseFormat} from "@glass-frontier/llm-client/retryController";
+import type { PromptTemplateRuntime } from './prompts/templateRuntime';
+import { RetryLLMClient} from "@glass-frontier/llm-client";
+import {LocationDeltaDecision} from "./gmGraph/nodes/classifiers/LocationDeltaNode";
+import {InventoryDelta} from "./gmGraph/nodes/classifiers/InventoryDeltaNode";
 
 export type ChronicleState = {
   chronicleId: string;
@@ -36,6 +31,7 @@ export type GraphContext = {
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
+  locationGraphStore: LocationGraphStore;
 
   //operations
   llm: RetryLLMClient;
@@ -54,6 +50,9 @@ export type GraphContext = {
   gmSummary?: string,
   shouldCloseChronicle?: boolean;
   advancesTimeline?: boolean;
+
+  locationDelta?: LocationDeltaDecision;
+  inventoryDelta?: InventoryDelta;
 }
 
 export type TelemetryLike = {

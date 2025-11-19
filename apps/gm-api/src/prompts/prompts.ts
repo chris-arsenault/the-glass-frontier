@@ -8,9 +8,18 @@ type MessageOrder = 'player' | 'gm' | 'both';
 const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
   "intent-classifier": 'player',
   "intent-beat-detector": 'player',
-  "beat-director": 'both',
+  "beat-tracker": 'both',
   "check-planner": 'player',
   "gm-summary": 'gm',
+  "location-delta": 'gm',
+  "inventory-delta": 'gm',
+  "action-resolver": 'player',
+  "action-resolver-wrap": 'player',
+  "inquiry-describer": 'player',
+  "clarification-responder": 'player',
+  "possibility-advisor": 'player',
+  "planning-narrator": 'player',
+  "reflection-weaver": 'player',
 }
 class PromptComposer {
   #templateRuntime: PromptTemplateRuntime;

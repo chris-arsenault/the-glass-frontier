@@ -12,7 +12,7 @@ export const PromptTemplateIds = [
   'intent-beat-detector',
   'intent-classifier',
   'intent-intake',
-  'inventory-arbiter',
+  'inventory-delta',
   'location-delta',
   'planning-narrator',
   'possibility-advisor',
@@ -110,11 +110,11 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/intent-classifier.hbs',
     supportsVariants: true,
   },
-  'inventory-arbiter': {
+  'inventory-delta': {
     description: 'Applies deterministic inventory changes between the GM narration and character save.',
-    id: 'inventory-arbiter',
-    label: 'Inventory Arbiter',
-    officialObjectKey: 'official/inventory-arbiter.hbs',
+    id: 'inventory-delta',
+    label: 'Inventory Delta',
+    officialObjectKey: 'official/inventory-delta.hbs',
     supportsVariants: true,
   },
   'location-delta': {

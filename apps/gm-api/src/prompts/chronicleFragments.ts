@@ -2,8 +2,10 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import {GraphContext} from "../types";
 import {trimBeatsList, trimBreadcrumbList, trimSkillsList} from "./contextFormaters";
+import {getPromptInput} from "@glass-frontier/gm-api/prompts/locationHelpers";
 export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" |
-  "gm-response" | "skill-check" | "user-message" | "recent-events" | "tone" | "wrap"
+  "gm-response" | "skill-check" | "user-message" | "recent-events" | "tone" | "wrap" |
+  "location-detail" | "inventory" | "inventory-detail";
 
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
   "intent-classifier": ['character', 'location', 'beats'],
@@ -11,13 +13,15 @@ export const templateFragmentMapping: Partial<Record<PromptTemplateId, Chronicle
   "beat-tracker": ['intent', 'beats', 'gm-response'],
   "check-planner": ['intent', 'character', 'location'],
   "gm-summary": ['intent', 'character', 'skill-check'],
-  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
-  "action-resolver-wrap": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'wrap'],
-  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
-  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
-  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
-  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
-  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'skill-check'],
+  "location-delta": ['intent', 'user-message', 'location-detail'],
+  "inventory-delta": ['intent', 'user-message', 'inventory'],
+  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
+  "action-resolver-wrap": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail',  'wrap'],
+  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
+  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
+  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
+  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
+  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
 }
 
 export function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
@@ -26,6 +30,12 @@ export function extractFragment(fragmentType: ChronicleFragmentTypes, context: G
       return characterFragment(context);
     case 'location':
       return locationFragment(context);
+    case 'location-detail':
+      return locationDetailFragment(context);
+    case 'inventory':
+      return inventoryFragment(context);
+    case 'inventory-detail':
+      return inventoryDetailFragment(context);
     case 'beats':
       return beatsFragment(context);
     case 'intent':
@@ -61,6 +71,42 @@ function locationFragment(context: GraphContext): any {
     tags: context.chronicleState.location?.tags,
     breadcrumbs: trimBreadcrumbList(context.chronicleState.location?.breadcrumb || []),
   }
+}
+
+async function locationDetailFragment(context: GraphContext): Promise<any> {
+  const promptInput = await getPromptInput(context);
+  if (promptInput === null) {
+    return "Lost In Space";
+  }
+
+  return {
+    children: promptInput.children,
+    parent: promptInput.parent,
+    siblings: promptInput.adjacent,
+    links: promptInput.links,
+  }
+}
+
+function inventoryFragment(context: GraphContext): any {
+  return context.chronicleState.character?.inventory.map(item => {
+    return {
+      name: item.name,
+      kind: item.kind,
+      quantity: item.quantity,
+    }
+  })
+}
+
+function inventoryDetailFragment(context: GraphContext): any {
+  return context.chronicleState.character?.inventory.map(item => {
+    return {
+      name: item.name,
+      kind: item.kind,
+      quantity: item.quantity,
+      description: item.description,
+      effect: item.effect,
+    }
+  })
 }
 
 function beatsFragment(context: GraphContext): any {

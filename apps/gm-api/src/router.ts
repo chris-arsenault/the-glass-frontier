@@ -1,13 +1,10 @@
 import {
   TranscriptEntry,
-  PendingEquip,
-
 } from '@glass-frontier/dto';
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 
 import type { Context } from './context';
-
 
 const t = initTRPC.context<Context>().create();
 export const appRouter = t.router({
@@ -17,8 +14,7 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.uuid(),
-        content: TranscriptEntry,
-        pendingEquip: z.array(PendingEquip).optional(),
+        content: TranscriptEntry
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -28,8 +24,7 @@ export const appRouter = t.router({
       }
       const playerEntry = { ...input.content, role: 'player' as const };
       const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
-        authorizationHeader: ctx.authorizationHeader,
-        pendingEquip: input.pendingEquip ?? [],
+        authorizationHeader: ctx.authorizationHeader
       });
       return {
         character: result.updatedCharacter,

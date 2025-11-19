@@ -32,69 +32,29 @@ const BASE_CHARACTER: Character = {
   bio: 'Seeded character for Playwright tests.',
   chronicleId: PLAYWRIGHT_CHRONICLE_ID,
   id: PLAYWRIGHT_CHARACTER_ID,
-  inventory: {
-    consumables: [
-      {
-        count: 2,
-        id: 'consumable-starlight',
-        name: 'Starlight Draught',
-      },
-    ],
-    data_shards: [
-      {
-        id: 'shard-vault-seed',
-        kind: 'chronicle_hook',
-        name: 'Vault Access Seed',
-        seed: 'Unlock the vigil gate',
-      },
-    ],
-    gear: {
-      armament: {
-        id: 'imbued-sunpiercer',
-        name: 'Sunpiercer Longarm',
-        slot: 'armament',
-      },
-      outfit: {
-        id: 'imbued-nullglass',
-        name: 'Nullglass Stealth Rig',
-        slot: 'outfit',
-      },
+  inventory: [
+    {
+      id: "ova",
+      kind: "relic",
+      name: "Oracle Vessel",
+      description: "Unlock the Vigil Gate",
+      quantity: 1,
     },
-    imbued_items: [
-      {
-        id: 'imbued-sunpiercer',
-        name: 'Sunpiercer Longarm',
-        registry_key: 'armament.sunpiercer',
-        slot: 'armament',
-      },
-      {
-        id: 'imbued-nullglass',
-        name: 'Nullglass Stealth Rig',
-        registry_key: 'outfit.nullglass',
-        slot: 'outfit',
-      },
-      {
-        id: 'imbued-obsidian',
-        name: 'Obsidian Halo',
-        registry_key: 'headgear.obsidian',
-        slot: 'headgear',
-      },
-    ],
-    relics: [
-      {
-        hook: 'Projects soft future glimpses',
-        id: 'relic-oracle-vessel',
-        name: 'Oracle Vessel',
-      },
-    ],
-    revision: 0,
-    supplies: [
-      {
-        id: 'supply-alloy-pack',
-        name: 'Alloy Pack',
-      },
-    ],
-  },
+    {
+      id: "vas",
+      kind: "supplies",
+      name: "Vault Access Seed",
+      description: "Unlock the Vigil Gate",
+      quantity: 1,
+    },
+    {
+      id: "sd",
+      kind: "consumable",
+      name: "Starlight Draught",
+      description: "Unlock the Vigil Gate",
+      quantity: 3,
+    }
+  ],
   loginId: PLAYWRIGHT_LOGIN_ID,
   momentum: {
     ceiling: 2,

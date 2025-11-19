@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { LlmTraceSchema } from '../audit/LlmAudit';
-import { InventoryDelta } from '../Inventory';
+import {InventoryDelta, InventoryDeltaSchema} from '../Inventory';
 import { BeatDelta } from './ChronicleBeat';
 import { Intent } from './Intent';
 import { IntentType as IntentTypeSchema } from './IntentType';
@@ -19,7 +19,7 @@ export const TurnSchema = z.object({
   gmTrace: LlmTraceSchema.optional(),
   handlerId: z.string().optional(),
   id: z.string().min(1),
-  inventoryDelta: InventoryDelta.optional(),
+  inventoryDelta: InventoryDeltaSchema.optional(),
   playerIntent: Intent.optional(),
   playerMessage: TranscriptEntry,
   resolvedIntentConfidence: z.number().min(0).max(1).optional(),

@@ -33,11 +33,9 @@ import {RetryLLMClient} from "@glass-frontier/llm-client";
 import {CheckPlannerNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode";
 import {GmSummaryNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode";
 import {CheckRunnerNode} from "@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode";
-import {
-  ActionResolverNode,
-  ClarificationResponderNode, GmResponseNode,
-  InquiryResponderNode, PlanningNarratorNode, PossibilityAdvisorNode, ReflectionWeaverNode
-} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes";
+import {GmResponseNode} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes";
+import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
+import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
 
 type GmEngineOptions = {
   worldStateStore: WorldStateStore;
@@ -137,10 +135,13 @@ class GmEngine {
     const gmSummaryNode = new GmSummaryNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
+    const locationDeltaNode = new LocationDeltaNode();
+    const inventoryDeltaNode = new InventoryDeltaNode();
 
     return new GmGraphOrchestrator(
       [intentClassifier, beatDetector, checkPlanner, checkRunner,
-        gmResponseNode, beatDirector, gmSummaryNode],
+        gmResponseNode, beatDirector, gmSummaryNode,
+        locationDeltaNode, inventoryDeltaNode],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );

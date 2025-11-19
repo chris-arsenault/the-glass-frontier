@@ -1,6 +1,5 @@
 import type { S3Client } from '@aws-sdk/client-s3';
 import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
-import { createEmptyInventory } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -342,7 +341,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     }
     return {
       ...character,
-      inventory: createEmptyInventory(),
+      inventory: [],
     };
   }
 
