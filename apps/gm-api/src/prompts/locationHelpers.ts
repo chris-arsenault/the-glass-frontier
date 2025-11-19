@@ -40,7 +40,7 @@ export async function getPromptInput(context: GraphContext): Promise<PromptInput
 }
 
 
-async function resolvePlanContext(context: GraphContext): Promise<PlannerContext | null> {
+export async function resolvePlanContext(context: GraphContext): Promise<PlannerContext | null> {
   const locationId = context.chronicleState.chronicle.locationId;
   const characterId = context.chronicleState.character?.id;
   if (!isNonEmptyString(characterId) || !isNonEmptyString(locationId)) {
@@ -104,7 +104,7 @@ const isValidPriorState = (
   return priorState.locationId === locationId;
 };
 
-const findAnchorPlace = (
+export const findAnchorPlace = (
   graph: LocationGraphSnapshot,
   anchorPlaceId: string
 ): LocationPlace | null => graph.places.find((entry) => entry.id === anchorPlaceId) ?? null;
@@ -120,7 +120,7 @@ const buildPlaceNameIndex = (graph: LocationGraphSnapshot): Map<string, Location
   return map;
 };
 
-const resolveParentPlace = (
+export const resolveParentPlace = (
   anchorPlace: LocationPlace,
   placeById: Map<string, LocationPlace>
 ): LocationPlace | null => {

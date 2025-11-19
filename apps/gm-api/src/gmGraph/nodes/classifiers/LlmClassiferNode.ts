@@ -38,9 +38,11 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
     }
     try {
       const composer = new PromptComposer(context.templates)
-      console.log(composer)
       const prompt = await composer.buildPrompt(this.options.id, context);
       console.log(prompt);
+      prompt.input.forEach(i => {
+        console.log(i.content[0].text);
+      })
       const json = await context.llm.generate({
         max_output_tokens: CLASSIFIER_MAX_TOKEN,
         model: CLASSIFIER_MODEL,
@@ -52,11 +54,9 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
           verbosity: CLASSIFIER_VERBOSITY as const
         }
       }, 'json');
-      console.log(json.message);
       const tryParsed = this.options.schema.safeParse(json.message)
       console.log(tryParsed);
       const parsed = tryParsed.data
-      console.log(parsed);
       return this.options.applyResult(context, parsed);
     } catch (error) {
       context.telemetry?.recordToolError?.({

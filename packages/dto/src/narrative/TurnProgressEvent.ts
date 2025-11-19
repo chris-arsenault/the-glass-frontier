@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { LlmTraceSchema } from '../audit/LlmAudit';
-import {InventoryDelta, InventoryDeltaSchema} from '../Inventory';
-import { BeatDelta } from './ChronicleBeat';
+import { InventoryDeltaSchema} from '../Inventory';
+import { BeatTrackerSchema} from './ChronicleBeat';
 import { Intent } from './Intent';
 import { IntentType as IntentTypeSchema } from './IntentType';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
@@ -10,7 +10,7 @@ import { TranscriptEntry } from './TranscriptEntry';
 
 export const TurnProgressPayloadSchema = z.object({
   advancesTimeline: z.boolean().optional(),
-  beatDelta: BeatDelta.optional(),
+  beatTracker: BeatTrackerSchema.optional(),
   chronicleShouldClose: z.boolean().optional(),
   executedNodes: z.array(z.string().min(1)).max(48).optional(),
   failure: z.boolean().optional(),

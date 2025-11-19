@@ -36,6 +36,7 @@ import {CheckRunnerNode} from "@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerN
 import {GmResponseNode} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes";
 import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
 import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
+import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
 
 type GmEngineOptions = {
   worldStateStore: WorldStateStore;
@@ -99,13 +100,19 @@ class GmEngine {
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
 
+    const worldUpdater = new WorldUpdater({worldStateStore: this.worldStateStore, locationGraphStore: this.locationGraphStore});
+    const updatedContext = await worldUpdater.update(graphResult);
+
     const turn = this.#buildTurn({
       chronicleId,
-      graphResult,
+      graphResult: updatedContext,
       playerMessage,
       systemMessage,
       turnSequence,
     });
+
+    await this.worldStateStore.addTurn(turn);
+
     //
     // if (graphResult.chronicleShouldClose === true && chronicleState.chronicle?.status !== 'closed') {
     //   await this.#closeChronicle({
@@ -115,15 +122,14 @@ class GmEngine {
     //   chronicleStatus = 'closed';
     // }
 
-    await this.worldStateStore.addTurn(turn);
 
     log('info', 'Narrative engine resolved turn', {
       checkIssued: Boolean(graphResult.skillCheckPlan),
       chronicleId,
     });
 
-    const updatedCharacter = graphResult.updatedCharacter ?? chronicleState.character ?? null;
-    const locationSummary = graphResult.locationSummary ?? null;
+    const updatedCharacter = updatedContext.chronicleState.character ?? null;
+    const locationSummary = updatedContext.chronicleState.location ?? null;
 
     return { chronicleStatus, locationSummary, turn, updatedCharacter };
   }

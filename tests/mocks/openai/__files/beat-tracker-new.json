@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":{\"title\":\"Shattered Chorus\",\"description\":\"Investigate the harmonics pulsing through the eastern vault.\"},\"updates\":[],\"turnEffect\":\"spawn_new\"}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":{\"title\":\"Shattered Chorus\",\"description\":\"Investigate the harmonics pulsing through the eastern vault.\"},\"updates\":[],\"turnEffect\":\"spawn_new\"}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 6,
+    "output_tokens": 6,
+    "total_tokens": 12
+  }
+}

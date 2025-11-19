@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":null,\"updates\":[{\"beatId\":\"shattered_chorus\",\"changeKind\":\"advance\",\"description\":\"Marked progress toward cracking the vault tone.\",\"status\":\"in_progress\"}],\"turnEffect\":\"advance_existing\"}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":null,\"updates\":[{\"beatId\":\"shattered_chorus\",\"changeKind\":\"advance\",\"description\":\"Marked progress toward cracking the vault tone.\",\"status\":\"in_progress\"}],\"turnEffect\":\"advance_existing\"}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 6,
+    "output_tokens": 6,
+    "total_tokens": 12
+  }
+}

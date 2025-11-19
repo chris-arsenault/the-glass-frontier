@@ -61,7 +61,6 @@ class PromptComposer {
       }]
     })
 
-    console.log(this.#userMessage(context));
     return prompt;
   }
 
@@ -73,11 +72,16 @@ class PromptComposer {
     const fragments = templateFragmentMapping[templateId]
 
     const devMessageList = []
-    fragments.forEach((f) => {
+    for (const f of fragments) {
       devMessageList.push(`### ${f.toUpperCase()}`);
-      devMessageList.push(JSON.stringify(extractFragment(f, context)));
+      const frag = await extractFragment(f, context)
+      if (typeof frag === 'string') {
+        devMessageList.push(frag);
+      } else {
+        devMessageList.push(JSON.stringify(frag));
+      }
       devMessageList.push('\n'); // double newline between fragments
-    })
+    }
     return devMessageList.join('\n')
 
   }

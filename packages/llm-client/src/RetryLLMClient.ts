@@ -39,9 +39,7 @@ export class RetryLLMClient {
       if (format === 'json') {
         response.message = JSON.parse(response.message);
       }
-      console.log("final response")
-      console.log(response)
-      console.log("final response")
+
       await this.#successHandler.handleSuccess(response);
       return response;
     } catch(error) {
@@ -67,11 +65,8 @@ export class RetryLLMClient {
     setTimeout(DEFAULT_TIMEOUT_MS, () => controller.abort());
     try {
       const response = await this.#provider.execute(request, controller.signal);
-      console.log(response)
       const record = response as Record<string, unknown>;
-      console.log(record)
       const usage = record.usage as Record<string, any> ?? {};
-      console.log(usage)
       const message = record.output_text;
 
       return {

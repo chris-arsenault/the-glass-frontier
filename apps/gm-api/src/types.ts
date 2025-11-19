@@ -7,7 +7,7 @@ import type {
   SkillCheckResult,
   Turn,
   TranscriptEntry,
-  BeatDelta,
+  BeatDelta, BeatTracker,
 } from '@glass-frontier/dto';
 import type { LocationGraphStore} from '@glass-frontier/persistence';
 
@@ -20,8 +20,8 @@ export type ChronicleState = {
   chronicleId: string;
   turnSequence: number;
   chronicle: Chronicle;
-  character: Character | null;
-  location: LocationSummary | null;
+  character: Character;
+  location: LocationSummary;
   turns: Turn[];
 }
 
@@ -43,16 +43,16 @@ export type GraphContext = {
 
   //stage results
   playerIntent?: Intent;
-  beatDelta?: BeatDelta;
   gmResponse?: TranscriptEntry
   skillCheckPlan?: SkillCheckPlan;
   skillCheckResult?: SkillCheckResult;
   gmSummary?: string,
-  shouldCloseChronicle?: boolean;
-  advancesTimeline?: boolean;
+  shouldCloseChronicle: boolean;
+  advancesTimeline: boolean;
 
   locationDelta?: LocationDeltaDecision;
   inventoryDelta?: InventoryDelta;
+  beatTracker?: BeatTracker;
 }
 
 export type TelemetryLike = {

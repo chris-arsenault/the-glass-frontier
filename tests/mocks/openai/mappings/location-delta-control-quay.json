@@ -8,7 +8,7 @@
         "matchesJsonPath": "$[?(@.text.format.name == 'location_delta_decision')]"
       },
       {
-        "matchesJsonPath": "$[?(@.input[0].content contains '#loc:quay')]"
+        "matchesJsonPath": "$[?(@.input[1].content[0].text contains '#loc:quay')]"
       }
     ]
   },

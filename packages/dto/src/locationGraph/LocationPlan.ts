@@ -33,7 +33,7 @@ export const LocationPlanOp = z.discriminatedUnion('op', [
 ]);
 
 export const LocationPlan = z.object({
-  character_id: z.string().min(1),
+  characterId: z.string().min(1),
   notes: z.string().optional(),
   ops: z.array(LocationPlanOp),
 });

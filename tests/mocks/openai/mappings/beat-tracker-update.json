@@ -1,14 +1,14 @@
 {
-  "priority": 0,
+  "priority": 2,
   "request": {
     "method": "POST",
     "urlPath": "/v1/responses",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$[?(@.text.format.name == 'location_delta_decision')]"
+        "matchesJsonPath": "$[?(@.text.format.name == 'beat_tracker_schema')]"
       },
       {
-        "matchesJsonPath": "$[?(@.input[1].content[0].text contains '#loc:auric')]"
+        "matchesJsonPath": "$[?(@.input[0].content[0].text contains '#beat:update')]"
       }
     ]
   },
@@ -17,6 +17,6 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "location-delta-control-auric.json"
+    "bodyFileName": "beat-tracker-noop.json"
   }
 }

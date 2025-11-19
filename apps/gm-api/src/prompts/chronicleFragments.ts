@@ -24,14 +24,16 @@ export const templateFragmentMapping: Partial<Record<PromptTemplateId, Chronicle
   "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
 }
 
-export function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
+export async function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
   switch (fragmentType) {
+    case 'user-message':
+      return userMessageFragment(context);
     case 'character':
       return characterFragment(context);
     case 'location':
       return locationFragment(context);
     case 'location-detail':
-      return locationDetailFragment(context);
+      return await locationDetailFragment(context);
     case 'inventory':
       return inventoryFragment(context);
     case 'inventory-detail':
@@ -53,6 +55,10 @@ export function extractFragment(fragmentType: ChronicleFragmentTypes, context: G
     default:
       return {};
   }
+}
+
+function userMessageFragment(context: GraphContext): any {
+  return context.playerMessage.content;
 }
 
 function characterFragment(context: GraphContext): any {
@@ -80,6 +86,7 @@ async function locationDetailFragment(context: GraphContext): Promise<any> {
   }
 
   return {
+    self: promptInput.current,
     children: promptInput.children,
     parent: promptInput.parent,
     siblings: promptInput.adjacent,

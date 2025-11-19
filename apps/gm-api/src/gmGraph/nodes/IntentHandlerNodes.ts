@@ -92,9 +92,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
 
     try {
       const composer = new PromptComposer(context.templates)
-      console.log(composer)
       const prompt = await composer.buildPrompt(this.options.id, context);
-      console.log(prompt);
       const narration = await context.llm.generate({
         max_output_tokens: NARRATIVE_MAX_OUTPUT_TOKENS,
         model: NARRATIVE_MODEL,
@@ -108,7 +106,6 @@ abstract class BaseIntentHandlerNode implements GraphNode {
           verbosity: NARRATIVE_VERBOSITY
         }
       }, 'string');
-      console.log(narration.message);
       if (narration === null) {
         return {...context, failure: true};
       }
@@ -122,9 +119,6 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         },
         role: 'gm',
       };
-      console.log("transcript");
-      console.log(transcript);
-      console.log("transcript");
       return {
         ...context,
         advancesTimeline: this.options.advancesTimeline,

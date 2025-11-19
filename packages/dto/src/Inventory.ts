@@ -5,12 +5,12 @@ export type InventoryEntryKind = z.infer<typeof InventoryEntryKindSchema>;
 
 export const InventoryDeltaOpSchema = z
   .object({
-    op: z.enum(['add', 'remove', 'update', 'consume']),
+    op: z.enum(['add', 'remove', 'update']),
     name: z.string().min(1),
-    kind: InventoryEntryKindSchema.optional().nullable(),
-    description: z.string().min(1).optional().nullable(),
+    kind: InventoryEntryKindSchema,
+    description: z.string().min(1),
     effect: z.string().min(1).optional().nullable(),
-    quantity: z.number().int().nonnegative().optional().nullable(),
+    quantity: z.number().int().nonnegative(),
   });
 
 export type InventoryDeltaOp = z.infer<typeof InventoryDeltaOpSchema>;

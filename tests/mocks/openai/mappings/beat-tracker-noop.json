@@ -1,5 +1,5 @@
 {
-  "priority": 1,
+  "priority": 10,
   "request": {
     "method": "POST",
     "urlPath": "/v1/responses",
@@ -14,6 +14,6 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "beat-tracker.json"
+    "bodyFileName": "beat-tracker-noop.json"
   }
 }

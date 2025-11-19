@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"ops\":[{\"op\":\"add\",\"name\":\"Auric Loom\",\"kind\":\"relic\",\"description\":\"Translates auric pulses into safe harmonics\",\"quantity\":1},{\"op\":\"remove\",\"name\":\"Vault Access Seed\",\"kind\":\"supplies\"},{\"op\":\"consume\",\"name\":\"Starlight Draught\",\"kind\":\"consumable\",\"quantity\":1}]}"
+          "text": "{\"ops\":[{\"op\":\"add\",\"name\":\"Auric Loom\",\"kind\":\"relic\",\"description\":\"Translates auric pulses into safe harmonics\",\"quantity\":1},{\"op\":\"remove\",\"name\":\"Vault Access Seed\",\"kind\":\"supplies\", \"description\":\"noop\",\"quantity\":0},{\"op\":\"update\",\"name\":\"Starlight Draught\",\"kind\":\"consumable\",\"quantity\":2, \"description\":\"noop\"}]}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"ops\":[{\"op\":\"add\",\"name\":\"Auric Loom\",\"kind\":\"relic\",\"description\":\"Translates auric pulses into safe harmonics\",\"quantity\":1},{\"op\":\"remove\",\"name\":\"Vault Access Seed\",\"kind\":\"supplies\"},{\"op\":\"consume\",\"name\":\"Starlight Draught\",\"kind\":\"consumable\",\"quantity\":1}]}"
+    "{\"ops\":[{\"op\":\"add\",\"name\":\"Auric Loom\",\"kind\":\"relic\",\"description\":\"Translates auric pulses into safe harmonics\",\"quantity\":1},{\"op\":\"remove\",\"name\":\"Vault Access Seed\",\"kind\":\"supplies\", \"description\":\"noop\",\"quantity\":0},{\"op\":\"update\",\"name\":\"Starlight Draught\",\"kind\":\"consumable\",\"quantity\":2, \"description\":\"noop\"}]}"
   ],
   "stop_reason": "stop",
   "usage": {
