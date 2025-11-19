@@ -94,6 +94,7 @@ class GmEngine {
       playerMessage,
       templateRuntime,
       turnSequence,
+      locationGraphStore: this.locationGraphStore
     });
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
@@ -188,6 +189,7 @@ class GmEngine {
     playerMessage,
     templateRuntime,
     turnSequence,
+    locationGraphStore
   }: {
     authorizationHeader?: string;
     chronicleId: string;
@@ -195,18 +197,21 @@ class GmEngine {
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
+    locationGraphStore: LocationGraphStore;
   }): GraphContext {
     return {
       chronicleId,
       turnSequence,
       chronicleState,
       playerMessage,
+      locationGraphStore,
       llm: this.llm,
       telemetry: this.telemetry,
       templates: templateRuntime,
       failure: false,
       systemMessage: undefined,
       playerIntent: undefined,
+      shouldUpdate: false,
     };
   }
 

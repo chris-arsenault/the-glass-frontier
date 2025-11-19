@@ -138,5 +138,12 @@
     "summary": "GM API now handles player intents",
     "details": "Refactored the client’s send-and-wrap flows and updated the API Gateway/Lambda wiring so player turns now hit the dedicated gm-api while the chronicle service continues handling directory and setup endpoints.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-inventory-ui-simplification",
+    "releasedAt": "2025-11-21",
+    "summary": "Character inventory UI matches the new schema",
+    "details": "Rebuilt the character overview so it renders gear, relics, consumables, and supplies straight from the new flat inventory payload, removed the obsolete gear queue/data shard hooks, and refreshed the inventory delta badge to show the new op kinds, descriptions, effects, and quantities.",
+    "type": "improvement"
   }
 ]

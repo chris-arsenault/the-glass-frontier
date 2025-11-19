@@ -9,7 +9,6 @@ import type {
   SkillCheckResult,
   SkillTier,
   TranscriptEntry,
-  PendingEquip,
   InventoryDelta,
   LlmTrace,
   PlayerFeedbackVisibilityLevel,
@@ -93,7 +92,6 @@ export type ChronicleState = {
   momentumTrend: MomentumTrend | null;
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
-  pendingEquip: PendingEquip[];
   recentChronicles: string[];
   playerSettings: PlayerSettings;
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -110,8 +108,6 @@ export type ChronicleStore = {
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
-  queueEquipChange: (entry: PendingEquip) => void;
-  clearPendingEquipQueue: () => void;
   clearActiveChronicle: () => void;
   setChronicleWrapTarget: (shouldWrap: boolean) => Promise<void>;
   resetStore: () => void;

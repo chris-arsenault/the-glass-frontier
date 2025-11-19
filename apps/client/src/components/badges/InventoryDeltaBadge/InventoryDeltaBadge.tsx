@@ -1,20 +1,12 @@
-import type { InventoryDelta } from '@glass-frontier/dto';
+import type { InventoryDelta, InventoryEntryKind } from '@glass-frontier/dto';
 import React from 'react';
 
 import './InventoryDeltaBadge.css';
 
-const slotLabels: Record<string, string> = {
-  armament: 'Armament',
-  headgear: 'Headgear',
-  module: 'Module',
-  outfit: 'Outfit',
-};
-
-const bucketLabels: Record<string, string> = {
-  consumables: 'Consumables',
-  data_shards: 'Data Shards',
-  imbued_items: 'Imbued',
-  relics: 'Relics',
+const kindLabels: Record<InventoryEntryKind, string> = {
+  consumable: 'Consumable',
+  gear: 'Gear',
+  relic: 'Relic',
   supplies: 'Supplies',
 };
 
@@ -25,28 +17,11 @@ type InventoryDeltaBadgeProps = {
 type Row = {
   id: string;
   op: string;
-  slot?: string | null;
-  bucket?: string | null;
+  kind?: string | null;
   name?: string | null;
-  meta?: string | null;
-  amount?: number | null;
-};
-
-type InventoryOp = NonNullable<InventoryDelta['ops']>[number];
-
-type MetaResolver = (op: InventoryOp, amount: number | null) => string | null;
-
-const metaResolvers: Record<string, MetaResolver> = {
-  add: (op) => op.hook ?? op.purpose ?? op.seed ?? null,
-  consume: (_op, amount) =>
-    typeof amount === 'number' && amount > 0 ? `x${amount}` : null,
-  remove: (op) => op.hook ?? op.purpose ?? op.seed ?? null,
-  spend_shard: (op) => op.purpose ?? op.seed ?? null,
-};
-
-const resolveMetaLabel = (op: InventoryOp, amount: number | null): string | null => {
-  const resolver = metaResolvers[op.op];
-  return resolver ? resolver(op, amount) : null;
+  quantity?: string | null;
+  description?: string | null;
+  effect?: string | null;
 };
 
 const formatRows = (delta: InventoryDelta): Row[] => {
@@ -56,14 +31,15 @@ const formatRows = (delta: InventoryDelta): Row[] => {
   return delta.ops
     .map((op, index) => {
       const base: Row = {
-        amount: op.amount ?? null,
-        bucket: op.bucket ? bucketLabels[op.bucket] ?? op.bucket : null,
+        description: op.description ?? null,
+        effect: op.effect ?? null,
         id: `${op.op}-${index}`,
+        kind: op.kind ? kindLabels[op.kind] ?? op.kind : null,
         name: op.name ?? null,
         op: op.op,
-        slot: op.slot ? slotLabels[op.slot] ?? op.slot : null,
+        quantity:
+          typeof op.quantity === 'number' && op.quantity > 0 ? `x${op.quantity}` : null,
       };
-      base.meta = resolveMetaLabel(op as InventoryOp, base.amount ?? null);
       return base;
     })
     .filter((row) => row.name);
@@ -82,7 +58,7 @@ export function InventoryDeltaBadge({ delta }: InventoryDeltaBadgeProps) {
   }
 
   const ariaLabel = `Inventory changes: ${rows
-    .map((row) => `${row.op} ${row.name}${row.slot ? ` (${row.slot})` : ''}`)
+    .map((row) => `${row.op} ${row.name}${row.kind ? ` (${row.kind})` : ''}`)
     .join('; ')}`;
 
   return (
@@ -98,10 +74,13 @@ export function InventoryDeltaBadge({ delta }: InventoryDeltaBadgeProps) {
             className={`inventory-delta-row inventory-delta-${getOpClassName(row.op)}`}
           >
             <span className="delta-op">{row.op}</span>
-            {row.slot ? <span className="delta-slot">{row.slot}</span> : null}
-            {row.bucket ? <span className="delta-bucket">{row.bucket}</span> : null}
+            {row.kind ? <span className="delta-kind">{row.kind}</span> : null}
             <strong className="delta-name">{row.name}</strong>
-            {row.meta ? <em className="delta-meta">{row.meta}</em> : null}
+            {row.quantity ? <span className="delta-quantity">{row.quantity}</span> : null}
+            {row.description ? (
+              <span className="delta-description">{row.description}</span>
+            ) : null}
+            {row.effect ? <em className="delta-effect">{row.effect}</em> : null}
           </div>
         ))}
       </div>

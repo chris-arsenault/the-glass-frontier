@@ -127,111 +127,11 @@
   gap: 0.4rem;
 }
 
-.gear-grid {
-  display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-}
-
-.gear-slot-card {
-  display: flex;
-  padding: 0.9rem;
-  background: rgb(15 23 42 / 65%);
-  border: 1px solid rgb(148 163 184 / 25%);
-  border-radius: 0.75rem;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.gear-slot-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: space-between;
-}
-
-.gear-slot-title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.gear-slot-body {
-  min-height: 3rem;
-}
-
-.gear-item-name {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.pending-chip {
-  display: inline-flex;
-  padding: 0.1rem 0.5rem;
-  color: #fbbf24;
-  border: 1px solid rgb(251 191 36 / 60%);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.gear-slot-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.session-card-button-secondary {
-  padding: 0.35rem 0.85rem;
-  color: #e2e8f0;
-  background: transparent;
-  border: 1px solid rgb(148 163 184 / 45%);
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.session-card-button-secondary:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
 .inventory-section {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   padding-top: 0.4rem;
-}
-
-.inventory-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.inventory-reset-button {
-  padding: 0.25rem 0.7rem;
-  color: #cbd5f5;
-  background: transparent;
-  border: 1px solid rgb(148 163 184 / 35%);
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.inventory-reset-button:hover,
-.inventory-reset-button:focus-visible {
-  border-color: rgb(148 163 184 / 75%);
-  outline: none;
-}
-
-.inventory-hint {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 0.85rem;
-  font-style: italic;
 }
 
 .inventory-list {
@@ -266,48 +166,21 @@
   font-size: 0.8rem;
 }
 
-.inventory-equip-button {
-  padding: 0.35rem 0.75rem;
-  color: #0f172a;
-  background: rgb(59 130 246 / 85%);
-  border: none;
-  border-radius: 0.6rem;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.inventory-equip-button.queued {
+.inventory-item-effect {
+  margin: 0.3rem 0 0;
   color: #cbd5f5;
-  background: rgb(59 130 246 / 20%);
-  border: 1px solid rgb(96 165 250 / 50%);
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
-.inventory-tag {
+.inventory-quantity {
   display: inline-flex;
-  padding: 0.15rem 0.6rem;
+  padding: 0.2rem 0.6rem;
   color: #e2e8f0;
-  background: rgb(15 23 42 / 35%);
-  border: 1px solid rgb(148 163 184 / 35%);
+  background: rgb(59 130 246 / 20%);
+  border: 1px solid rgb(96 165 250 / 45%);
   border-radius: 999px;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-}
-
-.pending-equip-list {
-  display: flex;
-  margin: 0.75rem 0 0;
-  padding: 0;
-  flex-direction: column;
-  gap: 0.3rem;
-  list-style: none;
-}
-
-.pending-equip-slot {
-  color: #cbd5f5;
-  font-weight: 600;
-}
-
-.pending-equip-action {
-  color: #fbbf24;
 }

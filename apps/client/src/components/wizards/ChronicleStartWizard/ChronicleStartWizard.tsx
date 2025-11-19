@@ -2,12 +2,10 @@ import type {
   LocationGraphSnapshot,
   LocationPlace,
   ChronicleSeed,
-  DataShard,
 } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { locationClient } from '../../../lib/locationClient';
 import { trpcClient } from '../../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
@@ -18,7 +16,6 @@ import {
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
-import { useChronicleShardHandler } from './hooks/useChronicleShardHandler';
 import {
   useLocationExplorer,
   type LocationInspectorState,
@@ -36,7 +33,6 @@ const toneOptions = [
 ];
 
 type SeedStatus = 'idle' | 'loading' | 'error';
-const EMPTY_SHARDS: DataShard[] = [];
 
 export function ChronicleStartWizard() {
   const navigate = useNavigate();
@@ -45,7 +41,6 @@ export function ChronicleStartWizard() {
   const setStep = useChronicleStartStore((state) => state.setStep);
   const resetWizard = useChronicleStartStore((state) => state.reset);
   const selectedLocation = useChronicleStartStore((state) => state.selectedLocation);
-  const setSelectedLocation = useChronicleStartStore((state) => state.setSelectedLocation);
   const selectedSeedId = useChronicleStartStore((state) => state.chosenSeedId);
   const seeds = useChronicleStartStore((state) => state.seeds);
   const customSeedText = useChronicleStartStore((state) => state.customSeedText);
@@ -58,12 +53,9 @@ export function ChronicleStartWizard() {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
-  const selectedCharacter = useSelectedCharacter();
-  const inventoryShards: DataShard[] = selectedCharacter?.inventory?.data_shards ?? EMPTY_SHARDS;
 
   const {
     activePlaceId,
-    bootstrapShardLocation,
     graph,
     graphError,
     inspector,
@@ -90,21 +82,6 @@ export function ChronicleStartWizard() {
   const toggleToneChip = useChronicleStartStore((state) => state.toggleToneChip);
   const chooseSeed = useChronicleStartStore((state) => state.chooseSeed);
   const setCustomSeed = useChronicleStartStore((state) => state.setCustomSeed);
-
-  const { isShardProcessing, shardMessage } = useChronicleShardHandler({
-    beatsEnabled,
-    bootstrapShardLocation,
-    createChronicleFromSeed,
-    goToDefaultSurface,
-    inventoryShards,
-    navigate,
-    preferredCharacterId,
-    resetWizard,
-    searchParams,
-    selectPlace,
-    setSelectedLocation,
-    setStep,
-  });
 
   const [customTitle, setCustomTitle] = useState('');
   const [creationError, setCreationError] = useState<string | null>(null);
@@ -348,7 +325,6 @@ export function ChronicleStartWizard() {
         </button>
       </header>
       <Stepper currentStep={step} onNavigate={setStep} />
-      {shardMessage ? <div className="wizard-banner">{shardMessage}</div> : null}
       <div className="chronicle-wizard-body">{currentStepComponent}</div>
       <footer className="chronicle-wizard-footer">
         <button type="button" className="secondary" onClick={handleBack}>
@@ -358,9 +334,7 @@ export function ChronicleStartWizard() {
           type="button"
           className="primary"
           onClick={step === 'create' ? handleChronicleCreate : handleNext}
-          disabled={
-            step === 'create' ? isCreatingChronicle || !canGoNext : !canGoNext || isShardProcessing
-          }
+          disabled={step === 'create' ? isCreatingChronicle || !canGoNext : !canGoNext}
         >
           {isCreatingChronicle ? 'Creating…' : primaryActionLabel}
         </button>

@@ -80,9 +80,7 @@
   color: #4ade80;
 }
 
-.inventory-delta-row.inventory-delta-remove .delta-op,
-.inventory-delta-row.inventory-delta-unequip .delta-op,
-.inventory-delta-row.inventory-delta-spend-shard .delta-op {
+.inventory-delta-row.inventory-delta-remove .delta-op {
   color: #f87171;
 }
 
@@ -90,8 +88,11 @@
   color: #fde047;
 }
 
-.inventory-delta-row .delta-slot,
-.inventory-delta-row .delta-bucket {
+.inventory-delta-row.inventory-delta-update .delta-op {
+  color: #38bdf8;
+}
+
+.inventory-delta-row .delta-kind {
   color: #94a3b8;
   font-size: 0.8rem;
 }
@@ -100,7 +101,17 @@
   font-weight: 600;
 }
 
-.inventory-delta-row .delta-meta {
+.inventory-delta-row .delta-quantity {
+  justify-self: end;
+  font-weight: 600;
+}
+
+.inventory-delta-row .delta-description {
   color: #cbd5f5;
+  font-size: 0.8rem;
+}
+
+.inventory-delta-row .delta-effect {
+  color: #fbbf24;
   font-style: italic;
 }

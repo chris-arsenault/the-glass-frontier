@@ -19,6 +19,8 @@ export const InventoryDeltaSchema = z.object({
   ops: z.array(InventoryDeltaOpSchema).default([]),
 });
 
+export type InventoryDelta = z.infer<typeof InventoryDeltaSchema>;
+
 
 export const InventoryEntrySchema = z.object({
   id: z.string().min(1),
@@ -34,3 +36,5 @@ export type InventoryEntry = z.infer<typeof InventoryEntrySchema>;
 export const InventorySchema = z.array(InventoryEntrySchema).default([]);
 
 export type Inventory = z.infer<typeof InventorySchema>;
+
+export const createEmptyInventory = (): Inventory => [];

@@ -1,6 +1,9 @@
 import {isNonEmptyString} from "@glass-frontier/utils";
 import {GraphContext} from "@glass-frontier/gm-api/types";
 
+const MAX_CHILDREN = 25;
+const MAX_NEIGHBORS = 25;
+
 import type {LocationGraphSnapshot, LocationPlace, LocationPlanEdge} from "@glass-frontier/dto";
 export type PromptInput = {
   adjacent: string[];
