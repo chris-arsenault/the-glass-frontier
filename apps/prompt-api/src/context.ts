@@ -1,17 +1,13 @@
+import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
 import { createOpsStore } from '@glass-frontier/ops';
-import { PromptTemplateManager, createWorldStateStore } from '@glass-frontier/worldstate';
 
 const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
 if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
   throw new Error('WORLDSTATE_DATABASE_URL must be configured for the prompt API.');
 }
 
-const worldStateStore = createWorldStateStore({
-  connectionString: worldstateDatabaseUrl,
-});
-
-const templateManager = new PromptTemplateManager({ worldStateStore });
-
+const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
+const templateManager = appStore.promptTemplateManager;
 const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
 export type Context = {
@@ -19,6 +15,7 @@ export type Context = {
   auditLogStore: typeof opsStore.auditLogStore;
   auditReviewStore: typeof opsStore.auditReviewStore;
   authorizationHeader?: string;
+  playerStore: PlayerStore;
   opsStore: typeof opsStore;
   templateManager: PromptTemplateManager;
 };
@@ -29,6 +26,7 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     auditLogStore: opsStore.auditLogStore,
     auditReviewStore: opsStore.auditReviewStore,
     authorizationHeader: options?.authorizationHeader,
+    playerStore: appStore.playerStore,
     opsStore,
     templateManager,
   };

@@ -26,6 +26,8 @@
       "@glass-frontier/node-utils/*": ["packages/node-utils/src/*"],
       "@glass-frontier/skill-check-resolver": ["packages/skill-check-resolver/src/index.ts"],
       "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
+      "@glass-frontier/app": ["packages/app/src/index.ts"],
+      "@glass-frontier/app/*": ["packages/app/src/*"],
       "@glass-frontier/worldstate": ["packages/worldstate/src/index.ts"],
       "@glass-frontier/worldstate/*": ["packages/worldstate/src/*"],
       "@glass-frontier/ops": ["packages/ops/src/index.ts"],

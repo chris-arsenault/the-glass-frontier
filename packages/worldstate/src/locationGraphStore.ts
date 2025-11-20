@@ -184,24 +184,30 @@ class PostgresLocationGraphStore implements LocationGraphStore {
       return this.getLocationState(input.characterId);
     }
 
-    const nextState = await withTransaction(this.#pool, async (client) => {
-      const currentState = await this.#getLocationState(client, input.characterId);
-      const adapter: PlanMutationAdapter = {
-        createEdge: async (edge) => this.#createEdge(client, input.locationId, edge),
-        createPlace: async (place) => {
-          const created = await this.#createPlaceRecord(client, {
-            canonicalParentId: place.canonical_parent_id ?? null,
-            description: place.description ?? null,
-            id: place.id ?? randomUUID(),
-            kind: place.kind,
-            locationRoot: input.locationId,
-            name: place.name,
-            parentId: place.parent_id ?? null,
-            tags: normalizeTags(place.tags, 24),
-          });
-          return created.id;
-        },
-        setCanonicalParent: async (childId, parentId) =>
+      const nextState = await withTransaction(this.#pool, async (client) => {
+        const currentState = await this.#getLocationState(client, input.characterId);
+        const adapter: PlanMutationAdapter = {
+          createEdge: async (edge) => this.#createEdge(client, input.locationId, edge),
+          createPlace: async (place) => {
+            const placeInput = place as {
+              canonical_parent_id?: string | null;
+              description?: string | null;
+              id?: string;
+              parent_id?: string | null;
+            };
+            const created = await this.#createPlaceRecord(client, {
+              canonicalParentId: placeInput.canonical_parent_id ?? null,
+              description: placeInput.description ?? null,
+              id: placeInput.id ?? randomUUID(),
+              kind: place.kind,
+              locationRoot: input.locationId,
+              name: place.name,
+              parentId: placeInput.parent_id ?? null,
+              tags: normalizeTags(place.tags, 24),
+            });
+            return created.id;
+          },
+          setCanonicalParent: async (childId, parentId) =>
           this.#setCanonicalParent(client, childId, parentId),
       };
 

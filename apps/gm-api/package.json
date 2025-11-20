@@ -21,6 +21,7 @@
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.930.0",
+    "@glass-frontier/app": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*",

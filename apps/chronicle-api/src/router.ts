@@ -56,25 +56,13 @@ const createChronicleInputSchema = z
 type CreateChronicleInput = z.infer<typeof createChronicleInputSchema>;
 
 const ensurePlayerRecord = async (ctx: Context, playerId: string): Promise<Player> => {
-  const existing = await ctx.worldStateStore.getPlayer(playerId);
-  if (existing !== null && existing !== undefined) {
-    if (existing.templateOverrides === undefined) {
-      existing.templateOverrides = {};
-    }
-    return existing;
-  }
-  const blank: Player = {
-    email: undefined,
-    id: playerId,
-    templateOverrides: {},
-    username: playerId,
-  };
-  return ctx.worldStateStore.upsertPlayer(blank);
+  return ctx.playerStore.ensure(playerId);
 };
 
 export const appRouter = t.router({
   createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
     log('info', `Creating Character ${input.name}`);
+    await ctx.playerStore.ensure(input.playerId);
     const character = await ctx.worldStateStore.upsertCharacter(input);
     return { character };
   }),
@@ -214,13 +202,8 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const player = await ensurePlayerRecord(ctx, input.playerId);
       const preferences = normalizePlayerPreferences(input.preferences);
-      const updated: Player = {
-        ...player,
-        preferences,
-      };
-      await ctx.worldStateStore.upsertPlayer(updated);
+      await ctx.playerStore.setPreferences(input.playerId, preferences);
       return { preferences };
     }),
 
@@ -230,6 +213,7 @@ async function createChronicleHandler(
   ctx: Context,
   input: CreateChronicleInput
 ): Promise<{ chronicle: EnsureChronicleResult }> {
+  await ctx.playerStore.ensure(input.playerId);
   const character = await requireCharacter(ctx, input.characterId);
   ensureCharacterOwnership(character, input.playerId);
 

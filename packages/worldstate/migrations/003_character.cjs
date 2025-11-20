@@ -9,7 +9,12 @@ exports.up = (pgm) => {
       references: 'node(id)',
       onDelete: 'CASCADE',
     },
-    player_id: { type: 'text', notNull: true, references: 'player(id)', onDelete: 'CASCADE' },
+    player_id: {
+      type: 'text',
+      notNull: true,
+      references: '"app"."player"(id)',
+      onDelete: 'CASCADE',
+    },
     name: { type: 'text', notNull: true },
     tags: { type: 'text[]', notNull: true, default: pgm.func(`'{}'::text[]`) },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },

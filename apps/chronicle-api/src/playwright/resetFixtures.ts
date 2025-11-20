@@ -14,7 +14,7 @@ export const resetPlaywrightFixtures = async (ctx: Context): Promise<{ locationI
   const locationId = randomUUID();
   const chronicle = buildPlaywrightChronicleRecord({ locationId });
 
-  await ctx.worldStateStore.upsertPlayer(player);
+  await ctx.playerStore.upsert(player);
   await ctx.worldStateStore.upsertCharacter(character);
   await ctx.worldStateStore.deleteChronicle(chronicle.id);
   await ctx.worldStateStore.upsertChronicle(chronicle);

@@ -1,5 +1,5 @@
 {
-  "name": "@glass-frontier/ops",
+  "name": "@glass-frontier/app",
   "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,14 +17,20 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "migrate": "node-pg-migrate -f ./node-pg-migrate.ops.config.cjs up",
-    "migrate:up": "node-pg-migrate -f ./node-pg-migrate.ops.config.cjs up",
-    "migrate:down": "node-pg-migrate -f ./node-pg-migrate.ops.config.cjs down",
-    "migrate:reset": "node-pg-migrate -f ./node-pg-migrate.ops.config.cjs down 0"
+    "migrate": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs up",
+    "migrate:up": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs up",
+    "migrate:down": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs down",
+    "migrate:reset": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs down 0"
   },
+  "keywords": [
+    "glass-frontier",
+    "app",
+    "postgres"
+  ],
+  "author": "Tsonu",
+  "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
     "@glass-frontier/dto": "workspace:*",
-    "@glass-frontier/utils": "workspace:*",
     "node-pg-migrate": "^7.6.1",
     "pg": "^8.13.1"
   },

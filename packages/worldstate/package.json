@@ -30,12 +30,11 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.930.0",
-    "@aws-sdk/client-s3": "^3.930.0",
     "@glass-frontier/dto": "workspace:*",
-    "@glass-frontier/node-utils": "workspace:*",
-    "@glass-frontier/utils": "workspace:*",
     "node-pg-migrate": "^7.6.1",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10"
   }
 }

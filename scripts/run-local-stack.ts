@@ -18,7 +18,6 @@ const MOCK_ENV: Record<string, string> = {
   NARRATIVE_S3_PREFIX: 'test/',
   NARRATIVE_DDB_TABLE: 'gf-e2e-world-index',
   LOCATION_GRAPH_DDB_TABLE: 'gf-e2e-location-graph',
-  PROMPT_TEMPLATE_BUCKET: 'gf-e2e-prompts',
   TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
   CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
   LLM_PROXY_ARCHIVE_BUCKET: 'gf-e2e-audit',
@@ -117,6 +116,10 @@ async function main(): Promise<void> {
     await waitForWiremockReady();
   }
 
+  await execa('pnpm', ['-F', '@glass-frontier/app', 'migrate'], {
+    env,
+    stdio: 'inherit',
+  });
   await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'migrate'], {
     env,
     stdio: 'inherit',

@@ -7,7 +7,7 @@ import type {
   ChronicleClosureEvent,
   ChronicleSummaryKind,
 } from '@glass-frontier/dto';
-import type { PromptTemplateManager } from '@glass-frontier/worldstate';
+import type { PromptTemplateManager } from '@glass-frontier/app';
 import {
   type WorldStateStore,
   type LocationGraphStore,

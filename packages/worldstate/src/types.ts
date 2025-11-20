@@ -8,7 +8,6 @@ import type {
   LocationPlace,
   LocationState,
   LocationSummary,
-  Player,
   Turn,
   Attribute,
 } from '@glass-frontier/dto';
@@ -49,9 +48,6 @@ export type WorldStateStore = {
   upsertCharacter: (character: Character) => Promise<Character>;
   getCharacter: (characterId: string) => Promise<Character | null>;
   listCharactersByPlayer: (playerId: string) => Promise<Character[]>;
-
-  upsertPlayer: (player: Player) => Promise<Player>;
-  getPlayer: (playerId: string) => Promise<Player | null>;
 
   upsertChronicle: (chronicle: Chronicle) => Promise<Chronicle>;
   getChronicle: (chronicleId: string) => Promise<Chronicle | null>;

@@ -7,7 +7,12 @@ exports.up = (pgm) => {
     title: { type: 'text', notNull: true },
     primary_char_id: { type: 'uuid', references: 'character(id)', onDelete: 'SET NULL' },
     status: { type: 'text', notNull: true, default: 'open' },
-    player_id: { type: 'text', notNull: true, references: 'player(id)', onDelete: 'CASCADE' },
+    player_id: {
+      type: 'text',
+      notNull: true,
+      references: '"app"."player"(id)',
+      onDelete: 'CASCADE',
+    },
     location_id: { type: 'uuid', notNull: true, references: 'location(id)', onDelete: 'RESTRICT' },
     seed_text: { type: 'text' },
     beats_enabled: { type: 'boolean', notNull: true, default: true },

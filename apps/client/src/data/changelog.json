@@ -145,5 +145,12 @@
     "summary": "Retired the legacy persistence package",
     "details": "Moved prompt template, audit, and support data into the Postgres-backed stack, split bug reports and token usage into a dedicated ops module with its own migrations, removed the deprecated S3/Dynamo persistence layer (including the usage DynamoDB table), and pointed every API at the new canonical storage modules.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-24-app-schema-prompts",
+    "releasedAt": "2025-11-24",
+    "summary": "Prompt templates now live in the app schema",
+    "details": "Introduced the @glass-frontier/app package with its own Postgres schema for players and prompt templates, seeded official template bodies via migrations, removed the S3 prompt bucket dependency, and rewired the APIs to resolve templates and player settings through the new Postgres-backed app store.",
+    "type": "improvement"
   }
 ]

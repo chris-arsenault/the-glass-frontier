@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/member-ordering */
-import type { Character, Chronicle, Player, Turn } from '@glass-frontier/dto';
+import type { Character, Chronicle, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -61,61 +61,11 @@ class PostgresWorldStateStore implements WorldStateStore {
     this.#locationGraphStore = options.locationGraphStore ?? null;
   }
 
-  async #upsertPlayerRow(payload: {
-    id: string;
-    username: string;
-    email: string | null;
-    preferences: Record<string, unknown>;
-    templateOverrides: Record<string, unknown>;
-    metadata: Record<string, unknown>;
-  }): Promise<void> {
-    await this.#pool.query(
-      `INSERT INTO player (id, username, email, preferences, template_overrides, metadata, updated_at)
-       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, now())
-       ON CONFLICT (id) DO UPDATE
-       SET username = EXCLUDED.username,
-           email = EXCLUDED.email,
-           preferences = EXCLUDED.preferences,
-           template_overrides = EXCLUDED.template_overrides,
-           metadata = EXCLUDED.metadata,
-           updated_at = now()`,
-      [
-        payload.id,
-        payload.username,
-        payload.email,
-        serializeJson(payload.preferences ?? {}),
-        serializeJson(payload.templateOverrides ?? {}),
-        serializeJson(payload.metadata ?? {}),
-      ]
-    );
-  }
-
-  async #getPlayerRow(playerId: string): Promise<{
-    id: string;
-    username: string;
-    email: string | null;
-    preferences: Record<string, unknown> | null;
-    template_overrides: Record<string, unknown> | null;
-    metadata: Record<string, unknown> | null;
-  } | null> {
-    const result = await this.#pool.query(
-      'SELECT id, username, email, preferences, template_overrides, metadata FROM player WHERE id = $1',
-      [playerId]
-    );
-    const row = result.rows[0];
-    if (!row) {
-      return null;
+  async #assertPlayerExists(playerId: string, executor: Pool | PoolClient = this.#pool): Promise<void> {
+    const lookup = await executor.query('SELECT 1 FROM app.player WHERE id = $1', [playerId]);
+    if (!lookup.rowCount) {
+      throw new Error(`Player ${playerId} not found in app schema`);
     }
-    return row;
-  }
-
-  async #ensurePlayer(executor: Pool | PoolClient, playerId: string): Promise<void> {
-    await executor.query(
-      `INSERT INTO player (id, username, email, preferences, template_overrides, metadata, updated_at)
-       VALUES ($1, $2, NULL, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, now())
-       ON CONFLICT (id) DO NOTHING`,
-      [playerId, playerId]
-    );
   }
 
   async ensureChronicle(params: {
@@ -135,6 +85,32 @@ class PostgresWorldStateStore implements WorldStateStore {
     }
     const record = this.#buildChronicleRecord(params, chronicleId);
     return this.upsertChronicle(record);
+  }
+
+  #buildChronicleRecord(
+    params: {
+      playerId: string;
+      locationId: string;
+      characterId?: string;
+      title?: string;
+      status?: Chronicle['status'];
+      seedText?: string | null;
+      beatsEnabled?: boolean;
+    },
+    chronicleId: string
+  ): Chronicle {
+    return normalizeChronicle({
+      beats: [],
+      beatsEnabled: params.beatsEnabled ?? true,
+      characterId: params.characterId,
+      id: chronicleId,
+      locationId: params.locationId,
+      playerId: params.playerId,
+      seedText: params.seedText ?? undefined,
+      status: params.status ?? 'open',
+      summaries: [],
+      title: params.title ?? 'Untitled Chronicle',
+    });
   }
 
   async getChronicleState(chronicleId: string): Promise<ChronicleSnapshot | null> {
@@ -171,7 +147,7 @@ class PostgresWorldStateStore implements WorldStateStore {
       playerId: character.playerId,
     });
     await withTransaction(this.#pool, async (client) => {
-      await this.#ensurePlayer(client, normalized.playerId);
+      await this.#assertPlayerExists(normalized.playerId, client);
       await this.#upsertNode(client, normalized.id, 'character', normalized);
       await client.query(
         `INSERT INTO character (id, player_id, name, tags, created_at, updated_at)
@@ -215,38 +191,10 @@ class PostgresWorldStateStore implements WorldStateStore {
     return result.rows.map((row) => ensureInventory(row.props as Character));
   }
 
-  async upsertPlayer(player: Player): Promise<Player> {
-    await this.#ensurePlayer(this.#pool, player.id);
-    await this.#upsertPlayerRow({
-      email: player.email ?? null,
-      id: player.id,
-      metadata: player.metadata ?? {},
-      preferences: player.preferences ?? {},
-      templateOverrides: player.templateOverrides ?? {},
-      username: player.username,
-    });
-    return player;
-  }
-
-  async getPlayer(playerId: string): Promise<Player | null> {
-    const row = await this.#getPlayerRow(playerId);
-    if (!row) {
-      return null;
-    }
-    return {
-      email: row.email ?? undefined,
-      id: row.id,
-      metadata: row.metadata ?? undefined,
-      preferences: row.preferences ?? undefined,
-      templateOverrides: row.template_overrides ?? undefined,
-      username: row.username,
-    };
-  }
-
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
     const normalized = normalizeChronicle(chronicle);
     await withTransaction(this.#pool, async (client) => {
-      await this.#ensurePlayer(client, normalized.playerId);
+      await this.#assertPlayerExists(normalized.playerId, client);
       await this.#ensureLocationExists(client, normalized.locationId, normalized.title);
       await this.#upsertNode(client, normalized.id, 'chronicle', normalized);
       await client.query(

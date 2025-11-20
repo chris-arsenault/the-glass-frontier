@@ -1,10 +1,9 @@
-import { CreateBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { CreateQueueCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { execa } from 'execa';
-import { readdir, readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { createAppStore } from '@glass-frontier/app';
 import { createLocationGraphStore, createWorldStateStore } from '@glass-frontier/worldstate';
 import { createOpsStore } from '@glass-frontier/ops';
 import {
@@ -28,7 +27,6 @@ const s3Endpoint = resolveAwsEndpoint('AWS_S3_ENDPOINT');
 const sqsEndpoint = resolveAwsEndpoint('AWS_SQS_ENDPOINT');
 
 const narrativeBucket = process.env.NARRATIVE_S3_BUCKET ?? 'gf-e2e-narrative';
-const promptBucket = process.env.PROMPT_TEMPLATE_BUCKET ?? 'gf-e2e-prompts';
 const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET ?? 'gf-e2e-audit';
 const turnProgressQueue = queueUrlFromEnv('TURN_PROGRESS_QUEUE_URL', 'gf-e2e-turn-progress');
 const closureQueue = queueUrlFromEnv('CHRONICLE_CLOSURE_QUEUE_URL', 'gf-e2e-chronicle-closure');
@@ -62,6 +60,7 @@ async function main(): Promise<void> {
     endpoint: sqsEndpoint,
     region,
   });
+  const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
   const locationGraphStore = createLocationGraphStore({
     connectionString: worldstateDatabaseUrl,
   });
@@ -71,16 +70,15 @@ async function main(): Promise<void> {
   });
   const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
+  await runAppMigrations();
   await runWorldstateMigrations();
   await runOpsMigrations();
   await ensureBucket(s3, narrativeBucket);
-  await ensureBucket(s3, promptBucket);
   await ensureBucket(s3, auditBucket);
-  await uploadPromptTemplates(s3, promptBucket);
 
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
-  await seedPlaywrightChronicle(worldStateStore, locationGraphStore);
+  await seedPlaywrightChronicle(worldStateStore, locationGraphStore, appStore.playerStore);
   // Touch ops stores so migrations are exercised in tests
   await opsStore.bugReportStore.listReports();
   await opsStore.tokenUsageStore.listUsage(PLAYWRIGHT_PLAYER_ID, 1);
@@ -99,6 +97,16 @@ async function main(): Promise<void> {
   });
   await opsStore.auditReviewStore.listByGroup(group.id);
   await opsStore.auditFeedbackStore.listByGroup(group.id);
+}
+
+async function runAppMigrations(): Promise<void> {
+  await execa('pnpm', ['-F', '@glass-frontier/app', 'migrate'], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      WORLDSTATE_DATABASE_URL: worldstateDatabaseUrl,
+    },
+  });
 }
 
 async function runWorldstateMigrations(): Promise<void> {
@@ -144,33 +152,6 @@ async function ensureBucket(client: S3Client, bucket: string): Promise<void> {
   });
 }
 
-async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<void> {
-  const templatesDir = path.resolve(
-    process.cwd(),
-    'apps',
-    'prompt-api',
-    'templates'
-  );
-  const files = await readdir(templatesDir);
-  await Promise.all(
-    files
-      .filter((file) => file.endsWith('.hbs'))
-      .map(async (file) => {
-        const body = await readFile(path.join(templatesDir, file));
-        const key = `official/${file}`;
-        await client.send(
-          new PutObjectCommand({
-            Body: body,
-            Bucket: bucket,
-            ContentType: 'text/plain; charset=utf-8',
-            Key: key,
-          })
-        );
-        log('Uploaded prompt template', key);
-      })
-  );
-}
-
 async function ensureQueue(client: SQSClient, name: string): Promise<void> {
   log('Ensuring SQS queue', name);
   await withRetry(`queue:${name}`, async () => {
@@ -205,34 +186,20 @@ async function withRetry<T>(
 
 async function seedPlaywrightChronicle(
   worldStateStore: ReturnType<typeof createWorldStateStore>,
-  locationGraphStore: ReturnType<typeof createLocationGraphStore>
+  locationGraphStore: ReturnType<typeof createLocationGraphStore>,
+  playerStore: ReturnType<typeof createAppStore>['playerStore']
 ): Promise<void> {
   const playerRecord = buildPlaywrightPlayerRecord();
   const characterRecord = buildPlaywrightCharacterRecord();
   const chronicleRecord = buildPlaywrightChronicleRecord();
 
-  await worldStateStore.upsertPlayer(playerRecord);
+  await playerStore.upsert(playerRecord);
   await worldStateStore.upsertCharacter(characterRecord);
   await worldStateStore.upsertChronicle(chronicleRecord);
   await seedPlaywrightLocationGraph(locationGraphStore, {
     characterId: PLAYWRIGHT_CHARACTER_ID,
     locationId: LOCATION_ROOT_SEED.id,
   });
-}
-
-const toPk = (prefix: 'player' | 'character' | 'chronicle' | 'location' | 'turn', id: string) =>
-  `${prefix.toUpperCase()}#${id}`;
-const toSk = toPk;
-
-async function writeJson(client: S3Client, key: string, payload: unknown): Promise<void> {
-  await client.send(
-    new PutObjectCommand({
-      Body: Buffer.from(JSON.stringify(payload, null, 2), 'utf-8'),
-      Bucket: narrativeBucket,
-      ContentType: 'application/json',
-      Key: key,
-    })
-  );
 }
 
 main().catch((error) => {
