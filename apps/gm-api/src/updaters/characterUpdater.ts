@@ -1,6 +1,6 @@
 import {GraphContext} from "../types";
 import {Character, Skill, SKILL_TIER_SEQUENCE} from "@glass-frontier/dto";
-import {toSnakeCase} from "@glass-frontier/utils";
+import {log, toSnakeCase} from "@glass-frontier/utils";
 
 const XP_PER_LEVEL = 5;
 
@@ -16,8 +16,10 @@ export function createUpdatedCharacter(context: GraphContext): Character {
 
   // add skills
   const normalizedSkill = toSnakeCase(context.skillCheckPlan.skill);
+  log("info", `Updating for skill ${normalizedSkill}`);
   const existing = normalizedSkill in working.skills;
   if (!existing) {
+    log("info", `Adding skill ${normalizedSkill}`);
     working.skills[normalizedSkill] = {
       attribute: context.skillCheckPlan.attribute,
       name: context.skillCheckPlan.skill,
@@ -38,6 +40,7 @@ export function createUpdatedCharacter(context: GraphContext): Character {
   }
 
   if (working.skills[normalizedSkill].xp > XP_PER_LEVEL) {
+    log("info", `Level up skill ${normalizedSkill}`);
     working.skills[normalizedSkill].xp -= XP_PER_LEVEL;
     const currentIndex = SKILL_TIER_SEQUENCE[working.skills[normalizedSkill].tier];
     const newIndex = currentIndex == SKILL_TIER_SEQUENCE.length - 1 ?  currentIndex : currentIndex+ 1;

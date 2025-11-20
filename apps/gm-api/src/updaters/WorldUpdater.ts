@@ -36,9 +36,6 @@ export class WorldUpdater {
 
   #updateCharacter(context: GraphContext): GraphContext {
     log("info", "Updating Character");
-    if (!context.inventoryDelta || context.inventoryDelta?.ops.length == 0) {
-      return context;
-    }
 
     const updatedCharacter = createUpdatedCharacter(context);
     return {

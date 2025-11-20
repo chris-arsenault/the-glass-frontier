@@ -68,6 +68,7 @@ module "prompt_api_lambda" {
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
     NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
     PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
+    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
     LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
   }
 

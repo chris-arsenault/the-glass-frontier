@@ -3,7 +3,6 @@ import type {
   TranscriptEntry,
   Turn,
   LocationSummary,
-  PendingEquip,
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
