@@ -76,6 +76,21 @@ function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
 let shuttingDown = false;
 let devProcess: ReturnType<typeof execa> | null = null;
 
+async function waitForWiremockReady(): Promise<void> {
+  const timeoutMs = 5_000;
+  try {
+    await waitOn({
+      resources: ['http-get://localhost:8080/__admin'],
+      timeout: timeoutMs,
+    });
+  } catch (error) {
+    throw new Error(
+      `[run-local-stack] Wiremock did not become ready within ${timeoutMs / 1000}s. Check mock mappings for syntax issues.`,
+      { cause: error }
+    );
+  }
+}
+
 async function main(): Promise<void> {
   process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
@@ -87,13 +102,14 @@ async function main(): Promise<void> {
     stdio: 'inherit',
   });
 
-  const baseWait = ['tcp:4566'];
-  const mockOpenAiWait = mode === 'mock-openai' ? ['http-get://localhost:8080/__admin'] : [];
-
   await waitOn({
-    resources: [...baseWait, ...mockOpenAiWait],
+    resources: ['tcp:4566'],
     timeout: 120_000,
   });
+
+  if (mode === 'mock-openai') {
+    await waitForWiremockReady();
+  }
 
   await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
     env,

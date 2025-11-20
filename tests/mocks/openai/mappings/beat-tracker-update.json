@@ -17,6 +17,6 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "beat-tracker-noop.json"
+    "bodyFileName": "beat-tracker-update.json"
   }
 }

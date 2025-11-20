@@ -270,7 +270,7 @@ class GmEngine {
     const failure = Boolean(graphResult.failure || combinedSystemMessage);
     return {
       advancesTimeline: graphResult.advancesTimeline,
-      beatDelta: graphResult.beatDelta ?? undefined,
+      beatTracker: graphResult.beatTracker ?? undefined,
       chronicleId,
       executedNodes: graphResult.executedNodes ?? undefined,
       failure,

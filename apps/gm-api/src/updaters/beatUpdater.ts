@@ -28,8 +28,9 @@ export function createUpdatedBeats(context: GraphContext): ChronicleBeat[] {
   }
 
   beatTracker.updates.forEach(b => {
-    const upd = working.findIndex((u) => u.id  === b.beatId);
-    if (!upd) {
+    const upd: number = working.findIndex((u) => u.id  === b.beatId);
+    if (upd === -1) {
+      log("warn", `Got update for non-existent beat ${b.beatId}`);
       return;
     }
     working[upd].updatedAt = now;

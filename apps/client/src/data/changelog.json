@@ -145,5 +145,12 @@
     "summary": "Character inventory UI matches the new schema",
     "details": "Rebuilt the character overview so it renders gear, relics, consumables, and supplies straight from the new flat inventory payload, removed the obsolete gear queue/data shard hooks, and refreshed the inventory delta badge to show the new op kinds, descriptions, effects, and quantities.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-beat-tracker-highlights",
+    "releasedAt": "2025-11-21",
+    "summary": "Beat tracker badges explain GM goal shifts",
+    "details": "GM chat entries now read the new beat tracker payload, so players see turn effects, focused beats, spawned goals, and per-beat updates inline instead of the old beat-directive tag.",
+    "type": "improvement"
   }
 ]

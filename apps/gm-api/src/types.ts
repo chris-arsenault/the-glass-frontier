@@ -7,7 +7,7 @@ import type {
   SkillCheckResult,
   Turn,
   TranscriptEntry,
-  BeatDelta, BeatTracker,
+  BeatTracker,
 } from '@glass-frontier/dto';
 import type { LocationGraphStore} from '@glass-frontier/persistence';
 

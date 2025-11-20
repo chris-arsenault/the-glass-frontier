@@ -9,6 +9,7 @@ import type {
   SkillCheckResult,
   SkillTier,
   TranscriptEntry,
+  BeatTracker,
   InventoryDelta,
   LlmTrace,
   PlayerFeedbackVisibilityLevel,
@@ -33,6 +34,7 @@ export type ChatMessage = {
   turnSequence?: number | null;
   skillProgress?: SkillProgressBadge[] | null;
   inventoryDelta?: InventoryDelta | null;
+  beatTracker?: BeatTracker | null;
   intentType?: Intent['intentType'] | null;
   handlerId?: string | null;
   worldDeltaTags?: string[] | null;

@@ -6,7 +6,7 @@ import type {
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
-  BeatDelta,
+  BeatTracker,
   PlayerPreferences,
 } from '@glass-frontier/dto';
 import { formatTurnJobId } from '@glass-frontier/utils';
@@ -67,9 +67,19 @@ const generateId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const slugifyBeatId = (title: string): string => {
+  const normalized = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized.length > 0 ? normalized : `beat-${Date.now()}`;
+};
+
 const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): ChatMessage => ({
   advancesTimeline: extras?.advancesTimeline ?? null,
   attributeKey: extras?.attributeKey ?? null,
+  beatTracker: extras?.beatTracker ?? null,
   entry,
   executedNodes: extras?.executedNodes ?? null,
   gmSummary: extras?.gmSummary ?? null,
@@ -127,6 +137,7 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
       advancesTimeline:
         typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
       attributeKey,
+      beatTracker: turn.beatTracker ?? null,
       executedNodes: turn.executedNodes ?? null,
       gmSummary: turn.gmSummary ?? null,
       gmTrace: turn.gmTrace ?? null,
@@ -212,33 +223,59 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
   return [character, ...filtered];
 };
 
-const upsertBeatRecord = (beats: ChronicleBeat[], candidate: ChronicleBeat): ChronicleBeat[] => {
-  const index = beats.findIndex((beat) => beat.id === candidate.id);
-  if (index >= 0) {
-    const next = [...beats];
-    next[index] = candidate;
-    return next;
-  }
-  return [...beats, candidate];
-};
-
-const applyBeatStateDelta = (
+const applyBeatTrackerUpdate = (
   beats: ChronicleBeat[],
-  delta?: BeatDelta | null
+  tracker?: BeatTracker | null
 ): { beats: ChronicleBeat[]; focusBeatId: string | null } => {
-  if (!delta) {
+  if (!tracker) {
     return { beats, focusBeatId: null };
   }
-  let nextBeats = beats;
-  for (const entry of delta.updated ?? []) {
-    nextBeats = upsertBeatRecord(nextBeats, entry);
+  const working = beats.map((beat) => ({ ...beat }));
+  let changed = false;
+  const now = Date.now();
+
+  if (tracker.newBeat) {
+    const fallbackId = slugifyBeatId(tracker.newBeat.title);
+    const newId = tracker.focusBeatId ?? fallbackId;
+    const existing = working.find((beat) => beat.id === newId);
+    if (!existing) {
+      working.push({
+        id: newId,
+        title: tracker.newBeat.title,
+        description: tracker.newBeat.description,
+        status: 'in_progress',
+        createdAt: now,
+        updatedAt: now,
+      });
+      changed = true;
+    }
   }
-  for (const entry of delta.created ?? []) {
-    nextBeats = upsertBeatRecord(nextBeats, entry);
+
+  for (const update of tracker.updates ?? []) {
+    const index = working.findIndex((beat) => beat.id === update.beatId);
+    if (index < 0) {
+      continue;
+    }
+    const target = working[index];
+    const nextBeat: ChronicleBeat = {
+      ...target,
+      updatedAt: now,
+      description: update.description ?? target.description,
+      status: update.status ?? target.status,
+    };
+    if (
+      (update.status === 'succeeded' || update.status === 'failed') &&
+      typeof nextBeat.resolvedAt !== 'number'
+    ) {
+      nextBeat.resolvedAt = now;
+    }
+    working[index] = nextBeat;
+    changed = true;
   }
+
   return {
-    beats: nextBeats,
-    focusBeatId: delta.focusBeatId ?? null,
+    beats: changed ? working : beats,
+    focusBeatId: tracker.focusBeatId ?? null,
   };
 };
 
@@ -306,33 +343,40 @@ const applyTurnProgressEvent = (
     state.pendingPlayerMessageId &&
     (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
   ) {
-    nextMessages = nextMessages.map((message) =>
-      message.entry.id === state.pendingPlayerMessageId
-        ? {
-          ...message,
-          advancesTimeline:
-              typeof payload.advancesTimeline === 'boolean'
-                ? payload.advancesTimeline
-                : message.advancesTimeline ?? null,
-          attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
-          executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
-          handlerId: payload.handlerId ?? message.handlerId ?? null,
-          intentType: payload.resolvedIntentType ?? payload.playerIntent?.intentType ?? message.intentType ?? null,
-          inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
-          playerIntent: payload.playerIntent ?? message.playerIntent,
-          skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
-          skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
-          skillKey: payload.playerIntent?.skill ?? message.skillKey,
-          worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
-        }
-        : message
-    );
+    nextMessages = nextMessages.map((message) => {
+      if (message.entry.id !== state.pendingPlayerMessageId) {
+        return message;
+      }
+      return {
+        ...message,
+        advancesTimeline:
+          typeof payload.advancesTimeline === 'boolean'
+            ? payload.advancesTimeline
+            : message.advancesTimeline ?? null,
+        attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+        beatTracker: extras.beatTracker ?? message.beatTracker ?? null,
+        executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
+        handlerId: payload.handlerId ?? message.handlerId ?? null,
+        intentType:
+          payload.resolvedIntentType ??
+          payload.playerIntent?.intentType ??
+          message.intentType ??
+          null,
+        inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
+        playerIntent: payload.playerIntent ?? message.playerIntent,
+        skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
+        skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
+        skillKey: payload.playerIntent?.skill ?? message.skillKey,
+        worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
+      };
+    });
   }
 
   const extras: Partial<ChatMessage> = {
     advancesTimeline:
       typeof payload.advancesTimeline === 'boolean' ? payload.advancesTimeline : null,
     attributeKey: payload.playerIntent?.attribute ?? null,
+    beatTracker: payload.beatTracker ?? null,
     executedNodes: payload.executedNodes ?? null,
     gmSummary: payload.gmSummary ?? null,
     gmTrace: payload.gmTrace ?? null,
@@ -358,7 +402,7 @@ const applyTurnProgressEvent = (
   }
 
   const shouldClose = payload.chronicleShouldClose === true;
-  const beatResult = applyBeatStateDelta(state.beats, payload.beatDelta);
+  const beatResult = applyBeatTrackerUpdate(state.beats, payload.beatTracker);
   return {
     ...state,
     beats: beatResult.beats,
@@ -783,10 +827,11 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         const nextMomentumTrend = character
           ? (deriveMomentumTrend(prev.character, character) ?? prev.momentumTrend)
           : prev.momentumTrend;
-        const beatResult = applyBeatStateDelta(prev.beats, turn.beatDelta);
+        const beatResult = applyBeatTrackerUpdate(prev.beats, turn.beatTracker);
 
         const extras = {
           attributeKey: turn.playerIntent?.attribute ?? null,
+          beatTracker: turn.beatTracker ?? null,
           executedNodes: turn.executedNodes ?? null,
           gmSummary: turn.gmSummary ?? null,
           gmTrace: turn.gmTrace ?? null,
@@ -805,6 +850,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             ? {
               ...message,
               attributeKey: extras.attributeKey,
+              beatTracker: extras.beatTracker ?? message.beatTracker ?? null,
               executedNodes: extras.executedNodes,
               inventoryDelta: extras.inventoryDelta,
               playerIntent: extras.playerIntent,
