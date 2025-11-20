@@ -84,6 +84,7 @@ export abstract class HybridObjectStore {
     const credentials = resolveAwsCredentials();
 
     const endpoint = resolveAwsEndpoint('s3');
+    const endpointConfig = typeof endpoint === 'string' && endpoint.length > 0 ? { endpoint } : {};
     const region = options.region ?? resolveAwsRegion();
     this.#client =
       options.client ??
@@ -91,7 +92,7 @@ export abstract class HybridObjectStore {
         credentials,
         forcePathStyle: shouldForcePathStyle(),
         region,
-        ...(endpoint ? { endpoint } : {}),
+        ...endpointConfig,
       });
   }
 

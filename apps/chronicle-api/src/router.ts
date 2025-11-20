@@ -143,9 +143,6 @@ export const appRouter = t.router({
       })
     )
     .query(async ({ ctx, input }) => {
-      if (ctx.tokenUsageStore === null) {
-        return { usage: [] as TokenUsagePeriod[] };
-      }
       const limit = Math.min(input.limit ?? 6, 12);
       const usage = await ctx.tokenUsageStore.listUsage(input.playerId, limit);
       return { usage };

@@ -18,10 +18,10 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.930.0",
     "@aws-sdk/client-s3": "^3.930.0",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
+    "@glass-frontier/ops": "workspace:*",
     "openai": "^6.8.1"
   }
 }

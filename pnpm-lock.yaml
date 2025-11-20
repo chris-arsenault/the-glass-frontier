@@ -120,9 +120,9 @@ importers:
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../../packages/node-utils
-      '@glass-frontier/persistence':
+      '@glass-frontier/ops':
         specifier: workspace:*
-        version: link:../../packages/persistence
+        version: link:../../packages/ops
       '@glass-frontier/skill-check-resolver':
         specifier: workspace:*
         version: link:../../packages/skill-check-resolver
@@ -300,9 +300,6 @@ importers:
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../../packages/node-utils
-      '@glass-frontier/persistence':
-        specifier: workspace:*
-        version: link:../../packages/persistence
       '@glass-frontier/skill-check-resolver':
         specifier: workspace:*
         version: link:../../packages/skill-check-resolver
@@ -371,9 +368,6 @@ importers:
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../../packages/dto
-      '@glass-frontier/persistence':
-        specifier: workspace:*
-        version: link:../../packages/persistence
       '@glass-frontier/worldstate':
         specifier: workspace:*
         version: link:../../packages/worldstate
@@ -442,15 +436,15 @@ importers:
 
   packages/llm-client:
     dependencies:
-      '@aws-sdk/client-dynamodb':
-        specifier: ^3.930.0
-        version: 3.930.0
       '@aws-sdk/client-s3':
         specifier: ^3.930.0
         version: 3.930.0
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../node-utils
+      '@glass-frontier/ops':
+        specifier: workspace:*
+        version: link:../ops
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../utils
@@ -464,29 +458,17 @@ importers:
         specifier: ^3.930.0
         version: 3.930.0
 
-  packages/persistence:
+  packages/ops:
     dependencies:
-      '@aws-sdk/client-dynamodb':
-        specifier: ^3.930.0
-        version: 3.930.0
-      '@aws-sdk/client-s3':
-        specifier: ^3.930.0
-        version: 3.930.0
-      '@aws-sdk/credential-providers':
-        specifier: ^3.930.0
-        version: 3.930.0
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../dto
-      '@glass-frontier/node-utils':
-        specifier: workspace:*
-        version: link:../node-utils
-      '@glass-frontier/utils':
-        specifier: workspace:*
-        version: link:../utils
-      '@glass-frontier/worldstate':
-        specifier: workspace:*
-        version: link:../worldstate
+      node-pg-migrate:
+        specifier: ^7.6.1
+        version: 7.9.1(pg@8.16.3)
+      pg:
+        specifier: ^8.13.1
+        version: 8.16.3
 
   packages/skill-check-resolver:
     dependencies:
@@ -505,9 +487,18 @@ importers:
 
   packages/worldstate:
     dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.930.0
+        version: 3.930.0
+      '@aws-sdk/client-s3':
+        specifier: ^3.930.0
+        version: 3.930.0
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../dto
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../utils

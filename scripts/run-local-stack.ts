@@ -22,7 +22,6 @@ const MOCK_ENV: Record<string, string> = {
   TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
   CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
   LLM_PROXY_ARCHIVE_BUCKET: 'gf-e2e-audit',
-  LLM_PROXY_USAGE_TABLE: 'gf-e2e-llm-usage',
   WORLDSTATE_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   OPENAI_API_BASE: 'http://localhost:8080/v1',
@@ -119,6 +118,10 @@ async function main(): Promise<void> {
   }
 
   await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'migrate'], {
+    env,
+    stdio: 'inherit',
+  });
+  await execa('pnpm', ['-F', '@glass-frontier/ops', 'migrate'], {
     env,
     stdio: 'inherit',
   });

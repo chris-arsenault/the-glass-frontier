@@ -1,10 +1,4 @@
 import { CreateBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import {
-  CreateTableCommand,
-  DescribeTableCommand,
-  DynamoDBClient,
-  ResourceInUseException,
-} from '@aws-sdk/client-dynamodb';
 import { CreateQueueCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { execa } from 'execa';
 import { readdir, readFile } from 'node:fs/promises';
@@ -12,6 +6,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createLocationGraphStore, createWorldStateStore } from '@glass-frontier/worldstate';
+import { BugReportStore, TokenUsageStore } from '@glass-frontier/ops';
 import {
   LOCATION_ROOT_SEED,
   PLAYWRIGHT_CHARACTER_ID,
@@ -30,13 +25,11 @@ const credentials = {
 
 const region = resolveAwsRegion();
 const s3Endpoint = resolveAwsEndpoint('AWS_S3_ENDPOINT');
-const dynamoEndpoint = resolveAwsEndpoint('AWS_DYNAMODB_ENDPOINT');
 const sqsEndpoint = resolveAwsEndpoint('AWS_SQS_ENDPOINT');
 
 const narrativeBucket = process.env.NARRATIVE_S3_BUCKET ?? 'gf-e2e-narrative';
 const promptBucket = process.env.PROMPT_TEMPLATE_BUCKET ?? 'gf-e2e-prompts';
 const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET ?? 'gf-e2e-audit';
-const usageTable = process.env.LLM_PROXY_USAGE_TABLE ?? 'gf-e2e-llm-usage';
 const turnProgressQueue = queueUrlFromEnv('TURN_PROGRESS_QUEUE_URL', 'gf-e2e-turn-progress');
 const closureQueue = queueUrlFromEnv('CHRONICLE_CLOSURE_QUEUE_URL', 'gf-e2e-chronicle-closure');
 const worldstateDatabaseUrl =
@@ -64,11 +57,6 @@ async function main(): Promise<void> {
     forcePathStyle: shouldForcePathStyle(),
     region,
   });
-  const dynamo = new DynamoDBClient({
-    credentials,
-    endpoint: dynamoEndpoint,
-    region,
-  });
   const sqs = new SQSClient({
     credentials,
     endpoint: sqsEndpoint,
@@ -81,18 +69,22 @@ async function main(): Promise<void> {
     connectionString: worldstateDatabaseUrl,
     locationGraphStore,
   });
+  const bugReportStore = new BugReportStore({ connectionString: worldstateDatabaseUrl });
+  const tokenUsageStore = new TokenUsageStore({ connectionString: worldstateDatabaseUrl });
 
   await runWorldstateMigrations();
+  await runOpsMigrations();
   await ensureBucket(s3, narrativeBucket);
   await ensureBucket(s3, promptBucket);
   await ensureBucket(s3, auditBucket);
   await uploadPromptTemplates(s3, promptBucket);
 
-  await ensureUsageTable(dynamo, usageTable);
-
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
   await seedPlaywrightChronicle(worldStateStore, locationGraphStore);
+  // Touch ops stores so migrations are exercised in tests
+  await bugReportStore.listReports();
+  await tokenUsageStore.listUsage(PLAYWRIGHT_PLAYER_ID, 1);
 }
 
 async function runWorldstateMigrations(): Promise<void> {
@@ -101,6 +93,16 @@ async function runWorldstateMigrations(): Promise<void> {
     env: {
       ...process.env,
       WORLDSTATE_DATABASE_URL: worldstateDatabaseUrl,
+    },
+  });
+}
+
+async function runOpsMigrations(): Promise<void> {
+  await execa('pnpm', ['-F', '@glass-frontier/ops', 'migrate'], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      OPS_DATABASE_URL: worldstateDatabaseUrl,
     },
   });
 }
@@ -155,58 +157,6 @@ async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<
   );
 }
 
-async function ensureUsageTable(client: DynamoDBClient, tableName: string): Promise<void> {
-  await ensureTable(client, {
-    AttributeDefinitions: [
-      { AttributeName: 'player_id', AttributeType: 'S' },
-      { AttributeName: 'usage_period', AttributeType: 'S' },
-    ],
-    BillingMode: 'PAY_PER_REQUEST',
-    KeySchema: [
-      { AttributeName: 'player_id', KeyType: 'HASH' },
-      { AttributeName: 'usage_period', KeyType: 'RANGE' },
-    ],
-    TableName: tableName,
-  });
-}
-
-async function ensureTable(client: DynamoDBClient, config: CreateTableCommand['input']) {
-  await withRetry(`table:${config.TableName ?? 'unknown'}`, async () => {
-    try {
-      await client.send(
-        new DescribeTableCommand({
-          TableName: config.TableName,
-        })
-      );
-      log('Table already exists', config.TableName);
-      return;
-    } catch (error) {
-      const notFound =
-        error instanceof Error &&
-        (error.name === 'ResourceNotFoundException' ||
-          error.name === 'ValidationException' ||
-          error.message?.includes('Requested resource not found'));
-      if (!notFound) {
-        throw error;
-      }
-    }
-
-    try {
-      await client.send(new CreateTableCommand(config));
-      log('Created table', config.TableName);
-      if (typeof config.TableName === 'string') {
-        await waitForTableActive(client, config.TableName);
-      }
-    } catch (error) {
-      if (error instanceof ResourceInUseException) {
-        log('Table already exists after race', config.TableName);
-        return;
-      }
-      throw error;
-    }
-  });
-}
-
 async function ensureQueue(client: SQSClient, name: string): Promise<void> {
   log('Ensuring SQS queue', name);
   await withRetry(`queue:${name}`, async () => {
@@ -237,30 +187,6 @@ async function withRetry<T>(
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
-async function waitForTableActive(
-  client: DynamoDBClient,
-  tableName: string,
-  attempts = 25,
-  pauseMs = 400
-): Promise<void> {
-  for (let index = 0; index < attempts; index += 1) {
-    try {
-      const description = await client.send(
-        new DescribeTableCommand({
-          TableName: tableName,
-        })
-      );
-      if (description.Table?.TableStatus === 'ACTIVE') {
-        return;
-      }
-    } catch {
-      // fall through to retry
-    }
-    await delay(pauseMs);
-  }
-  throw new Error(`Table ${tableName} did not become active`);
 }
 
 async function seedPlaywrightChronicle(

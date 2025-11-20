@@ -3,8 +3,8 @@ import {
   AuditLogStore,
   AuditModerationStore,
   PromptTemplateManager,
-} from '@glass-frontier/persistence';
-import { createWorldStateStore } from '@glass-frontier/worldstate';
+  createWorldStateStore,
+} from '@glass-frontier/worldstate';
 
 const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET;
 if (typeof auditBucket !== 'string' || auditBucket.trim().length === 0) {

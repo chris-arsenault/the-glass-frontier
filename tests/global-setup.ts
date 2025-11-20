@@ -24,7 +24,6 @@ const sharedEnv: Record<string, string> = {
   TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
   CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
   LLM_PROXY_ARCHIVE_BUCKET: 'gf-e2e-audit',
-  LLM_PROXY_USAGE_TABLE: 'gf-e2e-llm-usage',
   OPENAI_API_BASE: 'http://localhost:8080/v1',
   OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
   OPENAI_API_KEY: 'test-openai-key',

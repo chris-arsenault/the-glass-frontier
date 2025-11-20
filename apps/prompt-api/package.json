@@ -15,7 +15,6 @@
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
     "@glass-frontier/dto": "workspace:*",
-    "@glass-frontier/persistence": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*",
     "@trpc/server": "^11.7.1",
     "tsup": "^8.5.1",

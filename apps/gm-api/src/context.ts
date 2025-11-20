@@ -1,11 +1,11 @@
 // context.ts
 import {
+  PromptTemplateManager,
   createWorldStateStore,
   createLocationGraphStore,
   type WorldStateStore,
   type LocationGraphStore,
 } from '@glass-frontier/worldstate';
-import { PromptTemplateManager } from '@glass-frontier/persistence';
 
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";

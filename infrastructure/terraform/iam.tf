@@ -224,49 +224,6 @@ resource "aws_iam_role_policy_attachment" "gm_audit_storage" {
   policy_arn = aws_iam_policy.llm_audit_storage.arn
 }
 
-data "aws_iam_policy_document" "llm_usage_table" {
-  statement {
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem"
-    ]
-    resources = [aws_dynamodb_table.llm_usage.arn]
-  }
-}
-
-resource "aws_iam_policy" "llm_usage_table" {
-  name        = "${local.name_prefix}-llm-usage-table"
-  description = "Allow narrative services to record per-player token usage."
-  policy      = data.aws_iam_policy_document.llm_usage_table.json
-}
-
-resource "aws_iam_role_policy_attachment" "gm_llm_usage_table" {
-  role       = aws_iam_role.lambda["gm_lambda"].name
-  policy_arn = aws_iam_policy.llm_usage_table.arn
-}
-
-data "aws_iam_policy_document" "llm_usage_table_reader" {
-  statement {
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:Query"
-    ]
-    resources = [aws_dynamodb_table.llm_usage.arn]
-  }
-}
-
-resource "aws_iam_policy" "llm_usage_table_reader" {
-  name        = "${local.name_prefix}-llm-usage-table-reader"
-  description = "Allow the chronicle lambda to read per-player token usage."
-  policy      = data.aws_iam_policy_document.llm_usage_table_reader.json
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_llm_usage_table_reader" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.llm_usage_table_reader.arn
-}
-
 data "aws_iam_policy_document" "webservice_dynamodb" {
   statement {
     actions = [

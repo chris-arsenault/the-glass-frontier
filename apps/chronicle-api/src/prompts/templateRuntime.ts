@@ -1,5 +1,5 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
-import type { PromptTemplateManager } from '@glass-frontier/persistence';
+import type { PromptTemplateManager } from '@glass-frontier/worldstate';
 import Handlebars from 'handlebars';
 
 export class PromptTemplateRuntime {

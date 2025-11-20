@@ -18,26 +18,6 @@ resource "aws_dynamodb_table" "world_index" {
   tags = local.tags
 }
 
-resource "aws_dynamodb_table" "llm_usage" {
-  name         = "${local.name_prefix}-llm-usage"
-  billing_mode = "PAY_PER_REQUEST"
-
-  hash_key  = "player_id"
-  range_key = "usage_period"
-
-  attribute {
-    name = "player_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "usage_period"
-    type = "S"
-  }
-
-  tags = local.tags
-}
-
 resource "aws_dynamodb_table" "location_graph_index" {
   name         = "${local.name_prefix}-location-graph"
   billing_mode = "PAY_PER_REQUEST"

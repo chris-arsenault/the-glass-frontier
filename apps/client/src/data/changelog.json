@@ -138,5 +138,12 @@
     "summary": "Player identity replaces login everywhere",
     "details": "Removed the legacy login table and login identifiers across the stack, rewired DTOs, audits, persistence, APIs, and the client to use player IDs exclusively, and cleaned up front-end flows and tooling to stop mapping between login and player fields.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-23-postgres-persistence-consolidation",
+    "releasedAt": "2025-11-23",
+    "summary": "Retired the legacy persistence package",
+    "details": "Moved prompt template, audit, and support data into the Postgres-backed stack, split bug reports and token usage into a dedicated ops module with its own migrations, removed the deprecated S3/Dynamo persistence layer (including the usage DynamoDB table), and pointed every API at the new canonical storage modules.",
+    "type": "improvement"
   }
 ]

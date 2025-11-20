@@ -12,9 +12,9 @@ import {
   type PlayerTemplateVariant,
 } from '@glass-frontier/dto';
 import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
-import type { WorldStateStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
+import type { WorldStateStore } from '../types';
 import {
   DEFAULT_PLAYER_PREFIX,
   OFFICIAL_VARIANT_ID,
@@ -70,10 +70,11 @@ export class PromptTemplateManager {
     this.#worldState = options.worldStateStore;
     const region = options.region ?? resolveAwsRegion();
     const endpoint = resolveAwsEndpoint('s3');
+    const endpointConfig = typeof endpoint === 'string' && endpoint.length > 0 ? { endpoint } : {};
     this.#client = new S3Client({
       forcePathStyle: shouldForcePathStyle(),
       region,
-      ...(endpoint ? { endpoint } : {}),
+      ...endpointConfig,
     });
   }
 
@@ -87,8 +88,8 @@ export class PromptTemplateManager {
     const summary = this.#summarizeTemplate(templateId, player);
     const editable = await this.#loadTemplateBody(summary.activeSource, {
       activeVariantId: summary.activeVariantId,
-      playerId,
       player,
+      playerId,
       templateId,
     });
     return {
@@ -227,7 +228,7 @@ export class PromptTemplateManager {
     const overrides = toOverrideMap(player.templateOverrides);
     const slot = overrides.get(templateId);
     const hasOverride = slot !== undefined && slot.variants.length > 0;
-    const variantInfo = this.#resolveActiveVariant(slot, templateId);
+    const variantInfo = this.#resolveActiveVariant(slot);
     return {
       activeSource: variantInfo.source,
       activeVariantId: variantInfo.activeVariantId,
@@ -241,8 +242,7 @@ export class PromptTemplateManager {
   }
 
   #resolveActiveVariant(
-    slot: PlayerTemplateSlot | undefined,
-    templateId: PromptTemplateId
+    slot: PlayerTemplateSlot | undefined
   ): { activeVariantId: string; source: VariantSource; updatedAt: number } {
     if (slot === undefined) {
       return this.#officialVariantInfo();
@@ -312,7 +312,7 @@ export class PromptTemplateManager {
     activeVariantId: string;
     source: VariantSource;
     updatedAt: number;
-  } {
+    } {
     return {
       activeVariantId: OFFICIAL_VARIANT_ID,
       source: 'official',

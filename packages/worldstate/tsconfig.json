@@ -11,6 +11,7 @@
   "include": ["src"],
   "references": [
     { "path": "../dto" },
+    { "path": "../node-utils" },
     { "path": "../utils" }
   ]
 }

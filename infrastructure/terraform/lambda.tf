@@ -25,7 +25,6 @@ module "chronicle_lambda" {
     NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX         = "${var.environment}/"
     WORLDSTATE_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-    LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
@@ -140,7 +139,6 @@ module "gm_api_lambda" {
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
     LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
-    LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
   }

@@ -109,18 +109,6 @@ class PostgresWorldStateStore implements WorldStateStore {
     return row;
   }
 
-  async #listPlayerRows(): Promise<Array<{
-    id: string;
-    username: string;
-    email: string | null;
-    metadata: Record<string, unknown> | null;
-  }>> {
-    const result = await this.#pool.query(
-      'SELECT id, username, email, metadata FROM player ORDER BY username ASC'
-    );
-    return result.rows;
-  }
-
   async #ensurePlayer(executor: Pool | PoolClient, playerId: string): Promise<void> {
     await executor.query(
       `INSERT INTO player (id, username, email, preferences, template_overrides, metadata, updated_at)
