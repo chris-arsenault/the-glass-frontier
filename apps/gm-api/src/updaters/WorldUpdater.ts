@@ -30,7 +30,6 @@ export class WorldUpdater {
     await this.#saveCharacter(context.chronicleState.character);
     await this.#saveChronicle(context.chronicleState.chronicle);
     context = await this.#saveLocation(context, locationPlan);
-    console.log(context)
 
     return context;
   }

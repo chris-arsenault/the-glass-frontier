@@ -97,7 +97,11 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         max_output_tokens: NARRATIVE_MAX_OUTPUT_TOKENS,
         model: NARRATIVE_MODEL,
         ...prompt,
-        metadata: {chronicleId: context.chronicleId, nodeId: this.options.id},
+        metadata: {
+          chronicleId: context.chronicleId,
+          nodeId: this.options.id,
+          loginId: context.chronicleState.chronicle.loginId
+        },
         reasoning: NARRATIVE_REASONING.reasoning,
         text: {
           format: {
