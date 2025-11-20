@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 
 import { applyCharacterSnapshotProgress } from './characterProgress';
 import { HybridObjectStore } from './hybridObjectStore';
+import type { LocationGraphStore } from './locationGraphStore';
 import type { CharacterProgressPayload, ChronicleSnapshot } from './types';
 import type { WorldIndexRepository } from './worldIndexRepository';
 import type { WorldStateStore } from './worldStateStore';
@@ -14,6 +15,7 @@ const isNonEmptyString = (value?: string | null): value is string =>
 
 export class S3WorldStateStore extends HybridObjectStore implements WorldStateStore {
   readonly #index: WorldIndexRepository;
+  readonly #locationGraphStore: LocationGraphStore | null;
 
   constructor(options: {
     bucket: string;
@@ -21,6 +23,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     client?: S3Client;
     region?: string;
     worldIndex: WorldIndexRepository;
+    locationGraphStore?: LocationGraphStore | null;
   }) {
     super({
       bucket: options.bucket,
@@ -32,6 +35,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       throw new Error('S3WorldStateStore requires a world index repository.');
     }
     this.#index = options.worldIndex;
+    this.#locationGraphStore = options.locationGraphStore ?? null;
     const prefixValue = isNonEmptyString(options.prefix) ? options.prefix.trim() : null;
     const normalizedPrefix = prefixValue !== null ? prefixValue.replace(/\/+$/, '') : null;
     const prefixLabel =
@@ -69,6 +73,13 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     const character = isNonEmptyString(chronicle.characterId)
       ? await this.getCharacter(chronicle.characterId)
       : null;
+    const locationSummary =
+      this.#locationGraphStore && isNonEmptyString(chronicle.locationId) && character?.id
+        ? await this.#locationGraphStore.summarizeCharacterLocation({
+            characterId: character.id,
+            locationId: chronicle.locationId,
+          })
+        : null;
     const turns = await this.listChronicleTurns(chronicleId);
     const lastTurn = turns.length > 0 ? turns[turns.length - 1] : null;
     const turnSequence = lastTurn?.turnSequence ?? -1;
@@ -76,7 +87,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       character,
       chronicle,
       chronicleId: chronicle.id,
-      location: null,
+      location: locationSummary,
       turns,
       turnSequence,
     };

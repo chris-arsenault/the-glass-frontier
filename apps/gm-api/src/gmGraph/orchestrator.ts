@@ -31,6 +31,11 @@ type NodeDescriptor = {
   total: number;
 };
 
+const PARALLEL_GROUPS = new Map<string, string[]>([
+  ['intent-classifier', ['intent-beat-detector', 'check-planner']],
+  ['gm-response-node', ['gm-summary', 'inventory-delta', 'location-delta', 'beat-tracker']],
+]);
+
 class GmGraphOrchestrator {
   readonly #descriptors: Map<string, NodeDescriptor> = new Map();
   readonly #telemetry?: ChronicleTelemetry;
@@ -85,6 +90,17 @@ class GmGraphOrchestrator {
 
         executed.push(ranNode);
         context = result.context;
+
+        const parallelTargets = PARALLEL_GROUPS.get(descriptor.nodeId);
+        if (parallelTargets !== undefined) {
+          const parallelResult = await this.#runParallelGroup(parallelTargets, context, jobId);
+          executed.push(...parallelResult.executedNodes);
+          context = parallelResult.context;
+          parallelResult.next.forEach((target) => {
+            queue.push({ nodeId: target, context });
+          });
+          continue;
+        }
 
         if (context.failure) {
           queue = [];
@@ -236,6 +252,67 @@ class GmGraphOrchestrator {
       return result as { context: GraphContext; next?: string[] };
     }
     return { context: result as GraphContext };
+  }
+
+  async #runParallelGroup(
+    nodeIds: string[],
+    context: GraphContext,
+    jobId?: string
+  ): Promise<{ context: GraphContext; executedNodes: string[]; next: string[] }> {
+    const executions = await Promise.all(
+      nodeIds.map(async (nodeId) => {
+        const descriptor = this.#descriptors.get(nodeId);
+        if (!descriptor) {
+          throw new Error(`Unknown graph node ${nodeId}`);
+        }
+        const result = await this.#executeNode(descriptor, context, jobId);
+        return { descriptor, result };
+      })
+    );
+    const ordered = nodeIds.map((nodeId) => {
+      const entry = executions.find((candidate) => candidate.descriptor.nodeId === nodeId);
+      if (!entry) {
+        throw new Error(`Missing execution result for ${nodeId}`);
+      }
+      return entry;
+    });
+    let mergedContext = context;
+    ordered.forEach((entry) => {
+      mergedContext = this.#mergeContexts(mergedContext, entry.result.context);
+    });
+    const nextTargets = new Set<string>();
+    ordered.forEach((entry) => {
+      const references = entry.result.next ?? entry.descriptor.next ?? [];
+      references.forEach((target) => {
+        if (!nodeIds.includes(target)) {
+          nextTargets.add(target);
+        }
+      });
+    });
+    return {
+      context: mergedContext,
+      executedNodes: ordered.map((entry) => entry.descriptor.nodeId),
+      next: [...nextTargets],
+    };
+  }
+
+  #mergeContexts(base: GraphContext, update: GraphContext): GraphContext {
+    return {
+      ...base,
+      ...update,
+      beatTracker: update.beatTracker ?? base.beatTracker,
+      chronicleState: update.chronicleState ?? base.chronicleState,
+      gmResponse: update.gmResponse ?? base.gmResponse,
+      gmSummary: update.gmSummary ?? base.gmSummary,
+      handlerId: update.handlerId ?? base.handlerId,
+      inventoryDelta: update.inventoryDelta ?? base.inventoryDelta,
+      locationDelta: update.locationDelta ?? base.locationDelta,
+      playerIntent: update.playerIntent ?? base.playerIntent,
+      skillCheckPlan: update.skillCheckPlan ?? base.skillCheckPlan,
+      skillCheckResult: update.skillCheckResult ?? base.skillCheckResult,
+      systemMessage: update.systemMessage ?? base.systemMessage,
+      worldDeltaTags: update.worldDeltaTags ?? base.worldDeltaTags,
+    };
   }
 }
 

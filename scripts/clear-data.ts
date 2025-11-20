@@ -5,7 +5,7 @@ import {
   BatchWriteItemCommand,
   type WriteRequest
 } from "@aws-sdk/client-dynamodb";
-import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from "@glass-frontier/utils";
+import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from "../packages/node-utils/src";
 
 const region = resolveAwsRegion();
 const s3Endpoint = resolveAwsEndpoint("s3");

@@ -17,13 +17,14 @@ if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) 
 }
 const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
 
-const worldStateStore = createWorldStateStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-});
 const locationGraphStore = createLocationGraphStore({
   bucket: narrativeBucket,
   prefix: narrativePrefix,
+});
+const worldStateStore = createWorldStateStore({
+  bucket: narrativeBucket,
+  prefix: narrativePrefix,
+  locationGraphStore,
 });
 
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;

@@ -10,8 +10,8 @@ import {
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";
 
-const worldStateStore = createWorldStateStore({});
 const locationGraphStore = createLocationGraphStore({});
+const worldStateStore = createWorldStateStore({ locationGraphStore });
 const templateManager = new PromptTemplateManager({ worldStateStore});
 const llmClient = createLLMClient();
 

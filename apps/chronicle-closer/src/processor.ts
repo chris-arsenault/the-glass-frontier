@@ -46,8 +46,9 @@ class ChronicleClosureProcessor {
     locationGraphStore?: LocationGraphStore;
     llmClient?: RetryLLMClient;
   }) {
-    this.#worldStateStore = options?.worldStateStore ?? createWorldStateStore();
     this.#locationGraphStore = options?.locationGraphStore ?? createLocationGraphStore();
+    this.#worldStateStore =
+      options?.worldStateStore ?? createWorldStateStore({ locationGraphStore: this.#locationGraphStore });
     this.#llm = options?.llmClient ?? createLLMClient();
   }
 

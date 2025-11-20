@@ -165,26 +165,6 @@ class GmEngine {
     if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
-    if (!state.location) {
-      const locationId = state.chronicle?.locationId;
-      const characterId = state.character?.id;
-      if (isNonEmptyString(locationId) && isNonEmptyString(characterId)) {
-        try {
-          const summary = await this.locationGraphStore.summarizeCharacterLocation({
-            characterId,
-            locationId,
-          });
-          if (summary) {
-            return { ...state, location: summary };
-          }
-        } catch (error) {
-          log('warn', 'Failed to load location summary', {
-            chronicleId,
-            reason: error instanceof Error ? error.message : 'unknown',
-          });
-        }
-      }
-    }
     return state;
   }
 
