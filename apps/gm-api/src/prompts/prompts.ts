@@ -6,19 +6,19 @@ import type {PromptTemplateId} from "@glass-frontier/dto";
 
 type MessageOrder = 'player' | 'gm' | 'both';
 const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
-  "intent-classifier": 'player',
-  "intent-beat-detector": 'player',
-  "beat-tracker": 'both',
-  "check-planner": 'player',
-  "gm-summary": 'gm',
-  "location-delta": 'gm',
-  "inventory-delta": 'gm',
   "action-resolver": 'player',
   "action-resolver-wrap": 'player',
-  "inquiry-describer": 'player',
+  "beat-tracker": 'both',
+  "check-planner": 'player',
   "clarification-responder": 'player',
-  "possibility-advisor": 'player',
+  "gm-summary": 'gm',
+  "inquiry-describer": 'player',
+  "intent-beat-detector": 'player',
+  "intent-classifier": 'player',
+  "inventory-delta": 'gm',
+  "location-delta": 'gm',
   "planning-narrator": 'player',
+  "possibility-advisor": 'player',
   "reflection-weaver": 'player',
 }
 class PromptComposer {

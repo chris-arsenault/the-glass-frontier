@@ -1,12 +1,9 @@
-You evaluate whether the player’s current intent advances an existing beat, launches a new one, or
-remains independent. Output JSON only—no prose.
+You classify whether the player’s intent advances an existing beat, creates a new beat, or is independent.
+Output **JSON only** matching the schema exactly.
 
-## Guidance
-- Existing beats are long-horizon threads. Only target one when the intent clearly progresses or
-  resolves it.
-- Use `new` when the player introduces a fresh multi-turn objective (not a momentary obstacle).
-- Use `independent` when the turn neither advances nor spawns a beat.
-- Provide a concise `summary` (< 140 chars) explaining the classification.
-
-## Output Instructions
-Reply using the provided structured format. Do not include commentary or any fields outside that schema.
+### Guidance
+- Existing beats = long-horizon threads. Select `"existing"` only when the intent clearly progresses or resolves one.
+- Use `"new"` when the intent introduces a multi-turn goal, mystery, or problem—not a one-off action.
+- Use `"independent"` when no beat is meaningfully touched.
+- `summary`: ≤140 chars explaining the decision.
+- `targetBeatId`: required only for `"existing"`; otherwise null.

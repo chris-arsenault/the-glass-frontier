@@ -11,13 +11,11 @@ export const PromptTemplateIds = [
   'inquiry-describer',
   'intent-beat-detector',
   'intent-classifier',
-  'intent-intake',
   'inventory-delta',
   'location-delta',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
-  'skill-detector',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -96,13 +94,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/intent-beat-detector.hbs',
     supportsVariants: true,
   },
-  'intent-intake': {
-    description: 'Parses the player\'s utterance into actionable intent metadata.',
-    id: 'intent-intake',
-    label: 'Intent Intake',
-    officialObjectKey: 'official/intent-intake.hbs',
-    supportsVariants: true,
-  },
   'intent-classifier': {
     description: 'Parses the player\'s utterance into actionable intent metadata.',
     id: 'intent-classifier',
@@ -143,13 +134,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'reflection-weaver',
     label: 'Reflection Weaver',
     officialObjectKey: 'official/reflection-weaver.hbs',
-    supportsVariants: true,
-  },
-  'skill-detector': {
-    description: 'Maps player intents to the best-fit skill and attribute pairing.',
-    id: 'skill-detector',
-    label: 'Skill Detector',
-    officialObjectKey: 'official/skill-detector.hbs',
     supportsVariants: true,
   },
 };

@@ -8,37 +8,25 @@ import {LlmClassifierNode} from "./LlmClassiferNode";
 const PlannerPlanSchema = z.object({
   requiresCheck: z
     .boolean()
-    .describe('True when the move is risky, contested, or otherwise requires a skill check.'),
+    .describe('True when the move is meaningfully risky or contested and needs a roll.'),
   advantage: z
     .enum(['advantage', 'disadvantage', 'none'])
-    .describe('Check framing: advantage, disadvantage, or none.'),
+    .describe('Situational edge for the check: advantage, disadvantage, or none.'),
   complicationSeeds: z
     .array(
       z
         .string()
         .min(1)
-        .describe('≤ 90 char hook showing what failure/partial success might introduce.')
+        .describe('≤ 90 char hook for how failure or a mixed result complicates things.')
     )
-    .min(1)
-    .describe('List of at least two complication hooks that may appear on failure.'),
-  rationale: z
-    .string()
-    .min(1)
-    .describe('One sentence explaining why this action requires a check.'),
+    .min(0)
+    .describe('2–3 complication hooks when requiresCheck=true; otherwise an empty array.'),
   riskLevel: RiskLevelSchema.describe('Overall risk posture for this move.'),
-  attribute: Attribute.describe('The attribute that best matches the described approach.'),
-  handlerHints: z
-    .array(
-      z
-        .string()
-        .min(1)
-        .describe('Lowercase handler hint describing narration cues (e.g., "whispered").')
-    )
-    .describe('Optional narration hints; emit an empty array when none apply.'),
+  attribute: Attribute.describe('Attribute that best matches the player’s approach.'),
   skill: z
     .string()
     .min(1)
-    .describe('Best-fit skill name, preferring existing skills when relevant.'),
+    .describe('Best-fit skill name, preferring existing skills; new labels ≤ 2 words.'),
 });
 
 type PlannerPlan = z.infer<typeof PlannerPlanSchema>;
@@ -77,7 +65,6 @@ class CheckPlannerNode extends LlmClassifierNode<PlannerPlan> {
         tags: [],
         timestamp: Date.now(),
       },
-      rationale: result.rationale,
       riskLevel: result.riskLevel,
       attribute: result.attribute,
       skill: result.skill,

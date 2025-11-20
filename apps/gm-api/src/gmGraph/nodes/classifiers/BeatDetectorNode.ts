@@ -5,18 +5,18 @@ import type { GraphContext,  } from '../../../types';
 import {LlmClassifierNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LlmClassiferNode";
 
 const BeatDirectiveSchema = z.object({
-    kind: z
-      .enum(['existing', 'new', 'independent'])
-      .describe('Classification describing whether the turn advances an existing beat, creates a new one, or stands alone.'),
-    summary: z
-      .string()
-      .min(1)
-      .describe('Short justification pointing to the stakes or clue driving the decision.'),
-    targetBeatId: z
-      .string()
-      .min(1)
-      .nullable()
-      .describe('ID of the referenced beat when kind is "existing"; null otherwise.'),
+  kind: z
+    .enum(['existing', 'new', 'independent'])
+    .describe('Beat targeting: existing beat, new beat, or standalone turn.'),
+  summary: z
+    .string()
+    .min(1)
+    .describe('Brief rationale for the classification.'),
+  targetBeatId: z
+    .string()
+    .min(1)
+    .nullable()
+    .describe('Beat ID when kind="existing"; otherwise null.'),
 });
 
 type BeatDirective = z.infer<typeof BeatDirectiveSchema>;

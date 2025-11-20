@@ -24,7 +24,6 @@ export const SkillCheckPlan = z.object({
   advantage: z.string().min(1),
   complicationSeeds: z.array(z.string()),
   metadata: Metadata,
-  rationale: z.string().min(1),
   riskLevel: RiskLevel,
   attribute: Attribute,
   skill: z.string().min(1),
