@@ -9,16 +9,15 @@ import {
 } from './utils';
 
 const PIPELINE_ORDER = [
-  'intent-intake',
+  'intent-classifier',
   'intent-beat-detector',
-  'skill-detector',
   'check-planner',
-  'action-resolver',
-  'location-delta',
-  'gm-summary',
+  'check-runner',
+  'gm-response-node (action)',
   'beat-tracker',
+  'gm-summary',
+  'location-delta',
   'inventory-delta',
-  'character-update',
 ] as const;
 
 test.describe('Chat system', () => {
@@ -39,7 +38,11 @@ test.describe('Chat system', () => {
       'Automated bug submission covering moderation surfaces and integration flow.';
 
     const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
-    const gmEntry = await sendTurn(page, chatInput, 'Sweep the console banks for hidden sensors.');
+    const gmEntry = await sendTurn(
+      page,
+      chatInput,
+      'Sweep the console banks for hidden sensors. #beat:update #mock:beat:update'
+    );
 
     const pipelineLocator = gmEntry.locator('.chat-entry-node-trace');
     await expect(pipelineLocator).toBeVisible({ timeout: 15_000 });

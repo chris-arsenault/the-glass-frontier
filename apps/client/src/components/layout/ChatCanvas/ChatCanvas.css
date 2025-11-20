@@ -115,6 +115,16 @@
   font-size: 0.75rem;
 }
 
+.chat-entry-beat-tag {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cbd5f5;
+}
+
 .chat-entry-beat-effect {
   padding: 0.15rem 0.45rem;
   border: 1px solid rgb(45 212 191 / 45%);
@@ -145,91 +155,6 @@
   color: #a5f3fc;
 }
 
-.chat-entry-beat-tracker {
-  margin-top: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  background: rgb(15 23 42 / 40%);
-  border: 1px solid rgb(148 163 184 / 20%);
-  border-radius: 0.6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.chat-entry-beat-focus {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.chat-entry-beat-new-title {
-  margin: 0;
-  font-weight: 600;
-  color: #f8fafc;
-}
-
-.chat-entry-beat-new-description {
-  margin: 0.2rem 0 0;
-  color: #e2e8f0;
-  font-size: 0.9rem;
-}
-
-.chat-entry-beat-updates {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.chat-entry-beat-updates li {
-  border-top: 1px solid rgb(148 163 184 / 20%);
-  padding-top: 0.35rem;
-}
-
-.beat-update-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.beat-update-title {
-  font-weight: 600;
-}
-
-.beat-update-kind {
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid rgb(248 250 252 / 20%);
-}
-
-.beat-update-kind-advance {
-  color: #bbf7d0;
-  border-color: rgb(34 197 94 / 40%);
-}
-
-.beat-update-kind-resolve {
-  color: #fecaca;
-  border-color: rgb(248 113 113 / 40%);
-}
-
-.beat-update-status {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.beat-update-description {
-  margin: 0.2rem 0 0;
-  color: #cbd5f5;
-  font-size: 0.85rem;
-}
 
 .chat-entry-player .chat-entry-content {
   color: #f9a8d4;

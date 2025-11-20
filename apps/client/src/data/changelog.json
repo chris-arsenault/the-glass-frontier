@@ -150,7 +150,7 @@
     "id": "2025-11-21-beat-tracker-highlights",
     "releasedAt": "2025-11-21",
     "summary": "Beat tracker badges explain GM goal shifts",
-    "details": "GM chat entries now read the new beat tracker payload, so players see turn effects, focused beats, spawned goals, and per-beat updates inline instead of the old beat-directive tag.",
+    "details": "Chat entries now read the beat tracker payload end-to-end: player intents show the focused beat next to the intent type, while GM replies use a compact badge with a tooltip that lists spawned beats and per-beat advances/resolutions.",
     "type": "improvement"
   }
 ]

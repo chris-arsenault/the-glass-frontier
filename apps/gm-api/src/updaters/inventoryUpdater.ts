@@ -1,6 +1,7 @@
 import {GraphContext} from "@glass-frontier/gm-api/types";
 import {Inventory, InventoryDeltaOp, InventoryEntry, InventoryEntryKind} from "@glass-frontier/dto";
 import {log, toSnakeCase} from "@glass-frontier/utils";
+import {effect} from "zod/v3";
 
 export function createUpdatedInventory(context: GraphContext): Inventory {
   const working = structuredClone(context.chronicleState.character?.inventory || []);
@@ -41,7 +42,7 @@ export function createUpdatedInventory(context: GraphContext): Inventory {
         context.chronicleState.character?.inventory.push(item);
         break;
       case "remove":
-        working.slice(existingIndex, 1);
+        working.splice(existingIndex, 1);
         break;
     }
   })
@@ -57,7 +58,7 @@ function itemIndex(inventory: Inventory, item: InventoryDeltaOp): number {
     }
 
     if (entry.kind !== item.kind) {
-      log("warn", "Item trying to change kind, rejecting.")
+      log("warn", "Item trying to change kind, dropping kind change.")
     }
 
     return true;

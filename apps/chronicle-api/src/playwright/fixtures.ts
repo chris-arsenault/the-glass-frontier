@@ -34,21 +34,21 @@ const BASE_CHARACTER: Character = {
   id: PLAYWRIGHT_CHARACTER_ID,
   inventory: [
     {
-      id: "ova",
+      id: "oracle_vessel",
       kind: "relic",
       name: "Oracle Vessel",
       description: "Unlock the Vigil Gate",
       quantity: 1,
     },
     {
-      id: "vas",
+      id: "vault_access_seed",
       kind: "supplies",
       name: "Vault Access Seed",
       description: "Unlock the Vigil Gate",
       quantity: 1,
     },
     {
-      id: "sd",
+      id: "starlight_draught",
       kind: "consumable",
       name: "Starlight Draught",
       description: "Unlock the Vigil Gate",

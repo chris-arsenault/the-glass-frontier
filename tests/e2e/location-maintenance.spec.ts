@@ -19,7 +19,11 @@ test.describe('Location maintenance relationships', () => {
 
   test('adds and removes adjacency for a newly created place', async ({ page }) => {
     const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
-    await sendTurn(page, chatInput, '#loc:maintenance Survey the maintenance corridors.');
+    await sendTurn(
+      page,
+      chatInput,
+      '#loc:maintenance #beat:update Survey the maintenance corridors.'
+    );
 
     const menu = await openPlayerMenu(page);
     await menu.getByRole('button', { name: 'Location Maintenance' }).click();

@@ -1,6 +1,8 @@
 import { execa } from 'execa';
 import waitOn from 'wait-on';
 
+import { PidRegistry } from './pid-registry';
+
 type StackMode = 'mock-openai' | 'live-openai';
 
 const MOCK_ENV: Record<string, string> = {
@@ -75,6 +77,7 @@ function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
 
 let shuttingDown = false;
 let devProcess: ReturnType<typeof execa> | null = null;
+const pidRegistry = new PidRegistry();
 
 async function waitForWiremockReady(): Promise<void> {
   const timeoutMs = 5_000;
@@ -121,6 +124,18 @@ async function main(): Promise<void> {
     stdio: 'inherit',
   });
   devProcess.catch(() => undefined);
+  if (typeof devProcess.pid === 'number') {
+    const trackedPid = devProcess.pid;
+    await pidRegistry.register({
+      pid: trackedPid,
+      command: 'pnpm dev',
+      label: `local-stack:${mode}`,
+      cwd: process.cwd(),
+    });
+    devProcess.on('exit', () => {
+      void pidRegistry.unregister(trackedPid);
+    });
+  }
 
   const runtimeWait = [...APP_WAIT_RESOURCES];
   if (mode === 'mock-openai') {
@@ -145,6 +160,8 @@ async function shutdown() {
     return;
   }
   shuttingDown = true;
+  await pidRegistry.killAll();
+  await pidRegistry.clear();
   if (devProcess) {
     try {
       devProcess.kill('SIGTERM', { forceKillAfterTimeout: 1000 });

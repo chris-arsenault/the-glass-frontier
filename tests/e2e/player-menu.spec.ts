@@ -27,11 +27,17 @@ test.describe('Player menu moderation shortcuts', () => {
 
   test('opens fully populated moderation workspaces for moderators', async ({ page }) => {
     const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
-    await sendTurn(page, chatInput, 'Record a quick audit turn for moderation.');
+    await sendTurn(
+      page,
+      chatInput,
+      'Record a quick audit turn for moderation. #beat:update #mock:beat:update'
+    );
 
     const auditPanel = await openPlayerMenu(page);
     await auditPanel.getByRole('button', { name: 'LLM Audit Review' }).click();
     await expect(page.getByRole('heading', { name: 'LLM Audit Review' })).toBeVisible();
+    await page.locator('#audit-filter-player').fill('playwright-e2e');
+    await page.getByRole('button', { name: 'Apply Filters' }).click();
     await expect(page.getByRole('button', { name: 'Open Review' }).first()).toBeEnabled({
       timeout: 15_000,
     });

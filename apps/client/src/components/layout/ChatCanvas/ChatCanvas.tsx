@@ -1,5 +1,4 @@
 import type {
-  ChronicleBeatStatus,
   PlayerFeedbackSentiment,
   Intent,
   BeatTracker,
@@ -12,6 +11,7 @@ import { promptClient } from '../../../lib/promptClient';
 import type { ChatMessage } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { BeatTrackerBadge } from '../../badges/BeatTrackerBadge/BeatTrackerBadge';
 import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
 import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
@@ -59,12 +59,12 @@ const FEEDBACK_BOOLEAN_OPTIONS: Array<{ label: string; value: FeedbackBooleanCho
 ];
 
 const BEAT_TURN_EFFECT_LABELS: Record<BeatTracker['turnEffect'], string> = {
-  advance_and_spawn: 'Beat Tracker · Advanced & Spawned',
-  advance_existing: 'Beat Tracker · Advanced',
-  no_change: 'Beat Tracker · No Change',
-  resolve_and_spawn: 'Beat Tracker · Resolved & Spawned',
-  resolve_existing: 'Beat Tracker · Resolved',
-  spawn_new: 'Beat Tracker · New Beat',
+  advance_and_spawn: 'Advanced & Spawned',
+  advance_existing: 'Advanced Beat',
+  no_change: 'No Beat Change',
+  resolve_and_spawn: 'Resolved & Spawned',
+  resolve_existing: 'Resolved Beat',
+  spawn_new: 'Spawned Beat',
 };
 
 const describeBeatTurnEffect = (tracker?: BeatTracker | null): string | null => {
@@ -74,64 +74,38 @@ const describeBeatTurnEffect = (tracker?: BeatTracker | null): string | null => 
   return BEAT_TURN_EFFECT_LABELS[tracker.turnEffect] ?? null;
 };
 
-const formatBeatStatusLabel = (status?: ChronicleBeatStatus | null): string | null => {
-  if (!status) {
-    return null;
-  }
-  if (status === 'succeeded') {
-    return 'Succeeded';
-  }
-  if (status === 'failed') {
-    return 'Failed';
-  }
-  return 'In Progress';
+type PlayerBeatDirective = {
+  kind: 'existing' | 'new' | 'independent';
+  summary?: string;
+  targetBeatId?: string | null;
 };
 
-type BeatTrackerDetailsProps = {
-  beatLookup: Map<string, string>;
-  tracker: BeatTracker;
-};
-
-const BeatTrackerDetails = ({ beatLookup, tracker }: BeatTrackerDetailsProps): JSX.Element | null => {
-  const focusBeat = tracker.focusBeatId ? beatLookup.get(tracker.focusBeatId) ?? tracker.focusBeatId : null;
-  const nextBeat = tracker.newBeat ?? null;
-  const updates = tracker.updates ?? [];
-  if (!focusBeat && !nextBeat && updates.length === 0) {
+const readPlayerBeatDirective = (intent?: Intent | null): PlayerBeatDirective | null => {
+  if (!intent || typeof intent !== 'object') {
     return null;
   }
-  return (
-    <div className="chat-entry-beat-tracker">
-      {focusBeat ? <p className="chat-entry-beat-focus">Focus · {focusBeat}</p> : null}
-      {nextBeat ? (
-        <div className="chat-entry-beat-new">
-          <p className="chat-entry-beat-new-title">{nextBeat.title}</p>
-          <p className="chat-entry-beat-new-description">{nextBeat.description}</p>
-        </div>
-      ) : null}
-      {updates.length > 0 ? (
-        <ul className="chat-entry-beat-updates">
-          {updates.map((update, index) => {
-            const title = beatLookup.get(update.beatId) ?? update.beatId;
-            const statusLabel = formatBeatStatusLabel(update.status);
-            return (
-              <li key={`${update.beatId}-${index}`}>
-                <div className="beat-update-heading">
-                  <span className="beat-update-title">{title}</span>
-                  <span className={`beat-update-kind beat-update-kind-${update.changeKind}`}>
-                    {update.changeKind === 'advance' ? 'Advanced' : 'Resolved'}
-                  </span>
-                  {statusLabel ? <span className="beat-update-status">{statusLabel}</span> : null}
-                </div>
-                {update.description ? (
-                  <p className="beat-update-description">{update.description}</p>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
-  );
+  const candidate = (intent as { beatDirective?: PlayerBeatDirective | null }).beatDirective;
+  if (!candidate || typeof candidate.kind !== 'string') {
+    return null;
+  }
+  return candidate;
+};
+
+const describePlayerBeatLabel = (
+  directive: PlayerBeatDirective | null,
+  lookup: Map<string, string>
+): string | null => {
+  if (!directive) {
+    return null;
+  }
+  if (directive.kind === 'existing') {
+    const name = directive.targetBeatId ? lookup.get(directive.targetBeatId) ?? directive.summary : directive.summary;
+    return name ?? 'Tracked goal';
+  }
+  if (directive.kind === 'new') {
+    return 'New beat';
+  }
+  return 'Independent';
 };
 
 const formatIntentBadgeLabel = (intentType: ChatMessage['intentType']): string | null => {
@@ -425,6 +399,10 @@ export function ChatCanvas() {
             const beatTracker = chatMessage.beatTracker ?? null;
             const beatTrackerEffectLabel =
               entry.role === 'gm' && showNarrative ? describeBeatTurnEffect(beatTracker) : null;
+            const playerBeatLabel =
+              entry.role === 'player'
+                ? describePlayerBeatLabel(readPlayerBeatDirective(playerIntent), beatLookup)
+                : null;
             const playerIntentLabel = formatIntentBadgeLabel(playerIntent?.intentType ?? null);
             const timelineLabel = describeTimelineBadge(chatMessage.advancesTimeline ?? null);
             const deltaLabel = describeWorldDeltaTags(chatMessage.worldDeltaTags ?? null);
@@ -457,6 +435,9 @@ export function ChatCanvas() {
                       <span className="chat-entry-spark" title="Creative Spark awarded">
                         ★
                       </span>
+                    ) : null}
+                    {entry.role === 'player' && showNarrative && playerBeatLabel ? (
+                      <span className="chat-entry-beat-tag">{playerBeatLabel}</span>
                     ) : null}
                     {entry.role === 'gm' && beatTrackerEffectLabel ? (
                       <span className="chat-entry-beat-effect">{beatTrackerEffectLabel}</span>
@@ -547,8 +528,8 @@ export function ChatCanvas() {
                           ))}
                         </div>
                       ) : null}
-                      {showNarrative && beatTracker ? (
-                        <BeatTrackerDetails beatLookup={beatLookup} tracker={beatTracker} />
+                      {showBadges && beatTracker ? (
+                        <BeatTrackerBadge beatLookup={beatLookup} tracker={beatTracker} />
                       ) : null}
                       {showAll && deltaLabel ? (
                         <p className="chat-entry-delta-note">World shifts: {deltaLabel}</p>

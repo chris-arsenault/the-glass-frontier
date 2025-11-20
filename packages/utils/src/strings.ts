@@ -1,3 +1,12 @@
 export const toSnakeCase = (str: string): string => {
-  return str.replace(/([A-Z])/g, "_$1").toLowerCase();
+  return str
+    .replace(/[^a-zA-Z0-9]/g, " ")          // break words on punctuation/space
+    .trim()
+    .replace(/\s+/g, " ")                   // normalize spaces
+    .split(" ")
+    .map((word) =>
+      word.replace(/(?<!^)([A-Z])/g, "_$1") // underscore only if not first char
+    )
+    .join("_")
+    .toLowerCase();
 };

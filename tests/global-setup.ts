@@ -1,8 +1,9 @@
 import { execa } from 'execa';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import waitOn from 'wait-on';
+
+import { PidRegistry } from '../scripts/pid-registry';
 
 const STACK_STATE_PATH = path.resolve(process.cwd(), 'tests/.e2e-stack.json');
 
@@ -50,7 +51,15 @@ const waitResources = [
 const withEnv = (): NodeJS.ProcessEnv => ({ ...process.env, ...sharedEnv });
 
 export default async function globalSetup(): Promise<void> {
-  await rm(STACK_STATE_PATH, { force: true });
+  const pidRegistry = new PidRegistry({ persistPath: STACK_STATE_PATH });
+  await pidRegistry.load();
+  if (pidRegistry.list().length > 0) {
+    console.warn('[global-setup] Found stale dev processes; cleaning them up before bootstrapping.');
+    await pidRegistry.killAll();
+    await pidRegistry.clear();
+  } else {
+    await pidRegistry.clear();
+  }
 
   await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
     stdio: 'inherit',
@@ -76,21 +85,18 @@ export default async function globalSetup(): Promise<void> {
   devServer.catch(() => undefined);
   devServer.unref();
 
+  if (typeof devServer.pid === 'number') {
+    await pidRegistry.register({
+      pid: devServer.pid,
+      command: 'pnpm dev',
+      label: 'playwright-dev-server',
+      cwd: process.cwd(),
+      killGroup: true,
+    });
+  }
+
   await waitOn({
     resources: waitResources,
     timeout: 180_000,
   });
-
-  await mkdir(path.dirname(STACK_STATE_PATH), { recursive: true });
-  await writeFile(
-    STACK_STATE_PATH,
-    JSON.stringify(
-      {
-        devServerPid: devServer.pid,
-      },
-      null,
-      2
-    ),
-    'utf-8'
-  );
 }
