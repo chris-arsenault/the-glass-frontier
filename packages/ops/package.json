@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@glass-frontier/dto": "workspace:*",
+    "@glass-frontier/utils": "workspace:*",
     "node-pg-migrate": "^7.6.1",
     "pg": "^8.13.1"
   }
