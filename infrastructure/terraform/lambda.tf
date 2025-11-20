@@ -31,6 +31,8 @@ module "chronicle_lambda" {
     LOCATION_GRAPH_DDB_TABLE    = aws_dynamodb_table.location_graph_index.name
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
+    OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
+    OPENAI_API_BASE             = "https://api.openai.com/v1"
   }
 
   http_api_config = {
@@ -142,6 +144,7 @@ module "gm_api_lambda" {
     LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
     LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
+    OPENAI_API_BASE             = "https://api.openai.com/v1"
   }
 
   http_api_config = {

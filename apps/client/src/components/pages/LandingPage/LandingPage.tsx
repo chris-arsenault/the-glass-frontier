@@ -6,6 +6,7 @@ import {
   recentChronicleFeed,
 } from '../../../data/landingFeed';
 import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useUiStore } from '../../../stores/uiStore';
 import type { ChangelogEntry } from '../../../types/changelog';
 import './LandingPage.css';
 
@@ -23,6 +24,11 @@ export function LandingPage(): JSX.Element {
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
   const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
+  const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
+  const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
+  const currentChronicleId = useChronicleStore((state) => state.chronicleId);
+  const chronicleCharacterId = useChronicleStore((state) => state.character?.id ?? null);
+  const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const [loadingChronicleId, setLoadingChronicleId] = useState<string | null>(null);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
 
@@ -41,7 +47,9 @@ export function LandingPage(): JSX.Element {
       .reverse();
   }, []);
 
+  const quickCharacters = useMemo(() => availableCharacters.slice(0, 3), [availableCharacters]);
   const quickChronicles = useMemo(() => availableChronicles.slice(0, 3), [availableChronicles]);
+  const hasActiveChronicle = Boolean(currentChronicleId);
 
   const handleQuickLoad = async (chronicleId: string) => {
     if (!chronicleId) {
@@ -104,6 +112,75 @@ export function LandingPage(): JSX.Element {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="landing-panel landing-chronicle-panel">
+        <header className="landing-panel-header">
+          <div>
+            <p className="landing-eyebrow">Roster</p>
+            <h2>Your characters</h2>
+          </div>
+          <div className="landing-chronicle-header-meta">
+            <span className={`landing-status-chip status-${directoryStatus}`}>{directoryLabel}</span>
+            <div className="landing-chronicle-actions">
+              <button
+                type="button"
+                className="landing-link-button"
+                onClick={() => {
+                  void refreshDirectory().catch(() => undefined);
+                }}
+                disabled={directoryStatus === 'loading'}
+              >
+                {directoryStatus === 'loading' ? 'Refreshing…' : 'Refresh'}
+              </button>
+              <button
+                type="button"
+                className="landing-link-button"
+                onClick={openCreateCharacterModal}
+              >
+                Create new
+              </button>
+            </div>
+          </div>
+        </header>
+        {quickCharacters.length === 0 ? (
+          <p className="landing-empty-copy">
+            No characters yet. Use <strong>Create new</strong> to draft your first profile.
+          </p>
+        ) : (
+          <ul className="landing-my-characters">
+            {quickCharacters.map((character) => {
+              const isChronicleCharacter = chronicleCharacterId === character.id;
+              const isPreferred = preferredCharacterId === character.id;
+              const isLocked = hasActiveChronicle && !isChronicleCharacter;
+              const buttonLabel = isLocked
+                ? 'Locked'
+                : isChronicleCharacter
+                  ? 'Active'
+                  : isPreferred
+                    ? 'Selected'
+                    : 'Select';
+              return (
+                <li key={character.id}>
+                  <div>
+                    <p className="landing-my-character-title">{character.name}</p>
+                    <p className="landing-my-character-meta">
+                      {character.archetype} · {character.pronouns}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="landing-link-button"
+                    onClick={() => setPreferredCharacterId(character.id)}
+                    disabled={isLocked || isPreferred || directoryStatus === 'loading'}
+                  >
+                    {buttonLabel}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="landing-panel landing-chronicle-panel">

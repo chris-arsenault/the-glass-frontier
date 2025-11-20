@@ -119,38 +119,10 @@
     "type": "bugfix"
   },
   {
-    "id": "2025-11-18-playwright-isolated-stack",
-    "releasedAt": "2025-11-18",
-    "summary": "Playwright now boots a fully mocked stack",
-    "details": "Added a dockerised LocalStack + WireMock harness, seeded the hybrid storage buckets/tables, and wired Playwright global setup to run the dev servers so we can run deterministic landing-page coverage without touching shared dev persistence or OpenAI.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-19-playwright-deltas-and-moderation",
-    "releasedAt": "2025-11-19",
-    "summary": "Playwright now validates deltas and moderator surfaces",
-    "details": "Seeded richer location/inventory fixtures, scripted deterministic location-delta responses, and expanded the Playwright suite so it walks the GM pipeline, exercises multi-turn location plans, inspects character sheets, captures feedback/bug reports, and validates the LLM audit, bug moderation, and location maintenance workspaces end-to-end.",
-    "type": "improvement"
-  },
-  {
     "id": "2025-11-20-gm-api-routing",
     "releasedAt": "2025-11-20",
     "summary": "GM API now handles player intents",
     "details": "Refactored the client’s send-and-wrap flows and updated the API Gateway/Lambda wiring so player turns now hit the dedicated gm-api while the chronicle service continues handling directory and setup endpoints.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-21-inventory-ui-simplification",
-    "releasedAt": "2025-11-21",
-    "summary": "Character inventory UI matches the new schema",
-    "details": "Rebuilt the character overview so it renders gear, relics, consumables, and supplies straight from the new flat inventory payload, removed the obsolete gear queue/data shard hooks, and refreshed the inventory delta badge to show the new op kinds, descriptions, effects, and quantities.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-21-beat-tracker-highlights",
-    "releasedAt": "2025-11-21",
-    "summary": "Beat tracker badges explain GM goal shifts",
-    "details": "Chat entries now read the beat tracker payload end-to-end: player intents show the focused beat next to the intent type, while GM replies use a compact badge with a tooltip that lists spawned beats and per-beat advances/resolutions.",
     "type": "improvement"
   }
 ]
