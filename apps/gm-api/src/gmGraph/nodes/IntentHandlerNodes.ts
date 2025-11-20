@@ -123,6 +123,11 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         ...context,
         advancesTimeline: this.options.advancesTimeline,
         gmResponse: transcript,
+        gmTrace: {
+          auditId: narration.requestId,
+          nodeId: this.options.id,
+          requestId: narration.requestId,
+        },
       };
 
     } catch (error) {

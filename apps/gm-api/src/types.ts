@@ -1,13 +1,14 @@
 import type {
+  BeatTracker,
   Character,
   Chronicle,
   Intent,
   LocationSummary,
+  LlmTrace,
   SkillCheckPlan,
   SkillCheckResult,
-  Turn,
   TranscriptEntry,
-  BeatTracker,
+  Turn,
 } from '@glass-frontier/dto';
 import type { LocationGraphStore} from '@glass-frontier/persistence';
 
@@ -47,6 +48,7 @@ export type GraphContext = {
   skillCheckPlan?: SkillCheckPlan;
   skillCheckResult?: SkillCheckResult;
   gmSummary?: string,
+  gmTrace?: LlmTrace | null;
   shouldCloseChronicle: boolean;
   advancesTimeline: boolean;
 
