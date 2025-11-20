@@ -6,7 +6,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createLocationGraphStore, createWorldStateStore } from '@glass-frontier/worldstate';
-import { AuditFeedbackStore, AuditGroupStore, AuditLogStore, AuditReviewStore, BugReportStore, TokenUsageStore } from '@glass-frontier/ops';
+import { createOpsStore } from '@glass-frontier/ops';
 import {
   LOCATION_ROOT_SEED,
   PLAYWRIGHT_CHARACTER_ID,
@@ -69,12 +69,7 @@ async function main(): Promise<void> {
     connectionString: worldstateDatabaseUrl,
     locationGraphStore,
   });
-  const bugReportStore = new BugReportStore({ connectionString: worldstateDatabaseUrl });
-  const tokenUsageStore = new TokenUsageStore({ connectionString: worldstateDatabaseUrl });
-  const auditGroupStore = new AuditGroupStore({ connectionString: worldstateDatabaseUrl });
-  const auditLogStore = new AuditLogStore({ connectionString: worldstateDatabaseUrl });
-  const auditReviewStore = new AuditReviewStore({ connectionString: worldstateDatabaseUrl });
-  const auditFeedbackStore = new AuditFeedbackStore({ connectionString: worldstateDatabaseUrl });
+  const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
   await runWorldstateMigrations();
   await runOpsMigrations();
@@ -87,23 +82,23 @@ async function main(): Promise<void> {
   await ensureQueue(sqs, closureQueue.name);
   await seedPlaywrightChronicle(worldStateStore, locationGraphStore);
   // Touch ops stores so migrations are exercised in tests
-  await bugReportStore.listReports();
-  await tokenUsageStore.listUsage(PLAYWRIGHT_PLAYER_ID, 1);
-  const group = await auditGroupStore.ensureGroup({
+  await opsStore.bugReportStore.listReports();
+  await opsStore.tokenUsageStore.listUsage(PLAYWRIGHT_PLAYER_ID, 1);
+  const group = await opsStore.auditGroupStore.ensureGroup({
     chronicleId: PLAYWRIGHT_CHRONICLE_ID,
     playerId: PLAYWRIGHT_PLAYER_ID,
     scopeRef: PLAYWRIGHT_CHRONICLE_ID,
     scopeType: 'turn',
   });
-  await auditLogStore.record({
+  await opsStore.auditLogStore.record({
     groupId: group.id,
     playerId: PLAYWRIGHT_PLAYER_ID,
     providerId: 'seed',
     request: { message: 'seed' },
     response: { ok: true },
   });
-  await auditReviewStore.listByGroup(group.id);
-  await auditFeedbackStore.listByGroup(group.id);
+  await opsStore.auditReviewStore.listByGroup(group.id);
+  await opsStore.auditFeedbackStore.listByGroup(group.id);
 }
 
 async function runWorldstateMigrations(): Promise<void> {

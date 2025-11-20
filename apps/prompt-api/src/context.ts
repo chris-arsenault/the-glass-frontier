@@ -1,4 +1,4 @@
-import { AuditFeedbackStore, AuditLogStore, AuditReviewStore } from '@glass-frontier/ops';
+import { createOpsStore } from '@glass-frontier/ops';
 import { PromptTemplateManager, createWorldStateStore } from '@glass-frontier/worldstate';
 
 const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -12,24 +12,24 @@ const worldStateStore = createWorldStateStore({
 
 const templateManager = new PromptTemplateManager({ worldStateStore });
 
-const auditLogStore = new AuditLogStore({ connectionString: worldstateDatabaseUrl });
-const auditReviewStore = new AuditReviewStore({ connectionString: worldstateDatabaseUrl });
-const auditFeedbackStore = new AuditFeedbackStore({ connectionString: worldstateDatabaseUrl });
+const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
 export type Context = {
-  auditFeedbackStore: AuditFeedbackStore;
-  auditLogStore: AuditLogStore;
-  auditReviewStore: AuditReviewStore;
-  templateManager: PromptTemplateManager;
+  auditFeedbackStore: typeof opsStore.auditFeedbackStore;
+  auditLogStore: typeof opsStore.auditLogStore;
+  auditReviewStore: typeof opsStore.auditReviewStore;
   authorizationHeader?: string;
+  opsStore: typeof opsStore;
+  templateManager: PromptTemplateManager;
 };
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
   return {
-    auditFeedbackStore,
-    auditLogStore,
-    auditReviewStore,
+    auditFeedbackStore: opsStore.auditFeedbackStore,
+    auditLogStore: opsStore.auditLogStore,
+    auditReviewStore: opsStore.auditReviewStore,
     authorizationHeader: options?.authorizationHeader,
+    opsStore,
     templateManager,
   };
 }

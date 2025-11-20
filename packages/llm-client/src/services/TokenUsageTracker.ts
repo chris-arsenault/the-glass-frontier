@@ -1,21 +1,17 @@
-import { TokenUsageStore } from '@glass-frontier/ops';
+import { createOpsStore } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 
 type UsageRecord = Map<string, number>;
 
 class TokenUsageTracker {
-  readonly #store: TokenUsageStore;
-
-  private constructor(store: TokenUsageStore) {
-    this.#store = store;
-  }
+  readonly #store = createOpsStore({ connectionString: resolveConnectionString() ?? undefined });
 
   static fromEnv(): TokenUsageTracker | null {
     const connectionString = resolveConnectionString();
     if (connectionString === null) {
       return null;
     }
-    return new TokenUsageTracker(new TokenUsageStore({ connectionString }));
+    return new TokenUsageTracker();
   }
 
   async record(
@@ -32,19 +28,12 @@ class TokenUsageTracker {
       return;
     }
 
-    const period = this.#usagePeriod(timestamp);
-    await this.#store.recordUsage({
+    await this.#store.tokenUsageStore.recordUsage({
       metrics: Object.fromEntries(summary.entries()),
       playerId: normalizedPlayerId,
       timestamp,
     });
     log('info', `Updated ${normalizedPlayerId} usage data.`);
-  }
-
-  #usagePeriod(date: Date): string {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
   }
 
   #flattenUsage(candidate: unknown): UsageRecord {

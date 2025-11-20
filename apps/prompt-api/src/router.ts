@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions, complexity, no-await-in-loop */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import {
   AUDIT_REVIEW_STATUSES,
   AUDIT_REVIEW_TAGS,
@@ -6,9 +6,6 @@ import {
   AuditReviewRecordSchema,
   PlayerFeedbackRecordSchema,
   PromptTemplateIds,
-  type AuditLogEntry,
-  type AuditQueueItem,
-  type AuditReviewRecord,
   type AuditReviewStatus,
   type PromptTemplateId,
 } from '@glass-frontier/dto';
@@ -93,70 +90,20 @@ const sanitizeQueueFilters = (input: z.infer<typeof listAuditQueueInput>): Queue
   };
 };
 
-const toQueueItem = (
-  entry: AuditLogEntry,
-  review: AuditReviewRecord | null
-): AuditQueueItem => ({
-  auditId: entry.id,
-  createdAt: entry.createdAt,
-  createdAtMs: entry.createdAtMs,
-  nodeId: entry.nodeId ?? null,
-  notes: review?.notes ?? null,
-  playerFeedback: entry.playerFeedback ?? [],
-  playerId: entry.playerId ?? null,
-  providerId: entry.providerId ?? null,
-  requestContextId: entry.requestContextId ?? null,
-  reviewerId: review?.reviewerId ?? null,
-  reviewerName: review?.reviewerName ?? null,
-  status: review?.status ?? 'unreviewed',
-  storageKey: entry.storageKey,
-  tags: review?.tags ?? [],
-  templateId: review?.templateId ?? null,
-});
-
-const buildReviewMap = (reviews: AuditReviewRecord[]): Map<string, AuditReviewRecord> => {
-  const map = new Map<string, AuditReviewRecord>();
-  for (const review of reviews) {
-    if (!map.has(review.auditId)) {
-      map.set(review.auditId, review);
-    }
-  }
-  return map;
-};
-
-const buildFeedbackMap = (
-  feedback: Array<{ auditId: string | null; record: ReturnType<typeof PlayerFeedbackRecordSchema.parse> }>
-): Map<string, Array<ReturnType<typeof PlayerFeedbackRecordSchema.parse>>> => {
-  const map = new Map<string, Array<ReturnType<typeof PlayerFeedbackRecordSchema.parse>>>();
-  for (const item of feedback) {
-    if (item.auditId === null) {
-      continue;
-    }
-    const bucket = map.get(item.auditId) ?? [];
-    bucket.push(item.record);
-    map.set(item.auditId, bucket);
-  }
-  return map;
-};
-
 export const promptRouter = t.router({
   getAuditEntry: t.procedure
     .input(z.object({ auditId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const found = await ctx.auditLogStore.get(input.auditId);
+      const found = await ctx.opsStore.getAuditEntry(input.auditId);
       if (found === null) {
         throw new Error('Audit entry not found.');
       }
-      const reviews = await ctx.auditReviewStore.listByGroup(found.groupId);
-      const review = reviews.find((entry) => entry.auditId === input.auditId) ?? null;
-      const feedback = await ctx.auditFeedbackStore.listByGroup(found.groupId);
-      const feedbackForAudit = feedback.filter((entry) => entry.auditId === input.auditId);
       return {
         entry: AuditLogEntrySchema.parse({
           ...found.entry,
-          playerFeedback: feedbackForAudit,
+          playerFeedback: found.feedback,
         }),
-        review: review ? AuditReviewRecordSchema.parse(review) : null,
+        review: found.review ? AuditReviewRecordSchema.parse(found.review) : null,
       };
     }),
 
@@ -164,7 +111,7 @@ export const promptRouter = t.router({
     .input(listAuditQueueInput)
     .query(async ({ ctx, input }) => {
       const filters = sanitizeQueueFilters(input);
-      const { entries, nextCursor } = await ctx.auditLogStore.listRecent({
+      const { cursor, items } = await ctx.opsStore.listAuditQueue({
         cursor: input.cursor,
         endDate: filters.endDate,
         groupId: filters.groupId,
@@ -175,31 +122,9 @@ export const promptRouter = t.router({
         search: filters.search,
         startDate: filters.startDate,
       });
-
-      const groupIds = Array.from(new Set(entries.map((e) => e.groupId)));
-      const reviewsByGroup = new Map<string, Map<string, AuditReviewRecord>>();
-      const feedbackByGroup = new Map<string, Map<string, Array<ReturnType<typeof PlayerFeedbackRecordSchema.parse>>>>();
-      for (const groupId of groupIds) {
-        const reviews = await ctx.auditReviewStore.listByGroup(groupId);
-        reviewsByGroup.set(groupId, buildReviewMap(reviews));
-        const feedback = await ctx.auditFeedbackStore.listByGroup(groupId);
-        const fbMap = buildFeedbackMap(feedback.map((record) => ({ auditId: record.auditId, record })));
-        feedbackByGroup.set(groupId, fbMap);
-      }
-
-      const queueItems: AuditQueueItem[] = [];
-      for (const { entry, groupId } of entries) {
-        const review = reviewsByGroup.get(groupId)?.get(entry.id) ?? null;
-        const playerFeedback = feedbackByGroup.get(groupId)?.get(entry.id) ?? [];
-        const item = toQueueItem({ ...entry, playerFeedback }, review);
-        if (filters.statusFilter && !filters.statusFilter.has(item.status)) {
-          continue;
-        }
-        queueItems.push(item);
-      }
-
+      const queueItems = ctx.opsStore.toQueueItems(items, filters.statusFilter);
       return {
-        cursor: nextCursor ?? null,
+        cursor: cursor ?? null,
         items: queueItems,
       };
     }),
@@ -217,7 +142,7 @@ export const promptRouter = t.router({
   saveAuditReview: t.procedure
     .input(saveAuditReviewInput)
     .mutation(async ({ ctx, input }) => {
-      const record = await ctx.auditReviewStore.save({
+      const record = await ctx.opsStore.saveAuditReview({
         auditId: input.auditId,
         groupId: input.groupId,
         notes: normalizeString(input.notes),
@@ -254,7 +179,7 @@ export const promptRouter = t.router({
       if (playerId === null) {
         throw new Error('Player identifier required for feedback submission.');
       }
-      const audit = await ctx.auditLogStore.get(input.auditId);
+      const audit = await ctx.opsStore.getAuditEntry(input.auditId);
       if (audit === null) {
         throw new Error('Audit entry not found for feedback.');
       }
