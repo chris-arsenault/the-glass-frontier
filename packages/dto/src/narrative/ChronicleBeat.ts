@@ -22,15 +22,6 @@ export type ChronicleBeatStatus = z.infer<typeof ChronicleBeatStatus>;
 export type ChronicleBeat = z.infer<typeof ChronicleBeat>;
 export type IntentBeatDirective = z.infer<typeof IntentBeatDirective>;
 
-const BeatTurnEffect = z.enum([
-  "no_change",
-  "advance_existing",
-  "resolve_existing",
-  "spawn_new",
-  "advance_and_spawn",
-  "resolve_and_spawn"
-]);
-
 const BeatChangeKind = z.enum(["advance", "resolve"]);
 
 const BeatUpdateSchema = z.object({
@@ -55,7 +46,6 @@ const NewBeatSchema = z
   .describe("Beat details if spawning new; else null.");
 
 export const BeatTrackerSchema = z.object({
-  turnEffect: BeatTurnEffect.describe("Overall effect of this turn."),
   focusBeatId: z
     .string()
     .nullable()

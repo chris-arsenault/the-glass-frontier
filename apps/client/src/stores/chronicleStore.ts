@@ -131,8 +131,8 @@ const upsertChatEntry = (
 
 const flattenTurns = (turns: Turn[]): ChatMessage[] =>
   turns.flatMap((turn) => {
-    const skillKey = turn.playerIntent?.skill ?? null;
-    const attributeKey = turn.playerIntent?.attribute ?? null;
+    const attributeKey = turn.skillCheckPlan?.attribute ?? null;
+    const skillKey = turn.skillCheckPlan?.skill ?? null;
     const extras = {
       advancesTimeline:
         typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
@@ -327,50 +327,20 @@ const applyTurnProgressEvent = (
   state: ChronicleState,
   event: TurnProgressEvent
 ): ChronicleState => {
-  if (
-    !event.payload ||
-    !state.chronicleId ||
-    event.chronicleId !== state.chronicleId ||
-    (state.pendingTurnJobId && event.jobId !== state.pendingTurnJobId)
-  ) {
+  if (!event.payload || !state.chronicleId || event.chronicleId !== state.chronicleId) {
+    return state;
+  }
+
+  const isCurrentTurn =
+    state.pendingTurnJobId !== null
+      ? event.jobId === state.pendingTurnJobId
+      : event.turnSequence === state.turnSequence;
+  if (!isCurrentTurn) {
     return state;
   }
 
   const payload = event.payload;
   let nextMessages = state.messages;
-
-  if (
-    state.pendingPlayerMessageId &&
-    (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
-  ) {
-    nextMessages = nextMessages.map((message) => {
-      if (message.entry.id !== state.pendingPlayerMessageId) {
-        return message;
-      }
-      return {
-        ...message,
-        advancesTimeline:
-          typeof payload.advancesTimeline === 'boolean'
-            ? payload.advancesTimeline
-            : message.advancesTimeline ?? null,
-        attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
-        beatTracker: extras.beatTracker ?? message.beatTracker ?? null,
-        executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
-        handlerId: payload.handlerId ?? message.handlerId ?? null,
-        intentType:
-          payload.resolvedIntentType ??
-          payload.playerIntent?.intentType ??
-          message.intentType ??
-          null,
-        inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
-        playerIntent: payload.playerIntent ?? message.playerIntent,
-        skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
-        skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
-        skillKey: payload.playerIntent?.skill ?? message.skillKey,
-        worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
-      };
-    });
-  }
 
   const extras: Partial<ChatMessage> = {
     advancesTimeline:
@@ -392,6 +362,39 @@ const applyTurnProgressEvent = (
     turnSequence: event.turnSequence ?? null,
     worldDeltaTags: payload.worldDeltaTags ?? null,
   };
+
+  if (
+    state.pendingPlayerMessageId &&
+    (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
+  ) {
+    nextMessages = nextMessages.map((message) => {
+      if (message.entry.id !== state.pendingPlayerMessageId) {
+        return message;
+      }
+      return {
+        ...message,
+        advancesTimeline:
+          typeof payload.advancesTimeline === 'boolean'
+            ? payload.advancesTimeline
+            : message.advancesTimeline ?? null,
+        attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+        beatTracker: payload.beatTracker ?? message.beatTracker ?? null,
+        executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
+        handlerId: payload.handlerId ?? message.handlerId ?? null,
+        intentType:
+          payload.resolvedIntentType ??
+          payload.playerIntent?.intentType ??
+          message.intentType ??
+          null,
+        inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
+        playerIntent: payload.playerIntent ?? message.playerIntent,
+        skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
+        skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
+        skillKey: payload.playerIntent?.skill ?? message.skillKey,
+        worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
+      };
+    });
+  }
 
   if (payload.gmResponse) {
     nextMessages = upsertChatEntry(nextMessages, payload.gmResponse, extras);
@@ -829,8 +832,10 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           : prev.momentumTrend;
         const beatResult = applyBeatTrackerUpdate(prev.beats, turn.beatTracker);
 
+        const attributeKey = turn.skillCheckPlan?.attribute ?? null;
+        const skillKey = turn.skillCheckPlan?.skill ?? null;
         const extras = {
-          attributeKey: turn.playerIntent?.attribute ?? null,
+          attributeKey,
           beatTracker: turn.beatTracker ?? null,
           executedNodes: turn.executedNodes ?? null,
           gmSummary: turn.gmSummary ?? null,
@@ -839,7 +844,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           playerIntent: turn.playerIntent ?? null,
           skillCheckPlan: turn.skillCheckPlan ?? null,
           skillCheckResult: turn.skillCheckResult ?? null,
-          skillKey: turn.playerIntent?.skill ?? null,
+          skillKey,
           skillProgress: skillBadges.length > 0 ? skillBadges : null,
           turnId: turn.id ?? null,
           turnSequence: turn.turnSequence ?? null,

@@ -26,11 +26,13 @@ export function createUpdatedInventory(context: GraphContext): Inventory {
 
     switch (o) {
       case "update":
+        log("info", `Trying to update item ${op.name}`)
         working[existingIndex].description = op.description;
         working[existingIndex].effect = op.effect || working[existingIndex].effect;
         working[existingIndex].quantity = op.quantity;
         break;
       case "add":
+        log("info", `Trying to add item ${op.name}`)
         const item: InventoryEntry = {
           id: toSnakeCase(op.name),
           kind: op.kind as InventoryEntryKind,
@@ -42,6 +44,7 @@ export function createUpdatedInventory(context: GraphContext): Inventory {
         context.chronicleState.character?.inventory.push(item);
         break;
       case "remove":
+        log("info", `Trying to remove item ${op.name}`)
         working.splice(existingIndex, 1);
         break;
     }
@@ -52,6 +55,7 @@ export function createUpdatedInventory(context: GraphContext): Inventory {
 
 function itemIndex(inventory: Inventory, item: InventoryDeltaOp): number {
   const id = toSnakeCase(item.name);
+  log("info", `Processing item ${id}`)
   return inventory.findIndex((entry) => {
     if (entry.id !== id) {
       return false;

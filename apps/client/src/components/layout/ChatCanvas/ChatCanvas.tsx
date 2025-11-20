@@ -538,9 +538,7 @@ export function ChatCanvas() {
                           ))}
                         </div>
                       ) : null}
-                      {showBadges && beatTracker ? (
-                        <BeatTrackerBadge beatLookup={beatLookup} tracker={beatTracker} />
-                      ) : null}
+
                       {showAll && deltaLabel ? (
                         <p className="chat-entry-delta-note">World shifts: {deltaLabel}</p>
                       ) : null}

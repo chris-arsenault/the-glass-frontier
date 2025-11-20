@@ -34,8 +34,9 @@ class LocationDeltaNode extends LlmClassifierNode<LocationDeltaDecision> {
   }
 
   #isRunnable(context: GraphContext): boolean {
+    const correctAction = (context.playerIntent?.intentType == 'action' || context.playerIntent?.intentType == 'planning')
     return (
-      context.playerIntent?.intentType == 'action' &&
+      correctAction &&
       isNonEmptyString(context.gmResponse?.content) &&
       isNonEmptyString(context.chronicleState.chronicle.characterId)
     );

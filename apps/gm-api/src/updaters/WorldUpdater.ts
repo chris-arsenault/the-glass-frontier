@@ -87,17 +87,19 @@ export class WorldUpdater {
 
   async #saveCharacter(character: Character): Promise<void> {
     try {
-      await this.#worldStateStore.upsertCharacter(character);
+      const c = await this.#worldStateStore.upsertCharacter(character);
+      console.log(c)
     } catch (error) {
-      log("error", "Error in saving character", error);
+      log("error", `Error in saving character ${error}`);
     }
   }
 
   async #saveChronicle(chronicle: Chronicle): Promise<void> {
     try {
-      await this.#worldStateStore.upsertChronicle(chronicle);
+      const c = await this.#worldStateStore.upsertChronicle(chronicle);
+      console.log(c);
     } catch (error) {
-      log("error", "Error in saving chronicle", error);
+      log("error", `Error in saving chronicle ${error}`);
     }
   }
 

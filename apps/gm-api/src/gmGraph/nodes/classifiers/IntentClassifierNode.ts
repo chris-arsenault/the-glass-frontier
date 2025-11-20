@@ -49,6 +49,11 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       handlerHints: result.handlerHints,
       intentSummary: result.intentSummary,
       intentType: result.intentType,
+      beatDirective: {
+        kind: 'new',
+        summary: "dummy",
+        targetBeatId: null
+      },
       metadata: {
         source: 'intent-classifier',
         timestamp: Date.now(),

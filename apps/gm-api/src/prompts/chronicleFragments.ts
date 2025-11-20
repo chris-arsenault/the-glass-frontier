@@ -10,18 +10,18 @@ export type ChronicleFragmentTypes = "character" | "location" | "beats" | "inten
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
   "intent-classifier": ['character', 'location', 'beats'],
   "intent-beat-detector": ['intent', 'beats'],
-  "beat-tracker": ['intent', 'beats', 'gm-response'],
+  "beat-tracker": ['intent', 'beats'],
   "check-planner": ['intent', 'character', 'location'],
   "gm-summary": ['intent', 'character', 'skill-check'],
   "location-delta": ['intent', 'user-message', 'location-detail'],
   "inventory-delta": ['intent', 'user-message', 'inventory'],
-  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
-  "action-resolver-wrap": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail',  'wrap'],
-  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
-  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
-  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
-  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
-  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'inventory-detail'],
+  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail'],
+  "action-resolver-wrap": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail',  'wrap'],
+  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
+  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
+  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
+  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail'],
+  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
 }
 
 export async function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
@@ -123,12 +123,14 @@ function beatsFragment(context: GraphContext): any {
 function intentFragment(context: GraphContext): any {
   return {
     type: context.playerIntent?.intentType,
-    summary: context.playerIntent?.intentSummary
+    summary: context.playerIntent?.intentSummary,
+    targetBeat: context.playerIntent?.beatDirective.targetBeatId,
+    beatDirective: context.playerIntent?.beatDirective.summary,
   }
 }
 
 function toneFragment(context: GraphContext): any {
-  return `*IMPORTANT*:The player has requested this tone for the narration: ${context.playerIntent?.tone}}`
+  return `*IMPORTANT*: ${context.playerIntent?.tone}`
 }
 
 function skillCheckFragment(context: GraphContext): any {

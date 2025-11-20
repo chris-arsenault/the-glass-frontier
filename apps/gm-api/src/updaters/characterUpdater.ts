@@ -1,5 +1,6 @@
 import {GraphContext} from "../types";
 import {Character, Skill, SKILL_TIER_SEQUENCE} from "@glass-frontier/dto";
+import {toSnakeCase} from "@glass-frontier/utils";
 
 const XP_PER_LEVEL = 5;
 
@@ -14,9 +15,10 @@ export function createUpdatedCharacter(context: GraphContext): Character {
   working.momentum.current = context.skillCheckResult.newMomentum ?? working.momentum.current;
 
   // add skills
-  const existing = context.skillCheckPlan.skill in working.skills;
+  const normalizedSkill = toSnakeCase(context.skillCheckPlan.skill);
+  const existing = normalizedSkill in working.skills;
   if (!existing) {
-    working.skills[context.skillCheckPlan.skill] = {
+    working.skills[normalizedSkill] = {
       attribute: context.skillCheckPlan.attribute,
       name: context.skillCheckPlan.skill,
       tier: "fool",
@@ -26,20 +28,20 @@ export function createUpdatedCharacter(context: GraphContext): Character {
   // add skill xp
   switch (context.skillCheckResult.outcomeTier) {
     case "collapse":
-      working.skills[context.skillCheckPlan.skill].xp += 2
+      working.skills[normalizedSkill].xp += 2
       break;
     case "regress":
-      working.skills[context.skillCheckPlan.skill].xp += 1
+      working.skills[normalizedSkill].xp += 1
       break;
     default:
       break;
   }
 
-  if (working.skills[context.skillCheckPlan.skill].xp > XP_PER_LEVEL) {
-    working.skills[context.skillCheckPlan.skill].xp -= XP_PER_LEVEL;
-    const currentIndex = SKILL_TIER_SEQUENCE[working.skills[context.skillCheckPlan.skill].tier];
+  if (working.skills[normalizedSkill].xp > XP_PER_LEVEL) {
+    working.skills[normalizedSkill].xp -= XP_PER_LEVEL;
+    const currentIndex = SKILL_TIER_SEQUENCE[working.skills[normalizedSkill].tier];
     const newIndex = currentIndex == SKILL_TIER_SEQUENCE.length - 1 ?  currentIndex : currentIndex+ 1;
-    working.skills[context.skillCheckPlan.skill].tier = SKILL_TIER_SEQUENCE[newIndex];
+    working.skills[normalizedSkill].tier = SKILL_TIER_SEQUENCE[newIndex];
   }
 
   return working;

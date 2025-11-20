@@ -33,6 +33,7 @@ const MOCK_ENV: Record<string, string> = {
   GM_API_PORT: '7001',
   VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
   VITE_COGNITO_CLIENT_ID: 'local-e2e',
+  VITE_PROGRESS_WS_URL: 'ws://localhost:8787',
   PLAYWRIGHT_RESET_ENABLED: '1',
 };
 

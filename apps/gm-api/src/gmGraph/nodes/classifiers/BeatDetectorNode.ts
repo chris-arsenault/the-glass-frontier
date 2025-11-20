@@ -1,10 +1,9 @@
-import type { IntentBeatDirective} from '@glass-frontier/dto';
-import { z } from 'zod';
-
 import type { GraphContext,  } from '../../../types';
 import {LlmClassifierNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LlmClassiferNode";
+import { z } from "zod";
+import {IntentBeatDirective} from "@glass-frontier/dto";
 
-const BeatDirectiveSchema = z.object({
+export const BeatDirectiveSchema = z.object({
   kind: z
     .enum(['existing', 'new', 'independent'])
     .describe('Beat targeting: existing beat, new beat, or standalone turn.'),
@@ -19,8 +18,7 @@ const BeatDirectiveSchema = z.object({
     .describe('Beat ID when kind="existing"; otherwise null.'),
 });
 
-type BeatDirective = z.infer<typeof BeatDirectiveSchema>;
-
+export type BeatDirective = z.infer<typeof BeatDirectiveSchema>;
 class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
   readonly id = 'intent-beat-detector';
   constructor() {

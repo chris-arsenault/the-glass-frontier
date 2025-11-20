@@ -9,7 +9,7 @@ export function trimSkillsList(skills: Skill[]) {
 
 export function trimBeatsList(beats: ChronicleBeat[]) {
   return beats
-    .filter(b => { return b.status != 'in_progress' })
+    .filter(b => { return b.status == 'in_progress' })
     .map(b => { return {
       id: b.id,
       title: b.title,

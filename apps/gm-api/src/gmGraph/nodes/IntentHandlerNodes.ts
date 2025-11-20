@@ -17,7 +17,7 @@ type HandlerOptions = {
 const NARRATIVE_MAX_OUTPUT_TOKENS = 2000
 const NARRATIVE_MODEL = 'gpt-5-mini'
 const NARRATIVE_REASONING = { reasoning: { effort: 'minimal' as const } };
-const NARRATIVE_VERBOSITY = 'medium'
+const NARRATIVE_VERBOSITY = 'low'
 
 class GmResponseNode implements GraphNode {
   readonly id: string;

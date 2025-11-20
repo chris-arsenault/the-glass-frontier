@@ -16,6 +16,7 @@
 - Only add new environment variables when a value truly needs to be surfaced from Terraform; prefer hardcoded defaults in code for everything else.
 - Use the existing layers: persistence-related functionality belongs in `packages/persistence`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
 - Use declarative programing for sequenced events.
+- Avoid fallback logic or multi-source guessing; rely on the canonical field for any data lookup and do not search in alternate locations.
 
 ## Changelog Workflow
 

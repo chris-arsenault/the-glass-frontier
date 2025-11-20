@@ -8,7 +8,7 @@ party in place, moves to a known node, or leaves the destination ambiguous.
   - `same`: no graph change.
   - `inside`: destination is a child (room, chamber, sub-area).
   - `adjacent`: destination is a sibling under the same parent (street-to-street, shop-to-shop).
-  - `linked`: destination is reached via portal/vessel/teleport or exists outside the current parent.
+  - `linked`: destination is reached via portal/vessel/teleport or exists outside the current parent. Use sparingly
 - If the GM invents a new named space, use that literal string as `destination`.
 - If narration only broadens or narrows focus without a named target, emit `{"action":"uncertain","destination":<best known container>,"link":"same"}`.
 
