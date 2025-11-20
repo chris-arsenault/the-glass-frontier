@@ -27,8 +27,8 @@ export function createUpdatedInventory(context: GraphContext): Inventory {
     switch (o) {
       case "update":
         log("info", `Trying to update item ${op.name}`)
-        working[existingIndex].description = op.description;
-        working[existingIndex].effect = op.effect || working[existingIndex].effect;
+        working[existingIndex].description = op.description ?? working[existingIndex].description;
+        working[existingIndex].effect = op.effect ?? working[existingIndex].effect;
         working[existingIndex].quantity = op.quantity;
         break;
       case "add":
@@ -41,7 +41,7 @@ export function createUpdatedInventory(context: GraphContext): Inventory {
           effect: op.effect || "",
           quantity: op.quantity,
         }
-        context.chronicleState.character?.inventory.push(item);
+        working.push(item);
         break;
       case "remove":
         log("info", `Trying to remove item ${op.name}`)

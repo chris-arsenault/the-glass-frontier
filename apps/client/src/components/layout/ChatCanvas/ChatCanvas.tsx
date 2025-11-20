@@ -99,19 +99,15 @@ const readPlayerBeatDirective = (intent?: Intent | null): PlayerBeatDirective | 
   return candidate;
 };
 
-const describePlayerBeatLabel = (
-  directive: PlayerBeatDirective | null,
-  lookup: Map<string, string>
-): string | null => {
+const describePlayerBeatLabel = (directive: PlayerBeatDirective | null): string | null => {
   if (!directive) {
     return null;
   }
-  if (directive.kind === 'existing') {
-    const name = directive.targetBeatId ? lookup.get(directive.targetBeatId) ?? directive.summary : directive.summary;
-    return name ?? 'Tracked goal';
-  }
   if (directive.kind === 'new') {
     return 'New beat';
+  }
+  if (directive.kind === 'existing') {
+    return 'Existing beat';
   }
   return 'Independent';
 };
@@ -447,7 +443,11 @@ export function ChatCanvas() {
                       </span>
                     ) : null}
                     {entry.role === 'player' && showNarrative && playerBeatLabel ? (
-                      <span className="chat-entry-beat-tag">{playerBeatLabel}</span>
+                      <BeatTag
+                        label={playerBeatLabel}
+                        directive={readPlayerBeatDirective(playerIntent)}
+                        beatLookup={beatLookup}
+                      />
                     ) : null}
                     {entry.role === 'gm' && beatTrackerEffectLabel ? (
                       <span className="chat-entry-beat-effect">{beatTrackerEffectLabel}</span>
@@ -739,3 +739,40 @@ export function ChatCanvas() {
     </section>
   );
 }
+type BeatTagProps = {
+  beatLookup: Map<string, string>;
+  directive: PlayerBeatDirective | null;
+  label: string;
+};
+
+const BeatTag = ({ beatLookup, directive, label }: BeatTagProps) => {
+  if (!directive) {
+    return null;
+  }
+  const isHoverable = directive.kind === 'new' || directive.kind === 'existing';
+  const resolvedTitle =
+    directive.kind === 'existing' && directive.targetBeatId
+      ? beatLookup.get(directive.targetBeatId) ?? 'Tracked beat'
+      : directive.summary ?? 'Tracked beat';
+  const resolvedDescription =
+    directive.kind === 'existing' && directive.targetBeatId
+      ? beatLookup.get(directive.targetBeatId) ?? directive.summary ?? null
+      : directive.summary ?? null;
+
+  return (
+    <span className={`chat-entry-beat-tag${isHoverable ? ' chat-entry-beat-tag-hoverable' : ''}`}>
+      {label}
+      {isHoverable ? (
+        <span className="chat-entry-beat-tooltip">
+          <span className="chat-entry-beat-tooltip-label">Beat Details</span>
+          <p className="chat-entry-beat-tooltip-title">
+            {resolvedTitle ?? directive.summary ?? 'Tracked beat'}
+          </p>
+          {resolvedDescription ? (
+            <p className="chat-entry-beat-tooltip-description">{resolvedDescription}</p>
+          ) : null}
+        </span>
+      ) : null}
+    </span>
+  );
+};

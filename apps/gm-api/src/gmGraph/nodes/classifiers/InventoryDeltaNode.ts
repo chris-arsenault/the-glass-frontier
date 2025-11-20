@@ -21,7 +21,7 @@ class InventoryDeltaNode extends LlmClassifierNode<InventoryDelta> {
   }
 
   #isRunnable(context: GraphContext): boolean {
-    const correctAction = (context.playerIntent?.intentType == 'action' || context.playerIntent?.intentType == 'planning')
+    const correctAction = (context.playerIntent?.intentType == 'action' || context.playerIntent?.intentType == 'planning' || context.playerIntent?.intentType === 'wrap')
     return (
       correctAction &&
       isNonEmptyString(context.gmResponse?.content) &&

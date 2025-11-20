@@ -113,14 +113,14 @@ class GmEngine {
 
     await this.worldStateStore.addTurn(turn);
 
-    //
-    // if (graphResult.chronicleShouldClose === true && chronicleState.chronicle?.status !== 'closed') {
-    //   await this.#closeChronicle({
-    //     chronicleState,
-    //     closingTurnSequence: turn.turnSequence,
-    //   });
-    //   chronicleStatus = 'closed';
-    // }
+
+    if (graphResult.shouldCloseChronicle && chronicleState.chronicle?.status !== 'closed') {
+      await this.#closeChronicle({
+        chronicleState,
+        closingTurnSequence: turn.turnSequence,
+      });
+      chronicleStatus = 'closed';
+    }
 
 
     log('info', 'Narrative engine resolved turn', {
@@ -162,6 +162,7 @@ class GmEngine {
 
   async #loadChronicleState(chronicleId: string): Promise<ChronicleState> {
     const state = await this.worldStateStore.getChronicleState(chronicleId);
+    console.log(state)
     if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }

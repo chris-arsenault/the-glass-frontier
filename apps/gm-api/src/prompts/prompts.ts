@@ -1,5 +1,5 @@
 import { Prompt } from "@glass-frontier/llm-client";
-import {ChronicleFragmentTypes, extractFragment, templateFragmentMapping} from "./chronicleFragments";
+import { extractFragment, templateFragmentMapping} from "./chronicleFragments";
 import { GraphContext } from "../types";
 import { PromptTemplateRuntime } from "./templateRuntime";
 import type {PromptTemplateId} from "@glass-frontier/dto";
@@ -7,7 +7,7 @@ import type {PromptTemplateId} from "@glass-frontier/dto";
 type MessageOrder = 'player' | 'gm' | 'both';
 const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
   "action-resolver": 'player',
-  "action-resolver-wrap": 'player',
+  "wrap-resolver": 'player',
   "beat-tracker": 'both',
   "check-planner": 'player',
   "clarification-responder": 'player',
@@ -73,8 +73,12 @@ class PromptComposer {
 
     const devMessageList = []
     for (const f of fragments) {
-      devMessageList.push(`### ${f.toUpperCase()}`);
       const frag = await extractFragment(f, context)
+      if (this.#isEmptyFragment(frag)) {
+        continue;
+      }
+
+      devMessageList.push(`### ${f.toUpperCase()}`);
       if (typeof frag === 'string') {
         devMessageList.push(frag);
       } else {
@@ -93,6 +97,25 @@ class PromptComposer {
   #gmMessage(context: GraphContext) {
     return context.gmResponse?.content
   }
+
+  #isEmptyFragment(frag: any): boolean {
+    // null or undefined
+    if (frag == null) return true;
+
+    // string
+    if (typeof frag === "string") return frag.trim().length === 0;
+
+    // array
+    if (Array.isArray(frag)) return frag.length === 0;
+
+    // object (but not Date, Map, etc.)
+    if (typeof frag === "object") {
+      return Object.keys(frag).length === 0;
+    }
+
+    return false;
+  }
+
 }
 
 export { PromptComposer }

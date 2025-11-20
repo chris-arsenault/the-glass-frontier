@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const PromptTemplateIds = [
   'action-resolver',
-  'action-resolver-wrap',
+  'wrap-resolver',
   'beat-tracker',
   'check-planner',
   'chronicle-seed',
@@ -38,11 +38,11 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/action-resolver.hbs',
     supportsVariants: true,
   },
-  'action-resolver-wrap': {
-    description: 'Resolves decisive player actions with consequences and hooks with an ending soon.',
-    id: 'action-resolver-wrap',
-    label: 'Action Resolver (Wrap)',
-    officialObjectKey: 'official/action-resolver-wrap.hbs',
+  'wrap-resolver': {
+    description: 'Tries to end the story with decisive action',
+    id: 'wrap-resolver',
+    label: 'Wrap Resolver',
+    officialObjectKey: 'official/wrap-resolver.hbs',
     supportsVariants: true,
   },
   'beat-tracker': {

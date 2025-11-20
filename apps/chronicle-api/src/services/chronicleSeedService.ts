@@ -1,9 +1,11 @@
-import type { ChronicleSeed, LocationPlace } from '@glass-frontier/dto';
+import type {ChronicleSeed, ChronicleSeedList, LocationPlace} from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
 
 import { PromptTemplateRuntime } from '../prompts/templateRuntime';
+import {zodTextFormat} from "openai/helpers/zod";
+import {ChronicleSeedListSchema} from "@glass-frontier/dto";
 
 type GenerateSeedRequest = {
   loginId: string;
@@ -50,20 +52,37 @@ export class ChronicleSeedService {
       tone_chips: this.#formatToneChips(request.toneChips),
       tone_notes: this.#formatToneNotes(request.toneNotes),
     });
+    console.log(prompt)
 
     const client = this.#resolveClient(request.authorizationHeader);
 
     const response = await client.generate({
-      maxTokens: 600,
+      max_output_tokens: 1600,
+      model: "gpt-5-mini",
       metadata: {
         locationId: place.locationId,
         operation: 'chronicle-seed',
+        logonId: request.loginId
       },
-      prompt,
-      temperature: 0.65,
+      reasoning: { effort: 'minimal' as const },
+      text: {
+        format: zodTextFormat(ChronicleSeedListSchema, 'chronicle_response_schema'),
+        verbosity: "low",
+      },
+      instructions: prompt,
+      input: [{
+          role: 'user',
+          content: [{
+            type: 'input_text',
+            text: 'Generate 3 chronicle seeds with different themes. they should contain a specific initial quest hook or problem to solve.'
+          }]
+        }
+      ]
     }, 'json');
+    const tryParsed = ChronicleSeedListSchema.safeParse(response.message);
+    tryParsed.data?.seeds.forEach((seed) => {console.log(seed)})
 
-    return this.#normalizeSeeds(response.json, requested, place);
+    return this.#normalizeSeeds(tryParsed.data, requested, place);
   }
 
   async #ensurePlace(locationId: string): Promise<LocationPlace> {
@@ -94,7 +113,7 @@ export class ChronicleSeedService {
     return Array.from(tags).slice(0, 12);
   }
 
-  #normalizeSeeds(payload: unknown, requested: number, place: LocationPlace): ChronicleSeed[] {
+  #normalizeSeeds(payload: ChronicleSeedList, requested: number, place: LocationPlace): ChronicleSeed[] {
     const normalized: ChronicleSeed[] = [];
     for (const entry of this.#extractSeedEntries(payload)) {
       if (normalized.length >= requested) {

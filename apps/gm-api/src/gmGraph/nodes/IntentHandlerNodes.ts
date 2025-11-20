@@ -32,8 +32,10 @@ class GmResponseNode implements GraphNode {
     const possibilityAdvisorNode = new PossibilityAdvisorNode();
     const planningNarratorNode = new PlanningNarratorNode();
     const reflectionWeaverNode = new ReflectionWeaverNode();
+    const wrapResolverNode = new WrapResolverNode();
+
     this.#handlers = [actionResolverNode, inquiryResponderNode, clarificationResponderNode,
-      possibilityAdvisorNode, planningNarratorNode, reflectionWeaverNode
+      possibilityAdvisorNode, planningNarratorNode, reflectionWeaverNode, wrapResolverNode
     ];
   }
   async execute(context: GraphContext): Promise<GraphContext> {
@@ -46,7 +48,9 @@ class GmResponseNode implements GraphNode {
     }
 
     try {
-      const handler = this.#handlers.find(handler => handler.options.intentType === context.playerIntent?.intentType);
+      const intentType = context.playerIntent?.intentType;
+
+      let handler = this.#handlers.find(handler => handler.options.intentType === intentType);
 
       if (!handler) {
         log("error", `Handler not found for ${context.playerIntent?.intentType}`)
@@ -160,6 +164,17 @@ class ActionResolverNode extends BaseIntentHandlerNode {
       advancesTimeline: true,
       id: 'action-resolver',
       intentType: 'action',
+      temperature: 0.85,
+    });
+  }
+}
+
+class WrapResolverNode extends BaseIntentHandlerNode {
+  constructor() {
+    super({
+      advancesTimeline: true,
+      id: 'wrap-resolver',
+      intentType: 'wrap',
       temperature: 0.85,
     });
   }

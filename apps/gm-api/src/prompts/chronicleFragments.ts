@@ -5,23 +5,23 @@ import {trimBeatsList, trimBreadcrumbList, trimSkillsList} from "./contextFormat
 import {getPromptInput} from "@glass-frontier/gm-api/prompts/locationHelpers";
 export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" |
   "gm-response" | "skill-check" | "user-message" | "recent-events" | "tone" | "wrap" |
-  "location-detail" | "inventory" | "inventory-detail";
+  "location-detail" | "inventory" | "inventory-detail" | "seed";
 
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
-  "intent-classifier": ['character', 'location', 'beats'],
+  "intent-classifier": ['character', 'location', 'beats', 'wrap'],
   "intent-beat-detector": ['intent', 'beats'],
   "beat-tracker": ['intent', 'beats'],
   "check-planner": ['intent', 'character', 'location'],
-  "gm-summary": ['intent', 'character', 'skill-check'],
+  "gm-summary": ['intent', 'character', 'skill-check', 'wrap'],
   "location-delta": ['intent', 'user-message', 'location-detail'],
   "inventory-delta": ['intent', 'user-message', 'inventory'],
-  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail'],
-  "action-resolver-wrap": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail',  'wrap'],
-  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
-  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
-  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
-  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail'],
-  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail'],
+  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  "wrap-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail',  'wrap', 'seed'],
+  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail','seed'],
+  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
 }
 
 export async function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
@@ -52,6 +52,8 @@ export async function extractFragment(fragmentType: ChronicleFragmentTypes, cont
       return toneFragment(context);
     case 'wrap':
       return wrapFragment(context);
+    case 'seed':
+      return seedFragment(context);
     default:
       return {};
   }
@@ -72,6 +74,7 @@ function characterFragment(context: GraphContext): any {
 }
 
 function locationFragment(context: GraphContext): any {
+  console.log(context.chronicleState.location);
   return {
     description: context.chronicleState.location?.description,
     tags: context.chronicleState.location?.tags,
@@ -147,13 +150,20 @@ function gmResponseFragment(context: GraphContext): any {
 }
 
 function recentEventsFragment(context: GraphContext): any {
-  context.chronicleState.turns.slice(-10).map((turn, index) => {
+  return context.chronicleState.turns.slice(-10).map((turn, index) => {
     return `${index + 1} P: ${turn.playerIntent?.intentSummary}\n   G: ${turn.gmSummary}`
-  })
+  }).join('\n')
 }
 
 function wrapFragment(context: GraphContext): any {
+  if (context.chronicleState.chronicle?.targetEndTurn === undefined || context.chronicleState.chronicle?.targetEndTurn === null) {
+    return "";
+  }
   return {
     turnsLeft: context.chronicleState.chronicle.targetEndTurn - context.turnSequence
   }
+}
+
+function seedFragment(context: GraphContext): any {
+  return context.chronicleState.chronicle.seedText;
 }

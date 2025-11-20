@@ -54,7 +54,7 @@ class CheckPlannerNode extends LlmClassifierNode<PlannerPlan> {
 
   #shouldPlanCheck(context: GraphContext): boolean {
     const type = context.playerIntent?.intentType
-    return type === 'action' || type === 'planning';
+    return type === 'action' || type === 'planning' || type === 'wrap';
   }
 
   #savePlan(context: GraphContext, result: PlannerPlan): GraphContext {
