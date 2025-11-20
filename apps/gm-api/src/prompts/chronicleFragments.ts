@@ -74,8 +74,8 @@ function characterFragment(context: GraphContext): any {
 }
 
 function locationFragment(context: GraphContext): any {
-  console.log(context.chronicleState.location);
   return {
+    name: context.chronicleState.location?.breadcrumb.at(-1)?.name,
     description: context.chronicleState.location?.description,
     tags: context.chronicleState.location?.tags,
     breadcrumbs: trimBreadcrumbList(context.chronicleState.location?.breadcrumb || []),

@@ -52,7 +52,6 @@ export class ChronicleSeedService {
       tone_chips: this.#formatToneChips(request.toneChips),
       tone_notes: this.#formatToneNotes(request.toneNotes),
     });
-    console.log(prompt)
 
     const client = this.#resolveClient(request.authorizationHeader);
 
@@ -80,8 +79,6 @@ export class ChronicleSeedService {
       ]
     }, 'json');
     const tryParsed = ChronicleSeedListSchema.safeParse(response.message);
-    tryParsed.data?.seeds.forEach((seed) => {console.log(seed)})
-
     return this.#normalizeSeeds(tryParsed.data, requested, place);
   }
 
