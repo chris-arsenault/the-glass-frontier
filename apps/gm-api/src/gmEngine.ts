@@ -11,7 +11,7 @@ import type { PromptTemplateManager } from '@glass-frontier/persistence';
 import {
   type WorldStateStore,
   type LocationGraphStore,
-} from '@glass-frontier/persistence';
+} from '@glass-frontier/worldstate';
 import {formatTurnJobId, isDefined, isNonEmptyString, log} from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 

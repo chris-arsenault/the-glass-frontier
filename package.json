@@ -18,7 +18,7 @@
     "lint:css": "pnpm -F ./apps/client run lint:css",
     "lint:css:fix": "pnpm -F ./apps/client run lint:css:fix",
     "test": "turbo run test",
-    "clear:data": "tsx scripts/clear-data.ts",
+    "clear:data": "pnpm -F @glass-frontier/worldstate migrate:reset",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:update-snapshots": "playwright test -u",

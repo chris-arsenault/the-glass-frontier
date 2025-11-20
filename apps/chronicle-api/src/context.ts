@@ -1,13 +1,15 @@
 // context.ts
 import {
+  BugReportStore,
+  TokenUsageStore,
+} from '@glass-frontier/persistence';
+import {
   createWorldStateStore,
   createLocationGraphStore,
   type WorldStateStore,
   type LocationGraphStore,
-  PromptTemplateManager,
-  BugReportStore,
-  TokenUsageStore,
-} from '@glass-frontier/persistence';
+} from '@glass-frontier/worldstate';
+import { PromptTemplateManager } from '@glass-frontier/persistence';
 
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
@@ -17,24 +19,19 @@ if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) 
 }
 const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
 
+const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
+if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
+  throw new Error('WORLDSTATE_DATABASE_URL must be configured for the narrative service');
+}
 const locationGraphStore = createLocationGraphStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+  connectionString: worldstateDatabaseUrl,
 });
 const worldStateStore = createWorldStateStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+  connectionString: worldstateDatabaseUrl,
   locationGraphStore,
 });
 
-const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
-if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
-  throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
-}
-const templateManager = new PromptTemplateManager({
-  bucket: templateBucket.trim(),
-  worldStateStore,
-});
+const templateManager = new PromptTemplateManager({ worldStateStore });
 const seedService = new ChronicleSeedService({
   locationGraphStore,
   templateManager,

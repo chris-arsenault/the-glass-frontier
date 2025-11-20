@@ -10,7 +10,7 @@ import {
   createWorldStateStore,
   type LocationGraphStore,
   type WorldStateStore,
-} from '@glass-frontier/persistence';
+} from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -46,9 +46,21 @@ class ChronicleClosureProcessor {
     locationGraphStore?: LocationGraphStore;
     llmClient?: RetryLLMClient;
   }) {
-    this.#locationGraphStore = options?.locationGraphStore ?? createLocationGraphStore();
+    const worldstateDatabaseUrl =
+      process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL ?? '';
+    if (!options?.worldStateStore && worldstateDatabaseUrl.trim().length === 0) {
+      throw new Error('WORLDSTATE_DATABASE_URL must be configured for the chronicle closer.');
+    }
+
+    this.#locationGraphStore =
+      options?.locationGraphStore ??
+      createLocationGraphStore({ connectionString: worldstateDatabaseUrl });
     this.#worldStateStore =
-      options?.worldStateStore ?? createWorldStateStore({ locationGraphStore: this.#locationGraphStore });
+      options?.worldStateStore ??
+      createWorldStateStore({
+        connectionString: worldstateDatabaseUrl,
+        locationGraphStore: this.#locationGraphStore,
+      });
     this.#llm = options?.llmClient ?? createLLMClient();
   }
 

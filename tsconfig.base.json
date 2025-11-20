@@ -28,6 +28,8 @@
       "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
       "@glass-frontier/persistence": ["packages/persistence/src/index.ts"],
       "@glass-frontier/persistence/*": ["packages/persistence/src/*"],
+      "@glass-frontier/worldstate": ["packages/worldstate/src/index.ts"],
+      "@glass-frontier/worldstate/*": ["packages/worldstate/src/*"],
       "@glass-frontier/chronicle-api": ["apps/chronicle-api/src/index.ts"],
       "@glass-frontier/chronicle-api/*": ["apps/chronicle-api/src/*"],
       "@glass-frontier/prompt-api": ["apps/prompt-api/src/index.ts"],

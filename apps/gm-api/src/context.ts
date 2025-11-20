@@ -4,14 +4,19 @@ import {
   createLocationGraphStore,
   type WorldStateStore,
   type LocationGraphStore,
-  PromptTemplateManager,
-} from '@glass-frontier/persistence';
+} from '@glass-frontier/worldstate';
+import { PromptTemplateManager } from '@glass-frontier/persistence';
 
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";
 
-const locationGraphStore = createLocationGraphStore({});
-const worldStateStore = createWorldStateStore({ locationGraphStore });
+const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
+if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
+  throw new Error('WORLDSTATE_DATABASE_URL must be configured for the GM API.');
+}
+
+const locationGraphStore = createLocationGraphStore({ connectionString: worldstateDatabaseUrl });
+const worldStateStore = createWorldStateStore({ connectionString: worldstateDatabaseUrl, locationGraphStore });
 const templateManager = new PromptTemplateManager({ worldStateStore});
 const llmClient = createLLMClient();
 

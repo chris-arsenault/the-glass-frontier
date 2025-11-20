@@ -20,5 +20,17 @@ services:
       - ./tests/mocks/openai/__files:/home/wiremock/__files
       - ./tests/mocks/openai/mappings:/home/wiremock/mappings
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=worldstate
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
 volumes:
   localstack-data:
+  pgdata:

@@ -47,3 +47,9 @@ output "progress_websocket_url" {
   value       = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
   description = "WebSocket endpoint that streams GM turn progress."
 }
+
+output "worldstate_database_url" {
+  description = "Connection string for the worldstate Postgres instance."
+  value       = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+  sensitive   = true
+}

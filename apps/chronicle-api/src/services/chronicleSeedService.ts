@@ -1,6 +1,7 @@
 import type {ChronicleSeed, ChronicleSeedList, LocationPlace} from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
-import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
+import type { PromptTemplateManager } from '@glass-frontier/persistence';
+import type { LocationGraphStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import { PromptTemplateRuntime } from '../prompts/templateRuntime';

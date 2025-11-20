@@ -23,6 +23,8 @@ const MOCK_ENV: Record<string, string> = {
   CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
   LLM_PROXY_ARCHIVE_BUCKET: 'gf-e2e-audit',
   LLM_PROXY_USAGE_TABLE: 'gf-e2e-llm-usage',
+  WORLDSTATE_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
+  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   OPENAI_API_BASE: 'http://localhost:8080/v1',
   OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
   OPENAI_API_KEY: 'test-openai-key',
@@ -50,6 +52,7 @@ const APP_WAIT_RESOURCES = [
   'tcp:7001',
   'tcp:7300',
   'tcp:7400',
+  'tcp:5432',
 ];
 
 function resolveMode(): StackMode {
@@ -107,13 +110,18 @@ async function main(): Promise<void> {
   });
 
   await waitOn({
-    resources: ['tcp:4566'],
+    resources: ['tcp:4566', 'tcp:5432'],
     timeout: 120_000,
   });
 
   if (mode === 'mock-openai') {
     await waitForWiremockReady();
   }
+
+  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'migrate'], {
+    env,
+    stdio: 'inherit',
+  });
 
   await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
     env,

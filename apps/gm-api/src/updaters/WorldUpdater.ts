@@ -1,7 +1,7 @@
 import {GraphContext} from "../types";
 import {isNonEmptyString, log} from "@glass-frontier/utils";
 import {Character, Chronicle, LocationPlan } from "@glass-frontier/dto";
-import { LocationGraphStore, WorldStateStore} from "@glass-frontier/persistence";
+import { LocationGraphStore, WorldStateStore} from "@glass-frontier/worldstate";
 import {createUpdatedBeats} from "./beatUpdater";
 import {createLocationPlan} from "./locationUpdater";
 import {createUpdatedInventory} from "./inventoryUpdater";

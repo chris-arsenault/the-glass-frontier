@@ -124,5 +124,12 @@
     "summary": "GM API now handles player intents",
     "details": "Refactored the client’s send-and-wrap flows and updated the API Gateway/Lambda wiring so player turns now hit the dedicated gm-api while the chronicle service continues handling directory and setup endpoints.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-postgres-worldstate",
+    "releasedAt": "2025-11-21",
+    "summary": "Worldstate moved to Postgres",
+    "details": "Replaced the hybrid S3/Dynamo persistence layer with a unified Postgres worldstate service, added a property-graph schema for chronicles, characters, turns, and locations, and wired the dev stack plus Terraform to provision and seed a shared RDS instance.",
+    "type": "improvement"
   }
 ]

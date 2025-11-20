@@ -4,7 +4,7 @@ import type {
   LocationPlace,
   Login,
 } from '@glass-frontier/dto';
-import type { LocationGraphStore } from '@glass-frontier/persistence';
+import type { LocationGraphStore } from '@glass-frontier/worldstate';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 

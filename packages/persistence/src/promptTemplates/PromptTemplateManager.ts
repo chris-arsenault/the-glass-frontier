@@ -12,7 +12,7 @@ import {
   type PlayerTemplateVariant,
 } from '@glass-frontier/dto';
 import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
-import type { WorldStateStore } from '@glass-frontier/persistence';
+import type { WorldStateStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import {

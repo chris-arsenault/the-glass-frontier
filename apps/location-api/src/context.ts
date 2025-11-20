@@ -1,10 +1,13 @@
-import { createLocationGraphStore } from '@glass-frontier/persistence';
-import type { LocationGraphStore } from '@glass-frontier/persistence';
+import { createLocationGraphStore } from '@glass-frontier/worldstate';
+import type { LocationGraphStore } from '@glass-frontier/worldstate';
+
+const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
+if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
+  throw new Error('WORLDSTATE_DATABASE_URL must be configured for the location API.');
+}
 
 const locationGraphStore = createLocationGraphStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  indexTable: process.env.LOCATION_GRAPH_DDB_TABLE,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
+  connectionString: worldstateDatabaseUrl,
 });
 
 export type Context = {

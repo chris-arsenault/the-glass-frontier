@@ -24,6 +24,7 @@
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
     "@glass-frontier/persistence": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
     "@glass-frontier/skill-check-resolver": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",

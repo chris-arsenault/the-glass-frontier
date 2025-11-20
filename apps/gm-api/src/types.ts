@@ -10,7 +10,7 @@ import type {
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { LocationGraphStore} from '@glass-frontier/persistence';
+import type { LocationGraphStore} from '@glass-frontier/worldstate';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";

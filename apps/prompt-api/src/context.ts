@@ -2,30 +2,25 @@ import {
   AuditFeedbackStore,
   AuditLogStore,
   AuditModerationStore,
-  createWorldStateStore,
   PromptTemplateManager,
 } from '@glass-frontier/persistence';
-
-const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
-if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
-  throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the prompt API.');
-}
+import { createWorldStateStore } from '@glass-frontier/worldstate';
 
 const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET;
 if (typeof auditBucket !== 'string' || auditBucket.trim().length === 0) {
   throw new Error('LLM_PROXY_ARCHIVE_BUCKET must be configured for the audit review API.');
 }
 
+const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
+if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
+  throw new Error('WORLDSTATE_DATABASE_URL must be configured for the prompt API.');
+}
+
 const worldStateStore = createWorldStateStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
-  worldIndexTable: process.env.NARRATIVE_DDB_TABLE,
+  connectionString: worldstateDatabaseUrl,
 });
 
-const templateManager = new PromptTemplateManager({
-  bucket: templateBucket.trim(),
-  worldStateStore,
-});
+const templateManager = new PromptTemplateManager({ worldStateStore });
 
 const auditLogStore = new AuditLogStore({
   bucket: auditBucket.trim(),

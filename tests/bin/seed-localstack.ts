@@ -3,15 +3,15 @@ import {
   CreateTableCommand,
   DescribeTableCommand,
   DynamoDBClient,
-  PutItemCommand,
   ResourceInUseException,
 } from '@aws-sdk/client-dynamodb';
 import { CreateQueueCommand, SQSClient } from '@aws-sdk/client-sqs';
+import { execa } from 'execa';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { createLocationGraphStore } from '../../packages/persistence/src/createLocationGraphStore';
+import { createLocationGraphStore, createWorldStateStore } from '@glass-frontier/worldstate';
 import {
   LOCATION_ROOT_SEED,
   PLAYWRIGHT_CHARACTER_ID,
@@ -36,11 +36,13 @@ const sqsEndpoint = resolveAwsEndpoint('AWS_SQS_ENDPOINT');
 const narrativeBucket = process.env.NARRATIVE_S3_BUCKET ?? 'gf-e2e-narrative';
 const promptBucket = process.env.PROMPT_TEMPLATE_BUCKET ?? 'gf-e2e-prompts';
 const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET ?? 'gf-e2e-audit';
-const worldIndexTable = process.env.NARRATIVE_DDB_TABLE ?? 'gf-e2e-world-index';
-const locationIndexTable = process.env.LOCATION_GRAPH_DDB_TABLE ?? 'gf-e2e-location-graph';
 const usageTable = process.env.LLM_PROXY_USAGE_TABLE ?? 'gf-e2e-llm-usage';
 const turnProgressQueue = queueUrlFromEnv('TURN_PROGRESS_QUEUE_URL', 'gf-e2e-turn-progress');
 const closureQueue = queueUrlFromEnv('CHRONICLE_CLOSURE_QUEUE_URL', 'gf-e2e-chronicle-closure');
+const worldstateDatabaseUrl =
+  process.env.WORLDSTATE_DATABASE_URL ??
+  process.env.DATABASE_URL ??
+  'postgres://postgres:postgres@localhost:5432/worldstate';
 
 function queueUrlFromEnv(envVar: string, fallbackName: string): { name: string } {
   const explicit = process.env[envVar];
@@ -73,24 +75,34 @@ async function main(): Promise<void> {
     region,
   });
   const locationGraphStore = createLocationGraphStore({
-    bucket: narrativeBucket,
-    indexTable: locationIndexTable,
-    prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
-    region,
+    connectionString: worldstateDatabaseUrl,
+  });
+  const worldStateStore = createWorldStateStore({
+    connectionString: worldstateDatabaseUrl,
+    locationGraphStore,
   });
 
+  await runWorldstateMigrations();
   await ensureBucket(s3, narrativeBucket);
   await ensureBucket(s3, promptBucket);
   await ensureBucket(s3, auditBucket);
   await uploadPromptTemplates(s3, promptBucket);
 
-  await ensureWorldIndexTable(dynamo, worldIndexTable);
-  await ensureLocationIndexTable(dynamo, locationIndexTable);
   await ensureUsageTable(dynamo, usageTable);
 
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
-  await seedPlaywrightChronicle(s3, dynamo, locationGraphStore);
+  await seedPlaywrightChronicle(worldStateStore, locationGraphStore);
+}
+
+async function runWorldstateMigrations(): Promise<void> {
+  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'migrate'], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      WORLDSTATE_DATABASE_URL: worldstateDatabaseUrl,
+    },
+  });
 }
 
 async function ensureBucket(client: S3Client, bucket: string): Promise<void> {
@@ -141,36 +153,6 @@ async function uploadPromptTemplates(client: S3Client, bucket: string): Promise<
         log('Uploaded prompt template', key);
       })
   );
-}
-
-async function ensureWorldIndexTable(client: DynamoDBClient, tableName: string): Promise<void> {
-  await ensureTable(client, {
-    AttributeDefinitions: [
-      { AttributeName: 'pk', AttributeType: 'S' },
-      { AttributeName: 'sk', AttributeType: 'S' },
-    ],
-    BillingMode: 'PAY_PER_REQUEST',
-    KeySchema: [
-      { AttributeName: 'pk', KeyType: 'HASH' },
-      { AttributeName: 'sk', KeyType: 'RANGE' },
-    ],
-    TableName: tableName,
-  });
-}
-
-async function ensureLocationIndexTable(client: DynamoDBClient, tableName: string): Promise<void> {
-  await ensureTable(client, {
-    AttributeDefinitions: [
-      { AttributeName: 'pk', AttributeType: 'S' },
-      { AttributeName: 'sk', AttributeType: 'S' },
-    ],
-    BillingMode: 'PAY_PER_REQUEST',
-    KeySchema: [
-      { AttributeName: 'pk', KeyType: 'HASH' },
-      { AttributeName: 'sk', KeyType: 'RANGE' },
-    ],
-    TableName: tableName,
-  });
 }
 
 async function ensureUsageTable(client: DynamoDBClient, tableName: string): Promise<void> {
@@ -282,67 +264,16 @@ async function waitForTableActive(
 }
 
 async function seedPlaywrightChronicle(
-  s3: S3Client,
-  dynamo: DynamoDBClient,
+  worldStateStore: ReturnType<typeof createWorldStateStore>,
   locationGraphStore: ReturnType<typeof createLocationGraphStore>
 ): Promise<void> {
-  const prefix = sanitizePrefix(process.env.NARRATIVE_S3_PREFIX);
-  const objectKey = (relative: string): string => (prefix.length > 0 ? `${prefix}/${relative}` : relative);
   const loginRecord = buildPlaywrightLoginRecord();
   const characterRecord = buildPlaywrightCharacterRecord();
   const chronicleRecord = buildPlaywrightChronicleRecord();
 
-  await writeJson(s3, objectKey(`logins/${PLAYWRIGHT_LOGIN_ID}.json`), loginRecord);
-  await writeJson(
-    s3,
-    objectKey(`characters/${PLAYWRIGHT_LOGIN_ID}/${PLAYWRIGHT_CHARACTER_ID}.json`),
-    characterRecord
-  );
-  await writeJson(
-    s3,
-    objectKey(`chronicles/${PLAYWRIGHT_LOGIN_ID}/${PLAYWRIGHT_CHRONICLE_ID}.json`),
-    chronicleRecord
-  );
-
-  await putIndexRecord(dynamo, toPk('login', PLAYWRIGHT_LOGIN_ID), toSk('character', PLAYWRIGHT_CHARACTER_ID), {
-    targetId: PLAYWRIGHT_CHARACTER_ID,
-    targetType: 'character',
-  });
-  await putIndexRecord(dynamo, toPk('character', PLAYWRIGHT_CHARACTER_ID), toSk('login', PLAYWRIGHT_LOGIN_ID), {
-    targetId: PLAYWRIGHT_LOGIN_ID,
-    targetType: 'login',
-  });
-  await putIndexRecord(dynamo, toPk('login', PLAYWRIGHT_LOGIN_ID), toSk('chronicle', PLAYWRIGHT_CHRONICLE_ID), {
-    targetId: PLAYWRIGHT_CHRONICLE_ID,
-    targetType: 'chronicle',
-  });
-  await putIndexRecord(
-    dynamo,
-    toPk('chronicle', PLAYWRIGHT_CHRONICLE_ID),
-    toSk('login', PLAYWRIGHT_LOGIN_ID),
-    {
-      targetId: PLAYWRIGHT_LOGIN_ID,
-      targetType: 'login',
-    }
-  );
-  await putIndexRecord(
-    dynamo,
-    toPk('chronicle', PLAYWRIGHT_CHRONICLE_ID),
-    toSk('character', PLAYWRIGHT_CHARACTER_ID),
-    {
-      targetId: PLAYWRIGHT_CHARACTER_ID,
-      targetType: 'character',
-    }
-  );
-  await putIndexRecord(
-    dynamo,
-    toPk('chronicle', PLAYWRIGHT_CHRONICLE_ID),
-    toSk('location', LOCATION_ROOT_SEED.id),
-    {
-      targetId: LOCATION_ROOT_SEED.id,
-      targetType: 'location',
-    }
-  );
+  await worldStateStore.upsertLogin(loginRecord);
+  await worldStateStore.upsertCharacter(characterRecord);
+  await worldStateStore.upsertChronicle(chronicleRecord);
   await seedPlaywrightLocationGraph(locationGraphStore, {
     characterId: PLAYWRIGHT_CHARACTER_ID,
     locationId: LOCATION_ROOT_SEED.id,
@@ -363,32 +294,6 @@ async function writeJson(client: S3Client, key: string, payload: unknown): Promi
     })
   );
 }
-
-async function putIndexRecord(
-  client: DynamoDBClient,
-  pk: string,
-  sk: string,
-  attributes: { targetId: string; targetType: string }
-): Promise<void> {
-  await client.send(
-    new PutItemCommand({
-      Item: {
-        pk: { S: pk },
-        sk: { S: sk },
-        targetId: { S: attributes.targetId },
-        targetType: { S: attributes.targetType },
-      },
-      TableName: worldIndexTable,
-    })
-  );
-}
-
-const sanitizePrefix = (value?: string | null): string => {
-  if (typeof value !== 'string') {
-    return '';
-  }
-  return value.replace(/^\/+|\/+$/g, '');
-};
 
 main().catch((error) => {
   console.error('[seed-localstack] Failed', error);
