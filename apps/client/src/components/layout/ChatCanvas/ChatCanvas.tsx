@@ -74,6 +74,14 @@ const describeBeatTurnEffect = (tracker?: BeatTracker | null): string | null => 
   return BEAT_TURN_EFFECT_LABELS[tracker.turnEffect] ?? null;
 };
 
+const hasBeatTrackerDetails = (tracker?: BeatTracker | null): boolean => {
+  if (!tracker || tracker.turnEffect === 'no_change') {
+    return false;
+  }
+  const updates = tracker.updates ?? [];
+  return Boolean(tracker.newBeat || tracker.focusBeatId || updates.length > 0);
+};
+
 type PlayerBeatDirective = {
   kind: 'existing' | 'new' | 'independent';
   summary?: string;
@@ -398,7 +406,9 @@ export function ChatCanvas() {
               entry.role === 'player' ? 'Player' : entry.role === 'gm' ? 'GM' : 'System';
             const beatTracker = chatMessage.beatTracker ?? null;
             const beatTrackerEffectLabel =
-              entry.role === 'gm' && showNarrative ? describeBeatTurnEffect(beatTracker) : null;
+              entry.role === 'gm' && showNarrative && hasBeatTrackerDetails(beatTracker)
+                ? describeBeatTurnEffect(beatTracker)
+                : null;
             const playerBeatLabel =
               entry.role === 'player'
                 ? describePlayerBeatLabel(readPlayerBeatDirective(playerIntent), beatLookup)

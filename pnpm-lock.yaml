@@ -479,7 +479,11 @@ importers:
         specifier: workspace:*
         version: link:../utils
 
-  packages/utils: {}
+  packages/utils:
+    dependencies:
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
 
 packages:
 

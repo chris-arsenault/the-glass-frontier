@@ -72,8 +72,11 @@ export class RetryLLMClient {
       return {
         attempts: attempt + 1,
         message,
-        record,
+        metadata: request.metadata,
+        providerId: this.#provider.id,
+        requestBody: request,
         requestId,
+        responseBody: record,
         usage
       };
     } catch (error) {

@@ -19,7 +19,6 @@ const BeatDirectiveSchema = z.object({
       .describe('ID of the referenced beat when kind is "existing"; null otherwise.'),
 });
 
-
 type BeatDirective = z.infer<typeof BeatDirectiveSchema>;
 
 class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
