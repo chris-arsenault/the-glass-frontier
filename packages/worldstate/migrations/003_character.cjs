@@ -9,22 +9,17 @@ exports.up = (pgm) => {
       references: 'node(id)',
       onDelete: 'CASCADE',
     },
-    login_id: {
-      type: 'text',
-      notNull: true,
-      references: 'login(id)',
-      onDelete: 'CASCADE',
-    },
+    player_id: { type: 'text', notNull: true, references: 'player(id)', onDelete: 'CASCADE' },
     name: { type: 'text', notNull: true },
     tags: { type: 'text[]', notNull: true, default: pgm.func(`'{}'::text[]`) },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
 
-  pgm.createIndex('character', 'login_id', { name: 'character_login_idx' });
+  pgm.createIndex('character', 'player_id', { name: 'character_player_idx' });
 };
 
 exports.down = (pgm) => {
-  pgm.dropIndex('character', 'login_id', { ifExists: true, name: 'character_login_idx' });
+  pgm.dropIndex('character', 'player_id', { ifExists: true, name: 'character_player_idx' });
   pgm.dropTable('character', { ifExists: true });
 };

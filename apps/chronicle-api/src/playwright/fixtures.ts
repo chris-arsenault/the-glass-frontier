@@ -2,20 +2,23 @@ import type {
   Character,
   Chronicle,
   LocationPlace,
-  Login,
+  Player,
 } from '@glass-frontier/dto';
 import type { LocationGraphStore } from '@glass-frontier/worldstate';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-export const PLAYWRIGHT_LOGIN_ID = 'playwright-e2e';
+export const PLAYWRIGHT_PLAYER_ID = 'playwright-e2e';
 export const PLAYWRIGHT_CHARACTER_ID = '11111111-2222-4333-8444-555555555555';
 export const PLAYWRIGHT_CHRONICLE_ID = 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
-const BASE_LOGIN: Login = {
+const BASE_PLAYER: Player = {
   email: 'playwright@example.com',
-  id: PLAYWRIGHT_LOGIN_ID,
-  loginName: PLAYWRIGHT_LOGIN_ID,
+  id: PLAYWRIGHT_PLAYER_ID,
+  metadata: undefined,
+  preferences: undefined,
+  templateOverrides: {},
+  username: PLAYWRIGHT_PLAYER_ID,
 };
 
 const BASE_CHARACTER: Character = {
@@ -55,7 +58,7 @@ const BASE_CHARACTER: Character = {
       quantity: 3,
     }
   ],
-  loginId: PLAYWRIGHT_LOGIN_ID,
+  playerId: PLAYWRIGHT_PLAYER_ID,
   momentum: {
     ceiling: 2,
     current: 0,
@@ -80,7 +83,7 @@ const BASE_CHRONICLE: Chronicle = {
   characterId: PLAYWRIGHT_CHARACTER_ID,
   id: PLAYWRIGHT_CHRONICLE_ID,
   locationId: '99999999-8888-4777-8666-555555555555',
-  loginId: PLAYWRIGHT_LOGIN_ID,
+  playerId: PLAYWRIGHT_PLAYER_ID,
   status: 'open',
   summaries: [],
   title: 'Playwright Chronicle',
@@ -116,7 +119,7 @@ export const LOCATION_CHILDREN_SEED: LocationPlaceSeed[] = [
   },
 ];
 
-export const buildPlaywrightLoginRecord = (): Login => clone(BASE_LOGIN);
+export const buildPlaywrightPlayerRecord = (): Player => clone(BASE_PLAYER);
 export const buildPlaywrightCharacterRecord = (): Character => clone(BASE_CHARACTER);
 export const buildPlaywrightChronicleRecord = (
   options?: { locationId?: string }

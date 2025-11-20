@@ -16,7 +16,7 @@ const PROPOSAL_FOLDER = 'proposals';
 export type SaveReviewPayload = {
   auditId: string;
   storageKey: string;
-  reviewerLoginId: string;
+  reviewerId: string;
   reviewerName?: string | null;
   status: AuditReviewStatus;
   nodeId?: string | null;
@@ -59,7 +59,7 @@ export class AuditModerationStore extends HybridObjectStore {
       draftAt: payload.status === 'in_progress' ? now : existing?.draftAt ?? null,
       nodeId: payload.nodeId ?? existing?.nodeId ?? null,
       notes: payload.notes ?? existing?.notes ?? null,
-      reviewerLoginId: payload.reviewerLoginId,
+      reviewerId: payload.reviewerId,
       reviewerName: payload.reviewerName ?? existing?.reviewerName ?? null,
       status: payload.status,
       storageKey: payload.storageKey,

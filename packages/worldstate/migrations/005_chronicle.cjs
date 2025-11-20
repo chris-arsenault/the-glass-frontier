@@ -6,15 +6,15 @@ exports.up = (pgm) => {
     id: { type: 'uuid', primaryKey: true, references: 'node(id)', onDelete: 'CASCADE' },
     title: { type: 'text', notNull: true },
     primary_char_id: { type: 'uuid', references: 'character(id)', onDelete: 'SET NULL' },
-    status: { type: 'text', notNull: true, default: 'active' },
-    login_id: { type: 'text', notNull: true, references: 'login(id)', onDelete: 'CASCADE' },
+    status: { type: 'text', notNull: true, default: 'open' },
+    player_id: { type: 'text', notNull: true, references: 'player(id)', onDelete: 'CASCADE' },
     location_id: { type: 'uuid', notNull: true, references: 'location(id)', onDelete: 'RESTRICT' },
     seed_text: { type: 'text' },
     beats_enabled: { type: 'boolean', notNull: true, default: true },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.createIndex('chronicle', 'login_id', { name: 'chronicle_login_idx' });
+  pgm.createIndex('chronicle', 'player_id', { name: 'chronicle_player_idx' });
   pgm.createIndex('chronicle', 'location_id', { name: 'chronicle_location_idx' });
 
   pgm.createTable('chronicle_turn', {
@@ -58,6 +58,6 @@ exports.down = (pgm) => {
   });
   pgm.dropTable('chronicle_turn', { ifExists: true });
   pgm.dropIndex('chronicle', 'location_id', { ifExists: true, name: 'chronicle_location_idx' });
-  pgm.dropIndex('chronicle', 'login_id', { ifExists: true, name: 'chronicle_login_idx' });
+  pgm.dropIndex('chronicle', 'player_id', { ifExists: true, name: 'chronicle_player_idx' });
   pgm.dropTable('chronicle', { ifExists: true });
 };

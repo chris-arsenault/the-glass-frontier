@@ -104,7 +104,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         metadata: {
           chronicleId: context.chronicleId,
           nodeId: this.options.id,
-          loginId: context.chronicleState.chronicle.loginId
+          playerId: context.chronicleState.chronicle.playerId
         },
         reasoning: NARRATIVE_REASONING.reasoning,
         text: {

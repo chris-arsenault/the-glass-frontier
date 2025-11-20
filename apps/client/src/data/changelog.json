@@ -131,5 +131,12 @@
     "summary": "Worldstate moved to Postgres",
     "details": "Replaced the hybrid S3/Dynamo persistence layer with a unified Postgres worldstate service, added a property-graph schema for chronicles, characters, turns, and locations, and wired the dev stack plus Terraform to provision and seed a shared RDS instance.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-22-player-identity-unified",
+    "releasedAt": "2025-11-22",
+    "summary": "Player identity replaces login everywhere",
+    "details": "Removed the legacy login table and login identifiers across the stack, rewired DTOs, audits, persistence, APIs, and the client to use player IDs exclusively, and cleaned up front-end flows and tooling to stop mapping between login and player fields.",
+    "type": "improvement"
   }
 ]

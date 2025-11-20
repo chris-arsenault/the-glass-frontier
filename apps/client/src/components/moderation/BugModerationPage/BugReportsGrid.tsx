@@ -28,7 +28,6 @@ type GridRow = {
   createdAt: string;
   createdAtLabel: string;
   id: string;
-  loginId: string;
   playerId: string;
   status: BugReportStatus;
   summary: string;
@@ -58,7 +57,6 @@ const createRow = (report: BugReport): GridRow => ({
   createdAt: report.createdAt,
   createdAtLabel: formatTimestamp(report.createdAt),
   id: report.id,
-  loginId: report.loginId,
   playerId: normalizeField(report.playerId),
   status: report.status,
   summary: report.summary,
@@ -82,8 +80,7 @@ const filterReports = (
       const haystacks = [
         report.summary,
         report.details,
-        report.loginId,
-        report.playerId ?? '',
+        report.playerId,
         report.chronicleId ?? '',
         report.characterId ?? '',
         report.adminNotes ?? '',
@@ -104,7 +101,7 @@ const useColumns = (): Array<GridColDef<GridRow>> =>
         minWidth: 140,
         valueFormatter: (params) => formatBugStatus(params.value as BugReportStatus),
       },
-      { field: 'loginId', headerName: 'Login', minWidth: 160 },
+      { field: 'playerId', headerName: 'Player', minWidth: 160 },
       {
         field: 'chronicleId',
         headerName: 'Chronicle',
@@ -158,7 +155,7 @@ export const BugReportsGrid = ({
       <div className="bug-filter-row">
         <TextField
           label="Search bug reports"
-          placeholder="Search by summary, login, or ID"
+          placeholder="Search by summary, player, or ID"
           size="small"
           value={filters.query}
           onChange={handleQueryChange}

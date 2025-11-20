@@ -6,7 +6,7 @@ const PK_PREFIX = {
   character: 'CHARACTER#',
   chronicle: 'CHRONICLE#',
   location: 'LOCATION#',
-  login: 'LOGIN#',
+  player: 'PLAYER#',
   turn: 'TURN#',
 } as const;
 
@@ -14,7 +14,7 @@ const SK_PREFIX = {
   character: 'CHARACTER#',
   chronicle: 'CHRONICLE#',
   location: 'LOCATION#',
-  login: 'LOGIN#',
+  player: 'PLAYER#',
   turn: 'TURN#',
 } as const;
 
@@ -28,8 +28,8 @@ const resolvePkPrefix = (prefix: keyof typeof PK_PREFIX): string => {
     return PK_PREFIX.chronicle;
   case 'location':
     return PK_PREFIX.location;
-  case 'login':
-    return PK_PREFIX.login;
+  case 'player':
+    return PK_PREFIX.player;
   case 'turn':
     return PK_PREFIX.turn;
   default:
@@ -57,28 +57,28 @@ export class WorldIndexRepository extends HybridIndexRepository {
     super({ client: options.client, tableName: options.tableName });
   }
 
-  async linkCharacterToLogin(characterId: string, loginId: string): Promise<void> {
+  async linkCharacterToPlayer(characterId: string, playerId: string): Promise<void> {
     await Promise.all([
-      this.put(toPk('login', loginId), `${SK_PREFIX.character}${characterId}`, {
+      this.put(toPk('player', playerId), `${SK_PREFIX.character}${characterId}`, {
         targetId: { S: characterId },
         targetType: { S: 'character' },
       }),
-      this.put(toPk('character', characterId), `${SK_PREFIX.login}${loginId}`, {
-        targetId: { S: loginId },
-        targetType: { S: 'login' },
+      this.put(toPk('character', characterId), `${SK_PREFIX.player}${playerId}`, {
+        targetId: { S: playerId },
+        targetType: { S: 'player' },
       }),
     ]);
   }
 
-  async linkChronicleToLogin(chronicleId: string, loginId: string): Promise<void> {
+  async linkChronicleToPlayer(chronicleId: string, playerId: string): Promise<void> {
     await Promise.all([
-      this.put(toPk('login', loginId), `${SK_PREFIX.chronicle}${chronicleId}`, {
+      this.put(toPk('player', playerId), `${SK_PREFIX.chronicle}${chronicleId}`, {
         targetId: { S: chronicleId },
         targetType: { S: 'chronicle' },
       }),
-      this.put(toPk('chronicle', chronicleId), `${SK_PREFIX.login}${loginId}`, {
-        targetId: { S: loginId },
-        targetType: { S: 'login' },
+      this.put(toPk('chronicle', chronicleId), `${SK_PREFIX.player}${playerId}`, {
+        targetId: { S: playerId },
+        targetType: { S: 'player' },
       }),
     ]);
   }
@@ -110,32 +110,32 @@ export class WorldIndexRepository extends HybridIndexRepository {
     });
   }
 
-  async listCharactersByLogin(loginId: string): Promise<string[]> {
-    return this.listByPrefix(toPk('login', loginId), SK_PREFIX.character, (item) =>
+  async listCharactersByPlayer(playerId: string): Promise<string[]> {
+    return this.listByPrefix(toPk('player', playerId), SK_PREFIX.character, (item) =>
       decodePrefixedValue(item.sk?.S, SK_PREFIX.character)
     );
   }
 
-  async listChroniclesByLogin(loginId: string): Promise<string[]> {
-    return this.listByPrefix(toPk('login', loginId), SK_PREFIX.chronicle, (item) =>
+  async listChroniclesByPlayer(playerId: string): Promise<string[]> {
+    return this.listByPrefix(toPk('player', playerId), SK_PREFIX.chronicle, (item) =>
       decodePrefixedValue(item.sk?.S, SK_PREFIX.chronicle)
     );
   }
 
-  async getCharacterLogin(characterId: string): Promise<string | null> {
+  async getCharacterPlayer(characterId: string): Promise<string | null> {
     const matches = await this.listByPrefix(
       toPk('character', characterId),
-      SK_PREFIX.login,
-      (item) => decodePrefixedValue(item.sk?.S, SK_PREFIX.login)
+      SK_PREFIX.player,
+      (item) => decodePrefixedValue(item.sk?.S, SK_PREFIX.player)
     );
     return matches[0] ?? null;
   }
 
-  async getChronicleLogin(chronicleId: string): Promise<string | null> {
+  async getChroniclePlayer(chronicleId: string): Promise<string | null> {
     const matches = await this.listByPrefix(
       toPk('chronicle', chronicleId),
-      SK_PREFIX.login,
-      (item) => decodePrefixedValue(item.sk?.S, SK_PREFIX.login)
+      SK_PREFIX.player,
+      (item) => decodePrefixedValue(item.sk?.S, SK_PREFIX.player)
     );
     return matches[0] ?? null;
   }
@@ -155,10 +155,10 @@ export class WorldIndexRepository extends HybridIndexRepository {
     );
   }
 
-  async removeChronicleFromLogin(chronicleId: string, loginId: string): Promise<void> {
+  async removeChronicleFromPlayer(chronicleId: string, playerId: string): Promise<void> {
     await Promise.all([
-      this.delete(toPk('login', loginId), `${SK_PREFIX.chronicle}${chronicleId}`),
-      this.delete(toPk('chronicle', chronicleId), `${SK_PREFIX.login}${loginId}`),
+      this.delete(toPk('player', playerId), `${SK_PREFIX.chronicle}${chronicleId}`),
+      this.delete(toPk('chronicle', chronicleId), `${SK_PREFIX.player}${playerId}`),
     ]);
   }
 

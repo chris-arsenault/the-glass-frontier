@@ -20,7 +20,7 @@ const createInitialChronicle = (value: string | null): string => (value ?? '').t
 
 function BugReportModalContent(): JSX.Element {
   const close = useUiStore((state) => state.closeBugReportModal);
-  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
+  const playerId = useChronicleStore((state) => state.playerId ?? '');
   const chronicleId = useChronicleStore((state) => state.chronicleId ?? null);
   const characterId = useChronicleStore((state) => state.character?.id ?? null);
   const [summary, setSummary] = useState('');
@@ -35,7 +35,7 @@ function BugReportModalContent(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit =
-    summary.trim().length >= 4 && details.trim().length >= 10 && typeof loginId === 'string' && loginId.length > 0;
+    summary.trim().length >= 4 && details.trim().length >= 10 && playerId.length > 0;
 
   const resetForm = () => {
     setSummary('');
@@ -63,7 +63,7 @@ function BugReportModalContent(): JSX.Element {
         characterId: contextCharacterId.trim().length ? contextCharacterId.trim() : null,
         chronicleId: contextChronicleId.trim().length ? contextChronicleId.trim() : null,
         details: details.trim(),
-        loginId,
+        playerId,
         summary: summary.trim(),
       });
       setStatus('success');
@@ -93,9 +93,9 @@ function BugReportModalContent(): JSX.Element {
             This form is for platform bugs that are not tied to a single chronicle turn. Include enough detail so the team
             can reproduce the issue—even if you have to abandon a session.
           </p>
-          {loginId ? null : (
+          {playerId ? null : (
             <p className="bug-report-error" role="alert">
-              Login context unavailable. Refresh your session before submitting a report.
+              Player context unavailable. Refresh your session before submitting a report.
             </p>
           )}
           <label className="bug-report-label" htmlFor="bug-summary">

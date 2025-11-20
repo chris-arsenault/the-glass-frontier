@@ -1,4 +1,3 @@
-export * from './Login';
 export * from './Character';
 export * from './locationGraph/Place';
 export * from './locationGraph/Edge';

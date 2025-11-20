@@ -9,7 +9,7 @@ import {zodTextFormat} from "openai/helpers/zod";
 import {ChronicleSeedListSchema} from "@glass-frontier/dto";
 
 type GenerateSeedRequest = {
-  loginId: string;
+  playerId: string;
   locationId: string;
   toneChips?: string[];
   toneNotes?: string;
@@ -39,7 +39,7 @@ export class ChronicleSeedService {
     const tags = this.#collectTags(breadcrumb);
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
     const runtime = new PromptTemplateRuntime({
-      loginId: request.loginId,
+      playerId: request.playerId,
       manager: this.#templates,
     });
 
@@ -62,7 +62,7 @@ export class ChronicleSeedService {
       metadata: {
         locationId: place.locationId,
         operation: 'chronicle-seed',
-        logonId: request.loginId
+        playerId: request.playerId,
       },
       reasoning: { effort: 'minimal' as const },
       text: {

@@ -16,10 +16,10 @@ import {
   LOCATION_ROOT_SEED,
   PLAYWRIGHT_CHARACTER_ID,
   PLAYWRIGHT_CHRONICLE_ID,
-  PLAYWRIGHT_LOGIN_ID,
+  PLAYWRIGHT_PLAYER_ID,
   buildPlaywrightCharacterRecord,
   buildPlaywrightChronicleRecord,
-  buildPlaywrightLoginRecord,
+  buildPlaywrightPlayerRecord,
   seedPlaywrightLocationGraph,
 } from '../../apps/chronicle-api/src/playwright/fixtures';
 
@@ -267,11 +267,11 @@ async function seedPlaywrightChronicle(
   worldStateStore: ReturnType<typeof createWorldStateStore>,
   locationGraphStore: ReturnType<typeof createLocationGraphStore>
 ): Promise<void> {
-  const loginRecord = buildPlaywrightLoginRecord();
+  const playerRecord = buildPlaywrightPlayerRecord();
   const characterRecord = buildPlaywrightCharacterRecord();
   const chronicleRecord = buildPlaywrightChronicleRecord();
 
-  await worldStateStore.upsertLogin(loginRecord);
+  await worldStateStore.upsertPlayer(playerRecord);
   await worldStateStore.upsertCharacter(characterRecord);
   await worldStateStore.upsertChronicle(chronicleRecord);
   await seedPlaywrightLocationGraph(locationGraphStore, {
@@ -280,7 +280,7 @@ async function seedPlaywrightChronicle(
   });
 }
 
-const toPk = (prefix: 'login' | 'character' | 'chronicle' | 'location' | 'turn', id: string) =>
+const toPk = (prefix: 'player' | 'character' | 'chronicle' | 'location' | 'turn', id: string) =>
   `${prefix.toUpperCase()}#${id}`;
 const toSk = toPk;
 

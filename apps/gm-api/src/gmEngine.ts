@@ -75,6 +75,7 @@ class GmEngine {
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
+    _options?: { authorizationHeader?: string },
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
@@ -85,9 +86,9 @@ class GmEngine {
     const chronicleState = await this.#loadChronicleState(chronicleId);
     this.#ensureChronicleOpen(chronicleState);
     const turnSequence = chronicleState.turnSequence + 1;
-    const loginId = this.#requireLoginId(chronicleState);
+    const playerId = this.#requirePlayerId(chronicleState);
     const jobId = formatTurnJobId(chronicleId, turnSequence);
-    const templateRuntime = this.#createTemplateRuntime(loginId);
+    const templateRuntime = this.#createTemplateRuntime(playerId);
     const graphInput = this.#buildGraphInput({
       chronicleId,
       chronicleState,
@@ -167,17 +168,17 @@ class GmEngine {
     return state;
   }
 
-  #requireLoginId(state: ChronicleState): string {
-    const loginId = state.chronicle?.loginId;
-    if (!isNonEmptyString(loginId)) {
-      throw new Error('Chronicle state missing login identifier for template resolution');
+  #requirePlayerId(state: ChronicleState): string {
+    const playerId = state.chronicle?.playerId;
+    if (!isNonEmptyString(playerId)) {
+      throw new Error('Chronicle state missing player identifier for template resolution');
     }
-    return loginId.trim();
+    return playerId.trim();
   }
 
-  #createTemplateRuntime(loginId: string): PromptTemplateRuntime {
+  #createTemplateRuntime(playerId: string): PromptTemplateRuntime {
     return new PromptTemplateRuntime({
-      loginId,
+      playerId,
       manager: this.templateManager,
     });
   }
@@ -316,7 +317,7 @@ class GmEngine {
       characterId: input.chronicle.characterId ?? undefined,
       chronicleId: input.chronicle.id,
       locationId: input.chronicle.locationId,
-      loginId: input.chronicle.loginId,
+      playerId: input.chronicle.playerId,
       requestedAt: Date.now(),
       summaryKinds: CLOSURE_SUMMARY_KINDS,
       turnSequence: input.closingTurnSequence,

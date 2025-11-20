@@ -40,7 +40,7 @@ const createChronicleInputSchema = z
     chronicleId: z.string().uuid().optional(),
     location: locationDetailsSchema.optional(),
     locationId: z.string().uuid().optional(),
-    loginId: z.string().min(1),
+    playerId: z.string().min(1),
     seedText: z.string().max(400).optional(),
     status: z.enum(['open', 'closed']).optional(),
     title: z.string().min(1),
@@ -55,8 +55,8 @@ const createChronicleInputSchema = z
 
 type CreateChronicleInput = z.infer<typeof createChronicleInputSchema>;
 
-const ensurePlayerRecord = async (ctx: Context, loginId: string): Promise<Player> => {
-  const existing = await ctx.worldStateStore.getPlayer(loginId);
+const ensurePlayerRecord = async (ctx: Context, playerId: string): Promise<Player> => {
+  const existing = await ctx.worldStateStore.getPlayer(playerId);
   if (existing !== null && existing !== undefined) {
     if (existing.templateOverrides === undefined) {
       existing.templateOverrides = {};
@@ -64,8 +64,10 @@ const ensurePlayerRecord = async (ctx: Context, loginId: string): Promise<Player
     return existing;
   }
   const blank: Player = {
-    loginId,
+    email: undefined,
+    id: playerId,
     templateOverrides: {},
+    username: playerId,
   };
   return ctx.worldStateStore.upsertPlayer(blank);
 };
@@ -85,7 +87,7 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.string().uuid(),
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -93,8 +95,8 @@ export const appRouter = t.router({
       if (chronicle === null || chronicle === undefined) {
         return { chronicleId: input.chronicleId, deleted: false };
       }
-      if (chronicle.loginId !== input.loginId) {
-        throw new Error('Chronicle does not belong to the requesting login.');
+      if (chronicle.playerId !== input.playerId) {
+        throw new Error('Chronicle does not belong to the requesting player.');
       }
       await ctx.worldStateStore.deleteChronicle(input.chronicleId);
       return { chronicleId: input.chronicleId, deleted: true };
@@ -106,7 +108,7 @@ export const appRouter = t.router({
         .object({
           count: z.number().int().positive().max(5).optional(),
           locationId: z.string().uuid(),
-          loginId: z.string().min(1),
+          playerId: z.string().min(1),
         })
         .merge(toneSchema)
     )
@@ -115,7 +117,7 @@ export const appRouter = t.router({
         authorizationHeader: ctx.authorizationHeader,
         count: input.count,
         locationId: input.locationId,
-        loginId: input.loginId,
+        playerId: input.playerId,
         toneChips: input.toneChips,
         toneNotes: input.toneNotes,
       })
@@ -127,9 +129,9 @@ export const appRouter = t.router({
     .query(async ({ ctx, input }) => augmentChronicleSnapshot(ctx, input.chronicleId)),
 
   getPlayerSettings: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
+    .input(z.object({ playerId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const player = await ensurePlayerRecord(ctx, input.loginId);
+      const player = await ensurePlayerRecord(ctx, input.playerId);
       return { preferences: normalizePlayerPreferences(player.preferences) };
     }),
 
@@ -137,7 +139,7 @@ export const appRouter = t.router({
     .input(
       z.object({
         limit: z.number().int().positive().max(12).optional(),
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -145,7 +147,7 @@ export const appRouter = t.router({
         return { usage: [] as TokenUsagePeriod[] };
       }
       const limit = Math.min(input.limit ?? 6, 12);
-      const usage = await ctx.tokenUsageStore.listUsage(input.loginId, limit);
+      const usage = await ctx.tokenUsageStore.listUsage(input.playerId, limit);
       return { usage };
     }),
 
@@ -155,12 +157,12 @@ export const appRouter = t.router({
   }),
 
   listCharacters: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByLogin(input.loginId)),
+    .input(z.object({ playerId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByPlayer(input.playerId)),
 
   listChronicles: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
+    .input(z.object({ playerId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByPlayer(input.playerId)),
 
   resetPlaywrightFixtures: t.procedure.mutation(async ({ ctx }) => {
     if (process.env.PLAYWRIGHT_RESET_ENABLED !== '1') {
@@ -175,7 +177,7 @@ export const appRouter = t.router({
       BugReportSubmissionSchema.extend({
         characterId: z.string().uuid().optional().nullable(),
         chronicleId: z.string().uuid().optional().nullable(),
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -183,8 +185,7 @@ export const appRouter = t.router({
         characterId: input.characterId ?? null,
         chronicleId: input.chronicleId ?? null,
         details: input.details,
-        loginId: input.loginId,
-        playerId: input.playerId ?? null,
+        playerId: input.playerId,
         summary: input.summary,
       });
       return { report };
@@ -211,12 +212,12 @@ export const appRouter = t.router({
   updatePlayerSettings: t.procedure
     .input(
       z.object({
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
         preferences: PlayerPreferencesSchema,
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const player = await ensurePlayerRecord(ctx, input.loginId);
+      const player = await ensurePlayerRecord(ctx, input.playerId);
       const preferences = normalizePlayerPreferences(input.preferences);
       const updated: Player = {
         ...player,
@@ -233,7 +234,7 @@ async function createChronicleHandler(
   input: CreateChronicleInput
 ): Promise<{ chronicle: EnsureChronicleResult }> {
   const character = await requireCharacter(ctx, input.characterId);
-  ensureCharacterOwnership(character, input.loginId);
+  ensureCharacterOwnership(character, input.playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
   const existingPlace = await resolveExistingPlace(ctx, input.locationId);
@@ -254,14 +255,14 @@ async function createChronicleHandler(
     characterId: input.characterId,
     chronicleId,
     locationId: locationRoot.locationId,
-    loginId: input.loginId,
+    playerId: input.playerId,
     seedText: input.seedText,
     status: input.status,
     title: input.title,
   });
 
   await maybeMoveCharacterToExistingPlace(ctx, input.characterId, existingPlace);
-  log('info', `Ensuring chronicle ${chronicle.id} for login ${chronicle.loginId}`);
+  log('info', `Ensuring chronicle ${chronicle.id} for player ${chronicle.playerId}`);
   return { chronicle };
 }
 
@@ -273,9 +274,9 @@ async function requireCharacter(ctx: Context, characterId: string): Promise<Char
   return character;
 }
 
-function ensureCharacterOwnership(character: Character, loginId: string): void {
-  if (character.loginId !== loginId) {
-    throw new Error('Character does not belong to the requesting login.');
+function ensureCharacterOwnership(character: Character, playerId: string): void {
+  if (character.playerId !== playerId) {
+    throw new Error('Character does not belong to the requesting player.');
   }
 }
 

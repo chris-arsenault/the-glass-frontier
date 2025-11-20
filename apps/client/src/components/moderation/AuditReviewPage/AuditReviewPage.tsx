@@ -17,7 +17,7 @@ export function AuditReviewPage(): JSX.Element {
   const modal = useReviewModal(store.selectItem);
   useAuditReviewSync(access.canModerate, store.loadQueue, store.refreshProposals);
   const detailTemplateLabel = useTemplateLabel(store.selectedItem);
-  const reviewActions = useReviewActions(access.loginId, store.saveReview);
+  const reviewActions = useReviewActions(access.playerId, store.saveReview);
 
   if (!access.canModerate) {
     const redirectTarget = access.activeChronicleId ? `/chron/${access.activeChronicleId}` : '/';
@@ -62,7 +62,7 @@ const useAuditReviewState = () => useAuditReviewStore(useShallow(selectAuditRevi
 
 const useModeratorAccess = () => {
   const canModerate = useCanModerate();
-  const loginId = useChronicleStore((state) => state.loginId);
+  const playerId = useChronicleStore((state) => state.playerId);
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const navigate = useNavigate();
   const goBackToPlayerSurface = useCallback(() => {
@@ -72,7 +72,7 @@ const useModeratorAccess = () => {
       void navigate('/');
     }
   }, [activeChronicleId, navigate]);
-  return { activeChronicleId, canModerate, goBackToPlayerSurface, loginId };
+  return { activeChronicleId, canModerate, goBackToPlayerSurface, playerId };
 };
 
 const useReviewModal = (selectItem: (key: string | null) => Promise<void>) => {
@@ -106,21 +106,21 @@ const useAuditReviewSync = (
 };
 
 const useReviewActions = (
-  loginId: string | null,
-  saveReview: (loginId: string, status: 'in_progress' | 'completed') => Promise<void>
+  playerId: string | null,
+  saveReview: (playerId: string, status: 'in_progress' | 'completed') => Promise<void>
 ) => {
   const saveDraft = useCallback(() => {
-    if (!loginId) {
+    if (!playerId) {
       return;
     }
-    void saveReview(loginId, 'in_progress');
-  }, [loginId, saveReview]);
+    void saveReview(playerId, 'in_progress');
+  }, [playerId, saveReview]);
   const complete = useCallback(() => {
-    if (!loginId) {
+    if (!playerId) {
       return;
     }
-    void saveReview(loginId, 'completed');
-  }, [loginId, saveReview]);
+    void saveReview(playerId, 'completed');
+  }, [playerId, saveReview]);
   return { complete, saveDraft };
 };
 
@@ -181,7 +181,7 @@ const AuditReviewLayout = ({
       draft={store.draft}
       isOpen={Boolean(modal.modalKey)}
       isSaving={store.isLoading}
-      loginId={access.loginId}
+      playerId={access.playerId}
       onCancel={modal.closeReview}
       onComplete={reviewActions.complete}
       onSaveDraft={reviewActions.saveDraft}

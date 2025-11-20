@@ -77,17 +77,17 @@ export class PromptTemplateManager {
     });
   }
 
-  async listTemplates(loginId: string): Promise<TemplateSummary[]> {
-    const player = await this.#ensurePlayer(loginId);
+  async listTemplates(playerId: string): Promise<TemplateSummary[]> {
+    const player = await this.#ensurePlayer(playerId);
     return Array.from(this.#descriptorMap.keys()).map((id) => this.#summarizeTemplate(id, player));
   }
 
-  async getTemplate(loginId: string, templateId: PromptTemplateId): Promise<TemplateDetail> {
-    const player = await this.#ensurePlayer(loginId);
+  async getTemplate(playerId: string, templateId: PromptTemplateId): Promise<TemplateDetail> {
+    const player = await this.#ensurePlayer(playerId);
     const summary = this.#summarizeTemplate(templateId, player);
     const editable = await this.#loadTemplateBody(summary.activeSource, {
       activeVariantId: summary.activeVariantId,
-      loginId,
+      playerId,
       player,
       templateId,
     });
@@ -100,14 +100,14 @@ export class PromptTemplateManager {
   async saveTemplate(options: {
     editable: string;
     label?: string;
-    loginId: string;
+    playerId: string;
     templateId: PromptTemplateId;
   }): Promise<TemplateDetail> {
-    const player = await this.#ensurePlayer(options.loginId);
+    const player = await this.#ensurePlayer(options.playerId);
     const overrides = toOverrideMap(player.templateOverrides);
     const slot = overrides.get(options.templateId);
     const { activeVariantId, label } = this.#resolveVariantMetadata(slot, options.label);
-    const objectKey = this.#playerObjectKey(options.loginId, options.templateId, activeVariantId);
+    const objectKey = this.#playerObjectKey(options.playerId, options.templateId, activeVariantId);
     const sanitized = this.#normalizeTemplateBody(options.editable);
     await this.#writeVariantBody(objectKey, sanitized);
 
@@ -125,11 +125,11 @@ export class PromptTemplateManager {
     });
     player.templateOverrides = fromOverrideMap(overrides);
     await this.#worldState.upsertPlayer(player);
-    return this.getTemplate(options.loginId, options.templateId);
+    return this.getTemplate(options.playerId, options.templateId);
   }
 
-  async revertTemplate(options: { loginId: string; templateId: PromptTemplateId }): Promise<TemplateDetail> {
-    const player = await this.#ensurePlayer(options.loginId);
+  async revertTemplate(options: { playerId: string; templateId: PromptTemplateId }): Promise<TemplateDetail> {
+    const player = await this.#ensurePlayer(options.playerId);
     const overrides = toOverrideMap(player.templateOverrides);
     const slot = overrides.get(options.templateId);
     if (slot !== undefined) {
@@ -147,14 +147,14 @@ export class PromptTemplateManager {
     overrides.delete(options.templateId);
     player.templateOverrides = fromOverrideMap(overrides);
     await this.#worldState.upsertPlayer(player);
-    return this.getTemplate(options.loginId, options.templateId);
+    return this.getTemplate(options.playerId, options.templateId);
   }
 
   async resolveTemplate(
-    loginId: string,
+    playerId: string,
     templateId: PromptTemplateId
   ): Promise<{ body: string; variantId: string }> {
-    const player = await this.#ensurePlayer(loginId);
+    const player = await this.#ensurePlayer(playerId);
     const overrides = toOverrideMap(player.templateOverrides);
     const slot = overrides.get(templateId);
     if (slot === undefined) {
@@ -204,8 +204,8 @@ export class PromptTemplateManager {
     );
   }
 
-  async #ensurePlayer(loginId: string): Promise<Player> {
-    const existing = await this.#worldState.getPlayer(loginId);
+  async #ensurePlayer(playerId: string): Promise<Player> {
+    const existing = await this.#worldState.getPlayer(playerId);
     if (existing !== null && existing !== undefined) {
       if (existing.templateOverrides === undefined) {
         existing.templateOverrides = {};
@@ -213,8 +213,10 @@ export class PromptTemplateManager {
       return existing;
     }
     const blank: Player = {
-      loginId,
+      email: undefined,
+      id: playerId,
       templateOverrides: {},
+      username: playerId,
     };
     await this.#worldState.upsertPlayer(blank);
     return blank;
@@ -273,7 +275,7 @@ export class PromptTemplateManager {
     source: VariantSource,
     context: {
       activeVariantId: string;
-      loginId: string;
+      playerId: string;
       player: Player;
       templateId: PromptTemplateId;
     }
@@ -336,8 +338,8 @@ export class PromptTemplateManager {
     return descriptor;
   }
 
-  #playerObjectKey(loginId: string, templateId: PromptTemplateId, variantId: string): string {
-    return `${this.#playerPrefix}${loginId}/templates/${templateId}/${variantId}.hbs`;
+  #playerObjectKey(playerId: string, templateId: PromptTemplateId, variantId: string): string {
+    return `${this.#playerPrefix}${playerId}/templates/${templateId}/${variantId}.hbs`;
   }
 
   #normalizePrefix(prefix: string): string {

@@ -19,8 +19,7 @@ export type SaveFeedbackPayload = {
   expectedSkillCheck?: boolean | null;
   expectedSkillNotes?: string | null;
   gmEntryId: string;
-  playerId?: string | null;
-  playerLoginId: string;
+  playerId: string;
   sentiment: PlayerFeedbackSentiment;
   turnId: string;
   turnSequence: number;
@@ -53,8 +52,7 @@ export class AuditFeedbackStore extends HybridObjectStore {
       gmEntryId: payload.gmEntryId,
       id,
       metadata: undefined,
-      playerId: payload.playerId ?? null,
-      playerLoginId: payload.playerLoginId,
+      playerId: payload.playerId,
       sentiment: payload.sentiment,
       turnId: payload.turnId,
       turnSequence: payload.turnSequence,

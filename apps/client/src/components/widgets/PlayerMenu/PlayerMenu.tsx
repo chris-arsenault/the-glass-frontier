@@ -98,8 +98,8 @@ const formatTokenCount = (value: number): string => {
 
 
 export function PlayerMenu(): JSX.Element {
-  const loginName = useChronicleStore((state) => state.loginName);
-  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
+  const playerName = useChronicleStore((state) => state.playerName);
+  const playerId = useChronicleStore((state) => state.playerId ?? '');
   const character = useSelectedCharacter();
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const location = useChronicleStore((state) => state.location);
@@ -113,7 +113,7 @@ export function PlayerMenu(): JSX.Element {
   const highestRole = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
   const canAccessAdminTools = canModerate(highestRole);
   const roleBadge = ROLE_BADGES[highestRole];
-  const playerLabel = (loginName?.trim() || 'Unnamed Player').toUpperCase();
+  const playerLabel = (playerName?.trim() || 'Unnamed Player').toUpperCase();
   const chronicleTitle = chronicle?.title?.trim() || 'No chronicle selected';
   const locationDetails = describeLocation(location);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -179,7 +179,7 @@ export function PlayerMenu(): JSX.Element {
   };
 
   useEffect(() => {
-    if (!isOpen || !loginId) {
+    if (!isOpen || !playerId) {
       return;
     }
     let cancelled = false;
@@ -187,7 +187,7 @@ export function PlayerMenu(): JSX.Element {
       setUsageState('loading');
       setUsageError(null);
       try {
-        const result = await trpcClient.getTokenUsageSummary.query({ limit: 6, loginId });
+        const result = await trpcClient.getTokenUsageSummary.query({ limit: 6, playerId });
         if (cancelled) {
           return;
         }
@@ -205,7 +205,7 @@ export function PlayerMenu(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, loginId]);
+  }, [isOpen, playerId]);
 
   const usagePreview = usage[0] ?? null;
   const topMetrics = usagePreview?.metrics.slice(0, 3) ?? [];

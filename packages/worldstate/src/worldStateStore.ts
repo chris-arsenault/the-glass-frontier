@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions */
-import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/member-ordering */
+import type { Character, Chronicle, Player, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -61,9 +61,78 @@ class PostgresWorldStateStore implements WorldStateStore {
     this.#locationGraphStore = options.locationGraphStore ?? null;
   }
 
+  async #upsertPlayerRow(payload: {
+    id: string;
+    username: string;
+    email: string | null;
+    preferences: Record<string, unknown>;
+    templateOverrides: Record<string, unknown>;
+    metadata: Record<string, unknown>;
+  }): Promise<void> {
+    await this.#pool.query(
+      `INSERT INTO player (id, username, email, preferences, template_overrides, metadata, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, now())
+       ON CONFLICT (id) DO UPDATE
+       SET username = EXCLUDED.username,
+           email = EXCLUDED.email,
+           preferences = EXCLUDED.preferences,
+           template_overrides = EXCLUDED.template_overrides,
+           metadata = EXCLUDED.metadata,
+           updated_at = now()`,
+      [
+        payload.id,
+        payload.username,
+        payload.email,
+        serializeJson(payload.preferences ?? {}),
+        serializeJson(payload.templateOverrides ?? {}),
+        serializeJson(payload.metadata ?? {}),
+      ]
+    );
+  }
+
+  async #getPlayerRow(playerId: string): Promise<{
+    id: string;
+    username: string;
+    email: string | null;
+    preferences: Record<string, unknown> | null;
+    template_overrides: Record<string, unknown> | null;
+    metadata: Record<string, unknown> | null;
+  } | null> {
+    const result = await this.#pool.query(
+      'SELECT id, username, email, preferences, template_overrides, metadata FROM player WHERE id = $1',
+      [playerId]
+    );
+    const row = result.rows[0];
+    if (!row) {
+      return null;
+    }
+    return row;
+  }
+
+  async #listPlayerRows(): Promise<Array<{
+    id: string;
+    username: string;
+    email: string | null;
+    metadata: Record<string, unknown> | null;
+  }>> {
+    const result = await this.#pool.query(
+      'SELECT id, username, email, metadata FROM player ORDER BY username ASC'
+    );
+    return result.rows;
+  }
+
+  async #ensurePlayer(executor: Pool | PoolClient, playerId: string): Promise<void> {
+    await executor.query(
+      `INSERT INTO player (id, username, email, preferences, template_overrides, metadata, updated_at)
+       VALUES ($1, $2, NULL, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [playerId, playerId]
+    );
+  }
+
   async ensureChronicle(params: {
     chronicleId?: string;
-    loginId: string;
+    playerId: string;
     locationId: string;
     characterId?: string;
     title?: string;
@@ -108,62 +177,23 @@ class PostgresWorldStateStore implements WorldStateStore {
     };
   }
 
-  async upsertLogin(login: Login): Promise<Login> {
-    await this.#pool.query(
-      `INSERT INTO login (id, login_name, email, metadata)
-       VALUES ($1, $2, $3, $4::jsonb)
-       ON CONFLICT (id) DO UPDATE
-       SET login_name = EXCLUDED.login_name,
-           email = EXCLUDED.email,
-           metadata = EXCLUDED.metadata`,
-      [login.id, login.loginName, login.email ?? null, serializeJson(login.metadata ?? {})]
-    );
-    return login;
-  }
-
-  async getLogin(loginId: string): Promise<Login | null> {
-    const result = await this.#pool.query(
-      'SELECT id, login_name, email, metadata FROM login WHERE id = $1',
-      [loginId]
-    );
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-    return {
-      email: row.email ?? undefined,
-      id: row.id,
-      loginName: row.login_name,
-      metadata: row.metadata ?? undefined,
-    };
-  }
-
-  async listLogins(): Promise<Login[]> {
-    const result = await this.#pool.query(
-      'SELECT id, login_name, email, metadata FROM login ORDER BY login_name ASC'
-    );
-    return result.rows.map((row) => ({
-      email: row.email ?? undefined,
-      id: row.id,
-      loginName: row.login_name,
-      metadata: row.metadata ?? undefined,
-    }));
-  }
-
   async upsertCharacter(character: Character): Promise<Character> {
-    const normalized = ensureInventory(character);
+    const normalized: Character = ensureInventory({
+      ...character,
+      playerId: character.playerId,
+    });
     await withTransaction(this.#pool, async (client) => {
-      await this.#ensureLogin(client, normalized.loginId);
+      await this.#ensurePlayer(client, normalized.playerId);
       await this.#upsertNode(client, normalized.id, 'character', normalized);
       await client.query(
-        `INSERT INTO character (id, login_id, name, tags, created_at, updated_at)
+        `INSERT INTO character (id, player_id, name, tags, created_at, updated_at)
          VALUES ($1::uuid, $2, $3, $4::text[], now(), now())
          ON CONFLICT (id) DO UPDATE
-         SET login_id = EXCLUDED.login_id,
+         SET player_id = EXCLUDED.player_id,
              name = EXCLUDED.name,
              tags = EXCLUDED.tags,
              updated_at = now()`,
-        [normalized.id, normalized.loginId, normalized.name, normalized.tags ?? []]
+        [normalized.id, normalized.playerId, normalized.name, normalized.tags ?? []]
       );
     });
     return normalized;
@@ -185,72 +215,61 @@ class PostgresWorldStateStore implements WorldStateStore {
     return parsed;
   }
 
-  async listCharactersByLogin(loginId: string): Promise<Character[]> {
+  async listCharactersByPlayer(playerId: string): Promise<Character[]> {
     const result = await this.#pool.query(
       `SELECT n.props
        FROM character c
        JOIN node n ON n.id = c.id
-       WHERE c.login_id = $1
+       WHERE c.player_id = $1
        ORDER BY c.created_at ASC`,
-      [loginId]
+      [playerId]
     );
     return result.rows.map((row) => ensureInventory(row.props as Character));
   }
 
   async upsertPlayer(player: Player): Promise<Player> {
-    await withTransaction(this.#pool, async (client) => {
-      await this.#ensureLogin(client, player.loginId);
-      await client.query(
-        `INSERT INTO player (login_id, preferences, template_overrides, metadata, updated_at)
-         VALUES ($1, $2::jsonb, $3::jsonb, $4::jsonb, now())
-         ON CONFLICT (login_id) DO UPDATE
-         SET preferences = EXCLUDED.preferences,
-             template_overrides = EXCLUDED.template_overrides,
-             metadata = EXCLUDED.metadata,
-             updated_at = now()`,
-        [
-          player.loginId,
-          serializeJson(player.preferences ?? {}),
-          serializeJson(player.templateOverrides ?? {}),
-          serializeJson(player.metadata ?? {}),
-        ]
-      );
+    await this.#ensurePlayer(this.#pool, player.id);
+    await this.#upsertPlayerRow({
+      email: player.email ?? null,
+      id: player.id,
+      metadata: player.metadata ?? {},
+      preferences: player.preferences ?? {},
+      templateOverrides: player.templateOverrides ?? {},
+      username: player.username,
     });
     return player;
   }
 
-  async getPlayer(loginId: string): Promise<Player | null> {
-    const result = await this.#pool.query(
-      'SELECT preferences, template_overrides, metadata FROM player WHERE login_id = $1',
-      [loginId]
-    );
-    const row = result.rows[0];
+  async getPlayer(playerId: string): Promise<Player | null> {
+    const row = await this.#getPlayerRow(playerId);
     if (!row) {
       return null;
     }
     return {
-      loginId,
+      email: row.email ?? undefined,
+      id: row.id,
       metadata: row.metadata ?? undefined,
       preferences: row.preferences ?? undefined,
       templateOverrides: row.template_overrides ?? undefined,
+      username: row.username,
     };
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
     const normalized = normalizeChronicle(chronicle);
     await withTransaction(this.#pool, async (client) => {
-      await this.#ensureLogin(client, normalized.loginId);
+      await this.#ensurePlayer(client, normalized.playerId);
       await this.#ensureLocationExists(client, normalized.locationId, normalized.title);
       await this.#upsertNode(client, normalized.id, 'chronicle', normalized);
       await client.query(
         `INSERT INTO chronicle (
-           id, title, primary_char_id, status, login_id, location_id, seed_text, beats_enabled, created_at, updated_at
+           id, title, primary_char_id, status, player_id, location_id, seed_text, beats_enabled, created_at, updated_at
          ) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::uuid, $7, $8, now(), now())
          ON CONFLICT (id) DO UPDATE
          SET title = EXCLUDED.title,
              primary_char_id = EXCLUDED.primary_char_id,
              status = EXCLUDED.status,
-             login_id = EXCLUDED.login_id,
+             player_id = EXCLUDED.player_id,
              location_id = EXCLUDED.location_id,
              seed_text = EXCLUDED.seed_text,
              beats_enabled = EXCLUDED.beats_enabled,
@@ -260,7 +279,7 @@ class PostgresWorldStateStore implements WorldStateStore {
           normalized.title,
           normalized.characterId ?? null,
           normalized.status ?? 'open',
-          normalized.loginId,
+          normalized.playerId,
           normalized.locationId,
           normalized.seedText ?? null,
           normalized.beatsEnabled ?? true,
@@ -285,14 +304,14 @@ class PostgresWorldStateStore implements WorldStateStore {
     return normalizeChronicle(row.props as Chronicle);
   }
 
-  async listChroniclesByLogin(loginId: string): Promise<Chronicle[]> {
+  async listChroniclesByPlayer(playerId: string): Promise<Chronicle[]> {
     const result = await this.#pool.query(
       `SELECT n.props
        FROM chronicle c
        JOIN node n ON n.id = c.id
-       WHERE c.login_id = $1
+       WHERE c.player_id = $1
        ORDER BY c.created_at ASC`,
-      [loginId]
+      [playerId]
     );
     return result.rows.map((row) => normalizeChronicle(row.props as Chronicle));
   }
@@ -377,15 +396,6 @@ class PostgresWorldStateStore implements WorldStateStore {
     const next = applyCharacterSnapshotProgress(character, update);
     await this.upsertCharacter(next);
     return next;
-  }
-
-  async #ensureLogin(client: PoolClient, loginId: string): Promise<void> {
-    await client.query(
-      `INSERT INTO login (id, login_name, created_at)
-       VALUES ($1, $2, now())
-       ON CONFLICT (id) DO NOTHING`,
-      [loginId, loginId]
-    );
   }
 
   async #ensureLocationExists(

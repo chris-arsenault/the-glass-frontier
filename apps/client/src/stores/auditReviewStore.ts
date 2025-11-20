@@ -46,7 +46,7 @@ type AuditReviewStoreState = {
   selectItem: (storageKey: string | null) => Promise<void>;
   updateDraft: (updates: Partial<ReviewDraft>) => void;
   resetDraft: () => void;
-  saveReview: (loginId: string, status: 'in_progress' | 'completed') => Promise<void>;
+  saveReview: (playerId: string, status: 'in_progress' | 'completed') => Promise<void>;
   refreshProposals: () => Promise<void>;
   generateProposals: () => Promise<void>;
 };
@@ -188,7 +188,7 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
   },
   resetDraft: () => set({ draft: createDraft(), review: null }),
   review: null,
-  saveReview: async (loginId, status) => {
+  saveReview: async (playerId, status) => {
     const selectedKey = get().selectedKey;
     const detail = get().detail;
     if (!selectedKey || !detail) {
@@ -200,7 +200,7 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
       const templateId = get().selectedItem?.templateId ?? null;
       const record = await promptClient.saveAuditReview.mutate({
         auditId: detail.id,
-        loginId,
+        reviewerId: playerId,
         nodeId: detail.nodeId ?? undefined,
         notes: draft.notes || undefined,
         reviewerName: undefined,
@@ -217,7 +217,7 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
         isLoading: false,
         items: updateItemEntry(state.items, record.auditId, {
           notes: record.notes ?? null,
-          reviewerLoginId: record.reviewerLoginId,
+          reviewerId: record.reviewerId,
           reviewerName: record.reviewerName ?? null,
           status: record.status,
           tags: record.tags ?? [],

@@ -19,7 +19,7 @@ import { SideNavigation } from './components/navigation/SideNavigation/SideNavig
 import { LandingPage } from './components/pages/LandingPage/LandingPage';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
 import { ChronicleStartWizard } from './components/wizards/ChronicleStartWizard/ChronicleStartWizard';
-import { useLoginResources } from './hooks/useLoginResources';
+import { usePlayerResources } from './hooks/usePlayerResources';
 import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
 import { useAuthStore } from './stores/authStore';
 import { useChronicleStore } from './stores/chronicleStore';
@@ -218,7 +218,7 @@ const LegacyChronicleRedirect = (): JSX.Element => {
 
 export function App(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  useLoginResources(isAuthenticated);
+  usePlayerResources(isAuthenticated);
   useProgressStreamConnection(isAuthenticated);
 
   if (!isAuthenticated) {

@@ -48,7 +48,7 @@ export function ChronicleStartWizard() {
   const toneNotes = useChronicleStartStore((state) => state.toneNotes);
   const toneChips = useChronicleStartStore((state) => state.toneChips);
 
-  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
+  const playerId = useChronicleStore((state) => state.playerId ?? '');
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
@@ -154,7 +154,7 @@ export function ChronicleStartWizard() {
     case 'seeds':
       return (
         <SeedStep
-          loginId={loginId}
+          playerId={playerId}
           locationId={selectedLocation?.id ?? null}
           tone={{ toneChips, toneNotes }}
           seeds={seeds}
@@ -203,7 +203,7 @@ export function ChronicleStartWizard() {
     toggleToneChip,
     selectedLocation,
     setListViewFallback,
-    loginId,
+    playerId,
     seeds,
     selectedSeedId,
     seedStatus,
@@ -595,7 +595,7 @@ function ToneStep({ onToggleChip, onUpdateNotes, toneChips, toneNotes }: ToneSte
 }
 
 type SeedStepProps = {
-  loginId: string;
+  playerId: string;
   locationId: string | null;
   tone: { toneChips: string[]; toneNotes: string };
   seeds: ChronicleSeed[];
@@ -613,7 +613,7 @@ function SeedStep({
   customSeedText,
   customSeedTitle,
   locationId,
-  loginId,
+  playerId,
   onCustomSeedChange,
   onSeedsLoaded,
   onSelectSeed,
@@ -643,7 +643,7 @@ function SeedStep({
       const result = await trpcClient.generateChronicleSeeds.mutate({
         count: 3,
         locationId,
-        loginId,
+        playerId,
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
       });

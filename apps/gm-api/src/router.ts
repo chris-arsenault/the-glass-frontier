@@ -38,7 +38,7 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.string().uuid(),
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
         targetEndTurn: z.number().int().min(0).nullable().optional(),
       })
     )
@@ -47,8 +47,8 @@ export const appRouter = t.router({
       if (chronicle === null || chronicle === undefined) {
         throw new Error('Chronicle not found.');
       }
-      if (chronicle.loginId !== input.loginId) {
-        throw new Error('Chronicle does not belong to the requesting login.');
+      if (chronicle.playerId !== input.playerId) {
+        throw new Error('Chronicle does not belong to the requesting player.');
       }
       const normalizedTarget =
         typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;

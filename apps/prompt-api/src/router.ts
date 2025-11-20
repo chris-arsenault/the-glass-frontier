@@ -40,7 +40,7 @@ const listAuditQueueInput = z.object({
 
 const saveAuditReviewInput = z.object({
   auditId: z.string().min(1),
-  loginId: z.string().min(1),
+  reviewerId: z.string().min(1),
   nodeId: z.string().optional(),
   notes: z.string().max(4000).optional(),
   reviewerName: z.string().max(120).optional(),
@@ -266,7 +266,7 @@ const toQueueItem = (
     playerId: entry.playerId ?? null,
     providerId: entry.providerId ?? null,
     requestContextId: entry.requestContextId ?? null,
-    reviewerLoginId: review?.reviewerLoginId ?? null,
+    reviewerId: review?.reviewerId ?? null,
     reviewerName: review?.reviewerName ?? null,
     status: review?.status ?? 'unreviewed',
     storageKey: entry.storageKey,
@@ -367,12 +367,12 @@ export const promptRouter = t.router({
   getPromptTemplate: t.procedure
     .input(
       z.object({
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
         templateId: templateIdSchema,
       })
     )
     .query(async ({ ctx, input }) =>
-      ctx.templateManager.getTemplate(input.loginId, input.templateId)
+      ctx.templateManager.getTemplate(input.playerId, input.templateId)
     ),
 
   listAuditProposals: t.procedure.query(async ({ ctx }) => {
@@ -414,18 +414,18 @@ export const promptRouter = t.router({
     }),
 
   listPromptTemplates: t.procedure
-    .input(z.object({ loginId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.loginId)),
+    .input(z.object({ playerId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.playerId)),
 
   revertPromptTemplate: t.procedure
     .input(
       z.object({
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
         templateId: templateIdSchema,
       })
     )
     .mutation(async ({ ctx, input }) =>
-      ctx.templateManager.revertTemplate({ loginId: input.loginId, templateId: input.templateId })
+      ctx.templateManager.revertTemplate({ playerId: input.playerId, templateId: input.templateId })
     ),
 
   saveAuditReview: t.procedure
@@ -436,7 +436,7 @@ export const promptRouter = t.router({
         auditId: input.auditId,
         nodeId: input.nodeId ?? null,
         notes: normalizeString(input.notes),
-        reviewerLoginId: input.loginId,
+        reviewerId: input.reviewerId,
         reviewerName: normalizeString(input.reviewerName),
         status: input.status,
         storageKey: input.storageKey,
@@ -451,7 +451,7 @@ export const promptRouter = t.router({
       z.object({
         editable: z.string().min(1),
         label: z.string().max(64).optional(),
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
         templateId: templateIdSchema,
       })
     )
@@ -459,7 +459,7 @@ export const promptRouter = t.router({
       ctx.templateManager.saveTemplate({
         editable: input.editable,
         label: input.label,
-        loginId: input.loginId,
+        playerId: input.playerId,
         templateId: input.templateId,
       })
     ),
@@ -467,6 +467,10 @@ export const promptRouter = t.router({
   submitPlayerFeedback: t.procedure
     .input(submitPlayerFeedbackInput)
     .mutation(async ({ ctx, input }) => {
+      const playerId = normalizeString(input.playerId);
+      if (playerId === null) {
+        throw new Error('Player identifier required for feedback submission.');
+      }
       const record = await ctx.auditFeedbackStore.saveFeedback({
         auditId: input.auditId,
         chronicleId: input.chronicleId,
@@ -479,8 +483,7 @@ export const promptRouter = t.router({
         expectedSkillCheck: input.expectedSkillCheck ?? null,
         expectedSkillNotes: normalizeString(input.expectedSkillNotes),
         gmEntryId: input.gmEntryId,
-        playerId: normalizeString(input.playerId),
-        playerLoginId: input.playerLoginId,
+        playerId,
         sentiment: input.sentiment,
         turnId: input.turnId,
         turnSequence: input.turnSequence,

@@ -29,18 +29,15 @@ import type {
 import { decodeJwtPayload } from '../utils/jwt';
 import { useAuthStore } from './authStore';
 
-const resolveLoginIdentity = (): { loginId: string; loginName: string } => {
+const resolvePlayerIdentity = (): { playerId: string; playerName: string } => {
   const authState = useAuthStore.getState();
-  const username = authState.username?.trim();
-  if (username) {
-    return { loginId: username, loginName: username };
-  }
   const payload = decodeJwtPayload(authState.tokens?.idToken);
   const sub = typeof payload?.sub === 'string' ? payload.sub : null;
   if (sub) {
-    return { loginId: sub, loginName: sub };
+    const fallbackName = authState.username?.trim();
+    return { playerId: sub, playerName: fallbackName ?? sub };
   }
-  throw new Error('Login identity unavailable. Please reauthenticate.');
+  throw new Error('Player identity unavailable. Please reauthenticate.');
 };
 
 const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
@@ -438,8 +435,6 @@ const createBaseState = () => ({
   isSending: false,
   isUpdatingPlayerSettings: false,
   location: null as LocationSummary | null,
-  loginId: null as string | null,
-  loginName: null as string | null,
   messages: [] as ChatMessage[],
   momentumTrend: null as MomentumTrend | null,
   pendingPlayerMessageId: null as string | null,
@@ -447,6 +442,8 @@ const createBaseState = () => ({
   playerSettings: DEFAULT_PLAYER_SETTINGS,
   playerSettingsError: null as Error | null,
   playerSettingsStatus: 'idle' as const,
+  playerId: null as string | null,
+  playerName: null as string | null,
   preferredCharacterId: null as string | null,
   queuedIntents: 0,
   recentChronicles: [],
@@ -481,13 +478,13 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   },
 
   async createCharacterProfile(draft: CharacterCreationDraft) {
-    const identity = resolveLoginIdentity();
+    const identity = resolvePlayerIdentity();
     const character: Character = {
       archetype: draft.archetype,
       attributes: draft.attributes,
       id: generateId(),
       inventory: [],
-      loginId: identity.loginId,
+      playerId: identity.playerId,
       momentum: DEFAULT_MOMENTUM,
       name: draft.name,
       pronouns: draft.pronouns,
@@ -519,7 +516,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   },
 
   async createChronicleForCharacter(details: ChronicleCreationDetails) {
-    const identity = resolveLoginIdentity();
+    const identity = resolvePlayerIdentity();
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const title = details.title?.trim() ?? '';
     const locationName = details.locationName?.trim() ?? '';
@@ -541,7 +538,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           atmosphere: locationAtmosphere,
           locale: locationName,
         },
-        loginId: identity.loginId,
+        playerId: identity.playerId,
         title,
       });
       set((prev) => ({
@@ -561,7 +558,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   },
 
   async createChronicleFromSeed(details: ChronicleSeedCreationDetails) {
-    const identity = resolveLoginIdentity();
+    const identity = resolvePlayerIdentity();
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const trimmedSeed = details.seedText?.trim() ?? '';
     const beatsEnabled = details.beatsEnabled ?? true;
@@ -583,7 +580,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         beatsEnabled,
         characterId: targetCharacterId,
         locationId: details.locationId,
-        loginId: identity.loginId,
+        playerId: identity.playerId,
         seedText: trimmedSeed,
         status: 'open',
         title,
@@ -608,12 +605,12 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     if (!chronicleId) {
       throw new Error('Chronicle id is required.');
     }
-    const identity = resolveLoginIdentity();
+    const identity = resolvePlayerIdentity();
     const isActive = get().chronicleId === chronicleId;
     try {
       await trpcClient.deleteChronicle.mutate({
         chronicleId,
-        loginId: identity.loginId,
+        playerId: identity.playerId,
       });
       set((prev) => ({
         ...prev,
@@ -681,7 +678,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         connectionState: 'connected',
         focusedBeatId: initialFocusBeatId,
         location: chronicleState.location ?? null,
-        loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
+        playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         transportError: null,
@@ -702,8 +699,8 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   },
 
   async loadPlayerSettings() {
-    const loginId = get().loginId ?? get().loginName;
-    if (!loginId) {
+    const playerId = get().playerId;
+    if (!playerId) {
       return;
     }
     set((prev) => ({
@@ -712,7 +709,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       playerSettingsStatus: 'loading',
     }));
     try {
-      const result = await trpcClient.getPlayerSettings.query({ loginId });
+      const result = await trpcClient.getPlayerSettings.query({ playerId });
       set((prev) => ({
         ...prev,
         playerSettings: normalizePlayerSettings(result.preferences),
@@ -730,20 +727,20 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }
   },
 
-  async refreshLoginResources() {
-    const identity = resolveLoginIdentity();
+  async refreshPlayerResources() {
+    const identity = resolvePlayerIdentity();
     set((prev) => ({
       ...prev,
       directoryError: null,
       directoryStatus: 'loading',
-      loginId: identity.loginId,
-      loginName: identity.loginName,
+      playerId: identity.playerId,
+      playerName: identity.playerName,
     }));
 
     try {
       const [characters, chronicles] = await Promise.all([
-        trpcClient.listCharacters.query({ loginId: identity.loginId }),
-        trpcClient.listChronicles.query({ loginId: identity.loginId }),
+        trpcClient.listCharacters.query({ playerId: identity.playerId }),
+        trpcClient.listChronicles.query({ playerId: identity.playerId }),
       ]);
 
       set((prev) => ({
@@ -752,8 +749,8 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         availableChronicles: chronicles ?? [],
         directoryError: null,
         directoryStatus: 'ready',
-        loginId: identity.loginId,
-        loginName: identity.loginName,
+        playerId: identity.playerId,
+        playerName: identity.playerName,
         preferredCharacterId:
           prev.preferredCharacterId ?? characters?.[0]?.id ?? prev.preferredCharacterId,
       }));
@@ -938,14 +935,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }));
       throw nextError;
     }
-    const identity = resolveLoginIdentity();
+    const identity = resolvePlayerIdentity();
     const currentTurnSequence = Math.max(get().turnSequence, 0);
     const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
 
     try {
       const result = await gmClient.setChronicleTargetEnd.mutate({
         chronicleId,
-        loginId: identity.loginId,
+        playerId: identity.playerId,
         targetEndTurn,
       });
       const updatedChronicle = result?.chronicle ?? null;
@@ -978,9 +975,9 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   },
 
   async updatePlayerSettings(settings) {
-    const loginId = get().loginId ?? get().loginName;
-    if (!loginId) {
-      const nextError = new Error('Login not established. Please reauthenticate.');
+    const playerId = get().playerId;
+    if (!playerId) {
+      const nextError = new Error('Player identity not established. Please reauthenticate.');
       set((prev) => ({
         ...prev,
         playerSettingsError: nextError,
@@ -995,7 +992,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }));
     try {
       const result = await trpcClient.updatePlayerSettings.mutate({
-        loginId,
+        playerId,
         preferences: settings,
       });
       set((prev) => ({

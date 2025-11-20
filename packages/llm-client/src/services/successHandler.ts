@@ -160,17 +160,12 @@ export class LLMSuccessHandler {
   }
 
   #extractPlayerId(metadata: LoggableMetadata): string | undefined {
-    const keys = ['playerId', 'player_id', 'playerLoginId', 'loginId'] as const;
-    for (const key of keys) {
-      const raw = (metadata as Record<string, unknown>)[key];
-      if (typeof raw === 'string') {
-        const trimmed = raw.trim();
-        if (trimmed.length > 0) {
-          return trimmed;
-        }
-      }
+    const raw = (metadata as Record<string, unknown>).playerId;
+    if (typeof raw !== 'string') {
+      return undefined;
     }
-    return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
   }
 
   #extractRequestContextId(metadata: LoggableMetadata): string | undefined {

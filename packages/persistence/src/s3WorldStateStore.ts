@@ -1,5 +1,5 @@
 import type { S3Client } from '@aws-sdk/client-s3';
-import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
+import type { Character, Chronicle, Player, Turn } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -48,7 +48,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
 
   async ensureChronicle(params: {
     chronicleId?: string;
-    loginId: string;
+    playerId: string;
     locationId: string;
     characterId?: string;
     title?: string;
@@ -93,35 +93,20 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     };
   }
 
-  async upsertLogin(login: Login): Promise<Login> {
-    await this.setJson(this.#loginKey(login.id), login);
-    return login;
-  }
-
-  async getLogin(loginId: string): Promise<Login | null> {
-    return this.getJson<Login>(this.#loginKey(loginId));
-  }
-
-  async listLogins(): Promise<Login[]> {
-    const keys = await this.list('logins/', { suffix: '.json' });
-    const records = await Promise.all(keys.map((key) => this.getJson<Login>(key)));
-    return records.filter((login): login is Login => login !== null);
-  }
-
   async upsertCharacter(character: Character): Promise<Character> {
     const normalized = this.#ensureInventory(character);
-    await this.setJson(this.#characterKey(normalized.loginId, normalized.id), normalized);
-    await this.#index.linkCharacterToLogin(normalized.id, normalized.loginId);
+    await this.setJson(this.#characterKey(normalized.playerId, normalized.id), normalized);
+    await this.#index.linkCharacterToPlayer(normalized.id, normalized.playerId);
     return normalized;
   }
 
   async getCharacter(characterId: string): Promise<Character | null> {
-    const loginId = await this.#resolveCharacterLogin(characterId);
-    if (loginId === null) {
+    const playerId = await this.#resolveCharacterPlayer(characterId);
+    if (playerId === null) {
       return null;
     }
 
-    const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
+    const record = await this.getJson<Character>(this.#characterKey(playerId, characterId));
     if (record !== null) {
       const normalized = this.#ensureInventory(record);
       return normalized;
@@ -129,14 +114,14 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     return record;
   }
 
-  async listCharactersByLogin(loginId: string): Promise<Character[]> {
-    const characterIds = await this.#index.listCharactersByLogin(loginId);
+  async listCharactersByPlayer(playerId: string): Promise<Character[]> {
+    const characterIds = await this.#index.listCharactersByPlayer(playerId);
     if (characterIds.length === 0) {
       return [];
     }
     const records = await Promise.all(
       characterIds.map(async (characterId) => {
-        const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
+        const record = await this.getJson<Character>(this.#characterKey(playerId, characterId));
         if (record !== null) {
           const normalized = this.#ensureInventory(record);
           return normalized;
@@ -148,18 +133,18 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async upsertPlayer(player: Player): Promise<Player> {
-    await this.setJson(this.#playerKey(player.loginId), player);
+    await this.setJson(this.#playerKey(player.id), player);
     return player;
   }
 
-  async getPlayer(loginId: string): Promise<Player | null> {
-    return this.getJson<Player>(this.#playerKey(loginId));
+  async getPlayer(playerId: string): Promise<Player | null> {
+    return this.getJson<Player>(this.#playerKey(playerId));
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
     const normalized = this.#normalizeChronicle(chronicle);
-    await this.setJson(this.#chronicleKey(normalized.loginId, normalized.id), normalized);
-    await this.#index.linkChronicleToLogin(chronicle.id, chronicle.loginId);
+    await this.setJson(this.#chronicleKey(normalized.playerId, normalized.id), normalized);
+    await this.#index.linkChronicleToPlayer(chronicle.id, chronicle.playerId);
     if (isNonEmptyString(chronicle.characterId)) {
       await this.#index.linkChronicleToCharacter(chronicle.id, chronicle.characterId);
     }
@@ -170,12 +155,12 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
-    const loginId = await this.#resolveChronicleLogin(chronicleId);
-    if (loginId === null) {
+    const playerId = await this.#resolveChroniclePlayer(chronicleId);
+    if (playerId === null) {
       return null;
     }
 
-    const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
+    const record = await this.getJson<Chronicle>(this.#chronicleKey(playerId, chronicleId));
     if (record !== null) {
       const normalized = this.#normalizeChronicle(record);
       return normalized;
@@ -183,14 +168,14 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     return record;
   }
 
-  async listChroniclesByLogin(loginId: string): Promise<Chronicle[]> {
-    const chronicleIds = await this.#index.listChroniclesByLogin(loginId);
+  async listChroniclesByPlayer(playerId: string): Promise<Chronicle[]> {
+    const chronicleIds = await this.#index.listChroniclesByPlayer(playerId);
     if (chronicleIds.length === 0) {
       return [];
     }
     const records = await Promise.all(
       chronicleIds.map(async (chronicleId) => {
-        const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
+        const record = await this.getJson<Chronicle>(this.#chronicleKey(playerId, chronicleId));
         if (record !== null) {
           const normalized = this.#normalizeChronicle(record);
           return normalized;
@@ -206,11 +191,11 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     if (chronicle === null) {
       return;
     }
-    const loginId = chronicle.loginId;
-    const turnKeys = await this.list(this.#turnPrefix(loginId, chronicleId), { suffix: '.json' });
+    const playerId = chronicle.playerId;
+    const turnKeys = await this.list(this.#turnPrefix(playerId, chronicleId), { suffix: '.json' });
     await Promise.all(turnKeys.map((key) => this.delete(key)));
-    await this.delete(this.#chronicleKey(loginId, chronicleId));
-    await this.#index.removeChronicleFromLogin(chronicleId, loginId);
+    await this.delete(this.#chronicleKey(playerId, chronicleId));
+    await this.#index.removeChronicleFromPlayer(chronicleId, playerId);
     await this.#index.deleteChronicleRecords(chronicleId);
   }
 
@@ -223,15 +208,15 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     if (chronicle === null) {
       throw new Error(`Chronicle ${chronicleId} not found for turn ${turn.id}`);
     }
-    const key = this.#turnKey(chronicle.loginId, chronicle.id, turn.id);
+    const key = this.#turnKey(chronicle.playerId, chronicle.id, turn.id);
     await this.setJson(key, turn);
     await this.#index.recordChronicleTurn(chronicle.id, turn.id, turn.turnSequence ?? 0);
     return turn;
   }
 
   async listChronicleTurns(chronicleId: string): Promise<Turn[]> {
-    const loginId = await this.#resolveChronicleLogin(chronicleId);
-    if (loginId === null) {
+    const playerId = await this.#resolveChroniclePlayer(chronicleId);
+    if (playerId === null) {
       return [];
     }
     const pointers = await this.#index.listChronicleTurns(chronicleId);
@@ -239,7 +224,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       return [];
     }
     const turnRecords = await Promise.all(
-      pointers.map((pointer) => this.getJson<Turn>(this.#turnKey(loginId, chronicleId, pointer.turnId)))
+      pointers.map((pointer) => this.getJson<Turn>(this.#turnKey(playerId, chronicleId, pointer.turnId)))
     );
     return turnRecords.filter((record): record is Turn => record !== null);
   }
@@ -263,12 +248,12 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     return next;
   }
 
-  async #resolveChronicleLogin(chronicleId: string): Promise<string | null> {
-    return this.#index.getChronicleLogin(chronicleId);
+  async #resolveChroniclePlayer(chronicleId: string): Promise<string | null> {
+    return this.#index.getChroniclePlayer(chronicleId);
   }
 
-  async #resolveCharacterLogin(characterId: string): Promise<string | null> {
-    return this.#index.getCharacterLogin(characterId);
+  async #resolveCharacterPlayer(characterId: string): Promise<string | null> {
+    return this.#index.getCharacterPlayer(characterId);
   }
 
   #ensureInventory(character: Character): Character {
@@ -281,28 +266,24 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     };
   }
 
-  #loginKey(loginId: string): string {
-    return `logins/${loginId}.json`;
+  #characterKey(playerId: string, characterId: string): string {
+    return `characters/${playerId}/${characterId}.json`;
   }
 
-  #characterKey(loginId: string, characterId: string): string {
-    return `characters/${loginId}/${characterId}.json`;
+  #chronicleKey(playerId: string, chronicleId: string): string {
+    return `chronicles/${playerId}/${chronicleId}.json`;
   }
 
-  #chronicleKey(loginId: string, chronicleId: string): string {
-    return `chronicles/${loginId}/${chronicleId}.json`;
+  #playerKey(playerId: string): string {
+    return `players/${playerId}.json`;
   }
 
-  #playerKey(loginId: string): string {
-    return `players/${loginId}.json`;
+  #turnPrefix(playerId: string, chronicleId: string): string {
+    return `chronicles/${playerId}/${chronicleId}/turns/`;
   }
 
-  #turnPrefix(loginId: string, chronicleId: string): string {
-    return `chronicles/${loginId}/${chronicleId}/turns/`;
-  }
-
-  #turnKey(loginId: string, chronicleId: string, turnId: string): string {
-    return `${this.#turnPrefix(loginId, chronicleId)}${turnId}.json`;
+  #turnKey(playerId: string, chronicleId: string, turnId: string): string {
+    return `${this.#turnPrefix(playerId, chronicleId)}${turnId}.json`;
   }
 
   #normalizeChronicle(chronicle: Chronicle): Chronicle {
@@ -323,7 +304,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   #buildChronicleRecord(
     params: {
       characterId?: string;
-      loginId: string;
+      playerId: string;
       locationId: string;
       seedText?: string | null;
       status?: Chronicle['status'];
@@ -340,7 +321,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       characterId: params.characterId,
       id: chronicleId,
       locationId: params.locationId,
-      loginId: params.loginId,
+      playerId: params.playerId,
       metadata: undefined,
       seedText: isNonEmptyString(seed) ? seed : undefined,
       status: params.status ?? 'open',

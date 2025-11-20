@@ -40,7 +40,7 @@ export function CreateCharacterModal() {
   const isOpen = useUiStore((state) => state.isCreateCharacterModalOpen);
   const close = useUiStore((state) => state.closeCreateCharacterModal);
   const createCharacter = useChronicleStore((state) => state.createCharacterProfile);
-  const loginId = useChronicleStore((state) => state.loginId);
+  const playerId = useChronicleStore((state) => state.playerId);
 
   const [name, setName] = useState('');
   const [archetype, setArchetype] = useState('');
@@ -89,8 +89,8 @@ export function CreateCharacterModal() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!loginId) {
-      setError('Login context unavailable. Please refresh.');
+    if (!playerId) {
+      setError('Player context unavailable. Please refresh.');
       return;
     }
     setIsSubmitting(true);
@@ -256,7 +256,7 @@ export function CreateCharacterModal() {
             <button type="button" className="modal-secondary" onClick={close}>
               Cancel
             </button>
-            <button type="submit" className="modal-primary" disabled={isSubmitting || !loginId}>
+            <button type="submit" className="modal-primary" disabled={isSubmitting || !playerId}>
               {isSubmitting ? 'Creating...' : 'Create Character'}
             </button>
           </footer>

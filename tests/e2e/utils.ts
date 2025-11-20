@@ -49,11 +49,11 @@ export const seedChronicle = async (page: Page): Promise<{ chronicleId: string }
     const { useChronicleStore } = await import('/src/stores/chronicleStore.ts');
     const store = useChronicleStore.getState();
 
-    await store.refreshLoginResources();
+    await store.refreshPlayerResources();
     const refreshed = useChronicleStore.getState();
-    const loginId = refreshed.loginId ?? 'playwright-e2e';
+    const playerId = refreshed.playerId ?? 'playwright-e2e';
     const chronicle =
-      refreshed.availableChronicles.find((entry) => entry.loginId === loginId) ??
+      refreshed.availableChronicles.find((entry) => entry.playerId === playerId) ??
       refreshed.availableChronicles[0] ??
       null;
     if (!chronicle) {

@@ -3,17 +3,17 @@ import type { PromptTemplateManager } from '@glass-frontier/persistence';
 import Handlebars from 'handlebars';
 
 export class PromptTemplateRuntime {
-  readonly #loginId: string;
+  readonly #playerId: string;
   readonly #manager: PromptTemplateManager;
   readonly #cache = new Map<string, Handlebars.TemplateDelegate>();
 
-  constructor(options: { loginId: string; manager: PromptTemplateManager }) {
-    this.#loginId = options.loginId;
+  constructor(options: { playerId: string; manager: PromptTemplateManager }) {
+    this.#playerId = options.playerId;
     this.#manager = options.manager;
   }
 
   async render(templateId: PromptTemplateId, data: Record<string, unknown>): Promise<string> {
-    const resolved = await this.#manager.resolveTemplate(this.#loginId, templateId);
+    const resolved = await this.#manager.resolveTemplate(this.#playerId, templateId);
     const cacheKey = `${templateId}:${resolved.variantId}`;
     let template = this.#cache.get(cacheKey);
     if (template === undefined) {

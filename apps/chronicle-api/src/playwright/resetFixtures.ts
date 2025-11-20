@@ -4,17 +4,17 @@ import type { Context } from '../context';
 import {
   buildPlaywrightCharacterRecord,
   buildPlaywrightChronicleRecord,
-  buildPlaywrightLoginRecord,
+  buildPlaywrightPlayerRecord,
   seedPlaywrightLocationGraph,
 } from './fixtures';
 
 export const resetPlaywrightFixtures = async (ctx: Context): Promise<{ locationId: string }> => {
-  const login = buildPlaywrightLoginRecord();
+  const player = buildPlaywrightPlayerRecord();
   const character = buildPlaywrightCharacterRecord();
   const locationId = randomUUID();
   const chronicle = buildPlaywrightChronicleRecord({ locationId });
 
-  await ctx.worldStateStore.upsertLogin(login);
+  await ctx.worldStateStore.upsertPlayer(player);
   await ctx.worldStateStore.upsertCharacter(character);
   await ctx.worldStateStore.deleteChronicle(chronicle.id);
   await ctx.worldStateStore.upsertChronicle(chronicle);

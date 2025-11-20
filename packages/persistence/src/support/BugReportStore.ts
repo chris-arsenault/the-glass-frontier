@@ -10,10 +10,9 @@ const REPORT_FOLDER = 'bug-reports';
 export type CreateBugReportPayload = {
   summary: string;
   details: string;
-  loginId: string;
+  playerId: string;
   chronicleId?: string | null;
   characterId?: string | null;
-  playerId?: string | null;
 };
 
 export type UpdateBugReportPayload = {
@@ -52,9 +51,8 @@ export class BugReportStore extends HybridObjectStore {
       createdAt: now,
       details: payload.details,
       id: randomUUID(),
-      loginId: payload.loginId,
       metadata: undefined,
-      playerId: payload.playerId ?? null,
+      playerId: payload.playerId,
       status: 'open',
       summary: payload.summary,
       updatedAt: now,
