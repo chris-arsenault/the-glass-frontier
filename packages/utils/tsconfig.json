@@ -5,7 +5,7 @@
     "rootDir": "src",
     "composite": true,
     "declaration": true,
-    "declarationDir": "dist",
+    "declarationDir": "dist/types",
     "declarationMap": false
   },
   "include": ["src"],

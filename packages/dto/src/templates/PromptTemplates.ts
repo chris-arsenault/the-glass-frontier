@@ -2,28 +2,26 @@ import { z } from 'zod';
 
 export const PromptTemplateIds = [
   'action-resolver',
-  'beat-director',
+  'wrap-resolver',
+  'beat-tracker',
   'check-planner',
   'chronicle-seed',
-  'clarification-retriever',
+  'clarification-responder',
   'gm-summary',
   'inquiry-describer',
   'intent-beat-detector',
-  'intent-intake',
-  'inventory-arbiter',
+  'intent-classifier',
+  'inventory-delta',
   'location-delta',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
-  'skill-detector',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
 
 export const PromptTemplateDescriptor = z.object({
   description: z.string().min(1),
-  editableEndToken: z.string().min(1),
-  editableStartToken: z.string().min(1),
   id: z.enum(PromptTemplateIds),
   label: z.string().min(1),
   officialObjectKey: z.string().min(1),
@@ -32,32 +30,30 @@ export const PromptTemplateDescriptor = z.object({
 
 export type PromptTemplateDescriptor = z.infer<typeof PromptTemplateDescriptor>;
 
-const OUTPUT_FORMAT_SECTION = '## Output Format';
-const GUIDANCE_SECTION = '## Guidance';
-
 export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplateDescriptor> = {
   'action-resolver': {
     description: 'Resolves decisive player actions with consequences and hooks.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: '## Story Craft',
     id: 'action-resolver',
     label: 'Action Resolver',
     officialObjectKey: 'official/action-resolver.hbs',
     supportsVariants: true,
   },
-  'beat-director': {
+  'wrap-resolver': {
+    description: 'Tries to end the story with decisive action',
+    id: 'wrap-resolver',
+    label: 'Wrap Resolver',
+    officialObjectKey: 'official/wrap-resolver.hbs',
+    supportsVariants: true,
+  },
+  'beat-tracker': {
     description: 'Evaluates and updates chronicle beats using player and GM context.',
-    editableEndToken: '## Output Format',
-    editableStartToken: '## Instructions',
-    id: 'beat-director',
-    label: 'Beat Director',
-    officialObjectKey: 'official/beat-director.hbs',
+    id: 'beat-tracker',
+    label: 'Beat Tracker',
+    officialObjectKey: 'official/beat-tracker.hbs',
     supportsVariants: true,
   },
   'check-planner': {
     description: 'Determines mechanical framing for risky actions and complications.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: '## Decision Rules',
     id: 'check-planner',
     label: 'Check Planner',
     officialObjectKey: 'official/check-planner.hbs',
@@ -65,26 +61,20 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'chronicle-seed': {
     description: 'Generates short chronicle hooks based on a location and tone prompt.',
-    editableEndToken: '## Output Requirements',
-    editableStartToken: GUIDANCE_SECTION,
     id: 'chronicle-seed',
     label: 'Chronicle Seeds',
     officialObjectKey: 'official/chronicle-seed.hbs',
     supportsVariants: true,
   },
-  'clarification-retriever': {
+  'clarification-responder': {
     description: 'Answers short factual clarification questions crisply.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: GUIDANCE_SECTION,
-    id: 'clarification-retriever',
-    label: 'Clarification Retriever',
-    officialObjectKey: 'official/clarification-retriever.hbs',
+    id: 'clarification-responder',
+    label: 'Clarification Responder',
+    officialObjectKey: 'official/clarification-responder.hbs',
     supportsVariants: true,
   },
   'gm-summary': {
     description: 'Condenses narrated output into a log-friendly summary line.',
-    editableEndToken: '## Output',
-    editableStartToken: '## Instructions',
     id: 'gm-summary',
     label: 'GM Summary',
     officialObjectKey: 'official/gm-summary.hbs',
@@ -92,8 +82,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'inquiry-describer': {
     description: 'Provides sensory-rich scene description for inquiry turns.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: GUIDANCE_SECTION,
     id: 'inquiry-describer',
     label: 'Inquiry Describer',
     officialObjectKey: 'official/inquiry-describer.hbs',
@@ -101,35 +89,27 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'intent-beat-detector': {
     description: 'Determines whether the current intent advances, spawns, or ignores a beat.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: GUIDANCE_SECTION,
     id: 'intent-beat-detector',
     label: 'Intent Beat Detector',
     officialObjectKey: 'official/intent-beat-detector.hbs',
     supportsVariants: true,
   },
-  'intent-intake': {
+  'intent-classifier': {
     description: 'Parses the player\'s utterance into actionable intent metadata.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: '## Decision Rules',
-    id: 'intent-intake',
-    label: 'Intent Intake',
-    officialObjectKey: 'official/intent-intake.hbs',
+    id: 'intent-classifier',
+    label: 'Intent Classifier',
+    officialObjectKey: 'official/intent-classifier.hbs',
     supportsVariants: true,
   },
-  'inventory-arbiter': {
+  'inventory-delta': {
     description: 'Applies deterministic inventory changes between the GM narration and character save.',
-    editableEndToken: '## Output Schema',
-    editableStartToken: '## Rules',
-    id: 'inventory-arbiter',
-    label: 'Inventory Arbiter',
-    officialObjectKey: 'official/inventory-arbiter.hbs',
+    id: 'inventory-delta',
+    label: 'Inventory Delta',
+    officialObjectKey: 'official/inventory-delta.hbs',
     supportsVariants: true,
   },
   'location-delta': {
     description: 'Decides if the scene anchor shifts within the location graph.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: 'RULES',
     id: 'location-delta',
     label: 'Location Delta',
     officialObjectKey: 'official/location-delta.hbs',
@@ -137,8 +117,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'planning-narrator': {
     description: 'Summarizes transitional planning/prep scenes with light deltas.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: GUIDANCE_SECTION,
     id: 'planning-narrator',
     label: 'Planning Narrator',
     officialObjectKey: 'official/planning-narrator.hbs',
@@ -146,8 +124,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'possibility-advisor': {
     description: 'Enumerates viable options, costs, and risks without resolving them.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: GUIDANCE_SECTION,
     id: 'possibility-advisor',
     label: 'Possibility Advisor',
     officialObjectKey: 'official/possibility-advisor.hbs',
@@ -155,20 +131,9 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
   },
   'reflection-weaver': {
     description: 'Crafts introspective reflection prose without state changes.',
-    editableEndToken: OUTPUT_FORMAT_SECTION,
-    editableStartToken: GUIDANCE_SECTION,
     id: 'reflection-weaver',
     label: 'Reflection Weaver',
     officialObjectKey: 'official/reflection-weaver.hbs',
-    supportsVariants: true,
-  },
-  'skill-detector': {
-    description: 'Maps player intents to the best-fit skill and attribute pairing.',
-    editableEndToken: '## Output',
-    editableStartToken: '## Rules',
-    id: 'skill-detector',
-    label: 'Skill Detector',
-    officialObjectKey: 'official/skill-detector.hbs',
     supportsVariants: true,
   },
 };

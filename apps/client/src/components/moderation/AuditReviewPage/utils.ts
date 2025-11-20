@@ -62,11 +62,11 @@ const extractMessageContent = (value: unknown): string | null => {
     return direct;
   }
   if (Array.isArray(value)) {
-    for (const entry of value) {
-      const text = extractSegmentText(entry);
-      if (text !== null) {
-        return text;
-      }
+    const segments = value
+      .map((entry) => extractSegmentText(entry))
+      .filter((segment): segment is string => segment !== null);
+    if (segments.length > 0) {
+      return segments.join('\n');
     }
   }
   return null;
@@ -76,11 +76,26 @@ export const extractRequestPreview = (request: JsonValue): string | null => {
   if (request === null || typeof request !== 'object') {
     return null;
   }
+  const parts: string[] = [];
+  const instructions = coerceString((request as { instructions?: unknown }).instructions);
+  if (instructions) {
+    parts.push(`Instructions:\n${instructions}`);
+  }
   const messages = Array.isArray((request as { messages?: unknown }).messages)
-    ? ((request as { messages?: unknown }).messages as Array<{ content?: unknown }>)
+    ? ((request as { messages?: unknown }).messages as Array<{ content?: unknown; role?: unknown }>)
     : [];
-  const first = messages.at(0);
-  return extractMessageContent(first?.content ?? null);
+  messages.forEach((entry) => {
+    const content = extractMessageContent(entry?.content);
+    if (!content) {
+      return;
+    }
+    const role = coerceString(entry?.role) ?? 'assistant';
+    parts.push(`${role}:\n${content}`);
+  });
+  if (parts.length === 0) {
+    return null;
+  }
+  return parts.join('\n\n');
 };
 
 export const extractResponsePreview = (response: unknown): string | null => {
@@ -88,8 +103,20 @@ export const extractResponsePreview = (response: unknown): string | null => {
     return null;
   }
   const choices = Array.isArray((response as { choices?: unknown }).choices)
-    ? ((response as { choices?: unknown }).choices as Array<{ message?: { content?: unknown } }>)
+    ? ((response as { choices?: unknown }).choices as Array<{ message?: { content?: unknown; role?: unknown } }>)
     : [];
-  const first = choices.at(0);
-  return extractMessageContent(first?.message?.content ?? null);
+  const parts: string[] = [];
+  choices.forEach((choice, index) => {
+    const content = extractMessageContent(choice?.message?.content);
+    if (!content) {
+      return;
+    }
+    const role = coerceString(choice?.message?.role) ?? 'assistant';
+    const label = choices.length > 1 ? `${role} #${index + 1}` : role;
+    parts.push(`${label}:\n${content}`);
+  });
+  if (parts.length === 0) {
+    return null;
+  }
+  return parts.join('\n\n');
 };

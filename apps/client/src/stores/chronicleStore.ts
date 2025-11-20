@@ -6,14 +6,13 @@ import type {
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
-  PendingEquip,
-  BeatDelta,
+  BeatTracker,
   PlayerPreferences,
 } from '@glass-frontier/dto';
-import { createEmptyInventory } from '@glass-frontier/dto';
 import { formatTurnJobId } from '@glass-frontier/utils';
 import { create } from 'zustand';
 
+import { gmClient } from '../lib/gmClient';
 import { progressStream } from '../lib/progressStream';
 import { trpcClient } from '../lib/trpcClient';
 import type {
@@ -68,9 +67,19 @@ const generateId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const slugifyBeatId = (title: string): string => {
+  const normalized = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized.length > 0 ? normalized : `beat-${Date.now()}`;
+};
+
 const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): ChatMessage => ({
   advancesTimeline: extras?.advancesTimeline ?? null,
   attributeKey: extras?.attributeKey ?? null,
+  beatTracker: extras?.beatTracker ?? null,
   entry,
   executedNodes: extras?.executedNodes ?? null,
   gmSummary: extras?.gmSummary ?? null,
@@ -122,12 +131,13 @@ const upsertChatEntry = (
 
 const flattenTurns = (turns: Turn[]): ChatMessage[] =>
   turns.flatMap((turn) => {
-    const skillKey = turn.playerIntent?.skill ?? null;
-    const attributeKey = turn.playerIntent?.attribute ?? null;
+    const attributeKey = turn.skillCheckPlan?.attribute ?? null;
+    const skillKey = turn.skillCheckPlan?.skill ?? null;
     const extras = {
       advancesTimeline:
         typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
       attributeKey,
+      beatTracker: turn.beatTracker ?? null,
       executedNodes: turn.executedNodes ?? null,
       gmSummary: turn.gmSummary ?? null,
       gmTrace: turn.gmTrace ?? null,
@@ -147,8 +157,8 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
     if (turn.playerMessage) {
       turnEntries.push(toChatMessage(turn.playerMessage, extras));
     }
-    if (turn.gmMessage) {
-      turnEntries.push(toChatMessage(turn.gmMessage, extras));
+    if (turn.gmResponse) {
+      turnEntries.push(toChatMessage(turn.gmResponse, extras));
     }
     if (turn.systemMessage) {
       turnEntries.push(toChatMessage(turn.systemMessage, extras));
@@ -203,19 +213,6 @@ const deriveTitleFromSeed = (seedText: string): string => {
   return base.length > 64 ? `${base.slice(0, 61)}…` : base;
 };
 
-const isUnequipEntry = (entry: PendingEquip): entry is PendingEquip & { unequip: true } =>
-  'unequip' in entry && entry.unequip === true;
-
-const isSameEquipEntry = (a: PendingEquip, b: PendingEquip): boolean => {
-  if (isUnequipEntry(a) && isUnequipEntry(b)) {
-    return a.slot === b.slot;
-  }
-  if (!isUnequipEntry(a) && !isUnequipEntry(b) && 'itemId' in a && 'itemId' in b) {
-    return a.slot === b.slot && a.itemId === b.itemId;
-  }
-  return false;
-};
-
 const mergeChronicleRecord = (list: Chronicle[], chronicle: Chronicle) => {
   const filtered = list.filter((existing) => existing.id !== chronicle.id);
   return [chronicle, ...filtered];
@@ -226,33 +223,59 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
   return [character, ...filtered];
 };
 
-const upsertBeatRecord = (beats: ChronicleBeat[], candidate: ChronicleBeat): ChronicleBeat[] => {
-  const index = beats.findIndex((beat) => beat.id === candidate.id);
-  if (index >= 0) {
-    const next = [...beats];
-    next[index] = candidate;
-    return next;
-  }
-  return [...beats, candidate];
-};
-
-const applyBeatStateDelta = (
+const applyBeatTrackerUpdate = (
   beats: ChronicleBeat[],
-  delta?: BeatDelta | null
+  tracker?: BeatTracker | null
 ): { beats: ChronicleBeat[]; focusBeatId: string | null } => {
-  if (!delta) {
+  if (!tracker) {
     return { beats, focusBeatId: null };
   }
-  let nextBeats = beats;
-  for (const entry of delta.updated ?? []) {
-    nextBeats = upsertBeatRecord(nextBeats, entry);
+  const working = beats.map((beat) => ({ ...beat }));
+  let changed = false;
+  const now = Date.now();
+
+  if (tracker.newBeat) {
+    const fallbackId = slugifyBeatId(tracker.newBeat.title);
+    const newId = tracker.focusBeatId ?? fallbackId;
+    const existing = working.find((beat) => beat.id === newId);
+    if (!existing) {
+      working.push({
+        id: newId,
+        title: tracker.newBeat.title,
+        description: tracker.newBeat.description,
+        status: 'in_progress',
+        createdAt: now,
+        updatedAt: now,
+      });
+      changed = true;
+    }
   }
-  for (const entry of delta.created ?? []) {
-    nextBeats = upsertBeatRecord(nextBeats, entry);
+
+  for (const update of tracker.updates ?? []) {
+    const index = working.findIndex((beat) => beat.id === update.beatId);
+    if (index < 0) {
+      continue;
+    }
+    const target = working[index];
+    const nextBeat: ChronicleBeat = {
+      ...target,
+      updatedAt: now,
+      description: update.description ?? target.description,
+      status: update.status ?? target.status,
+    };
+    if (
+      (update.status === 'succeeded' || update.status === 'failed') &&
+      typeof nextBeat.resolvedAt !== 'number'
+    ) {
+      nextBeat.resolvedAt = now;
+    }
+    working[index] = nextBeat;
+    changed = true;
   }
+
   return {
-    beats: nextBeats,
-    focusBeatId: delta.focusBeatId ?? null,
+    beats: changed ? working : beats,
+    focusBeatId: tracker.focusBeatId ?? null,
   };
 };
 
@@ -304,49 +327,26 @@ const applyTurnProgressEvent = (
   state: ChronicleState,
   event: TurnProgressEvent
 ): ChronicleState => {
-  if (
-    !event.payload ||
-    !state.chronicleId ||
-    event.chronicleId !== state.chronicleId ||
-    (state.pendingTurnJobId && event.jobId !== state.pendingTurnJobId)
-  ) {
+  if (!event.payload || !state.chronicleId || event.chronicleId !== state.chronicleId) {
+    return state;
+  }
+
+  const isCurrentTurn =
+    state.pendingTurnJobId !== null
+      ? event.jobId === state.pendingTurnJobId
+      : event.turnSequence === state.turnSequence;
+  if (!isCurrentTurn) {
     return state;
   }
 
   const payload = event.payload;
   let nextMessages = state.messages;
 
-  if (
-    state.pendingPlayerMessageId &&
-    (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
-  ) {
-    nextMessages = nextMessages.map((message) =>
-      message.entry.id === state.pendingPlayerMessageId
-        ? {
-          ...message,
-          advancesTimeline:
-              typeof payload.advancesTimeline === 'boolean'
-                ? payload.advancesTimeline
-                : message.advancesTimeline ?? null,
-          attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
-          executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
-          handlerId: payload.handlerId ?? message.handlerId ?? null,
-          intentType: payload.resolvedIntentType ?? payload.playerIntent?.intentType ?? message.intentType ?? null,
-          inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
-          playerIntent: payload.playerIntent ?? message.playerIntent,
-          skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
-          skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
-          skillKey: payload.playerIntent?.skill ?? message.skillKey,
-          worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
-        }
-        : message
-    );
-  }
-
   const extras: Partial<ChatMessage> = {
     advancesTimeline:
       typeof payload.advancesTimeline === 'boolean' ? payload.advancesTimeline : null,
     attributeKey: payload.playerIntent?.attribute ?? null,
+    beatTracker: payload.beatTracker ?? null,
     executedNodes: payload.executedNodes ?? null,
     gmSummary: payload.gmSummary ?? null,
     gmTrace: payload.gmTrace ?? null,
@@ -363,8 +363,41 @@ const applyTurnProgressEvent = (
     worldDeltaTags: payload.worldDeltaTags ?? null,
   };
 
-  if (payload.gmMessage) {
-    nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, extras);
+  if (
+    state.pendingPlayerMessageId &&
+    (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
+  ) {
+    nextMessages = nextMessages.map((message) => {
+      if (message.entry.id !== state.pendingPlayerMessageId) {
+        return message;
+      }
+      return {
+        ...message,
+        advancesTimeline:
+          typeof payload.advancesTimeline === 'boolean'
+            ? payload.advancesTimeline
+            : message.advancesTimeline ?? null,
+        attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+        beatTracker: payload.beatTracker ?? message.beatTracker ?? null,
+        executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
+        handlerId: payload.handlerId ?? message.handlerId ?? null,
+        intentType:
+          payload.resolvedIntentType ??
+          payload.playerIntent?.intentType ??
+          message.intentType ??
+          null,
+        inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
+        playerIntent: payload.playerIntent ?? message.playerIntent,
+        skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
+        skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
+        skillKey: payload.playerIntent?.skill ?? message.skillKey,
+        worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
+      };
+    });
+  }
+
+  if (payload.gmResponse) {
+    nextMessages = upsertChatEntry(nextMessages, payload.gmResponse, extras);
   }
 
   if (payload.systemMessage) {
@@ -372,7 +405,7 @@ const applyTurnProgressEvent = (
   }
 
   const shouldClose = payload.chronicleShouldClose === true;
-  const beatResult = applyBeatStateDelta(state.beats, payload.beatDelta);
+  const beatResult = applyBeatTrackerUpdate(state.beats, payload.beatTracker);
   return {
     ...state,
     beats: beatResult.beats,
@@ -409,7 +442,6 @@ const createBaseState = () => ({
   loginName: null as string | null,
   messages: [] as ChatMessage[],
   momentumTrend: null as MomentumTrend | null,
-  pendingEquip: [] as PendingEquip[],
   pendingPlayerMessageId: null as string | null,
   pendingTurnJobId: null as string | null,
   playerSettings: DEFAULT_PLAYER_SETTINGS,
@@ -440,19 +472,11 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       location: null,
       messages: [],
       momentumTrend: null,
-      pendingEquip: [],
       pendingPlayerMessageId: null,
       pendingTurnJobId: null,
       queuedIntents: 0,
       transportError: null,
       turnSequence: 0,
-    }));
-  },
-
-  clearPendingEquipQueue() {
-    set((prev) => ({
-      ...prev,
-      pendingEquip: [],
     }));
   },
 
@@ -462,7 +486,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       archetype: draft.archetype,
       attributes: draft.attributes,
       id: generateId(),
-      inventory: createEmptyInventory(),
+      inventory: [],
       loginId: identity.loginId,
       momentum: DEFAULT_MOMENTUM,
       name: draft.name,
@@ -660,7 +684,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         loginId: chronicleState.chronicle?.loginId ?? prev.loginId,
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
-        pendingEquip: [],
         transportError: null,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
       }));
@@ -705,31 +728,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }));
       throw nextError;
     }
-  },
-
-  queueEquipChange(entry) {
-    set((prev) => {
-      const filtered = prev.pendingEquip.filter((item) => item.slot !== entry.slot);
-      const existing = prev.pendingEquip.find((item) => item.slot === entry.slot);
-      if (!isUnequipEntry(entry) && prev.character?.inventory?.gear?.[entry.slot]?.id === entry.itemId && !existing) {
-        return prev;
-      }
-      if (isUnequipEntry(entry) && !prev.character?.inventory?.gear?.[entry.slot] && !existing) {
-        return prev;
-      }
-      const sameAction =
-        existing &&
-        ((isUnequipEntry(existing) && isUnequipEntry(entry)) ||
-          (!isUnequipEntry(existing) &&
-            !isUnequipEntry(entry) &&
-            'itemId' in existing &&
-            'itemId' in entry &&
-            existing.itemId === entry.itemId));
-      return {
-        ...prev,
-        pendingEquip: sameAction ? filtered : [...filtered, entry],
-      };
-    });
   },
 
   async refreshLoginResources() {
@@ -803,7 +801,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }
 
     const playerEntry = buildPlayerEntry(trimmed);
-    const pendingEquipQueue = get().pendingEquip;
     const playerMessage = toChatMessage(playerEntry, { playerIntent: null });
     const nextTurnSequence = get().turnSequence + 1;
     const jobId = formatTurnJobId(chronicleId, nextTurnSequence);
@@ -821,10 +818,9 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { character, chronicleStatus, location, turn } = await trpcClient.postMessage.mutate({
+      const { character, chronicleStatus, location, turn } = await gmClient.postMessage.mutate({
         chronicleId,
         content: playerEntry,
-        pendingEquip: pendingEquipQueue,
       });
       progressStream.markComplete(jobId);
 
@@ -834,10 +830,13 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         const nextMomentumTrend = character
           ? (deriveMomentumTrend(prev.character, character) ?? prev.momentumTrend)
           : prev.momentumTrend;
-        const beatResult = applyBeatStateDelta(prev.beats, turn.beatDelta);
+        const beatResult = applyBeatTrackerUpdate(prev.beats, turn.beatTracker);
 
+        const attributeKey = turn.skillCheckPlan?.attribute ?? null;
+        const skillKey = turn.skillCheckPlan?.skill ?? null;
         const extras = {
-          attributeKey: turn.playerIntent?.attribute ?? null,
+          attributeKey,
+          beatTracker: turn.beatTracker ?? null,
           executedNodes: turn.executedNodes ?? null,
           gmSummary: turn.gmSummary ?? null,
           gmTrace: turn.gmTrace ?? null,
@@ -845,7 +844,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           playerIntent: turn.playerIntent ?? null,
           skillCheckPlan: turn.skillCheckPlan ?? null,
           skillCheckResult: turn.skillCheckResult ?? null,
-          skillKey: turn.playerIntent?.skill ?? null,
+          skillKey,
           skillProgress: skillBadges.length > 0 ? skillBadges : null,
           turnId: turn.id ?? null,
           turnSequence: turn.turnSequence ?? null,
@@ -856,6 +855,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             ? {
               ...message,
               attributeKey: extras.attributeKey,
+              beatTracker: extras.beatTracker ?? message.beatTracker ?? null,
               executedNodes: extras.executedNodes,
               inventoryDelta: extras.inventoryDelta,
               playerIntent: extras.playerIntent,
@@ -867,8 +867,8 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         );
 
         let nextMessages = updatedMessages;
-        if (turn.gmMessage) {
-          nextMessages = upsertChatEntry(nextMessages, turn.gmMessage, extras);
+        if (turn.gmResponse) {
+          nextMessages = upsertChatEntry(nextMessages, turn.gmResponse, extras);
         }
         if (turn.systemMessage) {
           nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, extras);
@@ -896,9 +896,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           location: location ?? prev.location,
           messages: nextMessages,
           momentumTrend: nextMomentumTrend,
-          pendingEquip: prev.pendingEquip.filter(
-            (entry) => !pendingEquipQueue.some((sent) => isSameEquipEntry(entry, sent))
-          ),
           pendingPlayerMessageId:
             prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
           pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
@@ -946,7 +943,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
 
     try {
-      const result = await trpcClient.setChronicleTargetEnd.mutate({
+      const result = await gmClient.setChronicleTargetEnd.mutate({
         chronicleId,
         loginId: identity.loginId,
         targetEndTurn,

@@ -170,6 +170,7 @@
 .landing-news-list li,
 .landing-chronicle-list li,
 .landing-my-chronicles li,
+.landing-my-characters li,
 .landing-update-list li,
 .landing-snippet-list li {
   padding: 1rem;
@@ -276,7 +277,8 @@
   cursor: not-allowed;
 }
 
-.landing-my-chronicles {
+.landing-my-chronicles,
+.landing-my-characters {
   list-style: none;
   margin: 0;
   margin-top: 0.5rem;
@@ -286,12 +288,14 @@
   gap: 0.75rem;
 }
 
-.landing-my-chronicle-title {
+.landing-my-chronicle-title,
+.landing-my-character-title {
   margin: 0 0 0.2rem;
   font-weight: 600;
 }
 
-.landing-my-chronicle-meta {
+.landing-my-chronicle-meta,
+.landing-my-character-meta {
   margin: 0;
   color: #cbd5f5;
   font-size: 0.9rem;

@@ -26,6 +26,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@glass-frontier/chronicle-api": "workspace:*",
+    "@glass-frontier/gm-api": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@mui/icons-material": "^7.3.5",

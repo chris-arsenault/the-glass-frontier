@@ -1,0 +1,11 @@
+Summarize the GM narration into a compact log line and decide whether the chronicle should close.
+Treat the summary as the canonical record for the turn.
+
+## Instructions
+- Produce a single sentence (<= 180 characters) capturing *who* acted, *what* changed, and *where* it
+  happened. Favor declarative prose over bullet-like fragments.
+- If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
+  `(collapse)`.
+- No markdown, numbers, or quotes; keep it pure text.
+- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
+  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.

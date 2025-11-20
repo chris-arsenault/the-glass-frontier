@@ -1,8 +1,6 @@
 import type { LocationPlace, Player, PlayerPreferences } from '@glass-frontier/dto';
 import {
   Character as CharacterSchema,
-  TranscriptEntry,
-  PendingEquip,
   type Character,
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
@@ -164,57 +162,6 @@ export const appRouter = t.router({
     .input(z.object({ loginId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByLogin(input.loginId)),
 
-  // POST /chronicles/:chronicleId/messages
-  postMessage: t.procedure
-    .input(
-      z.object({
-        chronicleId: z.string().uuid(),
-        content: TranscriptEntry, // tighten to your DTO schema
-        pendingEquip: z.array(PendingEquip).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
-      if (chronicle?.status === 'closed') {
-        throw new Error('Chronicle is closed.');
-      }
-      const playerEntry = { ...input.content, role: 'player' as const };
-      const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
-        authorizationHeader: ctx.authorizationHeader,
-        pendingEquip: input.pendingEquip ?? [],
-      });
-      return {
-        character: result.updatedCharacter,
-        chronicleStatus: result.chronicleStatus,
-        location: result.locationSummary,
-        turn: result.turn,
-      };
-    }),
-
-  setChronicleTargetEnd: t.procedure
-    .input(
-      z.object({
-        chronicleId: z.string().uuid(),
-        loginId: z.string().min(1),
-        targetEndTurn: z.number().int().min(0).nullable().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
-      if (chronicle === null || chronicle === undefined) {
-        throw new Error('Chronicle not found.');
-      }
-      if (chronicle.loginId !== input.loginId) {
-        throw new Error('Chronicle does not belong to the requesting login.');
-      }
-      const normalizedTarget =
-        typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;
-      const updated = await ctx.worldStateStore.upsertChronicle({
-        ...chronicle,
-        targetEndTurn: normalizedTarget,
-      });
-      return { chronicle: updated };
-    }),
   resetPlaywrightFixtures: t.procedure.mutation(async ({ ctx }) => {
     if (process.env.PLAYWRIGHT_RESET_ENABLED !== '1') {
       throw new Error('Playwright reset disabled');

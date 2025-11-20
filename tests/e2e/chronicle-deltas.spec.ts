@@ -27,7 +27,7 @@ test.describe('Chronicle deltas', () => {
     const gmEntry = await sendTurn(
       page,
       chatInput,
-      '#loc:auric Sweep the console banks for hidden sensors.'
+      '#loc:auric #beat:new #mock:beat:new Sweep the console banks for hidden sensors.'
     );
 
     await expect(locationPill).toContainText('Auric Causeway', { timeout: 15_000 });
@@ -36,31 +36,37 @@ test.describe('Chronicle deltas', () => {
     await expect(badge).toBeVisible();
     await badge.hover();
     const deltaRows = gmEntry.locator('.inventory-delta-row');
-    await expect(deltaRows).toHaveCount(6);
-    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-equip')).toContainText('Obsidian Halo');
-    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-unequip')).toContainText('Nullglass Stealth Rig');
-    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-remove')).toContainText('Vault Access Seed');
-    await expect(gmEntry.locator('.inventory-delta-row.inventory-delta-consume')).toContainText('Starlight Draught');
-    await expect(gmEntry.locator('.inventory-delta-row').filter({ hasText: 'Auric Loom' })).toHaveCount(1);
-    await expect(gmEntry.locator('.inventory-delta-row').filter({ hasText: 'Signal Flares' })).toHaveCount(1);
+    await expect(deltaRows).toHaveCount(3);
+    await expect(deltaRows.filter({ hasText: 'Auric Loom' })).toHaveCount(1);
+    await expect(deltaRows.filter({ hasText: 'Vault Access Seed' })).toHaveCount(1);
+    await expect(deltaRows.filter({ hasText: 'Starlight Draught' })).toHaveCount(1);
+
+    const beatBadge = gmEntry.locator('.beat-tracker-badge');
+    await expect(beatBadge).toBeVisible();
+    await beatBadge.hover();
+    await expect(beatBadge.locator('.beat-tracker-tooltip')).toContainText('Shattered Chorus');
 
     await page.getByRole('button', { name: 'Toggle character sheet' }).click();
     const drawer = page.locator('.character-drawer.open');
     await expect(drawer).toBeVisible();
-    await expect(drawer.locator('.gear-slot-card').filter({ hasText: 'Headgear' })).toContainText('Obsidian Halo');
-    await expect(drawer.locator('.gear-slot-card').filter({ hasText: 'Outfit' })).toContainText('Empty slot');
-    await expect(drawer.getByRole('heading', { name: 'Relics' }).locator('..')).toContainText('Auric Loom');
-    await expect(drawer.getByRole('heading', { name: 'Data Shards' }).locator('..')).toContainText(
-      'No data shards on hand.'
-    );
-    await expect(drawer.getByText('Starlight Draught')).toBeVisible();
-    await expect(drawer.getByText('Signal Flares')).toBeVisible();
+    await expect(drawer.getByRole('heading', { name: 'Gear' })).toBeVisible();
+    await expect(drawer.getByRole('heading', { name: 'Relics' })).toBeVisible();
+    await expect(drawer.getByRole('heading', { name: 'Consumables' })).toBeVisible();
+    await expect(drawer.getByRole('heading', { name: 'Supplies' })).toBeVisible();
     await drawer.getByRole('button', { name: 'Close character sheet' }).click();
 
-    await sendTurn(page, chatInput, '#loc:maintenance Descend into the maintenance bay.');
+    await sendTurn(
+      page,
+      chatInput,
+      '#loc:maintenance #beat:update #mock:beat:update Descend into the maintenance bay.'
+    );
     await expect(locationPill).toContainText('Maintenance Bay', { timeout: 15_000 });
 
-    await sendTurn(page, chatInput, '#loc:quay Return to the Luminous Quay observation deck.');
+    await sendTurn(
+      page,
+      chatInput,
+      '#loc:quay #beat:update #mock:beat:update Return to the Luminous Quay observation deck.'
+    );
     await expect(locationPill).not.toContainText('Maintenance Bay', { timeout: 15_000 });
     await expect(locationPill).toContainText('Luminous Quay', { timeout: 15_000 });
     const breadcrumbText = ((await locationPath.textContent()) ?? '').replace(/\s+/g, ' ').trim();
@@ -70,7 +76,11 @@ test.describe('Chronicle deltas', () => {
       );
     }
 
-    await sendTurn(page, chatInput, '#loc:prism Stride onto the Prism Walk and signal the towers.');
+    await sendTurn(
+      page,
+      chatInput,
+      '#loc:prism #beat:update #mock:beat:update Stride onto the Prism Walk and signal the towers.'
+    );
     await expect(locationPill).toContainText('Prism Walk', { timeout: 15_000 });
 
     const menu = await openPlayerMenu(page);

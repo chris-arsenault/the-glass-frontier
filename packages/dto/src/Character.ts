@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { Inventory as CharacterInventory, createEmptyInventory } from './Inventory';
+import {Inventory as CharacterInventory, createEmptyInventory, InventorySchema} from './Inventory';
 import type {
   Attribute,
   AttributeTier,
@@ -19,7 +19,7 @@ export const Character = z.object({
   attributes: CharacterAttributes,
   bio: z.string().min(1).optional(),
   id: z.string().min(1),
-  inventory: CharacterInventory.default(createEmptyInventory()),
+  inventory: InventorySchema,
   loginId: z.string().min(1),
   momentum: MomentumState,
   name: z.string().min(1),

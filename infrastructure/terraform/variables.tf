@@ -34,10 +34,10 @@ variable "chronicle_api_build_command" {
   default     = "pnpm --filter ./apps/chronicle-api build"
 }
 
-variable "llm_proxy_build_command" {
-  description = "Command used to compile the LLM proxy."
+variable "gm_api_build_command" {
+  description = "Command used to compile the GM API."
   type        = string
-  default     = "pnpm --filter ./apps/llm-proxy build"
+  default     = "pnpm --filter ./apps/gm-api build"
 }
 
 variable "lambda_node_version" {

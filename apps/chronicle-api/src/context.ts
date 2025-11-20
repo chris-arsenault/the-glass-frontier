@@ -2,16 +2,13 @@
 import {
   createWorldStateStore,
   createLocationGraphStore,
-  createImbuedRegistryStore,
   type WorldStateStore,
   type LocationGraphStore,
-  type ImbuedRegistryStore,
   PromptTemplateManager,
   BugReportStore,
   TokenUsageStore,
 } from '@glass-frontier/persistence';
 
-import { NarrativeEngine } from './narrativeEngine';
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
 const narrativeBucket = process.env.NARRATIVE_S3_BUCKET;
@@ -20,18 +17,16 @@ if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) 
 }
 const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
 
-const worldStateStore = createWorldStateStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-});
 const locationGraphStore = createLocationGraphStore({
   bucket: narrativeBucket,
   prefix: narrativePrefix,
 });
-const imbuedRegistryStore: ImbuedRegistryStore = createImbuedRegistryStore({
+const worldStateStore = createWorldStateStore({
   bucket: narrativeBucket,
   prefix: narrativePrefix,
+  locationGraphStore,
 });
+
 const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
 if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
   throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
@@ -44,12 +39,7 @@ const seedService = new ChronicleSeedService({
   locationGraphStore,
   templateManager,
 });
-const engine = new NarrativeEngine({
-  imbuedRegistryStore,
-  locationGraphStore,
-  templateManager,
-  worldStateStore,
-});
+
 const bugReportStore = new BugReportStore({
   bucket: narrativeBucket,
   prefix: narrativePrefix,
@@ -66,8 +56,6 @@ const tokenUsageStore = (() => {
 export type Context = {
   authorizationHeader?: string;
   bugReportStore: BugReportStore;
-  engine: NarrativeEngine;
-  imbuedRegistryStore: ImbuedRegistryStore;
   locationGraphStore: LocationGraphStore;
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;
@@ -79,8 +67,6 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
   return {
     authorizationHeader: options?.authorizationHeader,
     bugReportStore,
-    engine,
-    imbuedRegistryStore,
     locationGraphStore,
     seedService,
     templateManager,

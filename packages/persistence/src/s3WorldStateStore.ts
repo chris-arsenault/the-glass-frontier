@@ -1,11 +1,11 @@
 import type { S3Client } from '@aws-sdk/client-s3';
 import type { Character, Chronicle, Login, Player, Turn } from '@glass-frontier/dto';
-import { createEmptyInventory } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
 import { applyCharacterSnapshotProgress } from './characterProgress';
 import { HybridObjectStore } from './hybridObjectStore';
+import type { LocationGraphStore } from './locationGraphStore';
 import type { CharacterProgressPayload, ChronicleSnapshot } from './types';
 import type { WorldIndexRepository } from './worldIndexRepository';
 import type { WorldStateStore } from './worldStateStore';
@@ -15,13 +15,7 @@ const isNonEmptyString = (value?: string | null): value is string =>
 
 export class S3WorldStateStore extends HybridObjectStore implements WorldStateStore {
   readonly #index: WorldIndexRepository;
-
-  readonly #logins = new Map<string, Login>();
-  readonly #characters = new Map<string, Character>();
-  readonly #chronicles = new Map<string, Chronicle>();
-  readonly #chronicleLoginIndex = new Map<string, string>();
-  readonly #characterLoginIndex = new Map<string, string>();
-  readonly #players = new Map<string, Player>();
+  readonly #locationGraphStore: LocationGraphStore | null;
 
   constructor(options: {
     bucket: string;
@@ -29,6 +23,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     client?: S3Client;
     region?: string;
     worldIndex: WorldIndexRepository;
+    locationGraphStore?: LocationGraphStore | null;
   }) {
     super({
       bucket: options.bucket,
@@ -40,6 +35,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       throw new Error('S3WorldStateStore requires a world index repository.');
     }
     this.#index = options.worldIndex;
+    this.#locationGraphStore = options.locationGraphStore ?? null;
     const prefixValue = isNonEmptyString(options.prefix) ? options.prefix.trim() : null;
     const normalizedPrefix = prefixValue !== null ? prefixValue.replace(/\/+$/, '') : null;
     const prefixLabel =
@@ -77,6 +73,13 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     const character = isNonEmptyString(chronicle.characterId)
       ? await this.getCharacter(chronicle.characterId)
       : null;
+    const locationSummary =
+      this.#locationGraphStore && isNonEmptyString(chronicle.locationId) && character?.id
+        ? await this.#locationGraphStore.summarizeCharacterLocation({
+            characterId: character.id,
+            locationId: chronicle.locationId,
+          })
+        : null;
     const turns = await this.listChronicleTurns(chronicleId);
     const lastTurn = turns.length > 0 ? turns[turns.length - 1] : null;
     const turnSequence = lastTurn?.turnSequence ?? -1;
@@ -84,28 +87,19 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
       character,
       chronicle,
       chronicleId: chronicle.id,
-      location: null,
+      location: locationSummary,
       turns,
       turnSequence,
     };
   }
 
   async upsertLogin(login: Login): Promise<Login> {
-    this.#logins.set(login.id, login);
     await this.setJson(this.#loginKey(login.id), login);
     return login;
   }
 
   async getLogin(loginId: string): Promise<Login | null> {
-    const cached = this.#logins.get(loginId);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const record = await this.getJson<Login>(this.#loginKey(loginId));
-    if (record !== null) {
-      this.#logins.set(loginId, record);
-    }
-    return record;
+    return this.getJson<Login>(this.#loginKey(loginId));
   }
 
   async listLogins(): Promise<Login[]> {
@@ -116,19 +110,12 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
 
   async upsertCharacter(character: Character): Promise<Character> {
     const normalized = this.#ensureInventory(character);
-    this.#characters.set(normalized.id, normalized);
-    this.#characterLoginIndex.set(normalized.id, normalized.loginId);
     await this.setJson(this.#characterKey(normalized.loginId, normalized.id), normalized);
     await this.#index.linkCharacterToLogin(normalized.id, normalized.loginId);
     return normalized;
   }
 
   async getCharacter(characterId: string): Promise<Character | null> {
-    const cached = this.#characters.get(characterId);
-    if (cached !== undefined) {
-      return cached;
-    }
-
     const loginId = await this.#resolveCharacterLogin(characterId);
     if (loginId === null) {
       return null;
@@ -137,8 +124,6 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
     if (record !== null) {
       const normalized = this.#ensureInventory(record);
-      this.#characters.set(characterId, normalized);
-      this.#characterLoginIndex.set(characterId, loginId);
       return normalized;
     }
     return record;
@@ -151,15 +136,9 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     }
     const records = await Promise.all(
       characterIds.map(async (characterId) => {
-        const cached = this.#characters.get(characterId);
-        if (cached !== undefined) {
-          return cached;
-        }
         const record = await this.getJson<Character>(this.#characterKey(loginId, characterId));
         if (record !== null) {
           const normalized = this.#ensureInventory(record);
-          this.#characters.set(characterId, normalized);
-          this.#characterLoginIndex.set(characterId, loginId);
           return normalized;
         }
         return null;
@@ -169,27 +148,16 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async upsertPlayer(player: Player): Promise<Player> {
-    this.#players.set(player.loginId, player);
     await this.setJson(this.#playerKey(player.loginId), player);
     return player;
   }
 
   async getPlayer(loginId: string): Promise<Player | null> {
-    const cached = this.#players.get(loginId);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const record = await this.getJson<Player>(this.#playerKey(loginId));
-    if (record !== null) {
-      this.#players.set(loginId, record);
-    }
-    return record;
+    return this.getJson<Player>(this.#playerKey(loginId));
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {
     const normalized = this.#normalizeChronicle(chronicle);
-    this.#chronicles.set(normalized.id, normalized);
-    this.#chronicleLoginIndex.set(normalized.id, normalized.loginId);
     await this.setJson(this.#chronicleKey(normalized.loginId, normalized.id), normalized);
     await this.#index.linkChronicleToLogin(chronicle.id, chronicle.loginId);
     if (isNonEmptyString(chronicle.characterId)) {
@@ -202,11 +170,6 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
-    const cached = this.#chronicles.get(chronicleId);
-    if (cached !== undefined) {
-      return cached;
-    }
-
     const loginId = await this.#resolveChronicleLogin(chronicleId);
     if (loginId === null) {
       return null;
@@ -215,8 +178,6 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
     if (record !== null) {
       const normalized = this.#normalizeChronicle(record);
-      this.#chronicles.set(chronicleId, normalized);
-      this.#chronicleLoginIndex.set(chronicleId, loginId);
       return normalized;
     }
     return record;
@@ -229,15 +190,9 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     }
     const records = await Promise.all(
       chronicleIds.map(async (chronicleId) => {
-        const cached = this.#chronicles.get(chronicleId);
-        if (cached !== undefined) {
-          return cached;
-        }
         const record = await this.getJson<Chronicle>(this.#chronicleKey(loginId, chronicleId));
         if (record !== null) {
           const normalized = this.#normalizeChronicle(record);
-          this.#chronicles.set(chronicleId, normalized);
-          this.#chronicleLoginIndex.set(chronicleId, loginId);
           return normalized;
         }
         return record;
@@ -255,8 +210,6 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     const turnKeys = await this.list(this.#turnPrefix(loginId, chronicleId), { suffix: '.json' });
     await Promise.all(turnKeys.map((key) => this.delete(key)));
     await this.delete(this.#chronicleKey(loginId, chronicleId));
-    this.#chronicles.delete(chronicleId);
-    this.#chronicleLoginIndex.delete(chronicleId);
     await this.#index.removeChronicleFromLogin(chronicleId, loginId);
     await this.#index.deleteChronicleRecords(chronicleId);
   }
@@ -311,29 +264,11 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
   }
 
   async #resolveChronicleLogin(chronicleId: string): Promise<string | null> {
-    const cached = this.#chronicleLoginIndex.get(chronicleId);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const loginId = await this.#index.getChronicleLogin(chronicleId);
-    if (loginId !== null) {
-      this.#chronicleLoginIndex.set(chronicleId, loginId);
-      return loginId;
-    }
-    return null;
+    return this.#index.getChronicleLogin(chronicleId);
   }
 
   async #resolveCharacterLogin(characterId: string): Promise<string | null> {
-    const cached = this.#characterLoginIndex.get(characterId);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const loginId = await this.#index.getCharacterLogin(characterId);
-    if (loginId !== null) {
-      this.#characterLoginIndex.set(characterId, loginId);
-      return loginId;
-    }
-    return null;
+    return this.#index.getCharacterLogin(characterId);
   }
 
   #ensureInventory(character: Character): Character {
@@ -342,7 +277,7 @@ export class S3WorldStateStore extends HybridObjectStore implements WorldStateSt
     }
     return {
       ...character,
-      inventory: createEmptyInventory(),
+      inventory: [],
     };
   }
 

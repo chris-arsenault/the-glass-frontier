@@ -25,3 +25,4 @@ export * from './Inventory';
 export * from './audit/LlmAudit';
 export * from './support/BugReport';
 export * from './support/TokenUsage';
+export * from './Metadata'

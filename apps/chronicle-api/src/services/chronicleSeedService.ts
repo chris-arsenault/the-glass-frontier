@@ -1,9 +1,11 @@
-import type { ChronicleSeed, LocationPlace } from '@glass-frontier/dto';
-import { LangGraphLlmClient } from '@glass-frontier/llm-client';
+import type {ChronicleSeed, ChronicleSeedList, LocationPlace} from '@glass-frontier/dto';
+import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import type { LocationGraphStore, PromptTemplateManager } from '@glass-frontier/persistence';
 import { randomUUID } from 'node:crypto';
 
-import { PromptTemplateRuntime } from '../langGraph/prompts/templateRuntime';
+import { PromptTemplateRuntime } from '../prompts/templateRuntime';
+import {zodTextFormat} from "openai/helpers/zod";
+import {ChronicleSeedListSchema} from "@glass-frontier/dto";
 
 type GenerateSeedRequest = {
   loginId: string;
@@ -17,17 +19,17 @@ type GenerateSeedRequest = {
 export class ChronicleSeedService {
   readonly #templates: PromptTemplateManager;
   readonly #locations: LocationGraphStore;
-  readonly #llm: LangGraphLlmClient;
-  readonly #clientCache = new Map<string, LangGraphLlmClient>();
+  readonly #llm: RetryLLMClient;
+  readonly #clientCache = new Map<string, RetryLLMClient>();
 
   constructor(options: {
     templateManager: PromptTemplateManager;
     locationGraphStore: LocationGraphStore;
-    llmClient?: LangGraphLlmClient;
+    llmClient?: RetryLLMClient;
   }) {
     this.#templates = options.templateManager;
     this.#locations = options.locationGraphStore;
-    this.#llm = options.llmClient ?? new LangGraphLlmClient();
+    this.#llm = options.llmClient ?? createLLMClient();
   }
 
   async generateSeeds(request: GenerateSeedRequest): Promise<ChronicleSeed[]> {
@@ -53,17 +55,31 @@ export class ChronicleSeedService {
 
     const client = this.#resolveClient(request.authorizationHeader);
 
-    const response = await client.generateJson({
-      maxTokens: 600,
+    const response = await client.generate({
+      max_output_tokens: 1600,
+      model: "gpt-5-mini",
       metadata: {
         locationId: place.locationId,
         operation: 'chronicle-seed',
+        logonId: request.loginId
       },
-      prompt,
-      temperature: 0.65,
-    });
-
-    return this.#normalizeSeeds(response.json, requested, place);
+      reasoning: { effort: 'minimal' as const },
+      text: {
+        format: zodTextFormat(ChronicleSeedListSchema, 'chronicle_response_schema'),
+        verbosity: "low",
+      },
+      instructions: prompt,
+      input: [{
+          role: 'user',
+          content: [{
+            type: 'input_text',
+            text: 'Generate 3 chronicle seeds with different themes. they should contain a specific initial quest hook or problem to solve.'
+          }]
+        }
+      ]
+    }, 'json');
+    const tryParsed = ChronicleSeedListSchema.safeParse(response.message);
+    return this.#normalizeSeeds(tryParsed.data, requested, place);
   }
 
   async #ensurePlace(locationId: string): Promise<LocationPlace> {
@@ -94,7 +110,7 @@ export class ChronicleSeedService {
     return Array.from(tags).slice(0, 12);
   }
 
-  #normalizeSeeds(payload: unknown, requested: number, place: LocationPlace): ChronicleSeed[] {
+  #normalizeSeeds(payload: ChronicleSeedList, requested: number, place: LocationPlace): ChronicleSeed[] {
     const normalized: ChronicleSeed[] = [];
     for (const entry of this.#extractSeedEntries(payload)) {
       if (normalized.length >= requested) {
@@ -196,7 +212,7 @@ export class ChronicleSeedService {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  #resolveClient(authorizationHeader?: string): LangGraphLlmClient {
+  #resolveClient(authorizationHeader?: string): RetryLLMClient {
     const sanitized = this.#sanitizeHeader(authorizationHeader);
     if (sanitized === null) {
       return this.#llm;
@@ -205,9 +221,7 @@ export class ChronicleSeedService {
     if (cached !== undefined) {
       return cached;
     }
-    const client = new LangGraphLlmClient({
-      defaultHeaders: { Authorization: sanitized },
-    });
+    const client = createLLMClient()
     this.#clientCache.set(sanitized, client);
     return client;
   }

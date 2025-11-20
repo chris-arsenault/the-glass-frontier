@@ -1,4 +1,8 @@
-import type { PlayerFeedbackSentiment, Intent } from '@glass-frontier/dto';
+import type {
+  PlayerFeedbackSentiment,
+  Intent,
+  BeatTracker,
+} from '@glass-frontier/dto';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -7,6 +11,7 @@ import { promptClient } from '../../../lib/promptClient';
 import type { ChatMessage } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { BeatTrackerBadge } from '../../badges/BeatTrackerBadge/BeatTrackerBadge';
 import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
 import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
@@ -53,21 +58,58 @@ const FEEDBACK_BOOLEAN_OPTIONS: Array<{ label: string; value: FeedbackBooleanCho
   { label: 'False', value: 'false' },
 ];
 
-const describeBeatDirectiveTag = (
-  directive: Intent['beatDirective'] | null | undefined,
-  lookup: Map<string, string>
-): string | null => {
+const BEAT_TURN_EFFECT_LABELS: Record<BeatTracker['turnEffect'], string> = {
+  advance_and_spawn: 'Advanced & Spawned',
+  advance_existing: 'Advanced Beat',
+  no_change: 'No Beat Change',
+  resolve_and_spawn: 'Resolved & Spawned',
+  resolve_existing: 'Resolved Beat',
+  spawn_new: 'Spawned Beat',
+};
+
+const describeBeatTurnEffect = (tracker?: BeatTracker | null): string | null => {
+  if (!tracker || !tracker.turnEffect) {
+    return null;
+  }
+  return BEAT_TURN_EFFECT_LABELS[tracker.turnEffect] ?? null;
+};
+
+const hasBeatTrackerDetails = (tracker?: BeatTracker | null): boolean => {
+  if (!tracker || tracker.turnEffect === 'no_change') {
+    return false;
+  }
+  const updates = tracker.updates ?? [];
+  return Boolean(tracker.newBeat || tracker.focusBeatId || updates.length > 0);
+};
+
+type PlayerBeatDirective = {
+  kind: 'existing' | 'new' | 'independent';
+  summary?: string;
+  targetBeatId?: string | null;
+};
+
+const readPlayerBeatDirective = (intent?: Intent | null): PlayerBeatDirective | null => {
+  if (!intent || typeof intent !== 'object') {
+    return null;
+  }
+  const candidate = (intent as { beatDirective?: PlayerBeatDirective | null }).beatDirective;
+  if (!candidate || typeof candidate.kind !== 'string') {
+    return null;
+  }
+  return candidate;
+};
+
+const describePlayerBeatLabel = (directive: PlayerBeatDirective | null): string | null => {
   if (!directive) {
     return null;
   }
-  if (directive.kind === 'existing') {
-    const title = directive.targetBeatId ? lookup.get(directive.targetBeatId) : null;
-    return `Beat · ${title ?? 'Tracked goal'}`;
-  }
   if (directive.kind === 'new') {
-    return 'Beat · New thread';
+    return 'New beat';
   }
-  return 'Beat · Independent';
+  if (directive.kind === 'existing') {
+    return 'Existing beat';
+  }
+  return 'Independent';
 };
 
 const formatIntentBadgeLabel = (intentType: ChatMessage['intentType']): string | null => {
@@ -358,9 +400,14 @@ export function ChatCanvas() {
                 : new Date();
             const displayRole =
               entry.role === 'player' ? 'Player' : entry.role === 'gm' ? 'GM' : 'System';
-            const beatDirectiveLabel =
+            const beatTracker = chatMessage.beatTracker ?? null;
+            const beatTrackerEffectLabel =
+              entry.role === 'gm' && showNarrative && hasBeatTrackerDetails(beatTracker)
+                ? describeBeatTurnEffect(beatTracker)
+                : null;
+            const playerBeatLabel =
               entry.role === 'player'
-                ? describeBeatDirectiveTag(playerIntent?.beatDirective, beatLookup)
+                ? describePlayerBeatLabel(readPlayerBeatDirective(playerIntent), beatLookup)
                 : null;
             const playerIntentLabel = formatIntentBadgeLabel(playerIntent?.intentType ?? null);
             const timelineLabel = describeTimelineBadge(chatMessage.advancesTimeline ?? null);
@@ -395,8 +442,15 @@ export function ChatCanvas() {
                         ★
                       </span>
                     ) : null}
-                    {entry.role === 'player' && showNarrative && beatDirectiveLabel ? (
-                      <span className="chat-entry-beat-tag">{beatDirectiveLabel}</span>
+                    {entry.role === 'player' && showNarrative && playerBeatLabel ? (
+                      <BeatTag
+                        label={playerBeatLabel}
+                        directive={readPlayerBeatDirective(playerIntent)}
+                        beatLookup={beatLookup}
+                      />
+                    ) : null}
+                    {entry.role === 'gm' && beatTrackerEffectLabel ? (
+                      <span className="chat-entry-beat-effect">{beatTrackerEffectLabel}</span>
                     ) : null}
                     {entry.role === 'gm' ? (
                       <>
@@ -484,6 +538,7 @@ export function ChatCanvas() {
                           ))}
                         </div>
                       ) : null}
+
                       {showAll && deltaLabel ? (
                         <p className="chat-entry-delta-note">World shifts: {deltaLabel}</p>
                       ) : null}
@@ -684,3 +739,40 @@ export function ChatCanvas() {
     </section>
   );
 }
+type BeatTagProps = {
+  beatLookup: Map<string, string>;
+  directive: PlayerBeatDirective | null;
+  label: string;
+};
+
+const BeatTag = ({ beatLookup, directive, label }: BeatTagProps) => {
+  if (!directive) {
+    return null;
+  }
+  const isHoverable = directive.kind === 'new' || directive.kind === 'existing';
+  const resolvedTitle =
+    directive.kind === 'existing' && directive.targetBeatId
+      ? beatLookup.get(directive.targetBeatId) ?? 'Tracked beat'
+      : directive.summary ?? 'Tracked beat';
+  const resolvedDescription =
+    directive.kind === 'existing' && directive.targetBeatId
+      ? beatLookup.get(directive.targetBeatId) ?? directive.summary ?? null
+      : directive.summary ?? null;
+
+  return (
+    <span className={`chat-entry-beat-tag${isHoverable ? ' chat-entry-beat-tag-hoverable' : ''}`}>
+      {label}
+      {isHoverable ? (
+        <span className="chat-entry-beat-tooltip">
+          <span className="chat-entry-beat-tooltip-label">Beat Details</span>
+          <p className="chat-entry-beat-tooltip-title">
+            {resolvedTitle ?? directive.summary ?? 'Tracked beat'}
+          </p>
+          {resolvedDescription ? (
+            <p className="chat-entry-beat-tooltip-description">{resolvedDescription}</p>
+          ) : null}
+        </span>
+      ) : null}
+    </span>
+  );
+};

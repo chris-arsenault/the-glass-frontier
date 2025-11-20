@@ -4,7 +4,9 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import type { S3Client } from '@aws-sdk/client-s3';
 import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
 
+import { createLocationGraphStore } from './createLocationGraphStore';
 import { S3WorldStateStore } from './s3WorldStateStore';
+import type { LocationGraphStore } from './locationGraphStore';
 import { WorldIndexRepository } from './worldIndexRepository';
 import type { WorldStateStore } from './worldStateStore';
 
@@ -12,6 +14,7 @@ type CreateWorldStateStoreOptions = {
   bucket?: string | null;
   client?: S3Client;
   dynamoClient?: DynamoDBClient;
+  locationGraphStore?: LocationGraphStore;
   prefix?: string | null;
   region?: string;
   worldIndexTable?: string | null;
@@ -69,11 +72,20 @@ export function createWorldStateStore(options?: CreateWorldStateStoreOptions): W
     'World state store requires NARRATIVE_DDB_TABLE to be configured.'
   );
   const worldIndex = createWorldIndex(tableName, region, options?.dynamoClient);
+  const prefix = resolvePrefix(options);
+  const locationGraphStore =
+    options?.locationGraphStore ??
+    createLocationGraphStore({
+      bucket,
+      prefix,
+      region,
+    });
 
   return new S3WorldStateStore({
     bucket,
     client: options?.client,
-    prefix: resolvePrefix(options),
+    locationGraphStore,
+    prefix,
     region,
     worldIndex,
   });

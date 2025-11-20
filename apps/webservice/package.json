@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "tsx src/devServer.ts",
     "build": "tsup",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -16,10 +17,12 @@
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
     "jose": "^6.1.1",
-    "tsup": "^8.5.1"
+    "tsup": "^8.5.1",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
+    "@types/ws": "^8.5.12",
     "typescript": "^5.9.3"
   }
 }

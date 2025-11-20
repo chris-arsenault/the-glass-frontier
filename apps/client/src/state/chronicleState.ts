@@ -9,7 +9,7 @@ import type {
   SkillCheckResult,
   SkillTier,
   TranscriptEntry,
-  PendingEquip,
+  BeatTracker,
   InventoryDelta,
   LlmTrace,
   PlayerFeedbackVisibilityLevel,
@@ -34,6 +34,7 @@ export type ChatMessage = {
   turnSequence?: number | null;
   skillProgress?: SkillProgressBadge[] | null;
   inventoryDelta?: InventoryDelta | null;
+  beatTracker?: BeatTracker | null;
   intentType?: Intent['intentType'] | null;
   handlerId?: string | null;
   worldDeltaTags?: string[] | null;
@@ -93,7 +94,6 @@ export type ChronicleState = {
   momentumTrend: MomentumTrend | null;
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
-  pendingEquip: PendingEquip[];
   recentChronicles: string[];
   playerSettings: PlayerSettings;
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -110,8 +110,6 @@ export type ChronicleStore = {
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
-  queueEquipChange: (entry: PendingEquip) => void;
-  clearPendingEquipQueue: () => void;
   clearActiveChronicle: () => void;
   setChronicleWrapTarget: (shouldWrap: boolean) => Promise<void>;
   resetStore: () => void;

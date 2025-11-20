@@ -1,0 +1,596 @@
+
+> the-glass-frontier@0.1.0 test:e2e /home/tsonu/src/the-glass-frontier
+> playwright test
+
+[seed-localstack] Ensuring bucket gf-e2e-narrative
+[seed-localstack] Created bucket gf-e2e-narrative
+[seed-localstack] Ensuring bucket gf-e2e-prompts
+[seed-localstack] Created bucket gf-e2e-prompts
+[seed-localstack] Ensuring bucket gf-e2e-audit
+[seed-localstack] Created bucket gf-e2e-audit
+[seed-localstack] Uploaded prompt template official/action-resolver-wrap.hbs
+[seed-localstack] Uploaded prompt template official/inquiry-describer.hbs
+[seed-localstack] Uploaded prompt template official/gm-summary.hbs
+[seed-localstack] Uploaded prompt template official/chronicle-seed.hbs
+[seed-localstack] Uploaded prompt template official/check-planner.hbs
+[seed-localstack] Uploaded prompt template official/intent-beat-detector.hbs
+[seed-localstack] Uploaded prompt template official/intent-classifier.hbs
+[seed-localstack] Uploaded prompt template official/clarification-responder.hbs
+[seed-localstack] Uploaded prompt template official/beat-tracker.hbs
+[seed-localstack] Uploaded prompt template official/action-resolver.hbs
+[seed-localstack] Uploaded prompt template official/intent-intake.hbs
+[seed-localstack] Uploaded prompt template official/inventory-delta.hbs
+[seed-localstack] Uploaded prompt template official/possibility-advisor.hbs
+[seed-localstack] Uploaded prompt template official/planning-narrator.hbs
+[seed-localstack] Uploaded prompt template official/reflection-weaver.hbs
+[seed-localstack] Uploaded prompt template official/skill-detector.hbs
+[seed-localstack] Uploaded prompt template official/location-delta.hbs
+[seed-localstack] Created table gf-e2e-world-index
+[seed-localstack] Created table gf-e2e-location-graph
+[seed-localstack] Created table gf-e2e-llm-usage
+[seed-localstack] Ensuring SQS queue gf-e2e-turn-progress
+[seed-localstack] Ensuring SQS queue gf-e2e-chronicle-closure
+
+> the-glass-frontier@0.1.0 dev /home/tsonu/src/the-glass-frontier
+> turbo run dev --parallel
+
+• Packages in scope: @glass-frontier/chronicle-api, @glass-frontier/chronicle-closer, @glass-frontier/client, @glass-frontier/dto, @glass-frontier/gm-api, @glass-frontier/llm-client, @glass-frontier/location-api, @glass-frontier/node-utils, @glass-frontier/persistence, @glass-frontier/prompt-api, @glass-frontier/skill-check-resolver, @glass-frontier/utils, @glass-frontier/webservice
+• Running dev in 13 packages
+• Remote caching disabled
+@glass-frontier/client:dev: cache bypass, force executing e88c1db59e740619
+@glass-frontier/prompt-api:dev: cache bypass, force executing f1aa9c67e923325a
+@glass-frontier/chronicle-api:dev: cache bypass, force executing 5ab0044f448661e0
+@glass-frontier/location-api:dev: cache bypass, force executing a8a46b63b1ccb81b
+@glass-frontier/gm-api:dev: cache bypass, force executing ead0444465d4f1b5
+@glass-frontier/client:dev: 
+@glass-frontier/client:dev: > @glass-frontier/client@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/client
+@glass-frontier/client:dev: > vite
+@glass-frontier/client:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: > @glass-frontier/gm-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/gm-api
+@glass-frontier/gm-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/gm-api:dev: 
+@glass-frontier/chronicle-api:dev: 
+@glass-frontier/chronicle-api:dev: > @glass-frontier/chronicle-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/chronicle-api
+@glass-frontier/chronicle-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/chronicle-api:dev: 
+@glass-frontier/location-api:dev: 
+@glass-frontier/location-api:dev: > @glass-frontier/location-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/location-api
+@glass-frontier/location-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/location-api:dev: 
+@glass-frontier/prompt-api:dev: 
+@glass-frontier/prompt-api:dev: > @glass-frontier/prompt-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/prompt-api
+@glass-frontier/prompt-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/prompt-api:dev: 
+@glass-frontier/chronicle-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/chronicle-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/chronicle-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/chronicle-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/chronicle-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/prompt-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/gm-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/location-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/location-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/location-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/location-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/location-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/client:dev: 
+@glass-frontier/client:dev:   VITE v7.2.2  ready in 142 ms
+@glass-frontier/client:dev: 
+@glass-frontier/client:dev:   ➜  Local:   http://localhost:5173/
+@glass-frontier/client:dev:   ➜  Network: use --host to expose
+@glass-frontier/prompt-api:dev: {"level":"info","message":"Using S3 world state store bucket=gf-e2e-narrative prefix=test","timestamp":"2025-11-20T02:07:17.648Z"}
+@glass-frontier/prompt-api:dev: prompt-api listening on http://localhost:7400
+@glass-frontier/location-api:dev: location-api listening on http://localhost:7300
+@glass-frontier/chronicle-api:dev: {"level":"info","message":"Using S3 world state store bucket=gf-e2e-narrative prefix=test","timestamp":"2025-11-20T02:07:17.735Z"}
+@glass-frontier/chronicle-api:dev: tRPC dev server on http://localhost:7000
+@glass-frontier/gm-api:dev: {"level":"info","message":"Using S3 world state store bucket=gf-e2e-narrative prefix=test","timestamp":"2025-11-20T02:07:17.765Z"}
+@glass-frontier/gm-api:dev: tRPC dev server on http://localhost:7001
+
+Running 6 tests using 1 worker
+
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.497Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"intent-classifier","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'You are the Intent Router for Glass Frontier.\r\n' +
+@glass-frontier/gm-api:dev:     'Return a single best intent with mechanical metadata. Do not hedge.\r\n' +
+@glass-frontier/gm-api:dev:     '\r\n' +
+@glass-frontier/gm-api:dev:     'Intent types:\r\n' +
+@glass-frontier/gm-api:dev:     '- action: attempts to change fiction via a concrete verb; advances time; may cause deltas\r\n' +
+@glass-frontier/gm-api:dev:     '- inquiry: requests sensory/situational info; no time shift\r\n' +
+@glass-frontier/gm-api:dev:     '- clarification: confirms/corrects a fact; one-line factual response downstream; no time shift\r\n' +
+@glass-frontier/gm-api:dev:     '- possibility: explores hypotheticals/constraints; advisory only; no time shift\r\n' +
+@glass-frontier/gm-api:dev:     '- planning: preparing/regrouping/traveling; may advance time slightly\r\n' +
+@glass-frontier/gm-api:dev:     '- reflection: internal thoughts/emotions; no deltas; no time shift\r\n' +
+@glass-frontier/gm-api:dev:     '\r\n' +
+@glass-frontier/gm-api:dev:     'Classification rubric (apply in order):\r\n' +
+@glass-frontier/gm-api:dev:     '1) If the utterance contains an explicit, immediate verb directed at the world, prefer action.\r\n' +
+@glass-frontier/gm-api:dev:     '2) If it requests information without proposing change, prefer inquiry.\r\n' +
+@glass-frontier/gm-api:dev:     '3) If it asserts/requests a specific fact check about prior fiction, prefer clarification.\r\n' +
+@glass-frontier/gm-api:dev:     '4) If it explores options using hypotheticals (could/what if/can I), prefer possibility.\r\n' +
+@glass-frontier/gm-api:dev:     '5) If it describes setup, regrouping, or transit with intent to act later, prefer planning.\r\n' +
+@glass-frontier/gm-api:dev:     '6) If it’s internal monologue or mood with no ask and no change, prefer reflection.\r\n' +
+@glass-frontier/gm-api:dev:     '\r\n' +
+@glass-frontier/gm-api:dev:     'Tie-breaks:\r\n' +
+@glass-frontier/gm-api:dev:     '- If both action and planning apply, choose action.\r\n' +
+@glass-frontier/gm-api:dev:     '- If both inquiry and clarification apply, choose clarification.\r\n' +
+@glass-frontier/gm-api:dev:     '- If both possibility and planning apply, choose planning.\r\n' +
+@glass-frontier/gm-api:dev:     '\r\n' +
+@glass-frontier/gm-api:dev:     'Mechanical flags:\r\n' +
+@glass-frontier/gm-api:dev:     '- requires_check: true if outcome is uncertain and fictionally contested (typical for action; rare otherwise)\r\n' +
+@glass-frontier/gm-api:dev:     '- advances_time: none | minor | standard\r\n' +
+@glass-frontier/gm-api:dev:     '- target_beats: zero or more beat IDs/names that this utterance most directly touches\r\n' +
+@glass-frontier/gm-api:dev:     '- rationale: one sentence, in-fiction (<160 chars), no meta\r\n' +
+@glass-frontier/gm-api:dev:     '\r\n' +
+@glass-frontier/gm-api:dev:     'Never emit prose beyond the fields. Always satisfy the JSON schema.\r\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: Sweep the console banks for hidden sensors. #beat:update #mock:beat:update
+@glass-frontier/gm-api:dev: ### CHARACTER
+@glass-frontier/gm-api:dev: {"name":"Playwright Canary","archetype":"Recon","pronouns":"they/them","attributes":{"attunement":"standard","finesse":"standard","focus":"standard","ingenuity":"standard","presence":"standard","resolve":"standard","vitality":"standard"},"skills":[{"name":"Fieldcraft","tier":"apprentice"}]}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### LOCATION
+@glass-frontier/gm-api:dev: {"breadcrumbs":[]}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### BEATS
+@glass-frontier/gm-api:dev: []
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   success: true,
+@glass-frontier/gm-api:dev:   data: {
+@glass-frontier/gm-api:dev:     creativeSpark: false,
+@glass-frontier/gm-api:dev:     handlerHints: [],
+@glass-frontier/gm-api:dev:     intentSummary: 'Survey the vault antechamber',
+@glass-frontier/gm-api:dev:     intentType: 'action',
+@glass-frontier/gm-api:dev:     routerRationale: 'mock-classifier',
+@glass-frontier/gm-api:dev:     tone: 'focused'
+@glass-frontier/gm-api:dev:   }
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.610Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"intent-classifier","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.618Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"intent-beat-detector","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'You evaluate whether the player’s current intent advances an existing beat, launches a new one, or\n' +
+@glass-frontier/gm-api:dev:     'remains independent. Output JSON only—no prose.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Guidance\n' +
+@glass-frontier/gm-api:dev:     '- Existing beats are long-horizon threads. Only target one when the intent clearly progresses or\n' +
+@glass-frontier/gm-api:dev:     '  resolves it.\n' +
+@glass-frontier/gm-api:dev:     '- Use `new` when the player introduces a fresh multi-turn objective (not a momentary obstacle).\n' +
+@glass-frontier/gm-api:dev:     '- Use `independent` when the turn neither advances nor spawns a beat.\n' +
+@glass-frontier/gm-api:dev:     '- Provide a concise `summary` (< 140 chars) explaining the classification.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Output Instructions\n' +
+@glass-frontier/gm-api:dev:     'Reply using the provided structured format. Do not include commentary or any fields outside that schema.\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: Sweep the console banks for hidden sensors. #beat:update #mock:beat:update
+@glass-frontier/gm-api:dev: ### INTENT
+@glass-frontier/gm-api:dev: {"type":"action","summary":"Survey the vault antechamber"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### BEATS
+@glass-frontier/gm-api:dev: []
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   success: true,
+@glass-frontier/gm-api:dev:   data: {
+@glass-frontier/gm-api:dev:     kind: 'independent',
+@glass-frontier/gm-api:dev:     summary: 'Mock: track sensor echoes',
+@glass-frontier/gm-api:dev:     targetBeatId: null
+@glass-frontier/gm-api:dev:   }
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.658Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"intent-beat-detector","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.662Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"check-planner","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'You are the Risk Arbiter for the Glass Frontier GM. The router already determined that this turn is\n' +
+@glass-frontier/gm-api:dev:     'either a decisive **action** or a risky **planning** beat. Produce the mechanical framing that the\n' +
+@glass-frontier/gm-api:dev:     'skill resolver and narration nodes will consume. You determine the most appropriate skill + attribute pairing for the player’s current intent. Only\n' +
+@glass-frontier/gm-api:dev:     'emit JSON—no prose.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Output Guidelines\n' +
+@glass-frontier/gm-api:dev:     '- **Risk Level** describes position and consequence scale:\n' +
+@glass-frontier/gm-api:dev:     '  - `controlled`: Calm, rehearsed, or overwhelmingly prepared.\n' +
+@glass-frontier/gm-api:dev:     '  - `standard`: Typical uncertainty; success and failure both plausible.\n' +
+@glass-frontier/gm-api:dev:     '  - `risky`: High pressure, looming opposition, or partial information.\n' +
+@glass-frontier/gm-api:dev:     '  - `desperate`: Catastrophic stakes, chaotic footing, or severe cost if it fails.\n' +
+@glass-frontier/gm-api:dev:     '- **Advantage** captures situational modifiers:\n' +
+@glass-frontier/gm-api:dev:     '  - `advantage`: Concrete leverage such as superior tools, allies, or impeccable timing.\n' +
+@glass-frontier/gm-api:dev:     '  - `disadvantage`: Harm, poor footing, depleted resources, or pressing clocks.\n' +
+@glass-frontier/gm-api:dev:     '  - `none`: Neutral conditions.\n' +
+@glass-frontier/gm-api:dev:     '- **Rationale** is a single sentence (<180 chars) explaining why this check exists. Reference fiction\n' +
+@glass-frontier/gm-api:dev:     '  only; avoid meta language.\n' +
+@glass-frontier/gm-api:dev:     '- **Complication Seeds** should include 2–3 short hooks describing what failure or mixed results\n' +
+@glass-frontier/gm-api:dev:     '  might introduce (environmental twist, collateral damage, resource loss, etc.). Keep each seed under\n' +
+@glass-frontier/gm-api:dev:     '  90 characters.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Rules\n' +
+@glass-frontier/gm-api:dev:     '1. Prefer an existing skill when the name fits the described action. Only invent a new concise label\n' +
+@glass-frontier/gm-api:dev:     '(≤ 2 words) when absolutely necessary.\n' +
+@glass-frontier/gm-api:dev:     '2. Attributes must be chosen from  and should reflect the dominant approach\n' +
+@glass-frontier/gm-api:dev:     '(finesse vs. resolve, etc.).\n' +
+@glass-frontier/gm-api:dev:     '3. If the player intent implies a particular technique, include a short `handlerHint` (lowercase,\n' +
+@glass-frontier/gm-api:dev:     'dash-separated) to help downstream narration (e.g., `"handlerHints": ["whispered", "slow-burn"]`).\n' +
+@glass-frontier/gm-api:dev:     '4. For inquiry intents, select investigative/observational skills that match the environment; assume\n' +
+@glass-frontier/gm-api:dev:     'the player is probing something obscure if a check is required.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Output Instructions\n' +
+@glass-frontier/gm-api:dev:     'Respond strictly in the provided structured format. Populate every field—even if it means returning an empty array—so downstream nodes can consume the output without additional parsing.\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: Sweep the console banks for hidden sensors. #beat:update #mock:beat:update
+@glass-frontier/gm-api:dev: ### INTENT
+@glass-frontier/gm-api:dev: {"type":"action","summary":"Survey the vault antechamber"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### CHARACTER
+@glass-frontier/gm-api:dev: {"name":"Playwright Canary","archetype":"Recon","pronouns":"they/them","attributes":{"attunement":"standard","finesse":"standard","focus":"standard","ingenuity":"standard","presence":"standard","resolve":"standard","vitality":"standard"},"skills":[{"name":"Fieldcraft","tier":"apprentice"}]}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### LOCATION
+@glass-frontier/gm-api:dev: {"breadcrumbs":[]}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   success: true,
+@glass-frontier/gm-api:dev:   data: {
+@glass-frontier/gm-api:dev:     requiresCheck: true,
+@glass-frontier/gm-api:dev:     advantage: 'none',
+@glass-frontier/gm-api:dev:     complicationSeeds: [ 'Equipment strain', 'Lingering echo' ],
+@glass-frontier/gm-api:dev:     rationale: 'Mock planner rationale.',
+@glass-frontier/gm-api:dev:     riskLevel: 'standard',
+@glass-frontier/gm-api:dev:     attribute: 'focus',
+@glass-frontier/gm-api:dev:     handlerHints: [],
+@glass-frontier/gm-api:dev:     skill: 'fieldcraft'
+@glass-frontier/gm-api:dev:   }
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.687Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"check-planner","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.692Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"check-runner","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.check.result","timestamp":"2025-11-20T02:07:19.699Z","checkId":"f886c1f9-8e7a-4214-becd-ece501ce8649","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","outcome":"stall"}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.700Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"check-runner","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.706Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"gm-response-node","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"Using response type action-resolver for action","timestamp":"2025-11-20T02:07:19.713Z"}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.738Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"gm-response-node","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.750Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"beat-tracker","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'You are the Chronicle Beat Director. Identify how this turn affected story beats.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     'Beat rules:\n' +
+@glass-frontier/gm-api:dev:     '- Player utterance = intent (proposed goals)\n' +
+@glass-frontier/gm-api:dev:     '- GM narration = outcome (actual fiction)\n' +
+@glass-frontier/gm-api:dev:     '- Beats reflect long-term objectives that arise from intent OR outcome.\n' +
+@glass-frontier/gm-api:dev:     '- If narration contradicts intent, narration wins.\n' +
+@glass-frontier/gm-api:dev:     '- If narration creates a new long-horizon problem (injury, broken gear, revealed mystery), spawn new beat.\n' +
+@glass-frontier/gm-api:dev:     '- If the player declares a new long-term goal and narration does not block it, spawn the beat.\n' +
+@glass-frontier/gm-api:dev:     '- Never create beats for one-off actions or obstacles.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     'Rules:\n' +
+@glass-frontier/gm-api:dev:     '- Pick changes only at the “beat” level (quests, arcs). Never create beats for single tasks.\n' +
+@glass-frontier/gm-api:dev:     '- focusBeatId: ID of the beat most affected. Use null only when no beats exist.\n' +
+@glass-frontier/gm-api:dev:     '- turnEffect: one value summarizing this turn:\n' +
+@glass-frontier/gm-api:dev:     '  - no_change: nothing advanced or resolved.\n' +
+@glass-frontier/gm-api:dev:     '  - advance_existing: beat(s) progressed; none resolved; no new beat.\n' +
+@glass-frontier/gm-api:dev:     '  - resolve_existing: beat(s) clearly succeeded or failed; no new beat.\n' +
+@glass-frontier/gm-api:dev:     '  - spawn_new: only a new beat created.\n' +
+@glass-frontier/gm-api:dev:     '  - advance_and_spawn: existing beat(s) advanced AND a new beat created.\n' +
+@glass-frontier/gm-api:dev:     '  - resolve_and_spawn: a beat resolved AND a new beat created.\n' +
+@glass-frontier/gm-api:dev:     '- newBeat:\n' +
+@glass-frontier/gm-api:dev:     '  - When a new beat is spawned, supply {title, description}.\n' +
+@glass-frontier/gm-api:dev:     '  - Title ≤ 6 words. Description ≤ 240 chars, 1–2 sentences.\n' +
+@glass-frontier/gm-api:dev:     '  - When no new beat, newBeat = null.\n' +
+@glass-frontier/gm-api:dev:     '- updates:\n' +
+@glass-frontier/gm-api:dev:     '  - List only beats that changed this turn.\n' +
+@glass-frontier/gm-api:dev:     '  - Each update.beatId must match an existing beat.\n' +
+@glass-frontier/gm-api:dev:     '  - changeKind = "advance" or "resolve".\n' +
+@glass-frontier/gm-api:dev:     '  - description: provide only if beat text changes.\n' +
+@glass-frontier/gm-api:dev:     '  - status:\n' +
+@glass-frontier/gm-api:dev:     '    - If resolve → “succeeded” or “failed”.\n' +
+@glass-frontier/gm-api:dev:     '    - If advance → “in_progress” or null.\n' +
+@glass-frontier/gm-api:dev:     '  - If no beats changed, use [].\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     'Output must match the JSON schema exactly. No extra fields or prose.\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: Sweep the console banks for hidden sensors. #beat:update #mock:beat:update
+@glass-frontier/gm-api:dev: MOCK: The GM describes the scout slipping past the humming consoles.
+@glass-frontier/gm-api:dev: ### INTENT
+@glass-frontier/gm-api:dev: {"type":"action","summary":"Survey the vault antechamber"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### BEATS
+@glass-frontier/gm-api:dev: []
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### GM-RESPONSE
+@glass-frontier/gm-api:dev: MOCK: The GM describes the scout slipping past the humming consoles.
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   success: true,
+@glass-frontier/gm-api:dev:   data: {
+@glass-frontier/gm-api:dev:     turnEffect: 'advance_existing',
+@glass-frontier/gm-api:dev:     focusBeatId: 'shattered_chorus',
+@glass-frontier/gm-api:dev:     newBeat: null,
+@glass-frontier/gm-api:dev:     updates: [ [Object] ]
+@glass-frontier/gm-api:dev:   }
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.784Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"beat-tracker","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.790Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"gm-summary","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'Summarize the GM narration into a compact log line and decide whether the chronicle should close.\n' +
+@glass-frontier/gm-api:dev:     'Treat the summary as the canonical record for the turn.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Instructions\n' +
+@glass-frontier/gm-api:dev:     '- Produce a single sentence (<= 180 characters) capturing *who* acted, *what* changed, and *where* it\n' +
+@glass-frontier/gm-api:dev:     '  happened. Favor declarative prose over bullet-like fragments.\n' +
+@glass-frontier/gm-api:dev:     '- If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or\n' +
+@glass-frontier/gm-api:dev:     '  `(collapse)`.\n' +
+@glass-frontier/gm-api:dev:     '- No markdown, numbers, or quotes; keep it pure text.\n' +
+@glass-frontier/gm-api:dev:     '- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a\n' +
+@glass-frontier/gm-api:dev:     '  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: MOCK: The GM describes the scout slipping past the humming consoles.
+@glass-frontier/gm-api:dev: ### INTENT
+@glass-frontier/gm-api:dev: {"type":"action","summary":"Survey the vault antechamber"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### CHARACTER
+@glass-frontier/gm-api:dev: {"name":"Playwright Canary","archetype":"Recon","pronouns":"they/them","attributes":{"attunement":"standard","finesse":"standard","focus":"standard","ingenuity":"standard","presence":"standard","resolve":"standard","vitality":"standard"},"skills":[{"name":"Fieldcraft","tier":"apprentice"}]}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### SKILL-CHECK
+@glass-frontier/gm-api:dev: {"skill":"fieldcraft","riskLevel":"standard","advantage":false,"outcome":"stall"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   success: true,
+@glass-frontier/gm-api:dev:   data: {
+@glass-frontier/gm-api:dev:     shouldCloseChronicle: false,
+@glass-frontier/gm-api:dev:     summary: 'MOCK SUMMARY: The sensors quiet and the vault stays sealed.'
+@glass-frontier/gm-api:dev:   }
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.818Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"gm-summary","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.823Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"location-delta","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'You control the location anchor for the chronicle map. Decide whether the latest turn keeps the\n' +
+@glass-frontier/gm-api:dev:     'party in place, moves to a known node, or leaves the destination ambiguous.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Guidance\n' +
+@glass-frontier/gm-api:dev:     '- Move only if the GM prose clearly places the focus in a different room, zone, or linked locale.\n' +
+@glass-frontier/gm-api:dev:     '- Prefer the most specific destination explicitly mentioned. Never escalate scope unless the GM does.\n' +
+@glass-frontier/gm-api:dev:     '- `link` meaning:\n' +
+@glass-frontier/gm-api:dev:     '  - `same`: no graph change.\n' +
+@glass-frontier/gm-api:dev:     '  - `inside`: destination is a child (room, chamber, sub-area).\n' +
+@glass-frontier/gm-api:dev:     '  - `adjacent`: destination is a sibling under the same parent (street-to-street, shop-to-shop).\n' +
+@glass-frontier/gm-api:dev:     '  - `linked`: destination is reached via portal/vessel/teleport or exists outside the current parent.\n' +
+@glass-frontier/gm-api:dev:     '- If the GM invents a new named space, use that literal string as `destination`.\n' +
+@glass-frontier/gm-api:dev:     '- If narration only broadens or narrows focus without a named target, emit `{"action":"uncertain","destination":<best known container>,"link":"same"}`.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Output Instructions\n' +
+@glass-frontier/gm-api:dev:     'Reply strictly using the structured format provided with this prompt. Supply literal strings for `action`, `destination`, and `link`; do not include any commentary or extra fields.\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: MOCK: The GM describes the scout slipping past the humming consoles.
+@glass-frontier/gm-api:dev: ### INTENT
+@glass-frontier/gm-api:dev: {"type":"action","summary":"Survey the vault antechamber"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### USER-MESSAGE
+@glass-frontier/gm-api:dev: Sweep the console banks for hidden sensors. #beat:update #mock:beat:update
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### LOCATION-DETAIL
+@glass-frontier/gm-api:dev: {"self":"Auric Causeway","children":[],"parent":"Luminous Quay","siblings":["Prism Walk"],"links":[]}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   success: true,
+@glass-frontier/gm-api:dev:   data: { action: 'no_change', destination: 'Prism Walk', link: 'same' }
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.936Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"location-delta","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.942Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"inventory-delta","status":"start","turnSequence":0}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   instructions: 'You are the Inventory Arbiter for The Glass Frontier. Apply deterministic changes only. If the GM\n' +
+@glass-frontier/gm-api:dev:     'text does not explicitly grant, reveal, or consume something, leave the inventory untouched.\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Rules\n' +
+@glass-frontier/gm-api:dev:     '1. Treat the snapshot as canonical. Never guess about hidden state.\n' +
+@glass-frontier/gm-api:dev:     '2. Only emit operations when the narration or intent explicitly changes inventory.\n' +
+@glass-frontier/gm-api:dev:     '3. Allowed ops: `add`, `remove`, `consume`, `update`. Use the exact casing.\n' +
+@glass-frontier/gm-api:dev:     '4. Refer to items by their narrative names; never emit internal identifiers.\n' +
+@glass-frontier/gm-api:dev:     '5. Use `consume` for finite gear (potions, ammo, etc.)\n' +
+@glass-frontier/gm-api:dev:     '6. Maintain normalized data: one item per slot, no duplicate names in arrays.\n' +
+@glass-frontier/gm-api:dev:     '7. If no operations are needed, return `"ops": []`\n' +
+@glass-frontier/gm-api:dev:     '\n' +
+@glass-frontier/gm-api:dev:     '## Output Instructions\n' +
+@glass-frontier/gm-api:dev:     'Return your answer using the structured format provided alongside this prompt. Always emit `ops` (use an empty array when nothing changes) and honor the revision contract exactly—no commentary or extra fields.\n',
+@glass-frontier/gm-api:dev:   input: [
+@glass-frontier/gm-api:dev:     { role: 'user', content: [Array] },
+@glass-frontier/gm-api:dev:     { role: 'developer', content: [Array] }
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: MOCK: The GM describes the scout slipping past the humming consoles.
+@glass-frontier/gm-api:dev: ### INTENT
+@glass-frontier/gm-api:dev: {"type":"action","summary":"Survey the vault antechamber"}
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### USER-MESSAGE
+@glass-frontier/gm-api:dev: Sweep the console banks for hidden sensors. #beat:update #mock:beat:update
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: ### INVENTORY
+@glass-frontier/gm-api:dev: [{"name":"Oracle Vessel","kind":"relic","quantity":1},{"name":"Vault Access Seed","kind":"supplies","quantity":1},{"name":"Starlight Draught","kind":"consumable","quantity":3}]
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: { success: true, data: { ops: [ [Object], [Object], [Object] ] } }
+@glass-frontier/gm-api:dev: {"level":"info","message":"telemetry.chronicle.transition","timestamp":"2025-11-20T02:07:19.973Z","chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee","metadata":"","nodeId":"inventory-delta","status":"success","turnSequence":0}
+@glass-frontier/gm-api:dev: {"level":"info","message":"Updating Character","timestamp":"2025-11-20T02:07:19.979Z"}
+@glass-frontier/gm-api:dev: {"level":"info","message":"Updating Inventory","timestamp":"2025-11-20T02:07:19.980Z"}
+@glass-frontier/gm-api:dev: {"level":"warn","message":"Trying to remove non-existent item Vault Access Seed, doing nothing.","timestamp":"2025-11-20T02:07:19.986Z"}
+@glass-frontier/gm-api:dev: {"level":"warn","message":"Trying to update non-existent item Starlight Draught, adding instead.","timestamp":"2025-11-20T02:07:19.986Z"}
+@glass-frontier/gm-api:dev: {"level":"info","message":"Updating Beats","timestamp":"2025-11-20T02:07:19.987Z"}
+@glass-frontier/gm-api:dev: {"level":"warn","message":"Got update for non-existent beat shattered_chorus","timestamp":"2025-11-20T02:07:19.987Z"}
+@glass-frontier/gm-api:dev: {"level":"info","message":"Updating Location","timestamp":"2025-11-20T02:07:19.987Z"}
+@glass-frontier/gm-api:dev: {
+@glass-frontier/gm-api:dev:   chronicleId: 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+@glass-frontier/gm-api:dev:   turnSequence: 0,
+@glass-frontier/gm-api:dev:   chronicleState: {
+@glass-frontier/gm-api:dev:     character: {
+@glass-frontier/gm-api:dev:       archetype: 'Recon',
+@glass-frontier/gm-api:dev:       attributes: [Object],
+@glass-frontier/gm-api:dev:       bio: 'Seeded character for Playwright tests.',
+@glass-frontier/gm-api:dev:       chronicleId: 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+@glass-frontier/gm-api:dev:       id: '11111111-2222-4333-8444-555555555555',
+@glass-frontier/gm-api:dev:       inventory: [Array],
+@glass-frontier/gm-api:dev:       loginId: 'playwright-e2e',
+@glass-frontier/gm-api:dev:       momentum: [Object],
+@glass-frontier/gm-api:dev:       name: 'Playwright Canary',
+@glass-frontier/gm-api:dev:       pronouns: 'they/them',
+@glass-frontier/gm-api:dev:       skills: [Object],
+@glass-frontier/gm-api:dev:       tags: [Array]
+@glass-frontier/gm-api:dev:     },
+@glass-frontier/gm-api:dev:     chronicle: {
+@glass-frontier/gm-api:dev:       beats: [],
+@glass-frontier/gm-api:dev:       beatsEnabled: true,
+@glass-frontier/gm-api:dev:       characterId: '11111111-2222-4333-8444-555555555555',
+@glass-frontier/gm-api:dev:       id: 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+@glass-frontier/gm-api:dev:       locationId: '99999999-8888-4777-8666-555555555555',
+@glass-frontier/gm-api:dev:       loginId: 'playwright-e2e',
+@glass-frontier/gm-api:dev:       status: 'open',
+@glass-frontier/gm-api:dev:       summaries: [],
+@glass-frontier/gm-api:dev:       title: 'Playwright Chronicle'
+@glass-frontier/gm-api:dev:     },
+@glass-frontier/gm-api:dev:     chronicleId: 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+@glass-frontier/gm-api:dev:     location: {
+@glass-frontier/gm-api:dev:       anchorPlaceId: '65659af5-99c8-4c1a-bd26-46a96cff71c7',
+@glass-frontier/gm-api:dev:       breadcrumb: [Array],
+@glass-frontier/gm-api:dev:       certainty: 'exact',
+@glass-frontier/gm-api:dev:       description: 'Pedestrian bridge lined with resonance spires.',
+@glass-frontier/gm-api:dev:       status: [],
+@glass-frontier/gm-api:dev:       tags: [Array]
+@glass-frontier/gm-api:dev:     },
+@glass-frontier/gm-api:dev:     turns: [],
+@glass-frontier/gm-api:dev:     turnSequence: -1
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   playerMessage: {
+@glass-frontier/gm-api:dev:     content: 'Sweep the console banks for hidden sensors. #beat:update #mock:beat:update',
+@glass-frontier/gm-api:dev:     id: '1e7b5fc7-a4b6-4bc2-a7a5-4629e08a44b2',
+@glass-frontier/gm-api:dev:     metadata: { tags: [], timestamp: 1763604439429 },
+@glass-frontier/gm-api:dev:     role: 'player'
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   locationGraphStore: S3LocationGraphStore {},
+@glass-frontier/gm-api:dev:   llm: RetryLLMClient {},
+@glass-frontier/gm-api:dev:   telemetry: ChronicleTelemetry {},
+@glass-frontier/gm-api:dev:   templates: PromptTemplateRuntime {},
+@glass-frontier/gm-api:dev:   failure: false,
+@glass-frontier/gm-api:dev:   systemMessage: undefined,
+@glass-frontier/gm-api:dev:   playerIntent: {
+@glass-frontier/gm-api:dev:     creativeSpark: false,
+@glass-frontier/gm-api:dev:     handlerHints: [],
+@glass-frontier/gm-api:dev:     intentSummary: 'Survey the vault antechamber',
+@glass-frontier/gm-api:dev:     intentType: 'action',
+@glass-frontier/gm-api:dev:     metadata: { source: 'intent-classifier', timestamp: 1763604439610 },
+@glass-frontier/gm-api:dev:     routerRationale: 'mock-classifier',
+@glass-frontier/gm-api:dev:     tone: 'focused',
+@glass-frontier/gm-api:dev:     beatDirective: {
+@glass-frontier/gm-api:dev:       kind: 'independent',
+@glass-frontier/gm-api:dev:       summary: 'Mock: track sensor echoes',
+@glass-frontier/gm-api:dev:       targetBeatId: null
+@glass-frontier/gm-api:dev:     }
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   shouldUpdate: false,
+@glass-frontier/gm-api:dev:   skillCheckPlan: {
+@glass-frontier/gm-api:dev:     advantage: 'none',
+@glass-frontier/gm-api:dev:     complicationSeeds: [ 'Equipment strain', 'Lingering echo' ],
+@glass-frontier/gm-api:dev:     metadata: { tags: [], timestamp: 1763604439687 },
+@glass-frontier/gm-api:dev:     rationale: 'Mock planner rationale.',
+@glass-frontier/gm-api:dev:     riskLevel: 'standard',
+@glass-frontier/gm-api:dev:     attribute: 'focus',
+@glass-frontier/gm-api:dev:     skill: 'fieldcraft',
+@glass-frontier/gm-api:dev:     requiresCheck: true,
+@glass-frontier/gm-api:dev:     creativeSpark: false
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   skillCheckResult: {
+@glass-frontier/gm-api:dev:     advantage: false,
+@glass-frontier/gm-api:dev:     checkId: 'f886c1f9-8e7a-4214-becd-ece501ce8649',
+@glass-frontier/gm-api:dev:     chronicleId: 'aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+@glass-frontier/gm-api:dev:     dieSum: 7,
+@glass-frontier/gm-api:dev:     disadvantage: false,
+@glass-frontier/gm-api:dev:     margin: -1,
+@glass-frontier/gm-api:dev:     metadata: { tags: [], timestamp: 1763604439699 },
+@glass-frontier/gm-api:dev:     newMomentum: 0,
+@glass-frontier/gm-api:dev:     outcomeTier: 'stall',
+@glass-frontier/gm-api:dev:     totalModifier: 0
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   advancesTimeline: true,
+@glass-frontier/gm-api:dev:   gmResponse: {
+@glass-frontier/gm-api:dev:     content: 'MOCK: The GM describes the scout slipping past the humming consoles.',
+@glass-frontier/gm-api:dev:     id: 'intent-action-resolver-aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee-0',
+@glass-frontier/gm-api:dev:     metadata: { tags: [], timestamp: 1763604439737 },
+@glass-frontier/gm-api:dev:     role: 'gm'
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   beatTracker: {
+@glass-frontier/gm-api:dev:     turnEffect: 'advance_existing',
+@glass-frontier/gm-api:dev:     focusBeatId: 'shattered_chorus',
+@glass-frontier/gm-api:dev:     newBeat: null,
+@glass-frontier/gm-api:dev:     updates: [ [Object] ]
+@glass-frontier/gm-api:dev:   },
+@glass-frontier/gm-api:dev:   gmSummary: 'MOCK SUMMARY: The sensors quiet and the vault stays sealed.',
+@glass-frontier/gm-api:dev:   shouldCloseChronicle: false,
+@glass-frontier/gm-api:dev:   locationDelta: { action: 'no_change', destination: 'Prism Walk', link: 'same' },
+@glass-frontier/gm-api:dev:   inventoryDelta: { ops: [ [Object], [Object], [Object] ] },
+@glass-frontier/gm-api:dev:   executedNodes: [
+@glass-frontier/gm-api:dev:     'intent-classifier',
+@glass-frontier/gm-api:dev:     'intent-beat-detector',
+@glass-frontier/gm-api:dev:     'check-planner',
+@glass-frontier/gm-api:dev:     'check-runner',
+@glass-frontier/gm-api:dev:     'gm-response-node (action)',
+@glass-frontier/gm-api:dev:     'beat-tracker',
+@glass-frontier/gm-api:dev:     'gm-summary',
+@glass-frontier/gm-api:dev:     'location-delta',
+@glass-frontier/gm-api:dev:     'inventory-delta'
+@glass-frontier/gm-api:dev:   ]
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: {"level":"info","message":"Narrative engine resolved turn","timestamp":"2025-11-20T02:07:20.315Z","checkIssued":true,"chronicleId":"aaaa1111-bbbb-4ccc-8ddd-eeeeeeeeeeee"}
+@glass-frontier/prompt-api:dev: {"level":"info","message":"Shutting down prompt API server","timestamp":"2025-11-20T02:08:03.351Z"}
+@glass-frontier/gm-api:dev: {"level":"info","message":"Shutting down narrative engine server","timestamp":"2025-11-20T02:08:03.350Z"}
+@glass-frontier/chronicle-api:dev: {"level":"info","message":"Shutting down narrative engine server","timestamp":"2025-11-20T02:08:03.350Z"}
+@glass-frontier/location-api:dev: {"level":"info","message":"Shutting down location API server","timestamp":"2025-11-20T02:08:03.351Z"}
+ ELIFECYCLE  Command failed.
+@glass-frontier/gm-api:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/client:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/location-api:dev:  ELIFECYCLE  Command failed.
+ ELIFECYCLE  Command failed.
+@glass-frontier/prompt-api:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/chronicle-api:dev:  ELIFECYCLE  Command failed.

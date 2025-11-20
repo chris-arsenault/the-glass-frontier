@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"advantage\":\"none\",\"complicationSeeds\":[\"Equipment strain\",\"Lingering echo\"],\"rationale\":\"Mock planner rationale.\",\"riskLevel\":\"standard\"}"
+          "text": "{\"requiresCheck\":true,\"advantage\":\"none\",\"complicationSeeds\":[\"Equipment strain\",\"Lingering echo\"],\"rationale\":\"Mock planner rationale.\",\"riskLevel\":\"standard\",\"attribute\":\"focus\",\"handlerHints\":[],\"skill\":\"fieldcraft\"}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"advantage\":\"none\",\"complicationSeeds\":[\"Equipment strain\",\"Lingering echo\"],\"rationale\":\"Mock planner rationale.\",\"riskLevel\":\"standard\"}"
+    "{\"requiresCheck\":true,\"advantage\":\"none\",\"complicationSeeds\":[\"Equipment strain\",\"Lingering echo\"],\"rationale\":\"Mock planner rationale.\",\"riskLevel\":\"standard\",\"attribute\":\"focus\",\"handlerHints\":[],\"skill\":\"fieldcraft\"}"
   ],
   "stop_reason": "stop",
   "usage": {

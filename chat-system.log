@@ -1,0 +1,248 @@
+[seed-localstack] Ensuring bucket gf-e2e-narrative
+[seed-localstack] Created bucket gf-e2e-narrative
+[seed-localstack] Ensuring bucket gf-e2e-prompts
+[seed-localstack] Created bucket gf-e2e-prompts
+[seed-localstack] Ensuring bucket gf-e2e-audit
+[seed-localstack] Created bucket gf-e2e-audit
+[seed-localstack] Uploaded prompt template official/action-resolver-wrap.hbs
+[seed-localstack] Uploaded prompt template official/gm-summary.hbs
+[seed-localstack] Uploaded prompt template official/intent-beat-detector.hbs
+[seed-localstack] Uploaded prompt template official/inquiry-describer.hbs
+[seed-localstack] Uploaded prompt template official/intent-classifier.hbs
+[seed-localstack] Uploaded prompt template official/clarification-responder.hbs
+[seed-localstack] Uploaded prompt template official/chronicle-seed.hbs
+[seed-localstack] Uploaded prompt template official/beat-tracker.hbs
+[seed-localstack] Uploaded prompt template official/check-planner.hbs
+[seed-localstack] Uploaded prompt template official/action-resolver.hbs
+[seed-localstack] Uploaded prompt template official/reflection-weaver.hbs
+[seed-localstack] Uploaded prompt template official/intent-intake.hbs
+[seed-localstack] Uploaded prompt template official/inventory-delta.hbs
+[seed-localstack] Uploaded prompt template official/planning-narrator.hbs
+[seed-localstack] Uploaded prompt template official/skill-detector.hbs
+[seed-localstack] Uploaded prompt template official/location-delta.hbs
+[seed-localstack] Uploaded prompt template official/possibility-advisor.hbs
+[seed-localstack] Created table gf-e2e-world-index
+[seed-localstack] Created table gf-e2e-location-graph
+[seed-localstack] Created table gf-e2e-llm-usage
+[seed-localstack] Ensuring SQS queue gf-e2e-turn-progress
+[seed-localstack] Ensuring SQS queue gf-e2e-chronicle-closure
+
+Running 1 test using 1 worker
+
+
+> the-glass-frontier@0.1.0 dev /home/tsonu/src/the-glass-frontier
+> turbo run dev --parallel
+
+• Packages in scope: @glass-frontier/chronicle-api, @glass-frontier/chronicle-closer, @glass-frontier/client, @glass-frontier/dto, @glass-frontier/gm-api, @glass-frontier/llm-client, @glass-frontier/location-api, @glass-frontier/node-utils, @glass-frontier/persistence, @glass-frontier/prompt-api, @glass-frontier/skill-check-resolver, @glass-frontier/utils, @glass-frontier/webservice
+• Running dev in 13 packages
+• Remote caching disabled
+@glass-frontier/client:dev: cache bypass, force executing e88c1db59e740619
+@glass-frontier/location-api:dev: cache bypass, force executing a8a46b63b1ccb81b
+@glass-frontier/chronicle-api:dev: cache bypass, force executing 5ab0044f448661e0
+@glass-frontier/gm-api:dev: cache bypass, force executing ead0444465d4f1b5
+@glass-frontier/prompt-api:dev: cache bypass, force executing f1aa9c67e923325a
+[1A[2K[1/1] [chromium] › tests/e2e/chat-system.spec.ts:32:3 › Chat system › executes the action intent path and propagates feedback across moderation surfaces
+@glass-frontier/client:dev: 
+@glass-frontier/client:dev: > @glass-frontier/client@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/client
+@glass-frontier/client:dev: > vite
+@glass-frontier/client:dev: 
+@glass-frontier/location-api:dev: 
+@glass-frontier/location-api:dev: > @glass-frontier/location-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/location-api
+@glass-frontier/location-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/location-api:dev: 
+@glass-frontier/chronicle-api:dev: 
+@glass-frontier/chronicle-api:dev: > @glass-frontier/chronicle-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/chronicle-api
+@glass-frontier/chronicle-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/chronicle-api:dev: 
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: > @glass-frontier/gm-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/gm-api
+@glass-frontier/gm-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/gm-api:dev: 
+@glass-frontier/prompt-api:dev: 
+@glass-frontier/prompt-api:dev: > @glass-frontier/prompt-api@0.1.0 dev /home/tsonu/src/the-glass-frontier/apps/prompt-api
+@glass-frontier/prompt-api:dev: > NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec "tsx src/server_local.ts"
+@glass-frontier/prompt-api:dev: 
+@glass-frontier/chronicle-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/chronicle-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/location-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/chronicle-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/chronicle-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/location-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/chronicle-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/location-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/location-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/location-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/gm-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/gm-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] 3.1.11[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] to restart at any time, enter `rs`[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] watching path(s): src/**/* tsconfig.json[39m
+@glass-frontier/prompt-api:dev: [33m[nodemon] watching extensions: ts,tsx,hbs[39m
+@glass-frontier/prompt-api:dev: [32m[nodemon] starting `tsx src/server_local.ts`[39m
+@glass-frontier/client:dev: Port 5173 is in use, trying another one...
+@glass-frontier/client:dev: 
+@glass-frontier/client:dev:   VITE v7.2.2  ready in 159 ms
+@glass-frontier/client:dev: 
+@glass-frontier/client:dev:   ➜  Local:   http://localhost:5174/
+@glass-frontier/client:dev:   ➜  Network: use --host to expose
+@glass-frontier/location-api:dev: location-api listening on http://localhost:7300
+@glass-frontier/location-api:dev: node:events:497
+@glass-frontier/location-api:dev:       throw er; // Unhandled 'error' event
+@glass-frontier/location-api:dev:       ^
+@glass-frontier/location-api:dev: 
+@glass-frontier/location-api:dev: Error: listen EADDRINUSE: address already in use :::7300
+@glass-frontier/location-api:dev:     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+@glass-frontier/location-api:dev:     at listenInCluster (node:net:1997:12)
+@glass-frontier/location-api:dev:     at Server.listen (node:net:2102:7)
+@glass-frontier/location-api:dev:     at <anonymous> (/home/tsonu/src/the-glass-frontier/apps/location-api/src/server_local.ts:12:4)
+@glass-frontier/location-api:dev:     at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+@glass-frontier/location-api:dev:     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:651:26)
+@glass-frontier/location-api:dev:     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+@glass-frontier/location-api:dev: Emitted 'error' event on Server instance at:
+@glass-frontier/location-api:dev:     at emitErrorNT (node:net:1976:8)
+@glass-frontier/location-api:dev:     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+@glass-frontier/location-api:dev:   code: 'EADDRINUSE',
+@glass-frontier/location-api:dev:   errno: -98,
+@glass-frontier/location-api:dev:   syscall: 'listen',
+@glass-frontier/location-api:dev:   address: '::',
+@glass-frontier/location-api:dev:   port: 7300
+@glass-frontier/location-api:dev: }
+@glass-frontier/location-api:dev: 
+@glass-frontier/location-api:dev: Node.js v22.19.0
+@glass-frontier/prompt-api:dev: {"level":"info","message":"Using S3 world state store bucket=gf-e2e-narrative prefix=test","timestamp":"2025-11-20T02:04:53.317Z"}
+@glass-frontier/location-api:dev: [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+@glass-frontier/prompt-api:dev: prompt-api listening on http://localhost:7400
+@glass-frontier/prompt-api:dev: node:events:497
+@glass-frontier/prompt-api:dev:       throw er; // Unhandled 'error' event
+@glass-frontier/prompt-api:dev:       ^
+@glass-frontier/prompt-api:dev: 
+@glass-frontier/prompt-api:dev: Error: listen EADDRINUSE: address already in use :::7400
+@glass-frontier/prompt-api:dev:     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+@glass-frontier/prompt-api:dev:     at listenInCluster (node:net:1997:12)
+@glass-frontier/prompt-api:dev:     at Server.listen (node:net:2102:7)
+@glass-frontier/prompt-api:dev:     at <anonymous> (/home/tsonu/src/the-glass-frontier/apps/prompt-api/src/server_local.ts:12:4)
+@glass-frontier/prompt-api:dev:     at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+@glass-frontier/prompt-api:dev:     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:651:26)
+@glass-frontier/prompt-api:dev:     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+@glass-frontier/prompt-api:dev: Emitted 'error' event on Server instance at:
+@glass-frontier/prompt-api:dev:     at emitErrorNT (node:net:1976:8)
+@glass-frontier/prompt-api:dev:     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+@glass-frontier/prompt-api:dev:   code: 'EADDRINUSE',
+@glass-frontier/prompt-api:dev:   errno: -98,
+@glass-frontier/prompt-api:dev:   syscall: 'listen',
+@glass-frontier/prompt-api:dev:   address: '::',
+@glass-frontier/prompt-api:dev:   port: 7400
+@glass-frontier/prompt-api:dev: }
+@glass-frontier/prompt-api:dev: 
+@glass-frontier/prompt-api:dev: Node.js v22.19.0
+@glass-frontier/prompt-api:dev: [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+@glass-frontier/chronicle-api:dev: {"level":"info","message":"Using S3 world state store bucket=gf-e2e-narrative prefix=test","timestamp":"2025-11-20T02:04:53.385Z"}
+@glass-frontier/chronicle-api:dev: tRPC dev server on http://localhost:7000
+@glass-frontier/chronicle-api:dev: node:events:497
+@glass-frontier/chronicle-api:dev:       throw er; // Unhandled 'error' event
+@glass-frontier/chronicle-api:dev:       ^
+@glass-frontier/chronicle-api:dev: 
+@glass-frontier/chronicle-api:dev: Error: listen EADDRINUSE: address already in use :::7000
+@glass-frontier/chronicle-api:dev:     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+@glass-frontier/chronicle-api:dev:     at listenInCluster (node:net:1997:12)
+@glass-frontier/chronicle-api:dev:     at Server.listen (node:net:2102:7)
+@glass-frontier/chronicle-api:dev:     at <anonymous> (/home/tsonu/src/the-glass-frontier/apps/chronicle-api/src/server_local.ts:12:4)
+@glass-frontier/chronicle-api:dev:     at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+@glass-frontier/chronicle-api:dev:     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:651:26)
+@glass-frontier/chronicle-api:dev:     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+@glass-frontier/chronicle-api:dev: Emitted 'error' event on Server instance at:
+@glass-frontier/chronicle-api:dev:     at emitErrorNT (node:net:1976:8)
+@glass-frontier/chronicle-api:dev:     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+@glass-frontier/chronicle-api:dev:   code: 'EADDRINUSE',
+@glass-frontier/chronicle-api:dev:   errno: -98,
+@glass-frontier/chronicle-api:dev:   syscall: 'listen',
+@glass-frontier/chronicle-api:dev:   address: '::',
+@glass-frontier/chronicle-api:dev:   port: 7000
+@glass-frontier/chronicle-api:dev: }
+@glass-frontier/chronicle-api:dev: 
+@glass-frontier/chronicle-api:dev: Node.js v22.19.0
+@glass-frontier/chronicle-api:dev: [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+@glass-frontier/gm-api:dev: {"level":"info","message":"Using S3 world state store bucket=gf-e2e-narrative prefix=test","timestamp":"2025-11-20T02:04:53.453Z"}
+@glass-frontier/gm-api:dev: tRPC dev server on http://localhost:7001
+@glass-frontier/gm-api:dev: node:events:497
+@glass-frontier/gm-api:dev:       throw er; // Unhandled 'error' event
+@glass-frontier/gm-api:dev:       ^
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: Error: listen EADDRINUSE: address already in use :::7001
+@glass-frontier/gm-api:dev:     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+@glass-frontier/gm-api:dev:     at listenInCluster (node:net:1997:12)
+@glass-frontier/gm-api:dev:     at Server.listen (node:net:2102:7)
+@glass-frontier/gm-api:dev:     at <anonymous> (/home/tsonu/src/the-glass-frontier/apps/gm-api/src/server_local.ts:12:4)
+@glass-frontier/gm-api:dev:     at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+@glass-frontier/gm-api:dev:     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:651:26)
+@glass-frontier/gm-api:dev:     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+@glass-frontier/gm-api:dev: Emitted 'error' event on Server instance at:
+@glass-frontier/gm-api:dev:     at emitErrorNT (node:net:1976:8)
+@glass-frontier/gm-api:dev:     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+@glass-frontier/gm-api:dev:   code: 'EADDRINUSE',
+@glass-frontier/gm-api:dev:   errno: -98,
+@glass-frontier/gm-api:dev:   syscall: 'listen',
+@glass-frontier/gm-api:dev:   address: '::',
+@glass-frontier/gm-api:dev:   port: 7001
+@glass-frontier/gm-api:dev: }
+@glass-frontier/gm-api:dev: 
+@glass-frontier/gm-api:dev: Node.js v22.19.0
+@glass-frontier/gm-api:dev: [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[1A[2K  1) [chromium] › tests/e2e/chat-system.spec.ts:32:3 › Chat system › executes the action intent path and propagates feedback across moderation surfaces 
+
+    [31mTest timeout of 90000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 90000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('.chat-entry-gm').last().getByRole('button', { name: 'Share Feedback' })[22m
+    [2m    - locator resolved to <button disabled type="button" class="chat-entry-feedback-button">Share Feedback</button>[22m
+    [2m  - attempting click action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not enabled[22m
+    [2m    - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not enabled[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m    170 × waiting for element to be visible, enabled and stable[22m
+    [2m        - element is not enabled[22m
+    [2m      - retrying click action[22m
+    [2m        - waiting 500ms[22m
+
+
+      55 |     expect(executedNodes).toEqual([...PIPELINE_ORDER]);
+      56 |
+    > 57 |     await gmEntry.getByRole('button', { name: 'Share Feedback' }).click();
+         |                                                                   ^
+      58 |     const feedbackModal = page.locator('.chat-feedback-modal');
+      59 |     await expect(feedbackModal).toBeVisible();
+      60 |     await feedbackModal.getByLabel('Expected intent type').selectOption('inquiry');
+        at /home/tsonu/src/the-glass-frontier/tests/e2e/chat-system.spec.ts:57:67
+
+    attachment #1: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/chat-system-Chat-system-ex-bd28c--across-moderation-surfaces-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/chat-system-Chat-system-ex-bd28c--across-moderation-surfaces-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/chat-system-Chat-system-ex-bd28c--across-moderation-surfaces-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/chat-system-Chat-system-ex-bd28c--across-moderation-surfaces-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+ ELIFECYCLE  Command failed.
+@glass-frontier/gm-api:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/location-api:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/client:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/prompt-api:dev:  ELIFECYCLE  Command failed.
+@glass-frontier/chronicle-api:dev:  ELIFECYCLE  Command failed.
+[1A[2K  1 failed
+    [chromium] › tests/e2e/chat-system.spec.ts:32:3 › Chat system › executes the action intent path and propagates feedback across moderation surfaces 
