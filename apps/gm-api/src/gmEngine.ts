@@ -2,14 +2,14 @@ import type {
   Character,
   TranscriptEntry,
   Turn,
-  LocationSummary,
+  LocationEntity,
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
 } from '@glass-frontier/dto';
 import type { PromptTemplateManager } from '@glass-frontier/app';
 import {
-  type WorldStateStore,
+  type ChronicleStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
 import {formatTurnJobId, isDefined, isNonEmptyString, log} from '@glass-frontier/utils';
@@ -40,7 +40,7 @@ import {LoreJudgeNode, LoreSelectorNode} from "@glass-frontier/gm-api/gmGraph/no
 import type { LocationStore } from './types';
 
 type GmEngineOptions = {
-  worldStateStore: WorldStateStore;
+  chronicleStore: ChronicleStore;
   locationGraphStore: LocationStore;
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
@@ -50,7 +50,7 @@ type GmEngineOptions = {
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 
 class GmEngine {
-  readonly worldStateStore: WorldStateStore;
+  readonly chronicleStore: ChronicleStore;
   readonly locationGraphStore: LocationStore;
   readonly worldSchemaStore: WorldSchemaStore;
   readonly telemetry: ChronicleTelemetry;
@@ -62,7 +62,7 @@ class GmEngine {
 
   constructor(options: GmEngineOptions) {
     this.templateManager = options.templateManager;
-    this.worldStateStore = options.worldStateStore;
+    this.chronicleStore = options.chronicleStore;
     this.locationGraphStore = options.locationGraphStore;
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
@@ -80,7 +80,7 @@ class GmEngine {
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
-    locationSummary: LocationSummary | null;
+    locationSummary: LocationEntity | null;
     chronicleStatus: Chronicle['status'];
   }> {
     this.#assertChronicleId(chronicleId);
@@ -104,7 +104,7 @@ class GmEngine {
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
 
-    const worldUpdater = new WorldUpdater({worldStateStore: this.worldStateStore, locationGraphStore: this.locationGraphStore});
+    const worldUpdater = new WorldUpdater({chronicleStore: this.chronicleStore, locationGraphStore: this.locationGraphStore});
     const updatedContext = await worldUpdater.update(graphResult);
 
     const turn = this.#buildTurn({
@@ -116,7 +116,7 @@ class GmEngine {
       turnSequence,
     });
 
-    await this.worldStateStore.addTurn(turn);
+    await this.chronicleStore.addTurn(turn);
 
 
     if (graphResult.shouldCloseChronicle && chronicleState.chronicle?.status !== 'closed') {
@@ -168,7 +168,7 @@ class GmEngine {
   }
 
   async #loadChronicleState(chronicleId: string): Promise<ChronicleState> {
-    const state = await this.worldStateStore.getChronicleState(chronicleId);
+    const state = await this.chronicleStore.getChronicleState(chronicleId);
     if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
@@ -311,7 +311,7 @@ class GmEngine {
     if (record === undefined || record === null || record.status === 'closed') {
       return;
     }
-    await this.worldStateStore.upsertChronicle({
+    await this.chronicleStore.upsertChronicle({
       ...record,
       status: 'closed',
     });

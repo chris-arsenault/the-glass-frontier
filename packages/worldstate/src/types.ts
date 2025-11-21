@@ -7,9 +7,8 @@ import type {
   HardStateLink,
   HardStateStatus,
   HardStateSubkind,
-  LocationSummary,
+  LocationEntity,
   LocationNeighbors,
-  LocationPlace,
   LocationState,
   Turn,
   LoreFragment,
@@ -35,14 +34,14 @@ export type LocationStore = {
     tags?: string[];
     anchorId: string;
     relationship: string;
-  }) => Promise<LocationPlace>;
+  }) => Promise<LocationEntity>;
   getLocationDetails: (input: {
     id: string;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;
     maxHops?: number;
   }) => Promise<{
-    place: LocationPlace;
+    place: LocationEntity;
     neighbors: LocationNeighbors;
   }>;
   getLocationNeighbors: (input: {
@@ -64,11 +63,11 @@ export type ChronicleSnapshot = {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character | null;
-  location: LocationSummary | null;
+  location: LocationEntity | null;
   turns: Turn[];
 };
 
-export type WorldStateStore = {
+export type ChronicleStore = {
   ensureChronicle: (params: {
     chronicleId?: string;
     playerId: string;
@@ -94,10 +93,17 @@ export type WorldStateStore = {
 
   addTurn: (turn: Turn) => Promise<Turn>;
   listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
+
+  moveCharacterToLocation: (input: {
+    characterId: string;
+    locationId: string;
+    note?: string | null;
+  }) => Promise<{ characterId: string; locationId: string; note?: string; updatedAt: number }>;
 };
 
 export type WorldSchemaStore = {
-  upsertHardState: (input: {
+  // === Entity Operations ===
+  upsertEntity: (input: {
     id?: string;
     kind: HardStateKind;
     subkind?: HardStateSubkind | null;
@@ -107,25 +113,32 @@ export type WorldSchemaStore = {
     status?: HardStateStatus | null;
     links?: Array<{ relationship: string; targetId: string }>;
   }) => Promise<HardState>;
-  getHardState: (input: { id: string }) => Promise<HardState | null>;
-  getHardStateBySlug: (input: { slug: string }) => Promise<HardState | null>;
-  listHardStates: (input?: {
+  getEntity: (input: { id: string }) => Promise<HardState | null>;
+  getEntityBySlug: (input: { slug: string }) => Promise<HardState | null>;
+  listEntities: (input?: {
     kind?: HardStateKind;
     limit?: number;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;
   }) => Promise<HardState[]>;
-  deleteHardState: (input: { id: string }) => Promise<void>;
+  deleteEntity: (input: { id: string }) => Promise<void>;
+
+  // === Relationship Operations ===
   upsertRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
   deleteRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
-  listNeighborsForKind: (input: {
+
+  // === Generic Neighbor Queries ===
+  listNeighbors: (input: {
     id: string;
-    kind: HardStateKind;
+    kind?: HardStateKind;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;
     maxHops?: number;
     limit?: number;
   }) => Promise<WorldNeighbor[]>;
+
+  // === Schema Operations ===
+  getWorldSchema: () => Promise<WorldSchema>;
   upsertKind: (input: {
     id: HardStateKind;
     category?: string | null;
@@ -137,13 +150,8 @@ export type WorldSchemaStore = {
   addRelationshipType: (input: { id: string; description?: string | null }) => Promise<WorldRelationshipType>;
   upsertRelationshipRule: (input: WorldRelationshipRule) => Promise<void>;
   deleteRelationshipRule: (input: WorldRelationshipRule) => Promise<void>;
-  getWorldSchema: () => Promise<WorldSchema>;
-  moveCharacterToLocation: (input: {
-    characterId: string;
-    locationId: string;
-    note?: string | null;
-  }) => Promise<LocationState>;
 
+  // === Lore Operations ===
   createLoreFragment: (input: {
     id?: string;
     entityId: string;

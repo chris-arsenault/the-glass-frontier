@@ -60,7 +60,7 @@ export const buildLoreContext = async (context: GraphContext): Promise<LoreConte
     if (!isNonEmptyString(entityId)) {
       continue;
     }
-    const hardState = await context.worldSchemaStore.getHardState({ id: entityId });
+    const hardState = await context.worldSchemaStore.getEntity({ id: entityId });
     if (hardState) {
       hardState.links?.forEach((link) => neighbors.add(link.targetId));
     }

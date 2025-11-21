@@ -88,7 +88,7 @@ export class ChronicleSeedService {
   }
 
   async #ensurePlace(locationId: string): Promise<HardState> {
-    const place = await this.#world.getHardState({ id: locationId });
+    const place = await this.#world.getEntity({ id: locationId });
     if (!place || place.kind !== 'location') {
       throw new Error(`Location ${locationId} not found.`);
     }

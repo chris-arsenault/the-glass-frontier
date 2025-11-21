@@ -8,7 +8,7 @@ import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState
 import {
   useChronicleStartStore,
   type ChronicleWizardStep,
-  type SelectedLocationSummary,
+  type SelectedLocationEntity,
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
@@ -47,7 +47,7 @@ export function ChronicleStartWizard() {
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const setSelectedLocation = useChronicleStartStore((state) => state.setSelectedLocation);
 
-  const [locations, setLocations] = useState<SelectedLocationSummary[]>([]);
+  const [locations, setLocations] = useState<SelectedLocationEntity[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
@@ -64,7 +64,7 @@ export function ChronicleStartWizard() {
     setLocationError(null);
     try {
       const list = await worldAtlasClient.listEntities('location');
-      const mapped = list.map<SelectedLocationSummary>((entity) => ({
+      const mapped = list.map<SelectedLocationEntity>((entity) => ({
         id: entity.id,
         slug: entity.slug,
         name: entity.name,
@@ -88,7 +88,7 @@ export function ChronicleStartWizard() {
   }, [refreshLocations]);
 
   const handleSelectLocation = useCallback(
-    (location: SelectedLocationSummary) => {
+    (location: SelectedLocationEntity) => {
       setSelectedLocation(location);
     },
     [setSelectedLocation]
@@ -111,7 +111,7 @@ export function ChronicleStartWizard() {
           status: 'known',
           subkind: null,
         });
-        const summary: SelectedLocationSummary = {
+        const summary: SelectedLocationEntity = {
           id: created.id,
           slug: created.slug,
           name: created.name,
@@ -374,11 +374,11 @@ export function ChronicleStartWizard() {
 }
 
 type LocationStepProps = {
-  locations: SelectedLocationSummary[];
+  locations: SelectedLocationEntity[];
   activeLocationId: string | null;
   isLoading: boolean;
   error: string | null;
-  onSelect: (location: SelectedLocationSummary) => void;
+  onSelect: (location: SelectedLocationEntity) => void;
   onCreate: (name: string) => void;
   onRefresh: () => void;
 }
@@ -628,7 +628,7 @@ function SeedStep({
 }
 
 type CreateStepProps = {
-  selectedLocation: SelectedLocationSummary | null;
+  selectedLocation: SelectedLocationEntity | null;
   selectedSeed: ChronicleSeed | null;
   customSeedTitle: string;
   customSeedText: string;

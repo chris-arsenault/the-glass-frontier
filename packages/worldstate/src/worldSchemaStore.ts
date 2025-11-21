@@ -5,11 +5,8 @@ import type {
   HardStateProminence,
   HardStateSubkind,
   HardStateStatus,
-  WorldNeighbor,
   LoreFragment,
   WorldKind,
-  LocationPlace,
-  LocationState,
   WorldRelationshipRule,
   WorldRelationshipType,
   WorldSchema,
@@ -19,7 +16,7 @@ import type { Pool, PoolClient } from 'pg';
 
 import { GraphOperations } from './graphOperations';
 import { createPool, withTransaction } from './pg';
-import type { WorldSchemaStore } from './types';
+import type { WorldSchemaStore, WorldNeighbor } from './types';
 import { normalizeTags, now, toSnakeCase } from './utils';
 
 type KindRow = {
@@ -59,11 +56,11 @@ const toHardState = (row: HardStateRow, links: HardStateLink[]): HardState => ({
   id: row.id,
   slug: row.slug,
   kind: row.kind,
-  subkind: row.subkind ?? undefined,
+  subkind: (row.subkind as HardStateSubkind | null) ?? undefined,
   name: row.name,
   description: row.description ?? undefined,
   prominence: row.prominence ?? 'recognized',
-  status: row.status ?? undefined,
+  status: (row.status as HardStateStatus | null) ?? undefined,
   links,
   createdAt: row.created_at?.getTime() ?? now(),
   updatedAt: row.updated_at?.getTime() ?? now(),
@@ -83,19 +80,7 @@ const toLoreFragment = (row: LoreFragmentRow): LoreFragment => ({
   timestamp: row.created_at?.getTime() ?? now(),
 });
 
-const toLocationPlace = (state: HardState): LocationPlace => ({
-  createdAt: state.createdAt,
-  id: state.id,
-  kind: 'location',
-  name: state.name,
-  description: state.description ?? undefined,
-  prominence: state.prominence ?? 'recognized',
-  slug: state.slug,
-  status: state.status ?? undefined,
-  subkind: state.subkind ?? undefined,
-  tags: [],
-  updatedAt: state.updatedAt,
-});
+// Removed: toLocationEntity - no longer needed
 
 const PROMINENCE_RANK: Record<HardStateProminence, number> = {
   forgotten: 0,
@@ -114,7 +99,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     this.#graph = options.graph ?? new GraphOperations(options.pool);
   }
 
-  async upsertHardState(input: {
+  async upsertEntity(input: {
     id?: string;
     kind: HardStateKind;
     subkind?: HardStateSubkind | null;
@@ -135,11 +120,12 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       await this.#assertProminence(prominence);
 
       const slug = await this.#reserveSlug(client, toSnakeCase(input.name), id);
+      const subkind = input.subkind ?? null;
       await this.#graph.upsertNode(client, id, 'world_entity', {
         id,
         slug,
         kind: input.kind,
-        subkind: input.subkind ?? undefined,
+        subkind: subkind ?? undefined,
         name: input.name,
         description: description ?? undefined,
         prominence,
@@ -159,7 +145,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
              prominence = EXCLUDED.prominence,
              status = EXCLUDED.status,
              updated_at = now()`,
-        [id, slug, input.kind, input.subkind ?? null, input.name, input.description ?? null, prominence, status ?? null]
+        [id, slug, input.kind, subkind, input.name, input.description ?? null, prominence, status ?? null]
       );
 
       if (input.links) {
@@ -167,14 +153,14 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       }
     });
 
-    const persisted = await this.getHardState({ id });
+    const persisted = await this.getEntity({ id });
     if (!persisted) {
-      throw new Error('Failed to upsert hard state');
+      throw new Error('Failed to upsert entity');
     }
     return persisted;
   }
 
-  async deleteHardState(input: { id: string }): Promise<void> {
+  async deleteEntity(input: { id: string }): Promise<void> {
     await withTransaction(this.#pool, async (client) => {
       await client.query(
         `DELETE FROM edge
@@ -210,7 +196,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     );
   }
 
-  async getHardState(input: { id: string }): Promise<HardState | null> {
+  async getEntity(input: { id: string }): Promise<HardState | null> {
     const result = await this.#pool.query(
       `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.description, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
        FROM hard_state hs
@@ -226,7 +212,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return toHardState(row, links);
   }
 
-  async listHardStates(input?: {
+  async listEntities(input?: {
     kind?: HardStateKind;
     limit?: number;
     minProminence?: HardStateProminence;
@@ -268,7 +254,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     );
   }
 
-  async getHardStateBySlug(input: { slug: string }): Promise<HardState | null> {
+  async getEntityBySlug(input: { slug: string }): Promise<HardState | null> {
     const result = await this.#pool.query(
       `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.description, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
        FROM hard_state hs
@@ -284,9 +270,9 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return toHardState(row, links);
   }
 
-  async listNeighborsForKind(input: {
+  async listNeighbors(input: {
     id: string;
-    kind: HardStateKind;
+    kind?: HardStateKind;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;
     maxHops?: number;
@@ -579,33 +565,6 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     });
   }
 
-  async moveCharacterToLocation(input: {
-    characterId: string;
-    locationId: string;
-    note?: string | null;
-  }): Promise<LocationState> {
-    await withTransaction(this.#pool, async (client) => {
-      await this.#assertCharacterNode(client, input.characterId);
-      await this.#assertLocationExists(client, input.locationId);
-      await client.query('DELETE FROM edge WHERE src_id = $1::uuid AND type = $2', [
-        input.characterId,
-        'resides_in',
-      ]);
-      await this.#graph.upsertEdge(client, {
-        src: input.characterId,
-        dst: input.locationId,
-        type: 'resides_in',
-        props: { note: input.note ?? undefined },
-      });
-    });
-    return {
-      characterId: input.characterId,
-      locationId: input.locationId,
-      note: input.note ?? undefined,
-      updatedAt: Date.now(),
-    };
-  }
-
   async #getKind(executor: PoolClient, kind: HardStateKind): Promise<KindRow> {
     const result = await executor.query(
       `SELECT id, category, display_name, default_status
@@ -747,29 +706,6 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     );
     if (result.rowCount !== unique.length) {
       throw new Error('One or more hard state entities do not exist');
-    }
-  }
-
-  async #assertCharacterNode(executor: PoolClient, characterId: string): Promise<void> {
-    const result = await executor.query(
-      `SELECT kind FROM node WHERE id = $1::uuid`,
-      [characterId]
-    );
-    if (!result.rowCount) {
-      throw new Error(`Character ${characterId} not found`);
-    }
-    if (result.rows[0]?.kind !== 'character') {
-      throw new Error(`Node ${characterId} is not a character`);
-    }
-  }
-
-  async #assertLocationExists(executor: PoolClient, locationId: string): Promise<void> {
-    const result = await executor.query(
-      `SELECT kind FROM hard_state WHERE id = $1::uuid`,
-      [locationId]
-    );
-    if (!result.rowCount || result.rows[0]?.kind !== 'location') {
-      throw new Error(`Location ${locationId} not found`);
     }
   }
 

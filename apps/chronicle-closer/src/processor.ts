@@ -2,13 +2,13 @@ import type {
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
-  LocationSummary,
+  LocationEntity,
 } from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import {
-  createWorldStateStore,
+  createChronicleStore,
   createWorldSchemaStore,
-  type WorldStateStore,
+  type ChronicleStore,
 } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
@@ -27,29 +27,29 @@ import {
   type SummaryContext,
 } from './summaryHelpers';
 
-type ChronicleSnapshot = NonNullable<Awaited<ReturnType<WorldStateStore['getChronicleState']>>>;
+type ChronicleSnapshot = NonNullable<Awaited<ReturnType<ChronicleStore['getChronicleState']>>>;
 
 const SUMMARY_HANDLERS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 
 class ChronicleClosureProcessor {
-  readonly #worldStateStore: WorldStateStore;
+  readonly #chronicleStore: ChronicleStore;
   readonly #llm: RetryLLMClient;
 
   constructor(options?: {
-    worldStateStore?: WorldStateStore;
+    chronicleStore?: ChronicleStore;
     llmClient?: RetryLLMClient;
   }) {
     const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL ?? '';
-    if (!options?.worldStateStore && worldstateDatabaseUrl.trim().length === 0) {
+    if (!options?.chronicleStore && worldstateDatabaseUrl.trim().length === 0) {
       throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the chronicle closer.');
     }
 
     const worldSchemaStore = createWorldSchemaStore({
       connectionString: worldstateDatabaseUrl,
     });
-    this.#worldStateStore =
-      options?.worldStateStore ??
-      createWorldStateStore({
+    this.#chronicleStore =
+      options?.chronicleStore ??
+      createChronicleStore({
         connectionString: worldstateDatabaseUrl,
         worldStore: worldSchemaStore,
       });
@@ -57,7 +57,7 @@ class ChronicleClosureProcessor {
   }
 
   async process(event: ChronicleClosureEvent): Promise<void> {
-    const snapshot = await this.#worldStateStore.getChronicleState(event.chronicleId);
+    const snapshot = await this.#chronicleStore.getChronicleState(event.chronicleId);
     if (snapshot === null || snapshot.chronicle === undefined) {
       log('warn', 'chronicle-closer.snapshot-missing', { chronicleId: event.chronicleId });
       return;
@@ -96,7 +96,7 @@ class ChronicleClosureProcessor {
   async #buildContext(snapshot: ChronicleSnapshot): Promise<SummaryContext> {
     const chronicle = snapshot.chronicle;
     const locationName = await this.#resolveLocationName(chronicle);
-    const locationSummary = await this.#resolveLocationSummary(snapshot);
+    const locationSummary = await this.#resolveLocationEntity(snapshot);
     const beatLines = buildBeatLines(chronicle);
     const { inventoryHighlights, skillHighlights, transcript } = buildTurnArtifacts(
       snapshot.turns
@@ -117,7 +117,7 @@ class ChronicleClosureProcessor {
     return chronicle.locationId ?? 'Unknown Location';
   }
 
-  async #resolveLocationSummary(snapshot: ChronicleSnapshot): Promise<LocationSummary | null> {
+  async #resolveLocationEntity(snapshot: ChronicleSnapshot): Promise<LocationEntity | null> {
     return snapshot.location ?? null;
   }
 
@@ -154,7 +154,7 @@ class ChronicleClosureProcessor {
       },
       summary,
     };
-    await this.#worldStateStore.upsertChronicle({
+    await this.#chronicleStore.upsertChronicle({
       ...chronicle,
       summaries: [...(chronicle.summaries ?? []), entry],
     });
@@ -205,7 +205,7 @@ class ChronicleClosureProcessor {
     if (summary.length === 0) {
       return;
     }
-    await this.#worldStateStore.upsertCharacter({
+    await this.#chronicleStore.upsertCharacter({
       ...character,
       bio: summary,
     });
@@ -214,6 +214,30 @@ class ChronicleClosureProcessor {
       chronicleId: context.chronicle.id,
       turnSequence: event.turnSequence,
     });
+  }
+
+  // Stub implementations - these need proper implementation
+  async #hasRecordedLocationEvents(_chronicle: Chronicle): Promise<boolean> {
+    // TODO: Check if location events have already been recorded
+    return false;
+  }
+
+  async #fetchLocationEventFragments(
+    _context: SummaryContext,
+    _chronicle: Chronicle
+  ): Promise<{ fragments: unknown[]; provider: string; requestId: string } | null> {
+    // TODO: Fetch and generate location event fragments
+    return null;
+  }
+
+  async #persistLocationEvents(_input: {
+    chronicle: Chronicle;
+    fragments: unknown[];
+    provider: string;
+    requestId: string;
+    turnSequence: number;
+  }): Promise<void> {
+    // TODO: Persist location events to storage
   }
 
 }

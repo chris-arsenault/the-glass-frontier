@@ -5,9 +5,9 @@ import type {
   Intent,
   HardStateProminence,
   LocationNeighbors,
-  LocationPlace,
+  LocationEntity,
   LocationState,
-  LocationSummary,
+  LocationEntity,
   LlmTrace,
   SkillCheckPlan,
   SkillCheckResult,
@@ -26,7 +26,7 @@ export type ChronicleState = {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character;
-  location: LocationSummary;
+  location: LocationEntity;
   turns: Turn[];
 }
 
@@ -94,14 +94,14 @@ export type LocationStore = {
     tags?: string[];
     anchorId: string;
     relationship: string;
-  }) => Promise<LocationPlace>;
+  }) => Promise<LocationEntity>;
   getLocationDetails: (input: {
     id: string;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;
     maxHops?: number;
   }) => Promise<{
-    place: LocationPlace;
+    place: LocationEntity;
     neighbors: LocationNeighbors;
   }>;
   getLocationNeighbors: (input: {

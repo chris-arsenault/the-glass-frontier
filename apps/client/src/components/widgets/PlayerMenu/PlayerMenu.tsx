@@ -1,4 +1,4 @@
-import type { LocationSummary, TokenUsagePeriod } from '@glass-frontier/dto';
+import type { LocationEntity, TokenUsagePeriod } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -76,7 +76,7 @@ const SettingsIcon = () => (
   </svg>
 );
 
-const describeLocation = (location?: LocationSummary | null) => {
+const describeLocation = (location?: LocationEntity | null) => {
   if (!location) {
     return {
       breadcrumb: 'Select a chronicle to establish position.',

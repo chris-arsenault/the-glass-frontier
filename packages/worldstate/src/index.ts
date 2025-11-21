@@ -1,11 +1,13 @@
-// Unified interface (recommended)
+// === Unified Interface (Recommended) ===
 export { WorldState } from './worldState';
-export { GraphOperations } from './graphOperations';
-export { createWorldLocationStore } from './locationStore';
 
-// Individual stores (for advanced use cases)
-export { createWorldStateStore } from './worldStateStore';
+// === Core Stores ===
+export { GraphOperations } from './graphOperations';
+export { createChronicleStore } from './worldStateStore';
 export { createWorldSchemaStore } from './worldSchemaStore';
 
-// Types
-export type { WorldStateStore, ChronicleSnapshot, WorldSchemaStore } from './types';
+// === Domain Helpers ===
+export { LocationHelpers } from './locationStore';
+
+// === Types ===
+export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor } from './types';

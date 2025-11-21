@@ -1,15 +1,15 @@
 // context.ts
 import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
 import {
-  createWorldStateStore,
+  createChronicleStore,
   createWorldSchemaStore,
-  type WorldStateStore,
+  LocationHelpers,
+  type ChronicleStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
 
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";
-import { createWorldLocationStore } from '@glass-frontier/worldstate';
 import type { LocationStore } from './types';
 
 const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
@@ -19,8 +19,8 @@ if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().le
 
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
 const worldSchemaStore = createWorldSchemaStore({ connectionString: worldstateDatabaseUrl });
-const locationGraphStore = createWorldLocationStore({ worldSchemaStore });
-const worldStateStore = createWorldStateStore({
+const locationGraphStore = new LocationHelpers(worldSchemaStore);
+const chronicleStore = createChronicleStore({
   connectionString: worldstateDatabaseUrl,
   worldStore: worldSchemaStore,
 });
@@ -31,7 +31,7 @@ const engine = new GmEngine({
   locationGraphStore,
   templateManager,
   worldSchemaStore,
-  worldStateStore,
+  chronicleStore,
   llmClient,
 });
 
@@ -43,7 +43,7 @@ export type Context = {
   worldSchemaStore: WorldSchemaStore;
   playerStore: PlayerStore;
   templateManager: PromptTemplateManager;
-  worldStateStore: WorldStateStore;
+  chronicleStore: ChronicleStore;
 };
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
@@ -55,6 +55,6 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     worldSchemaStore,
     playerStore: appStore.playerStore,
     templateManager,
-    worldStateStore,
+    chronicleStore,
   };
 }

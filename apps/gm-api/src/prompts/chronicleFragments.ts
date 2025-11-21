@@ -95,7 +95,7 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
     return { anchor: null };
   }
   try {
-    const entity = await context.worldSchemaStore.getHardState({ id: anchorId });
+    const entity = await context.worldSchemaStore.getEntity({ id: anchorId });
     if (!entity) {
       return { anchor: null };
     }

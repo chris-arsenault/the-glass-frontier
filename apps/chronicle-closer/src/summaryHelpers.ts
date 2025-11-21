@@ -3,7 +3,7 @@ import type {
   Chronicle,
   ChronicleSummaryKind,
   InventoryDeltaOp,
-  LocationSummary,
+  LocationEntity,
   Turn,
 } from '@glass-frontier/dto';
 import { z } from 'zod';
@@ -12,7 +12,7 @@ export type SummaryContext = {
   chronicle: Chronicle;
   character: Character | null;
   locationName: string;
-  locationSummary: LocationSummary | null;
+  locationSummary: LocationEntity | null;
   beatLines: string[];
   inventoryHighlights: string[];
   skillHighlights: string[];

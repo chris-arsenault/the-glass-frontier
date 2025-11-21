@@ -4,7 +4,7 @@ import type {
   Chronicle,
   ChronicleBeat,
   Intent,
-  LocationSummary,
+  LocationEntity,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -86,7 +86,7 @@ export type ChronicleState = {
   queuedIntents: number;
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
-  location?: LocationSummary | null;
+  location?: LocationEntity | null;
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;

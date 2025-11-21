@@ -1,4 +1,4 @@
-import type { LocationPlace, LocationState } from '@glass-frontier/dto';
+import type { LocationEntity, LocationState } from '@glass-frontier/dto';
 import type { LocationDeltaDecision } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
@@ -45,7 +45,7 @@ export async function applyLocationUpdate(context: GraphContext): Promise<Locati
 async function findLocationByName(
   context: GraphContext,
   name: string
-): Promise<LocationPlace | null> {
+): Promise<LocationEntity | null> {
   const currentLocationId =
     context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
 
@@ -79,7 +79,7 @@ async function createNewLocation(
   context: GraphContext,
   anchorId: string,
   delta: LocationDeltaDecision
-): Promise<LocationPlace> {
+): Promise<LocationEntity> {
   const relationship = mapLinkToRelationship(delta.link);
 
   return context.locationGraphStore.createLocationWithRelationship({

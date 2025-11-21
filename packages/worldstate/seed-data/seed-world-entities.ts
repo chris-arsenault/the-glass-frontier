@@ -142,7 +142,7 @@ async function seedWorldEntities() {
           const uuid = randomUUID();
           idMap.set(entity.id, uuid);
 
-          await worldState.world.upsertHardState({
+          await worldState.world.upsertEntity({
             id: uuid,
             kind: entity.kind as any,
             subkind: entity.subkind as any,

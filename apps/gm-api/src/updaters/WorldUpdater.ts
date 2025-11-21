@@ -1,6 +1,6 @@
-import type { Character, Chronicle, LocationSummary } from '@glass-frontier/dto';
+import type { Character, Chronicle, LocationEntity } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
-import type { WorldStateStore } from '@glass-frontier/worldstate';
+import type { ChronicleStore } from '@glass-frontier/worldstate';
 
 import type { GraphContext, LocationStore } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
@@ -10,11 +10,11 @@ import { applyLocationUpdate } from './locationUpdater';
 
 
 export class WorldUpdater {
-  readonly #worldStateStore: WorldStateStore;
+  readonly #chronicleStore: ChronicleStore;
   readonly #locationGraphStore: LocationStore;
 
-  constructor(options: { worldStateStore: WorldStateStore; locationGraphStore: LocationStore }) {
-    this.#worldStateStore = options.worldStateStore;
+  constructor(options: { chronicleStore: ChronicleStore; locationGraphStore: LocationStore }) {
+    this.#chronicleStore = options.chronicleStore;
     this.#locationGraphStore = options.locationGraphStore;
   }
 
@@ -88,7 +88,7 @@ export class WorldUpdater {
 
   async #saveCharacter(character: Character): Promise<void> {
     try {
-      await this.#worldStateStore.upsertCharacter(character);
+      await this.#chronicleStore.upsertCharacter(character);
     } catch (error) {
       log('error', `Error in saving character ${error}`);
     }
@@ -96,7 +96,7 @@ export class WorldUpdater {
 
   async #saveChronicle(chronicle: Chronicle): Promise<void> {
     try {
-      await this.#worldStateStore.upsertChronicle(chronicle);
+      await this.#chronicleStore.upsertChronicle(chronicle);
     } catch (error) {
       log('error', `Error in saving chronicle ${error}`);
     }
@@ -110,7 +110,7 @@ export class WorldUpdater {
         return context;
       }
 
-      const summary = await this.#buildLocationSummary(locationState.locationId);
+      const summary = await this.#buildLocationEntity(locationState.locationId);
       const updatedChronicle: Chronicle = {
         ...context.chronicleState.chronicle,
         locationId: locationState.locationId,
@@ -130,7 +130,7 @@ export class WorldUpdater {
     }
   }
 
-  async #buildLocationSummary(locationId: string): Promise<LocationSummary | null> {
+  async #buildLocationEntity(locationId: string): Promise<LocationEntity | null> {
     try {
       const details = await this.#locationGraphStore.getLocationDetails({ id: locationId });
       return mapLocationDetailsToSummary(details);
@@ -152,14 +152,14 @@ export const mapLocationDetailsToSummary = (details: {
     prominence?: string;
     description?: string;
   };
-}): LocationSummary => {
+}): LocationEntity => {
   return {
     id: details.place.id,
     slug: details.place.slug ?? details.place.id,
     name: details.place.name,
     kind: details.place.kind,
     subkind: details.place.subkind,
-    prominence: (details.place.prominence as LocationSummary['prominence']) ?? 'recognized',
+    prominence: (details.place.prominence as LocationEntity['prominence']) ?? 'recognized',
     status: details.place.status,
     description: details.place.description,
     tags: [],

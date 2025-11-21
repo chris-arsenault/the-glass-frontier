@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/member-ordering */
-import type { Character, Chronicle, LocationSummary, Turn } from '@glass-frontier/dto';
+import type { Character, Chronicle, LocationEntity, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -9,7 +9,7 @@ import { createWorldSchemaStore } from './worldSchemaStore';
 import type {
   ChronicleSnapshot,
   WorldSchemaStore,
-  WorldStateStore,
+  ChronicleStore,
 } from './types';
 import { isNonEmptyString } from './utils';
 
@@ -52,7 +52,7 @@ const resolveText = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
-class PostgresWorldStateStore implements WorldStateStore {
+class PostgresChronicleStore implements ChronicleStore {
   readonly #pool: Pool;
   readonly #graph: GraphOperations;
   readonly #worldStore: WorldSchemaStore | null;
@@ -453,12 +453,12 @@ class PostgresWorldStateStore implements WorldStateStore {
   }
 
 
-  async #summarizeLocation(locationId: string): Promise<LocationSummary | null> {
+  async #summarizeLocation(locationId: string): Promise<LocationEntity | null> {
     if (!this.#worldStore) {
       return null;
     }
     try {
-      const state = await this.#worldStore.getHardState({ id: locationId });
+      const state = await this.#worldStore.getEntity({ id: locationId });
       if (!state || state.kind !== 'location') {
         return null;
       }
@@ -472,6 +472,8 @@ class PostgresWorldStateStore implements WorldStateStore {
         prominence: state.prominence ?? 'recognized',
         status: state.status ?? undefined,
         tags: [],
+        createdAt: state.createdAt,
+        updatedAt: state.updatedAt,
       };
     } catch {
       return null;
@@ -486,11 +488,11 @@ class PostgresWorldStateStore implements WorldStateStore {
     if (!this.#worldStore) {
       return;
     }
-    const existing = await this.#worldStore.getHardState({ id: locationId });
+    const existing = await this.#worldStore.getEntity({ id: locationId });
     if (existing && existing.kind === 'location') {
       return;
     }
-    await this.#worldStore.upsertHardState({
+    await this.#worldStore.upsertEntity({
       id: locationId,
       kind: 'location',
       name: name ?? 'Unknown Location',
@@ -504,19 +506,59 @@ class PostgresWorldStateStore implements WorldStateStore {
     }
   }
 
+  async moveCharacterToLocation(input: {
+    characterId: string;
+    locationId: string;
+    note?: string | null;
+  }): Promise<{ characterId: string; locationId: string; note?: string; updatedAt: number }> {
+    await withTransaction(this.#pool, async (client) => {
+      // Verify character exists
+      const charCheck = await client.query('SELECT 1 FROM character WHERE id = $1::uuid', [input.characterId]);
+      if (!charCheck.rowCount) {
+        throw new Error(`Character ${input.characterId} not found`);
+      }
+      // Verify location exists
+      const locCheck = await client.query('SELECT 1 FROM hard_state WHERE id = $1::uuid AND kind = $2', [
+        input.locationId,
+        'location',
+      ]);
+      if (!locCheck.rowCount) {
+        throw new Error(`Location ${input.locationId} not found`);
+      }
+      // Delete existing resides_in edges for this character
+      await client.query('DELETE FROM edge WHERE src_id = $1::uuid AND type = $2', [
+        input.characterId,
+        'resides_in',
+      ]);
+      // Create new resides_in edge
+      await this.#graph.upsertEdge(client, {
+        src: input.characterId,
+        dst: input.locationId,
+        type: 'resides_in',
+        props: { note: input.note ?? undefined },
+      });
+    });
+    return {
+      characterId: input.characterId,
+      locationId: input.locationId,
+      note: input.note ?? undefined,
+      updatedAt: Date.now(),
+    };
+  }
+
 }
 
-export function createWorldStateStore(options?: {
+export function createChronicleStore(options?: {
   connectionString?: string;
   pool?: Pool;
   graph?: GraphOperations;
   worldStore?: WorldSchemaStore | null;
-}): WorldStateStore {
+}): ChronicleStore {
   const pool = createPool({
     connectionString: options?.connectionString,
     pool: options?.pool,
   });
-  const store = new PostgresWorldStateStore({
+  const store = new PostgresChronicleStore({
     pool,
     graph: options?.graph,
     worldStore: options?.worldStore ?? null,

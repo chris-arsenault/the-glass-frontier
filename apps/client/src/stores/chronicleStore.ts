@@ -2,7 +2,7 @@ import type {
   Character,
   Chronicle,
   ChronicleBeat,
-  LocationSummary,
+  LocationEntity,
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
@@ -52,7 +52,7 @@ type ChronicleSnapshot = {
   character: Character | null;
   chronicle: (Chronicle & { beats?: ChronicleBeat[]; seedText?: string | null }) | null;
   chronicleId: string;
-  location: LocationSummary | null;
+  location: LocationEntity | null;
   turnSequence?: number | null;
   turns?: Turn[];
 };
@@ -434,7 +434,7 @@ const createBaseState = () => ({
   isOffline: false,
   isSending: false,
   isUpdatingPlayerSettings: false,
-  location: null as LocationSummary | null,
+  location: null as LocationEntity | null,
   messages: [] as ChatMessage[],
   momentumTrend: null as MomentumTrend | null,
   pendingPlayerMessageId: null as string | null,

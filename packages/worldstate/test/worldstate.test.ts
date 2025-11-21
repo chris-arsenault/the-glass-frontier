@@ -179,7 +179,7 @@ describe('Locations as hard state', () => {
       playerId: TEST_PLAYER_ID,
       title: 'Missing Location Chronicle',
     });
-    const hardState = await worldState.world.getHardState({ id: locationId });
+    const hardState = await worldState.world.getEntity({ id: locationId });
 
     expect(chronicle.locationId).toBe(locationId);
     expect(hardState?.kind).toBe('location');
@@ -187,7 +187,7 @@ describe('Locations as hard state', () => {
   });
 
   it('summarizes chronicle locations from hard state records', async () => {
-    const location = await worldState.world.upsertHardState({
+    const location = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Atlas Landing',
       status: 'known',
@@ -209,24 +209,24 @@ describe('Locations as hard state', () => {
 
 describe('World schema', () => {
   it('persists hard state with directed links', async () => {
-    const faction = await worldState.world.upsertHardState({
+    const faction = await worldState.world.upsertEntity({
       kind: 'faction',
       name: 'Glass Wardens',
       status: 'active',
       subkind: 'order',
     });
-    const npc = await worldState.world.upsertHardState({
+    const npc = await worldState.world.upsertEntity({
       kind: 'npc',
       name: 'Mirin',
       status: 'alive',
       subkind: 'ally',
     });
-    const updated = await worldState.world.upsertHardState({
+    const updated = await worldState.world.upsertEntity({
       ...faction,
       links: [{ relationship: 'ally_of', targetId: npc.id }],
       name: 'Glass Wardens',
     });
-    const linked = await worldState.world.getHardState({ id: npc.id });
+    const linked = await worldState.world.getEntity({ id: npc.id });
 
     expect(updated.links).toEqual([{ relationship: 'ally_of', targetId: npc.id, direction: 'out' }]);
     expect(linked?.links).toContainEqual({
@@ -239,7 +239,7 @@ describe('World schema', () => {
 
   it('rejects unsupported hard state status', async () => {
     await expect(
-      worldState.world.upsertHardState({
+      worldState.world.upsertEntity({
         kind: 'npc',
         name: 'Unknown',
         status: 'ghost' as unknown as HardStateStatus,
@@ -248,13 +248,13 @@ describe('World schema', () => {
   });
 
   it('rejects disallowed relationships between kinds', async () => {
-    const location = await worldState.world.upsertHardState({
+    const location = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Forbidden Site',
       status: 'known',
       subkind: 'site',
     });
-    const artifact = await worldState.world.upsertHardState({
+    const artifact = await worldState.world.upsertEntity({
       kind: 'artifact',
       name: 'Lost Relic',
       status: 'intact',
@@ -270,7 +270,7 @@ describe('World schema', () => {
   });
 
   it('creates lore fragments linked to hard state', async () => {
-    const root = await worldState.world.upsertHardState({
+    const root = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Lore Root',
       status: 'known',
@@ -296,9 +296,9 @@ describe('World schema', () => {
   });
 });
 
-describe('WorldStateStore', () => {
+describe('ChronicleStore', () => {
   it('creates characters and chronicles with turn history', async () => {
-    const startingLocation = await worldState.world.upsertHardState({
+    const startingLocation = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Chronicle Root',
       status: 'known',
@@ -325,7 +325,7 @@ describe('WorldStateStore', () => {
   });
 
   it('ensures chronicle retrieval respects the most recent turn ordering', async () => {
-    const location = await worldState.world.upsertHardState({
+    const location = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Order',
       status: 'known',
@@ -351,13 +351,13 @@ describe('WorldStateStore', () => {
   });
 
   it('persists chronicle anchor entities', async () => {
-    const anchor = await worldState.world.upsertHardState({
+    const anchor = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Anchor Site',
       status: 'known',
       subkind: 'site',
     });
-    const location = await worldState.world.upsertHardState({
+    const location = await worldState.world.upsertEntity({
       kind: 'location',
       name: 'Anchor Location',
       status: 'known',

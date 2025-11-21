@@ -15,7 +15,7 @@ import { z } from 'zod';
 import type { Context } from './context';
 
 type EnsureChronicleResult = Awaited<
-  ReturnType<Context['worldStateStore']['ensureChronicle']>
+  ReturnType<Context['chronicleStore']['ensureChronicle']>
 >;
 
 const t = initTRPC.context<Context>().create();
@@ -62,7 +62,7 @@ export const appRouter = t.router({
   createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
     log('info', `Creating Character ${input.name}`);
     await ctx.playerStore.ensure(input.playerId);
-    const character = await ctx.worldStateStore.upsertCharacter(input);
+    const character = await ctx.chronicleStore.upsertCharacter(input);
     return { character };
   }),
   // POST /chronicles
@@ -78,14 +78,14 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle === null || chronicle === undefined) {
         return { chronicleId: input.chronicleId, deleted: false };
       }
       if (chronicle.playerId !== input.playerId) {
         throw new Error('Chronicle does not belong to the requesting player.');
       }
-      await ctx.worldStateStore.deleteChronicle(input.chronicleId);
+      await ctx.chronicleStore.deleteChronicle(input.chronicleId);
       return { chronicleId: input.chronicleId, deleted: true };
     }),
 
@@ -142,11 +142,11 @@ export const appRouter = t.router({
 
   listCharacters: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listCharactersByPlayer(input.playerId)),
+    .query(async ({ ctx, input }) => ctx.chronicleStore.listCharactersByPlayer(input.playerId)),
 
   listChronicles: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByPlayer(input.playerId)),
+    .query(async ({ ctx, input }) => ctx.chronicleStore.listChroniclesByPlayer(input.playerId)),
 
   submitBugReport: t.procedure
     .input(
@@ -211,14 +211,14 @@ async function createChronicleHandler(
   const chronicleId = input.chronicleId ?? randomUUID();
   const locationId = input.locationId ?? randomUUID();
   const locationName = resolveLocationName(input);
-  await ctx.worldSchemaStore.upsertHardState({
+  await ctx.worldSchemaStore.upsertEntity({
     id: locationId,
     kind: 'location',
     name: locationName,
     status: 'known',
   });
 
-  const chronicle = await ctx.worldStateStore.ensureChronicle({
+  const chronicle = await ctx.chronicleStore.ensureChronicle({
     beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,
@@ -234,7 +234,7 @@ async function createChronicleHandler(
 }
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {
-  const character = await ctx.worldStateStore.getCharacter(characterId);
+  const character = await ctx.chronicleStore.getCharacter(characterId);
   if (character === null || character === undefined) {
     throw new Error('Character not found for chronicle creation.');
   }
@@ -261,7 +261,7 @@ async function augmentChronicleSnapshot(
   ctx: Context,
   chronicleId: string
 ): Promise<ChronicleState | null> {
-  const snapshot = await ctx.worldStateStore.getChronicleState(chronicleId);
+  const snapshot = await ctx.chronicleStore.getChronicleState(chronicleId);
   return snapshot;
 }
 

@@ -10,13 +10,14 @@
     "start": "node dist/server_local.js"
   },
   "dependencies": {
-    "@glass-frontier/worldstate": "workspace:*",
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
     "express": "^4.19.2",
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/express": "^5.0.5",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }

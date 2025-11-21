@@ -1,58 +1,65 @@
 .location-pill {
   display: flex;
   flex: 1 1 240px;
-  padding: 0.45rem 0.9rem;
-  background: rgb(15 23 42 / 80%);
-  border: 1px solid rgb(148 163 184 / 35%);
-  border-radius: 0.75rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-primary);
+  border: none;
+  border-radius: var(--radius-md);
   box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
   flex-direction: column;
-  gap: 0.1rem;
+  gap: var(--space-1);
   max-width: 100%;
   min-width: 0;
 }
 
 .location-pill-label {
-  color: #93c5fd;
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  color: var(--text-accent);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .location-pill-value {
   display: flex;
-  color: #e2e8f0;
+  color: var(--text-primary);
   flex-direction: column;
-  font-size: 0.9rem;
-  gap: 0.15rem;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .location-pill-link {
-  color: #f8fafc;
+  color: var(--text-primary);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-decoration: underline;
   text-decoration-style: dashed;
+  text-decoration-color: var(--border-accent);
   background: none;
   border: none;
   padding: 0;
   text-align: left;
   cursor: pointer;
+  transition: text-decoration-color 120ms ease;
+}
+
+.location-pill-link:hover {
+  text-decoration-color: var(--text-primary);
 }
 
 .location-pill-meta {
-  color: #94a3b8;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
 .location-pill-empty .location-pill-value {
-  color: #94a3b8;
+  color: var(--text-muted);
 }

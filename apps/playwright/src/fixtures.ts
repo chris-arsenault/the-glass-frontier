@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { Character, Chronicle, HardState, Player } from '@glass-frontier/dto';
-import { createWorldStateStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
+import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
 
 export const PLAYWRIGHT_PLAYER_ID = 'playwright-e2e';
@@ -29,7 +29,6 @@ const BASE_CHARACTER: Character = {
     vitality: 'standard',
   },
   bio: 'Seeded character for Playwright tests.',
-  chronicleId: PLAYWRIGHT_CHRONICLE_ID,
   id: PLAYWRIGHT_CHARACTER_ID,
   inventory: [],
   momentum: { ceiling: 3, current: 0, floor: -2 },
@@ -94,18 +93,18 @@ export const buildPlaywrightChronicleRecord = (options?: { locationId?: string }
 
 export async function seedPlaywrightFixtures(connectionString: string): Promise<{ location: HardState }> {
   const worldSchemaStore = createWorldSchemaStore({ connectionString });
-  const worldStateStore = createWorldStateStore({ connectionString, worldStore: worldSchemaStore });
+  const chronicleStore = createChronicleStore({ connectionString, worldStore: worldSchemaStore });
 
-  await worldStateStore.deleteChronicle(PLAYWRIGHT_CHRONICLE_ID).catch(() => undefined);
+  await chronicleStore.deleteChronicle(PLAYWRIGHT_CHRONICLE_ID).catch(() => undefined);
 
   const player = buildPlaywrightPlayerRecord();
   const character = buildPlaywrightCharacterRecord();
   const chronicle = buildPlaywrightChronicleRecord();
 
-  const location = await worldSchemaStore.upsertHardState(LOCATION_ROOT);
+  const location = await worldSchemaStore.upsertEntity(LOCATION_ROOT);
 
-  const warden = await worldSchemaStore.upsertHardState(NON_LOCATION_ENTITIES[0]);
-  const relic = await worldSchemaStore.upsertHardState(NON_LOCATION_ENTITIES[1]);
+  const warden = await worldSchemaStore.upsertEntity(NON_LOCATION_ENTITIES[0]);
+  const relic = await worldSchemaStore.upsertEntity(NON_LOCATION_ENTITIES[1]);
 
   await worldSchemaStore.createLoreFragment({
     entityId: warden.id,
@@ -122,8 +121,8 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
     tags: ['artifact', 'oracle'],
   });
 
-  await worldStateStore.upsertCharacter(character);
-  await worldStateStore.upsertChronicle(chronicle);
+  await chronicleStore.upsertCharacter(character);
+  await chronicleStore.upsertChronicle(chronicle);
 
   return { location };
 }

@@ -54,7 +54,7 @@ app.get('/entities', async (req, res) => {
     const maxProminence = prominenceSchema.safeParse(req.query.maxProminence).success
       ? (req.query.maxProminence as string)
       : undefined;
-    const list = await world.listHardStates({
+    const list = await world.listEntities({
       kind: kind as never,
       limit: 200,
       minProminence: minProminence as never,
@@ -69,7 +69,7 @@ app.get('/entities', async (req, res) => {
 app.get('/entities/:slug', async (req, res) => {
   try {
     const slug = req.params.slug;
-    const entity = await world.getHardStateBySlug({ slug });
+    const entity = await world.getEntityBySlug({ slug });
     if (!entity) {
       res.status(404).json({ error: 'Not found' });
       return;
@@ -84,7 +84,7 @@ app.get('/entities/:slug', async (req, res) => {
 app.post('/entities', async (req, res) => {
   try {
     const input = hardStateInput.parse(req.body);
-    const entity = await world.upsertHardState({
+    const entity = await world.upsertEntity({
       id: input.id,
       kind: input.kind as never,
       subkind: input.subkind as never,
@@ -197,8 +197,8 @@ app.post('/chronicles', async (req, res) => {
         characterId: z.string().uuid().optional(),
       })
       .parse(req.body);
-    const anchor = await world.getHardStateBySlug({ slug: input.anchorSlug });
-    const location = await world.getHardStateBySlug({ slug: input.locationSlug });
+    const anchor = await world.getEntityBySlug({ slug: input.anchorSlug });
+    const location = await world.getEntityBySlug({ slug: input.locationSlug });
     if (!anchor) {
       res.status(404).json({ error: 'Anchor not found' });
       return;

@@ -3,7 +3,7 @@ import { execa } from 'execa';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createAppStore } from '../../packages/app/src/index.js';
-import { createWorldSchemaStore, createWorldStateStore } from '../../packages/worldstate/src/index.js';
+import { createWorldSchemaStore, createChronicleStore } from '../../packages/worldstate/src/index.js';
 import { createOpsStore } from '../../packages/ops/src/index.js';
 import {
   PLAYWRIGHT_CHARACTER_ID,
@@ -51,7 +51,7 @@ const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
 const worldSchemaStore = createWorldSchemaStore({
   connectionString: worldstateDatabaseUrl,
 });
-const worldStateStore = createWorldStateStore({
+const chronicleStore = createChronicleStore({
   connectionString: worldstateDatabaseUrl,
   worldStore: worldSchemaStore,
 });
@@ -65,7 +65,7 @@ const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
-  await seedPlaywrightChronicle(worldStateStore, worldSchemaStore, appStore.playerStore);
+  await seedPlaywrightChronicle(chronicleStore, worldSchemaStore, appStore.playerStore);
   // Touch ops stores so migrations are exercised in tests
   await opsStore.bugReportStore.listReports();
   await opsStore.tokenUsageStore.listUsage(PLAYWRIGHT_PLAYER_ID, 1);
@@ -161,7 +161,7 @@ async function withRetry<T>(
 }
 
 async function seedPlaywrightChronicle(
-  worldStateStore: ReturnType<typeof createWorldStateStore>,
+  chronicleStore: ReturnType<typeof createChronicleStore>,
   worldSchemaStore: ReturnType<typeof createWorldSchemaStore>,
   playerStore: ReturnType<typeof createAppStore>['playerStore']
 ): Promise<void> {
@@ -170,8 +170,8 @@ async function seedPlaywrightChronicle(
   const chronicleRecord = buildPlaywrightChronicleRecord();
 
   await playerStore.upsert(playerRecord);
-  await worldStateStore.upsertCharacter(characterRecord);
-  await worldStateStore.upsertChronicle(chronicleRecord);
+  await chronicleStore.upsertCharacter(characterRecord);
+  await chronicleStore.upsertChronicle(chronicleRecord);
   await seedPlaywrightFixtures(worldstateDatabaseUrl);
 }
 
