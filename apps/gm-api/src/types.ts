@@ -83,7 +83,13 @@ export type GraphContext = {
   inventoryDelta?: InventoryDelta;
   beatTracker?: BeatTracker;
   loreContext?: LoreContextSlice;
-  loreFocus?: LoreFocusState;
+  loreUsage?: Array<{
+    fragmentId: string;
+    entityId: string;
+    tags: string[];
+    usage: 'unused' | 'glanced' | 'grounding';
+    emergentTags?: string[];
+  }>;
 }
 
 export type LocationStore = {

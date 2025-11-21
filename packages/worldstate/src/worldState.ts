@@ -1,10 +1,10 @@
 import type { Pool } from 'pg';
 
 import { GraphOperations } from './graphOperations';
-import { LocationHelpers } from './locationStore';
+import { LocationHelpers } from './locationHelpers';
 import { createPool } from './pg';
 import type { WorldSchemaStore, ChronicleStore } from './types';
-import { createChronicleStore } from './worldStateStore';
+import { createChronicleStore } from './chronicleStore';
 import { createWorldSchemaStore } from './worldSchemaStore';
 
 /**

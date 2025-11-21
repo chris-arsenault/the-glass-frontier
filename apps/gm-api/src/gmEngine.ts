@@ -36,7 +36,7 @@ import {GmResponseNode} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandler
 import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
 import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
 import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
-import {LoreJudgeNode, LoreSelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/LoreNodes";
+import {LoreJudgeNode, LoreSelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LoreNodes";
 import type { LocationStore } from './types';
 
 type GmEngineOptions = {
@@ -143,7 +143,7 @@ class GmEngine {
     const intentClassifier = new IntentClassifierNode();
     const loreSelector = new LoreSelectorNode();
     const beatDetector = new BeatDetectorNode();
-    const beatDirector = new BeatTrackerNode();
+    const beatTracker = new BeatTrackerNode();
     const checkPlanner = new CheckPlannerNode();
     const gmSummaryNode = new GmSummaryNode();
     const checkRunner = new CheckRunnerNode();
@@ -154,7 +154,7 @@ class GmEngine {
 
     return new GmGraphOrchestrator(
       [intentClassifier, loreSelector, beatDetector, checkPlanner, checkRunner,
-        gmResponseNode, loreJudgeNode, beatDirector, gmSummaryNode,
+        gmResponseNode, loreJudgeNode, beatTracker, gmSummaryNode,
         locationDeltaNode, inventoryDeltaNode],
       this.telemetry,
       { progressEmitter: this.progressEmitter }
@@ -294,6 +294,8 @@ class GmEngine {
       gmTrace: graphResult.gmTrace ?? undefined,
       id: turnId,
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
+      loreOffered: graphResult.loreContext?.offered ?? undefined,
+      loreUsage: graphResult.loreUsage ?? undefined,
       playerIntent: graphResult.playerIntent,
       playerMessage,
       skillCheckPlan: graphResult.skillCheckPlan,

@@ -3,11 +3,11 @@ export { WorldState } from './worldState';
 
 // === Core Stores ===
 export { GraphOperations } from './graphOperations';
-export { createChronicleStore } from './worldStateStore';
+export { createChronicleStore } from './chronicleStore';
 export { createWorldSchemaStore } from './worldSchemaStore';
 
 // === Domain Helpers ===
-export { LocationHelpers } from './locationStore';
+export { LocationHelpers } from './locationHelpers';
 
 // === Types ===
 export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor } from './types';

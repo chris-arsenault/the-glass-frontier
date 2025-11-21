@@ -54,7 +54,7 @@ export const BeatTrackerSchema = z.object({
   updates: z
     .array(BeatUpdateSchema)
     .describe("Only beats that changed; empty array if none."),
-  tags: z.array(z.string()).default([]).optional(),
+  tags: z.array(z.string()).default([]),
 });
 
 export type BeatTracker = z.infer<typeof BeatTrackerSchema>;

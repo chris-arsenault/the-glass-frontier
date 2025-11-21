@@ -1,6 +1,6 @@
 import type { HardState, HardStateLink, LoreFragment, WorldSchema } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
@@ -107,6 +107,13 @@ export function WorldAtlasPage(): JSX.Element {
   }, [entity, schema]);
 
   const relationshipOptions = useMemo(() => schema?.relationshipTypes ?? [], [schema]);
+  const entityLookup = useMemo(() => {
+    const lookup = new Map<string, HardState>();
+    for (const item of entities) {
+      lookup.set(item.id, item);
+    }
+    return lookup;
+  }, [entities]);
 
   const handleSaveEntity = async () => {
     if (!entity) return;
@@ -383,20 +390,31 @@ export function WorldAtlasPage(): JSX.Element {
             <section className="atlas-section">
               <h3>Relationships</h3>
               <div className="atlas-links">
-                {(entity.links ?? []).map((link) => (
-                  <div key={`${link.relationship}-${link.targetId}-${link.direction}`} className="atlas-link-row">
-                    <div className="atlas-link-pill">{link.relationship}</div>
-                    <div className="atlas-link-body">
-                      <span>{link.direction === 'in' ? '←' : '→'}</span>
-                      <span className="atlas-link-target">{link.targetId}</span>
+                {(entity.links ?? []).map((link) => {
+                  const target = entityLookup.get(link.targetId);
+                  const targetName = target?.name ?? link.targetId;
+                  const targetHref = target ? `/atlas/${target.slug}` : null;
+                  return (
+                    <div key={`${link.relationship}-${link.targetId}-${link.direction}`} className="atlas-link-row">
+                      <div className="atlas-link-pill">{link.relationship}</div>
+                      <div className="atlas-link-body">
+                        <span>{link.direction === 'in' ? '←' : '→'}</span>
+                        {targetHref ? (
+                          <Link to={targetHref} className="atlas-link-target">
+                            {targetName}
+                          </Link>
+                        ) : (
+                          <span className="atlas-link-target">{targetName}</span>
+                        )}
+                      </div>
+                      {canModerate ? (
+                        <button type="button" className="atlas-link-action" onClick={() => void handleRemoveLink(link)}>
+                          Remove
+                        </button>
+                      ) : null}
                     </div>
-                    {canModerate ? (
-                      <button type="button" className="atlas-link-action" onClick={() => void handleRemoveLink(link)}>
-                        Remove
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {canModerate ? (
                 <div className="atlas-add-link">

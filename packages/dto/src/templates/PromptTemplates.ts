@@ -13,6 +13,7 @@ export const PromptTemplateIds = [
   'intent-classifier',
   'inventory-delta',
   'location-delta',
+  'lore-judge',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
@@ -114,6 +115,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     label: 'Location Delta',
     officialObjectKey: 'official/location-delta.hbs',
     supportsVariants: true,
+  },
+  'lore-judge': {
+    description: 'Classifies how offered lore fragments were utilized in the GM response.',
+    id: 'lore-judge',
+    label: 'Lore Judge',
+    officialObjectKey: 'official/lore-judge.hbs',
+    supportsVariants: false,
   },
   'planning-narrator': {
     description: 'Summarizes transitional planning/prep scenes with light deltas.',

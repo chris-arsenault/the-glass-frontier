@@ -142,6 +142,15 @@
   flex: 1;
 }
 
+.atlas-link-target {
+  color: #cfe1ff;
+  text-decoration: none;
+}
+
+.atlas-link-target:hover {
+  text-decoration: underline;
+}
+
 .atlas-link-action {
   background: none;
   border: none;

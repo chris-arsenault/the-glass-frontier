@@ -192,7 +192,7 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async getCharacter(characterId: string): Promise<Character | null> {
     const result = await this.#pool.query(
-      `SELECT n.props
+      `SELECT n.props, c.inventory
        FROM character c
        JOIN node n ON n.id = c.id
        WHERE c.id = $1::uuid`,
@@ -202,20 +202,30 @@ class PostgresChronicleStore implements ChronicleStore {
     if (!row) {
       return null;
     }
-    const parsed = ensureInventory(row.props as Character);
-    return parsed;
+    const character = ensureInventory(row.props as Character);
+    // Explicitly merge inventory from character table to ensure it's present
+    return {
+      ...character,
+      inventory: row.inventory ?? character.inventory ?? [],
+    };
   }
 
   async listCharactersByPlayer(playerId: string): Promise<Character[]> {
     const result = await this.#pool.query(
-      `SELECT n.props
+      `SELECT n.props, c.inventory
        FROM character c
        JOIN node n ON n.id = c.id
        WHERE c.player_id = $1
        ORDER BY c.created_at ASC`,
       [playerId]
     );
-    return result.rows.map((row) => ensureInventory(row.props as Character));
+    return result.rows.map((row) => {
+      const character = ensureInventory(row.props as Character);
+      return {
+        ...character,
+        inventory: row.inventory ?? character.inventory ?? [],
+      };
+    });
   }
 
   async upsertChronicle(chronicle: Chronicle): Promise<Chronicle> {

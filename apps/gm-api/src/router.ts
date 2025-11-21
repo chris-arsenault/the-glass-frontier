@@ -18,7 +18,7 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle?.status === 'closed') {
         throw new Error('Chronicle is closed.');
       }
@@ -43,7 +43,7 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle === null || chronicle === undefined) {
         throw new Error('Chronicle not found.');
       }
@@ -52,7 +52,7 @@ export const appRouter = t.router({
       }
       const normalizedTarget =
         typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;
-      const updated = await ctx.worldStateStore.upsertChronicle({
+      const updated = await ctx.chronicleStore.upsertChronicle({
         ...chronicle,
         targetEndTurn: normalizedTarget,
       });

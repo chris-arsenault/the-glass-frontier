@@ -45,6 +45,7 @@ export const templateFragmentMapping: Partial<Record<PromptTemplateId, Chronicle
   'intent-classifier': ['character', 'location', 'beats', 'wrap'],
   'inventory-delta': ['intent', 'user-message', 'inventory', 'lore'],
   'location-delta': ['intent', 'user-message', 'location-detail', 'lore'],
+  'lore-judge': ['lore', 'gm-response'],
   'planning-narrator': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
   'possibility-advisor': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
   'reflection-weaver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],

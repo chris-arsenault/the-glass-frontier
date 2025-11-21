@@ -236,5 +236,12 @@
     "summary": "Hard state descriptions everywhere",
     "details": "Hard state entities now persist and expose an optional description across the world schema, Atlas UI/API, GM location fragments, and location summaries, so narrative surfaces can render richer context.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-29-atlas-relationship-labels",
+    "releasedAt": "2025-11-29",
+    "summary": "Atlas relationships show entity names",
+    "details": "World Atlas relationship rows now display linked entity names instead of ids and link directly to the target Atlas page so moderators can quickly navigate between related entities.",
+    "type": "bugfix"
   }
 ]

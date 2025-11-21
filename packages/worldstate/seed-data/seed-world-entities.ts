@@ -73,8 +73,14 @@ async function seedWorldEntities() {
   // Create a dummy chronicle for lore fragments (required by schema)
   // First create a dummy player, location, and chronicle
   const dummyPlayerId = 'seed-system';
-  const dummyLocationId = randomUUID();
   let dummyChronicleId = randomUUID();
+  const dummyLocation = await worldState.world.upsertEntity({
+    slug: 'seed-chronicle-location',
+    kind: 'location' as any,
+    name: 'Seed Chronicle Location',
+    subkind: 'region' as any,
+    status: 'known' as any,
+  });
 
   try {
     // Create dummy player
@@ -87,9 +93,9 @@ async function seedWorldEntities() {
     // Try to find existing chronicle first, or create new one
     const existingChronicle = await pool.query(
       `SELECT c.id FROM chronicle c
-       JOIN location l ON c.location_id = l.id
-       WHERE l.slug = 'seed-chronicle-location'
-       LIMIT 1`
+       WHERE c.location_id = $1::uuid
+       LIMIT 1`,
+      [dummyLocation.id]
     );
 
     if (existingChronicle.rows.length > 0) {
@@ -97,27 +103,14 @@ async function seedWorldEntities() {
       dummyChronicleId = existingChronicle.rows[0].id;
       console.log(`Reusing existing chronicle ${dummyChronicleId} for lore fragments`);
     } else {
-      // Create dummy location node for chronicle
-      await pool.query(
-        `INSERT INTO node (id, kind, props) VALUES ($1::uuid, 'location', '{}'::jsonb)`,
-        [dummyLocationId]
-      );
-      await pool.query(
-        `INSERT INTO location (id, slug, name, kind) VALUES ($1::uuid, 'seed-chronicle-location', 'Seed Chronicle Location', 'region')`,
-        [dummyLocationId]
-      );
-
-      // Create dummy chronicle node
-      await pool.query(
-        `INSERT INTO node (id, kind, props) VALUES ($1::uuid, 'chronicle', '{}'::jsonb)`,
-        [dummyChronicleId]
-      );
-      await pool.query(
-        `INSERT INTO chronicle (id, player_id, location_id, status, title)
-         VALUES ($1::uuid, $2, $3::uuid, 'closed', 'World Seed Chronicle')`,
-        [dummyChronicleId, dummyPlayerId, dummyLocationId]
-      );
-
+      await worldState.chronicles.ensureChronicle({
+        chronicleId: dummyChronicleId,
+        playerId: dummyPlayerId,
+        locationId: dummyLocation.id,
+        title: 'World Seed Chronicle',
+        status: 'closed',
+        beatsEnabled: false,
+      });
       console.log(`Created dummy chronicle ${dummyChronicleId} for lore fragments`);
     }
   } catch (error) {
