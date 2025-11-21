@@ -1,4 +1,4 @@
-import type { LocationPlace, Player, PlayerPreferences } from '@glass-frontier/dto';
+import type { Player, PlayerPreferences } from '@glass-frontier/dto';
 import {
   Character as CharacterSchema,
   type Character,
@@ -13,7 +13,6 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 import type { Context } from './context';
-import { resetPlaywrightFixtures } from './playwright/resetFixtures';
 
 type EnsureChronicleResult = Awaited<
   ReturnType<Context['worldStateStore']['ensureChronicle']>
@@ -149,14 +148,6 @@ export const appRouter = t.router({
     .input(z.object({ playerId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.worldStateStore.listChroniclesByPlayer(input.playerId)),
 
-  resetPlaywrightFixtures: t.procedure.mutation(async ({ ctx }) => {
-    if (process.env.PLAYWRIGHT_RESET_ENABLED !== '1') {
-      throw new Error('Playwright reset disabled');
-    }
-    await resetPlaywrightFixtures(ctx);
-    return { ok: true };
-  }),
-
   submitBugReport: t.procedure
     .input(
       BugReportSubmissionSchema.extend({
@@ -218,39 +209,26 @@ async function createChronicleHandler(
   ensureCharacterOwnership(character, input.playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
-  const existingPlace = await resolveExistingPlace(ctx, input.locationId);
-  ensureLocationSelection(existingPlace, input);
-  const localeDetails = resolveLocaleDetails(input, existingPlace);
-
-  const locationRoot = await ctx.locationGraphStore.upsertLocation({
-    description: localeDetails.description,
-    id: existingPlace?.locationId ?? input.locationId,
-    kind: localeDetails.kind,
-    name: localeDetails.name,
-    parentId: null,
-    tags: deriveLocationTags(localeDetails.description),
+  const locationId = input.locationId ?? randomUUID();
+  const locationName = resolveLocationName(input);
+  await ctx.worldSchemaStore.upsertHardState({
+    id: locationId,
+    kind: 'location',
+    name: locationName,
+    status: 'known',
   });
-
-  // Move character to the location if characterId provided
-  if (isNonEmptyString(input.characterId)) {
-    await ctx.locationGraphStore.moveCharacterToLocation({
-      characterId: input.characterId,
-      placeId: locationRoot.id,
-    });
-  }
 
   const chronicle = await ctx.worldStateStore.ensureChronicle({
     beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,
-    locationId: locationRoot.locationId,
+    locationId,
     playerId: input.playerId,
     seedText: input.seedText,
     status: input.status,
     title: input.title,
   });
 
-  await maybeMoveCharacterToExistingPlace(ctx, input.characterId, existingPlace);
   log('info', `Ensuring chronicle ${chronicle.id} for player ${chronicle.playerId}`);
   return { chronicle };
 }
@@ -269,78 +247,14 @@ function ensureCharacterOwnership(character: Character, playerId: string): void 
   }
 }
 
-async function resolveExistingPlace(
-  ctx: Context,
-  locationId?: string
-): Promise<LocationPlace | null> {
-  if (!isNonEmptyString(locationId)) {
-    return null;
-  }
-  return ctx.locationGraphStore.getPlace(locationId);
-}
-
-function ensureLocationSelection(
-  existingPlace: LocationPlace | null,
-  input: CreateChronicleInput
-): void {
-  if (
-    isNonEmptyString(input.locationId) &&
-    existingPlace === null &&
-    input.location === undefined
-  ) {
-    throw new Error('Selected location was not found.');
-  }
-}
-
-function resolveLocaleDetails(
-  input: CreateChronicleInput,
-  existingPlace: LocationPlace | null
-): { description: string; kind: string; name: string } {
-  return {
-    description: resolveLocaleDescription(input, existingPlace),
-    kind: existingPlace?.kind ?? 'locale',
-    name: resolveLocaleName(input, existingPlace),
-  };
-}
-
-function resolveLocaleDescription(
-  input: CreateChronicleInput,
-  existingPlace: LocationPlace | null
-): string {
-  if (isNonEmptyString(input.location?.atmosphere)) {
-    return input.location.atmosphere.trim();
-  }
-  if (isNonEmptyString(existingPlace?.description)) {
-    return existingPlace.description;
-  }
-  return 'Atmosphere undisclosed.';
-}
-
-function resolveLocaleName(
-  input: CreateChronicleInput,
-  existingPlace: LocationPlace | null
-): string {
+function resolveLocationName(input: CreateChronicleInput): string {
   if (isNonEmptyString(input.location?.locale)) {
     return input.location.locale.trim();
   }
-  if (isNonEmptyString(existingPlace?.name)) {
-    return existingPlace.name;
+  if (isNonEmptyString(input.title)) {
+    return `${input.title} Locale`.slice(0, 80);
   }
   return 'Uncatalogued Locale';
-}
-
-async function maybeMoveCharacterToExistingPlace(
-  ctx: Context,
-  characterId: string,
-  place: LocationPlace | null
-): Promise<void> {
-  if (place === null) {
-    return;
-  }
-  await ctx.locationGraphStore.moveCharacterToLocation({
-    characterId,
-    placeId: place.id,
-  });
 }
 
 async function augmentChronicleSnapshot(
@@ -348,39 +262,7 @@ async function augmentChronicleSnapshot(
   chronicleId: string
 ): Promise<ChronicleState | null> {
   const snapshot = await ctx.worldStateStore.getChronicleState(chronicleId);
-  if (snapshot === null || snapshot === undefined) {
-    return null;
-  }
-  const characterId = snapshot.chronicle.characterId ?? snapshot.character?.id ?? null;
-  const locationId = snapshot.chronicle.locationId;
-  if (isNonEmptyString(characterId) && isNonEmptyString(locationId)) {
-    const state = await ctx.locationGraphStore.getLocationState(characterId);
-    if (state) {
-      const breadcrumb = await ctx.locationGraphStore.getLocationChain({
-        anchorId: state.anchorPlaceId,
-      });
-      snapshot.location = {
-        anchorPlaceId: state.anchorPlaceId,
-        breadcrumb,
-        certainty: state.certainty,
-        description: undefined,
-        status: state.status ?? [],
-        tags: [],
-      };
-    }
-  }
   return snapshot;
-}
-
-function deriveLocationTags(atmosphere: string): string[] {
-  if (!isNonEmptyString(atmosphere)) {
-    return [];
-  }
-  return atmosphere
-    .split(/[,.]/)
-    .map((part) => part.trim().toLowerCase())
-    .filter((part) => part.length > 1)
-    .slice(0, 6);
 }
 
 const isNonEmptyString = (value: unknown): value is string =>

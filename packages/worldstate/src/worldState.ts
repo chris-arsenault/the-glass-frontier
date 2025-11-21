@@ -1,9 +1,8 @@
 import type { Pool } from 'pg';
 
 import { GraphOperations } from './graphOperations';
-import { createLocationStore } from './locationStore';
 import { createPool } from './pg';
-import type { LocationStore, WorldSchemaStore, WorldStateStore as ChronicleStore } from './types';
+import type { WorldSchemaStore, WorldStateStore as ChronicleStore } from './types';
 import { createWorldStateStore } from './worldStateStore';
 import { createWorldSchemaStore } from './worldSchemaStore';
 
@@ -15,18 +14,15 @@ import { createWorldSchemaStore } from './worldSchemaStore';
 export class WorldState {
   readonly #graph: GraphOperations;
   readonly #chronicles: ChronicleStore;
-  readonly #locations: LocationStore;
   readonly #world: WorldSchemaStore;
 
   private constructor(options: {
     graph: GraphOperations;
     chronicles: ChronicleStore;
-    locations: LocationStore;
     world: WorldSchemaStore;
   }) {
     this.#graph = options.graph;
     this.#chronicles = options.chronicles;
-    this.#locations = options.locations;
     this.#world = options.world;
   }
 
@@ -46,19 +42,16 @@ export class WorldState {
     // Shared graph operations for all knowledge domains
     const graph = new GraphOperations(pool);
 
-    // Create domain stores with shared graph operations
-    const locations = createLocationStore({ pool, graph });
+    const world = createWorldSchemaStore({ pool, graph });
     const chronicles = createWorldStateStore({
       pool,
       graph,
-      locationStore: locations,
+      worldStore: world,
     });
-    const world = createWorldSchemaStore({ pool, graph });
 
     return new WorldState({
       graph,
       chronicles,
-      locations,
       world,
     });
   }
@@ -76,13 +69,6 @@ export class WorldState {
    */
   get chronicles(): ChronicleStore {
     return this.#chronicles;
-  }
-
-  /**
-   * Location graph operations.
-   */
-  get locations(): LocationStore {
-    return this.#locations;
   }
 
   /**

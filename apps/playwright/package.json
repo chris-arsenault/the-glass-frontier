@@ -1,0 +1,23 @@
+{
+  "name": "@glass-frontier/playwright",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/server_local.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server_local.js"
+  },
+  "dependencies": {
+    "@glass-frontier/worldstate": "workspace:*",
+    "@glass-frontier/app": "workspace:*",
+    "@glass-frontier/utils": "workspace:*",
+    "express": "^4.19.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

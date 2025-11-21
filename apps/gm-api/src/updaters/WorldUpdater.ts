@@ -1,8 +1,8 @@
 import type { Character, Chronicle, LocationSummary } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
-import type { LocationStore, WorldStateStore } from '@glass-frontier/worldstate';
+import type { WorldStateStore } from '@glass-frontier/worldstate';
 
-import type { GraphContext } from '../types';
+import type { GraphContext, LocationStore } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
 import { createUpdatedCharacter } from './characterUpdater';
 import { createUpdatedInventory } from './inventoryUpdater';

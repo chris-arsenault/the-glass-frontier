@@ -2,15 +2,15 @@
 import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
 import {
   createWorldStateStore,
-  createLocationStore,
-  type WorldStateStore,
-  type LocationStore,
   createWorldSchemaStore,
+  type WorldStateStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
 
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";
+import { createNoopLocationStore } from './locationStoreNoop';
+import type { LocationStore } from './types';
 
 const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
 if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
@@ -18,9 +18,12 @@ if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().le
 }
 
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
-const locationGraphStore = createLocationStore({ connectionString: worldstateDatabaseUrl });
-const worldStateStore = createWorldStateStore({ connectionString: worldstateDatabaseUrl, locationGraphStore });
 const worldSchemaStore = createWorldSchemaStore({ connectionString: worldstateDatabaseUrl });
+const locationGraphStore = createNoopLocationStore();
+const worldStateStore = createWorldStateStore({
+  connectionString: worldstateDatabaseUrl,
+  worldStore: worldSchemaStore,
+});
 const templateManager = appStore.promptTemplateManager;
 const llmClient = createLLMClient();
 

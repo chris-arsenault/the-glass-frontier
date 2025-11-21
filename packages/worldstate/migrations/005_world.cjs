@@ -8,6 +8,11 @@ const worldSchema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 exports.shorthands = undefined;
 
 exports.up = async (pgm) => {
+  pgm.createTable('world_prominence', {
+    id: { type: 'text', primaryKey: true },
+    rank: { type: 'integer', notNull: true },
+    created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
+  });
   pgm.createTable('world_kind', {
     id: { type: 'text', primaryKey: true },
     category: { type: 'text' },
@@ -55,9 +60,17 @@ exports.up = async (pgm) => {
 
   pgm.createTable('hard_state', {
     id: { type: 'uuid', primaryKey: true, references: 'node(id)', onDelete: 'CASCADE' },
+    slug: { type: 'text', notNull: true, unique: true },
     kind: { type: 'text', notNull: true, references: 'world_kind(id)', onDelete: 'RESTRICT' },
     subkind: { type: 'text' },
     name: { type: 'text', notNull: true },
+    prominence: {
+      type: 'text',
+      notNull: true,
+      default: 'recognized',
+      references: 'world_prominence(id)',
+      onDelete: 'RESTRICT',
+    },
     status: { type: 'text' },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
@@ -79,28 +92,21 @@ exports.up = async (pgm) => {
     deferrable: false,
   });
   pgm.createIndex('hard_state', 'kind', { name: 'hard_state_kind_idx' });
+  pgm.createIndex('hard_state', 'slug', { name: 'hard_state_slug_idx', unique: true });
+  pgm.addConstraint('hard_state', 'hard_state_prominence_check', {
+    check: "prominence IN ('forgotten','marginal','recognized','renowned','mythic')",
+  });
 
   pgm.createTable('lore_fragment', {
     id: { type: 'uuid', primaryKey: true, references: 'node(id)', onDelete: 'CASCADE' },
     entity_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'CASCADE' },
     chronicle_id: { type: 'uuid', references: 'chronicle(id)', onDelete: 'SET NULL' },
     beat_id: { type: 'text' },
-    turn_start: { type: 'integer' },
-    turn_end: { type: 'integer' },
     title: { type: 'text', notNull: true },
     prose: { type: 'text', notNull: true },
     tags: { type: 'text[]', notNull: true, default: pgm.func(`'{}'::text[]`) },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.addConstraint(
-    'lore_fragment',
-    'lore_fragment_turn_range_check',
-    `CHECK (
-        (turn_start IS NULL AND turn_end IS NULL)
-        OR
-        (turn_start IS NOT NULL AND turn_end IS NOT NULL AND turn_end >= turn_start)
-      )`
-  );
   pgm.createIndex('lore_fragment', ['entity_id', 'created_at'], {
     name: 'lore_fragment_entity_idx',
   });
@@ -112,13 +118,15 @@ exports.up = async (pgm) => {
 exports.down = (pgm) => {
   pgm.dropIndex('lore_fragment', 'chronicle_id', { ifExists: true, name: 'lore_fragment_chronicle_idx' });
   pgm.dropIndex('lore_fragment', ['entity_id', 'created_at'], { ifExists: true, name: 'lore_fragment_entity_idx' });
-  pgm.dropConstraint('lore_fragment', 'lore_fragment_turn_range_check', { ifExists: true });
   pgm.dropTable('lore_fragment', { ifExists: true });
 
   pgm.dropIndex('hard_state', 'kind', { ifExists: true, name: 'hard_state_kind_idx' });
   pgm.dropConstraint('hard_state', 'hard_state_status_fk', { ifExists: true });
   pgm.dropConstraint('hard_state', 'hard_state_subkind_fk', { ifExists: true });
+  pgm.dropIndex('hard_state', 'slug', { ifExists: true, name: 'hard_state_slug_idx' });
+  pgm.dropConstraint('hard_state', 'hard_state_prominence_check', { ifExists: true });
   pgm.dropTable('hard_state', { ifExists: true });
+  pgm.dropTable('world_prominence', { ifExists: true });
 
   pgm.dropConstraint('world_relationship_rule', 'world_relationship_rule_pk', { ifExists: true });
   pgm.dropTable('world_relationship_rule', { ifExists: true });
@@ -137,6 +145,14 @@ async function seedWorldSchema(pgm, schema) {
   if (!schema || !schema.kinds) {
     return;
   }
+
+  pgm.sql(`INSERT INTO world_prominence (id, rank) VALUES
+    ('forgotten', 0),
+    ('marginal', 1),
+    ('recognized', 2),
+    ('renowned', 3),
+    ('mythic', 4)
+  ON CONFLICT (id) DO NOTHING`);
 
   const escape = (value) => {
     if (value === null || value === undefined) {

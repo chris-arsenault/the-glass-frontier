@@ -1,6 +1,6 @@
 import type { HardState, HardStateLink, LoreFragment, WorldSchema } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
@@ -16,11 +16,6 @@ type FragmentDraft = {
 };
 
 const toLine = (items: string[]) => items.join(', ');
-
-const isUuid = (value: string): boolean =>
-  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
-    value
-  );
 
 export function WorldAtlasPage(): JSX.Element {
   const { slug } = useParams<{ slug?: string }>();
@@ -45,7 +40,7 @@ export function WorldAtlasPage(): JSX.Element {
     targetId: '',
   });
   const [startTitle, setStartTitle] = useState('');
-  const [startLocationId, setStartLocationId] = useState('');
+  const [startLocationSlug, setStartLocationSlug] = useState(slug ?? '');
 
   const load = async () => {
     if (!slug) {
@@ -57,12 +52,6 @@ export function WorldAtlasPage(): JSX.Element {
     setIsLoading(true);
     setError(null);
     try {
-      if (!isUuid(slug)) {
-        setError(null);
-        setEntity(null);
-        setFragments([]);
-        return;
-      }
       const [details, schemaResult] = await Promise.all([
         worldAtlasClient.getEntity(slug),
         worldSchemaClient.getSchema(),
@@ -98,6 +87,12 @@ export function WorldAtlasPage(): JSX.Element {
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load entities'))
       .finally(() => setIsLoading(false));
   }, [entities.length, isLoading, schema]);
+
+  useEffect(() => {
+    if (entity && entity.kind === 'location') {
+      setStartLocationSlug((prev) => (prev ? prev : entity.slug));
+    }
+  }, [entity]);
 
   const statusOptions = useMemo(() => {
     if (!entity || !schema) return [];
@@ -233,8 +228,8 @@ export function WorldAtlasPage(): JSX.Element {
     setError(null);
     try {
       const chronicle = await worldAtlasClient.startChronicle({
-        anchorEntityId: entity.id,
-        locationId: startLocationId,
+        anchorSlug: entity.slug,
+        locationSlug: startLocationSlug,
         playerId,
         title: startTitle || entity.name,
       });
@@ -279,7 +274,7 @@ export function WorldAtlasPage(): JSX.Element {
                 key={item.id}
                 className="atlas-list-card"
                 type="button"
-                onClick={() => navigate(`/atlas/${item.id}`)}
+                onClick={() => navigate(`/atlas/${item.slug}`)}
               >
                 <p className="atlas-list-kind">{item.kind}</p>
                 <p className="atlas-list-name">{item.name}</p>
@@ -304,14 +299,14 @@ export function WorldAtlasPage(): JSX.Element {
                 <input value={startTitle} onChange={(e) => setStartTitle(e.target.value)} />
               </label>
               <label>
-                Location ID
+                Location slug
                 <input
-                  value={startLocationId}
-                  onChange={(e) => setStartLocationId(e.target.value)}
-                  placeholder="Location UUID"
+                  value={startLocationSlug}
+                  onChange={(e) => setStartLocationSlug(e.target.value)}
+                  placeholder="location_slug"
                 />
               </label>
-              <button type="button" onClick={() => void handleStartChronicle()} disabled={isSaving || !startLocationId}>
+              <button type="button" onClick={() => void handleStartChronicle()} disabled={isSaving || !startLocationSlug}>
                 Start chronicle
               </button>
             </div>

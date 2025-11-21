@@ -5,6 +5,7 @@ export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'create';
 
 export type SelectedLocationSummary = {
   id: string;
+  slug: string;
   name: string;
   breadcrumb: LocationBreadcrumbEntry[];
 }

@@ -75,7 +75,6 @@ const resetDatabase = async (executor: Pool): Promise<void> => {
     'chronicle',
     'hard_state',
     'character',
-    'location',
     'edge',
     'node',
   ];
@@ -171,174 +170,40 @@ afterAll(async () => {
   await pool.end();
 });
 
-describe('LocationStore', () => {
-  it('returns canonical parents for descendants', async () => {
-    const root = await worldState.locations.upsertLocation({ kind: 'region', name: 'Root' });
-    const child = await worldState.locations.upsertLocation({
-      kind: 'zone',
-      name: 'Child',
-      parentId: root.id,
+describe('Locations as hard state', () => {
+  it('creates missing location entries as hard state when starting a chronicle', async () => {
+    const locationId = randomUUID();
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      characterId: undefined,
+      locationId,
+      playerId: TEST_PLAYER_ID,
+      title: 'Missing Location Chronicle',
     });
-    const grandchild = await worldState.locations.upsertLocation({
-      kind: 'room',
-      name: 'Grandchild',
-      parentId: child.id,
-    });
+    const hardState = await worldState.world.getHardState({ id: locationId });
 
-    const details = await worldState.locations.getLocationDetails({ id: root.id });
-    const byName = new Map(details.children.map((place) => [place.name, place]));
-
-    expect(byName.size).toBe(2);
-    expect(byName.get('Child')?.canonicalParentId).toBe(root.id);
-    expect(byName.get('Grandchild')?.canonicalParentId).toBe(child.id);
+    expect(chronicle.locationId).toBe(locationId);
+    expect(hardState?.kind).toBe('location');
+    expect(hardState?.name).toBe('Missing Location Chronicle');
   });
 
-  it('resolves parent, children, and siblings in neighbors', async () => {
-    const root = await worldState.locations.upsertLocation({ kind: 'region', name: 'Hub' });
-    const first = await worldState.locations.upsertLocation({
-      kind: 'zone',
-      name: 'First',
-      parentId: root.id,
+  it('summarizes chronicle locations from hard state records', async () => {
+    const location = await worldState.world.upsertHardState({
+      kind: 'location',
+      name: 'Atlas Landing',
+      status: 'known',
+      subkind: 'site',
     });
-    const second = await worldState.locations.upsertLocation({
-      kind: 'zone',
-      name: 'Second',
-      parentId: root.id,
-    });
-    const childOfFirst = await worldState.locations.upsertLocation({
-      kind: 'room',
-      name: 'Nested',
-      parentId: first.id,
-    });
-
-    const neighbors = await worldState.locations.getLocationNeighbors({ id: first.id });
-
-    expect(neighbors.parent?.id).toBe(root.id);
-    expect(neighbors.children.map((place) => place.id)).toContain(childOfFirst.id);
-    expect(neighbors.siblings.map((place) => place.id)).toContain(second.id);
-  });
-
-  it('upserts adjacency edges without duplication', async () => {
-    const origin = await worldState.locations.upsertLocation({ kind: 'region', name: 'Origin' });
-    const target = await worldState.locations.upsertLocation({ kind: 'region', name: 'Target' });
-
-    await worldState.locations.upsertEdge({
-      dst: target.id,
-      kind: 'ADJACENT_TO',
-      metadata: { note: 'first' },
-      src: origin.id,
-    });
-    await worldState.locations.upsertEdge({
-      dst: target.id,
-      kind: 'ADJACENT_TO',
-      metadata: { note: 'updated' },
-      src: origin.id,
-    });
-
-    const neighbors = await worldState.locations.getLocationNeighbors({ id: origin.id });
-    const adjacency = neighbors.adjacent.filter((entry) => entry.neighbor.id === target.id);
-
-    expect(adjacency).toHaveLength(1);
-    expect(adjacency[0]?.edge.metadata).toEqual({ note: 'updated' });
-  });
-
-  it('creates locations with requested relationships', async () => {
-    const root = await worldState.locations.upsertLocation({ kind: 'region', name: 'Root A' });
-    const anchor = await worldState.locations.upsertLocation({
-      kind: 'zone',
-      name: 'Anchor',
-      parentId: root.id,
-    });
-
-    const inside = await worldState.locations.createLocationWithRelationship({
-      anchorId: anchor.id,
-      kind: 'room',
-      name: 'Inside',
-      relationship: 'inside',
-    });
-    const adjacent = await worldState.locations.createLocationWithRelationship({
-      anchorId: anchor.id,
-      kind: 'room',
-      name: 'Next Door',
-      relationship: 'adjacent',
-    });
-    const neighbors = await worldState.locations.getLocationNeighbors({ id: anchor.id });
-
-    expect(inside.canonicalParentId).toBe(anchor.id);
-    expect(adjacent.canonicalParentId).toBe(root.id);
-    expect(neighbors.adjacent.map((entry) => entry.neighbor.id)).toContain(adjacent.id);
-  });
-
-  it('removes locations and their edges', async () => {
-    const root = await worldState.locations.upsertLocation({ kind: 'region', name: 'Root B' });
-    const child = await worldState.locations.upsertLocation({
-      kind: 'zone',
-      name: 'Disposable',
-      parentId: root.id,
-    });
-    await worldState.locations.upsertEdge({
-      dst: root.id,
-      kind: 'LINKS_TO',
-      src: child.id,
-    });
-
-    await worldState.locations.deleteLocation({ id: child.id });
-    const lookup = await worldState.locations.getPlace(child.id);
-    const neighbors = await worldState.locations.getLocationNeighbors({ id: root.id });
-
-    expect(lookup).toBeNull();
-    expect(neighbors.children.some((place) => place.id === child.id)).toBe(false);
-    expect(neighbors.links.some((entry) => entry.neighbor.id === child.id)).toBe(false);
-  });
-
-  it('tracks character location relative to the root place', async () => {
-    const root = await worldState.locations.upsertLocation({ kind: 'region', name: 'Base' });
-    const room = await worldState.locations.upsertLocation({
-      kind: 'room',
-      name: 'Room',
-      parentId: root.id,
-    });
-    const character = await worldState.chronicles.upsertCharacter(
-      defaultCharacter({ name: 'Mover' })
-    );
-
-    const state = await worldState.locations.moveCharacterToLocation({
-      characterId: character.id,
-      placeId: room.id,
-      status: ['walking'],
-    });
-    const persisted = await worldState.locations.getLocationState(character.id);
-
-    expect(state.locationId).toBe(root.id);
-    expect(state.anchorPlaceId).toBe(room.id);
-    expect(persisted).not.toBeNull();
-    expect(persisted?.locationId).toBe(root.id);
-    expect(persisted?.anchorPlaceId).toBe(room.id);
-    expect(persisted?.status).toEqual(['walking']);
-  });
-
-  it('persists and lists location events', async () => {
-    const location = await worldState.locations.upsertLocation({ kind: 'region', name: 'Events' });
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,
       locationId: location.id,
       playerId: TEST_PLAYER_ID,
-      title: 'Events Chronicle',
+      title: 'Anchored Chronicle',
     });
+    const state = await worldState.chronicles.getChronicleState(chronicle.id);
 
-    const inserted = await worldState.locations.appendLocationEvents({
-      events: [
-        { chronicleId: chronicle.id, summary: 'Event one' },
-        { chronicleId: chronicle.id, summary: 'Event two', metadata: { severity: 'low' } },
-      ],
-      locationId: location.id,
-    });
-    const listed = await worldState.locations.listLocationEvents({ locationId: location.id });
-
-    expect(inserted).toHaveLength(2);
-    expect(listed.map((event) => event.summary)).toEqual(['Event one', 'Event two']);
-    expect(listed[0]?.chronicleId).toBe(chronicle.id);
-    expect(listed[1]?.metadata).toEqual({ severity: 'low' });
+    expect(state?.location?.anchorPlaceId).toBe(location.id);
+    expect(state?.location?.breadcrumb[0]?.name).toBe('Atlas Landing');
+    expect(state?.location?.status).toEqual(['known']);
   });
 });
 
@@ -405,9 +270,7 @@ describe('World schema', () => {
   });
 
   it('creates lore fragments linked to hard state', async () => {
-    const place = await worldState.locations.upsertLocation({ kind: 'region', name: 'Lore Root Place' });
     const root = await worldState.world.upsertHardState({
-      id: place.id,
       kind: 'location',
       name: 'Lore Root',
       status: 'known',
@@ -415,13 +278,13 @@ describe('World schema', () => {
     });
     const character = await worldState.chronicles.upsertCharacter(defaultCharacter());
     const chronicle = await worldState.chronicles.upsertChronicle(
-      defaultChronicle(place.id, { characterId: character.id })
+      defaultChronicle(root.id, { characterId: character.id })
     );
 
     const fragment = await worldState.world.createLoreFragment({
       entityId: root.id,
       prose: 'An old story about the root.',
-      source: { beatId: 'beat-1', chronicleId: chronicle.id, turnRange: [0, 2] },
+      source: { beatId: 'beat-1', chronicleId: chronicle.id },
       tags: ['Myth', 'origin'],
       title: 'Origin Story',
     });
@@ -429,16 +292,17 @@ describe('World schema', () => {
 
     expect(fragment.title).toBe('Origin Story');
     expect(listed).toHaveLength(1);
-    expect(listed[0]?.source.turnRange).toEqual([0, 2]);
     expect(listed[0]?.tags).toEqual(['myth', 'origin']);
   });
 });
 
 describe('WorldStateStore', () => {
   it('creates characters and chronicles with turn history', async () => {
-    const startingLocation = await worldState.locations.upsertLocation({
-      kind: 'region',
+    const startingLocation = await worldState.world.upsertHardState({
+      kind: 'location',
       name: 'Chronicle Root',
+      status: 'known',
+      subkind: 'region',
     });
     const character = await worldState.chronicles.upsertCharacter(defaultCharacter());
     const chronicle = await worldState.chronicles.upsertChronicle(
@@ -461,7 +325,12 @@ describe('WorldStateStore', () => {
   });
 
   it('ensures chronicle retrieval respects the most recent turn ordering', async () => {
-    const location = await worldState.locations.upsertLocation({ kind: 'region', name: 'Order' });
+    const location = await worldState.world.upsertHardState({
+      kind: 'location',
+      name: 'Order',
+      status: 'known',
+      subkind: 'region',
+    });
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,
       locationId: location.id,
@@ -488,7 +357,12 @@ describe('WorldStateStore', () => {
       status: 'known',
       subkind: 'site',
     });
-    const location = await worldState.locations.upsertLocation({ kind: 'region', name: 'Anchor Location' });
+    const location = await worldState.world.upsertHardState({
+      kind: 'location',
+      name: 'Anchor Location',
+      status: 'known',
+      subkind: 'region',
+    });
     const chronicle = await worldState.chronicles.ensureChronicle({
       anchorEntityId: anchor.id,
       locationId: location.id,

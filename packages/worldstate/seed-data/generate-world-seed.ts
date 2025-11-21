@@ -230,12 +230,16 @@ function generateRelationships(
       for (const relType of (allowedRels as string[])) {
         if (!usedRelTypes.has(relType)) {
           // Create first instance of this relationship type
-          relationships.push({
-            id: `REL-${String(relationshipIdCounter++).padStart(6, '0')}`,
-            from: fromEntities[0].id,
-            to: toEntities[0].id,
-            relationshipType: relType
-          });
+          // Skip if it would be self-referential
+          const toEntityIndex = fromKind === toKind && toEntities.length > 1 ? 1 : 0;
+          if (fromEntities[0].id !== toEntities[toEntityIndex].id) {
+            relationships.push({
+              id: `REL-${String(relationshipIdCounter++).padStart(6, '0')}`,
+              from: fromEntities[0].id,
+              to: toEntities[toEntityIndex].id,
+              relationshipType: relType
+            });
+          }
           usedRelTypes.add(relType);
         }
       }
@@ -248,12 +252,15 @@ function generateRelationships(
           const relType = (allowedRels as string[])[j % (allowedRels as string[]).length];
           const toEntity = toEntities[(i * relsPerEntity + j) % toEntities.length];
 
-          relationships.push({
-            id: `REL-${String(relationshipIdCounter++).padStart(6, '0')}`,
-            from: fromEntities[i].id,
-            to: toEntity.id,
-            relationshipType: relType
-          });
+          // Skip self-referential relationships
+          if (fromEntities[i].id !== toEntity.id) {
+            relationships.push({
+              id: `REL-${String(relationshipIdCounter++).padStart(6, '0')}`,
+              from: fromEntities[i].id,
+              to: toEntity.id,
+              relationshipType: relType
+            });
+          }
         }
       }
     }

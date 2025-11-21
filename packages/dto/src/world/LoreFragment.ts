@@ -3,11 +3,8 @@ import { z } from 'zod';
 import { HardStateKind } from './HardState';
 
 export const LoreFragmentSource = z.object({
-  chronicleId: z.string().min(1),
+  chronicleId: z.string().min(1).optional(),
   beatId: z.string().min(1).optional(),
-  turnRange: z
-    .tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
-    .optional(),
   entityKind: HardStateKind.optional(),
 });
 

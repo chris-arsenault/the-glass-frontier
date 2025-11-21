@@ -13,6 +13,7 @@ export const LocationSummary = z.object({
   breadcrumb: z.array(LocationBreadcrumbEntry).nonempty(),
   certainty: LocationCertainty,
   description: z.string().optional(),
+  slug: z.string().min(1).optional(),
   status: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
 });

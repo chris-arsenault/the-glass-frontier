@@ -6,9 +6,8 @@ import type {
 } from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import {
-  createLocationStore,
   createWorldStateStore,
-  type LocationStore,
+  createWorldSchemaStore,
   type WorldStateStore,
 } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
@@ -30,20 +29,14 @@ import {
 
 type ChronicleSnapshot = NonNullable<Awaited<ReturnType<WorldStateStore['getChronicleState']>>>;
 
-const SUMMARY_HANDLERS: ChronicleSummaryKind[] = [
-  'chronicle_story',
-  'location_events',
-  'character_bio',
-];
+const SUMMARY_HANDLERS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 
 class ChronicleClosureProcessor {
   readonly #worldStateStore: WorldStateStore;
-  readonly #locationGraphStore: LocationStore;
   readonly #llm: RetryLLMClient;
 
   constructor(options?: {
     worldStateStore?: WorldStateStore;
-    locationGraphStore?: LocationStore;
     llmClient?: RetryLLMClient;
   }) {
     const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL ?? '';
@@ -51,14 +44,14 @@ class ChronicleClosureProcessor {
       throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the chronicle closer.');
     }
 
-    this.#locationGraphStore =
-      options?.locationGraphStore ??
-      createLocationStore({ connectionString: worldstateDatabaseUrl });
+    const worldSchemaStore = createWorldSchemaStore({
+      connectionString: worldstateDatabaseUrl,
+    });
     this.#worldStateStore =
       options?.worldStateStore ??
       createWorldStateStore({
         connectionString: worldstateDatabaseUrl,
-        locationGraphStore: this.#locationGraphStore,
+        worldStore: worldSchemaStore,
       });
     this.#llm = options?.llmClient ?? createLLMClient();
   }
@@ -92,9 +85,6 @@ class ChronicleClosureProcessor {
     case 'chronicle_story':
       await this.#generateChronicleStorySummary(context, event);
       break;
-    case 'location_events':
-      await this.#generateLocationEvents(context, event);
-      break;
     case 'character_bio':
       await this.#generateCharacterBio(context, event);
       break;
@@ -124,33 +114,11 @@ class ChronicleClosureProcessor {
   }
 
   async #resolveLocationName(chronicle: Chronicle): Promise<string> {
-    const place = await this.#locationGraphStore.getPlace(chronicle.locationId);
-    if (place !== null) {
-      return place.name;
-    }
-    return 'Unknown Location';
+    return chronicle.locationId ?? 'Unknown Location';
   }
 
   async #resolveLocationSummary(snapshot: ChronicleSnapshot): Promise<LocationSummary | null> {
-    const characterId = snapshot.character?.id;
-    if (typeof characterId !== 'string' || characterId.trim().length === 0) {
-      return null;
-    }
-    const state = await this.#locationGraphStore.getLocationState(characterId);
-    if (!state) {
-      return null;
-    }
-    const breadcrumb = await this.#locationGraphStore.getLocationChain({
-      anchorId: state.anchorPlaceId,
-    });
-    return {
-      anchorPlaceId: state.anchorPlaceId,
-      breadcrumb,
-      certainty: state.certainty,
-      description: undefined,
-      status: state.status ?? [],
-      tags: [],
-    };
+    return snapshot.location ?? null;
   }
 
   async #generateChronicleStorySummary(
@@ -245,77 +213,6 @@ class ChronicleClosureProcessor {
       characterId: character.id,
       chronicleId: context.chronicle.id,
       turnSequence: event.turnSequence,
-    });
-  }
-
-  async #hasRecordedLocationEvents(chronicle: Chronicle): Promise<boolean> {
-    const existing = await this.#locationGraphStore.listLocationEvents({
-      locationId: chronicle.locationId,
-    });
-    return existing.some((entry) => entry.chronicleId === chronicle.id);
-  }
-
-  async #fetchLocationEventFragments(
-    context: SummaryContext,
-    chronicle: Chronicle
-  ): Promise<{ fragments: LocationEventFragment[]; provider?: string; requestId: string } | null> {
-    const prompt = buildLocationEventsPrompt(context);
-    try {
-      const response = await this.#llm.generateJson({
-        maxTokens: 600,
-        metadata: {
-          chronicleId: chronicle.id,
-          operation: 'chronicle-closer.location-events',
-        },
-        prompt,
-        temperature: 0.25,
-      });
-      const parsed = LocationEventsResponseSchema.safeParse(response.json);
-      if (!parsed.success) {
-        log('warn', 'chronicle-closer.location-parse-failed', {
-          chronicleId: chronicle.id,
-          reason: parsed.error.message,
-        });
-        return null;
-      }
-      const fragments = flattenLocationEvents(parsed.data);
-      if (fragments.length === 0) {
-        return null;
-      }
-      return { fragments, provider: response.provider, requestId: response.requestId };
-    } catch (error) {
-      log('error', 'chronicle-closer.location-events-request-failed', {
-        chronicleId: chronicle.id,
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-      return null;
-    }
-  }
-
-  async #persistLocationEvents(input: {
-    chronicle: Chronicle;
-    fragments: LocationEventFragment[];
-    provider?: string;
-    requestId: string;
-    turnSequence: number;
-  }): Promise<void> {
-    await this.#locationGraphStore.appendLocationEvents({
-      events: input.fragments.map((entry) => ({
-        chronicleId: input.chronicle.id,
-        metadata: {
-          provider: input.provider,
-          requestId: input.requestId,
-          scope: entry.name,
-          turnSequence: input.turnSequence,
-        },
-        scope: entry.name,
-        summary: entry.summary,
-      })),
-      locationId: input.chronicle.locationId,
-    });
-    log('info', 'chronicle-closer.location-events-recorded', {
-      chronicleId: input.chronicle.id,
-      eventCount: input.fragments.length,
     });
   }
 

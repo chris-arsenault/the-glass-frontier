@@ -14,7 +14,6 @@ import { PlayerSettingsModal } from './components/modals/PlayerSettingsModal/Pla
 import { UserGuideModal } from './components/modals/UserGuideModal/UserGuideModal';
 import { AuditReviewPage } from './components/moderation/AuditReviewPage/AuditReviewPage';
 import { BugModerationPage } from './components/moderation/BugModerationPage/BugModerationPage';
-import { LocationMaintenancePage } from './components/moderation/LocationMaintenancePage/LocationMaintenancePage';
 import { WorldAtlasPage } from './components/moderation/WorldAtlasPage/WorldAtlasPage';
 import { WorldSchemaPage } from './components/moderation/WorldSchemaPage/WorldSchemaPage';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
@@ -241,7 +240,6 @@ export function App(): JSX.Element {
             <Route path="/chronicles/start" element={<ChronicleStartWizard />} />
             <Route path="/moderation/audit" element={<AuditReviewPage />} />
             <Route path="/moderation/bugs" element={<BugModerationPage />} />
-            <Route path="/moderation/locations" element={<LocationMaintenancePage />} />
             <Route path="/moderation/worldSchema" element={<WorldSchemaPage />} />
             <Route path="/atlas/:slug?" element={<WorldAtlasPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

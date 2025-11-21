@@ -20,8 +20,8 @@ export const worldAtlasClient = {
     return handle<HardState[]>(res);
   },
 
-  async getEntity(id: string): Promise<{ entity: HardState; fragments: LoreFragment[] }> {
-    const res = await fetch(`${API_BASE}/entities/${id}`);
+  async getEntity(slug: string): Promise<{ entity: HardState; fragments: LoreFragment[] }> {
+    const res = await fetch(`${API_BASE}/entities/${slug}`);
     return handle(res);
   },
 
@@ -31,6 +31,7 @@ export const worldAtlasClient = {
     subkind?: string | null;
     name: string;
     status?: string | null;
+    prominence?: string | null;
     links?: Array<{ relationship: string; targetId: string }>;
   }): Promise<HardState> {
     const res = await fetch(`${API_BASE}/entities`, {
@@ -63,9 +64,8 @@ export const worldAtlasClient = {
     entityId: string;
     title: string;
     prose: string;
-    chronicleId: string;
+    chronicleId?: string;
     beatId?: string;
-    turnRange?: [number, number];
     tags?: string[];
   }): Promise<LoreFragment> {
     const res = await fetch(`${API_BASE}/fragments`, {
@@ -83,7 +83,6 @@ export const worldAtlasClient = {
     tags?: string[];
     chronicleId?: string;
     beatId?: string;
-    turnRange?: [number, number];
   }): Promise<LoreFragment> {
     const res = await fetch(`${API_BASE}/fragments/${input.id}`, {
       method: 'PUT',
@@ -100,8 +99,8 @@ export const worldAtlasClient = {
 
   async startChronicle(input: {
     playerId: string;
-    anchorEntityId: string;
-    locationId: string;
+    anchorSlug: string;
+    locationSlug: string;
     title: string;
     characterId?: string;
   }) {

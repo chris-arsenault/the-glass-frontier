@@ -23,7 +23,6 @@ const buildTarget = (port) => {
 const chroniclePort = Number(process.env.CHRONICLE_API_PORT ?? process.env.NARRATIVE_PORT ?? 7000);
 const gmPort = Number(process.env.GM_API_PORT ?? 7001);
 const promptPort = Number(process.env.PROMPT_API_PORT ?? 7400);
-const locationPort = Number(process.env.LOCATION_API_PORT ?? 7300);
 const worldSchemaPort = Number(process.env.WORLD_SCHEMA_API_PORT ?? 4015);
 const atlasPort = Number(process.env.ATLAS_API_PORT ?? 4016);
 
@@ -37,11 +36,6 @@ const proxy = {
     target: buildTarget(promptPort),
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/prompt/, ''),
-  },
-  '/location': {
-    target: buildTarget(locationPort),
-    changeOrigin: true,
-    rewrite: (p) => p.replace(/^\/location/, ''),
   },
   '/gm': {
     target: buildTarget(gmPort),

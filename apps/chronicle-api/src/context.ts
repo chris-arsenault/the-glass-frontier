@@ -1,7 +1,7 @@
 // context.ts
 import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
 import { createOpsStore } from '@glass-frontier/ops';
-import { createWorldStateStore, createLocationStore, type WorldStateStore, type LocationStore } from '@glass-frontier/worldstate';
+import { createWorldStateStore, createWorldSchemaStore, type WorldSchemaStore, type WorldStateStore } from '@glass-frontier/worldstate';
 
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
@@ -10,30 +10,30 @@ if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().le
   throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the narrative service');
 }
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
-const locationGraphStore = createLocationStore({
+const worldSchemaStore = createWorldSchemaStore({
   connectionString: worldstateDatabaseUrl,
 });
 const worldStateStore = createWorldStateStore({
   connectionString: worldstateDatabaseUrl,
-  locationGraphStore,
+  worldStore: worldSchemaStore,
 });
 
 const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 const templateManager = appStore.promptTemplateManager;
 const seedService = new ChronicleSeedService({
-  locationGraphStore,
   templateManager,
+  worldStore: worldSchemaStore,
 });
 
 export type Context = {
   authorizationHeader?: string;
   appStore: typeof appStore;
   bugReportStore: typeof opsStore.bugReportStore;
-  locationGraphStore: LocationStore;
   playerStore: PlayerStore;
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;
   tokenUsageStore: typeof opsStore.tokenUsageStore;
+  worldSchemaStore: WorldSchemaStore;
   worldStateStore: WorldStateStore;
 };
 
@@ -42,11 +42,11 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     authorizationHeader: options?.authorizationHeader,
     appStore,
     bugReportStore: opsStore.bugReportStore,
-    locationGraphStore,
     playerStore: appStore.playerStore,
     seedService,
     templateManager,
     tokenUsageStore: opsStore.tokenUsageStore,
+    worldSchemaStore,
     worldStateStore,
   };
 }

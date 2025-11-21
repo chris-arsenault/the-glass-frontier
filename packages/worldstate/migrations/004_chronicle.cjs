@@ -13,7 +13,7 @@ exports.up = (pgm) => {
       references: '"app"."player"(id)',
       onDelete: 'CASCADE',
     },
-    location_id: { type: 'uuid', notNull: true, references: 'location(id)', onDelete: 'RESTRICT' },
+    location_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'RESTRICT' },
     seed_text: { type: 'text' },
     beats_enabled: { type: 'boolean', notNull: true, default: true },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
@@ -110,7 +110,7 @@ exports.up = (pgm) => {
 
   pgm.createTable('location_event', {
     id: { type: 'uuid', primaryKey: true, default: pgm.func('uuid_generate_v4()') },
-    location_id: { type: 'uuid', notNull: true, references: 'location(id)', onDelete: 'CASCADE' },
+    location_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'CASCADE' },
     chronicle_id: { type: 'uuid', references: 'chronicle(id)', onDelete: 'SET NULL' },
     summary: { type: 'text', notNull: true },
     scope: { type: 'text' },

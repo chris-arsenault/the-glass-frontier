@@ -22,6 +22,7 @@ const hardStateInput = z.object({
   subkind: z.string().optional(),
   name: z.string().min(1),
   status: z.string().optional(),
+  prominence: z.enum(['forgotten', 'marginal', 'recognized', 'renowned', 'mythic']).optional(),
   links: z
     .array(
       z.object({
@@ -37,30 +38,37 @@ const fragmentInput = z.object({
   entityId: z.string().uuid(),
   title: z.string().min(1),
   prose: z.string().min(1),
-  chronicleId: z.string().uuid(),
+  chronicleId: z.string().uuid().optional(),
   beatId: z.string().optional(),
-  turnRange: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]).optional(),
   tags: z.array(z.string()).optional(),
 });
 
 app.get('/entities', async (req, res) => {
   try {
     const kind = typeof req.query.kind === 'string' ? req.query.kind : undefined;
-    const list = await world.listHardStates({ kind: kind as never, limit: 200 });
+    const prominenceSchema = z.enum(['forgotten', 'marginal', 'recognized', 'renowned', 'mythic']);
+    const minProminence = prominenceSchema.safeParse(req.query.minProminence).success
+      ? (req.query.minProminence as string)
+      : undefined;
+    const maxProminence = prominenceSchema.safeParse(req.query.maxProminence).success
+      ? (req.query.maxProminence as string)
+      : undefined;
+    const list = await world.listHardStates({
+      kind: kind as never,
+      limit: 200,
+      minProminence: minProminence as never,
+      maxProminence: maxProminence as never,
+    });
     res.json(list);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to list entities' });
   }
 });
 
-app.get('/entities/:id', async (req, res) => {
+app.get('/entities/:slug', async (req, res) => {
   try {
-    const parsedId = z.string().uuid().safeParse(req.params.id);
-    if (!parsedId.success) {
-      res.status(400).json({ error: 'Invalid entity id' });
-      return;
-    }
-    const entity = await world.getHardState({ id: parsedId.data });
+    const slug = req.params.slug;
+    const entity = await world.getHardStateBySlug({ slug });
     if (!entity) {
       res.status(404).json({ error: 'Not found' });
       return;
@@ -80,6 +88,7 @@ app.post('/entities', async (req, res) => {
       kind: input.kind as never,
       subkind: input.subkind as never,
       name: input.name,
+      prominence: (input.prominence as never) ?? undefined,
       status: (input.status as never) ?? null,
       links: input.links,
     });
@@ -136,7 +145,6 @@ app.post('/fragments', async (req, res) => {
       source: {
         chronicleId: input.chronicleId,
         beatId: input.beatId,
-        turnRange: input.turnRange,
       },
     });
     res.json(fragment);
@@ -157,7 +165,6 @@ app.put('/fragments/:id', async (req, res) => {
       source: {
         chronicleId: input.chronicleId,
         beatId: input.beatId,
-        turnRange: input.turnRange,
       },
     });
     res.json(fragment);
@@ -183,17 +190,27 @@ app.post('/chronicles', async (req, res) => {
       .object({
         playerId: z.string().min(1),
         title: z.string().min(1),
-        locationId: z.string().uuid(),
-        anchorEntityId: z.string().uuid(),
+        locationSlug: z.string().min(1),
+        anchorSlug: z.string().min(1),
         characterId: z.string().uuid().optional(),
       })
       .parse(req.body);
+    const anchor = await world.getHardStateBySlug({ slug: input.anchorSlug });
+    const location = await world.getHardStateBySlug({ slug: input.locationSlug });
+    if (!anchor) {
+      res.status(404).json({ error: 'Anchor not found' });
+      return;
+    }
+    if (!location || location.kind !== 'location') {
+      res.status(400).json({ error: 'Location not found or invalid kind' });
+      return;
+    }
     const chronicle = await worldState.chronicles.ensureChronicle({
       playerId: input.playerId,
-      locationId: input.locationId,
+      locationId: location.id,
       characterId: input.characterId,
       title: input.title,
-      anchorEntityId: input.anchorEntityId,
+      anchorEntityId: anchor.id,
     });
     res.json(chronicle);
   } catch (error) {

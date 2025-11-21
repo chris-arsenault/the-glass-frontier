@@ -4,6 +4,7 @@ import waitOn from 'wait-on';
 import { PidRegistry } from './pid-registry';
 
 type StackMode = 'mock-openai' | 'live-openai';
+type SeedMode = 'e2e-fixtures' | 'world-seed';
 
 const MOCK_ENV: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
@@ -57,6 +58,23 @@ function resolveMode(): StackMode {
     return 'live-openai';
   }
   return 'mock-openai';
+}
+
+function resolveSeedMode(): SeedMode {
+  const flag = process.argv.find((entry) => entry?.startsWith('--seed='));
+  if (flag) {
+    const value = flag.split('=')[1];
+    if (value === 'world-seed') {
+      return 'world-seed';
+    }
+    if (value === 'e2e-fixtures') {
+      return 'e2e-fixtures';
+    }
+  }
+  if (process.env.LOCAL_STACK_SEED === 'world-seed') {
+    return 'world-seed';
+  }
+  return 'e2e-fixtures';
 }
 
 function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
@@ -139,6 +157,7 @@ async function main(): Promise<void> {
   process.on('SIGTERM', handleSignal);
 
   const mode = resolveMode();
+  const seedMode = resolveSeedMode();
   const env = buildEnv(mode);
 
   await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
@@ -169,10 +188,17 @@ async function main(): Promise<void> {
     stdio: 'inherit',
   });
 
-  await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
-    env,
-    stdio: 'inherit',
-  });
+  if (seedMode === 'e2e-fixtures') {
+    await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
+      env,
+      stdio: 'inherit',
+    });
+  } else {
+    await execa('pnpm', ['exec', 'tsx', 'packages/worldstate/seed-data/seed-world-entities.ts'], {
+      env,
+      stdio: 'inherit',
+    });
+  }
 
   devProcess = execa('pnpm', ['dev'], {
     env,
@@ -197,7 +223,7 @@ async function main(): Promise<void> {
     runtimeWait.unshift('http-get://localhost:8080/__admin');
   }
   await waitOn({ resources: runtimeWait, timeout: 180_000 }).catch(() => undefined);
-  console.log(`Local stack (${mode}) is running. Press Ctrl+C to stop.`);
+  console.log(`Local stack (${mode}) with seeds: ${seedMode} is running. Press Ctrl+C to stop.`);
 
   try {
     await devProcess;

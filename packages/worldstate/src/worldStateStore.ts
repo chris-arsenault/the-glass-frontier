@@ -5,12 +5,13 @@ import type { Pool, PoolClient } from 'pg';
 
 import { GraphOperations } from './graphOperations';
 import { createPool, withTransaction } from './pg';
+import { createWorldSchemaStore } from './worldSchemaStore';
 import type {
   ChronicleSnapshot,
-  LocationStore,
+  WorldSchemaStore,
   WorldStateStore,
 } from './types';
-import { isNonEmptyString, slugify } from './utils';
+import { isNonEmptyString } from './utils';
 
 const ensureInventory = (character: Character): Character => {
   if (character.inventory !== undefined) {
@@ -54,12 +55,12 @@ const resolveText = (value: unknown, fallback = ''): string => {
 class PostgresWorldStateStore implements WorldStateStore {
   readonly #pool: Pool;
   readonly #graph: GraphOperations;
-  readonly #locationStore: LocationStore | null;
+  readonly #worldStore: WorldSchemaStore | null;
 
-  constructor(options: { pool: Pool; graph?: GraphOperations; locationStore?: LocationStore | null }) {
+  constructor(options: { pool: Pool; graph?: GraphOperations; worldStore?: WorldSchemaStore | null }) {
     this.#pool = options.pool;
     this.#graph = options.graph ?? new GraphOperations(options.pool);
-    this.#locationStore = options.locationStore ?? null;
+    this.#worldStore = options.worldStore ?? createWorldSchemaStore({ pool: this.#pool, graph: this.#graph });
   }
 
   get graph(): GraphOperations {
@@ -130,7 +131,7 @@ class PostgresWorldStateStore implements WorldStateStore {
       ? await this.getCharacter(chronicle.characterId)
       : null;
     const locationSummary =
-      this.#locationStore && isNonEmptyString(chronicle.locationId)
+      this.#worldStore && isNonEmptyString(chronicle.locationId)
         ? await this.#summarizeLocation(chronicle.locationId)
         : null;
     const turns = await this.listChronicleTurns(chronicleId);
@@ -453,21 +454,23 @@ class PostgresWorldStateStore implements WorldStateStore {
 
 
   async #summarizeLocation(locationId: string): Promise<LocationSummary | null> {
-    if (!this.#locationStore) {
+    if (!this.#worldStore) {
       return null;
     }
     try {
-      const details = await this.#locationStore.getLocationDetails({ id: locationId });
-      const breadcrumb = details.breadcrumb.length > 0 ? details.breadcrumb : [
-        { id: details.place.id, kind: details.place.kind, name: details.place.name },
-      ];
+      const state = await this.#worldStore.getHardState({ id: locationId });
+      if (!state || state.kind !== 'location') {
+        return null;
+      }
+      const breadcrumb = [{ id: state.id, kind: state.kind, name: state.name }];
       return {
-        anchorPlaceId: details.place.id,
+        anchorPlaceId: state.id,
+        slug: state.slug,
         breadcrumb,
         certainty: 'exact',
-        description: details.place.description,
-        status: [],
-        tags: details.place.tags ?? [],
+        description: undefined,
+        status: state.status ? [state.status] : [],
+        tags: [],
       };
     } catch {
       return null;
@@ -479,31 +482,18 @@ class PostgresWorldStateStore implements WorldStateStore {
     locationId: string,
     name?: string | null
   ): Promise<void> {
-    const lookup = await client.query('SELECT 1 FROM location WHERE id = $1::uuid', [locationId]);
-    if (lookup.rowCount && lookup.rows.length > 0) {
+    if (!this.#worldStore) {
       return;
     }
-    const slug = slugify(name ?? locationId);
-    await this.#graph.upsertNode(
-      client,
-      locationId,
-      'location',
-      {
-        canonicalParentId: undefined,
-        description: name ?? undefined,
-        id: locationId,
-        kind: 'locale',
-        name: name ?? 'Unknown Location',
-        tags: [],
-      }
-    );
-    await client.query(
-      `INSERT INTO location (
-         id, slug, name, kind, biome, description, tags, metadata, created_at, updated_at
-       ) VALUES ($1::uuid, $2, $3, $4, NULL, $5, $6::text[], '{}'::jsonb, now(), now())
-       ON CONFLICT (id) DO NOTHING`,
-      [locationId, slug, name ?? 'Unknown Location', 'locale', name ?? null, []]
-    );
+    const existing = await this.#worldStore.getHardState({ id: locationId });
+    if (existing && existing.kind === 'location') {
+      return;
+    }
+    await this.#worldStore.upsertHardState({
+      id: locationId,
+      kind: 'location',
+      name: name ?? 'Unknown Location',
+    });
   }
 
   async #assertAnchorExists(client: PoolClient, anchorEntityId: string): Promise<void> {
@@ -519,7 +509,7 @@ export function createWorldStateStore(options?: {
   connectionString?: string;
   pool?: Pool;
   graph?: GraphOperations;
-  locationStore?: LocationStore | null;
+  worldStore?: WorldSchemaStore | null;
 }): WorldStateStore {
   const pool = createPool({
     connectionString: options?.connectionString,
@@ -528,7 +518,7 @@ export function createWorldStateStore(options?: {
   const store = new PostgresWorldStateStore({
     pool,
     graph: options?.graph,
-    locationStore: options?.locationStore ?? null,
+    worldStore: options?.worldStore ?? null,
   });
   return store;
 }

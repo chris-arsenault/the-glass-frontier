@@ -31,12 +31,19 @@
   white-space: nowrap;
 }
 
-.location-pill-path {
+.location-pill-link {
   color: #f8fafc;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
 }
 
 .location-pill-meta {

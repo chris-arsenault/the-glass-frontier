@@ -36,4 +36,14 @@ export const slugify = (value: string): string => {
   return `loc_${randomUUID()}`;
 };
 
+export const toSnakeCase = (value: string): string => {
+  return value
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/_+/g, '_')
+    .toLowerCase()
+    .replace(/^_+|_+$/g, '');
+};
+
 export const now = (): number => Date.now();

@@ -149,6 +149,15 @@ export const HardStateStatus = z.enum([
 ]);
 export type HardStateStatus = z.infer<typeof HardStateStatus>;
 
+export const HardStateProminence = z.enum([
+  'forgotten',
+  'marginal',
+  'recognized',
+  'renowned',
+  'mythic',
+]);
+export type HardStateProminence = z.infer<typeof HardStateProminence>;
+
 export const HardStateLink = z.object({
   relationship: z.string().min(1),
   targetId: z.string().min(1),
@@ -158,10 +167,12 @@ export type HardStateLink = z.infer<typeof HardStateLink>;
 
 export const HardState = z.object({
   id: z.string().min(1),
+  slug: z.string().min(1),
   kind: HardStateKind,
   subkind: HardStateSubkind.optional(),
   name: z.string().min(1),
   status: HardStateStatus.optional(),
+  prominence: HardStateProminence.default('recognized'),
   links: z.array(HardStateLink).default([]),
   createdAt: z
     .number()

@@ -49,15 +49,6 @@ const BugIcon = () => (
   </svg>
 );
 
-const LocationIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path
-      d="M12 2C8.134 2 5 5.018 5 8.8c0 4.778 5.875 11.684 6.127 11.979a1.17 1.17 0 0 0 1.746 0C13.125 20.484 19 13.578 19 8.8 19 5.018 15.866 2 12 2Zm0 3a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6Z"
-      fill="currentColor"
-    />
-  </svg>
-);
-
 const GlobeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path
@@ -183,11 +174,6 @@ export function PlayerMenu(): JSX.Element {
 
   const handleBugModerationShortcut = () => {
     void navigate('/moderation/bugs');
-    close();
-  };
-
-  const handleLocationMaintenanceShortcut = () => {
-    void navigate('/moderation/locations');
     close();
   };
 
@@ -395,21 +381,6 @@ export function PlayerMenu(): JSX.Element {
                   <span className="player-menu-link-title">Bug Moderation</span>
                   <span className="player-menu-link-subtitle">
                     Review bug reports and capture admin notes
-                  </span>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="player-menu-link-button"
-                onClick={handleLocationMaintenanceShortcut}
-              >
-                <span className="player-menu-link-icon" aria-hidden="true">
-                  <LocationIcon />
-                </span>
-                <div className="player-menu-link-text">
-                  <span className="player-menu-link-title">Location Maintenance</span>
-                  <span className="player-menu-link-subtitle">
-                    Curate the dictionary and graph relationships
                   </span>
                 </div>
               </button>

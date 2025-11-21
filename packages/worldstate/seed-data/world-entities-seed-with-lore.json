@@ -3,7 +3,7 @@
   "metadata": {
     "description": "Comprehensive world entity seed data for The Glass Frontier",
     "totalEntities": 330,
-    "totalRelationships": 3016,
+    "totalRelationships": 2998,
     "kinds": [
       "location",
       "npc",
@@ -15348,42 +15348,6 @@
   },
   "relationships": [
     {
-      "id": "REL-000001",
-      "from": "LOC-000001",
-      "to": "LOC-000001",
-      "relationshipType": "adjacent_to"
-    },
-    {
-      "id": "REL-000002",
-      "from": "LOC-000001",
-      "to": "LOC-000001",
-      "relationshipType": "contains"
-    },
-    {
-      "id": "REL-000003",
-      "from": "LOC-000001",
-      "to": "LOC-000001",
-      "relationshipType": "contained_within"
-    },
-    {
-      "id": "REL-000004",
-      "from": "LOC-000001",
-      "to": "LOC-000001",
-      "relationshipType": "connected_by"
-    },
-    {
-      "id": "REL-000005",
-      "from": "LOC-000001",
-      "to": "LOC-000001",
-      "relationshipType": "related_to"
-    },
-    {
-      "id": "REL-000006",
-      "from": "LOC-000001",
-      "to": "LOC-000001",
-      "relationshipType": "adjacent_to"
-    },
-    {
       "id": "REL-000007",
       "from": "LOC-000001",
       "to": "LOC-000002",
@@ -17284,48 +17248,6 @@
       "from": "NPC-000010",
       "to": "LOC-000030",
       "relationshipType": "works_at"
-    },
-    {
-      "id": "REL-000324",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "ally_of"
-    },
-    {
-      "id": "REL-000325",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "enemy_of"
-    },
-    {
-      "id": "REL-000326",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "kin_of"
-    },
-    {
-      "id": "REL-000327",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "mentor_of"
-    },
-    {
-      "id": "REL-000328",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "owes_favor_to"
-    },
-    {
-      "id": "REL-000329",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "betrayed"
-    },
-    {
-      "id": "REL-000330",
-      "from": "NPC-000001",
-      "to": "NPC-000001",
-      "relationshipType": "ally_of"
     },
     {
       "id": "REL-000331",
@@ -22638,12 +22560,6 @@
       "relationshipType": "wields"
     },
     {
-      "id": "REL-001216",
-      "from": "FAC-000001",
-      "to": "FAC-000001",
-      "relationshipType": "ally_of"
-    },
-    {
       "id": "REL-001217",
       "from": "FAC-000001",
       "to": "FAC-000002",
@@ -27138,12 +27054,6 @@
       "relationshipType": "related_to"
     },
     {
-      "id": "REL-001966",
-      "from": "FAI-000001",
-      "to": "FAI-000001",
-      "relationshipType": "ally_of"
-    },
-    {
       "id": "REL-001967",
       "from": "FAI-000001",
       "to": "FAI-000002",
@@ -29296,12 +29206,6 @@
       "from": "CON-000010",
       "to": "FAI-000030",
       "relationshipType": "cause_of"
-    },
-    {
-      "id": "REL-002326",
-      "from": "CON-000001",
-      "to": "CON-000001",
-      "relationshipType": "related_to"
     },
     {
       "id": "REL-002327",
@@ -31464,12 +31368,6 @@
       "relationshipType": "rumors_about"
     },
     {
-      "id": "REL-002687",
-      "from": "RUM-000001",
-      "to": "RUM-000001",
-      "relationshipType": "related_to"
-    },
-    {
       "id": "REL-002688",
       "from": "RUM-000001",
       "to": "RUM-000002",
@@ -33262,12 +33160,6 @@
       "from": "LAW-000010",
       "to": "RUM-000030",
       "relationshipType": "rumors_about"
-    },
-    {
-      "id": "REL-002987",
-      "from": "LAW-000001",
-      "to": "LAW-000001",
-      "relationshipType": "related_to"
     },
     {
       "id": "REL-002988",

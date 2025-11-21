@@ -1,7 +1,7 @@
-import type {ChronicleSeed, ChronicleSeedList, LocationPlace} from '@glass-frontier/dto';
+import type { ChronicleSeed, ChronicleSeedList, HardState } from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import type { PromptTemplateManager } from '@glass-frontier/app';
-import type { LocationStore } from '@glass-frontier/worldstate';
+import type { WorldSchemaStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import { PromptTemplateRuntime } from '../prompts/templateRuntime';
@@ -19,23 +19,23 @@ type GenerateSeedRequest = {
 
 export class ChronicleSeedService {
   readonly #templates: PromptTemplateManager;
-  readonly #locations: LocationStore;
+  readonly #world: WorldSchemaStore;
   readonly #llm: RetryLLMClient;
   readonly #clientCache = new Map<string, RetryLLMClient>();
 
   constructor(options: {
     templateManager: PromptTemplateManager;
-    locationGraphStore: LocationStore;
+    worldStore: WorldSchemaStore;
     llmClient?: RetryLLMClient;
   }) {
     this.#templates = options.templateManager;
-    this.#locations = options.locationGraphStore;
+    this.#world = options.worldStore;
     this.#llm = options.llmClient ?? createLLMClient();
   }
 
   async generateSeeds(request: GenerateSeedRequest): Promise<ChronicleSeed[]> {
     const place = await this.#ensurePlace(request.locationId);
-    const breadcrumb = await this.#buildBreadcrumb(place);
+    const breadcrumb = this.#buildBreadcrumb(place);
     const tags = this.#collectTags(breadcrumb);
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
     const runtime = new PromptTemplateRuntime({
@@ -45,8 +45,8 @@ export class ChronicleSeedService {
 
     const prompt = await runtime.render('chronicle-seed', {
       breadcrumb: breadcrumb.map((entry) => `${entry.name} (${entry.kind})`).join(' / '),
-      location_description: place.description ?? 'Uncatalogued locale.',
-      location_kind: place.kind,
+      location_description: place.status ? `Status: ${place.status}` : 'Uncatalogued locale.',
+      location_kind: place.subkind ?? place.kind,
       location_name: place.name,
       requested,
       tags: tags.length > 0 ? tags.join(', ') : 'untagged',
@@ -60,7 +60,7 @@ export class ChronicleSeedService {
       max_output_tokens: 1600,
       model: "gpt-5-mini",
       metadata: {
-        locationId: place.locationId,
+        locationId: place.id,
         operation: 'chronicle-seed',
         playerId: request.playerId,
       },
@@ -83,35 +83,32 @@ export class ChronicleSeedService {
     return this.#normalizeSeeds(tryParsed.data, requested, place);
   }
 
-  async #ensurePlace(locationId: string): Promise<LocationPlace> {
-    const place = await this.#locations.getPlace(locationId);
-    if (place === undefined || place === null) {
+  async #ensurePlace(locationId: string): Promise<HardState> {
+    const place = await this.#world.getHardState({ id: locationId });
+    if (!place || place.kind !== 'location') {
       throw new Error(`Location ${locationId} not found.`);
     }
     return place;
   }
 
-  async #buildBreadcrumb(anchor: LocationPlace): Promise<LocationPlace[]> {
-    return this.#collectBreadcrumb(anchor, new Set<string>(), 0);
+  #buildBreadcrumb(anchor: HardState): HardState[] {
+    return [anchor];
   }
 
-  #collectTags(chain: LocationPlace[]): string[] {
+  #collectTags(chain: HardState[]): string[] {
     const tags = new Set<string>();
     for (const node of chain) {
-      const nodeTags = Array.isArray(node.tags)
-        ? node.tags.filter((tag): tag is string => typeof tag === 'string')
-        : [];
-      for (const tag of nodeTags) {
-        const trimmed = tag.trim().toLowerCase();
-        if (trimmed.length > 0) {
-          tags.add(trimmed);
-        }
+      if (node.subkind) {
+        tags.add(node.subkind);
+      }
+      if (node.status) {
+        tags.add(node.status);
       }
     }
     return Array.from(tags).slice(0, 12);
   }
 
-  #normalizeSeeds(payload: ChronicleSeedList, requested: number, place: LocationPlace): ChronicleSeed[] {
+  #normalizeSeeds(payload: ChronicleSeedList, requested: number, place: HardState): ChronicleSeed[] {
     const normalized: ChronicleSeed[] = [];
     for (const entry of this.#extractSeedEntries(payload)) {
       if (normalized.length >= requested) {
@@ -161,7 +158,7 @@ export class ChronicleSeedService {
   #fillSeedShortfall(
     seeds: ChronicleSeed[],
     requested: number,
-    place: LocationPlace
+    place: HardState
   ): ChronicleSeed[] {
     const output = [...seeds];
     while (output.length < requested) {
@@ -170,12 +167,12 @@ export class ChronicleSeedService {
     return output;
   }
 
-  #fallbackSeed(place: LocationPlace, index: number): ChronicleSeed {
-    const tags = Array.isArray(place.tags) ? place.tags.slice(0, 3) : [];
+  #fallbackSeed(place: HardState, index: number): ChronicleSeed {
+    const tags = [place.subkind, place.status].filter((tag): tag is string => Boolean(tag)).slice(0, 3);
     return {
       id: randomUUID(),
       tags,
-      teaser: `Rumors ripple through ${place.name}, drawing attention to a fresh anomaly hidden within its ${place.kind}.`,
+      teaser: `Rumors ripple through ${place.name}, drawing attention to a fresh anomaly hidden within its ${place.subkind ?? place.kind}.`,
       title: `${place.name} Hook ${index}`.slice(0, 80),
     };
   }
@@ -225,32 +222,5 @@ export class ChronicleSeedService {
     const client = createLLMClient()
     this.#clientCache.set(sanitized, client);
     return client;
-  }
-
-  async #collectBreadcrumb(
-    node: LocationPlace | null,
-    visited: Set<string>,
-    depth: number
-  ): Promise<LocationPlace[]> {
-    if (node === null) {
-      return [];
-    }
-    if (visited.has(node.id) || depth >= 20) {
-      return [node];
-    }
-    visited.add(node.id);
-    const parentId =
-      typeof node.canonicalParentId === 'string' && node.canonicalParentId.length > 0
-        ? node.canonicalParentId
-        : null;
-    if (parentId === null) {
-      return [node];
-    }
-    const parentPlace = await this.#locations.getPlace(parentId);
-    if (parentPlace === undefined || parentPlace === null) {
-      return [node];
-    }
-    const path = await this.#collectBreadcrumb(parentPlace, visited, depth + 1);
-    return [...path, node];
   }
 }

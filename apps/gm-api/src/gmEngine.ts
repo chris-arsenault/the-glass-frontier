@@ -10,7 +10,6 @@ import type {
 import type { PromptTemplateManager } from '@glass-frontier/app';
 import {
   type WorldStateStore,
-  type LocationStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
 import {formatTurnJobId, isDefined, isNonEmptyString, log} from '@glass-frontier/utils';
@@ -38,6 +37,7 @@ import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifier
 import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
 import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
 import {LoreJudgeNode, LoreSelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/LoreNodes";
+import type { LocationStore } from './types';
 
 type GmEngineOptions = {
   worldStateStore: WorldStateStore;
@@ -47,11 +47,7 @@ type GmEngineOptions = {
   llmClient: RetryLLMClient;
 };
 
-const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = [
-  'chronicle_story',
-  'location_events',
-  'character_bio',
-];
+const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 
 class GmEngine {
   readonly worldStateStore: WorldStateStore;

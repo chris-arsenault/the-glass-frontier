@@ -95,7 +95,8 @@ export const resetWiremockScenarios = async (request: APIRequestContext) => {
 };
 
 export const resetPlaywrightState = async (request: APIRequestContext) => {
-  await request.post('http://localhost:7000/trpc/resetPlaywrightFixtures', {
-    data: { input: null },
+  const port = process.env.PLAYWRIGHT_PORT ? Number(process.env.PLAYWRIGHT_PORT) : 7800;
+  await request.post(`http://localhost:${port}/reset`, {
+    data: {},
   });
 };

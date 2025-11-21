@@ -38,6 +38,8 @@
       "@glass-frontier/prompt-api/*": ["apps/prompt-api/src/*"],
       "@glass-frontier/location-api": ["apps/location-api/src/index.ts"],
       "@glass-frontier/location-api/*": ["apps/location-api/src/*"],
+      "@glass-frontier/playwright": ["apps/playwright/src/index.ts"],
+      "@glass-frontier/playwright/*": ["apps/playwright/src/*"],
       "@glass-frontier/gm-api": ["apps/gm-api/src/index.ts"],
       "@glass-frontier/gm-api/*": ["apps/gm-api/src/*"]
     }

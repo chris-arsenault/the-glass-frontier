@@ -2,6 +2,7 @@ import type {
   HardState,
   HardStateKind,
   HardStateLink,
+  HardStateProminence,
   HardStateSubkind,
   HardStateStatus,
   LoreFragment,
@@ -16,7 +17,7 @@ import type { Pool, PoolClient } from 'pg';
 import { GraphOperations } from './graphOperations';
 import { createPool, withTransaction } from './pg';
 import type { WorldSchemaStore } from './types';
-import { normalizeTags, now } from './utils';
+import { normalizeTags, now, toSnakeCase } from './utils';
 
 type KindRow = {
   id: HardStateKind;
@@ -27,9 +28,12 @@ type KindRow = {
 
 type HardStateRow = {
   id: string;
+  slug: string;
   kind: HardStateKind;
   subkind: string | null;
   name: string;
+  prominence: HardStateProminence;
+  prominence_rank?: number;
   status: HardStateStatus | null;
   created_at: Date | null;
   updated_at: Date | null;
@@ -40,8 +44,6 @@ type LoreFragmentRow = {
   entity_id: string;
   chronicle_id: string | null;
   beat_id: string | null;
-  turn_start: number | null;
-  turn_end: number | null;
   title: string;
   prose: string;
   tags: string[];
@@ -51,35 +53,30 @@ type LoreFragmentRow = {
 
 const toHardState = (row: HardStateRow, links: HardStateLink[]): HardState => ({
   id: row.id,
+  slug: row.slug,
   kind: row.kind,
   subkind: row.subkind ?? undefined,
   name: row.name,
+  prominence: row.prominence ?? 'recognized',
   status: row.status ?? undefined,
   links,
   createdAt: row.created_at?.getTime() ?? now(),
   updatedAt: row.updated_at?.getTime() ?? now(),
 });
 
-const toLoreFragment = (row: LoreFragmentRow): LoreFragment => {
-  const turnRange =
-    typeof row.turn_start === 'number' && typeof row.turn_end === 'number'
-      ? [row.turn_start, row.turn_end]
-      : undefined;
-  return {
-    id: row.id,
-    entityId: row.entity_id,
-    source: {
-      chronicleId: row.chronicle_id ?? '',
-      beatId: row.beat_id ?? undefined,
-      turnRange,
-      entityKind: row.entity_kind,
-    },
-    title: row.title,
-    prose: row.prose,
-    tags: Array.isArray(row.tags) ? row.tags : [],
-    timestamp: row.created_at?.getTime() ?? now(),
-  };
-};
+const toLoreFragment = (row: LoreFragmentRow): LoreFragment => ({
+  id: row.id,
+  entityId: row.entity_id,
+  source: {
+    chronicleId: row.chronicle_id ?? undefined,
+    beatId: row.beat_id ?? undefined,
+    entityKind: row.entity_kind,
+  },
+  title: row.title,
+  prose: row.prose,
+  tags: Array.isArray(row.tags) ? row.tags : [],
+  timestamp: row.created_at?.getTime() ?? now(),
+});
 
 class PostgresWorldSchemaStore implements WorldSchemaStore {
   readonly #pool: Pool;
@@ -95,6 +92,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     kind: HardStateKind;
     subkind?: HardStateSubkind | null;
     name: string;
+    prominence?: HardStateProminence | null;
     status?: HardStateStatus | null;
     links?: Array<{ relationship: string; targetId: string }>;
   }): Promise<HardState> {
@@ -104,26 +102,33 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       const kindRow = await this.#getKind(client, input.kind);
       const status = await this.#resolveStatus(client, input.kind, input.status ?? kindRow.default_status);
       await this.#assertSubkind(client, input.kind, input.subkind ?? null);
+      const prominence = input.prominence ?? 'recognized';
+      await this.#assertProminence(prominence);
 
+      const slug = await this.#reserveSlug(client, toSnakeCase(input.name), id);
       await this.#graph.upsertNode(client, id, 'world_entity', {
         id,
+        slug,
         kind: input.kind,
         subkind: input.subkind ?? undefined,
         name: input.name,
+        prominence,
         status: status ?? undefined,
         links: normalizedLinks,
       });
 
       await client.query(
-        `INSERT INTO hard_state (id, kind, subkind, name, status, created_at, updated_at)
-         VALUES ($1::uuid, $2, $3, $4, $5, now(), now())
+        `INSERT INTO hard_state (id, slug, kind, subkind, name, prominence, status, created_at, updated_at)
+         VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, now(), now())
          ON CONFLICT (id) DO UPDATE
-         SET kind = EXCLUDED.kind,
+         SET slug = EXCLUDED.slug,
+             kind = EXCLUDED.kind,
              subkind = EXCLUDED.subkind,
              name = EXCLUDED.name,
+             prominence = EXCLUDED.prominence,
              status = EXCLUDED.status,
              updated_at = now()`,
-        [id, input.kind, input.subkind ?? null, input.name, status ?? null]
+        [id, slug, input.kind, input.subkind ?? null, input.name, prominence, status ?? null]
       );
 
       if (input.links) {
@@ -176,9 +181,10 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async getHardState(input: { id: string }): Promise<HardState | null> {
     const result = await this.#pool.query(
-      `SELECT id, kind, subkind, name, status, created_at, updated_at
-       FROM hard_state
-       WHERE id = $1::uuid`,
+      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
+       FROM hard_state hs
+       JOIN world_prominence wp ON wp.id = hs.prominence
+       WHERE hs.id = $1::uuid`,
       [input.id]
     );
     const row = result.rows[0] as HardStateRow | undefined;
@@ -189,19 +195,36 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return toHardState(row, links);
   }
 
-  async listHardStates(input?: { kind?: HardStateKind; limit?: number }): Promise<HardState[]> {
+  async listHardStates(input?: {
+    kind?: HardStateKind;
+    limit?: number;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+  }): Promise<HardState[]> {
     const limit = Math.max(1, Math.min(200, input?.limit ?? 100));
     const params: Array<string | number> = [limit];
-    let filter = '';
+    const clauses: string[] = [];
     if (input?.kind) {
       params.push(input.kind);
-      filter = 'WHERE kind = $2';
+      clauses.push(`hs.kind = $${params.length}`);
     }
+    const mapOrder = (value: HardStateProminence) =>
+      ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'].indexOf(value);
+    if (input?.minProminence) {
+      params.push(mapOrder(input.minProminence));
+      clauses.push(`wp.rank >= $${params.length}`);
+    }
+    if (input?.maxProminence) {
+      params.push(mapOrder(input.maxProminence));
+      clauses.push(`wp.rank <= $${params.length}`);
+    }
+    const filter = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const result = await this.#pool.query(
-      `SELECT id, kind, subkind, name, status, created_at, updated_at
-       FROM hard_state
+      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
+       FROM hard_state hs
+       JOIN world_prominence wp ON wp.id = hs.prominence
        ${filter}
-       ORDER BY created_at ASC
+       ORDER BY wp.rank ASC, hs.created_at ASC
        LIMIT $1`,
       params
     );
@@ -214,13 +237,28 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     );
   }
 
+  async getHardStateBySlug(input: { slug: string }): Promise<HardState | null> {
+    const result = await this.#pool.query(
+      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
+       FROM hard_state hs
+       JOIN world_prominence wp ON wp.id = hs.prominence
+       WHERE hs.slug = $1`,
+      [input.slug]
+    );
+    const row = result.rows[0] as HardStateRow | undefined;
+    if (!row) {
+      return null;
+    }
+    const links = await this.#listLinks(row.id);
+    return toHardState(row, links);
+  }
+
   async createLoreFragment(input: {
     id?: string;
     entityId: string;
     source: {
-      chronicleId: string;
+      chronicleId?: string;
       beatId?: string;
-      turnRange?: [number, number];
     };
     title: string;
     prose: string;
@@ -244,19 +282,17 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       });
       await client.query(
         `INSERT INTO lore_fragment (
-           id, entity_id, chronicle_id, beat_id, turn_start, turn_end,
+           id, entity_id, chronicle_id, beat_id,
            title, prose, tags, created_at
          ) VALUES (
-           $1::uuid, $2::uuid, $3::uuid, $4, $5, $6,
-           $7, $8, $9::text[], to_timestamp($10 / 1000.0)
+           $1::uuid, $2::uuid, $3::uuid, $4,
+           $5, $6, $7::text[], to_timestamp($8 / 1000.0)
          )`,
         [
           id,
           input.entityId,
-          input.source.chronicleId,
+          input.source.chronicleId ?? null,
           input.source.beatId ?? null,
-          input.source.turnRange?.[0] ?? null,
-          input.source.turnRange?.[1] ?? null,
           input.title,
           input.prose,
           tags,
@@ -443,7 +479,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     title?: string;
     prose?: string;
     tags?: string[];
-    source?: { chronicleId?: string; beatId?: string; turnRange?: [number, number] };
+    source?: { chronicleId?: string; beatId?: string };
   }): Promise<LoreFragment> {
     const fragment = await this.getLoreFragment({ id: input.id });
     if (!fragment) {
@@ -453,7 +489,6 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     const nextSource = {
       chronicleId: input.source?.chronicleId ?? fragment.source.chronicleId,
       beatId: input.source?.beatId ?? fragment.source.beatId,
-      turnRange: input.source?.turnRange ?? fragment.source.turnRange,
     };
     await withTransaction(this.#pool, async (client) => {
       await this.#graph.upsertNode(client, input.id, 'lore_fragment', {
@@ -469,18 +504,14 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
              prose = $2,
              tags = $3::text[],
              beat_id = $4,
-             turn_start = $5,
-             turn_end = $6,
-             chronicle_id = $7::uuid
-         WHERE id = $8::uuid`,
+             chronicle_id = $5::uuid
+         WHERE id = $6::uuid`,
         [
           input.title ?? fragment.title,
           input.prose ?? fragment.prose,
           nextTags,
           nextSource.beatId ?? null,
-          nextSource.turnRange?.[0] ?? null,
-          nextSource.turnRange?.[1] ?? null,
-          nextSource.chronicleId,
+          nextSource.chronicleId ?? null,
           input.id,
         ]
       );
@@ -555,6 +586,16 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     );
     if (!result.rowCount) {
       throw new Error(`Relationship type ${relationshipId} is not configured`);
+    }
+  }
+
+  async #assertProminence(value: HardStateProminence): Promise<void> {
+    const result = await this.#pool.query(
+      `SELECT 1 FROM world_prominence WHERE id = $1`,
+      [value]
+    );
+    if (!result.rowCount) {
+      throw new Error(`Invalid prominence value: ${value}`);
     }
   }
 
@@ -702,6 +743,22 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       }
     }
     return linkMap;
+  }
+
+  async #reserveSlug(executor: PoolClient, base: string, id: string): Promise<string> {
+    const normalized = base && base.trim().length > 0 ? base.trim() : toSnakeCase(id);
+    let candidate = normalized;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const existing = await executor.query(
+        `SELECT id FROM hard_state WHERE slug = $1 AND id <> $2::uuid`,
+        [candidate, id]
+      );
+      if (existing.rowCount === 0) {
+        return candidate;
+      }
+      candidate = `${normalized}_${randomUUID().slice(0, 6)}`;
+    }
+    return `${normalized}_${randomUUID().slice(0, 8)}`;
   }
 }
 

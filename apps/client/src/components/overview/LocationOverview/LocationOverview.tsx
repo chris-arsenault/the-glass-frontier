@@ -15,7 +15,9 @@ export function LocationOverview() {
     );
   }
 
-  const breadcrumb = location.breadcrumb.map((entry) => entry.name).join(' › ');
+  const current = location.breadcrumb.at(-1);
+  const locationName = current?.name ?? 'Unknown';
+  const locationSlug = location.slug ?? location.anchorPlaceId;
   const status = location.status.join(', ');
   const tagSnippet = location.tags.slice(0, 3).join(', ');
   const certaintyLabel =
@@ -27,9 +29,14 @@ export function LocationOverview() {
     <div className="location-pill">
       <div className="location-pill-label">Location</div>
       <div className="location-pill-value">
-        <span className="location-pill-path" title={breadcrumb}>
-          {breadcrumb}
-        </span>
+        <button
+          type="button"
+          className="location-pill-link"
+          title="Open in World Atlas"
+          onClick={() => window.open(`/atlas/${locationSlug}`, '_blank', 'noopener,noreferrer')}
+        >
+          {locationName}
+        </button>
         <span>{detail}</span>
         {meta ? <span className="location-pill-meta">{meta}</span> : null}
       </div>

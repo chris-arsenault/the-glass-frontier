@@ -3,18 +3,17 @@ import { execa } from 'execa';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createAppStore } from '../../packages/app/src/index.js';
-import { createLocationStore, createWorldStateStore } from '../../packages/worldstate/src/index.js';
+import { createWorldSchemaStore, createWorldStateStore } from '../../packages/worldstate/src/index.js';
 import { createOpsStore } from '../../packages/ops/src/index.js';
 import {
-  LOCATION_ROOT_SEED,
   PLAYWRIGHT_CHARACTER_ID,
   PLAYWRIGHT_CHRONICLE_ID,
   PLAYWRIGHT_PLAYER_ID,
   buildPlaywrightCharacterRecord,
   buildPlaywrightChronicleRecord,
   buildPlaywrightPlayerRecord,
-  seedPlaywrightLocationGraph,
-} from '../../apps/chronicle-api/src/playwright/fixtures';
+  seedPlaywrightFixtures,
+} from '../../apps/playwright/src/fixtures';
 
 const credentials = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? 'test',
@@ -48,23 +47,25 @@ async function main(): Promise<void> {
     endpoint: sqsEndpoint,
     region,
   });
-  const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
-  const locationStore = createLocationStore({
-    connectionString: worldstateDatabaseUrl,
-  });
-  const worldStateStore = createWorldStateStore({
-    connectionString: worldstateDatabaseUrl,
-    locationStore,
-  });
-  const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
+const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
+const worldSchemaStore = createWorldSchemaStore({
+  connectionString: worldstateDatabaseUrl,
+});
+const worldStateStore = createWorldStateStore({
+  connectionString: worldstateDatabaseUrl,
+  worldStore: worldSchemaStore,
+});
+const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
   await runAppMigrations();
   await runWorldstateMigrations();
   await runOpsMigrations();
 
+  await seedWorldEntities();
+
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
-  await seedPlaywrightChronicle(worldStateStore, locationStore, appStore.playerStore);
+  await seedPlaywrightChronicle(worldStateStore, worldSchemaStore, appStore.playerStore);
   // Touch ops stores so migrations are exercised in tests
   await opsStore.bugReportStore.listReports();
   await opsStore.tokenUsageStore.listUsage(PLAYWRIGHT_PLAYER_ID, 1);
@@ -115,6 +116,18 @@ async function runOpsMigrations(): Promise<void> {
   });
 }
 
+async function seedWorldEntities(): Promise<void> {
+  log('Seeding world entities with lore fragments...');
+  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'seed:world'], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      GLASS_FRONTIER_DATABASE_URL: worldstateDatabaseUrl,
+    },
+  });
+  log('World entities seeded successfully');
+}
+
 async function ensureQueue(client: SQSClient, name: string): Promise<void> {
   log('Ensuring SQS queue', name);
   await withRetry(`queue:${name}`, async () => {
@@ -149,7 +162,7 @@ async function withRetry<T>(
 
 async function seedPlaywrightChronicle(
   worldStateStore: ReturnType<typeof createWorldStateStore>,
-  locationStore: ReturnType<typeof createLocationStore>,
+  worldSchemaStore: ReturnType<typeof createWorldSchemaStore>,
   playerStore: ReturnType<typeof createAppStore>['playerStore']
 ): Promise<void> {
   const playerRecord = buildPlaywrightPlayerRecord();
@@ -159,10 +172,7 @@ async function seedPlaywrightChronicle(
   await playerStore.upsert(playerRecord);
   await worldStateStore.upsertCharacter(characterRecord);
   await worldStateStore.upsertChronicle(chronicleRecord);
-  await seedPlaywrightLocationGraph(locationStore, {
-    characterId: PLAYWRIGHT_CHARACTER_ID,
-    locationId: LOCATION_ROOT_SEED.id,
-  });
+  await seedPlaywrightFixtures(worldstateDatabaseUrl);
 }
 
 main().catch((error) => {

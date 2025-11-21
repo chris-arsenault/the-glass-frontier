@@ -3,6 +3,9 @@ import type {
   Character,
   Chronicle,
   Intent,
+  LocationNeighbors,
+  LocationPlace,
+  LocationState,
   LocationSummary,
   LlmTrace,
   SkillCheckPlan,
@@ -10,7 +13,7 @@ import type {
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { LocationStore, WorldSchemaStore } from '@glass-frontier/worldstate';
+import type { WorldSchemaStore } from '@glass-frontier/worldstate';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";
@@ -81,6 +84,31 @@ export type GraphContext = {
   loreContext?: LoreContextSlice;
   loreFocus?: LoreFocusState;
 }
+
+export type LocationStore = {
+  createLocationWithRelationship: (input: {
+    name: string;
+    kind: string;
+    description?: string | null;
+    tags?: string[];
+    anchorId: string;
+    relationship: 'inside' | 'adjacent' | 'linked';
+  }) => Promise<LocationPlace>;
+  getLocationDetails: (input: { id: string }) => Promise<{
+    place: LocationPlace;
+    breadcrumb: Array<{ id: string; name: string; kind: string }>;
+    children: LocationPlace[];
+    neighbors: LocationNeighbors;
+  }>;
+  getLocationNeighbors: (input: { id: string; limit?: number }) => Promise<LocationNeighbors>;
+  moveCharacterToLocation: (input: {
+    characterId: string;
+    placeId: string;
+    certainty?: LocationState['certainty'];
+    note?: string | null;
+    status?: string[];
+  }) => Promise<LocationState>;
+};
 
 export type TelemetryLike = {
   recordToolError: (entry: {

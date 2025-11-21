@@ -201,5 +201,26 @@
     "summary": "World Atlas with anchored chronicles",
     "details": "Introduced the World Atlas wiki page for entities with editable hard state, relations, and lore, added anchor-aware chronicles via Atlas API, and exposed narrative anchor fragments to the GM prompts for better cohesion.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-27-location-hardstate",
+    "releasedAt": "2025-11-27",
+    "summary": "Locations moved into world hard state",
+    "details": "Removed the legacy location maintenance UI and API, now storing locations as world hard state entities via the Atlas flows. Chronicle start uses atlas locations and GM location calls are stubbed while the new flow replaces the old graph.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-27-lore-fragments-detached",
+    "releasedAt": "2025-11-27",
+    "summary": "Lore fragments can outlive chronicles",
+    "details": "Chronicle IDs are now optional when creating lore fragments, and turn range metadata was removed so fragments can be authored from the UI or API and persist even if chronicles are deleted.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-27-hardstate-prominence",
+    "releasedAt": "2025-11-27",
+    "summary": "Hard state prominence levels",
+    "details": "Hard state entities now carry a five-level prominence field (forgotten → mythic) with slug-based lookups, allowing filtering by prominence and slug-friendly Atlas/chronicle links.",
+    "type": "feature"
   }
 ]
