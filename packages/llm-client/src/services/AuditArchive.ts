@@ -1,5 +1,4 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { resolveAwsEndpoint, resolveAwsRegion, shouldForcePathStyle } from '@glass-frontier/node-utils';
+import { createOpsStore, type OpsStore } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -14,93 +13,73 @@ type ArchiveRecord = {
   metadata?: Record<string, unknown>;
 };
 
-const UNKNOWN_NODE_ID = 'unknown-node';
-
 export function createAuditArchive() {
-
+  return AuditArchive.fromEnv();
 }
 
 class AuditArchive {
-  readonly #bucket: string;
-  readonly #client: S3Client;
+  readonly #store: OpsStore;
 
-  private constructor(bucket: string, client?: S3Client) {
-    this.#bucket = bucket;
-    if (client !== undefined) {
-      this.#client = client;
-      return;
-    }
-    const region = resolveAwsRegion();
-    const endpoint = resolveAwsEndpoint('s3');
-    this.#client = new S3Client({
-      endpoint,
-      forcePathStyle: shouldForcePathStyle(),
-      region,
-    });
+  private constructor(store: OpsStore) {
+    this.#store = store;
   }
 
   static fromEnv(): AuditArchive | null {
-    const rawBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET;
-    if (typeof rawBucket !== 'string') {
+    const connectionString = resolveConnectionString();
+    if (connectionString === null) {
       return null;
     }
-    const bucket = rawBucket.trim();
-    if (bucket.length === 0) {
-      return null;
-    }
-    return new AuditArchive(bucket);
+    const store = createOpsStore({ connectionString });
+    return new AuditArchive(store);
   }
 
   async record(entry: ArchiveRecord): Promise<void> {
     const id =
       typeof entry.id === 'string' && entry.id.trim().length > 0 ? entry.id.trim() : randomUUID();
-    const timestamp = new Date();
-    const key = this.#buildKey(timestamp, id, entry.nodeId);
-    const payload = {
-      createdAt: timestamp.toISOString(),
+
+    const playerId = entry.playerId ?? undefined;
+    if (!playerId) {
+      log('warn', 'Skipping audit record - no playerId', { id });
+      return;
+    }
+
+    const chronicleId = (entry.metadata as Record<string, unknown> | undefined)?.chronicleId;
+    const characterId = (entry.metadata as Record<string, unknown> | undefined)?.characterId;
+    const turnId = (entry.metadata as Record<string, unknown> | undefined)?.turnId;
+
+    // Ensure audit group exists for this player/chronicle
+    const group = await this.#store.auditGroupStore.ensureGroup({
+      scopeType: 'chronicle',
+      playerId,
+      chronicleId: typeof chronicleId === 'string' ? chronicleId : undefined,
+      characterId: typeof characterId === 'string' ? characterId : undefined,
+    });
+
+    // Write audit entry to PostgreSQL
+    await this.#store.auditLogStore.record({
       id,
-      metadata: entry.metadata ?? null,
-      nodeId: entry.nodeId ?? null,
-      playerId: entry.playerId ?? null,
+      groupId: group.id,
+      playerId,
       providerId: entry.providerId,
       request: entry.request,
-      requestContextId: entry.requestContextId ?? null,
       response: entry.response,
-    };
-    const body = JSON.stringify(payload, (_key, value) =>
-      typeof value === 'bigint' ? Number(value) : value
-    );
+      metadata: entry.metadata ?? {},
+      chronicleId: typeof chronicleId === 'string' ? chronicleId : undefined,
+      characterId: typeof characterId === 'string' ? characterId : undefined,
+      turnId: typeof turnId === 'string' ? turnId : undefined,
+    });
 
-    await this.#client.send(
-      new PutObjectCommand({
-        Body: body,
-        Bucket: this.#bucket,
-        ContentType: 'application/json',
-        Key: key,
-      })
-    );
     log('info', `Wrote ${id} to audit log.`);
   }
-
-  #buildKey(timestamp: Date, id: string, nodeId?: string): string {
-    const year = timestamp.getUTCFullYear();
-    const month = String(timestamp.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(timestamp.getUTCDate()).padStart(2, '0');
-    const segment = this.#sanitizeNodeId(nodeId);
-    return `${segment}/${year}/${month}/${day}/${id}.json`;
-  }
-
-  #sanitizeNodeId(value?: string): string {
-    if (typeof value !== 'string') {
-      return UNKNOWN_NODE_ID;
-    }
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
-      return UNKNOWN_NODE_ID;
-    }
-    const normalized = trimmed.replace(/[^A-Za-z0-9-_]+/g, '-').slice(0, 64);
-    return normalized.length > 0 ? normalized : UNKNOWN_NODE_ID;
-  }
 }
+
+const resolveConnectionString = (): string | null => {
+  const raw = process.env.GLASS_FRONTIER_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 export { AuditArchive };

@@ -5,11 +5,9 @@ const isNonEmptyString = (value: unknown): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
 };
 
-type AwsService = 's3' | 'dynamodb' | 'sqs';
+type AwsService = 'sqs';
 
 const SERVICE_ENV_LOOKUP: Record<AwsService, string> = {
-  dynamodb: 'AWS_DYNAMODB_ENDPOINT',
-  s3: 'AWS_S3_ENDPOINT',
   sqs: 'AWS_SQS_ENDPOINT',
 };
 
@@ -25,14 +23,6 @@ const toTrimmedOrNull = (value?: string): string | null => {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-};
-
-const normalizeBoolean = (value?: string): boolean => {
-  if (!isNonEmptyString(value)) {
-    return false;
-  }
-  const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
 
 export const resolveAwsEndpoint = (service: AwsService): string | undefined => {
@@ -55,13 +45,6 @@ export const resolveAwsRegion = (): string => {
     toTrimmedOrNull(process.env.AWS_DEFAULT_REGION) ??
     'us-east-1'
   );
-};
-
-export const shouldForcePathStyle = (): boolean => {
-  if (normalizeBoolean(process.env.AWS_S3_FORCE_PATH_STYLE)) {
-    return true;
-  }
-  return resolveAwsEndpoint('s3') !== undefined;
 };
 
 export const resolveAwsCredentials = (): ReturnType<typeof fromEnv> | undefined =>

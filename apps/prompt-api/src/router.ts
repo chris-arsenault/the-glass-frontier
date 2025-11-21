@@ -10,12 +10,26 @@ import {
   type PromptTemplateId,
 } from '@glass-frontier/dto';
 import { initTRPC } from '@trpc/server';
+import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
 
 import type { Context } from './context';
 import { submitPlayerFeedbackInput } from './schemas/submitPlayerFeedback';
 
 const t = initTRPC.context<Context>().create();
+
+async function withMutationTelemetry<T>(
+  action: string,
+  metadata: Record<string, unknown>,
+  fn: () => Promise<T>
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: unknown) {
+    log('error', `Prompt mutation failed: ${action}`, { metadata, error });
+    throw error;
+  }
+}
 const auditStatusSchema = z.enum(AUDIT_REVIEW_STATUSES);
 const auditTagSchema = z.enum(AUDIT_REVIEW_TAGS);
 const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
@@ -142,23 +156,27 @@ export const promptRouter = t.router({
   revertPromptTemplate: t.procedure
     .input(z.object({ playerId: z.string().min(1), templateId: templateIdSchema }))
     .mutation(async ({ ctx, input }) =>
-      ctx.templateManager.revertTemplate({ playerId: input.playerId, templateId: input.templateId })
+      withMutationTelemetry('revert-template', { playerId: input.playerId, templateId: input.templateId }, () =>
+        ctx.templateManager.revertTemplate({ playerId: input.playerId, templateId: input.templateId })
+      )
     ),
 
   saveAuditReview: t.procedure
     .input(saveAuditReviewInput)
-    .mutation(async ({ ctx, input }) => {
-      const record = await ctx.opsStore.saveAuditReview({
-        auditId: input.auditId,
-        groupId: input.groupId,
-        notes: normalizeString(input.notes),
-        reviewerId: input.reviewerId,
-        severity: input.severity,
-        status: input.status,
-        tags: Array.from(new Set(input.tags ?? [])),
-      });
-      return AuditReviewRecordSchema.parse(record);
-    }),
+    .mutation(async ({ ctx, input }) =>
+      withMutationTelemetry('save-audit-review', { auditId: input.auditId, groupId: input.groupId }, async () => {
+        const record = await ctx.opsStore.saveAuditReview({
+          auditId: input.auditId,
+          groupId: input.groupId,
+          notes: normalizeString(input.notes),
+          reviewerId: input.reviewerId,
+          severity: input.severity,
+          status: input.status,
+          tags: Array.from(new Set(input.tags ?? [])),
+        });
+        return AuditReviewRecordSchema.parse(record);
+      })
+    ),
 
   savePromptTemplate: t.procedure
     .input(
@@ -170,47 +188,57 @@ export const promptRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) =>
-      ctx.templateManager.saveTemplate({
-        editable: input.editable,
-        label: input.label,
-        playerId: input.playerId,
-        templateId: input.templateId,
-      })
+      withMutationTelemetry('save-template', { playerId: input.playerId, templateId: input.templateId }, () =>
+        ctx.templateManager.saveTemplate({
+          editable: input.editable,
+          label: input.label,
+          playerId: input.playerId,
+          templateId: input.templateId,
+        })
+      )
     ),
 
   submitPlayerFeedback: t.procedure
     .input(submitPlayerFeedbackInput)
-    .mutation(async ({ ctx, input }) => {
-      const playerId = normalizeString(input.playerId);
-      if (playerId === null) {
-        throw new Error('Player identifier required for feedback submission.');
-      }
-      const audit = await ctx.opsStore.getAuditEntry(input.auditId);
-      if (audit === null) {
-        throw new Error('Audit entry not found for feedback.');
-      }
-      const record = await ctx.auditFeedbackStore.create({
-        auditId: input.auditId,
-        chronicleId: input.chronicleId,
-        comment: normalizeString(input.comment),
-        expectedIntentType: input.expectedIntentType ?? null,
-        expectedInventoryDelta: input.expectedInventoryDelta ?? null,
-        expectedInventoryNotes: normalizeString(input.expectedInventoryNotes),
-        expectedLocationChange: input.expectedLocationChange ?? null,
-        expectedLocationNotes: normalizeString(input.expectedLocationNotes),
-        expectedSkillCheck: input.expectedSkillCheck ?? null,
-        expectedSkillNotes: normalizeString(input.expectedSkillNotes),
-        gmEntryId: input.gmEntryId,
-        groupId: audit.groupId,
-        metadata: {},
-        note: normalizeString(input.comment),
-        playerId,
-        sentiment: input.sentiment,
-        turnId: input.turnId,
-        turnSequence: input.turnSequence,
-      });
-      return PlayerFeedbackRecordSchema.parse(record);
-    }),
+    .mutation(async ({ ctx, input }) =>
+      withMutationTelemetry(
+        'submit-player-feedback',
+        { auditId: input.auditId, chronicleId: input.chronicleId, turnId: input.turnId },
+        async () => {
+          const playerId = normalizeString(input.playerId);
+          if (playerId === null) {
+            throw new Error('Player identifier required for feedback submission.');
+          }
+          // Get or create audit group for this chronicle
+          const auditGroup = await ctx.opsStore.auditGroupStore.ensureGroup({
+            scopeType: 'chronicle',
+            playerId,
+            chronicleId: input.chronicleId,
+          });
+          const record = await ctx.auditFeedbackStore.create({
+            auditId: input.auditId,
+            chronicleId: input.chronicleId,
+            comment: normalizeString(input.comment),
+            expectedIntentType: input.expectedIntentType ?? null,
+            expectedInventoryDelta: input.expectedInventoryDelta ?? null,
+            expectedInventoryNotes: normalizeString(input.expectedInventoryNotes),
+            expectedLocationChange: input.expectedLocationChange ?? null,
+            expectedLocationNotes: normalizeString(input.expectedLocationNotes),
+            expectedSkillCheck: input.expectedSkillCheck ?? null,
+            expectedSkillNotes: normalizeString(input.expectedSkillNotes),
+            gmEntryId: input.gmEntryId,
+            groupId: auditGroup.id,
+            metadata: {},
+            note: normalizeString(input.comment),
+            playerId,
+            sentiment: input.sentiment,
+            turnId: input.turnId,
+            turnSequence: input.turnSequence,
+          });
+          return PlayerFeedbackRecordSchema.parse(record);
+        }
+      )
+    ),
 });
 
 export type PromptRouter = typeof promptRouter;

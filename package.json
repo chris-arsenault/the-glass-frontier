@@ -33,8 +33,6 @@
   "author": "Codex",
   "license": "Polyform-Noncommercial-1.0.0",
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.930.0",
-    "@aws-sdk/client-s3": "^3.930.0",
     "@aws-sdk/client-sqs": "^3.930.0",
     "@aws-sdk/credential-providers": "^3.930.0",
     "@eslint/js": "^9.39.1",

@@ -1,4 +1,3 @@
-import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { CreateQueueCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { execa } from 'execa';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -23,11 +22,8 @@ const credentials = {
 };
 
 const region = resolveAwsRegion();
-const s3Endpoint = resolveAwsEndpoint('AWS_S3_ENDPOINT');
 const sqsEndpoint = resolveAwsEndpoint('AWS_SQS_ENDPOINT');
 
-const narrativeBucket = process.env.NARRATIVE_S3_BUCKET ?? 'gf-e2e-narrative';
-const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET ?? 'gf-e2e-audit';
 const turnProgressQueue = queueUrlFromEnv('TURN_PROGRESS_QUEUE_URL', 'gf-e2e-turn-progress');
 const closureQueue = queueUrlFromEnv('CHRONICLE_CLOSURE_QUEUE_URL', 'gf-e2e-chronicle-closure');
 const worldstateDatabaseUrl =
@@ -47,12 +43,6 @@ const log = (...args: unknown[]) => {
 };
 
 async function main(): Promise<void> {
-  const s3 = new S3Client({
-    credentials,
-    endpoint: s3Endpoint,
-    forcePathStyle: shouldForcePathStyle(),
-    region,
-  });
   const sqs = new SQSClient({
     credentials,
     endpoint: sqsEndpoint,
@@ -71,8 +61,6 @@ async function main(): Promise<void> {
   await runAppMigrations();
   await runWorldstateMigrations();
   await runOpsMigrations();
-  await ensureBucket(s3, narrativeBucket);
-  await ensureBucket(s3, auditBucket);
 
   await ensureQueue(sqs, turnProgressQueue.name);
   await ensureQueue(sqs, closureQueue.name);
@@ -124,29 +112,6 @@ async function runOpsMigrations(): Promise<void> {
       ...process.env,
       GLASS_FRONTIER_DATABASE_URL: worldstateDatabaseUrl,
     },
-  });
-}
-
-async function ensureBucket(client: S3Client, bucket: string): Promise<void> {
-  log('Ensuring bucket', bucket);
-  await withRetry(`bucket:${bucket}`, async () => {
-    try {
-      await client.send(
-        new CreateBucketCommand({
-          Bucket: bucket,
-        })
-      );
-      log('Created bucket', bucket);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.name === 'BucketAlreadyOwnedByYou' || error.name === 'BucketAlreadyExists')
-      ) {
-        log('Bucket already exists', bucket);
-        return;
-      }
-      throw error;
-    }
   });
 }
 
@@ -204,16 +169,6 @@ main().catch((error) => {
   console.error('[seed-localstack] Failed', error);
   process.exitCode = 1;
 });
-function shouldForcePathStyle(): boolean {
-  const explicit = process.env.AWS_S3_FORCE_PATH_STYLE;
-  if (typeof explicit === 'string') {
-    const normalized = explicit.trim().toLowerCase();
-    if (['1', 'true', 'yes'].includes(normalized)) {
-      return true;
-    }
-  }
-  return Boolean(s3Endpoint);
-}
 
 function resolveAwsRegion(): string {
   const candidates = [
