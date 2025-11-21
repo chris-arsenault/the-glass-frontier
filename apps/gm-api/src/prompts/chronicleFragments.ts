@@ -1,169 +1,200 @@
-
+/* eslint-disable sonarjs/no-duplicate-string */
 import type { PromptTemplateId } from '@glass-frontier/dto';
-import {GraphContext} from "../types";
-import {trimBeatsList, trimBreadcrumbList, trimSkillsList} from "./contextFormaters";
-import {getPromptInput} from "@glass-frontier/gm-api/prompts/locationHelpers";
-export type ChronicleFragmentTypes = "character" | "location" | "beats" | "intent" |
-  "gm-response" | "skill-check" | "user-message" | "recent-events" | "tone" | "wrap" |
-  "location-detail" | "inventory" | "inventory-detail" | "seed";
+import { getPromptInput } from '@glass-frontier/gm-api/prompts/locationHelpers';
+import { isNonEmptyString } from '@glass-frontier/utils';
 
+import type { GraphContext } from '../types';
+import { trimBeatsList, trimBreadcrumbList, trimSkillsList } from './contextFormaters';
+
+export type ChronicleFragmentTypes =
+  | 'character'
+  | 'location'
+  | 'beats'
+  | 'intent'
+  | 'gm-response'
+  | 'skill-check'
+  | 'user-message'
+  | 'recent-events'
+  | 'tone'
+  | 'wrap'
+  | 'location-detail'
+  | 'inventory'
+  | 'inventory-detail'
+  | 'seed';
+
+// prettier-ignore
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
-  "intent-classifier": ['character', 'location', 'beats', 'wrap'],
-  "intent-beat-detector": ['intent', 'beats'],
-  "beat-tracker": ['intent', 'beats'],
-  "check-planner": ['intent', 'character', 'location'],
-  "gm-summary": ['intent', 'character', 'skill-check', 'wrap'],
-  "location-delta": ['intent', 'user-message', 'location-detail'],
-  "inventory-delta": ['intent', 'user-message', 'inventory'],
-  "action-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
-  "wrap-resolver": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail',  'wrap', 'seed'],
-  "inquiry-describer": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
-  "clarification-responder": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
-  "possibility-advisor": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail','seed'],
-  "planning-narrator": ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
-  "reflection-weaver": ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  'action-resolver': ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  'beat-tracker': ['intent', 'beats'],
+  'check-planner': ['intent', 'character', 'location'],
+  'clarification-responder': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  'gm-summary': ['intent', 'character', 'skill-check', 'wrap'],
+  'inquiry-describer': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  'intent-beat-detector': ['intent', 'beats'],
+  'intent-classifier': ['character', 'location', 'beats', 'wrap'],
+  'inventory-delta': ['intent', 'user-message', 'inventory'],
+  'location-delta': ['intent', 'user-message', 'location-detail'],
+  'planning-narrator': ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  'possibility-advisor': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  'reflection-weaver': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
+  'wrap-resolver': ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'wrap', 'seed'],
+};
+
+type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
+
+const fragmentHandlers: Record<ChronicleFragmentTypes, FragmentHandler> = {
+  beats: beatsFragment,
+  character: characterFragment,
+  'gm-response': gmResponseFragment,
+  intent: intentFragment,
+  inventory: inventoryFragment,
+  'inventory-detail': inventoryDetailFragment,
+  location: locationFragment,
+  'location-detail': locationDetailFragment,
+  'recent-events': recentEventsFragment,
+  seed: seedFragment,
+  'skill-check': skillCheckFragment,
+  tone: toneFragment,
+  'user-message': userMessageFragment,
+  wrap: wrapFragment,
+};
+
+export function extractFragment(
+  fragmentType: ChronicleFragmentTypes,
+  context: GraphContext
+): Promise<unknown> | unknown {
+  // eslint-disable-next-line securityPlugin/detect-object-injection
+  const handler = fragmentHandlers[fragmentType];
+  return handler(context);
 }
 
-export async function extractFragment(fragmentType: ChronicleFragmentTypes, context: GraphContext): any {
-  switch (fragmentType) {
-    case 'user-message':
-      return userMessageFragment(context);
-    case 'character':
-      return characterFragment(context);
-    case 'location':
-      return locationFragment(context);
-    case 'location-detail':
-      return await locationDetailFragment(context);
-    case 'inventory':
-      return inventoryFragment(context);
-    case 'inventory-detail':
-      return inventoryDetailFragment(context);
-    case 'beats':
-      return beatsFragment(context);
-    case 'intent':
-      return intentFragment(context);
-    case 'gm-response':
-      return gmResponseFragment(context);
-    case 'skill-check':
-      return skillCheckFragment(context);
-    case 'recent-events':
-      return recentEventsFragment(context);
-    case 'tone':
-      return toneFragment(context);
-    case 'wrap':
-      return wrapFragment(context);
-    case 'seed':
-      return seedFragment(context);
-    default:
-      return {};
-  }
-}
-
-function userMessageFragment(context: GraphContext): any {
+function userMessageFragment(context: GraphContext): string {
   return context.playerMessage.content;
 }
 
-function characterFragment(context: GraphContext): any {
+function characterFragment(context: GraphContext): Record<string, unknown> {
   return {
-    name: context.chronicleState.character?.name,
     archetype: context.chronicleState.character?.archetype,
-    pronouns: context.chronicleState.character?.pronouns,
     attributes: context.chronicleState.character?.attributes,
-    skills: trimSkillsList(Object.values(context.chronicleState.character?.skills || {})),
+    name: context.chronicleState.character?.name,
+    pronouns: context.chronicleState.character?.pronouns,
+    skills: trimSkillsList(Object.values(context.chronicleState.character?.skills ?? {})),
+  };
+}
+
+// eslint-disable-next-line complexity
+async function locationFragment(context: GraphContext): Promise<Record<string, unknown>> {
+  const anchorId =
+    context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+  if (!isNonEmptyString(anchorId)) {
+    return {
+      breadcrumbs: [],
+      description: null,
+      name: null,
+      tags: [],
+    };
+  }
+  try {
+    const details = await context.locationGraphStore.getLocationDetails({ id: anchorId });
+    return {
+      breadcrumbs: trimBreadcrumbList(details.breadcrumb),
+      description: details.place.description,
+      name: details.place.name,
+      tags: details.place.tags ?? [],
+    };
+  } catch {
+    return {
+      breadcrumbs: trimBreadcrumbList(context.chronicleState.location?.breadcrumb ?? []),
+      description: context.chronicleState.location?.description ?? null,
+      name: context.chronicleState.location?.breadcrumb.at(-1)?.name ?? null,
+      tags: context.chronicleState.location?.tags ?? [],
+    };
   }
 }
 
-function locationFragment(context: GraphContext): any {
-  return {
-    name: context.chronicleState.location?.breadcrumb.at(-1)?.name,
-    description: context.chronicleState.location?.description,
-    tags: context.chronicleState.location?.tags,
-    breadcrumbs: trimBreadcrumbList(context.chronicleState.location?.breadcrumb || []),
-  }
-}
-
-async function locationDetailFragment(context: GraphContext): Promise<any> {
+async function locationDetailFragment(context: GraphContext): Promise<unknown> {
   const promptInput = await getPromptInput(context);
   if (promptInput === null) {
-    return "Lost In Space";
+    return 'Lost In Space';
   }
 
   return {
-    self: promptInput.current,
     children: promptInput.children,
-    parent: promptInput.parent,
-    siblings: promptInput.adjacent,
     links: promptInput.links,
-  }
+    parent: promptInput.parent,
+    self: promptInput.current,
+    siblings: promptInput.adjacent,
+  };
 }
 
-function inventoryFragment(context: GraphContext): any {
-  return context.chronicleState.character?.inventory.map(item => {
-    return {
-      name: item.name,
-      kind: item.kind,
-      quantity: item.quantity,
-    }
-  })
+function inventoryFragment(context: GraphContext): Array<Record<string, unknown>> {
+  return (context.chronicleState.character?.inventory ?? []).map((item) => ({
+    kind: item.kind,
+    name: item.name,
+    quantity: item.quantity,
+  }));
 }
 
-function inventoryDetailFragment(context: GraphContext): any {
-  return context.chronicleState.character?.inventory.map(item => {
-    return {
-      name: item.name,
-      kind: item.kind,
-      quantity: item.quantity,
-      description: item.description,
-      effect: item.effect,
-    }
-  })
+function inventoryDetailFragment(context: GraphContext): Array<Record<string, unknown>> {
+  return (context.chronicleState.character?.inventory ?? []).map((item) => ({
+    description: item.description,
+    effect: item.effect,
+    kind: item.kind,
+    name: item.name,
+    quantity: item.quantity,
+  }));
 }
 
-function beatsFragment(context: GraphContext): any {
+function beatsFragment(context: GraphContext): unknown {
   return trimBeatsList(context.chronicleState.chronicle.beats);
 }
 
-function intentFragment(context: GraphContext): any {
+function intentFragment(context: GraphContext): Record<string, unknown> {
   return {
-    type: context.playerIntent?.intentType,
+    beatDirective: context.playerIntent?.beatDirective.summary,
     summary: context.playerIntent?.intentSummary,
     targetBeat: context.playerIntent?.beatDirective.targetBeatId,
-    beatDirective: context.playerIntent?.beatDirective.summary,
-  }
+    type: context.playerIntent?.intentType,
+  };
 }
 
-function toneFragment(context: GraphContext): any {
-  return `*IMPORTANT*: ${context.playerIntent?.tone}`
+function toneFragment(context: GraphContext): string {
+  return `*IMPORTANT*: ${context.playerIntent?.tone}`;
 }
 
-function skillCheckFragment(context: GraphContext): any {
+function skillCheckFragment(context: GraphContext): Record<string, unknown> {
   return {
-    skill: context.skillCheckPlan?.skill,
-    riskLevel: context.skillCheckPlan?.riskLevel,
     advantage: context.skillCheckResult?.advantage,
-    outcome: context.skillCheckResult?.outcomeTier
-  }
+    outcome: context.skillCheckResult?.outcomeTier,
+    riskLevel: context.skillCheckPlan?.riskLevel,
+    skill: context.skillCheckPlan?.skill,
+  };
 }
 
-function gmResponseFragment(context: GraphContext): any {
-  return context.gmResponse?.content
+function gmResponseFragment(context: GraphContext): string | undefined {
+  return context.gmResponse?.content;
 }
 
-function recentEventsFragment(context: GraphContext): any {
-  return context.chronicleState.turns.slice(-10).map((turn, index) => {
-    return `${index + 1} P: ${turn.playerIntent?.intentSummary}\n   G: ${turn.gmSummary}`
-  }).join('\n')
+function recentEventsFragment(context: GraphContext): string {
+  return context.chronicleState.turns
+    .slice(-10)
+    .map(
+      (turn, index) =>
+        `${index + 1} P: ${turn.playerIntent?.intentSummary ?? ''}\n   G: ${turn.gmSummary ?? ''}`
+    )
+    .join('\n');
 }
 
-function wrapFragment(context: GraphContext): any {
-  if (context.chronicleState.chronicle?.targetEndTurn === undefined || context.chronicleState.chronicle?.targetEndTurn === null) {
-    return "";
+function wrapFragment(context: GraphContext): Record<string, number> | string {
+  const targetEndTurn = context.chronicleState.chronicle?.targetEndTurn;
+  if (targetEndTurn === undefined || targetEndTurn === null) {
+    return '';
   }
   return {
-    turnsLeft: context.chronicleState.chronicle.targetEndTurn - context.turnSequence
-  }
+    turnsLeft: targetEndTurn - context.turnSequence,
+  };
 }
 
-function seedFragment(context: GraphContext): any {
+function seedFragment(context: GraphContext): string | undefined {
   return context.chronicleState.chronicle.seedText;
 }

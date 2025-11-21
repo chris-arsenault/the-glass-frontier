@@ -1,22 +1,19 @@
-/* eslint-disable max-lines, max-lines-per-function, complexity, no-await-in-loop, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, perfectionistPlugin/sort-objects */
 import type {
+  LocationBreadcrumbEntry,
   LocationEdge,
   LocationEdgeKind,
   LocationEvent,
-  LocationGraphSnapshot,
   LocationPlace,
   LocationPlan,
-  LocationPlanEdge,
   LocationState,
   LocationSummary,
 } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
-import { executeLocationPlan, type PlanExecutionResult, type PlanMutationAdapter } from './locationGraphPlan';
 import { createPool, withTransaction } from './pg';
 import type { LocationGraphStore } from './types';
-import { coerceString, isNonEmptyString, normalizeTags, now, slugify } from './utils';
+import { isNonEmptyString, normalizeTags, now, slugify } from './utils';
 
 type Queryable = Pick<Pool, 'query'> | PoolClient;
 
@@ -25,85 +22,84 @@ type LocationRow = {
   slug: string;
   name: string;
   kind: string;
-  location_root: string;
-  canonical_parent: string | null;
+  biome: string | null;
   description: string | null;
   tags: string[];
-  ltree_path: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: Date | null;
   updated_at: Date | null;
   props?: unknown;
-};
-
-type LocationStateRow = {
-  character_id: string;
-  location_id: string;
-  anchor_place_id: string;
-  certainty: LocationState['certainty'];
-  status: string[];
-  note: string | null;
-  updated_at: Date | null;
+  parent_id?: string | null;
+  root_id?: string | null;
 };
 
 const toPlace = (row: LocationRow): LocationPlace => {
   const props = (row.props ?? {}) as Partial<LocationPlace>;
   return {
-    canonicalParentId: row.canonical_parent ?? props.canonicalParentId ?? undefined,
-    createdAt: Number.isFinite(props.createdAt) && typeof props.createdAt === 'number'
-      ? props.createdAt
-      : row.created_at?.getTime() ?? now(),
+    canonicalParentId: row.parent_id ?? props.canonicalParentId ?? undefined,
+    createdAt:
+      typeof props.createdAt === 'number' && Number.isFinite(props.createdAt)
+        ? props.createdAt
+        : row.created_at?.getTime() ?? now(),
     description: props.description ?? row.description ?? undefined,
     id: row.id,
     kind: props.kind ?? row.kind,
-    locationId: row.location_root,
-    metadata: props.metadata ?? undefined,
+    locationId: row.root_id ?? row.id,
+    metadata: props.metadata ?? row.metadata ?? undefined,
     name: props.name ?? row.name,
     tags: Array.isArray(row.tags) ? row.tags : props.tags ?? [],
-    updatedAt: Number.isFinite(props.updatedAt) && typeof props.updatedAt === 'number'
-      ? props.updatedAt
-      : row.updated_at?.getTime() ?? now(),
+    updatedAt:
+      typeof props.updatedAt === 'number' && Number.isFinite(props.updatedAt)
+        ? props.updatedAt
+        : row.updated_at?.getTime() ?? now(),
   };
 };
 
-const toEdge = (row: {
+const toNeighbor = (row: {
   src_id: string;
   dst_id: string;
   type: LocationEdgeKind;
   props: Record<string, unknown> | null;
-  created_at?: Date | null;
-}): LocationEdge => {
-  const props = (row.props ?? {}) as { metadata?: Record<string, unknown>; createdAt?: unknown; locationId?: string };
+  created_at: Date | null;
+  neighbor_id: string;
+  neighbor_name: string;
+  neighbor_kind: string;
+  neighbor_slug: string;
+  neighbor_description: string | null;
+  neighbor_tags: string[];
+  neighbor_metadata: Record<string, unknown> | null;
+  neighbor_props: Record<string, unknown> | null;
+  direction: 'out' | 'in';
+}): { edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' } => {
+  const props = (row.props ?? {}) as { metadata?: Record<string, unknown>; createdAt?: number };
   const createdAt =
     typeof props.createdAt === 'number' && Number.isFinite(props.createdAt)
       ? props.createdAt
       : row.created_at?.getTime() ?? now();
   return {
-    createdAt,
-    dst: row.dst_id,
-    kind: row.type,
-    locationId: props.locationId ?? '',
-    metadata: props.metadata,
-    src: row.src_id,
+    direction: row.direction,
+    edge: {
+      createdAt,
+      dst: row.dst_id,
+      kind: row.type,
+      locationId: '',
+      metadata: props.metadata,
+      src: row.src_id,
+    },
+    neighbor: {
+      canonicalParentId: undefined,
+      createdAt: createdAt,
+      description: row.neighbor_description ?? undefined,
+      id: row.neighbor_id,
+      kind: row.neighbor_kind,
+      locationId: row.neighbor_id,
+      metadata: row.neighbor_metadata ?? (row.neighbor_props ?? undefined),
+      name: row.neighbor_name,
+      tags: Array.isArray(row.neighbor_tags) ? row.neighbor_tags : [],
+      updatedAt: row.created_at?.getTime() ?? createdAt,
+    },
   };
 };
-
-const toLocationEvent = (row: {
-  id: string;
-  location_id: string;
-  chronicle_id: string | null;
-  summary: string;
-  scope: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: Date | null;
-}): LocationEvent => ({
-  chronicleId: row.chronicle_id ?? '',
-  createdAt: row.created_at?.getTime() ?? now(),
-  id: row.id,
-  locationId: row.location_id,
-  metadata: row.metadata ?? undefined,
-  scope: row.scope ?? undefined,
-  summary: row.summary,
-});
 
 class PostgresLocationGraphStore implements LocationGraphStore {
   readonly #pool: Pool;
@@ -112,6 +108,129 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     this.#pool = options.pool;
   }
 
+  // --- New API ---
+  async upsertLocation(input: {
+    id?: string;
+    name: string;
+    kind: string;
+    description?: string | null;
+    tags?: string[];
+    biome?: string | null;
+    parentId?: string | null;
+  }): Promise<LocationPlace> {
+    const id = input.id ?? randomUUID();
+    const tags = normalizeTags(input.tags, 24);
+    const slug = await this.#reserveSlug(id, input.name);
+    const place = await withTransaction(this.#pool, async (client) => {
+      await this.#upsertNode(client, id, 'location', {
+        biome: input.biome ?? undefined,
+        canonicalParentId: input.parentId ?? undefined,
+        description: input.description ?? undefined,
+        id,
+        kind: input.kind,
+        name: input.name,
+        tags,
+      });
+      await client.query(
+        `INSERT INTO location (id, slug, name, kind, biome, description, tags, metadata, created_at, updated_at)
+         VALUES ($1::uuid, $2, $3, $4, $5, $6, $7::text[], '{}'::jsonb, now(), now())
+         ON CONFLICT (id) DO UPDATE
+         SET name = EXCLUDED.name,
+             kind = EXCLUDED.kind,
+             biome = EXCLUDED.biome,
+             description = EXCLUDED.description,
+             tags = EXCLUDED.tags,
+             slug = EXCLUDED.slug,
+             updated_at = now()`,
+        [id, slug, input.name, input.kind, input.biome ?? null, input.description ?? null, tags]
+      );
+      await this.#setCanonicalParent(client, id, input.parentId ?? null);
+      const fetched = await this.#getPlace(client, id);
+      if (!fetched) {
+        throw new Error('Failed to upsert location');
+      }
+      return fetched;
+    });
+    return place;
+  }
+
+  async deleteLocation(input: { id: string }): Promise<void> {
+    await withTransaction(this.#pool, async (client) => {
+      await client.query('DELETE FROM edge WHERE src_id = $1::uuid OR dst_id = $1::uuid', [input.id]);
+      await client.query('DELETE FROM location WHERE id = $1::uuid', [input.id]);
+      await client.query('DELETE FROM node WHERE id = $1::uuid', [input.id]);
+    });
+  }
+
+  async upsertEdge(input: {
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    const createdAt = now();
+    await this.#pool.query(
+      `DELETE FROM edge WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3`,
+      [input.src, input.dst, input.kind]
+    );
+    await this.#pool.query(
+      `INSERT INTO edge (id, src_id, dst_id, type, props, created_at)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::jsonb, to_timestamp($6 / 1000.0))`,
+      [
+        randomUUID(),
+        input.src,
+        input.dst,
+        input.kind,
+        JSON.stringify({ metadata: input.metadata ?? {}, createdAt }),
+        createdAt,
+      ]
+    );
+  }
+
+  async deleteEdge(input: { src: string; dst: string; kind: LocationEdgeKind }): Promise<void> {
+    await this.#pool.query(
+      `DELETE FROM edge WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3`,
+      [input.src, input.dst, input.kind]
+    );
+  }
+
+  async listLocationRoots(input?: { search?: string; limit?: number }): Promise<LocationPlace[]> {
+    const limit = Math.max(1, Math.min(100, input?.limit ?? 50));
+    const search = input?.search ? `%${input.search.toLowerCase()}%` : null;
+    const result = await this.#pool.query(
+      `SELECT l.*, NULL::uuid as parent_id, l.id as root_id, n.props
+       FROM location l
+       JOIN node n ON n.id = l.id
+       WHERE NOT EXISTS (
+         SELECT 1 FROM edge e WHERE e.src_id = l.id AND e.type = 'location_parent'
+       )
+       ${search ? 'AND lower(l.name) LIKE $2' : ''}
+       ORDER BY l.created_at ASC
+       LIMIT $1`,
+      search ? [limit, search] : [limit]
+    );
+    return result.rows.map((row) => toPlace(row as LocationRow));
+  }
+
+  async getLocationDetails(input: {
+    id: string;
+  }): Promise<{
+    place: LocationPlace;
+    breadcrumb: LocationBreadcrumbEntry[];
+    children: LocationPlace[];
+    neighbors: Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>;
+  }> {
+    const place = await this.#getPlace(this.#pool, input.id);
+    if (!place) {
+      throw new Error('Location not found');
+    }
+    const breadcrumb = await this.getLocationChain({ anchorId: input.id });
+    const children = await this.#listDescendants(input.id);
+    const neighbors = await this.getLocationNeighbors({ id: input.id, limit: 100 });
+    return { place, breadcrumb, children, neighbors };
+  }
+
+  // --- Backward-compatible helpers for callers not yet migrated ---
   async ensureLocation(input: {
     locationId?: string;
     name: string;
@@ -120,59 +239,29 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     characterId?: string;
     kind?: string;
   }): Promise<LocationPlace> {
-    const locationId = isNonEmptyString(input.locationId) ? input.locationId : randomUUID();
-    const description = input.description ?? null;
-    const kind = isNonEmptyString(input.kind) ? input.kind : 'locale';
-    const tags = normalizeTags(input.tags, 24);
-    const result = await withTransaction(this.#pool, async (client) => {
-      const existing = await this.#getPlace(client, locationId);
-      if (existing !== null) {
-        if (isNonEmptyString(input.characterId)) {
-          await this.#writeState(client, {
-            anchorPlaceId: existing.id,
-            certainty: 'exact',
-            characterId: input.characterId,
-            locationId,
-            status: [],
-          });
-        }
-        return existing;
-      }
-      const place = await this.#createPlaceRecord(client, {
-        canonicalParentId: null,
-        description,
-        id: locationId,
-        kind,
-        locationRoot: locationId,
-        name: input.name,
-        parentId: null,
-        tags,
-      });
-      if (isNonEmptyString(input.characterId)) {
-        await this.#writeState(client, {
-          anchorPlaceId: place.id,
-          certainty: 'exact',
-          characterId: input.characterId,
-          locationId,
-          status: [],
-        });
-      }
-      return place;
+    const place = await this.upsertLocation({
+      description: input.description,
+      id: input.locationId,
+      kind: input.kind ?? 'locale',
+      name: input.name,
+      parentId: null,
+      tags: input.tags,
     });
-    return result;
+    if (isNonEmptyString(input.characterId)) {
+      await this.upsertEdge({
+        dst: place.id,
+        kind: 'character_at' as unknown as LocationEdgeKind,
+        metadata: { certainty: 'exact', status: [], note: null, locationId: place.id },
+        src: input.characterId,
+      });
+    }
+    return place;
   }
 
-  async getLocationGraph(locationId: string): Promise<LocationGraphSnapshot> {
-    const places = await this.#listPlaces(locationId);
-    const edges = await this.#listEdges(locationId);
-    const edgesWithLocation = edges.map((edge) =>
-      edge.locationId && edge.locationId.length > 0 ? edge : { ...edge, locationId }
-    );
-    return {
-      edges: edgesWithLocation,
-      locationId,
-      places,
-    };
+  async getLocationGraph(locationId: string): Promise<{ edges: LocationEdge[]; locationId: string; places: LocationPlace[] }> {
+    const places = await this.#listDescendants(locationId);
+    const edges = await this.#listSubgraphEdges(locationId);
+    return { edges, locationId, places };
   }
 
   async applyPlan(input: {
@@ -180,57 +269,99 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     characterId: string;
     plan: LocationPlan;
   }): Promise<LocationState | null> {
-    if (input.plan.ops.length === 0) {
+    if (!input.plan.ops.length) {
       return this.getLocationState(input.characterId);
     }
+    const idMap = new Map<string, string>();
+    let anchorPlaceId: string | null = input.locationId;
+    let certainty: LocationState['certainty'] = 'exact';
+    let note: string | null = null;
+    let status: string[] = [];
 
-      const nextState = await withTransaction(this.#pool, async (client) => {
-        const currentState = await this.#getLocationState(client, input.characterId);
-        const adapter: PlanMutationAdapter = {
-          createEdge: async (edge) => this.#createEdge(client, input.locationId, edge),
-          createPlace: async (place) => {
-            const placeInput = place as {
-              canonical_parent_id?: string | null;
-              description?: string | null;
-              id?: string;
-              parent_id?: string | null;
-            };
-            const created = await this.#createPlaceRecord(client, {
-              canonicalParentId: placeInput.canonical_parent_id ?? null,
-              description: placeInput.description ?? null,
-              id: placeInput.id ?? randomUUID(),
-              kind: place.kind,
-              locationRoot: input.locationId,
-              name: place.name,
-              parentId: placeInput.parent_id ?? null,
-              tags: normalizeTags(place.tags, 24),
+    await withTransaction(this.#pool, async (client) => {
+      for (const op of input.plan.ops) {
+        switch (op.op) {
+          case 'CREATE_PLACE': {
+            const created = await this.upsertLocation({
+              description: op.place.description,
+              kind: op.place.kind,
+              name: op.place.name,
+              parentId: null,
+              tags: op.place.tags,
             });
-            return created.id;
-          },
-          setCanonicalParent: async (childId, parentId) =>
-          this.#setCanonicalParent(client, childId, parentId),
-      };
-
-      const result = await executeLocationPlan(input.plan, adapter);
-      const next = await this.#resolveNextState(
-        client,
-        input,
-        result,
-        currentState
-      );
-      if (next === null) {
-        return currentState;
+            idMap.set(op.place.temp_id, created.id);
+            if (!anchorPlaceId) {
+              anchorPlaceId = created.id;
+            }
+            break;
+          }
+          case 'CREATE_EDGE': {
+            await this.upsertEdge({
+              src: idMap.get(op.edge.src) ?? op.edge.src,
+              dst: idMap.get(op.edge.dst) ?? op.edge.dst,
+              kind: op.edge.kind,
+            });
+            break;
+          }
+          case 'MOVE':
+          case 'ENTER': {
+            anchorPlaceId = idMap.get(op.dst_place_id) ?? op.dst_place_id;
+            break;
+          }
+          case 'EXIT': {
+            const parent = await this.#getParentId(client, idMap.get(op.src_place_id) ?? op.src_place_id);
+            if (parent) {
+              anchorPlaceId = parent;
+            }
+            break;
+          }
+          case 'SET_STATUS': {
+            status = Array.isArray(op.status) ? op.status : [];
+            break;
+          }
+          case 'SET_CERTAINTY': {
+            certainty = op.certainty;
+            note = op.note ?? null;
+            break;
+          }
+          case 'NO_CHANGE':
+          default:
+            break;
+        }
       }
-      await this.#writeState(client, next);
-      return next;
+      if (anchorPlaceId) {
+        const rootId = await this.#resolveRootId(client, anchorPlaceId);
+        await this.#saveCharacterLocation(
+          {
+            anchorPlaceId,
+            certainty,
+            characterId: input.characterId,
+            locationId: rootId,
+            note,
+            status,
+          },
+          client
+        );
+      }
     });
 
-    return nextState;
+    if (!anchorPlaceId) {
+      return null;
+    }
+    const rootId = await this.#resolveRootId(this.#pool, anchorPlaceId);
+    return {
+      anchorPlaceId,
+      certainty,
+      characterId: input.characterId,
+      locationId: rootId,
+      note: note ?? undefined,
+      status,
+      updatedAt: now(),
+    };
   }
 
   async getLocationState(characterId: string): Promise<LocationState | null> {
-    const state = await this.#getLocationState(this.#pool, characterId);
-    return state;
+    return this.#getLocationState(this.#pool, characterId);
   }
 
   async summarizeCharacterLocation(input: {
@@ -238,57 +369,18 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     characterId: string;
   }): Promise<LocationSummary | null> {
     const state = await this.getLocationState(input.characterId);
-    if (
-      state === null ||
-      !isNonEmptyString(state.anchorPlaceId) ||
-      state.locationId !== input.locationId
-    ) {
+    if (!state) {
       return null;
     }
-    const breadcrumb = await this.#buildBreadcrumb(state.anchorPlaceId, input.locationId);
-    if (breadcrumb.length === 0) {
-      return null;
-    }
-    const tagCollections = await Promise.all(
-      breadcrumb.map(async (entry) => {
-        const place = await this.getPlace(entry.id);
-        return place?.tags ?? [];
-      })
-    );
-    const tags = Array.from(new Set(tagCollections.flat()));
-    const anchor = await this.getPlace(state.anchorPlaceId);
+    const chain = await this.getLocationChain({ anchorId: state.anchorPlaceId });
     return {
       anchorPlaceId: state.anchorPlaceId,
-      breadcrumb,
+      breadcrumb: chain,
       certainty: state.certainty,
-      description: anchor?.description,
+      description: undefined,
       status: state.status ?? [],
-      tags,
+      tags: [],
     };
-  }
-
-  async listLocationRoots(
-    input?: { search?: string; limit?: number }
-  ): Promise<LocationPlace[]> {
-    const limit = Math.min(input?.limit ?? 50, 100);
-    const search = coerceString(input?.search);
-    const query = search === null
-      ? `SELECT l.*, n.props
-         FROM location l
-         JOIN node n ON n.id = l.id
-         WHERE l.id = l.location_root
-         ORDER BY l.name ASC
-         LIMIT $1`
-      : `SELECT l.*, n.props
-         FROM location l
-         JOIN node n ON n.id = l.id
-         WHERE l.id = l.location_root
-           AND lower(l.name) LIKE lower($2)
-         ORDER BY l.name ASC
-         LIMIT $1`;
-    const params = search === null ? [limit] : [limit, `%${search}%`];
-    const result = await this.#pool.query(query, params);
-    return result.rows.map((row) => toPlace(row as LocationRow));
   }
 
   async getPlace(placeId: string): Promise<LocationPlace | null> {
@@ -303,34 +395,13 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     tags?: string[];
     description?: string;
   }): Promise<LocationPlace> {
-    const locationId = isNonEmptyString(input.locationId) ? input.locationId : null;
-    const parentId = coerceString(input.parentId);
-    const tags = normalizeTags(input.tags, 24);
-    return withTransaction(this.#pool, async (client) => {
-      const parent =
-        parentId !== null ? await this.#getPlace(client, parentId) : null;
-      if (parentId !== null && parent === null) {
-        throw new Error(`Parent place ${parentId} not found.`);
-      }
-      const targetLocationId = parent?.locationId ?? locationId ?? randomUUID();
-      const place = await this.#createPlaceRecord(client, {
-        canonicalParentId: parent?.id ?? null,
-        description: input.description ?? null,
-        id: parent === null && locationId === null ? targetLocationId : randomUUID(),
-        kind: input.kind,
-        locationRoot: targetLocationId,
-        name: input.name,
-        parentId: parent?.id ?? null,
-        tags,
-      });
-      if (parent !== null) {
-        await this.#createEdge(client, targetLocationId, {
-          dst: place.id,
-          kind: 'CONTAINS',
-          src: parent.id,
-        });
-      }
-      return place;
+    return this.upsertLocation({
+      description: input.description,
+      id: input.locationId,
+      kind: input.kind,
+      name: input.name,
+      parentId: input.parentId ?? null,
+      tags: input.tags,
     });
   }
 
@@ -342,56 +413,17 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     tags?: string[];
     canonicalParentId?: string | null;
   }): Promise<LocationPlace> {
-    return withTransaction(this.#pool, async (client) => {
-      const current = await this.#getPlace(client, input.placeId);
-      if (current === null) {
-        throw new Error(`Place ${input.placeId} not found.`);
-      }
-      const nextParentId = await this.#resolveParentTarget(
-        client,
-        current,
-        input.canonicalParentId
-      );
-      const slug = slugify(input.name ?? current.name);
-      const newPath = await this.#computePath(client, {
-        parentId: nextParentId ?? null,
-        slug,
-      });
-      const previousPath = await this.#readPath(client, current.id);
-
-      await client.query(
-        `UPDATE location
-         SET name = $2,
-             kind = $3,
-             description = $4,
-             tags = $5::text[],
-             canonical_parent = $6::uuid,
-             slug = $7,
-             ltree_path = text2ltree($8),
-             updated_at = now()
-         WHERE id = $1::uuid`,
-        [
-          current.id,
-          input.name ?? current.name,
-          input.kind ?? current.kind,
-          input.description === undefined ? current.description ?? null : input.description,
-          input.tags ?? current.tags ?? [],
-          nextParentId ?? null,
-          slug,
-          newPath,
-        ]
-      );
-
-      if (previousPath !== null && newPath !== null && previousPath !== newPath) {
-        await client.query(
-          `UPDATE location
-           SET ltree_path = text2ltree($2) || subpath(ltree_path, nlevel(text2ltree($1)))
-           WHERE ltree_path <@ text2ltree($1)`,
-          [previousPath, newPath]
-        );
-      }
-
-      return (await this.#getPlace(client, current.id)) as LocationPlace;
+    const existing = await this.getPlace(input.placeId);
+    if (!existing) {
+      throw new Error('Location not found');
+    }
+    return this.upsertLocation({
+      description: input.description ?? existing.description ?? null,
+      id: existing.id,
+      kind: input.kind ?? existing.kind,
+      name: input.name ?? existing.name,
+      parentId: input.canonicalParentId ?? existing.canonicalParentId ?? null,
+      tags: input.tags ?? existing.tags,
     });
   }
 
@@ -402,11 +434,7 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     kind: LocationEdgeKind;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
-    await withTransaction(this.#pool, async (client) => {
-      await this.#ensurePlaceInLocation(client, input.locationId, input.src);
-      await this.#ensurePlaceInLocation(client, input.locationId, input.dst);
-      await this.#createEdge(client, input.locationId, input, input.metadata);
-    });
+    await this.upsertEdge(input);
   }
 
   async removeEdge(input: {
@@ -415,56 +443,80 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     dst: string;
     kind: LocationEdgeKind;
   }): Promise<void> {
-    await this.#pool.query(
-      `DELETE FROM edge
-       WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3`,
-      [input.src, input.dst, input.kind]
-    );
+    await this.deleteEdge(input);
   }
 
   async createLocationChain(input: {
     parentId?: string | null;
     segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
   }): Promise<{ anchor: LocationPlace; created: LocationPlace[] }> {
-    if (input.segments.length === 0) {
-      throw new Error('segments_required');
+    const created: LocationPlace[] = [];
+    let parentId = input.parentId ?? null;
+    for (const segment of input.segments) {
+      const place = await this.upsertLocation({
+        description: segment.description ?? null,
+        kind: segment.kind,
+        name: segment.name,
+        parentId,
+        tags: segment.tags,
+      });
+      created.push(place);
+      parentId = place.id;
     }
-    const parentId = coerceString(input.parentId);
-    return withTransaction(this.#pool, async (client) => {
-      const parent = parentId !== null ? await this.#getPlace(client, parentId) : null;
-      if (parentId !== null && parent === null) {
-        throw new Error(`Parent place ${parentId} not found.`);
-      }
-      const locationId = parent?.locationId ?? randomUUID();
-      const created: LocationPlace[] = [];
-      let lastParent = parent;
-      for (const segment of input.segments) {
-        const place = await this.#createPlaceRecord(client, {
-          canonicalParentId: lastParent?.id ?? null,
-          description: segment.description ?? null,
-          id: lastParent === null && created.length === 0 ? locationId : randomUUID(),
-          kind: segment.kind,
-          locationRoot: locationId,
-          name: segment.name,
-          parentId: lastParent?.id ?? null,
-          tags: normalizeTags(segment.tags, 24),
-        });
-        if (lastParent !== null) {
-          await this.#createEdge(client, locationId, {
-            dst: place.id,
-            kind: 'CONTAINS',
-            src: lastParent.id,
-          });
-        }
-        created.push(place);
-        lastParent = place;
-      }
-      const anchor = lastParent ?? parent;
-      if (anchor === null) {
-        throw new Error('anchor_not_created');
-      }
-      return { anchor, created };
-    });
+    return { anchor: created[created.length - 1], created };
+  }
+
+  async getLocationChain(input: { anchorId: string }): Promise<LocationBreadcrumbEntry[]> {
+    const result = await this.#pool.query(
+      `WITH RECURSIVE chain AS (
+         SELECT l.id, l.name, l.kind, parent.dst_id AS parent_id
+         FROM location l
+         LEFT JOIN edge parent ON parent.src_id = l.id AND parent.type = 'location_parent'
+         WHERE l.id = $1::uuid
+         UNION ALL
+         SELECT parent_loc.id, parent_loc.name, parent_loc.kind, parent_edge.dst_id
+         FROM chain c
+         JOIN edge parent_edge ON parent_edge.src_id = c.parent_id AND parent_edge.type = 'location_parent'
+         JOIN location parent_loc ON parent_loc.id = parent_edge.src_id
+       )
+       SELECT id, name, kind FROM chain`,
+      [input.anchorId]
+    );
+    return result.rows
+      .map((row) => ({ id: row.id as string, kind: row.kind as string, name: row.name as string }))
+      .reverse();
+  }
+
+  async getLocationNeighbors(input: {
+    id: string;
+    kind?: LocationEdgeKind;
+    limit?: number;
+  }): Promise<Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>> {
+    const limit = Math.max(1, Math.min(200, input.limit ?? 50));
+    const kindFilter = input.kind ? 'AND e.type = $3' : '';
+    const params: unknown[] = input.kind ? [input.id, input.id, input.kind, limit] : [input.id, input.id, limit];
+    const result = await this.#pool.query(
+      `SELECT e.src_id, e.dst_id, e.type, e.props, e.created_at,
+              l.id as neighbor_id, l.name as neighbor_name, l.kind as neighbor_kind, l.slug as neighbor_slug,
+              l.description as neighbor_description, l.tags as neighbor_tags, l.metadata as neighbor_metadata,
+              n.props as neighbor_props, 'out'::text as direction
+       FROM edge e
+       JOIN location l ON l.id = e.dst_id
+       JOIN node n ON n.id = l.id
+       WHERE e.src_id = $1::uuid ${kindFilter ? 'AND e.type = $3' : ''}
+       UNION ALL
+       SELECT e.src_id, e.dst_id, e.type, e.props, e.created_at,
+              l.id as neighbor_id, l.name as neighbor_name, l.kind as neighbor_kind, l.slug as neighbor_slug,
+              l.description as neighbor_description, l.tags as neighbor_tags, l.metadata as neighbor_metadata,
+              n.props as neighbor_props, 'in'::text as direction
+       FROM edge e
+       JOIN location l ON l.id = e.src_id
+       JOIN node n ON n.id = l.id
+       WHERE e.dst_id = $2::uuid ${kindFilter ? 'AND e.type = $3' : ''}
+       LIMIT $${input.kind ? 4 : 3}`,
+      params
+    );
+    return result.rows.map((row) => toNeighbor(row as never));
   }
 
   async appendLocationEvents(input: {
@@ -476,48 +528,38 @@ class PostgresLocationGraphStore implements LocationGraphStore {
       metadata?: Record<string, unknown>;
     }>;
   }): Promise<LocationEvent[]> {
-    if (input.events.length === 0) {
-      return [];
-    }
-    const nowMs = now();
-    const rows: Array<{
-      id: string;
-      location_id: string;
-      chronicle_id: string;
-      summary: string;
-      scope: string | null;
-      metadata: Record<string, unknown> | null;
-      created_at: Date;
-    }> = input.events.map((event, index) => ({
-      created_at: new Date(nowMs + index),
-      chronicle_id: event.chronicleId,
-      id: randomUUID(),
-      location_id: input.locationId,
-      metadata: event.metadata ?? null,
-      scope: coerceString(event.scope),
-      summary: event.summary,
-    }));
-    const values = rows
-      .map(
-        (_, index) =>
-          `($${index * 7 + 1}, $${index * 7 + 2}, $${index * 7 + 3}, $${index * 7 + 4}, $${index * 7 + 5}, $${index * 7 + 6}::jsonb, $${index * 7 + 7})`
-      )
-      .join(', ');
-    const params = rows.flatMap((row) => [
-      row.id,
-      row.location_id,
-      row.chronicle_id,
-      row.summary,
-      row.scope,
-      JSON.stringify(row.metadata ?? {}),
-      row.created_at,
-    ]);
-    await this.#pool.query(
-      `INSERT INTO location_event (id, location_id, chronicle_id, summary, scope, metadata, created_at)
-       VALUES ${values}`,
-      params
-    );
-    return rows.map((row) => toLocationEvent(row));
+    const createdAt = now();
+    const result: LocationEvent[] = [];
+    await withTransaction(this.#pool, async (client) => {
+      for (const evt of input.events) {
+        const id = randomUUID();
+        const insert = await client.query(
+          `INSERT INTO location_event (id, location_id, chronicle_id, summary, scope, metadata, created_at)
+           VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6::jsonb, to_timestamp($7 / 1000.0))
+           RETURNING id, location_id, chronicle_id, summary, scope, metadata, created_at`,
+          [
+            id,
+            input.locationId,
+            evt.chronicleId,
+            evt.summary,
+            evt.scope ?? null,
+            JSON.stringify(evt.metadata ?? {}),
+            createdAt,
+          ]
+        );
+        const row = insert.rows[0];
+        result.push({
+          chronicleId: row.chronicle_id ?? '',
+          createdAt: row.created_at?.getTime() ?? createdAt,
+          id: row.id,
+          locationId: row.location_id,
+          metadata: row.metadata ?? undefined,
+          scope: row.scope ?? undefined,
+          summary: row.summary,
+        });
+      }
+    });
+    return result;
   }
 
   async listLocationEvents(input: { locationId: string }): Promise<LocationEvent[]> {
@@ -528,328 +570,216 @@ class PostgresLocationGraphStore implements LocationGraphStore {
        ORDER BY created_at ASC`,
       [input.locationId]
     );
-    return result.rows.map((row) => toLocationEvent(row));
+    return result.rows.map((row) => ({
+      chronicleId: row.chronicle_id ?? '',
+      createdAt: row.created_at?.getTime() ?? now(),
+      id: row.id,
+      locationId: row.location_id,
+      metadata: row.metadata ?? undefined,
+      scope: row.scope ?? undefined,
+      summary: row.summary,
+    }));
   }
 
-  async #listPlaces(locationId: string): Promise<LocationPlace[]> {
+  async #listSubgraphEdges(rootId: string): Promise<LocationEdge[]> {
     const result = await this.#pool.query(
-      `SELECT l.*, n.props
-       FROM location l
-       JOIN node n ON n.id = l.id
-       WHERE l.location_root = $1::uuid
-       ORDER BY l.created_at ASC`,
-      [locationId]
-    );
-    return result.rows.map((row) => toPlace(row as LocationRow));
-  }
-
-  async #listEdges(locationId: string): Promise<LocationEdge[]> {
-    const result = await this.#pool.query(
-      `SELECT e.src_id, e.dst_id, e.type, e.props, e.created_at
-       FROM edge e
-       WHERE EXISTS (
-         SELECT 1 FROM location ls WHERE ls.id = e.src_id AND ls.location_root = $1::uuid
+      `WITH RECURSIVE place_tree AS (
+         SELECT l.id
+         FROM location l
+         WHERE l.id = $1::uuid
+         UNION ALL
+         SELECT child.id
+         FROM place_tree pt
+         JOIN edge e ON e.dst_id = pt.id AND e.type = 'location_parent'
+         JOIN location child ON child.id = e.src_id
        )
-       AND EXISTS (
-         SELECT 1 FROM location ld WHERE ld.id = e.dst_id AND ld.location_root = $1::uuid
-       )`,
-      [locationId]
+       SELECT e.src_id, e.dst_id, e.type, e.props, e.created_at
+       FROM edge e
+       WHERE e.src_id IN (SELECT id FROM place_tree)
+         AND e.dst_id IN (SELECT id FROM place_tree)`,
+      [rootId]
     );
-    return result.rows.map((row) => toEdge(row as never));
+    return result.rows.map((row) => {
+      const props = (row.props ?? {}) as { metadata?: Record<string, unknown>; createdAt?: number };
+      const createdAt =
+        typeof props.createdAt === 'number' && Number.isFinite(props.createdAt)
+          ? props.createdAt
+          : row.created_at?.getTime() ?? now();
+      return {
+        createdAt,
+        dst: row.dst_id,
+        kind: row.type,
+        locationId: rootId,
+        metadata: props.metadata,
+        src: row.src_id,
+      } as LocationEdge;
+    });
   }
 
-  async #createEdge(
-    client: PoolClient,
-    locationId: string,
-    edge: LocationPlanEdge,
-    metadata?: Record<string, unknown>
+  async #getLocationState(executor: Queryable, characterId: string): Promise<LocationState | null> {
+    const result = await executor.query(
+      `SELECT dst_id AS anchor_place_id, props
+       FROM edge
+       WHERE src_id = $1::uuid AND type = 'character_at'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [characterId]
+    );
+    const row = result.rows[0];
+    if (!row) {
+      return null;
+    }
+    const anchorPlaceId = row.anchor_place_id as string;
+    const props = (row.props ?? {}) as {
+      status?: string[];
+      certainty?: LocationState['certainty'];
+      note?: string | null;
+      updatedAt?: number;
+      locationId?: string;
+    };
+    const locationId = props.locationId ?? (await this.#resolveRootId(executor, anchorPlaceId));
+    return {
+      anchorPlaceId,
+      certainty: props.certainty ?? 'exact',
+      characterId,
+      locationId,
+      note: props.note ?? undefined,
+      status: Array.isArray(props.status) ? props.status : [],
+      updatedAt: props.updatedAt ?? now(),
+    };
+  }
+
+  async #saveCharacterLocation(
+    state: {
+      characterId: string;
+      anchorPlaceId: string;
+      locationId: string;
+      status: string[];
+      certainty: LocationState['certainty'];
+      note?: string | null;
+    },
+    executor: Queryable = this.#pool
   ): Promise<void> {
+    await executor.query(`DELETE FROM edge WHERE src_id = $1::uuid AND type = 'character_at'`, [
+      state.characterId,
+    ]);
     const createdAt = now();
-    await client.query(
+    await executor.query(
       `INSERT INTO edge (id, src_id, dst_id, type, props, created_at)
-       SELECT $1::uuid, $2::uuid, $3::uuid, $4, $5::jsonb, to_timestamp($6 / 1000.0)
-       WHERE NOT EXISTS (
-         SELECT 1 FROM edge WHERE src_id = $2::uuid AND dst_id = $3::uuid AND type = $4
-       )`,
+       VALUES ($1::uuid, $2::uuid, $3::uuid, 'character_at', $4::jsonb, to_timestamp($5 / 1000.0))`,
       [
         randomUUID(),
-        edge.src,
-        edge.dst,
-        edge.kind,
-        JSON.stringify({ metadata, locationId, createdAt }),
+        state.characterId,
+        state.anchorPlaceId,
+        JSON.stringify({
+          status: state.status ?? [],
+          certainty: state.certainty ?? 'exact',
+          note: state.note ?? null,
+          locationId: state.locationId,
+          updatedAt: createdAt,
+        }),
         createdAt,
       ]
     );
   }
 
+  async #listDescendants(rootId: string): Promise<LocationPlace[]> {
+    const result = await this.#pool.query(
+      `WITH RECURSIVE tree AS (
+         SELECT l.*, n.props, NULL::uuid as parent_id, l.id as root_id
+         FROM location l
+         JOIN node n ON n.id = l.id
+         WHERE l.id = $1::uuid
+         UNION ALL
+         SELECT child.*, n.props, parent.src_id as parent_id, tree.root_id
+         FROM tree
+         JOIN edge parent ON parent.dst_id = tree.id AND parent.type = 'location_parent'
+         JOIN location child ON child.id = parent.src_id
+         JOIN node n ON n.id = child.id
+       )
+       SELECT * FROM tree`,
+      [rootId]
+    );
+    return result.rows.map((row) => toPlace(row as LocationRow));
+  }
+
   async #getPlace(executor: Queryable, placeId: string): Promise<LocationPlace | null> {
     const result = await executor.query(
-      `SELECT l.*, n.props
+      `SELECT l.*, n.props, parent.dst_id AS parent_id
        FROM location l
        JOIN node n ON n.id = l.id
+       LEFT JOIN edge parent ON parent.src_id = l.id AND parent.type = 'location_parent'
        WHERE l.id = $1::uuid`,
       [placeId]
     );
     const row = result.rows[0] as LocationRow | undefined;
-    return row ? toPlace(row) : null;
-  }
-
-  async #createPlaceRecord(
-    client: PoolClient,
-    input: {
-      id: string;
-      locationRoot: string;
-      parentId: string | null;
-      name: string;
-      kind: string;
-      tags: string[];
-      description: string | null;
-      canonicalParentId: string | null;
-    }
-  ): Promise<LocationPlace> {
-    const slug = slugify(input.name);
-    const path = await this.#computePath(client, { parentId: input.parentId, slug });
-    const place: LocationPlace = {
-      canonicalParentId: input.canonicalParentId ?? undefined,
-      createdAt: now(),
-      description: input.description ?? undefined,
-      id: input.id,
-      kind: input.kind,
-      locationId: input.locationRoot,
-      metadata: undefined,
-      name: input.name,
-      tags: input.tags ?? [],
-      updatedAt: now(),
-    };
-    await client.query(
-      `INSERT INTO node (id, kind, props, created_at)
-       VALUES ($1::uuid, 'location', $2::jsonb, now())
-       ON CONFLICT (id) DO UPDATE SET props = EXCLUDED.props`,
-      [input.id, JSON.stringify(place)]
-    );
-    await client.query(
-      `INSERT INTO location (
-         id, slug, name, kind, tags, ltree_path, location_root, canonical_parent, description, created_at, updated_at
-       ) VALUES ($1::uuid, $2, $3, $4, $5::text[], text2ltree($6), $7::uuid, $8::uuid, $9, now(), now())
-       ON CONFLICT (id) DO UPDATE
-       SET name = EXCLUDED.name,
-           kind = EXCLUDED.kind,
-           tags = EXCLUDED.tags,
-           ltree_path = EXCLUDED.ltree_path,
-           canonical_parent = EXCLUDED.canonical_parent,
-           description = EXCLUDED.description,
-           updated_at = now()`,
-      [
-        input.id,
-        slug,
-        input.name,
-        input.kind,
-        input.tags ?? [],
-        path ?? slug,
-        input.locationRoot,
-        input.canonicalParentId ?? null,
-        input.description,
-      ]
-    );
-    return place;
-  }
-
-  async #writeState(
-    executor: Queryable,
-    state: {
-      characterId: string;
-      locationId: string;
-      anchorPlaceId: string;
-      certainty: LocationState['certainty'];
-      status: string[];
-      note?: string | null;
-    }
-  ): Promise<void> {
-    await executor.query(
-      `INSERT INTO character_location_state (
-         character_id, location_id, anchor_place_id, certainty, status, note, updated_at
-       ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::text[], $6, now())
-       ON CONFLICT (character_id) DO UPDATE
-       SET location_id = EXCLUDED.location_id,
-           anchor_place_id = EXCLUDED.anchor_place_id,
-           certainty = EXCLUDED.certainty,
-           status = EXCLUDED.status,
-           note = EXCLUDED.note,
-           updated_at = now()`,
-      [
-        state.characterId,
-        state.locationId,
-        state.anchorPlaceId,
-        state.certainty,
-        state.status ?? [],
-        state.note ?? null,
-      ]
-    );
-  }
-
-  async #getLocationState(executor: Queryable, characterId: string): Promise<LocationState | null> {
-    const result = await executor.query(
-      `SELECT character_id, location_id, anchor_place_id, certainty, status, note, updated_at
-       FROM character_location_state
-       WHERE character_id = $1::uuid`,
-      [characterId]
-    );
-    const row = result.rows[0] as LocationStateRow | undefined;
     if (!row) {
       return null;
     }
-    return {
-      anchorPlaceId: row.anchor_place_id,
-      certainty: row.certainty,
-      characterId: row.character_id,
-      locationId: row.location_id,
-      note: row.note ?? undefined,
-      status: row.status ?? [],
-      updatedAt: row.updated_at?.getTime() ?? now(),
-    };
+    const rootId = await this.#resolveRootId(executor, placeId);
+    return toPlace({ ...row, root_id: rootId });
   }
 
-  async #buildBreadcrumb(placeId: string, locationId: string): Promise<Array<{ id: string; kind: string; name: string }>> {
-    const result = await this.#pool.query(
-      `WITH anchor AS (
-         SELECT ltree_path FROM location WHERE id = $1::uuid AND location_root = $2::uuid
-       )
-       SELECT id, name, kind
-       FROM location, anchor
-       WHERE location_root = $2::uuid
-         AND anchor.ltree_path IS NOT NULL
-         AND location.ltree_path @> anchor.ltree_path
-       ORDER BY nlevel(location.ltree_path) ASC`,
-      [placeId, locationId]
-    );
-    return result.rows.map((row) => ({
-      id: row.id as string,
-      kind: row.kind as string,
-      name: row.name as string,
-    }));
-  }
-
-  async #resolveParentTarget(
-    client: PoolClient,
-    place: LocationPlace,
-    candidate?: string | null
-  ): Promise<string | undefined> {
-    if (candidate === undefined) {
-      return place.canonicalParentId ?? undefined;
-    }
-    const parentId = coerceString(candidate);
-    if (parentId === null) {
-      return undefined;
-    }
-    if (parentId === place.id) {
-      throw new Error('A location cannot be its own parent.');
-    }
-    const parent = await this.#getPlace(client, parentId);
-    if (parent === null) {
-      throw new Error(`Parent place ${parentId} not found.`);
-    }
-    if (parent.locationId !== place.locationId) {
-      throw new Error('Parent place must belong to the same location.');
-    }
-    return parent.id;
-  }
-
-  async #ensurePlaceInLocation(
-    client: PoolClient,
-    locationId: string,
-    placeId: string
-  ): Promise<void> {
-    const result = await client.query(
-      'SELECT 1 FROM location WHERE id = $1::uuid AND location_root = $2::uuid',
-      [placeId, locationId]
-    );
-    if (result.rowCount === 0) {
-      throw new Error('Edge endpoints must belong to the specified location.');
-    }
-  }
-
-  async #setCanonicalParent(client: PoolClient, childId: string, parentId: string): Promise<void> {
-    const child = await this.#getPlace(client, childId);
-    const parent = await this.#getPlace(client, parentId);
-    if (child === null || parent === null) {
-      return;
-    }
-    if (child.locationId !== parent.locationId) {
-      throw new Error('Parent and child must share the same location.');
-    }
-    const slug = slugify(child.name);
-    const newPath = await this.#computePath(client, { parentId: parent.id, slug });
-    const previousPath = await this.#readPath(client, child.id);
-    await client.query(
-      `UPDATE location
-       SET canonical_parent = $2::uuid,
-           ltree_path = text2ltree($3),
-           updated_at = now()
-       WHERE id = $1::uuid`,
-      [child.id, parent.id, newPath ?? slug]
-    );
-    if (previousPath !== null && newPath !== null && previousPath !== newPath) {
+  async #setCanonicalParent(client: PoolClient, placeId: string, parentId: string | null): Promise<void> {
+    await client.query('DELETE FROM edge WHERE src_id = $1::uuid AND type = $2', [placeId, 'location_parent']);
+    if (isNonEmptyString(parentId)) {
       await client.query(
-        `UPDATE location
-         SET ltree_path = text2ltree($2) || subpath(ltree_path, nlevel(text2ltree($1)))
-         WHERE ltree_path <@ text2ltree($1)`,
-        [previousPath, newPath]
+        `INSERT INTO edge (id, src_id, dst_id, type, props, created_at)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, 'location_parent', '{}'::jsonb, now())
+         ON CONFLICT (src_id, dst_id, type) DO NOTHING`,
+        [randomUUID(), placeId, parentId]
       );
     }
   }
 
-  async #computePath(
-    executor: Queryable,
-    input: { parentId: string | null; slug: string }
-  ): Promise<string | null> {
-    if (input.parentId === null) {
-      return input.slug;
+  async #resolveRootId(executor: Queryable, placeId: string): Promise<string> {
+    let current = placeId;
+    const visited = new Set<string>();
+    for (let i = 0; i < 64; i += 1) {
+      if (visited.has(current)) {
+        break;
+      }
+      visited.add(current);
+      const parent = await this.#getParentId(executor, current);
+      if (!parent) {
+        return current;
+      }
+      current = parent;
     }
-    const result = await executor.query(
-      'SELECT ltree_path::text as path FROM location WHERE id = $1::uuid',
-      [input.parentId]
-    );
-    const row = result.rows[0] as { path?: string } | undefined;
-    const parentPath = row?.path ?? null;
-    if (parentPath === null) {
-      return input.slug;
-    }
-    return `${parentPath}.${input.slug}`;
+    return current;
   }
 
-  async #readPath(executor: Queryable, placeId: string): Promise<string | null> {
+  async #getParentId(executor: Queryable, placeId: string): Promise<string | null> {
     const result = await executor.query(
-      'SELECT ltree_path::text AS path FROM location WHERE id = $1::uuid',
+      `SELECT dst_id FROM edge WHERE src_id = $1::uuid AND type = 'location_parent' LIMIT 1`,
       [placeId]
     );
-    const row = result.rows[0] as { path?: string } | undefined;
-    return row?.path ?? null;
+    return result.rows[0]?.dst_id ?? null;
   }
 
-  async #resolveNextState(
-    client: PoolClient,
-    input: { locationId: string; characterId: string },
-    result: PlanExecutionResult,
-    currentState: LocationState | null
-  ): Promise<LocationState | null> {
-    const anchor = result.anchorPlaceId ?? currentState?.anchorPlaceId ?? null;
-    if (!isNonEmptyString(anchor)) {
-      return null;
+  async #reserveSlug(id: string, name: string): Promise<string> {
+    const base = slugify(name);
+    let candidate = base;
+    for (let i = 0; i < 5; i += 1) {
+      const conflict = await this.#pool.query(
+        `SELECT 1 FROM location WHERE slug = $1 AND id <> $2::uuid`,
+        [candidate, id]
+      );
+      if (conflict.rowCount === 0) {
+        return candidate;
+      }
+      candidate = `${base}-${randomUUID().slice(0, 4)}`;
     }
-    const state: LocationState = {
-      anchorPlaceId: anchor,
-      certainty: result.certainty ?? currentState?.certainty ?? 'exact',
-      characterId: input.characterId,
-      locationId: input.locationId,
-      note: result.note ?? currentState?.note,
-      status: result.status ?? currentState?.status ?? [],
-      updatedAt: now(),
-    };
-    const place = await this.#getPlace(client, anchor);
-    if (place !== null && place.locationId !== input.locationId) {
-      throw new Error('Anchor place must belong to the target location.');
-    }
-    return state;
+    return `${base}-${randomUUID().slice(0, 6)}`;
+  }
+
+  async #upsertNode(client: PoolClient, id: string, kind: string, props: unknown): Promise<void> {
+    await client.query(
+      `INSERT INTO node (id, kind, props, created_at)
+       VALUES ($1::uuid, $2, $3::jsonb, now())
+       ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, props = EXCLUDED.props`,
+      [id, kind, JSON.stringify(props ?? {})]
+    );
   }
 }
 

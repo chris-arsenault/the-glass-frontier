@@ -61,71 +61,38 @@ export type WorldStateStore = {
 };
 
 export type LocationGraphStore = {
-  ensureLocation: (input: {
-    locationId?: string;
-    name: string;
-    description?: string;
-    tags?: string[];
-    characterId?: string;
-    kind?: string;
-  }) => Promise<LocationPlace>;
-
-  getLocationGraph: (locationId: string) => Promise<LocationGraphSnapshot>;
-
-  applyPlan: (input: {
-    locationId: string;
-    characterId: string;
-    plan: LocationPlan;
-  }) => Promise<LocationState | null>;
-
-  getLocationState: (characterId: string) => Promise<LocationState | null>;
-
-  summarizeCharacterLocation: (input: {
-    locationId: string;
-    characterId: string;
-  }) => Promise<LocationSummary | null>;
-
-  listLocationRoots: (input?: { search?: string; limit?: number }) => Promise<LocationPlace[]>;
-
-  getPlace: (placeId: string) => Promise<LocationPlace | null>;
-
-  createPlace: (input: {
-    parentId?: string | null;
-    locationId?: string;
+  upsertLocation: (input: {
+    id?: string;
     name: string;
     kind: string;
-    tags?: string[];
-    description?: string;
-  }) => Promise<LocationPlace>;
-
-  updatePlace: (input: {
-    placeId: string;
-    name?: string;
-    kind?: string;
     description?: string | null;
     tags?: string[];
-    canonicalParentId?: string | null;
+    biome?: string | null;
+    parentId?: string | null;
   }) => Promise<LocationPlace>;
+  deleteLocation: (input: { id: string }) => Promise<void>;
 
-  addEdge: (input: {
-    locationId: string;
+  upsertEdge: (input: {
     src: string;
     dst: string;
     kind: LocationEdgeKind;
     metadata?: Record<string, unknown>;
   }) => Promise<void>;
+  deleteEdge: (input: { src: string; dst: string; kind: LocationEdgeKind }) => Promise<void>;
 
-  removeEdge: (input: {
-    locationId: string;
-    src: string;
-    dst: string;
-    kind: LocationEdgeKind;
-  }) => Promise<void>;
-
-  createLocationChain: (input: {
-    parentId?: string | null;
-    segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
-  }) => Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
+  listLocationRoots: (input?: { search?: string; limit?: number }) => Promise<LocationPlace[]>;
+  getLocationDetails: (input: { id: string }) => Promise<{
+    place: LocationPlace;
+    breadcrumb: LocationBreadcrumbEntry[];
+    children: LocationPlace[];
+    neighbors: Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>;
+  }>;
+  getLocationChain: (input: { anchorId: string }) => Promise<LocationBreadcrumbEntry[]>;
+  getLocationNeighbors: (input: {
+    id: string;
+    kind?: LocationEdgeKind;
+    limit?: number;
+  }) => Promise<Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>>;
 
   appendLocationEvents: (input: {
     locationId: string;
@@ -136,6 +103,60 @@ export type LocationGraphStore = {
       metadata?: Record<string, unknown>;
     }>;
   }) => Promise<LocationEvent[]>;
-
   listLocationEvents: (input: { locationId: string }) => Promise<LocationEvent[]>;
+
+  // Legacy-compatible methods still used by upstream services
+  ensureLocation: (input: {
+    locationId?: string;
+    name: string;
+    description?: string;
+    tags?: string[];
+    characterId?: string;
+    kind?: string;
+  }) => Promise<LocationPlace>;
+  getLocationGraph: (locationId: string) => Promise<{ edges: LocationEdge[]; locationId: string; places: LocationPlace[] }>;
+  applyPlan: (input: {
+    locationId: string;
+    characterId: string;
+    plan: LocationPlan;
+  }) => Promise<LocationState | null>;
+  getLocationState: (characterId: string) => Promise<LocationState | null>;
+  summarizeCharacterLocation: (input: {
+    locationId: string;
+    characterId: string;
+  }) => Promise<LocationSummary | null>;
+  getPlace: (placeId: string) => Promise<LocationPlace | null>;
+  createPlace: (input: {
+    parentId?: string | null;
+    locationId?: string;
+    name: string;
+    kind: string;
+    tags?: string[];
+    description?: string;
+  }) => Promise<LocationPlace>;
+  updatePlace: (input: {
+    placeId: string;
+    name?: string;
+    kind?: string;
+    description?: string | null;
+    tags?: string[];
+    canonicalParentId?: string | null;
+  }) => Promise<LocationPlace>;
+  addEdge: (input: {
+    locationId: string;
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
+  removeEdge: (input: {
+    locationId: string;
+    src: string;
+    dst: string;
+    kind: LocationEdgeKind;
+  }) => Promise<void>;
+  createLocationChain: (input: {
+    parentId?: string | null;
+    segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
+  }) => Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
 };

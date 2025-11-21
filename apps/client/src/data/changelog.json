@@ -152,5 +152,26 @@
     "summary": "Prompt templates now live in the app schema",
     "details": "Introduced the @glass-frontier/app package with its own Postgres schema for players and prompt templates, seeded official template bodies via migrations, removed the S3 prompt bucket dependency, and rewired the APIs to resolve templates and player settings through the new Postgres-backed app store.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-25-character-jsonb-fields",
+    "releasedAt": "2025-11-25",
+    "summary": "Characters now persist full state in Postgres",
+    "details": "Extended the worldstate character table to store archetype, pronouns, bio, attributes, skills, inventory, and momentum as jsonb fields so the Postgres-backed worldstate stays aligned with the Character DTO instead of only keeping name metadata.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-25-location-graph-slim",
+    "releasedAt": "2025-11-25",
+    "summary": "Location graph simplified onto Postgres edges",
+    "details": "Rebuilt the location schema as a thin table plus graph edges with a single-parent constraint, removed the legacy location-root path columns, and rewired the worldstate location store to use recursive CTEs instead of the custom locationGraph store.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-26-gm-location-contract",
+    "releasedAt": "2025-11-26",
+    "summary": "GM API now targets the new location contract",
+    "details": "Migrated the GM service to the new location contract by consuming the location details query, mapping it back to the existing UI shape, applying location moves through the canonical upsert/edge mutators, and exposing both legacy and new endpoints on the location API during the transition.",
+    "type": "improvement"
   }
 ]

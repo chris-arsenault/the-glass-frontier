@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/member-ordering */
-import type { Character, Chronicle, Turn } from '@glass-frontier/dto';
+import type { Character, Chronicle, LocationSummary, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -122,11 +122,8 @@ class PostgresWorldStateStore implements WorldStateStore {
       ? await this.getCharacter(chronicle.characterId)
       : null;
     const locationSummary =
-      this.#locationGraphStore && isNonEmptyString(chronicle.locationId) && character?.id
-        ? await this.#locationGraphStore.summarizeCharacterLocation({
-          characterId: character.id,
-          locationId: chronicle.locationId,
-        })
+      this.#locationGraphStore && isNonEmptyString(chronicle.locationId)
+        ? await this.#summarizeLocation(chronicle.locationId)
         : null;
     const turns = await this.listChronicleTurns(chronicleId);
     const lastTurn = turns.length > 0 ? turns[turns.length - 1] : null;
@@ -150,14 +147,35 @@ class PostgresWorldStateStore implements WorldStateStore {
       await this.#assertPlayerExists(normalized.playerId, client);
       await this.#upsertNode(client, normalized.id, 'character', normalized);
       await client.query(
-        `INSERT INTO character (id, player_id, name, tags, created_at, updated_at)
-         VALUES ($1::uuid, $2, $3, $4::text[], now(), now())
+        `INSERT INTO character (
+           id, player_id, name, tags, archetype, pronouns, bio, attributes, skills, inventory, momentum, created_at, updated_at
+         )
+         VALUES ($1::uuid, $2, $3, $4::text[], $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, now(), now())
          ON CONFLICT (id) DO UPDATE
          SET player_id = EXCLUDED.player_id,
              name = EXCLUDED.name,
              tags = EXCLUDED.tags,
+             archetype = EXCLUDED.archetype,
+             pronouns = EXCLUDED.pronouns,
+             bio = EXCLUDED.bio,
+             attributes = EXCLUDED.attributes,
+             skills = EXCLUDED.skills,
+             inventory = EXCLUDED.inventory,
+             momentum = EXCLUDED.momentum,
              updated_at = now()`,
-        [normalized.id, normalized.playerId, normalized.name, normalized.tags ?? []]
+        [
+          normalized.id,
+          normalized.playerId,
+          normalized.name,
+          normalized.tags ?? [],
+          normalized.archetype,
+          normalized.pronouns,
+          normalized.bio ?? null,
+          serializeJson(normalized.attributes),
+          serializeJson(normalized.skills),
+          serializeJson(normalized.inventory),
+          serializeJson(normalized.momentum),
+        ]
       );
     });
     return normalized;
@@ -334,6 +352,28 @@ class PostgresWorldStateStore implements WorldStateStore {
     return next;
   }
 
+  async #summarizeLocation(locationId: string): Promise<LocationSummary | null> {
+    if (!this.#locationGraphStore) {
+      return null;
+    }
+    try {
+      const details = await this.#locationGraphStore.getLocationDetails({ id: locationId });
+      const breadcrumb = details.breadcrumb.length > 0 ? details.breadcrumb : [
+        { id: details.place.id, kind: details.place.kind, name: details.place.name },
+      ];
+      return {
+        anchorPlaceId: details.place.id,
+        breadcrumb,
+        certainty: 'exact',
+        description: details.place.description,
+        status: [],
+        tags: details.place.tags ?? [],
+      };
+    } catch {
+      return null;
+    }
+  }
+
   async #ensureLocationExists(
     client: PoolClient,
     locationId: string,
@@ -353,17 +393,16 @@ class PostgresWorldStateStore implements WorldStateStore {
         description: name ?? undefined,
         id: locationId,
         kind: 'locale',
-        locationId,
         name: name ?? 'Unknown Location',
         tags: [],
       }
     );
     await client.query(
       `INSERT INTO location (
-         id, slug, name, kind, biome, tags, ltree_path, location_root, canonical_parent, description, created_at, updated_at
-       ) VALUES ($1::uuid, $2, $3, $4, NULL, $5::text[], text2ltree($6), $1::uuid, NULL, $7, now(), now())
+         id, slug, name, kind, biome, description, tags, metadata, created_at, updated_at
+       ) VALUES ($1::uuid, $2, $3, $4, NULL, $5, $6::text[], '{}'::jsonb, now(), now())
        ON CONFLICT (id) DO NOTHING`,
-      [locationId, slug, name ?? 'Unknown Location', 'locale', [], slug, name ?? null]
+      [locationId, slug, name ?? 'Unknown Location', 'locale', name ?? null, []]
     );
   }
 

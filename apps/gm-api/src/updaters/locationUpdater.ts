@@ -1,22 +1,27 @@
-import {GraphContext} from "../types";
-import {LocationPlace, LocationPlan, LocationPlanEdge, LocationPlanOp} from "@glass-frontier/dto";
-import {normalizeName, PlannerContext, resolvePlanContext} from "@glass-frontier/gm-api/prompts/locationHelpers";
-import {LocationDeltaDecision} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
-import {isNonEmptyString, log} from "@glass-frontier/utils";
+import type { LocationPlace, LocationPlan, LocationPlanEdge } from '@glass-frontier/dto';
+import type { LocationDeltaDecision } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
+import {
+  normalizeName,
+  type PlannerContext,
+  resolvePlanContext,
+} from '@glass-frontier/gm-api/prompts/locationHelpers';
+import { isNonEmptyString, log } from '@glass-frontier/utils';
+
+import type { GraphContext } from '../types';
 
 export async function createLocationPlan(context: GraphContext): Promise<LocationPlan> {
-  log("info", "Updating Location");
+  log('info', 'Updating Location');
   const plan: LocationPlan = {
-    characterId: "",
-    notes: "",
-    ops: []
-  }
+    characterId: '',
+    notes: '',
+    ops: [],
+  };
 
   const characterId = context.chronicleState.chronicle.characterId;
   const delta = context.locationDelta;
   const plannerContext = await resolvePlanContext(context);
 
-  if (!characterId || !delta || !plannerContext) {
+  if (!isNonEmptyString(characterId) || delta === undefined || delta === null || plannerContext === null) {
     return plan;
   }
 
@@ -34,17 +39,16 @@ export async function createLocationPlan(context: GraphContext): Promise<Locatio
 
   plan.ops.push({ dst_place_id: targetId, op: 'MOVE' });
 
-  return finalizeMovePlan(characterId, delta.destination, plan.ops)
-
+  return finalizeMovePlan(characterId, delta.destination, plan.ops);
 }
-
 
 export function resolveTargetReference(input: {
   context: PlannerContext;
   delta: LocationDeltaDecision;
   plan: LocationPlan;
 }): string {
-  const { anchorPlace, parentPlace, placeById, placeByName } = input.context;
+  const { anchorPlace, parentPlaceId, placeById, placeByName } = input.context;
+  const resolvedParentId = parentPlaceId ?? anchorPlace.id;
   const known = placeByName.get(normalizeName(input.delta.destination)) ?? null;
 
   if (known !== null) {
@@ -55,11 +59,11 @@ export function resolveTargetReference(input: {
         anchorId: anchorPlace.id,
         link: input.delta.link,
         ops: input.plan.ops,
-        parentId: parentPlace?.id ?? anchorPlace.id,
+        parentId: resolvedParentId,
         target: known,
       });
     }
-    return  known.id;
+    return known.id;
   }
 
   const tempId = createTempId(input.delta.destination);
@@ -76,13 +80,12 @@ export function resolveTargetReference(input: {
     anchorId: anchorPlace.id,
     link: input.delta.link,
     ops: input.plan.ops,
-    parentId: parentPlace?.id ?? anchorPlace.id,
+    parentId: resolvedParentId,
     targetId: tempId,
   });
 
   return tempId;
 }
-
 
 export const isAncestor = (
   placeById: Map<string, LocationPlace>,
@@ -121,21 +124,21 @@ export function appendEdgesForExistingTarget(input: {
 }): void {
   const { anchorId, link, ops, parentId, target } = input;
   switch (link) {
-    case 'inside':
-      ops.push({ edge: buildEdge(anchorId, target.id, 'CONTAINS'), op: 'CREATE_EDGE' });
-      break;
-    case 'adjacent':
-      ops.push({
-        edge: buildEdge(anchorId, target.id, 'ADJACENT_TO'),
-        op: 'CREATE_EDGE',
-      });
-      break;
-    case 'linked':
-      ops.push({ edge: buildEdge(anchorId, target.id, 'LINKS_TO'), op: 'CREATE_EDGE' });
-      break;
-    default:
-      ops.push({ edge: buildEdge(parentId, target.id, 'CONTAINS'), op: 'CREATE_EDGE' });
-      break;
+  case 'inside':
+    ops.push({ edge: buildEdge(anchorId, target.id, 'CONTAINS'), op: 'CREATE_EDGE' });
+    break;
+  case 'adjacent':
+    ops.push({
+      edge: buildEdge(anchorId, target.id, 'ADJACENT_TO'),
+      op: 'CREATE_EDGE',
+    });
+    break;
+  case 'linked':
+    ops.push({ edge: buildEdge(anchorId, target.id, 'LINKS_TO'), op: 'CREATE_EDGE' });
+    break;
+  default:
+    ops.push({ edge: buildEdge(parentId, target.id, 'CONTAINS'), op: 'CREATE_EDGE' });
+    break;
   }
 }
 
@@ -148,28 +151,27 @@ function appendEdgesForNewTarget(input: {
 }): void {
   const { anchorId, link, ops, parentId, targetId } = input;
   switch (link) {
-    case 'inside':
-      ops.push({ edge: buildEdge(anchorId, targetId, 'CONTAINS'), op: 'CREATE_EDGE' });
-      break;
-    case 'adjacent':
-      ops.push({ edge: buildEdge(parentId, targetId, 'CONTAINS'), op: 'CREATE_EDGE' });
-      ops.push({
-        edge: buildEdge(anchorId, targetId, 'ADJACENT_TO'),
-        op: 'CREATE_EDGE',
-      });
-      break;
-    case 'linked':
-      ops.push({ edge: buildEdge(anchorId, targetId, 'LINKS_TO'), op: 'CREATE_EDGE' });
-      break;
-    default:
-      ops.push({
-        edge: buildEdge(anchorId, targetId, 'ADJACENT_TO'),
-        op: 'CREATE_EDGE',
-      });
-      break;
+  case 'inside':
+    ops.push({ edge: buildEdge(anchorId, targetId, 'CONTAINS'), op: 'CREATE_EDGE' });
+    break;
+  case 'adjacent':
+    ops.push({ edge: buildEdge(parentId, targetId, 'CONTAINS'), op: 'CREATE_EDGE' });
+    ops.push({
+      edge: buildEdge(anchorId, targetId, 'ADJACENT_TO'),
+      op: 'CREATE_EDGE',
+    });
+    break;
+  case 'linked':
+    ops.push({ edge: buildEdge(anchorId, targetId, 'LINKS_TO'), op: 'CREATE_EDGE' });
+    break;
+  default:
+    ops.push({
+      edge: buildEdge(anchorId, targetId, 'ADJACENT_TO'),
+      op: 'CREATE_EDGE',
+    });
+    break;
   }
 }
-
 
 const buildEdge = (
   src: string,
@@ -180,7 +182,6 @@ const buildEdge = (
   kind,
   src,
 });
-
 
 const createTempId = (name: string): string => {
   const slug = name
@@ -195,22 +196,11 @@ const createTempId = (name: string): string => {
 
 const inferKind = (link: LocationDeltaDecision['link']): string => {
   switch (link) {
-    case 'inside':
-      return 'room';
-    case 'linked':
-      return 'structure';
-    default:
-      return 'locale';
+  case 'inside':
+    return 'room';
+  case 'linked':
+    return 'structure';
+  default:
+    return 'locale';
   }
 };
-
-
-const finalizeMovePlan = (
-  characterId: string,
-  destination: string,
-  ops: LocationPlan['ops']
-): LocationPlan => ({
-  characterId: characterId,
-  notes: `move:${destination}`,
-  ops,
-});
