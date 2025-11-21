@@ -3,12 +3,11 @@ import type { Character, Chronicle, LocationSummary, Turn } from '@glass-frontie
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
-import { applyCharacterSnapshotProgress } from './characterProgress';
+import { GraphOperations } from './graphOperations';
 import { createPool, withTransaction } from './pg';
 import type {
-  CharacterProgressPayload,
   ChronicleSnapshot,
-  LocationGraphStore,
+  LocationStore,
   WorldStateStore,
 } from './types';
 import { isNonEmptyString, slugify } from './utils';
@@ -54,11 +53,17 @@ const resolveText = (value: unknown, fallback = ''): string => {
 
 class PostgresWorldStateStore implements WorldStateStore {
   readonly #pool: Pool;
-  readonly #locationGraphStore: LocationGraphStore | null;
+  readonly #graph: GraphOperations;
+  readonly #locationStore: LocationStore | null;
 
-  constructor(options: { pool: Pool; locationGraphStore?: LocationGraphStore | null }) {
+  constructor(options: { pool: Pool; graph?: GraphOperations; locationStore?: LocationStore | null }) {
     this.#pool = options.pool;
-    this.#locationGraphStore = options.locationGraphStore ?? null;
+    this.#graph = options.graph ?? new GraphOperations(options.pool);
+    this.#locationStore = options.locationStore ?? null;
+  }
+
+  get graph(): GraphOperations {
+    return this.#graph;
   }
 
   async #assertPlayerExists(playerId: string, executor: Pool | PoolClient = this.#pool): Promise<void> {
@@ -122,7 +127,7 @@ class PostgresWorldStateStore implements WorldStateStore {
       ? await this.getCharacter(chronicle.characterId)
       : null;
     const locationSummary =
-      this.#locationGraphStore && isNonEmptyString(chronicle.locationId)
+      this.#locationStore && isNonEmptyString(chronicle.locationId)
         ? await this.#summarizeLocation(chronicle.locationId)
         : null;
     const turns = await this.listChronicleTurns(chronicleId);
@@ -145,7 +150,7 @@ class PostgresWorldStateStore implements WorldStateStore {
     });
     await withTransaction(this.#pool, async (client) => {
       await this.#assertPlayerExists(normalized.playerId, client);
-      await this.#upsertNode(client, normalized.id, 'character', normalized);
+      await this.#graph.upsertNode(client, normalized.id, 'character', normalized);
       await client.query(
         `INSERT INTO character (
            id, player_id, name, tags, archetype, pronouns, bio, attributes, skills, inventory, momentum, created_at, updated_at
@@ -214,7 +219,7 @@ class PostgresWorldStateStore implements WorldStateStore {
     await withTransaction(this.#pool, async (client) => {
       await this.#assertPlayerExists(normalized.playerId, client);
       await this.#ensureLocationExists(client, normalized.locationId, normalized.title);
-      await this.#upsertNode(client, normalized.id, 'chronicle', normalized);
+      await this.#graph.upsertNode(client, normalized.id, 'chronicle', normalized);
       await client.query(
         `INSERT INTO chronicle (
            id, title, primary_char_id, status, player_id, location_id, seed_text, beats_enabled, created_at, updated_at
@@ -297,26 +302,82 @@ class PostgresWorldStateStore implements WorldStateStore {
     if (chronicle === null) {
       throw new Error(`Chronicle ${chronicleId} not found for turn ${turn.id}`);
     }
-    const turnIndex = resolveTurnIndex(turn);
+    const turnSequence = resolveTurnIndex(turn);
     await withTransaction(this.#pool, async (client) => {
-      await this.#upsertNode(client, turn.id, 'chronicle_turn', turn);
+      await this.#graph.upsertNode(client, turn.id, 'chronicle_turn', turn);
       await client.query(
         `INSERT INTO chronicle_turn (
-           id, chronicle_id, turn_index, payload, player_input, gm_output, intent_json, created_at
-         ) VALUES ($1::uuid, $2::uuid, $3, $4::jsonb, $5, $6, $7::jsonb, now())
-         ON CONFLICT (chronicle_id, turn_index) DO UPDATE
-         SET payload = EXCLUDED.payload,
-             player_input = EXCLUDED.player_input,
-             gm_output = EXCLUDED.gm_output,
-             intent_json = EXCLUDED.intent_json`,
+           id, chronicle_id, turn_sequence, created_at,
+           handler_id, executed_nodes, failure, advances_timeline, world_delta_tags,
+           player_message_id, player_message_content, player_message_metadata,
+           resolved_intent_type, player_intent,
+           gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
+           system_message_id, system_message_content, system_message_metadata,
+           skill_check_plan, skill_check_result,
+           inventory_delta, location_delta, beat_tracker,
+           gm_trace
+         ) VALUES (
+           $1::uuid, $2::uuid, $3, now(),
+           $4, $5, $6, $7, $8,
+           $9, $10, $11::jsonb,
+           $12, $13::jsonb,
+           $14, $15, $16::jsonb, $17,
+           $18, $19, $20::jsonb,
+           $21::jsonb, $22::jsonb,
+           $23::jsonb, $24::jsonb, $25::jsonb,
+           $26::jsonb
+         )
+         ON CONFLICT (chronicle_id, turn_sequence) DO UPDATE SET
+           handler_id = EXCLUDED.handler_id,
+           executed_nodes = EXCLUDED.executed_nodes,
+           failure = EXCLUDED.failure,
+           advances_timeline = EXCLUDED.advances_timeline,
+           world_delta_tags = EXCLUDED.world_delta_tags,
+           player_message_id = EXCLUDED.player_message_id,
+           player_message_content = EXCLUDED.player_message_content,
+           player_message_metadata = EXCLUDED.player_message_metadata,
+           resolved_intent_type = EXCLUDED.resolved_intent_type,
+           player_intent = EXCLUDED.player_intent,
+           gm_response_id = EXCLUDED.gm_response_id,
+           gm_response_content = EXCLUDED.gm_response_content,
+           gm_response_metadata = EXCLUDED.gm_response_metadata,
+           gm_summary = EXCLUDED.gm_summary,
+           system_message_id = EXCLUDED.system_message_id,
+           system_message_content = EXCLUDED.system_message_content,
+           system_message_metadata = EXCLUDED.system_message_metadata,
+           skill_check_plan = EXCLUDED.skill_check_plan,
+           skill_check_result = EXCLUDED.skill_check_result,
+           inventory_delta = EXCLUDED.inventory_delta,
+           location_delta = EXCLUDED.location_delta,
+           beat_tracker = EXCLUDED.beat_tracker,
+           gm_trace = EXCLUDED.gm_trace`,
         [
           turn.id,
           chronicleId,
-          turnIndex,
-          serializeJson(turn),
-          resolveText(turn.playerMessage, ''),
-          resolveText(turn.gmSummary ?? turn.gmResponse, ''),
-          serializeJson(turn.playerIntent ?? {}),
+          turnSequence,
+          turn.handlerId ?? null,
+          turn.executedNodes ?? [],
+          turn.failure,
+          turn.advancesTimeline ?? false,
+          turn.worldDeltaTags ?? [],
+          turn.playerMessage.id,
+          turn.playerMessage.content,
+          serializeJson(turn.playerMessage.metadata),
+          turn.resolvedIntentType ?? null,
+          turn.playerIntent ? serializeJson(turn.playerIntent) : null,
+          turn.gmResponse?.id ?? null,
+          turn.gmResponse?.content ?? null,
+          turn.gmResponse?.metadata ? serializeJson(turn.gmResponse.metadata) : null,
+          turn.gmSummary ?? null,
+          turn.systemMessage?.id ?? null,
+          turn.systemMessage?.content ?? null,
+          turn.systemMessage?.metadata ? serializeJson(turn.systemMessage.metadata) : null,
+          turn.skillCheckPlan ? serializeJson(turn.skillCheckPlan) : null,
+          turn.skillCheckResult ? serializeJson(turn.skillCheckResult) : null,
+          turn.inventoryDelta ? serializeJson(turn.inventoryDelta) : null,
+          null, // location_delta - will be populated from GraphContext in future
+          turn.beatTracker ? serializeJson(turn.beatTracker) : null,
+          turn.gmTrace ? serializeJson(turn.gmTrace) : null,
         ]
       );
     });
@@ -325,39 +386,66 @@ class PostgresWorldStateStore implements WorldStateStore {
 
   async listChronicleTurns(chronicleId: string): Promise<Turn[]> {
     const result = await this.#pool.query(
-      `SELECT payload
+      `SELECT
+         id, chronicle_id, turn_sequence,
+         handler_id, executed_nodes, failure, advances_timeline, world_delta_tags,
+         player_message_id, player_message_content, player_message_metadata,
+         resolved_intent_type, player_intent,
+         gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
+         system_message_id, system_message_content, system_message_metadata,
+         skill_check_plan, skill_check_result,
+         inventory_delta, beat_tracker,
+         gm_trace
        FROM chronicle_turn
        WHERE chronicle_id = $1::uuid
-       ORDER BY turn_index ASC`,
+       ORDER BY turn_sequence ASC`,
       [chronicleId]
     );
-    return result.rows.map((row) => row.payload as Turn);
+    return result.rows.map((row): Turn => ({
+      id: row.id,
+      chronicleId: row.chronicle_id,
+      turnSequence: row.turn_sequence,
+      handlerId: row.handler_id ?? undefined,
+      executedNodes: row.executed_nodes ?? undefined,
+      failure: row.failure,
+      advancesTimeline: row.advances_timeline ?? undefined,
+      worldDeltaTags: row.world_delta_tags ?? undefined,
+      playerMessage: {
+        id: row.player_message_id,
+        content: row.player_message_content,
+        metadata: row.player_message_metadata ?? { tags: [], timestamp: Date.now() },
+        role: 'player' as const,
+      },
+      resolvedIntentType: row.resolved_intent_type ?? undefined,
+      playerIntent: row.player_intent ?? undefined,
+      gmResponse: row.gm_response_id ? {
+        id: row.gm_response_id,
+        content: row.gm_response_content,
+        metadata: row.gm_response_metadata ?? { tags: [], timestamp: Date.now() },
+        role: 'gm' as const,
+      } : undefined,
+      gmSummary: row.gm_summary ?? undefined,
+      systemMessage: row.system_message_id ? {
+        id: row.system_message_id,
+        content: row.system_message_content,
+        metadata: row.system_message_metadata ?? { tags: [], timestamp: Date.now() },
+        role: 'system' as const,
+      } : undefined,
+      skillCheckPlan: row.skill_check_plan ?? undefined,
+      skillCheckResult: row.skill_check_result ?? undefined,
+      inventoryDelta: row.inventory_delta ?? undefined,
+      beatTracker: row.beat_tracker ?? undefined,
+      gmTrace: row.gm_trace ?? undefined,
+    }));
   }
 
-  async applyCharacterProgress(update: CharacterProgressPayload): Promise<Character | null> {
-    if (!isNonEmptyString(update.characterId)) {
-      return null;
-    }
-    const character = await this.getCharacter(update.characterId);
-    if (character === null) {
-      return null;
-    }
-    const hasMomentumDelta = typeof update.momentumDelta === 'number' && update.momentumDelta !== 0;
-    const hasSkillUpdate = update.skill !== undefined;
-    if (!hasMomentumDelta && !hasSkillUpdate) {
-      return character;
-    }
-    const next = applyCharacterSnapshotProgress(character, update);
-    await this.upsertCharacter(next);
-    return next;
-  }
 
   async #summarizeLocation(locationId: string): Promise<LocationSummary | null> {
-    if (!this.#locationGraphStore) {
+    if (!this.#locationStore) {
       return null;
     }
     try {
-      const details = await this.#locationGraphStore.getLocationDetails({ id: locationId });
+      const details = await this.#locationStore.getLocationDetails({ id: locationId });
       const breadcrumb = details.breadcrumb.length > 0 ? details.breadcrumb : [
         { id: details.place.id, kind: details.place.kind, name: details.place.name },
       ];
@@ -384,7 +472,7 @@ class PostgresWorldStateStore implements WorldStateStore {
       return;
     }
     const slug = slugify(name ?? locationId);
-    await this.#upsertNode(
+    await this.#graph.upsertNode(
       client,
       locationId,
       'location',
@@ -406,28 +494,22 @@ class PostgresWorldStateStore implements WorldStateStore {
     );
   }
 
-  async #upsertNode(client: PoolClient, id: string, kind: string, props: unknown): Promise<void> {
-    await client.query(
-      `INSERT INTO node (id, kind, props, created_at)
-       VALUES ($1::uuid, $2, $3::jsonb, now())
-       ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, props = EXCLUDED.props`,
-      [id, kind, serializeJson(props)]
-    );
-  }
 }
 
 export function createWorldStateStore(options?: {
   connectionString?: string;
   pool?: Pool;
-  locationGraphStore?: LocationGraphStore | null;
+  graph?: GraphOperations;
+  locationStore?: LocationStore | null;
 }): WorldStateStore {
   const pool = createPool({
     connectionString: options?.connectionString,
     pool: options?.pool,
   });
   const store = new PostgresWorldStateStore({
-    locationGraphStore: options?.locationGraphStore ?? null,
     pool,
+    graph: options?.graph,
+    locationStore: options?.locationStore ?? null,
   });
   return store;
 }

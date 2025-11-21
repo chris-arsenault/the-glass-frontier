@@ -66,7 +66,7 @@ export class AuditFeedbackStore {
       chronicleId: feedback.chronicleId,
       comment: feedback.comment ?? null,
       createdAt: now,
-      expectedIntentType: feedback.expectedIntentType ?? null,
+      expectedIntentType: (feedback.expectedIntentType as PlayerFeedbackRecord['expectedIntentType']) ?? null,
       expectedInventoryDelta: feedback.expectedInventoryDelta ?? null,
       expectedInventoryNotes: feedback.expectedInventoryNotes ?? null,
       expectedLocationChange: feedback.expectedLocationChange ?? null,

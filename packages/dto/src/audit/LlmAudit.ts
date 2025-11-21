@@ -79,6 +79,7 @@ export const AuditReviewRecordSchema = z.object({
   completedAt: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   draftAt: z.string().optional().nullable(),
+  id: z.string().min(1),
   nodeId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   reviewerId: z.string().min(1),

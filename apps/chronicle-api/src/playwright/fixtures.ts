@@ -4,7 +4,7 @@ import type {
   LocationPlace,
   Player,
 } from '@glass-frontier/dto';
-import type { LocationGraphStore } from '@glass-frontier/worldstate';
+import type { LocationStore } from '@glass-frontier/worldstate';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -132,7 +132,7 @@ export const buildPlaywrightChronicleRecord = (
 };
 
 export const seedPlaywrightLocationGraph = async (
-  store: LocationGraphStore,
+  store: LocationStore,
   options: { locationId: string; characterId: string }
 ): Promise<{
   root: LocationPlace;

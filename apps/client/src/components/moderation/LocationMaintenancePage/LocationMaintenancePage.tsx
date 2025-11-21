@@ -69,6 +69,23 @@ export function LocationMaintenancePage(): JSX.Element {
   );
 
   const placeMap = useMemo(() => buildPlaceMap(locationDetails), [locationDetails]);
+
+  const graph = useMemo(() => {
+    if (!locationDetails) {
+      return null;
+    }
+    const places = [locationDetails.place, ...locationDetails.children];
+    const edges = [
+      ...locationDetails.neighbors.adjacent.map((n) => n.edge),
+      ...locationDetails.neighbors.links.map((n) => n.edge),
+    ];
+    return {
+      edges,
+      locationId: locationDetails.place.locationId,
+      places,
+    };
+  }, [locationDetails]);
+
   const [relationshipPlaceId, setRelationshipPlaceId] = useState<string | null>(null);
   const [childParentId, setChildParentId] = useState<string | null>(null);
   const [descriptionPlaceId, setDescriptionPlaceId] = useState<string | null>(null);

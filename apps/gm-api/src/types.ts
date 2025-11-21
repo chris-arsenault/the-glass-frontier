@@ -10,7 +10,7 @@ import type {
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { LocationGraphStore} from '@glass-frontier/worldstate';
+import type { LocationStore} from '@glass-frontier/worldstate';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";
@@ -32,7 +32,7 @@ export type GraphContext = {
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
-  locationGraphStore: LocationGraphStore;
+  locationGraphStore: LocationStore;
 
   //operations
   llm: RetryLLMClient;

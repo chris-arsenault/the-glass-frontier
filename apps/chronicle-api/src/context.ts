@@ -1,7 +1,7 @@
 // context.ts
 import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
 import { createOpsStore } from '@glass-frontier/ops';
-import { createWorldStateStore, createLocationGraphStore, type WorldStateStore, type LocationGraphStore } from '@glass-frontier/worldstate';
+import { createWorldStateStore, createLocationStore, type WorldStateStore, type LocationStore } from '@glass-frontier/worldstate';
 
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
@@ -10,7 +10,7 @@ if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().le
   throw new Error('WORLDSTATE_DATABASE_URL must be configured for the narrative service');
 }
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
-const locationGraphStore = createLocationGraphStore({
+const locationGraphStore = createLocationStore({
   connectionString: worldstateDatabaseUrl,
 });
 const worldStateStore = createWorldStateStore({
@@ -29,7 +29,7 @@ export type Context = {
   authorizationHeader?: string;
   appStore: typeof appStore;
   bugReportStore: typeof opsStore.bugReportStore;
-  locationGraphStore: LocationGraphStore;
+  locationGraphStore: LocationStore;
   playerStore: PlayerStore;
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;

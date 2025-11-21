@@ -1,4 +1,4 @@
-export { createOpsStore, type OpsStores } from './opsStore';
+export { createOpsStore, type OpsStore } from './opsStore';
 export { BugReportStore } from './support/BugReportStore';
 export { TokenUsageStore } from './support/TokenUsageStore';
 export { AuditGroupStore } from './support/audit/AuditGroupStore';

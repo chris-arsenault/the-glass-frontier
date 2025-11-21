@@ -1,6 +1,6 @@
 import type { Character, Chronicle, LocationSummary } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
-import type { LocationGraphStore, WorldStateStore } from '@glass-frontier/worldstate';
+import type { LocationStore, WorldStateStore } from '@glass-frontier/worldstate';
 
 import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
@@ -11,9 +11,9 @@ import { applyLocationUpdate } from './locationUpdater';
 
 export class WorldUpdater {
   readonly #worldStateStore: WorldStateStore;
-  readonly #locationGraphStore: LocationGraphStore;
+  readonly #locationGraphStore: LocationStore;
 
-  constructor(options: { worldStateStore: WorldStateStore; locationGraphStore: LocationGraphStore }) {
+  constructor(options: { worldStateStore: WorldStateStore; locationGraphStore: LocationStore }) {
     this.#worldStateStore = options.worldStateStore;
     this.#locationGraphStore = options.locationGraphStore;
   }

@@ -10,7 +10,7 @@ import type {
 import type { PromptTemplateManager } from '@glass-frontier/app';
 import {
   type WorldStateStore,
-  type LocationGraphStore,
+  type LocationStore,
 } from '@glass-frontier/worldstate';
 import {formatTurnJobId, isDefined, isNonEmptyString, log} from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
@@ -39,7 +39,7 @@ import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
 
 type GmEngineOptions = {
   worldStateStore: WorldStateStore;
-  locationGraphStore: LocationGraphStore;
+  locationGraphStore: LocationStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
 };
@@ -52,7 +52,7 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = [
 
 class GmEngine {
   readonly worldStateStore: WorldStateStore;
-  readonly locationGraphStore: LocationGraphStore;
+  readonly locationGraphStore: LocationStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
   readonly llm: RetryLLMClient;
@@ -203,7 +203,7 @@ class GmEngine {
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
-    locationGraphStore: LocationGraphStore;
+    locationGraphStore: LocationStore;
   }): GraphContext {
     return {
       chronicleId,

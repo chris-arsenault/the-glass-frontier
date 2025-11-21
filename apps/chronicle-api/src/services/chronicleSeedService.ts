@@ -1,7 +1,7 @@
 import type {ChronicleSeed, ChronicleSeedList, LocationPlace} from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import type { PromptTemplateManager } from '@glass-frontier/app';
-import type { LocationGraphStore } from '@glass-frontier/worldstate';
+import type { LocationStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import { PromptTemplateRuntime } from '../prompts/templateRuntime';
@@ -19,13 +19,13 @@ type GenerateSeedRequest = {
 
 export class ChronicleSeedService {
   readonly #templates: PromptTemplateManager;
-  readonly #locations: LocationGraphStore;
+  readonly #locations: LocationStore;
   readonly #llm: RetryLLMClient;
   readonly #clientCache = new Map<string, RetryLLMClient>();
 
   constructor(options: {
     templateManager: PromptTemplateManager;
-    locationGraphStore: LocationGraphStore;
+    locationGraphStore: LocationStore;
     llmClient?: RetryLLMClient;
   }) {
     this.#templates = options.templateManager;

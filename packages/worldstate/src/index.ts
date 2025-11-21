@@ -1,3 +1,10 @@
+// Unified interface (recommended)
+export { WorldState } from './worldState';
+export { GraphOperations } from './graphOperations';
+
+// Individual stores (for advanced use cases)
 export { createWorldStateStore } from './worldStateStore';
-export { createLocationGraphStore } from './locationGraphStore';
-export type { WorldStateStore, LocationGraphStore, CharacterProgressPayload, ChronicleSnapshot } from './types';
+export { createLocationStore } from './locationStore';
+
+// Types
+export type { WorldStateStore, LocationStore, ChronicleSnapshot } from './types';

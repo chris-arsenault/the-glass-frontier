@@ -52,7 +52,7 @@ export class AuditReviewStore {
       reviewerName: null,
       status: review.status as AuditReviewRecord['status'],
       storageKey: id,
-      tags: review.tags ?? [],
+      tags: (review.tags ?? []) as AuditReviewRecord['tags'],
       templateId: null,
       updatedAt: now.toISOString(),
     };
@@ -120,7 +120,7 @@ export class AuditReviewStore {
       reviewerName: null,
       status: row.status as AuditReviewRecord['status'],
       storageKey: row.id,
-      tags: row.tags ?? [],
+      tags: (row.tags ?? []) as AuditReviewRecord['tags'],
       templateId: null,
       updatedAt: row.updated_at.toISOString(),
     };

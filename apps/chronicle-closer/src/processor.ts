@@ -6,9 +6,9 @@ import type {
 } from '@glass-frontier/dto';
 import {createLLMClient, RetryLLMClient} from '@glass-frontier/llm-client';
 import {
-  createLocationGraphStore,
+  createLocationStore,
   createWorldStateStore,
-  type LocationGraphStore,
+  type LocationStore,
   type WorldStateStore,
 } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
@@ -38,12 +38,12 @@ const SUMMARY_HANDLERS: ChronicleSummaryKind[] = [
 
 class ChronicleClosureProcessor {
   readonly #worldStateStore: WorldStateStore;
-  readonly #locationGraphStore: LocationGraphStore;
+  readonly #locationGraphStore: LocationStore;
   readonly #llm: RetryLLMClient;
 
   constructor(options?: {
     worldStateStore?: WorldStateStore;
-    locationGraphStore?: LocationGraphStore;
+    locationGraphStore?: LocationStore;
     llmClient?: RetryLLMClient;
   }) {
     const worldstateDatabaseUrl =
@@ -54,7 +54,7 @@ class ChronicleClosureProcessor {
 
     this.#locationGraphStore =
       options?.locationGraphStore ??
-      createLocationGraphStore({ connectionString: worldstateDatabaseUrl });
+      createLocationStore({ connectionString: worldstateDatabaseUrl });
     this.#worldStateStore =
       options?.worldStateStore ??
       createWorldStateStore({

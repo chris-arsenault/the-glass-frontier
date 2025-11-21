@@ -210,7 +210,7 @@ export class AuditLogStore {
       .filter((entry): entry is { entry: AuditLogEntry; groupId: string } => entry !== null);
     const hasMore = result.rows.length > limit;
     const nextCursor =
-      hasMore && entries.length > 0 && entries[entries.length - 1]?.createdAtMs
+      hasMore && entries.length > 0 && entries[entries.length - 1]?.entry.createdAtMs
         ? encodeCursor({
           id: entries[entries.length - 1]?.entry.id ?? '',
           ts: entries[entries.length - 1]?.entry.createdAtMs ?? 0,

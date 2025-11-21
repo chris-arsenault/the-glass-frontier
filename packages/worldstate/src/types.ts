@@ -1,5 +1,4 @@
 import type {
-  Attribute,
   Character,
   Chronicle,
   LocationBreadcrumbEntry,
@@ -20,16 +19,6 @@ export type ChronicleSnapshot = {
   character: Character | null;
   location: LocationSummary | null;
   turns: Turn[];
-};
-
-export type CharacterProgressPayload = {
-  characterId: string;
-  momentumDelta?: number;
-  skill?: {
-    name: string;
-    attribute: Attribute;
-    xpAward?: number;
-  };
 };
 
 export type WorldStateStore = {
@@ -57,11 +46,9 @@ export type WorldStateStore = {
 
   addTurn: (turn: Turn) => Promise<Turn>;
   listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
-
-  applyCharacterProgress: (update: CharacterProgressPayload) => Promise<Character | null>;
 };
 
-export type LocationGraphStore = {
+export type LocationStore = {
   upsertLocation: (input: {
     id?: string;
     name: string;

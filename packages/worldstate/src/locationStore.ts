@@ -10,8 +10,9 @@ import type {
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
+import { GraphOperations } from './graphOperations';
 import { createPool, withTransaction } from './pg';
-import type { LocationGraphStore } from './types';
+import type { LocationStore as LocationStoreInterface } from './types';
 import { isNonEmptyString, normalizeTags, now, slugify } from './utils';
 
 type Queryable = Pick<Pool, 'query'> | PoolClient;
@@ -110,11 +111,13 @@ const toNeighbor = (row: {
   };
 };
 
-class PostgresLocationGraphStore implements LocationGraphStore {
+class PostgresLocationStore implements LocationStoreInterface {
   readonly #pool: Pool;
+  readonly #graph: GraphOperations;
 
-  constructor(options: { pool: Pool }) {
+  constructor(options: { pool: Pool; graph?: GraphOperations }) {
     this.#pool = options.pool;
+    this.#graph = options.graph ?? new GraphOperations(options.pool);
   }
 
   // --- New API ---
@@ -131,7 +134,7 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     const tags = normalizeTags(input.tags, 24);
     const slug = await this.#reserveSlug(id, input.name);
     const place = await withTransaction(this.#pool, async (client) => {
-      await this.#upsertNode(client, id, 'location', {
+      await this.#graph.upsertNode(client, id, 'location', {
         biome: input.biome ?? undefined,
         canonicalParentId: input.parentId ?? undefined,
         description: input.description ?? undefined,
@@ -167,7 +170,7 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     await withTransaction(this.#pool, async (client) => {
       await client.query('DELETE FROM edge WHERE src_id = $1::uuid OR dst_id = $1::uuid', [input.id]);
       await client.query('DELETE FROM location WHERE id = $1::uuid', [input.id]);
-      await client.query('DELETE FROM node WHERE id = $1::uuid', [input.id]);
+      await this.#graph.deleteNode(client, input.id);
     });
   }
 
@@ -682,23 +685,19 @@ class PostgresLocationGraphStore implements LocationGraphStore {
     return `${base}-${randomUUID().slice(0, 6)}`;
   }
 
-  async #upsertNode(client: PoolClient, id: string, kind: string, props: unknown): Promise<void> {
-    await client.query(
-      `INSERT INTO node (id, kind, props, created_at)
-       VALUES ($1::uuid, $2, $3::jsonb, now())
-       ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, props = EXCLUDED.props`,
-      [id, kind, JSON.stringify(props ?? {})]
-    );
-  }
 }
 
-export function createLocationGraphStore(options?: {
+export function createLocationStore(options?: {
   connectionString?: string;
   pool?: Pool;
-}): LocationGraphStore {
+  graph?: GraphOperations;
+}): LocationStoreInterface {
   const pool = createPool({
     connectionString: options?.connectionString,
     pool: options?.pool,
   });
-  return new PostgresLocationGraphStore({ pool });
+  return new PostgresLocationStore({
+    pool,
+    graph: options?.graph,
+  });
 }
