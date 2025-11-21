@@ -32,7 +32,7 @@ const FEEDBACK_SENTIMENT_ENUM = [...PLAYER_FEEDBACK_SENTIMENTS] as [
 ];
 
 export const PlayerFeedbackRecordSchema = z.object({
-  auditId: z.string().min(1),
+  auditId: z.string().min(1).optional().nullable(),
   chronicleId: z.string().min(1),
   comment: z.string().max(2000).optional().nullable(),
   createdAt: z.string().min(1),
@@ -44,6 +44,7 @@ export const PlayerFeedbackRecordSchema = z.object({
   expectedSkillCheck: z.boolean().optional().nullable(),
   expectedSkillNotes: z.string().max(2000).optional().nullable(),
   gmEntryId: z.string().min(1),
+  groupId: z.string().min(1),
   id: z.string().min(1),
   metadata: z.record(z.string(), z.unknown()).optional(),
   playerId: z.string().min(1),
@@ -112,8 +113,10 @@ export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditQueueItemSchema = z.object({
   auditId: z.string().min(1),
+  chronicleId: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
+  groupId: z.string().min(1),
   nodeId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   playerFeedback: z.array(PlayerFeedbackRecordSchema).optional(),
@@ -126,6 +129,8 @@ export const AuditQueueItemSchema = z.object({
   storageKey: z.string().min(1),
   tags: z.array(z.enum(REVIEW_TAG_ENUM)),
   templateId: z.enum(TEMPLATE_ID_ENUM).optional().nullable(),
+  turnId: z.string().optional().nullable(),
+  turnSequence: z.number().int().nonnegative().optional().nullable(),
 });
 
 export type AuditQueueItem = z.infer<typeof AuditQueueItemSchema>;

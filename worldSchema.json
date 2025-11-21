@@ -1,0 +1,773 @@
+{
+  "version": "0.1.0",
+  "kinds": {
+    "location": {
+      "category": "real",
+      "displayName": "Location",
+      "subkinds": [
+        "planet",
+        "moon",
+        "region",
+        "city",
+        "district",
+        "shop_or_tavern",
+        "habitat",
+        "station",
+        "space_anomaly",
+        "site",
+        "dungeon",
+        "facility"
+      ],
+      "statuses": [
+        "known",
+        "hidden",
+        "lost",
+        "ruined",
+        "destroyed"
+      ],
+      "defaultStatus": "known"
+    },
+    "npc": {
+      "category": "real",
+      "displayName": "NPC",
+      "subkinds": [
+        "civilian",
+        "leader",
+        "ally",
+        "notorious_villain",
+        "agent",
+        "merchant",
+        "scholar",
+        "captain",
+        "mystic"
+      ],
+      "statuses": [
+        "alive",
+        "dead",
+        "missing",
+        "retired",
+        "ascended"
+      ],
+      "defaultStatus": "alive"
+    },
+    "ship_or_vehicle": {
+      "category": "real",
+      "displayName": "Ship / Vehicle",
+      "subkinds": [
+        "capital_ship",
+        "frigate",
+        "courier",
+        "shuttle",
+        "gunship",
+        "lander",
+        "walker",
+        "train",
+        "caravan"
+      ],
+      "statuses": [
+        "operational",
+        "damaged",
+        "destroyed",
+        "missing",
+        "mothballed"
+      ],
+      "defaultStatus": "operational"
+    },
+    "artifact": {
+      "category": "real",
+      "displayName": "Artifact",
+      "subkinds": [
+        "relic",
+        "weapon",
+        "focus",
+        "device",
+        "data_relic",
+        "key",
+        "containment_relic"
+      ],
+      "statuses": [
+        "intact",
+        "broken",
+        "lost",
+        "sealed",
+        "corrupted"
+      ],
+      "defaultStatus": "intact"
+    },
+    "faction": {
+      "category": "real",
+      "displayName": "Faction",
+      "subkinds": [
+        "government",
+        "corporate",
+        "outlaw",
+        "guild",
+        "order",
+        "cartel",
+        "militia"
+      ],
+      "statuses": [
+        "active",
+        "fragmented",
+        "dormant",
+        "destroyed",
+        "outlawed"
+      ],
+      "defaultStatus": "active"
+    },
+    "resource": {
+      "category": "real",
+      "displayName": "Resource",
+      "subkinds": [
+        "strategic",
+        "mundane",
+        "hyperdrive_fuel",
+        "spirit_dust",
+        "ore",
+        "data",
+        "biomass"
+      ],
+      "statuses": [
+        "abundant",
+        "common",
+        "scarce",
+        "depleted",
+        "mythical"
+      ],
+      "defaultStatus": "common"
+    },
+    "magic": {
+      "category": "idea",
+      "displayName": "Magic",
+      "subkinds": [
+        "school",
+        "spell",
+        "ritual",
+        "tradition",
+        "forbidden_technique"
+      ],
+      "statuses": [
+        "sanctioned",
+        "forbidden",
+        "forgotten",
+        "experimental"
+      ],
+      "defaultStatus": "sanctioned"
+    },
+    "faith": {
+      "category": "idea",
+      "displayName": "Faith",
+      "subkinds": [
+        "religion",
+        "cult",
+        "philosophy",
+        "mystery_cult",
+        "state_church"
+      ],
+      "statuses": [
+        "dominant",
+        "major",
+        "minority",
+        "heresy",
+        "suppressed",
+        "extinct"
+      ],
+      "defaultStatus": "minority"
+    },
+    "conflict": {
+      "category": "idea",
+      "displayName": "Conflict",
+      "subkinds": [
+        "war",
+        "rebellion",
+        "insurgency",
+        "cold_war",
+        "proxy_war",
+        "shadow_conflict"
+      ],
+      "statuses": [
+        "brewing",
+        "active",
+        "stalemated",
+        "won",
+        "lost",
+        "frozen"
+      ],
+      "defaultStatus": "brewing"
+    },
+    "rumor": {
+      "category": "idea",
+      "displayName": "Rumor",
+      "subkinds": [
+        "local",
+        "regional",
+        "cosmic",
+        "personal",
+        "prophecy"
+      ],
+      "statuses": [
+        "fresh",
+        "spreading",
+        "confirmed",
+        "debunked",
+        "forgotten"
+      ],
+      "defaultStatus": "fresh"
+    },
+    "law_or_edict": {
+      "category": "idea",
+      "displayName": "Law or Edict",
+      "subkinds": [
+        "civil_law",
+        "religious_law",
+        "martial_law",
+        "corporate_policy",
+        "treaty"
+      ],
+      "statuses": [
+        "drafted",
+        "enacted",
+        "contested",
+        "ignored",
+        "repealed"
+      ],
+      "defaultStatus": "enacted"
+    }
+  },
+  "relationshipTypes": {
+    "adjacent_to": "Two locations are physically or spatially adjacent.",
+    "contains": "Subject location or container holds the target within it.",
+    "contained_within": "Subject is contained within the target.",
+    "connected_by": "Locations are linked by an explicit route or gate.",
+    "resides_in": "Subject NPC normally lives in the target location.",
+    "frequents": "Subject NPC regularly visits the target location.",
+    "works_at": "Subject NPC works at the target location.",
+    "controls": "Subject faction or NPC exercises authority over the target.",
+    "inhabited_by": "Subject location is inhabited by the target NPC or group.",
+    "member_of": "Subject NPC or ship belongs to the target faction or faith.",
+    "leader_of": "Subject NPC leads the target faction or faith.",
+    "agent_of": "Subject NPC acts covertly on behalf of the target faction or faith.",
+    "ally_of": "Subject NPC, faction, or ship is an ally of the target.",
+    "enemy_of": "Subject NPC, faction, or ship is an enemy of the target.",
+    "kin_of": "Subject NPC is family or blood-related to the target NPC.",
+    "mentor_of": "Subject NPC is a teacher or mentor to the target NPC.",
+    "owes_favor_to": "Subject NPC or faction owes a significant favor to the target.",
+    "betrayed": "Subject has betrayed the target.",
+    "docked_at": "Subject ship is currently docked at or stationed at the target location.",
+    "patrols": "Subject ship or faction regularly patrols the target location or region.",
+    "orbits": "Subject ship or habitat orbits the target celestial body.",
+    "stored_at": "Subject artifact or resource is stored at the target location.",
+    "discovered_at": "Subject artifact or resource was discovered at the target location.",
+    "entombed_within": "Subject artifact or remains are sealed within the target.",
+    "wields": "Subject NPC or faction actively uses the target artifact.",
+    "seeks": "Subject NPC, faction, or faith actively seeks the target artifact, resource, or magic.",
+    "source_of": "Subject location or resource is the origin or source of the target resource or magic.",
+    "depleted_of": "Subject location or resource has lost or spent the target resource.",
+    "studies": "Subject NPC, faction, or faith studies the target magic, resource, artifact, or phenomenon.",
+    "prohibits": "Subject faith or law forbids the target magic, artifact, practice, or behavior.",
+    "sanctions": "Subject faith, faction, or law formally permits or regulates the target.",
+    "worships": "Subject NPC or faction venerates the target faith, artifact, or entity.",
+    "opposes": "Subject faith, faction, or law opposes the target faith, law, or practice.",
+    "enforces": "Subject faction, NPC, or ship enforces the target law or edict.",
+    "violates": "Subject NPC, faction, or location is in violation of the target law or edict.",
+    "in_effect_in": "Subject law or edict applies within the target location or jurisdiction.",
+    "cause_of": "Subject law, resource, or event is a significant cause of the target conflict.",
+    "fights_in": "Subject NPC, faction, or ship actively participates in the target conflict.",
+    "battleground_in": "Subject conflict is actively fought in or around the target location.",
+    "claims": "Subject faction or faith claims authority over the target location, resource, or group.",
+    "influences": "Subject faction, faith, or magic strongly shapes the target location or group.",
+    "rumors_about": "Subject rumor concerns the target entity.",
+    "spawned_by": "Subject rumor or conflict originated from the target entity or event.",
+    "documents": "Subject law, rumor, or artifact records or encodes information about the target.",
+    "related_to": "Subject idea, law, rumor, or conflict is broadly related to the target in theme or origin.",
+    "outcome_of": "Subject is a direct outcome of the target conflict or event."
+  },
+  "relationships": {
+    "location": {
+      "location": [
+        "adjacent_to",
+        "contains",
+        "contained_within",
+        "connected_by",
+        "related_to"
+      ],
+      "npc": [
+        "inhabited_by",
+        "related_to"
+      ],
+      "ship_or_vehicle": [
+        "docked_at",
+        "patrols",
+        "orbits",
+        "related_to"
+      ],
+      "artifact": [
+        "stored_at",
+        "discovered_at",
+        "entombed_within",
+        "related_to"
+      ],
+      "faction": [
+        "controls",
+        "influences",
+        "claims",
+        "related_to"
+      ],
+      "resource": [
+        "source_of",
+        "depleted_of",
+        "related_to"
+      ],
+      "conflict": [
+        "battleground_in",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about"
+      ],
+      "law_or_edict": [
+        "in_effect_in",
+        "related_to"
+      ]
+    },
+    "npc": {
+      "location": [
+        "resides_in",
+        "frequents",
+        "works_at"
+      ],
+      "npc": [
+        "ally_of",
+        "enemy_of",
+        "kin_of",
+        "mentor_of",
+        "owes_favor_to",
+        "betrayed",
+        "related_to"
+      ],
+      "ship_or_vehicle": [
+        "controls",
+        "member_of",
+        "related_to"
+      ],
+      "artifact": [
+        "wields",
+        "seeks",
+        "related_to"
+      ],
+      "faction": [
+        "member_of",
+        "leader_of",
+        "agent_of",
+        "ally_of",
+        "enemy_of",
+        "related_to"
+      ],
+      "resource": [
+        "seeks",
+        "related_to"
+      ],
+      "magic": [
+        "studies",
+        "wields",
+        "related_to"
+      ],
+      "faith": [
+        "worships",
+        "member_of",
+        "opposes",
+        "related_to"
+      ],
+      "conflict": [
+        "fights_in",
+        "cause_of",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about"
+      ],
+      "law_or_edict": [
+        "violates",
+        "enforces",
+        "related_to"
+      ]
+    },
+    "ship_or_vehicle": {
+      "location": [
+        "docked_at",
+        "patrols",
+        "orbits"
+      ],
+      "npc": [
+        "member_of",
+        "controls",
+        "related_to"
+      ],
+      "faction": [
+        "member_of",
+        "agent_of",
+        "ally_of",
+        "enemy_of",
+        "related_to"
+      ],
+      "conflict": [
+        "fights_in",
+        "related_to"
+      ],
+      "artifact": [
+        "stored_at",
+        "wields",
+        "related_to"
+      ],
+      "resource": [
+        "stored_at",
+        "source_of",
+        "related_to"
+      ]
+    },
+    "artifact": {
+      "location": [
+        "stored_at",
+        "discovered_at",
+        "entombed_within"
+      ],
+      "npc": [
+        "wields",
+        "seeks",
+        "related_to"
+      ],
+      "faction": [
+        "wields",
+        "seeks",
+        "related_to"
+      ],
+      "resource": [
+        "source_of",
+        "related_to"
+      ],
+      "magic": [
+        "source_of",
+        "studies",
+        "related_to"
+      ],
+      "faith": [
+        "worships",
+        "documents",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about",
+        "spawned_by"
+      ],
+      "conflict": [
+        "cause_of",
+        "related_to"
+      ],
+      "law_or_edict": [
+        "documents",
+        "prohibits",
+        "sanctions",
+        "related_to"
+      ]
+    },
+    "faction": {
+      "location": [
+        "controls",
+        "influences",
+        "claims"
+      ],
+      "npc": [
+        "member_of",
+        "leader_of",
+        "agent_of",
+        "ally_of",
+        "enemy_of"
+      ],
+      "ship_or_vehicle": [
+        "member_of",
+        "controls",
+        "agent_of"
+      ],
+      "artifact": [
+        "wields",
+        "seeks"
+      ],
+      "faction": [
+        "ally_of",
+        "enemy_of",
+        "member_of",
+        "opposes",
+        "related_to"
+      ],
+      "resource": [
+        "controls",
+        "seeks",
+        "source_of",
+        "related_to"
+      ],
+      "magic": [
+        "studies",
+        "sanctions",
+        "prohibits",
+        "related_to"
+      ],
+      "faith": [
+        "ally_of",
+        "opposes",
+        "member_of",
+        "related_to"
+      ],
+      "conflict": [
+        "fights_in",
+        "cause_of",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about"
+      ],
+      "law_or_edict": [
+        "enforces",
+        "violates",
+        "documents",
+        "related_to"
+      ]
+    },
+    "resource": {
+      "location": [
+        "source_of",
+        "depleted_of",
+        "related_to"
+      ],
+      "artifact": [
+        "contained_within",
+        "source_of",
+        "related_to"
+      ],
+      "faction": [
+        "controls",
+        "seeks",
+        "cause_of",
+        "related_to"
+      ],
+      "ship_or_vehicle": [
+        "source_of",
+        "stored_at",
+        "related_to"
+      ],
+      "magic": [
+        "source_of",
+        "studies",
+        "related_to"
+      ],
+      "conflict": [
+        "cause_of",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about",
+        "spawned_by"
+      ]
+    },
+    "magic": {
+      "npc": [
+        "wields",
+        "studies",
+        "related_to"
+      ],
+      "faction": [
+        "studies",
+        "sanctions",
+        "prohibits",
+        "related_to"
+      ],
+      "location": [
+        "influences",
+        "related_to"
+      ],
+      "artifact": [
+        "source_of",
+        "documents",
+        "related_to"
+      ],
+      "faith": [
+        "worships",
+        "opposes",
+        "related_to"
+      ],
+      "conflict": [
+        "cause_of",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about",
+        "spawned_by"
+      ],
+      "law_or_edict": [
+        "prohibits",
+        "sanctions",
+        "related_to"
+      ]
+    },
+    "faith": {
+      "npc": [
+        "worships",
+        "member_of",
+        "opposes",
+        "related_to"
+      ],
+      "faction": [
+        "member_of",
+        "ally_of",
+        "opposes",
+        "related_to"
+      ],
+      "location": [
+        "influences",
+        "controls",
+        "related_to"
+      ],
+      "faith": [
+        "ally_of",
+        "opposes",
+        "related_to"
+      ],
+      "magic": [
+        "sanctions",
+        "prohibits",
+        "related_to"
+      ],
+      "conflict": [
+        "cause_of",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about",
+        "spawned_by"
+      ],
+      "law_or_edict": [
+        "documents",
+        "cause_of",
+        "related_to"
+      ]
+    },
+    "conflict": {
+      "location": [
+        "battleground_in",
+        "related_to"
+      ],
+      "faction": [
+        "fights_in",
+        "cause_of",
+        "related_to"
+      ],
+      "npc": [
+        "fights_in",
+        "related_to"
+      ],
+      "ship_or_vehicle": [
+        "fights_in",
+        "related_to"
+      ],
+      "resource": [
+        "cause_of",
+        "related_to"
+      ],
+      "magic": [
+        "cause_of",
+        "related_to"
+      ],
+      "faith": [
+        "cause_of",
+        "related_to"
+      ],
+      "conflict": [
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about",
+        "spawned_by"
+      ],
+      "law_or_edict": [
+        "cause_of",
+        "outcome_of",
+        "related_to"
+      ]
+    },
+    "rumor": {
+      "location": [
+        "rumors_about"
+      ],
+      "npc": [
+        "rumors_about"
+      ],
+      "ship_or_vehicle": [
+        "rumors_about"
+      ],
+      "artifact": [
+        "rumors_about"
+      ],
+      "faction": [
+        "rumors_about"
+      ],
+      "resource": [
+        "rumors_about"
+      ],
+      "magic": [
+        "rumors_about"
+      ],
+      "faith": [
+        "rumors_about"
+      ],
+      "conflict": [
+        "rumors_about"
+      ],
+      "rumor": [
+        "related_to"
+      ],
+      "law_or_edict": [
+        "rumors_about"
+      ]
+    },
+    "law_or_edict": {
+      "location": [
+        "in_effect_in",
+        "related_to"
+      ],
+      "npc": [
+        "enforces",
+        "violates",
+        "related_to"
+      ],
+      "faction": [
+        "enforces",
+        "violates",
+        "related_to"
+      ],
+      "faith": [
+        "documents",
+        "opposes",
+        "related_to"
+      ],
+      "conflict": [
+        "cause_of",
+        "related_to"
+      ],
+      "artifact": [
+        "documents",
+        "related_to"
+      ],
+      "magic": [
+        "prohibits",
+        "sanctions",
+        "related_to"
+      ],
+      "rumor": [
+        "rumors_about",
+        "spawned_by"
+      ],
+      "law_or_edict": [
+        "related_to"
+      ]
+    }
+  }
+}

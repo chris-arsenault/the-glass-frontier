@@ -1,6 +1,11 @@
 import type {
   Character,
   Chronicle,
+  HardState,
+  HardStateKind,
+  HardStateLink,
+  HardStateStatus,
+  HardStateSubkind,
   LocationBreadcrumbEntry,
   LocationEdge,
   LocationEdgeKind,
@@ -10,6 +15,11 @@ import type {
   LocationState,
   LocationSummary,
   Turn,
+  LoreFragment,
+  WorldKind,
+  WorldRelationshipRule,
+  WorldRelationshipType,
+  WorldSchema,
 } from '@glass-frontier/dto';
 
 export type ChronicleSnapshot = {
@@ -110,4 +120,52 @@ export type LocationStore = {
     status?: string[];
   }) => Promise<LocationState>;
   getPlace: (placeId: string) => Promise<LocationPlace | null>;
+};
+
+export type WorldSchemaStore = {
+  upsertHardState: (input: {
+    id?: string;
+    kind: HardStateKind;
+    subkind?: HardStateSubkind | null;
+    name: string;
+    status?: HardStateStatus | null;
+    links?: Array<{ relationship: string; targetId: string }>;
+  }) => Promise<HardState>;
+  getHardState: (input: { id: string }) => Promise<HardState | null>;
+  listHardStates: (input?: { kind?: HardStateKind; limit?: number }) => Promise<HardState[]>;
+  deleteHardState: (input: { id: string }) => Promise<void>;
+  upsertRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
+  deleteRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
+  upsertKind: (input: {
+    id: HardStateKind;
+    category?: string | null;
+    displayName?: string | null;
+    defaultStatus?: HardStateStatus | null;
+    subkinds?: HardStateSubkind[];
+    statuses?: HardStateStatus[];
+  }) => Promise<WorldKind>;
+  addRelationshipType: (input: { id: string; description?: string | null }) => Promise<WorldRelationshipType>;
+  upsertRelationshipRule: (input: WorldRelationshipRule) => Promise<void>;
+  deleteRelationshipRule: (input: WorldRelationshipRule) => Promise<void>;
+  getWorldSchema: () => Promise<WorldSchema>;
+
+  createLoreFragment: (input: {
+    id?: string;
+    entityId: string;
+    source: { chronicleId: string; beatId?: string; turnRange?: [number, number] };
+    title: string;
+    prose: string;
+    tags?: string[];
+    timestamp?: number;
+  }) => Promise<LoreFragment>;
+  getLoreFragment: (input: { id: string }) => Promise<LoreFragment | null>;
+  listLoreFragmentsByEntity: (input: { entityId: string; limit?: number }) => Promise<LoreFragment[]>;
+  updateLoreFragment: (input: {
+    id: string;
+    title?: string;
+    prose?: string;
+    tags?: string[];
+    source?: { chronicleId?: string; beatId?: string; turnRange?: [number, number] };
+  }) => Promise<LoreFragment>;
+  deleteLoreFragment: (input: { id: string }) => Promise<void>;
 };

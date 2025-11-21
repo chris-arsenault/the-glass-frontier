@@ -25,3 +25,6 @@ export * from './audit/LlmAudit';
 export * from './support/BugReport';
 export * from './support/TokenUsage';
 export * from './Metadata'
+export * from './world/HardState';
+export * from './world/LoreFragment';
+export * from './world/WorldSchema';

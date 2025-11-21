@@ -47,9 +47,10 @@ class AuditArchive {
     const characterId = (entry.metadata as Record<string, unknown> | undefined)?.characterId;
     const turnId = (entry.metadata as Record<string, unknown> | undefined)?.turnId;
 
-    // Ensure audit group exists for this player/chronicle
+    // Ensure audit group exists for this turn
     const group = await this.#store.auditGroupStore.ensureGroup({
-      scopeType: 'chronicle',
+      scopeType: typeof turnId === 'string' ? 'turn' : 'chronicle',
+      scopeRef: typeof turnId === 'string' ? turnId : typeof chronicleId === 'string' ? chronicleId : undefined,
       playerId,
       chronicleId: typeof chronicleId === 'string' ? chronicleId : undefined,
       characterId: typeof characterId === 'string' ? characterId : undefined,

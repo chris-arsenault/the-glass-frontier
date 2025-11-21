@@ -173,5 +173,26 @@
     "summary": "GM API now targets the new location contract",
     "details": "Migrated the GM service to the new location contract by consuming the location details query, mapping it back to the existing UI shape, applying location moves through the canonical upsert/edge mutators, and exposing both legacy and new endpoints on the location API during the transition.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-27-location-relationship-fix",
+    "releasedAt": "2025-11-27",
+    "summary": "Location maintenance now returns proper relationships",
+    "details": "Corrected the descendant query to preserve canonical parent ids in the location graph and added a Postgres-backed vitest suite that exercises location, edge, character, chronicle, and event persistence to prevent regressions.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2025-11-27-world-hardstate-lore",
+    "releasedAt": "2025-11-27",
+    "summary": "World hard state and lore fragments persist in Postgres",
+    "details": "Seeded world kind/subkind/status and relationship rules from the shared world schema into Postgres, enforced typed hard-state links, and added lore fragment storage plus integration tests so narrative entities and their edges stay consistent.",
+    "type": "feature"
+  },
+  {
+    "id": "2025-11-27-world-schema-ui",
+    "releasedAt": "2025-11-27",
+    "summary": "World schema editor and API",
+    "details": "Added a moderation page to manage world kinds, subkinds, statuses, and relationship rules, plus a dedicated world-schema API that surfaces the schema and allows updates backed by database constraints.",
+    "type": "feature"
   }
 ]

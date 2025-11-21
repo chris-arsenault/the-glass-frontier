@@ -3,8 +3,9 @@ import type { Pool } from 'pg';
 import { GraphOperations } from './graphOperations';
 import { createLocationStore } from './locationStore';
 import { createPool } from './pg';
-import type { LocationStore, WorldStateStore as ChronicleStore } from './types';
+import type { LocationStore, WorldSchemaStore, WorldStateStore as ChronicleStore } from './types';
 import { createWorldStateStore } from './worldStateStore';
+import { createWorldSchemaStore } from './worldSchemaStore';
 
 /**
  * Unified interface for all world state operations.
@@ -15,15 +16,18 @@ export class WorldState {
   readonly #graph: GraphOperations;
   readonly #chronicles: ChronicleStore;
   readonly #locations: LocationStore;
+  readonly #world: WorldSchemaStore;
 
   private constructor(options: {
     graph: GraphOperations;
     chronicles: ChronicleStore;
     locations: LocationStore;
+    world: WorldSchemaStore;
   }) {
     this.#graph = options.graph;
     this.#chronicles = options.chronicles;
     this.#locations = options.locations;
+    this.#world = options.world;
   }
 
   /**
@@ -49,11 +53,13 @@ export class WorldState {
       graph,
       locationStore: locations,
     });
+    const world = createWorldSchemaStore({ pool, graph });
 
     return new WorldState({
       graph,
       chronicles,
       locations,
+      world,
     });
   }
 
@@ -77,6 +83,13 @@ export class WorldState {
    */
   get locations(): LocationStore {
     return this.#locations;
+  }
+
+  /**
+   * World schema operations for hard state and lore fragments.
+   */
+  get world(): WorldSchemaStore {
+    return this.#world;
   }
 
   // Future knowledge domains can be added here:

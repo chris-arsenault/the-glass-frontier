@@ -609,7 +609,7 @@ class PostgresLocationStore implements LocationStoreInterface {
          JOIN node n ON n.id = l.id
          WHERE l.id = $1::uuid
          UNION ALL
-         SELECT child.*, n.props, parent.src_id as parent_id, tree.root_id
+         SELECT child.*, n.props, tree.id as parent_id, tree.root_id
          FROM tree
          JOIN edge parent ON parent.dst_id = tree.id AND parent.type = 'location_parent'
          JOIN location child ON child.id = parent.src_id

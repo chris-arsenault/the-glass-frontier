@@ -102,8 +102,8 @@ export class OpsStore {
     const reviews = await this.auditReviewStore.listByGroup(found.groupId);
     const feedback = await this.auditFeedbackStore.listByGroup(found.groupId);
     const review = reviews.find((entry) => entry.auditId === auditId) ?? null;
-    const playerFeedback = feedback.filter((entry) => entry.auditId === auditId);
-    return { entry: found.entry, feedback: playerFeedback, groupId: found.groupId, review };
+    // Return ALL feedback for the turn group, not just for this specific audit
+    return { entry: found.entry, feedback, groupId: found.groupId, review };
   }
 
   async saveAuditReview(input: {
@@ -131,10 +131,13 @@ export class OpsStore {
   ): AuditQueueItem[] {
     const items: AuditQueueItem[] = [];
     for (const bundle of bundles) {
+      const metadata = bundle.entry.metadata as Record<string, unknown> | null | undefined;
       const item: AuditQueueItem = {
         auditId: bundle.entry.id,
+        chronicleId: typeof metadata?.chronicleId === 'string' ? metadata.chronicleId : null,
         createdAt: bundle.entry.createdAt,
         createdAtMs: bundle.entry.createdAtMs,
+        groupId: bundle.groupId,
         nodeId: bundle.entry.nodeId ?? null,
         notes: bundle.review?.notes ?? null,
         playerFeedback: bundle.feedback,
@@ -147,6 +150,8 @@ export class OpsStore {
         storageKey: bundle.entry.storageKey,
         tags: bundle.review?.tags ?? [],
         templateId: bundle.review?.templateId ?? null,
+        turnId: typeof metadata?.turnId === 'string' ? metadata.turnId : null,
+        turnSequence: typeof metadata?.turnSequence === 'number' ? metadata.turnSequence : null,
       };
       if (statusFilter && !statusFilter.has(item.status)) {
         continue;

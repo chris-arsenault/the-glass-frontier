@@ -20,7 +20,10 @@
     "migrate": "node-pg-migrate -f ./node-pg-migrate.worldstate.config.cjs up",
     "migrate:up": "node-pg-migrate -f ./node-pg-migrate.worldstate.config.cjs up",
     "migrate:down": "node-pg-migrate -f ./node-pg-migrate.worldstate.config.cjs down",
-    "migrate:reset": "node-pg-migrate -f ./node-pg-migrate.worldstate.config.cjs down 0"
+    "migrate:reset": "node-pg-migrate -f ./node-pg-migrate.worldstate.config.cjs down 0",
+    "seed:data": "tsx seed-data/seed-locations.ts",
+    "seed:world": "tsx seed-data/seed-world-entities.ts",
+    "generate:world-seed": "tsx seed-data/generate-world-seed.ts"
   },
   "keywords": [
     "glass-frontier",

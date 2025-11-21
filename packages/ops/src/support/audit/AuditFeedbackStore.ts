@@ -62,7 +62,7 @@ export class AuditFeedbackStore {
   }): Promise<PlayerFeedbackRecord> {
     const now = new Date().toISOString();
     const record: PlayerFeedbackRecord = {
-      auditId: feedback.auditId ?? '',
+      auditId: feedback.auditId ?? null,
       chronicleId: feedback.chronicleId,
       comment: feedback.comment ?? null,
       createdAt: now,
@@ -74,6 +74,7 @@ export class AuditFeedbackStore {
       expectedSkillCheck: feedback.expectedSkillCheck ?? null,
       expectedSkillNotes: feedback.expectedSkillNotes ?? null,
       gmEntryId: feedback.gmEntryId,
+      groupId: feedback.groupId,
       id: randomUUID(),
       metadata: feedback.metadata ?? {},
       playerId: feedback.playerId,
@@ -138,7 +139,7 @@ export class AuditFeedbackStore {
 
   #mapRow(row: AuditFeedbackRow): PlayerFeedbackRecord | null {
     const parsed = PlayerFeedbackRecordSchema.safeParse({
-      auditId: row.audit_id ?? '',
+      auditId: row.audit_id ?? null,
       chronicleId: row.chronicle_id,
       comment: row.comment,
       createdAt: row.created_at.toISOString(),
@@ -150,6 +151,7 @@ export class AuditFeedbackStore {
       expectedSkillCheck: row.expected_skill_check ?? null,
       expectedSkillNotes: row.expected_skill_notes ?? null,
       gmEntryId: row.gm_entry_id,
+      groupId: row.group_id,
       id: row.id,
       metadata: row.metadata ?? undefined,
       playerId: row.player_id,

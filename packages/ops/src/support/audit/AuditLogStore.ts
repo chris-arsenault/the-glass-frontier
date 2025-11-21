@@ -39,6 +39,7 @@ type AuditEntryRow = {
   created_at: Date;
   scope_type?: string;
   scope_ref?: string | null;
+  turn_sequence?: number | null;
 };
 
 type CursorPayload = {
@@ -128,9 +129,10 @@ export class AuditLogStore {
   async get(entryId: string): Promise<{ entry: AuditLogEntry; groupId: string } | null> {
     const result = await this.#pool.query<AuditEntryRow>(
       `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
-              g.scope_type, g.scope_ref
+              g.scope_type, g.scope_ref, t.turn_sequence
        FROM audit_entry e
        JOIN audit_group g ON g.id = e.group_id
+       LEFT JOIN chronicle_turn t ON t.id = e.turn_id
        WHERE e.id = $1::uuid`,
       [entryId]
     );
@@ -195,9 +197,10 @@ export class AuditLogStore {
     const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const result = await this.#pool.query<AuditEntryRow>(
       `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
-              g.scope_type, g.scope_ref
+              g.scope_type, g.scope_ref, t.turn_sequence
        FROM audit_entry e
        JOIN audit_group g ON g.id = e.group_id
+       LEFT JOIN chronicle_turn t ON t.id = e.turn_id
        ${whereSql}
        ORDER BY e.created_at DESC, e.id DESC
        LIMIT ${limit + 1}`,
@@ -220,7 +223,11 @@ export class AuditLogStore {
   }
 
   #mapRow(row: AuditEntryRow): { entry: AuditLogEntry; groupId: string } | null {
-    const metadata = { ...(row.metadata ?? {}), groupId: row.group_id };
+    const metadata = {
+      ...(row.metadata ?? {}),
+      groupId: row.group_id,
+      ...(typeof row.turn_sequence === 'number' ? { turnSequence: row.turn_sequence } : {}),
+    };
     const parsed = AuditLogEntrySchema.safeParse({
       characterId: row.character_id ?? undefined,
       chronicleId: row.chronicle_id ?? undefined,

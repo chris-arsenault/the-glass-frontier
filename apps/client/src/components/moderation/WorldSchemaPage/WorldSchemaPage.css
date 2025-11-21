@@ -1,0 +1,100 @@
+.ws-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.ws-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ws-actions button {
+  margin-left: 0.75rem;
+}
+
+.ws-alert {
+  padding: 0.75rem 1rem;
+  background: #ffd7d7;
+  border: 1px solid #f39494;
+  border-radius: 6px;
+}
+
+.ws-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
+  gap: 1rem;
+}
+
+.ws-card {
+  background: #0f1724;
+  border: 1px solid #1f2a3a;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ws-card-header h2 {
+  margin: 0;
+}
+
+.ws-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ws-field input,
+.ws-field select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #253046;
+  background: #0c111a;
+  color: #e8ecf5;
+}
+
+.ws-form button {
+  justify-self: flex-start;
+}
+
+.ws-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ws-table-head,
+.ws-table-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ws-table-head {
+  font-weight: 600;
+  color: #9fb5d1;
+}
+
+.ws-table-row {
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: #0c111a;
+  border: 1px solid #1b2434;
+}
+
+.ws-kind-id {
+  font-weight: 700;
+}
+
+.ws-link {
+  background: none;
+  border: none;
+  color: #76c7ff;
+  cursor: pointer;
+  padding: 0;
+}
