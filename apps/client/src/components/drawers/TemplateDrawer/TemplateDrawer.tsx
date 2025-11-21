@@ -10,7 +10,7 @@ import './TemplateDrawer.css';
 export function TemplateDrawer() {
   const isOpen = useUiStore((state) => state.isTemplateDrawerOpen);
   const close = useUiStore((state) => state.closeTemplateDrawer);
-  const loginId = useChronicleStore((state) => state.loginId);
+  const playerId = useChronicleStore((state) => state.playerId);
   const {
     detail,
     draft,
@@ -56,29 +56,29 @@ export function TemplateDrawer() {
   }, [isOpen, close]);
 
   useEffect(() => {
-    if (isOpen && loginId) {
-      void loadSummaries(loginId);
+    if (isOpen && playerId) {
+      void loadSummaries(playerId);
     }
     if (!isOpen) {
       reset();
     }
-  }, [isOpen, loginId, loadSummaries, reset]);
+  }, [isOpen, playerId, loadSummaries, reset]);
 
   const handleSelect = (nodeId: PromptTemplateId) => {
-    if (loginId) {
-      void selectTemplate(nodeId, loginId);
+    if (playerId) {
+      void selectTemplate(nodeId, playerId);
     }
   };
 
   const handleSave = () => {
-    if (loginId) {
-      void saveTemplate(loginId).then(() => loadSummaries(loginId));
+    if (playerId) {
+      void saveTemplate(playerId).then(() => loadSummaries(playerId));
     }
   };
 
   const handleRevert = () => {
-    if (loginId) {
-      void revertTemplate(loginId).then(() => loadSummaries(loginId));
+    if (playerId) {
+      void revertTemplate(playerId).then(() => loadSummaries(playerId));
     }
   };
 

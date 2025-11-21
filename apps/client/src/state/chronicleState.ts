@@ -4,7 +4,7 @@ import type {
   Chronicle,
   ChronicleBeat,
   Intent,
-  LocationSummary,
+  LocationEntity,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -74,8 +74,8 @@ export type ChronicleState = {
   focusedBeatId: string | null;
   chronicleId: string | null;
   chronicleRecord: Chronicle | null;
-  loginId: string | null;
-  loginName: string | null;
+  playerId: string | null;
+  playerName: string | null;
   preferredCharacterId: string | null;
   messages: ChatMessage[];
   turnSequence: number;
@@ -86,7 +86,7 @@ export type ChronicleState = {
   queuedIntents: number;
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
-  location?: LocationSummary | null;
+  location?: LocationEntity | null;
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;
@@ -105,7 +105,7 @@ export type ChronicleStore = {
   hydrateChronicle: (chronicleId: string) => Promise<string>;
   sendPlayerMessage: (input: { content: string }) => Promise<void>;
   setPreferredCharacterId: (characterId: string | null) => void;
-  refreshLoginResources: () => Promise<void>;
+  refreshPlayerResources: () => Promise<void>;
   createChronicleForCharacter: (details: ChronicleCreationDetails) => Promise<string>;
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;

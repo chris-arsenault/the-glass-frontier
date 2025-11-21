@@ -10,6 +10,7 @@
   },
   "include": ["src", "scripts/**/*.mjs", "tsup.config.ts"],
   "references": [
+    { "path": "../../packages/app" },
     { "path": "../../packages/skill-check-resolver" },
     { "path": "../../packages/dto" },
     { "path": "../../packages/utils" },

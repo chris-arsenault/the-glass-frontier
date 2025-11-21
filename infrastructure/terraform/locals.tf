@@ -4,7 +4,7 @@ locals {
   client_build_dir            = "${local.client_source_dir}/dist"
   chronicle_source_dir        = "${path.module}/../../apps/chronicle-api"
   chronicle_dist_dir          = "${local.chronicle_source_dir}/dist"
-  prompt_template_source_dir  = "${path.module}/../../apps/prompt-api/templates"
+  prompt_template_source_dir  = "${path.module}/../../packages/app/templates"
   prompt_api_source_dir       = "${path.module}/../../apps/prompt-api"
   prompt_api_dist_dir         = "${local.prompt_api_source_dir}/dist"
   location_api_source_dir     = "${path.module}/../../apps/location-api"

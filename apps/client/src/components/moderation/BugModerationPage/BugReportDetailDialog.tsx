@@ -103,10 +103,6 @@ export function BugReportDetailDialog({
                   <dd>{formatBugStatus(report.status)}</dd>
                 </dl>
                 <dl>
-                  <dt>Login</dt>
-                  <dd>{report.loginId}</dd>
-                </dl>
-                <dl>
                   <dt>Player</dt>
                   <dd>{describeField(report.playerId)}</dd>
                 </dl>

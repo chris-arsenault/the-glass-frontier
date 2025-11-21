@@ -37,7 +37,7 @@ export function SessionManager() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
-  const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
+  const refreshDirectory = useChronicleStore((state) => state.refreshPlayerResources);
   const connectionState = useChronicleStore((state) => state.connectionState);
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);

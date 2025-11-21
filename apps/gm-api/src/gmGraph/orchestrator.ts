@@ -33,7 +33,7 @@ type NodeDescriptor = {
 
 const PARALLEL_GROUPS = new Map<string, string[]>([
   ['intent-classifier', ['intent-beat-detector', 'check-planner']],
-  ['gm-response-node', ['gm-summary', 'inventory-delta', 'location-delta', 'beat-tracker']],
+  ['gm-response-node', ['lore-judge', 'gm-summary', 'inventory-delta', 'location-delta', 'beat-tracker']],
 ]);
 
 class GmGraphOrchestrator {
@@ -307,6 +307,8 @@ class GmGraphOrchestrator {
       handlerId: update.handlerId ?? base.handlerId,
       inventoryDelta: update.inventoryDelta ?? base.inventoryDelta,
       locationDelta: update.locationDelta ?? base.locationDelta,
+      loreContext: update.loreContext ?? base.loreContext,
+      loreUsage: update.loreUsage ?? base.loreUsage,
       playerIntent: update.playerIntent ?? base.playerIntent,
       skillCheckPlan: update.skillCheckPlan ?? base.skillCheckPlan,
       skillCheckResult: update.skillCheckResult ?? base.skillCheckResult,

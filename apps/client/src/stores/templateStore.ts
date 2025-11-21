@@ -86,11 +86,11 @@ type TemplateStoreState = {
   isSaving: boolean;
   error: string | null;
   isDirty: boolean;
-  loadSummaries: (loginId: string) => Promise<void>;
-  selectTemplate: (templateId: PromptTemplateId | null, loginId: string) => Promise<void>;
+  loadSummaries: (playerId: string) => Promise<void>;
+  selectTemplate: (templateId: PromptTemplateId | null, playerId: string) => Promise<void>;
   updateDraft: (value: string) => void;
-  saveTemplate: (loginId: string) => Promise<void>;
-  revertTemplate: (loginId: string) => Promise<void>;
+  saveTemplate: (playerId: string) => Promise<void>;
+  revertTemplate: (playerId: string) => Promise<void>;
   reset: () => void;
 };
 
@@ -103,15 +103,15 @@ const toRecord = (summaries: TemplateSummary[]): Record<string, TemplateSummary>
 };
 
 const createLoadSummariesHandler = (set: TemplateStoreSet) => {
-  return async (loginId: string): Promise<void> => {
-    if (!isNonEmptyString(loginId)) {
+  return async (playerId: string): Promise<void> => {
+    if (!isNonEmptyString(playerId)) {
       return;
     }
 
     set({ error: null, isLoading: true });
 
     try {
-      const summaries = await promptClient.listPromptTemplates.query({ loginId });
+      const summaries = await promptClient.listPromptTemplates.query({ playerId });
       const summaryList = summaries ?? [];
 
       set((prev) => ({
@@ -130,9 +130,9 @@ const createLoadSummariesHandler = (set: TemplateStoreSet) => {
 };
 
 const createRevertTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet) => {
-  return async (loginId: string): Promise<void> => {
+  return async (playerId: string): Promise<void> => {
     const selectedTemplateId = get().selectedTemplateId;
-    if (selectedTemplateId === null || !isNonEmptyString(loginId)) {
+    if (selectedTemplateId === null || !isNonEmptyString(playerId)) {
       return;
     }
 
@@ -140,7 +140,7 @@ const createRevertTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGe
 
     try {
       const next = await promptClient.revertPromptTemplate.mutate({
-        loginId,
+        playerId,
         templateId: selectedTemplateId,
       });
       applyDetailUpdate(set, next);
@@ -155,9 +155,9 @@ const createRevertTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGe
 };
 
 const createSaveTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet) => {
-  return async (loginId: string): Promise<void> => {
+  return async (playerId: string): Promise<void> => {
     const { detail, draft, selectedTemplateId } = get();
-    if (detail === null || selectedTemplateId === null || !isNonEmptyString(loginId)) {
+    if (detail === null || selectedTemplateId === null || !isNonEmptyString(playerId)) {
       return;
     }
 
@@ -166,7 +166,7 @@ const createSaveTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet)
     try {
       const next = await promptClient.savePromptTemplate.mutate({
         editable: draft,
-        loginId,
+        playerId,
         templateId: selectedTemplateId,
       });
       applyDetailUpdate(set, next);
@@ -181,8 +181,8 @@ const createSaveTemplateHandler = (set: TemplateStoreSet, get: TemplateStoreGet)
 };
 
 const createSelectTemplateHandler = (set: TemplateStoreSet) => {
-  return async (templateId: PromptTemplateId | null, loginId: string): Promise<void> => {
-    if (templateId === null || !isNonEmptyString(loginId)) {
+  return async (templateId: PromptTemplateId | null, playerId: string): Promise<void> => {
+    if (templateId === null || !isNonEmptyString(playerId)) {
       set({ detail: null, draft: '', isDirty: false, selectedTemplateId: templateId ?? null });
       return;
     }
@@ -190,7 +190,7 @@ const createSelectTemplateHandler = (set: TemplateStoreSet) => {
     set({ error: null, isLoading: true, selectedTemplateId: templateId });
 
     try {
-      const detail = await promptClient.getPromptTemplate.query({ loginId, templateId });
+      const detail = await promptClient.getPromptTemplate.query({ playerId, templateId });
       set({
         detail,
         draft: detail?.editable ?? '',

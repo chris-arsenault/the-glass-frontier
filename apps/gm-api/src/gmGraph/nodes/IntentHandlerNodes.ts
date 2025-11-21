@@ -103,8 +103,10 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         ...prompt,
         metadata: {
           chronicleId: context.chronicleId,
+          turnId: context.turnId,
+          turnSequence: context.turnSequence,
           nodeId: this.options.id,
-          loginId: context.chronicleState.chronicle.loginId
+          playerId: context.chronicleState.chronicle.playerId
         },
         reasoning: NARRATIVE_REASONING.reasoning,
         text: {

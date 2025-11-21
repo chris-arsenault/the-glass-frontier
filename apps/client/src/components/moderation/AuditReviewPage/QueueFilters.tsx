@@ -15,7 +15,7 @@ const TEXT_FILTERS = [
   {
     id: 'audit-filter-player',
     label: 'Player ID',
-    placeholder: 'player-login-id',
+    placeholder: 'player-id',
     valueKey: 'playerId' as const,
   },
   {

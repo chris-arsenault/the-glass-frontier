@@ -10,9 +10,6 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.930.0",
-    "@aws-sdk/client-dynamodb": "^3.930.0",
-    "@aws-sdk/lib-dynamodb": "^3.930.0",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",

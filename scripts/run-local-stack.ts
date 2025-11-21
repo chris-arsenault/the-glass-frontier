@@ -4,25 +4,18 @@ import waitOn from 'wait-on';
 import { PidRegistry } from './pid-registry';
 
 type StackMode = 'mock-openai' | 'live-openai';
+type SeedMode = 'e2e-fixtures' | 'world-seed';
 
 const MOCK_ENV: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
   AWS_SECRET_ACCESS_KEY: 'test',
   AWS_REGION: 'us-east-1',
   AWS_DEFAULT_REGION: 'us-east-1',
-  AWS_S3_ENDPOINT: 'http://127.0.0.1:4566',
-  AWS_DYNAMODB_ENDPOINT: 'http://127.0.0.1:4566',
   AWS_SQS_ENDPOINT: 'http://127.0.0.1:4566',
-  AWS_S3_FORCE_PATH_STYLE: '1',
-  NARRATIVE_S3_BUCKET: 'gf-e2e-narrative',
-  NARRATIVE_S3_PREFIX: 'test/',
-  NARRATIVE_DDB_TABLE: 'gf-e2e-world-index',
-  LOCATION_GRAPH_DDB_TABLE: 'gf-e2e-location-graph',
-  PROMPT_TEMPLATE_BUCKET: 'gf-e2e-prompts',
   TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
   CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
-  LLM_PROXY_ARCHIVE_BUCKET: 'gf-e2e-audit',
-  LLM_PROXY_USAGE_TABLE: 'gf-e2e-llm-usage',
+  GLASS_FRONTIER_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
+  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   OPENAI_API_BASE: 'http://localhost:8080/v1',
   OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
   OPENAI_API_KEY: 'test-openai-key',
@@ -50,6 +43,7 @@ const APP_WAIT_RESOURCES = [
   'tcp:7001',
   'tcp:7300',
   'tcp:7400',
+  'tcp:5432',
 ];
 
 function resolveMode(): StackMode {
@@ -64,6 +58,23 @@ function resolveMode(): StackMode {
     return 'live-openai';
   }
   return 'mock-openai';
+}
+
+function resolveSeedMode(): SeedMode {
+  const flag = process.argv.find((entry) => entry?.startsWith('--seed='));
+  if (flag) {
+    const value = flag.split('=')[1];
+    if (value === 'world-seed') {
+      return 'world-seed';
+    }
+    if (value === 'e2e-fixtures') {
+      return 'e2e-fixtures';
+    }
+  }
+  if (process.env.LOCAL_STACK_SEED === 'world-seed') {
+    return 'world-seed';
+  }
+  return 'e2e-fixtures';
 }
 
 function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
@@ -95,11 +106,58 @@ async function waitForWiremockReady(): Promise<void> {
   }
 }
 
+async function waitForPostgresReady(connectionString: string): Promise<void> {
+  const timeoutMs = 30_000;
+  const startTime = Date.now();
+
+  console.log('[run-local-stack] Waiting for PostgreSQL to be ready...');
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      // Get the container name
+      const psResult = await execa('docker-compose', [
+        '-f',
+        'docker-compose.e2e.yml',
+        'ps',
+        '-q',
+        'postgres',
+      ]);
+
+      const containerId = psResult.stdout.trim();
+      if (!containerId) {
+        console.log('[run-local-stack] PostgreSQL container not found, retrying...');
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      // Try pg_isready directly on the container
+      await execa('docker', ['exec', containerId, 'pg_isready', '-U', 'postgres'], {
+        timeout: 3000,
+      });
+
+      console.log('[run-local-stack] PostgreSQL is ready!');
+      return;
+    } catch (error) {
+      // Log error for debugging
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.log(`[run-local-stack] PostgreSQL check failed (${elapsed}s): ${errorMsg}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  throw new Error(
+    `[run-local-stack] PostgreSQL did not become ready within ${timeoutMs / 1000}s.`
+  );
+}
+
 async function main(): Promise<void> {
   process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
 
   const mode = resolveMode();
+  const seedMode = resolveSeedMode();
   const env = buildEnv(mode);
 
   await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
@@ -107,18 +165,40 @@ async function main(): Promise<void> {
   });
 
   await waitOn({
-    resources: ['tcp:4566'],
+    resources: ['tcp:4566', 'tcp:5432'],
     timeout: 120_000,
   });
+
+  await waitForPostgresReady(env.GLASS_FRONTIER_DATABASE_URL as string);
 
   if (mode === 'mock-openai') {
     await waitForWiremockReady();
   }
 
-  await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
+  await execa('pnpm', ['-F', '@glass-frontier/app', 'migrate'], {
     env,
     stdio: 'inherit',
   });
+  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'migrate'], {
+    env,
+    stdio: 'inherit',
+  });
+  await execa('pnpm', ['-F', '@glass-frontier/ops', 'migrate'], {
+    env,
+    stdio: 'inherit',
+  });
+
+  if (seedMode === 'e2e-fixtures') {
+    await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
+      env,
+      stdio: 'inherit',
+    });
+  } else {
+    await execa('pnpm', ['exec', 'tsx', 'packages/worldstate/seed-data/seed-world-entities.ts'], {
+      env,
+      stdio: 'inherit',
+    });
+  }
 
   devProcess = execa('pnpm', ['dev'], {
     env,
@@ -143,7 +223,7 @@ async function main(): Promise<void> {
     runtimeWait.unshift('http-get://localhost:8080/__admin');
   }
   await waitOn({ resources: runtimeWait, timeout: 180_000 }).catch(() => undefined);
-  console.log(`Local stack (${mode}) is running. Press Ctrl+C to stop.`);
+  console.log(`Local stack (${mode}) with seeds: ${seedMode} is running. Press Ctrl+C to stop.`);
 
   try {
     await devProcess;

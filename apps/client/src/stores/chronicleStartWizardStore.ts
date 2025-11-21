@@ -1,17 +1,20 @@
-import type { ChronicleSeed, LocationBreadcrumbEntry } from '@glass-frontier/dto';
+import type { ChronicleSeed } from '@glass-frontier/dto';
 import { create } from 'zustand';
 
 export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'create';
 
-export type SelectedLocationSummary = {
+export type SelectedLocationEntity = {
   id: string;
+  slug: string;
   name: string;
-  breadcrumb: LocationBreadcrumbEntry[];
+  description?: string;
+  status?: string;
+  subkind?: string;
 }
 
 export type ChronicleStartState = {
   step: ChronicleWizardStep;
-  selectedLocation: SelectedLocationSummary | null;
+  selectedLocation: SelectedLocationEntity | null;
   toneChips: string[];
   toneNotes: string;
   seeds: ChronicleSeed[];
@@ -25,7 +28,7 @@ export type ChronicleStartState = {
 type ChronicleStartActions = {
   reset: () => void;
   setStep: (step: ChronicleWizardStep) => void;
-  setSelectedLocation: (selection: SelectedLocationSummary | null) => void;
+  setSelectedLocation: (selection: SelectedLocationEntity | null) => void;
   toggleToneChip: (chip: string) => void;
   setToneNotes: (notes: string) => void;
   setSeeds: (seeds: ChronicleSeed[]) => void;

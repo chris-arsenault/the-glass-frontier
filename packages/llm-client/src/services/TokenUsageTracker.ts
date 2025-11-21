@@ -1,37 +1,17 @@
-import { DynamoDBClient, UpdateItemCommand, type AttributeValue } from '@aws-sdk/client-dynamodb';
-import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
+import { createOpsStore } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 
 type UsageRecord = Map<string, number>;
 
 class TokenUsageTracker {
-  readonly #tableName: string;
-  readonly #client: DynamoDBClient;
-
-  private constructor(tableName: string, client?: DynamoDBClient) {
-    this.#tableName = tableName;
-    if (client !== undefined) {
-      this.#client = client;
-      return;
-    }
-    const region = resolveAwsRegion();
-    const endpoint = resolveAwsEndpoint('dynamodb');
-    this.#client = new DynamoDBClient({
-      endpoint,
-      region,
-    });
-  }
+  readonly #store = createOpsStore({ connectionString: resolveConnectionString() ?? undefined });
 
   static fromEnv(): TokenUsageTracker | null {
-    const rawTableName = process.env.LLM_PROXY_USAGE_TABLE;
-    if (typeof rawTableName !== 'string') {
+    const connectionString = resolveConnectionString();
+    if (connectionString === null) {
       return null;
     }
-    const tableName = rawTableName.trim();
-    if (tableName.length === 0) {
-      return null;
-    }
-    return new TokenUsageTracker(tableName);
+    return new TokenUsageTracker();
   }
 
   async record(
@@ -48,28 +28,12 @@ class TokenUsageTracker {
       return;
     }
 
-    const period = this.#usagePeriod(timestamp);
-    const { expression, names, values } = this.#buildUpdateComponents(summary, timestamp);
-
-    await this.#client.send(
-      new UpdateItemCommand({
-        ExpressionAttributeNames: names,
-        ExpressionAttributeValues: values,
-        Key: {
-          player_id: { S: normalizedPlayerId },
-          usage_period: { S: period },
-        },
-        TableName: this.#tableName,
-        UpdateExpression: expression,
-      })
-    );
+    await this.#store.tokenUsageStore.recordUsage({
+      metrics: Object.fromEntries(summary.entries()),
+      playerId: normalizedPlayerId,
+      timestamp,
+    });
     log('info', `Updated ${normalizedPlayerId} usage data.`);
-  }
-
-  #usagePeriod(date: Date): string {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
   }
 
   #flattenUsage(candidate: unknown): UsageRecord {
@@ -118,51 +82,13 @@ class TokenUsageTracker {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  #buildUpdateComponents(
-    summary: UsageRecord,
-    timestamp: Date
-  ): {
-    expression: string;
-    names: Record<string, string>;
-    values: Record<string, AttributeValue>;
-  } {
-    const names = new Map<string, string>([
-      ['#requestTotal', 'total_requests'],
-      ['#updatedAt', 'updated_at'],
-    ]);
-    const values = new Map<string, AttributeValue>([
-      [':one', { N: '1' }],
-      [':updated_at', { S: timestamp.toISOString() }],
-      [':zero', { N: '0' }],
-    ]);
-
-    const setParts = [
-      '#updatedAt = :updated_at',
-      '#requestTotal = if_not_exists(#requestTotal, :zero) + :one',
-    ];
-    const addParts: string[] = [];
-
-    let index = 0;
-    for (const [metric, value] of summary.entries()) {
-      index += 1;
-      const attrAlias = `#metric${index}`;
-      const valueAlias = `:metric${index}`;
-      names.set(attrAlias, this.#metricAttributeName(metric));
-      values.set(valueAlias, { N: value.toString() });
-      addParts.push(`${attrAlias} ${valueAlias}`);
-    }
-
-    const expressionSegments = [`SET ${setParts.join(', ')}`];
-    if (addParts.length > 0) {
-      expressionSegments.push(`ADD ${addParts.join(', ')}`);
-    }
-
-    return {
-      expression: expressionSegments.join(' '),
-      names: Object.fromEntries(names),
-      values: Object.fromEntries(values),
-    };
-  }
 }
+
+const resolveConnectionString = (): string | null => {
+  const raw =
+    process.env.GLASS_FRONTIER_DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/worldstate';
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 export { TokenUsageTracker };

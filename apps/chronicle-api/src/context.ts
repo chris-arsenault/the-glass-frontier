@@ -1,77 +1,53 @@
 // context.ts
-import {
-  createWorldStateStore,
-  createLocationGraphStore,
-  type WorldStateStore,
-  type LocationGraphStore,
-  PromptTemplateManager,
-  BugReportStore,
-  TokenUsageStore,
-} from '@glass-frontier/persistence';
+import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
+import { createOpsStore } from '@glass-frontier/ops';
+import { createChronicleStore, createWorldSchemaStore, type WorldSchemaStore, type ChronicleStore } from '@glass-frontier/worldstate';
 
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
-const narrativeBucket = process.env.NARRATIVE_S3_BUCKET;
-if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) {
-  throw new Error('NARRATIVE_S3_BUCKET must be configured for the narrative service');
+const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
+if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
+  throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the narrative service');
 }
-const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
-
-const locationGraphStore = createLocationGraphStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
+const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
+const worldSchemaStore = createWorldSchemaStore({
+  connectionString: worldstateDatabaseUrl,
 });
-const worldStateStore = createWorldStateStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-  locationGraphStore,
+const chronicleStore = createChronicleStore({
+  connectionString: worldstateDatabaseUrl,
+  worldStore: worldSchemaStore,
 });
 
-const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
-if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
-  throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
-}
-const templateManager = new PromptTemplateManager({
-  bucket: templateBucket.trim(),
-  worldStateStore,
-});
+const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
+const templateManager = appStore.promptTemplateManager;
 const seedService = new ChronicleSeedService({
-  locationGraphStore,
   templateManager,
+  worldStore: worldSchemaStore,
 });
-
-const bugReportStore = new BugReportStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-});
-
-const tokenUsageStore = (() => {
-  const tableName = process.env.LLM_PROXY_USAGE_TABLE;
-  if (typeof tableName !== 'string' || tableName.trim().length === 0) {
-    return null;
-  }
-  return new TokenUsageStore({ tableName: tableName.trim() });
-})();
 
 export type Context = {
   authorizationHeader?: string;
-  bugReportStore: BugReportStore;
-  locationGraphStore: LocationGraphStore;
+  appStore: typeof appStore;
+  bugReportStore: typeof opsStore.bugReportStore;
+  playerStore: PlayerStore;
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;
-  tokenUsageStore: TokenUsageStore | null;
-  worldStateStore: WorldStateStore;
+  tokenUsageStore: typeof opsStore.tokenUsageStore;
+  worldSchemaStore: WorldSchemaStore;
+  chronicleStore: ChronicleStore;
 };
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
   return {
     authorizationHeader: options?.authorizationHeader,
-    bugReportStore,
-    locationGraphStore,
+    appStore,
+    bugReportStore: opsStore.bugReportStore,
+    playerStore: appStore.playerStore,
     seedService,
     templateManager,
-    tokenUsageStore,
-    worldStateStore,
+    tokenUsageStore: opsStore.tokenUsageStore,
+    worldSchemaStore,
+    chronicleStore,
   };
 }
 

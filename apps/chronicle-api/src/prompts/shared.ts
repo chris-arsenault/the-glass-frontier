@@ -16,8 +16,10 @@ export const describeLocation = (chronicle: ChronicleState): string => {
   if (isNonEmptyString(summary.description)) {
     return summary.description;
   }
-  const path = summary.breadcrumb.map((entry) => entry.name).join(' → ');
-  return path.length > 0 ? path : 'an unknown place';
+  if (isNonEmptyString(summary.name)) {
+    return summary.name;
+  }
+  return summary.slug ?? 'an unknown place';
 };
 
 export const summarizeTags = (tags?: string[] | null, fallback = 'No tags'): string => {

@@ -1,25 +1,17 @@
-import type {
-  LocationGraphSnapshot,
-  LocationPlace,
-  ChronicleSeed,
-} from '@glass-frontier/dto';
+import type { ChronicleSeed } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { locationClient } from '../../../lib/locationClient';
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import { trpcClient } from '../../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
 import {
   useChronicleStartStore,
   type ChronicleWizardStep,
-  type SelectedLocationSummary,
+  type SelectedLocationEntity,
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
-import {
-  useLocationExplorer,
-  type LocationInspectorState,
-} from './hooks/useLocationExplorer';
 
 const toneOptions = [
   'gritty',
@@ -48,40 +40,95 @@ export function ChronicleStartWizard() {
   const toneNotes = useChronicleStartStore((state) => state.toneNotes);
   const toneChips = useChronicleStartStore((state) => state.toneChips);
 
-  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
+  const playerId = useChronicleStore((state) => state.playerId ?? '');
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
+  const setSelectedLocation = useChronicleStartStore((state) => state.setSelectedLocation);
 
-  const {
-    activePlaceId,
-    graph,
-    graphError,
-    inspector,
-    isGraphLoading,
-    isLoadingRoots,
-    listViewFallback,
-    refreshRoots,
-    rootError,
-    roots,
-    selectedRootId,
-    selectPlace,
-    selectRoot,
-    setListViewFallback,
-  } = useLocationExplorer();
+  const [locations, setLocations] = useState<SelectedLocationEntity[]>([]);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
   const setBeatsEnabled = useChronicleStartStore((state) => state.setBeatsEnabled);
-
-  const [subModalOpen, setSubModalOpen] = useState(false);
-  const [chainModalOpen, setChainModalOpen] = useState(false);
-  const [chainModalParent, setChainModalParent] = useState<LocationPlace | null>(null);
   const [seedStatus, setSeedStatus] = useState<SeedStatus>('idle');
   const setSeeds = useChronicleStartStore((state) => state.setSeeds);
   const setToneNotes = useChronicleStartStore((state) => state.setToneNotes);
   const toggleToneChip = useChronicleStartStore((state) => state.toggleToneChip);
   const chooseSeed = useChronicleStartStore((state) => state.chooseSeed);
   const setCustomSeed = useChronicleStartStore((state) => state.setCustomSeed);
+
+  const refreshLocations = useCallback(async () => {
+    setIsLoadingLocations(true);
+    setLocationError(null);
+    try {
+      const list = await worldAtlasClient.listEntities('location');
+      const mapped = list.map<SelectedLocationEntity>((entity) => ({
+        id: entity.id,
+        slug: entity.slug,
+        name: entity.name,
+        description: entity.description ?? undefined,
+        status: entity.status ?? undefined,
+        subkind: entity.subkind ?? undefined,
+      }));
+      setLocations(mapped);
+      if (!selectedLocation && mapped.length > 0) {
+        setSelectedLocation(mapped[0]);
+      }
+    } catch (err: unknown) {
+      setLocationError(err instanceof Error ? err.message : 'Failed to load locations');
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  }, [selectedLocation, setSelectedLocation]);
+
+  useEffect(() => {
+    void refreshLocations();
+  }, [refreshLocations]);
+
+  const handleSelectLocation = useCallback(
+    (location: SelectedLocationEntity) => {
+      setSelectedLocation(location);
+    },
+    [setSelectedLocation]
+  );
+
+  const handleCreateLocation = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        return;
+      }
+      setIsLoadingLocations(true);
+      setLocationError(null);
+      try {
+        const created = await worldAtlasClient.upsertEntity({
+          kind: 'location',
+          links: [],
+          name: trimmed,
+          description: '',
+          status: 'known',
+          subkind: null,
+        });
+        const summary: SelectedLocationEntity = {
+          id: created.id,
+          slug: created.slug,
+          name: created.name,
+          description: created.description ?? undefined,
+          status: created.status ?? undefined,
+          subkind: created.subkind ?? undefined,
+        };
+        setLocations((prev) => [...prev, summary]);
+        setSelectedLocation(summary);
+      } catch (err: unknown) {
+        setLocationError(err instanceof Error ? err.message : 'Failed to create location');
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    },
+    [setSelectedLocation]
+  );
 
   const [customTitle, setCustomTitle] = useState('');
   const [creationError, setCreationError] = useState<string | null>(null);
@@ -122,24 +169,13 @@ export function ChronicleStartWizard() {
     case 'location':
       return (
         <LocationStep
-          roots={roots}
-          isLoadingRoots={isLoadingRoots}
-          rootError={rootError}
-          selectedRootId={selectedRootId}
-          onSelectRoot={selectRoot}
-          graph={graph}
-          graphError={graphError}
-          isGraphLoading={isGraphLoading}
-          activePlaceId={activePlaceId}
-          onSelectPlace={selectPlace}
-          inspector={inspector}
-          listViewFallback={listViewFallback}
-          setListViewFallback={setListViewFallback}
-          onOpenSubModal={() => setSubModalOpen(true)}
-          onOpenChainModal={(parent) => {
-            setChainModalParent(parent ?? null);
-            setChainModalOpen(true);
-          }}
+          activeLocationId={selectedLocation?.id ?? null}
+          error={locationError}
+          isLoading={isLoadingLocations}
+          locations={locations}
+          onCreate={handleCreateLocation}
+          onRefresh={refreshLocations}
+          onSelect={handleSelectLocation}
         />
       );
     case 'tone':
@@ -154,7 +190,7 @@ export function ChronicleStartWizard() {
     case 'seeds':
       return (
         <SeedStep
-          loginId={loginId}
+          playerId={playerId}
           locationId={selectedLocation?.id ?? null}
           tone={{ toneChips, toneNotes }}
           seeds={seeds}
@@ -188,22 +224,17 @@ export function ChronicleStartWizard() {
     }
   }, [
     step,
-    roots,
-    isLoadingRoots,
-    rootError,
-    selectedRootId,
-    graph,
-    graphError,
-    isGraphLoading,
-    activePlaceId,
-    inspector,
-    listViewFallback,
+    locations,
+    isLoadingLocations,
+    locationError,
+    selectedLocation,
+    handleCreateLocation,
+    refreshLocations,
+    handleSelectLocation,
     toneNotes,
     toneChips,
     toggleToneChip,
-    selectedLocation,
-    setListViewFallback,
-    loginId,
+    playerId,
     seeds,
     selectedSeedId,
     seedStatus,
@@ -214,8 +245,6 @@ export function ChronicleStartWizard() {
     selectedCharacterName,
     beatsEnabled,
     chooseSeed,
-    selectPlace,
-    selectRoot,
     setBeatsEnabled,
     setCustomSeed,
     setSeeds,
@@ -340,219 +369,97 @@ export function ChronicleStartWizard() {
         </button>
       </footer>
       {creationError ? <p className="wizard-error">{creationError}</p> : null}
-      {subModalOpen && inspector.place ? (
-        <AddLocationModal
-          parent={inspector.place}
-          onClose={() => setSubModalOpen(false)}
-          onCreated={(placeId) => {
-            setSubModalOpen(false);
-            const rootId = inspector.place?.locationId ?? placeId;
-            selectRoot(rootId).catch(() => undefined);
-            selectPlace(placeId).catch(() => undefined);
-            refreshRoots().catch(() => undefined);
-          }}
-        />
-      ) : null}
-      {chainModalOpen ? (
-        <ChainLocationModal
-          parent={chainModalParent}
-          onClose={() => {
-            setChainModalOpen(false);
-            setChainModalParent(null);
-          }}
-          onCreated={(placeId) => {
-            setChainModalOpen(false);
-            setChainModalParent(null);
-            const rootId = inspector.place?.locationId ?? placeId;
-            selectRoot(rootId).catch(() => undefined);
-            selectPlace(placeId).catch(() => undefined);
-            refreshRoots().catch(() => undefined);
-          }}
-        />
-      ) : null}
     </section>
   );
 }
 
-type StepperProps = {
-  currentStep: ChronicleWizardStep;
-  onNavigate: (step: ChronicleWizardStep) => void;
-}
-
-const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'create'];
-
-function Stepper({ currentStep, onNavigate }: StepperProps) {
-  return (
-    <ol className="wizard-stepper">
-      {stepOrder.map((step) => (
-        <li key={step}>
-          <button
-            type="button"
-            className={`wizard-step${currentStep === step ? ' active' : ''}`}
-            onClick={() => onNavigate(step)}
-          >
-            {step === 'location'
-              ? 'Choose location'
-              : step === 'tone'
-                ? 'Tone'
-                : step === 'seeds'
-                  ? 'Seeds'
-                  : 'Create'}
-          </button>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 type LocationStepProps = {
-  roots: LocationPlace[];
-  isLoadingRoots: boolean;
-  rootError: string | null;
-  selectedRootId: string | null;
-  onSelectRoot: (locationId: string) => void;
-  graph: LocationGraphSnapshot | null;
-  graphError: string | null;
-  isGraphLoading: boolean;
-  activePlaceId: string | null;
-  onSelectPlace: (placeId: string) => void;
-  inspector: LocationInspectorState;
-  listViewFallback: boolean;
-  setListViewFallback: (enabled: boolean) => void;
-  onOpenSubModal: () => void;
-  onOpenChainModal: (parent?: LocationPlace | null) => void;
+  locations: SelectedLocationEntity[];
+  activeLocationId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  onSelect: (location: SelectedLocationEntity) => void;
+  onCreate: (name: string) => void;
+  onRefresh: () => void;
 }
 
 function LocationStep({
-  activePlaceId,
-  graph,
-  graphError,
-  inspector,
-  isGraphLoading,
-  isLoadingRoots,
-  listViewFallback,
-  onOpenChainModal,
-  onOpenSubModal,
-  onSelectPlace,
-  onSelectRoot,
-  rootError,
-  roots,
-  selectedRootId,
-  setListViewFallback,
+  activeLocationId,
+  error,
+  isLoading,
+  locations,
+  onCreate,
+  onRefresh,
+  onSelect,
 }: LocationStepProps) {
   const [search, setSearch] = useState('');
+  const [draftName, setDraftName] = useState('');
 
-  const filteredNodes = useMemo(() => {
-    if (!graph?.places) {
-      return [];
-    }
+  const filtered = useMemo(() => {
     const value = search.trim().toLowerCase();
     if (!value) {
-      return graph.places;
+      return locations;
     }
-    return graph.places.filter((place) => place.name.toLowerCase().includes(value));
-  }, [graph, search]);
+    return locations.filter((loc) => loc.name.toLowerCase().includes(value));
+  }, [locations, search]);
 
   return (
     <div className="location-step">
-      <aside className="location-sidebar">
-        <h2>Available locations</h2>
-        {roots.length === 0 ? (
-          <button
-            type="button"
-            className="location-root"
-            onClick={() => onOpenChainModal(null)}
-          >
-            Create first location chain
+      <header className="location-step__header">
+        <div>
+          <h2>Choose a location</h2>
+          <p>Locations are hard state entities from the World Atlas.</p>
+        </div>
+        <div className="location-step__actions">
+          <button type="button" onClick={onRefresh} disabled={isLoading}>
+            {isLoading ? 'Refreshing…' : 'Refresh'}
           </button>
-        ) : null}
-        {isLoadingRoots ? <p>Loading locations…</p> : null}
-        {rootError ? <p className="wizard-error">{rootError}</p> : null}
-        <ul>
-          {roots.map((root) => (
-            <li key={root.id}>
-              <button
-                type="button"
-                className={`location-root${selectedRootId === root.id ? ' active' : ''}`}
-                onClick={() => onSelectRoot(root.id)}
-              >
-                {root.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <div className="location-main">
-        <div className="location-map-header">
-          <input
-            type="search"
-            placeholder="Search nodes"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <label>
-            <input
-              type="checkbox"
-              checked={listViewFallback}
-              onChange={(event) => setListViewFallback(event.target.checked)}
-            />
-            List view
-          </label>
         </div>
-        {isGraphLoading ? <p>Loading map…</p> : null}
-        {graphError ? <p className="wizard-error">{graphError}</p> : null}
-        <div className={`location-map ${listViewFallback ? 'list' : 'grid'}`}>
-          {filteredNodes.map((place) => (
-            <button
-              key={place.id}
-              type="button"
-              className={`location-node${place.id === activePlaceId ? ' active' : ''}`}
-              onClick={() => onSelectPlace(place.id)}
-            >
-              <span>{place.name}</span>
-              <small>{place.kind}</small>
-            </button>
-          ))}
-          {!filteredNodes.length && graph ? <p>No nodes match this search.</p> : null}
-        </div>
+      </header>
+      {error ? <p className="wizard-error">{error}</p> : null}
+      <div className="location-step__create">
+        <input
+          type="text"
+          placeholder="New location name"
+          value={draftName}
+          onChange={(event) => setDraftName(event.target.value)}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            void onCreate(draftName);
+            setDraftName('');
+          }}
+          disabled={isLoading || draftName.trim().length === 0}
+        >
+          Add location
+        </button>
       </div>
-      <div className="location-inspector">
-        {inspector.place ? (
-          <>
-            <p className="inspector-name">{inspector.place.name}</p>
-            <p className="inspector-kind">{inspector.place.kind}</p>
-            <pre className="inspector-breadcrumb">
-              {inspector.breadcrumb.map((entry, index) => `${'  '.repeat(index)}${entry.name}`).join('\n')}
-            </pre>
-            <p className="inspector-description">
-              {inspector.place.description ?? 'No summary.'}
+      <div className="location-step__search">
+        <input
+          type="search"
+          placeholder="Search locations"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+      {isLoading ? <p>Loading locations…</p> : null}
+      <div className="location-step__list">
+        {filtered.map((loc) => (
+          <button
+            key={loc.id}
+            type="button"
+            className={`location-card${loc.id === activeLocationId ? ' active' : ''}`}
+            onClick={() => onSelect(loc)}
+          >
+            <p className="location-card__name">{loc.name}</p>
+            <p className="location-card__meta">
+              {loc.subkind ?? 'location'} · {loc.slug}
             </p>
-            <div className="inspector-tags">
-              {(inspector.place.tags ?? []).map((tag) => (
-                <span key={tag}>{tag}</span>
-              ))}
-            </div>
-            <div className="inspector-actions">
-              <button type="button" className="chip-button" onClick={onOpenSubModal}>
-                Add sub-location
-              </button>
-              <button
-                type="button"
-                className="chip-button"
-                onClick={() => onOpenChainModal(inspector.place)}
-              >
-                New multi-level
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="inspector-empty">
-            <p>Select a node to inspect or create a new root chain.</p>
-            <button type="button" className="chip-button" onClick={() => onOpenChainModal(null)}>
-              Create root chain
-            </button>
-          </div>
-        )}
+            {loc.description ? <p className="location-card__desc">{loc.description}</p> : null}
+          </button>
+        ))}
+        {!filtered.length && !isLoading ? <p>No locations found.</p> : null}
       </div>
     </div>
   );
@@ -595,7 +502,7 @@ function ToneStep({ onToggleChip, onUpdateNotes, toneChips, toneNotes }: ToneSte
 }
 
 type SeedStepProps = {
-  loginId: string;
+  playerId: string;
   locationId: string | null;
   tone: { toneChips: string[]; toneNotes: string };
   seeds: ChronicleSeed[];
@@ -613,7 +520,7 @@ function SeedStep({
   customSeedText,
   customSeedTitle,
   locationId,
-  loginId,
+  playerId,
   onCustomSeedChange,
   onSeedsLoaded,
   onSelectSeed,
@@ -643,7 +550,7 @@ function SeedStep({
       const result = await trpcClient.generateChronicleSeeds.mutate({
         count: 3,
         locationId,
-        loginId,
+        playerId,
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
       });
@@ -721,7 +628,7 @@ function SeedStep({
 }
 
 type CreateStepProps = {
-  selectedLocation: SelectedLocationSummary | null;
+  selectedLocation: SelectedLocationEntity | null;
   selectedSeed: ChronicleSeed | null;
   customSeedTitle: string;
   customSeedText: string;
@@ -752,7 +659,8 @@ function CreateStep({
         {selectedLocation ? (
           <>
             <p className="summary-title">{selectedLocation.name}</p>
-            <p>{selectedLocation.breadcrumb.map((entry) => entry.name).join(' → ')}</p>
+            <p>{selectedLocation.subkind ? `${selectedLocation.subkind} · ${selectedLocation.slug}` : selectedLocation.slug}</p>
+            {selectedLocation.description ? <p className="summary-description">{selectedLocation.description}</p> : null}
           </>
         ) : (
           <p>Select a location to continue.</p>
@@ -814,215 +722,33 @@ function CreateStep({
   );
 }
 
-type AddLocationModalProps = {
-  parent: LocationPlace;
-  onClose: () => void;
-  onCreated: (placeId: string) => void;
+type StepperProps = {
+  currentStep: ChronicleWizardStep;
+  onNavigate: (step: ChronicleWizardStep) => void;
 }
 
-function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps) {
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState('locale');
-  const [tags, setTags] = useState('');
-  const [description, setDescription] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'create'];
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      setError('Name is required.');
-      return;
-    }
-    setIsSaving(true);
-    setError(null);
-    try {
-      const created = await locationClient.createLocationPlace.mutate({
-        description: description.trim() || undefined,
-        kind: kind.trim() || 'locale',
-        name: name.trim(),
-        parentId: parent.id,
-        tags: tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      });
-      onCreated(created.place.id);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create location.';
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+function Stepper({ currentStep, onNavigate }: StepperProps) {
   return (
-    <div className="wizard-modal">
-      <div className="wizard-modal-content">
-        <h3>Add sub-location</h3>
-        <p>Parent: {parent.name}</p>
-        <label>
-          Name
-          <input value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          Type
-          <input value={kind} onChange={(event) => setKind(event.target.value)} />
-        </label>
-        <label>
-          Tags (comma separated)
-          <input value={tags} onChange={(event) => setTags(event.target.value)} />
-        </label>
-        <label>
-          Summary
-          <textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
-        </label>
-        {error ? <p className="wizard-error">{error}</p> : null}
-        <div className="wizard-modal-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
+    <ol className="wizard-stepper">
+      {stepOrder.map((step) => (
+        <li key={step}>
+          <button
+            type="button"
+            className={`wizard-step${currentStep === step ? ' active' : ''}`}
+            onClick={() => onNavigate(step)}
+          >
+            {step === 'location'
+              ? 'Choose location'
+              : step === 'tone'
+                ? 'Tone'
+                : step === 'seeds'
+                  ? 'Seeds'
+                  : 'Create'}
           </button>
-          <button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ChainLocationModalProps = {
-  parent: LocationPlace | null;
-  onClose: () => void;
-  onCreated: (placeId: string) => void;
-}
-
-type SegmentDraft = {
-  description: string;
-  kind: string;
-  name: string;
-  tags: string;
-};
-
-function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalProps) {
-  const [segments, setSegments] = useState<SegmentDraft[]>([
-    { description: '', kind: 'locale', name: '', tags: '' },
-  ]);
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const updateSegment = (index: number, field: keyof SegmentDraft, value: string) => {
-    setSegments((prev) =>
-      prev.map((segment, idx) => {
-        if (idx !== index) {
-          return segment;
-        }
-        if (field === 'description') {
-          return { ...segment, description: value };
-        }
-        if (field === 'kind') {
-          return { ...segment, kind: value };
-        }
-        if (field === 'name') {
-          return { ...segment, name: value };
-        }
-        return { ...segment, tags: value };
-      })
-    );
-  };
-
-  const handleAddRow = () => {
-    setSegments((prev) => [...prev, { description: '', kind: 'locale', name: '', tags: '' }]);
-  };
-
-  const handleRemoveRow = (index: number) => {
-    setSegments((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleSave = async () => {
-    if (segments.some((segment) => !segment.name.trim())) {
-      setError('All segments require a name.');
-      return;
-    }
-    setIsSaving(true);
-    setError(null);
-    try {
-      const result = await locationClient.createLocationChain.mutate({
-        parentId: parent?.id,
-        segments: segments.map((segment) => ({
-          description: segment.description.trim() || undefined,
-          kind: segment.kind.trim() || 'locale',
-          name: segment.name.trim(),
-          tags: segment.tags
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        })),
-      });
-      onCreated(result.anchor.id);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create chain.';
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="wizard-modal">
-      <div className="wizard-modal-content">
-        <h3>New multi-level path</h3>
-        <p>{parent ? `Parent: ${parent.name}` : 'Create a root location chain'}</p>
-        {segments.map((segment, index) => (
-          <div key={index} className="wizard-segment-row">
-            <label>
-              Name
-              <input
-                value={segment.name}
-                onChange={(event) => updateSegment(index, 'name', event.target.value)}
-              />
-            </label>
-            <label>
-              Type
-              <input
-                value={segment.kind}
-                onChange={(event) => updateSegment(index, 'kind', event.target.value)}
-              />
-            </label>
-            <label>
-              Tags
-              <input
-                value={segment.tags}
-                onChange={(event) => updateSegment(index, 'tags', event.target.value)}
-              />
-            </label>
-            <label>
-              Summary
-              <textarea
-                rows={2}
-                value={segment.description}
-                onChange={(event) => updateSegment(index, 'description', event.target.value)}
-              />
-            </label>
-            {segments.length > 1 ? (
-              <button type="button" onClick={() => handleRemoveRow(index)}>
-                Remove
-              </button>
-            ) : null}
-          </div>
-        ))}
-        <button type="button" onClick={handleAddRow}>
-          Add row
-        </button>
-        {error ? <p className="wizard-error">{error}</p> : null}
-        <div className="wizard-modal-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Creating…' : 'Create'}
-          </button>
-        </div>
-      </div>
-    </div>
+        </li>
+      ))}
+    </ol>
   );
 }

@@ -24,11 +24,9 @@ module "chronicle_lambda" {
     NODE_ENV                    = var.environment
     NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX         = "${var.environment}/"
-    NARRATIVE_DDB_TABLE         = aws_dynamodb_table.world_index.name
-    LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
+    GLASS_FRONTIER_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
-    LOCATION_GRAPH_DDB_TABLE    = aws_dynamodb_table.location_graph_index.name
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
@@ -66,9 +64,8 @@ module "prompt_api_lambda" {
     DOMAIN_NAME              = local.cloudfront_domain
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
+    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
     LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
   }
 
@@ -103,7 +100,7 @@ module "location_api_lambda" {
     DOMAIN_NAME              = local.cloudfront_domain
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
+    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
   }
 
   http_api_config = {
@@ -137,13 +134,11 @@ module "gm_api_lambda" {
     DOMAIN_NAME                 = local.cloudfront_domain
     NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX         = "${var.environment}/"
-    NARRATIVE_DDB_TABLE         = aws_dynamodb_table.world_index.name
-    LOCATION_GRAPH_DDB_TABLE    = aws_dynamodb_table.location_graph_index.name
+    GLASS_FRONTIER_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
     LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
-    LLM_PROXY_USAGE_TABLE       = aws_dynamodb_table.llm_usage.name
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
   }
@@ -178,8 +173,7 @@ module "chronicle_closer_lambda" {
     NODE_ENV                 = var.environment
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    NARRATIVE_DDB_TABLE      = aws_dynamodb_table.world_index.name
-    LOCATION_GRAPH_DDB_TABLE = aws_dynamodb_table.location_graph_index.name
+    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
   }
 }
 

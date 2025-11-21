@@ -167,7 +167,7 @@ export function ChatCanvas() {
   const messages = useChronicleStore((state) => state.messages);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
   const chronicleId = useChronicleStore((state) => state.chronicleId);
-  const loginId = useChronicleStore((state) => state.loginId);
+  const playerId = useChronicleStore((state) => state.playerId);
   const isWaitingForGm = useChronicleStore((state) => state.isSending);
   const beats = useChronicleStore((state) => state.beats);
   const expandedMessages = useUiStore((state) => state.expandedMessages);
@@ -257,7 +257,7 @@ export function ChatCanvas() {
   };
 
   const handleSubmitFeedback = async () => {
-    if (feedbackTarget === null || !chronicleId || !loginId) {
+    if (feedbackTarget === null || !chronicleId || !playerId) {
       return;
     }
     setIsSubmittingFeedback(true);
@@ -296,7 +296,7 @@ export function ChatCanvas() {
         expectedSkillCheck,
         expectedSkillNotes,
         gmEntryId: feedbackTarget.gmEntryId,
-        playerLoginId: loginId,
+        playerId,
         sentiment: feedbackSentiment,
         turnId: feedbackTarget.turnId,
         turnSequence: feedbackTarget.turnSequence,
@@ -392,7 +392,7 @@ export function ChatCanvas() {
               Boolean(chatMessage.turnId) &&
               hasTurnSequence &&
               Boolean(chronicleId) &&
-              Boolean(loginId) &&
+              Boolean(playerId) &&
               !hasSubmitted;
             const timestamp =
               typeof entry.metadata?.timestamp === 'number'

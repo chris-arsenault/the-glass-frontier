@@ -17,6 +17,7 @@ const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
   "intent-classifier": 'player',
   "inventory-delta": 'gm',
   "location-delta": 'gm',
+  "lore-judge": 'gm',
   "planning-narrator": 'player',
   "possibility-advisor": 'player',
   "reflection-weaver": 'player',

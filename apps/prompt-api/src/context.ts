@@ -1,61 +1,33 @@
-import {
-  AuditFeedbackStore,
-  AuditLogStore,
-  AuditModerationStore,
-  createWorldStateStore,
-  PromptTemplateManager,
-} from '@glass-frontier/persistence';
+import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
+import { createOpsStore } from '@glass-frontier/ops';
 
-const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
-if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
-  throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the prompt API.');
+const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
+if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
+  throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the prompt API.');
 }
 
-const auditBucket = process.env.LLM_PROXY_ARCHIVE_BUCKET;
-if (typeof auditBucket !== 'string' || auditBucket.trim().length === 0) {
-  throw new Error('LLM_PROXY_ARCHIVE_BUCKET must be configured for the audit review API.');
-}
-
-const worldStateStore = createWorldStateStore({
-  bucket: process.env.NARRATIVE_S3_BUCKET,
-  prefix: process.env.NARRATIVE_S3_PREFIX ?? undefined,
-  worldIndexTable: process.env.NARRATIVE_DDB_TABLE,
-});
-
-const templateManager = new PromptTemplateManager({
-  bucket: templateBucket.trim(),
-  worldStateStore,
-});
-
-const auditLogStore = new AuditLogStore({
-  bucket: auditBucket.trim(),
-  prefix: process.env.LLM_PROXY_ARCHIVE_PREFIX ?? undefined,
-});
-
-const auditModerationStore = new AuditModerationStore({
-  bucket: auditBucket.trim(),
-  prefix: process.env.LLM_PROXY_ARCHIVE_PREFIX ?? undefined,
-});
-
-const auditFeedbackStore = new AuditFeedbackStore({
-  bucket: auditBucket.trim(),
-  prefix: process.env.LLM_PROXY_ARCHIVE_PREFIX ?? undefined,
-});
+const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
+const templateManager = appStore.promptTemplateManager;
+const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
 
 export type Context = {
-  auditFeedbackStore: AuditFeedbackStore;
-  auditLogStore: AuditLogStore;
-  auditModerationStore: AuditModerationStore;
-  templateManager: PromptTemplateManager;
+  auditFeedbackStore: typeof opsStore.auditFeedbackStore;
+  auditLogStore: typeof opsStore.auditLogStore;
+  auditReviewStore: typeof opsStore.auditReviewStore;
   authorizationHeader?: string;
+  playerStore: PlayerStore;
+  opsStore: typeof opsStore;
+  templateManager: PromptTemplateManager;
 };
 
 export function createContext(options?: { authorizationHeader?: string }): Context {
   return {
-    auditFeedbackStore,
-    auditLogStore,
-    auditModerationStore,
+    auditFeedbackStore: opsStore.auditFeedbackStore,
+    auditLogStore: opsStore.auditLogStore,
+    auditReviewStore: opsStore.auditReviewStore,
     authorizationHeader: options?.authorizationHeader,
+    playerStore: appStore.playerStore,
+    opsStore,
     templateManager,
   };
 }

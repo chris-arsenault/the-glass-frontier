@@ -20,7 +20,7 @@ type ReviewDialogProps = {
   draft: ReviewDraft;
   isOpen: boolean;
   isSaving: boolean;
-  loginId: string | null;
+  playerId: string | null;
   onCancel: () => void;
   onComplete: () => void;
   onSaveDraft: () => void;
@@ -33,7 +33,7 @@ export const ReviewDialog = ({
   draft,
   isOpen,
   isSaving,
-  loginId,
+  playerId,
   onCancel,
   onComplete,
   onSaveDraft,
@@ -62,10 +62,10 @@ export const ReviewDialog = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Close</Button>
-        <Button onClick={onSaveDraft} disabled={!loginId || isSaving}>
+        <Button onClick={onSaveDraft} disabled={!playerId || isSaving}>
           {isSaving ? 'Saving…' : 'Save Draft'}
         </Button>
-        <Button onClick={onComplete} variant="contained" disabled={!loginId || isSaving}>
+        <Button onClick={onComplete} variant="contained" disabled={!playerId || isSaving}>
           {isSaving ? 'Saving…' : 'Save'}
         </Button>
       </DialogActions>
@@ -146,7 +146,7 @@ const FeedbackItem = ({ entry }: { entry: PlayerFeedbackRecord }) => {
     <li className="audit-feedback-item">
       <div className="audit-feedback-meta">
         <span className={`audit-chip sentiment-${entry.sentiment}`}>{entry.sentiment}</span>
-        <span>{entry.playerLoginId}</span>
+        <span>{entry.playerId ?? 'Unknown player'}</span>
         <span>{formatFeedbackTimestamp(entry.createdAt)}</span>
       </div>
       {expectationBlocks.length > 0 ? (
