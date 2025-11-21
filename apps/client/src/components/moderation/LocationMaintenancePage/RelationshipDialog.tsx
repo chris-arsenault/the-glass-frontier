@@ -2,6 +2,7 @@ import type {
   LocationBreadcrumbEntry,
   LocationEdgeKind as LocationEdgeKindType,
   LocationGraphSnapshot,
+  LocationNeighbors,
   LocationPlace,
 } from '@glass-frontier/dto';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
@@ -20,7 +21,7 @@ type RelationshipDialogProps = {
   open: boolean;
   placeId: string | null;
   placeMap: Map<string, LocationPlace>;
-  selectedDetail: { breadcrumb: LocationBreadcrumbEntry[]; place: LocationPlace } | null;
+  selectedDetail: { breadcrumb: LocationBreadcrumbEntry[]; place: LocationPlace; neighbors: LocationNeighbors } | null;
 };
 
 export const RelationshipDialog = ({

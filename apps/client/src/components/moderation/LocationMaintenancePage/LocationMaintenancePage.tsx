@@ -92,6 +92,23 @@ export function LocationMaintenancePage(): JSX.Element {
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isSavingDescription, setIsSavingDescription] = useState(false);
 
+  const relationshipGraph = useMemo(() => {
+    // If a place is selected for relationship management, use its neighbors
+    if (selectedDetail && relationshipPlaceId === selectedDetail.place.id) {
+      const edges = [
+        ...selectedDetail.neighbors.adjacent.map((n) => n.edge),
+        ...selectedDetail.neighbors.links.map((n) => n.edge),
+      ];
+      return {
+        edges,
+        locationId: selectedDetail.place.locationId,
+        places: [selectedDetail.place],
+      };
+    }
+    // Fall back to the root location's graph
+    return graph;
+  }, [selectedDetail, relationshipPlaceId, graph]);
+
   useEffect(() => {
     if (canModerate) {
       void loadRoots();
@@ -239,7 +256,7 @@ export function LocationMaintenancePage(): JSX.Element {
         />
       </div>
       <RelationshipDialog
-        graph={graph}
+        graph={relationshipGraph}
         isMutating={isMutatingEdge}
         onAdd={handleAddRelationship}
         onClose={() => setRelationshipPlaceId(null)}

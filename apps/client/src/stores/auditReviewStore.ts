@@ -205,8 +205,11 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
     }
     set({ error: null });
     try {
-      const detail = await promptClient.getAuditEntry.query({ storageKey });
       const selectedItem = get().items.find((item) => item.storageKey === storageKey) ?? null;
+      if (!selectedItem) {
+        throw new Error('Audit item not found in queue.');
+      }
+      const detail = await promptClient.getAuditEntry.query({ auditId: selectedItem.auditId });
       const draft: ReviewDraft = {
         notes: detail.review?.notes ?? '',
         tags: detail.review?.tags ?? [],

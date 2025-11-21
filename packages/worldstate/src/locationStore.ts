@@ -60,22 +60,25 @@ const toPlace = (row: LocationRow): LocationPlace => {
   };
 };
 
-const toNeighbor = (row: {
-  src_id: string;
-  dst_id: string;
-  type: LocationEdgeKind;
-  props: Record<string, unknown> | null;
-  created_at: Date | null;
-  neighbor_id: string;
-  neighbor_name: string;
-  neighbor_kind: string;
-  neighbor_slug: string;
-  neighbor_description: string | null;
-  neighbor_tags: string[];
-  neighbor_metadata: Record<string, unknown> | null;
-  neighbor_props: Record<string, unknown> | null;
-  direction: 'out' | 'in';
-}): { edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' } => {
+const toNeighbor = (
+  row: {
+    src_id: string;
+    dst_id: string;
+    type: LocationEdgeKind;
+    props: Record<string, unknown> | null;
+    created_at: Date | null;
+    neighbor_id: string;
+    neighbor_name: string;
+    neighbor_kind: string;
+    neighbor_slug: string;
+    neighbor_description: string | null;
+    neighbor_tags: string[];
+    neighbor_metadata: Record<string, unknown> | null;
+    neighbor_props: Record<string, unknown> | null;
+    direction: 'out' | 'in';
+  },
+  rootId: string
+): { edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' } => {
   const props = (row.props ?? {}) as { metadata?: Record<string, unknown>; createdAt?: number };
   const createdAt =
     typeof props.createdAt === 'number' && Number.isFinite(props.createdAt)
@@ -92,7 +95,7 @@ const toNeighbor = (row: {
       createdAt,
       dst: row.dst_id,
       kind: row.type,
-      locationId: '',
+      locationId: rootId,
       metadata: props.metadata,
       src: row.src_id,
     },
@@ -102,7 +105,7 @@ const toNeighbor = (row: {
       description: row.neighbor_description ?? undefined,
       id: row.neighbor_id,
       kind: row.neighbor_kind,
-      locationId: row.neighbor_id,
+      locationId: rootId,
       metadata: validNeighborMetadata,
       name: row.neighbor_name,
       tags: Array.isArray(row.neighbor_tags) ? row.neighbor_tags : [],
@@ -297,7 +300,9 @@ class PostgresLocationStore implements LocationStoreInterface {
     }
     const breadcrumb = await this.getLocationChain({ anchorId: input.id });
     const neighbors = await this.getLocationNeighbors({ id: input.id, limit: 100 });
-    const children = neighbors.children.length ? neighbors.children : await this.#listDescendants(input.id);
+    const allDescendants = await this.#listDescendants(input.id);
+    // Filter out the root itself from descendants to avoid duplication
+    const children = allDescendants.filter(desc => desc.id !== input.id);
     return { place, breadcrumb, children, neighbors };
   }
 
@@ -348,10 +353,11 @@ class PostgresLocationStore implements LocationStoreInterface {
          LEFT JOIN edge parent ON parent.src_id = l.id AND parent.type = 'location_parent'
          WHERE l.id = $1::uuid
          UNION ALL
-         SELECT parent_loc.id, parent_loc.name, parent_loc.kind, parent_edge.dst_id
+         SELECT l.id, l.name, l.kind, parent.dst_id AS parent_id
          FROM chain c
-         JOIN edge parent_edge ON parent_edge.src_id = c.parent_id AND parent_edge.type = 'location_parent'
-         JOIN location parent_loc ON parent_loc.id = parent_edge.src_id
+         JOIN location l ON l.id = c.parent_id
+         LEFT JOIN edge parent ON parent.src_id = l.id AND parent.type = 'location_parent'
+         WHERE c.parent_id IS NOT NULL
        )
        SELECT id, name, kind FROM chain`,
       [input.anchorId]
@@ -419,7 +425,7 @@ class PostgresLocationStore implements LocationStoreInterface {
        FROM edge e
        JOIN location l ON l.id = e.dst_id
        JOIN node n ON n.id = l.id
-       WHERE e.src_id = $1::uuid AND e.type IN ('ADJACENT_TO','DOCKED_TO','LINKS_TO')
+       WHERE e.src_id = $1::uuid AND e.type IN ('ADJACENT_TO','CONTAINS','DOCKED_TO','LINKS_TO')
        UNION ALL
        SELECT e.src_id, e.dst_id, e.type, e.props, e.created_at,
               l.id as neighbor_id, l.name as neighbor_name, l.kind as neighbor_kind, l.slug as neighbor_slug,
@@ -428,7 +434,7 @@ class PostgresLocationStore implements LocationStoreInterface {
        FROM edge e
        JOIN location l ON l.id = e.src_id
        JOIN node n ON n.id = l.id
-       WHERE e.dst_id = $2::uuid AND e.type IN ('ADJACENT_TO','DOCKED_TO','LINKS_TO')
+       WHERE e.dst_id = $2::uuid AND e.type IN ('ADJACENT_TO','CONTAINS','DOCKED_TO','LINKS_TO')
        LIMIT $3`,
       [input.id, input.id, limit]
     );
@@ -455,14 +461,14 @@ class PostgresLocationStore implements LocationStoreInterface {
     }
 
     // Parse neighbor edges
-    const neighbors = edgeRows.rows.map((row) => toNeighbor(row as never));
+    const neighbors = edgeRows.rows.map((row) => toNeighbor(row as never, rootId));
 
     return {
       parent: parentPlace,
       children,
       siblings,
       adjacent: neighbors.filter((entry) => entry.edge.kind === 'ADJACENT_TO'),
-      links: neighbors.filter((entry) => entry.edge.kind === 'LINKS_TO' || entry.edge.kind === 'DOCKED_TO'),
+      links: neighbors.filter((entry) => entry.edge.kind === 'CONTAINS' || entry.edge.kind === 'LINKS_TO' || entry.edge.kind === 'DOCKED_TO'),
     };
   }
 

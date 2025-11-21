@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 
 import { trpcClient } from '../../../lib/trpcClient';
+import { useAuthStore } from '../../../stores/authStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { decodeJwtPayload } from '../../../utils/jwt';
 import '../shared/modalBase.css';
 import './BugReportModal.css';
 
@@ -20,7 +22,9 @@ const createInitialChronicle = (value: string | null): string => (value ?? '').t
 
 function BugReportModalContent(): JSX.Element {
   const close = useUiStore((state) => state.closeBugReportModal);
-  const playerId = useChronicleStore((state) => state.playerId ?? '');
+  const tokens = useAuthStore((state) => state.tokens);
+  const payload = decodeJwtPayload(tokens?.idToken);
+  const playerId = typeof payload?.sub === 'string' ? payload.sub : '';
   const chronicleId = useChronicleStore((state) => state.chronicleId ?? null);
   const characterId = useChronicleStore((state) => state.character?.id ?? null);
   const [summary, setSummary] = useState('');

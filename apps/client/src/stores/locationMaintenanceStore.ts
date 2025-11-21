@@ -1,6 +1,7 @@
 import type {
   LocationBreadcrumbEntry,
   LocationEdgeKind,
+  LocationNeighbors,
   LocationPlace,
 } from '@glass-frontier/dto';
 import { create } from 'zustand';
@@ -16,6 +17,7 @@ export type LocationFilters = {
 type PlaceDetail = {
   breadcrumb: LocationBreadcrumbEntry[];
   place: LocationPlace;
+  neighbors: LocationNeighbors;
 };
 
 export type UpdatePlacePayload = {
@@ -42,6 +44,7 @@ type LocationDetails = {
   place: LocationPlace;
   breadcrumb: LocationBreadcrumbEntry[];
   children: LocationPlace[];
+  neighbors: LocationNeighbors;
 };
 
 type LocationMaintenanceStoreState = {
@@ -117,6 +120,12 @@ const normalizeEdgeKind = (value: string): LocationEdgeKind => {
 };
 
 const submitPlaceUpdate = async (placeId: string, payload: UpdatePlacePayload) => {
+  // Fetch current place to get missing required fields
+  const currentPlace = await locationClient.getPlace.query({ placeId });
+  if (!currentPlace) {
+    throw new Error('Location not found');
+  }
+
   const place = await locationClient.upsertLocation.mutate({
     description:
       payload.description === null
@@ -125,9 +134,9 @@ const submitPlaceUpdate = async (placeId: string, payload: UpdatePlacePayload) =
           ? undefined
           : payload.description,
     id: placeId,
-    kind: normalizeString(payload.kind) ?? 'locale',
-    name: normalizeString(payload.name) ?? 'Unknown',
-    parentId: payload.parentId ?? null,
+    kind: normalizeString(payload.kind) ?? currentPlace.kind,
+    name: normalizeString(payload.name) ?? currentPlace.name,
+    parentId: payload.parentId !== undefined ? payload.parentId : currentPlace.canonicalParentId ?? null,
     tags: payload.tags ? normalizeTags(payload.tags) : undefined,
   });
 
@@ -256,12 +265,15 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
     selectPlace: async (placeId) => {
       set({ selectedPlaceId: placeId });
       try {
-        const place = await locationClient.getPlace.query({ placeId });
+        const [place, breadcrumb, neighbors] = await Promise.all([
+          locationClient.getPlace.query({ placeId }),
+          locationClient.getLocationChain.query({ anchorId: placeId }),
+          locationClient.getLocationNeighbors.query({ id: placeId }),
+        ]);
         if (!place) {
           throw new Error('Location not found');
         }
-        const breadcrumb = await locationClient.getLocationChain.query({ anchorId: placeId });
-        set({ selectedDetail: { breadcrumb, place } });
+        set({ selectedDetail: { breadcrumb, place, neighbors } });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to load location.';
         set({ error: message });
