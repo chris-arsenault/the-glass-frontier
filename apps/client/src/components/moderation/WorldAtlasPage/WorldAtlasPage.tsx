@@ -117,6 +117,7 @@ export function WorldAtlasPage(): JSX.Element {
         id: entity.id,
         kind: entity.kind,
         name: entity.name,
+        description: entity.description ?? null,
         status: entity.status ?? null,
         subkind: entity.subkind ?? null,
         links: entity.links.map((link) => ({ relationship: link.relationship, targetId: link.targetId })),
@@ -282,6 +283,7 @@ export function WorldAtlasPage(): JSX.Element {
                   {item.subkind ? `${item.subkind} · ` : ''}
                   {item.status ?? '—'}
                 </p>
+                <p className="atlas-list-desc">{item.description ?? 'No description yet.'}</p>
               </button>
             ))}
           </div>
@@ -320,6 +322,7 @@ export function WorldAtlasPage(): JSX.Element {
                   <strong>{entity.subkind ?? '—'}</strong> · Status:{' '}
                   <strong>{entity.status ?? '—'}</strong>
                 </p>
+                {entity.description ? <p className="atlas-description">{entity.description}</p> : null}
               </div>
             </header>
 
@@ -332,6 +335,16 @@ export function WorldAtlasPage(): JSX.Element {
                     value={entity.name}
                     disabled={!canModerate}
                     onChange={(e) => setEntity({ ...entity, name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    value={entity.description ?? ''}
+                    disabled={!canModerate}
+                    onChange={(e) => setEntity({ ...entity, description: e.target.value || undefined })}
+                    rows={3}
+                    placeholder="Short textarea for entity description"
                   />
                 </label>
                 <label>

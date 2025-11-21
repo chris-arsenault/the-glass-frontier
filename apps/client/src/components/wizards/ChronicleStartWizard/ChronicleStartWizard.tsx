@@ -65,10 +65,12 @@ export function ChronicleStartWizard() {
     try {
       const list = await worldAtlasClient.listEntities('location');
       const mapped = list.map<SelectedLocationSummary>((entity) => ({
-        breadcrumb: [{ id: entity.id, kind: entity.kind, name: entity.name }],
         id: entity.id,
         slug: entity.slug,
         name: entity.name,
+        description: entity.description ?? undefined,
+        status: entity.status ?? undefined,
+        subkind: entity.subkind ?? undefined,
       }));
       setLocations(mapped);
       if (!selectedLocation && mapped.length > 0) {
@@ -105,14 +107,17 @@ export function ChronicleStartWizard() {
           kind: 'location',
           links: [],
           name: trimmed,
+          description: '',
           status: 'known',
           subkind: null,
         });
         const summary: SelectedLocationSummary = {
-          breadcrumb: [{ id: created.id, kind: created.kind, name: created.name }],
           id: created.id,
           slug: created.slug,
           name: created.name,
+          description: created.description ?? undefined,
+          status: created.status ?? undefined,
+          subkind: created.subkind ?? undefined,
         };
         setLocations((prev) => [...prev, summary]);
         setSelectedLocation(summary);
@@ -449,8 +454,9 @@ function LocationStep({
           >
             <p className="location-card__name">{loc.name}</p>
             <p className="location-card__meta">
-              {loc.breadcrumb.at(-1)?.kind ?? 'location'} · {loc.slug}
+              {loc.subkind ?? 'location'} · {loc.slug}
             </p>
+            {loc.description ? <p className="location-card__desc">{loc.description}</p> : null}
           </button>
         ))}
         {!filtered.length && !isLoading ? <p>No locations found.</p> : null}
@@ -653,7 +659,8 @@ function CreateStep({
         {selectedLocation ? (
           <>
             <p className="summary-title">{selectedLocation.name}</p>
-            <p>{selectedLocation.breadcrumb.map((entry) => entry.name).join(' → ')}</p>
+            <p>{selectedLocation.subkind ? `${selectedLocation.subkind} · ${selectedLocation.slug}` : selectedLocation.slug}</p>
+            {selectedLocation.description ? <p className="summary-description">{selectedLocation.description}</p> : null}
           </>
         ) : (
           <p>Select a location to continue.</p>

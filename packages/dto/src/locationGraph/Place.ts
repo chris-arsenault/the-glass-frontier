@@ -1,26 +1,24 @@
 import { z } from 'zod';
 
-import { Metadata } from '../Metadata';
+import { HardStateProminence } from '../world/HardState';
 
 export const LocationPlace = z.object({
-  canonicalParentId: z.string().optional(),
   createdAt: z
     .number()
     .int()
-    .nonnegative()
-    .default(Date.now()),
-  description: z.string().optional(),
+    .nonnegative(),
   id: z.string().min(1),
-  kind: z.string().min(1),
-  locationId: z.string().min(1),
-  metadata: Metadata.optional(),
+  kind: z.literal('location'),
   name: z.string().min(1),
+  prominence: HardStateProminence.default('recognized'),
+  slug: z.string().min(1),
+  status: z.string().optional(),
+  subkind: z.string().optional(),
   tags: z.array(z.string()).default([]),
   updatedAt: z
     .number()
     .int()
-    .nonnegative()
-    .default(Date.now()),
+    .nonnegative(),
 });
 
 export type LocationPlace = z.infer<typeof LocationPlace>;

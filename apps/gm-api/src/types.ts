@@ -3,6 +3,7 @@ import type {
   Character,
   Chronicle,
   Intent,
+  HardStateProminence,
   LocationNeighbors,
   LocationPlace,
   LocationState,
@@ -92,21 +93,28 @@ export type LocationStore = {
     description?: string | null;
     tags?: string[];
     anchorId: string;
-    relationship: 'inside' | 'adjacent' | 'linked';
+    relationship: string;
   }) => Promise<LocationPlace>;
-  getLocationDetails: (input: { id: string }) => Promise<{
+  getLocationDetails: (input: {
+    id: string;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+  }) => Promise<{
     place: LocationPlace;
-    breadcrumb: Array<{ id: string; name: string; kind: string }>;
-    children: LocationPlace[];
     neighbors: LocationNeighbors;
   }>;
-  getLocationNeighbors: (input: { id: string; limit?: number }) => Promise<LocationNeighbors>;
+  getLocationNeighbors: (input: {
+    id: string;
+    limit?: number;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+  }) => Promise<LocationNeighbors>;
   moveCharacterToLocation: (input: {
     characterId: string;
     placeId: string;
-    certainty?: LocationState['certainty'];
     note?: string | null;
-    status?: string[];
   }) => Promise<LocationState>;
 };
 

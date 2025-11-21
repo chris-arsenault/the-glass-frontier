@@ -120,9 +120,18 @@ exports.up = (pgm) => {
   pgm.createIndex('location_event', ['location_id', 'created_at'], {
     name: 'location_event_location_idx',
   });
+
+  pgm.addConstraint('lore_fragment', 'lore_fragment_chronicle_fk', {
+    foreignKeys: {
+      columns: 'chronicle_id',
+      references: 'chronicle(id)',
+      onDelete: 'SET NULL',
+    },
+  });
 };
 
 exports.down = (pgm) => {
+  pgm.dropConstraint('lore_fragment', 'lore_fragment_chronicle_fk', { ifExists: true });
   pgm.dropIndex('location_event', ['location_id', 'created_at'], {
     ifExists: true,
     name: 'location_event_location_idx',

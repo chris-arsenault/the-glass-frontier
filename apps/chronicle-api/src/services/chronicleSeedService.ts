@@ -45,7 +45,11 @@ export class ChronicleSeedService {
 
     const prompt = await runtime.render('chronicle-seed', {
       breadcrumb: breadcrumb.map((entry) => `${entry.name} (${entry.kind})`).join(' / '),
-      location_description: place.status ? `Status: ${place.status}` : 'Uncatalogued locale.',
+      location_description: place.description
+        ? place.description
+        : place.status
+          ? `Status: ${place.status}`
+          : 'Uncatalogued locale.',
       location_kind: place.subkind ?? place.kind,
       location_name: place.name,
       requested,

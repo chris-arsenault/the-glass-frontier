@@ -8,6 +8,9 @@ import type {
   HardStateStatus,
   HardStateSubkind,
   LocationSummary,
+  LocationNeighbors,
+  LocationPlace,
+  LocationState,
   Turn,
   LoreFragment,
   WorldKind,
@@ -16,6 +19,46 @@ import type {
   WorldSchema,
 } from '@glass-frontier/dto';
 
+export type WorldNeighbor = {
+  relationship: string;
+  direction: 'out' | 'in';
+  hops: 1 | 2;
+  neighbor: HardState;
+  via?: { id: string; relationship: string; direction: 'out' | 'in' };
+};
+
+export type LocationStore = {
+  createLocationWithRelationship: (input: {
+    name: string;
+    kind: string;
+    description?: string | null;
+    tags?: string[];
+    anchorId: string;
+    relationship: string;
+  }) => Promise<LocationPlace>;
+  getLocationDetails: (input: {
+    id: string;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+  }) => Promise<{
+    place: LocationPlace;
+    neighbors: LocationNeighbors;
+  }>;
+  getLocationNeighbors: (input: {
+    id: string;
+    limit?: number;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+  }) => Promise<LocationNeighbors>;
+  moveCharacterToLocation: (input: {
+    characterId: string;
+    placeId: string;
+    note?: string | null;
+  }) => Promise<LocationState>;
+  worldSchemaStore?: WorldSchemaStore;
+};
 export type ChronicleSnapshot = {
   chronicleId: string;
   turnSequence: number;
@@ -59,6 +102,7 @@ export type WorldSchemaStore = {
     kind: HardStateKind;
     subkind?: HardStateSubkind | null;
     name: string;
+    description?: string | null;
     prominence?: HardStateProminence | null;
     status?: HardStateStatus | null;
     links?: Array<{ relationship: string; targetId: string }>;
@@ -74,6 +118,14 @@ export type WorldSchemaStore = {
   deleteHardState: (input: { id: string }) => Promise<void>;
   upsertRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
   deleteRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
+  listNeighborsForKind: (input: {
+    id: string;
+    kind: HardStateKind;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+    limit?: number;
+  }) => Promise<WorldNeighbor[]>;
   upsertKind: (input: {
     id: HardStateKind;
     category?: string | null;
@@ -86,6 +138,11 @@ export type WorldSchemaStore = {
   upsertRelationshipRule: (input: WorldRelationshipRule) => Promise<void>;
   deleteRelationshipRule: (input: WorldRelationshipRule) => Promise<void>;
   getWorldSchema: () => Promise<WorldSchema>;
+  moveCharacterToLocation: (input: {
+    characterId: string;
+    locationId: string;
+    note?: string | null;
+  }) => Promise<LocationState>;
 
   createLoreFragment: (input: {
     id?: string;

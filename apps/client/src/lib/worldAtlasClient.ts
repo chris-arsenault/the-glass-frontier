@@ -30,6 +30,7 @@ export const worldAtlasClient = {
     kind: string;
     subkind?: string | null;
     name: string;
+    description?: string | null;
     status?: string | null;
     prominence?: string | null;
     links?: Array<{ relationship: string; targetId: string }>;

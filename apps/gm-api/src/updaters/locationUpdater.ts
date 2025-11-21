@@ -10,7 +10,7 @@ export async function applyLocationUpdate(context: GraphContext): Promise<Locati
   const characterId = context.chronicleState.chronicle.characterId;
   const delta = context.locationDelta;
   const currentLocationId =
-    context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+    context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
 
   if (!isNonEmptyString(characterId) || !delta || delta.action === 'no_change') {
     return null;
@@ -47,7 +47,7 @@ async function findLocationByName(
   name: string
 ): Promise<LocationPlace | null> {
   const currentLocationId =
-    context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+    context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
 
   if (!isNonEmptyString(currentLocationId)) {
     return null;
@@ -56,41 +56,16 @@ async function findLocationByName(
   try {
     const neighbors = await context.locationGraphStore.getLocationNeighbors({
       id: currentLocationId,
-      limit: 100,
+      minProminence: 'recognized',
+      maxHops: 2,
     });
 
     const normalizedName = normalizeName(name);
-
-    // Check parent
-    if (neighbors.parent && normalizeName(neighbors.parent.name) === normalizedName) {
-      return neighbors.parent;
-    }
-
-    // Check children
-    for (const child of neighbors.children) {
-      if (normalizeName(child.name) === normalizedName) {
-        return child;
-      }
-    }
-
-    // Check siblings
-    for (const sibling of neighbors.siblings) {
-      if (normalizeName(sibling.name) === normalizedName) {
-        return sibling;
-      }
-    }
-
-    // Check adjacent
-    for (const adj of neighbors.adjacent) {
-      if (normalizeName(adj.neighbor.name) === normalizedName) {
-        return adj.neighbor;
-      }
-    }
-
-    // Check links
-    for (const link of neighbors.links) {
-      if (normalizeName(link.neighbor.name) === normalizedName) {
-        return link.neighbor;
+    for (const entries of Object.values(neighbors)) {
+      for (const entry of entries) {
+        if (normalizeName(entry.neighbor.name) === normalizedName) {
+          return entry.neighbor;
+        }
       }
     }
   } catch (error) {
@@ -106,41 +81,27 @@ async function createNewLocation(
   delta: LocationDeltaDecision
 ): Promise<LocationPlace> {
   const relationship = mapLinkToRelationship(delta.link);
-  const kind = inferKind(delta.link);
 
   return context.locationGraphStore.createLocationWithRelationship({
     anchorId,
-    kind,
+    kind: 'location',
     name: delta.destination,
     relationship,
     tags: [],
   });
 }
 
-function mapLinkToRelationship(
-  link: LocationDeltaDecision['link']
-): 'inside' | 'adjacent' | 'linked' {
+function mapLinkToRelationship(link: LocationDeltaDecision['link']): string {
   switch (link) {
     case 'inside':
-      return 'inside';
+      return 'contains';
     case 'adjacent':
     case 'same':
-      return 'adjacent';
+      return 'adjacent_to';
     case 'linked':
-      return 'linked';
+      return 'connected_by';
     default:
-      return 'adjacent';
-  }
-}
-
-function inferKind(link: LocationDeltaDecision['link']): string {
-  switch (link) {
-    case 'inside':
-      return 'room';
-    case 'linked':
-      return 'structure';
-    default:
-      return 'locale';
+      return 'related_to';
   }
 }
 

@@ -1,10 +1,22 @@
-import type { LocationEdge } from './Edge';
-import type { LocationPlace } from './Place';
+import { z } from 'zod';
 
-export type LocationNeighbors = {
-  parent: LocationPlace | null;
-  children: LocationPlace[];
-  siblings: LocationPlace[];
-  adjacent: Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>;
-  links: Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>;
-};
+import { LocationPlace } from './Place';
+
+export const LocationNeighbor = z.object({
+  direction: z.enum(['out', 'in']),
+  hops: z.union([z.literal(1), z.literal(2)]).default(1),
+  neighbor: LocationPlace,
+  relationship: z.string().min(1),
+  via: z
+    .object({
+      direction: z.enum(['out', 'in']),
+      id: z.string().min(1),
+      relationship: z.string().min(1),
+    })
+    .optional(),
+});
+
+export const LocationNeighbors = z.record(z.string().min(1), z.array(LocationNeighbor)).default({});
+
+export type LocationNeighbor = z.infer<typeof LocationNeighbor>;
+export type LocationNeighbors = z.infer<typeof LocationNeighbors>;

@@ -21,6 +21,7 @@ const hardStateInput = z.object({
   kind: z.string().min(1),
   subkind: z.string().optional(),
   name: z.string().min(1),
+  description: z.string().max(2000).optional(),
   status: z.string().optional(),
   prominence: z.enum(['forgotten', 'marginal', 'recognized', 'renowned', 'mythic']).optional(),
   links: z
@@ -88,6 +89,7 @@ app.post('/entities', async (req, res) => {
       kind: input.kind as never,
       subkind: input.subkind as never,
       name: input.name,
+      description: input.description ?? undefined,
       prominence: (input.prominence as never) ?? undefined,
       status: (input.status as never) ?? null,
       links: input.links,

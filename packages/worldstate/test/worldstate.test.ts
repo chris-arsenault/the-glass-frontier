@@ -201,9 +201,9 @@ describe('Locations as hard state', () => {
     });
     const state = await worldState.chronicles.getChronicleState(chronicle.id);
 
-    expect(state?.location?.anchorPlaceId).toBe(location.id);
-    expect(state?.location?.breadcrumb[0]?.name).toBe('Atlas Landing');
-    expect(state?.location?.status).toEqual(['known']);
+    expect(state?.location?.id).toBe(location.id);
+    expect(state?.location?.name).toBe('Atlas Landing');
+    expect(state?.location?.status).toBe('known');
   });
 });
 
@@ -321,7 +321,7 @@ describe('WorldStateStore', () => {
     expect(turn.turnSequence).toBe(0);
     expect(snapshot?.turns).toHaveLength(1);
     expect(snapshot?.character?.id).toBe(character.id);
-    expect(snapshot?.location?.anchorPlaceId).toBe(startingLocation.id);
+    expect(snapshot?.location?.id).toBe(startingLocation.id);
   });
 
   it('ensures chronicle retrieval respects the most recent turn ordering', async () => {

@@ -5,8 +5,11 @@ import type {
   HardStateProminence,
   HardStateSubkind,
   HardStateStatus,
+  WorldNeighbor,
   LoreFragment,
   WorldKind,
+  LocationPlace,
+  LocationState,
   WorldRelationshipRule,
   WorldRelationshipType,
   WorldSchema,
@@ -32,6 +35,7 @@ type HardStateRow = {
   kind: HardStateKind;
   subkind: string | null;
   name: string;
+  description: string | null;
   prominence: HardStateProminence;
   prominence_rank?: number;
   status: HardStateStatus | null;
@@ -57,6 +61,7 @@ const toHardState = (row: HardStateRow, links: HardStateLink[]): HardState => ({
   kind: row.kind,
   subkind: row.subkind ?? undefined,
   name: row.name,
+  description: row.description ?? undefined,
   prominence: row.prominence ?? 'recognized',
   status: row.status ?? undefined,
   links,
@@ -78,6 +83,28 @@ const toLoreFragment = (row: LoreFragmentRow): LoreFragment => ({
   timestamp: row.created_at?.getTime() ?? now(),
 });
 
+const toLocationPlace = (state: HardState): LocationPlace => ({
+  createdAt: state.createdAt,
+  id: state.id,
+  kind: 'location',
+  name: state.name,
+  description: state.description ?? undefined,
+  prominence: state.prominence ?? 'recognized',
+  slug: state.slug,
+  status: state.status ?? undefined,
+  subkind: state.subkind ?? undefined,
+  tags: [],
+  updatedAt: state.updatedAt,
+});
+
+const PROMINENCE_RANK: Record<HardStateProminence, number> = {
+  forgotten: 0,
+  marginal: 1,
+  recognized: 2,
+  renowned: 3,
+  mythic: 4,
+};
+
 class PostgresWorldSchemaStore implements WorldSchemaStore {
   readonly #pool: Pool;
   readonly #graph: GraphOperations;
@@ -92,12 +119,14 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     kind: HardStateKind;
     subkind?: HardStateSubkind | null;
     name: string;
+    description?: string | null;
     prominence?: HardStateProminence | null;
     status?: HardStateStatus | null;
     links?: Array<{ relationship: string; targetId: string }>;
   }): Promise<HardState> {
     const id = input.id ?? randomUUID();
     const normalizedLinks = this.#sanitizeLinks(input.links);
+    const description = input.description?.trim() ?? null;
     await withTransaction(this.#pool, async (client) => {
       const kindRow = await this.#getKind(client, input.kind);
       const status = await this.#resolveStatus(client, input.kind, input.status ?? kindRow.default_status);
@@ -112,23 +141,25 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
         kind: input.kind,
         subkind: input.subkind ?? undefined,
         name: input.name,
+        description: description ?? undefined,
         prominence,
         status: status ?? undefined,
         links: normalizedLinks,
       });
 
       await client.query(
-        `INSERT INTO hard_state (id, slug, kind, subkind, name, prominence, status, created_at, updated_at)
-         VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, now(), now())
+        `INSERT INTO hard_state (id, slug, kind, subkind, name, description, prominence, status, created_at, updated_at)
+         VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, now(), now())
          ON CONFLICT (id) DO UPDATE
          SET slug = EXCLUDED.slug,
              kind = EXCLUDED.kind,
              subkind = EXCLUDED.subkind,
              name = EXCLUDED.name,
+             description = EXCLUDED.description,
              prominence = EXCLUDED.prominence,
              status = EXCLUDED.status,
              updated_at = now()`,
-        [id, slug, input.kind, input.subkind ?? null, input.name, prominence, status ?? null]
+        [id, slug, input.kind, input.subkind ?? null, input.name, input.description ?? null, prominence, status ?? null]
       );
 
       if (input.links) {
@@ -181,7 +212,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async getHardState(input: { id: string }): Promise<HardState | null> {
     const result = await this.#pool.query(
-      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
+      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.description, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
        FROM hard_state hs
        JOIN world_prominence wp ON wp.id = hs.prominence
        WHERE hs.id = $1::uuid`,
@@ -220,7 +251,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     }
     const filter = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const result = await this.#pool.query(
-      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
+      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.description, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
        FROM hard_state hs
        JOIN world_prominence wp ON wp.id = hs.prominence
        ${filter}
@@ -239,7 +270,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async getHardStateBySlug(input: { slug: string }): Promise<HardState | null> {
     const result = await this.#pool.query(
-      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
+      `SELECT hs.id, hs.slug, hs.kind, hs.subkind, hs.name, hs.description, hs.prominence, hs.status, hs.created_at, hs.updated_at, wp.rank as prominence_rank
        FROM hard_state hs
        JOIN world_prominence wp ON wp.id = hs.prominence
        WHERE hs.slug = $1`,
@@ -251,6 +282,24 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     }
     const links = await this.#listLinks(row.id);
     return toHardState(row, links);
+  }
+
+  async listNeighborsForKind(input: {
+    id: string;
+    kind: HardStateKind;
+    minProminence?: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+    limit?: number;
+  }): Promise<WorldNeighbor[]> {
+    return this.#listNeighbors({
+      anchorId: input.id,
+      kind: input.kind,
+      minProminence: input.minProminence ?? 'recognized',
+      maxProminence: input.maxProminence,
+      maxHops: input.maxHops ?? 2,
+      limit: input.limit,
+    });
   }
 
   async createLoreFragment(input: {
@@ -530,6 +579,33 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     });
   }
 
+  async moveCharacterToLocation(input: {
+    characterId: string;
+    locationId: string;
+    note?: string | null;
+  }): Promise<LocationState> {
+    await withTransaction(this.#pool, async (client) => {
+      await this.#assertCharacterNode(client, input.characterId);
+      await this.#assertLocationExists(client, input.locationId);
+      await client.query('DELETE FROM edge WHERE src_id = $1::uuid AND type = $2', [
+        input.characterId,
+        'resides_in',
+      ]);
+      await this.#graph.upsertEdge(client, {
+        src: input.characterId,
+        dst: input.locationId,
+        type: 'resides_in',
+        props: { note: input.note ?? undefined },
+      });
+    });
+    return {
+      characterId: input.characterId,
+      locationId: input.locationId,
+      note: input.note ?? undefined,
+      updatedAt: Date.now(),
+    };
+  }
+
   async #getKind(executor: PoolClient, kind: HardStateKind): Promise<KindRow> {
     const result = await executor.query(
       `SELECT id, category, display_name, default_status
@@ -674,6 +750,29 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     }
   }
 
+  async #assertCharacterNode(executor: PoolClient, characterId: string): Promise<void> {
+    const result = await executor.query(
+      `SELECT kind FROM node WHERE id = $1::uuid`,
+      [characterId]
+    );
+    if (!result.rowCount) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+    if (result.rows[0]?.kind !== 'character') {
+      throw new Error(`Node ${characterId} is not a character`);
+    }
+  }
+
+  async #assertLocationExists(executor: PoolClient, locationId: string): Promise<void> {
+    const result = await executor.query(
+      `SELECT kind FROM hard_state WHERE id = $1::uuid`,
+      [locationId]
+    );
+    if (!result.rowCount || result.rows[0]?.kind !== 'location') {
+      throw new Error(`Location ${locationId} not found`);
+    }
+  }
+
   #sanitizeLinks(
     links?: Array<{ relationship: string; targetId: string }>
   ): Array<{ relationship: string; targetId: string }> {
@@ -743,6 +842,143 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       }
     }
     return linkMap;
+  }
+
+  async #listNeighbors(input: {
+    anchorId: string;
+    kind?: HardStateKind;
+    minProminence: HardStateProminence;
+    maxProminence?: HardStateProminence;
+    maxHops?: number;
+    limit?: number;
+  }): Promise<WorldNeighbor[]> {
+    const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
+    const maxHops = Math.max(1, Math.min(input.maxHops ?? 2, 2));
+    const minRank = PROMINENCE_RANK[input.minProminence] ?? PROMINENCE_RANK.recognized;
+    const maxRank = input.maxProminence ? PROMINENCE_RANK[input.maxProminence] : Number.MAX_SAFE_INTEGER;
+    const kindFilter = input.kind ?? null;
+
+    const result = await this.#pool.query(
+      `WITH base AS (
+         SELECT
+           CASE WHEN e.src_id = $1::uuid THEN e.dst_id ELSE e.src_id END AS neighbor_id,
+           e.type AS root_relationship,
+           CASE WHEN e.src_id = $1::uuid THEN 'out' ELSE 'in' END AS root_direction
+         FROM edge e
+         JOIN hard_state hs ON hs.id = CASE WHEN e.src_id = $1::uuid THEN e.dst_id ELSE e.src_id END
+         JOIN world_prominence wp ON wp.id = hs.prominence
+         WHERE (e.src_id = $1::uuid OR e.dst_id = $1::uuid)
+           AND wp.rank >= $2 AND wp.rank <= $3
+           AND ($4::text IS NULL OR hs.kind = $4)
+       ),
+       second AS (
+         SELECT
+           b.neighbor_id AS via_id,
+           CASE WHEN e.src_id = b.neighbor_id THEN e.dst_id ELSE e.src_id END AS neighbor_id,
+           b.root_relationship,
+           b.root_direction,
+           e.type AS relationship,
+           CASE WHEN e.src_id = b.neighbor_id THEN 'out' ELSE 'in' END AS direction
+         FROM base b
+         JOIN edge e ON e.src_id = b.neighbor_id OR e.dst_id = b.neighbor_id
+         JOIN hard_state hs ON hs.id = CASE WHEN e.src_id = b.neighbor_id THEN e.dst_id ELSE e.src_id END
+         JOIN world_prominence wp ON wp.id = hs.prominence
+         WHERE wp.rank >= $2 AND wp.rank <= $3
+           AND CASE WHEN e.src_id = b.neighbor_id THEN e.dst_id ELSE e.src_id END <> $1::uuid
+           AND ($4::text IS NULL OR hs.kind = $4)
+       ),
+       combined AS (
+         SELECT
+           neighbor_id,
+           root_relationship,
+           root_direction,
+           root_relationship AS relationship,
+           root_direction AS direction,
+           NULL::uuid AS via_id,
+           1 AS hops
+         FROM base
+         UNION ALL
+         SELECT
+           neighbor_id,
+           root_relationship,
+           root_direction,
+           relationship,
+           direction,
+           via_id,
+           2 AS hops
+         FROM second
+       )
+       SELECT
+         c.neighbor_id,
+         c.root_relationship,
+         c.root_direction,
+         c.relationship,
+         c.direction,
+         c.via_id,
+         c.hops,
+         hs.id,
+         hs.slug,
+         hs.kind,
+         hs.subkind,
+         hs.name,
+         hs.description,
+         hs.status,
+         hs.prominence,
+         hs.created_at,
+         hs.updated_at
+       FROM combined c
+       JOIN hard_state hs ON hs.id = c.neighbor_id
+       JOIN world_prominence wp ON wp.id = hs.prominence
+       WHERE wp.rank >= $2
+         AND wp.rank <= $3
+         AND c.hops <= $5
+       ORDER BY c.hops ASC, hs.created_at ASC
+       LIMIT $6`,
+      [input.anchorId, minRank, maxRank, kindFilter, maxHops, limit]
+    );
+
+    const seen = new Set<string>();
+    const neighbors: WorldNeighbor[] = [];
+    for (const row of result.rows) {
+      const relationship = row.root_relationship as string;
+      const neighborId = row.neighbor_id as string;
+      const direction = (row.root_direction as 'out' | 'in') ?? 'out';
+      const key = `${relationship}:${neighborId}:${direction}:${row.hops}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+
+      const neighbor: HardState = {
+        id: row.id as string,
+        slug: row.slug as string,
+        kind: row.kind as HardStateKind,
+        subkind: row.subkind ?? undefined,
+        name: row.name as string,
+        description: row.description ?? undefined,
+        prominence: row.prominence as HardStateProminence,
+        status: row.status ?? undefined,
+        links: [],
+        createdAt: row.created_at?.getTime?.() ? row.created_at.getTime() : now(),
+        updatedAt: row.updated_at?.getTime?.() ? row.updated_at.getTime() : now(),
+      };
+
+      neighbors.push({
+        direction,
+        hops: row.hops as 1 | 2,
+        neighbor,
+        relationship,
+        via: row.via_id
+          ? {
+              direction: (row.direction as 'out' | 'in') ?? direction,
+              id: row.via_id as string,
+              relationship: row.relationship as string,
+            }
+          : undefined,
+      });
+    }
+
+    return neighbors;
   }
 
   async #reserveSlug(executor: PoolClient, base: string, id: string): Promise<string> {

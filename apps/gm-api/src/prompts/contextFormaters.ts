@@ -2,9 +2,7 @@ import type {
   Character,
   ChronicleBeat,
   InventoryItem,
-  LocationBreadcrumbEntry,
   LocationNeighbors,
-  LocationPlace,
   PlayerIntent,
   Skill,
   SkillCheckPlan,
@@ -35,28 +33,14 @@ export function trimBeatsList(beats: ChronicleBeat[]) {
     });
 }
 
-export function trimBreadcrumbList(crumbs: LocationBreadcrumbEntry[]) {
-  return crumbs.map((b) => {
-    return {
-      kind: b.kind,
-      name: b.name,
-    };
-  });
-}
-
 // Default objects
-export const EMPTY_LOCATION_DETAIL = {
-  adjacent: [],
-  children: [],
-  links: [],
-  parent: [],
-  siblings: [],
-} as const;
+export const EMPTY_LOCATION_DETAIL: Record<string, unknown> = {};
 
 export const EMPTY_LOCATION = {
-  breadcrumbs: [],
-  description: null,
   name: null,
+  slug: null,
+  description: null,
+  status: null,
   tags: [],
 } as const;
 
@@ -111,18 +95,18 @@ export function formatInventoryItemDetail(item: InventoryItem): Record<string, u
 }
 
 export function formatLocationNeighbors(neighbors: LocationNeighbors): Record<string, unknown> {
-  const formatPlace = (place: LocationPlace) => ({
-    description: place.description ?? null,
-    name: place.name,
-  });
-
-  const formatNeighbor = (n: { neighbor: LocationPlace }) => formatPlace(n.neighbor);
-
-  return {
-    adjacent: neighbors.adjacent.map(formatNeighbor),
-    children: neighbors.children.map(formatPlace),
-    links: neighbors.links.map(formatNeighbor),
-    parent: neighbors.parent ? [formatPlace(neighbors.parent)] : [],
-    siblings: neighbors.siblings.map(formatPlace),
-  };
+  const formatted: Record<string, unknown> = {};
+  for (const [relationship, entries] of Object.entries(neighbors)) {
+    formatted[relationship] = entries.map((entry) => ({
+      direction: entry.direction,
+      hops: entry.hops,
+      name: entry.neighbor.name,
+      slug: entry.neighbor.slug,
+      description: entry.neighbor.description ?? null,
+      subkind: entry.neighbor.subkind ?? null,
+      status: entry.neighbor.status ?? null,
+      via: entry.via ?? null,
+    }));
+  }
+  return formatted;
 }

@@ -1,4 +1,4 @@
-import type { ChronicleSeed, LocationBreadcrumbEntry } from '@glass-frontier/dto';
+import type { ChronicleSeed } from '@glass-frontier/dto';
 import { create } from 'zustand';
 
 export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'create';
@@ -7,7 +7,9 @@ export type SelectedLocationSummary = {
   id: string;
   slug: string;
   name: string;
-  breadcrumb: LocationBreadcrumbEntry[];
+  description?: string;
+  status?: string;
+  subkind?: string;
 }
 
 export type ChronicleStartState = {

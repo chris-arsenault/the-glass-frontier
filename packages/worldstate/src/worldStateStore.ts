@@ -462,14 +462,15 @@ class PostgresWorldStateStore implements WorldStateStore {
       if (!state || state.kind !== 'location') {
         return null;
       }
-      const breadcrumb = [{ id: state.id, kind: state.kind, name: state.name }];
       return {
-        anchorPlaceId: state.id,
+        id: state.id,
         slug: state.slug,
-        breadcrumb,
-        certainty: 'exact',
-        description: undefined,
-        status: state.status ? [state.status] : [],
+        name: state.name,
+        kind: 'location',
+        subkind: state.subkind ?? undefined,
+        description: state.description ?? undefined,
+        prominence: state.prominence ?? 'recognized',
+        status: state.status ?? undefined,
         tags: [],
       };
     } catch {

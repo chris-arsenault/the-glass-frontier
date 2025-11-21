@@ -1,22 +1,17 @@
 import { z } from 'zod';
 
-import { LocationCertainty } from './LocationState';
-
-export const LocationBreadcrumbEntry = z.object({
-  id: z.string().min(1),
-  kind: z.string().min(1),
-  name: z.string().min(1),
-});
+import { HardStateProminence } from '../world/HardState';
 
 export const LocationSummary = z.object({
-  anchorPlaceId: z.string().min(1),
-  breadcrumb: z.array(LocationBreadcrumbEntry).nonempty(),
-  certainty: LocationCertainty,
+  id: z.string().min(1),
+  slug: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.literal('location'),
+  subkind: z.string().optional(),
   description: z.string().optional(),
-  slug: z.string().min(1).optional(),
-  status: z.array(z.string()).default([]),
+  prominence: HardStateProminence.default('recognized'),
+  status: z.string().optional(),
   tags: z.array(z.string()).default([]),
 });
 
 export type LocationSummary = z.infer<typeof LocationSummary>;
-export type LocationBreadcrumbEntry = z.infer<typeof LocationBreadcrumbEntry>;

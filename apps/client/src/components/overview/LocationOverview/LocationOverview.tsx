@@ -15,14 +15,11 @@ export function LocationOverview() {
     );
   }
 
-  const current = location.breadcrumb.at(-1);
-  const locationName = current?.name ?? 'Unknown';
-  const locationSlug = location.slug ?? location.anchorPlaceId;
-  const status = location.status.join(', ');
+  const locationName = location.name ?? 'Unknown';
+  const locationSlug = location.slug;
+  const status = location.status ?? '';
   const tagSnippet = location.tags.slice(0, 3).join(', ');
-  const certaintyLabel =
-    location.certainty === 'exact' ? 'fixed position' : location.certainty.toUpperCase();
-  const meta = [status, certaintyLabel].filter(Boolean).join(' · ');
+  const meta = [location.subkind, status].filter(Boolean).join(' · ');
   const detail = location.description || tagSnippet || 'Exploring new ground.';
 
   return (

@@ -51,6 +51,8 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
   const locationDetails = [
     context.locationName,
     context.locationSummary?.description ?? null,
+    context.locationSummary?.subkind ?? null,
+    context.locationSummary?.status ?? null,
   ]
     .filter(Boolean)
     .join(' — ');
@@ -79,7 +81,7 @@ export const buildLocationEventsPrompt = (context: SummaryContext): string => {
     'Return JSON shaped exactly like: {"locations":[{"name":"PLACE","events":["Sentence one.","Sentence two."]}]}',
     'Each event MUST be 1-2 sentences in third-person past tense and describe the outcome or change that location experienced.',
     `Beats guidance: ${beats}`,
-    `Location context: ${context.locationName} ${context.locationSummary?.description ?? ''}`.trim(),
+    `Location context: ${context.locationName} ${context.locationSummary?.status ?? ''}`.trim(),
     'Transcript timeline:',
     context.transcript,
   ].join('\n');

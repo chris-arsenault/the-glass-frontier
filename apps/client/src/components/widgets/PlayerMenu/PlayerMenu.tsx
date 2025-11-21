@@ -83,8 +83,8 @@ const describeLocation = (location?: LocationSummary | null) => {
       edge: 'No location tracked',
     };
   }
-  const breadcrumb = location.breadcrumb.map((entry) => entry.name).join(' › ');
-  const edge = location.breadcrumb.at(-1)?.name ?? breadcrumb;
+  const edge = location.name ?? location.slug;
+  const breadcrumb = [location.subkind, location.status].filter(Boolean).join(' › ') || edge;
   return {
     breadcrumb,
     edge,

@@ -64,6 +64,7 @@ exports.up = async (pgm) => {
     kind: { type: 'text', notNull: true, references: 'world_kind(id)', onDelete: 'RESTRICT' },
     subkind: { type: 'text' },
     name: { type: 'text', notNull: true },
+    description: { type: 'text' },
     prominence: {
       type: 'text',
       notNull: true,
@@ -100,7 +101,7 @@ exports.up = async (pgm) => {
   pgm.createTable('lore_fragment', {
     id: { type: 'uuid', primaryKey: true, references: 'node(id)', onDelete: 'CASCADE' },
     entity_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'CASCADE' },
-    chronicle_id: { type: 'uuid', references: 'chronicle(id)', onDelete: 'SET NULL' },
+    chronicle_id: { type: 'uuid' },
     beat_id: { type: 'text' },
     title: { type: 'text', notNull: true },
     prose: { type: 'text', notNull: true },

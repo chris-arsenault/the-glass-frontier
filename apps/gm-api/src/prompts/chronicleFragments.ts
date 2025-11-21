@@ -13,7 +13,6 @@ import {
   formatLocationNeighbors,
   formatSkillCheck,
   trimBeatsList,
-  trimBreadcrumbList,
 } from './contextFormaters';
 
 export type ChronicleFragmentTypes =
@@ -111,6 +110,7 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
         kind: entity.kind,
         subkind: entity.subkind ?? null,
         status: entity.status ?? null,
+        description: entity.description ?? null,
         relationships: entity.links?.length ?? 0,
         tags: Array.from(new Set(fragments.flatMap((f) => f.tags ?? []))),
         recentLore: fragments.map((fragment) => ({
@@ -146,25 +146,35 @@ function loreFragment(context: GraphContext): Array<{
 
 async function locationFragment(context: GraphContext): Promise<Record<string, unknown>> {
   const anchorId =
-    context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+    context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
 
   if (!isNonEmptyString(anchorId)) {
     return EMPTY_LOCATION;
   }
 
   try {
-    const details = await context.locationGraphStore.getLocationDetails({ id: anchorId });
+    const details = await context.locationGraphStore.getLocationDetails({
+      id: anchorId,
+      minProminence: 'recognized',
+      maxHops: 2,
+    });
     return {
-      breadcrumbs: trimBreadcrumbList(details.breadcrumb),
-      description: details.place.description,
+      id: details.place.id,
       name: details.place.name,
+      slug: details.place.slug,
+      status: details.place.status ?? null,
+      description: details.place.description ?? null,
+      neighbors: formatLocationNeighbors(details.neighbors),
       tags: details.place.tags ?? [],
     };
   } catch {
     return {
-      breadcrumbs: trimBreadcrumbList(context.chronicleState.location?.breadcrumb ?? []),
+      id: context.chronicleState.location?.id ?? null,
+      name: context.chronicleState.location?.name ?? null,
+      slug: context.chronicleState.location?.slug ?? null,
+      status: context.chronicleState.location?.status ?? null,
       description: context.chronicleState.location?.description ?? null,
-      name: context.chronicleState.location?.breadcrumb.at(-1)?.name ?? null,
+      neighbors: {},
       tags: context.chronicleState.location?.tags ?? [],
     };
   }
@@ -172,7 +182,7 @@ async function locationFragment(context: GraphContext): Promise<Record<string, u
 
 async function locationDetailFragment(context: GraphContext): Promise<unknown> {
   const anchorId =
-    context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+    context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
 
   if (!isNonEmptyString(anchorId)) {
     return EMPTY_LOCATION_DETAIL;
@@ -181,7 +191,8 @@ async function locationDetailFragment(context: GraphContext): Promise<unknown> {
   try {
     const neighbors = await context.locationGraphStore.getLocationNeighbors({
       id: anchorId,
-      limit: 100,
+      minProminence: 'recognized',
+      maxHops: 2,
     });
     return formatLocationNeighbors(neighbors);
   } catch {

@@ -110,7 +110,7 @@ export class WorldUpdater {
         return context;
       }
 
-      const summary = await this.#buildLocationSummary(locationState.anchorPlaceId);
+      const summary = await this.#buildLocationSummary(locationState.locationId);
       const updatedChronicle: Chronicle = {
         ...context.chronicleState.chronicle,
         locationId: locationState.locationId,
@@ -130,9 +130,9 @@ export class WorldUpdater {
     }
   }
 
-  async #buildLocationSummary(anchorPlaceId: string): Promise<LocationSummary | null> {
+  async #buildLocationSummary(locationId: string): Promise<LocationSummary | null> {
     try {
-      const details = await this.#locationGraphStore.getLocationDetails({ id: anchorPlaceId });
+      const details = await this.#locationGraphStore.getLocationDetails({ id: locationId });
       return mapLocationDetailsToSummary(details);
     } catch (error) {
       log('error', 'Failed to map location summary', error);
@@ -142,19 +142,26 @@ export class WorldUpdater {
 }
 
 export const mapLocationDetailsToSummary = (details: {
-  place: { id: string; kind: string; name: string; description?: string; tags?: string[] };
-  breadcrumb: Array<{ id: string; kind: string; name: string }>;
+  place: {
+    id: string;
+    kind: string;
+    name: string;
+    slug?: string;
+    subkind?: string;
+    status?: string;
+    prominence?: string;
+    description?: string;
+  };
 }): LocationSummary => {
-  const breadcrumb =
-    Array.isArray(details.breadcrumb) && details.breadcrumb.length > 0
-      ? details.breadcrumb
-      : [{ id: details.place.id, kind: details.place.kind, name: details.place.name }];
   return {
-    anchorPlaceId: details.place.id,
-    breadcrumb,
-    certainty: 'exact',
+    id: details.place.id,
+    slug: details.place.slug ?? details.place.id,
+    name: details.place.name,
+    kind: details.place.kind,
+    subkind: details.place.subkind,
+    prominence: (details.place.prominence as LocationSummary['prominence']) ?? 'recognized',
+    status: details.place.status,
     description: details.place.description,
-    status: [],
-    tags: details.place.tags ?? [],
+    tags: [],
   };
 };

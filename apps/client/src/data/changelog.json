@@ -222,5 +222,19 @@
     "summary": "Hard state prominence levels",
     "details": "Hard state entities now carry a five-level prominence field (forgotten → mythic) with slug-based lookups, allowing filtering by prominence and slug-friendly Atlas/chronicle links.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-28-location-schema-refresh",
+    "releasedAt": "2025-11-28",
+    "summary": "Location DTO refresh and neighbor graph",
+    "details": "Simplified location summaries to align with world hard state slugs, replaced legacy breadcrumb/adjacent buckets with dynamic relationship-keyed neighbors filtered by prominence, and wired GM location lookups to the world schema store.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-28-hardstate-descriptions",
+    "releasedAt": "2025-11-28",
+    "summary": "Hard state descriptions everywhere",
+    "details": "Hard state entities now persist and expose an optional description across the world schema, Atlas UI/API, GM location fragments, and location summaries, so narrative surfaces can render richer context.",
+    "type": "improvement"
   }
 ]

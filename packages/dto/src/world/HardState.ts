@@ -171,6 +171,7 @@ export const HardState = z.object({
   kind: HardStateKind,
   subkind: HardStateSubkind.optional(),
   name: z.string().min(1),
+  description: z.string().max(2000).optional(),
   status: HardStateStatus.optional(),
   prominence: HardStateProminence.default('recognized'),
   links: z.array(HardStateLink).default([]),
