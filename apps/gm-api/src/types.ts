@@ -10,7 +10,7 @@ import type {
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { LocationStore} from '@glass-frontier/worldstate';
+import type { LocationStore, WorldSchemaStore } from '@glass-frontier/worldstate';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";
@@ -26,13 +26,36 @@ export type ChronicleState = {
   turns: Turn[];
 }
 
+export type LoreFocusState = {
+  entityScores: Record<string, number>;
+  tagScores: Record<string, number>;
+  lastUpdated?: number;
+};
+
+export type LoreSnippet = {
+  id: string;
+  title: string;
+  entityId: string;
+  tags: string[];
+  summary: string;
+  score: number;
+};
+
+export type LoreContextSlice = {
+  offered: LoreSnippet[];
+  focusEntities: string[];
+  focusTags: string[];
+};
+
 export type GraphContext = {
   //inputs
   chronicleId: string;
+  turnId: string;
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
   locationGraphStore: LocationStore;
+  worldSchemaStore: WorldSchemaStore;
 
   //operations
   llm: RetryLLMClient;
@@ -55,6 +78,8 @@ export type GraphContext = {
   locationDelta?: LocationDeltaDecision;
   inventoryDelta?: InventoryDelta;
   beatTracker?: BeatTracker;
+  loreContext?: LoreContextSlice;
+  loreFocus?: LoreFocusState;
 }
 
 export type TelemetryLike = {

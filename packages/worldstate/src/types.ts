@@ -41,6 +41,7 @@ export type WorldStateStore = {
     status?: Chronicle['status'];
     seedText?: string | null;
     beatsEnabled?: boolean;
+    anchorEntityId?: string | null;
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;

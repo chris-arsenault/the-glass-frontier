@@ -209,9 +209,10 @@ export const promptRouter = t.router({
           if (playerId === null) {
             throw new Error('Player identifier required for feedback submission.');
           }
-          // Get or create audit group for this chronicle
+          // Get or create audit group for this turn
           const auditGroup = await ctx.opsStore.auditGroupStore.ensureGroup({
-            scopeType: 'chronicle',
+            scopeType: 'turn',
+            scopeRef: input.turnId,
             playerId,
             chronicleId: input.chronicleId,
           });

@@ -15,6 +15,7 @@ interface Entity {
   subkind: string;
   name: string;
   status: string;
+  description?: string;
 }
 
 interface Relationship {
@@ -69,6 +70,7 @@ async function seedWorldEntities() {
         subkind TEXT NOT NULL,
         name TEXT NOT NULL,
         status TEXT NOT NULL,
+        description TEXT,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
@@ -114,15 +116,16 @@ async function seedWorldEntities() {
       for (const entity of entities) {
         try {
           await pool.query(
-            `INSERT INTO world_entity (id, kind, subkind, name, status)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO world_entity (id, kind, subkind, name, status, description)
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (id) DO UPDATE
              SET kind = EXCLUDED.kind,
                  subkind = EXCLUDED.subkind,
                  name = EXCLUDED.name,
                  status = EXCLUDED.status,
+                 description = EXCLUDED.description,
                  updated_at = NOW()`,
-            [entity.id, entity.kind, entity.subkind, entity.name, entity.status]
+            [entity.id, entity.kind, entity.subkind, entity.name, entity.status, entity.description || null]
           );
           entityCount++;
         } catch (error) {

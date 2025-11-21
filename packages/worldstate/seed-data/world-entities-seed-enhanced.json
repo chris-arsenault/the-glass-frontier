@@ -35,7 +35,7 @@
         "subkind": "moon",
         "name": "Echo Satellite",
         "status": "hidden",
-        "description": "This small satellite drifts through the Verge band, its surface pockmarked by meteor storms and ancient mining operations. Echo Satellite serves as a waypoint for those brave enough to navigate the scrap-laden auroral seas. Few outside the inner circles of major factions know of its existence. Locals speak of Free the Radical, whose presence influences the region's affairs."
+        "description": "This small satellite drifts through the Verge band, its surface pockmarked by meteor storms and ancient mining operations. Echo Satellite serves as a waypoint for those brave enough to navigate the scrap-laden auroral seas. Few outside the inner circles of major factions know of its existence."
       },
       {
         "id": "LOC-000003",
@@ -43,7 +43,7 @@
         "subkind": "region",
         "name": "Kyther Range",
         "status": "lost",
-        "description": "This expansive territory bears geological evidence of the Glassfall's devastation, yet has become a crucial corridor in the Tempered Accord's network. Resonance anchors pulse at regular intervals, marking safe passage for caravans and pilgrims. Its exact coordinates have been lost since the Glassfall, though expeditions occasionally stumble upon traces. Locals speak of Researcher Study, whose presence influences the region's affairs."
+        "description": "This expansive territory bears geological evidence of the Glassfall's devastation, yet has become a crucial corridor in the Tempered Accord's network. Resonance anchors pulse at regular intervals, marking safe passage for caravans and pilgrims. Its exact coordinates have been lost since the Glassfall, though expeditions occasionally stumble upon traces."
       },
       {
         "id": "LOC-000004",
@@ -59,7 +59,7 @@
         "subkind": "district",
         "name": "Grove Heights",
         "status": "destroyed",
-        "description": "Carved from the ruins of pre-Glassfall habitation, Grove Heights has transformed into a vibrant community where salvagers, artisans, and charter scribes conduct the intricate dance of Accord politics. Locals speak of Shard Breaker 2, whose presence influences the region's affairs."
+        "description": "Carved from the ruins of pre-Glassfall habitation, Grove Heights has transformed into a vibrant community where salvagers, artisans, and charter scribes conduct the intricate dance of Accord politics."
       },
       {
         "id": "LOC-000006",
@@ -75,7 +75,7 @@
         "subkind": "habitat",
         "name": "Verge Station",
         "status": "known",
-        "description": "This modular settlement houses a diverse population of salvagers, refugees, and frontier prospectors. Its docking clamps accommodate everything from swift courier craft to lumbering cargo haulers bringing supplies from the surface. Trade routes connect it to Kyther Range."
+        "description": "This modular settlement houses a diverse population of salvagers, refugees, and frontier prospectors. Its docking clamps accommodate everything from swift courier craft to lumbering cargo haulers bringing supplies from the surface."
       },
       {
         "id": "LOC-000008",
@@ -83,7 +83,7 @@
         "subkind": "station",
         "name": "Checkpoint Alpha",
         "status": "known",
-        "description": "Positioned at a critical juncture in the resonance network, Checkpoint Alpha facilitates the flow of travelers, goods, and certified attunement records. Custodian proxies audit every transaction, ensuring Charter compliance. Locals speak of Vane the Cruel 3, whose presence influences the region's affairs."
+        "description": "Positioned at a critical juncture in the resonance network, Checkpoint Alpha facilitates the flow of travelers, goods, and certified attunement records. Custodian proxies audit every transaction, ensuring Charter compliance."
       },
       {
         "id": "LOC-000009",
@@ -91,7 +91,7 @@
         "subkind": "space_anomaly",
         "name": "Resonance Tear",
         "status": "known",
-        "description": "Discovered during the Signal Famine, Resonance Tear continues to baffle custodian analytics and human researchers alike. Some factions petition for closer study; others advocate permanent exclusion zones. Locals speak of Analyst Data 3, whose presence influences the region's affairs."
+        "description": "Discovered during the Signal Famine, Resonance Tear continues to baffle custodian analytics and human researchers alike. Some factions petition for closer study; others advocate permanent exclusion zones."
       },
       {
         "id": "LOC-000010",
@@ -107,7 +107,7 @@
         "subkind": "dungeon",
         "name": "Forgotten Catacomb",
         "status": "lost",
-        "description": "Stories circulate about the treasures and dangers within Forgotten Catacomb. The Lattice Proxy Synod maintains surveillance, ready to intervene should any expedition approach Prohibited Capabilities thresholds. Its exact coordinates have been lost since the Glassfall, though expeditions occasionally stumble upon traces. The Artisan Society maintains significant interests here."
+        "description": "Stories circulate about the treasures and dangers within Forgotten Catacomb. The Lattice Proxy Synod maintains surveillance, ready to intervene should any expedition approach Prohibited Capabilities thresholds. Its exact coordinates have been lost since the Glassfall, though expeditions occasionally stumble upon traces."
       },
       {
         "id": "LOC-000012",
@@ -115,7 +115,7 @@
         "subkind": "facility",
         "name": "Research Facility",
         "status": "known",
-        "description": "Operating under strict Charter oversight, Research Facility processes raw materials into certified resonance components. Its workforce balances productivity quotas against mandatory Cooling Interlude schedules. The Artisan Society maintains significant interests here."
+        "description": "Operating under strict Charter oversight, Research Facility processes raw materials into certified resonance components. Its workforce balances productivity quotas against mandatory Cooling Interlude schedules."
       },
       {
         "id": "LOC-000013",
@@ -123,7 +123,7 @@
         "subkind": "planet",
         "name": "Kaleidos 2",
         "status": "known",
-        "description": "Once a jewel of colonial ambition, Kaleidos 2 now exists in isolation since the Glassfall severed all Sol uplinks. The planet's magnetosphere still hums with prism dust, creating the navigable Prismwell that threads civilization together. The Protector Legion maintains significant interests here."
+        "description": "Once a jewel of colonial ambition, Kaleidos 2 now exists in isolation since the Glassfall severed all Sol uplinks. The planet's magnetosphere still hums with prism dust, creating the navigable Prismwell that threads civilization together."
       },
       {
         "id": "LOC-000014",
@@ -131,7 +131,7 @@
         "subkind": "moon",
         "name": "Echo Satellite 2",
         "status": "known",
-        "description": "This small satellite drifts through the Verge band, its surface pockmarked by meteor storms and ancient mining operations. Echo Satellite 2 serves as a waypoint for those brave enough to navigate the scrap-laden auroral seas. Locals speak of Spy Network, whose presence influences the region's affairs. The Protector Legion maintains significant interests here."
+        "description": "This small satellite drifts through the Verge band, its surface pockmarked by meteor storms and ancient mining operations. Echo Satellite 2 serves as a waypoint for those brave enough to navigate the scrap-laden auroral seas."
       },
       {
         "id": "LOC-000015",
@@ -147,7 +147,7 @@
         "subkind": "city",
         "name": "Glasswake City 2",
         "status": "ruined",
-        "description": "Rising from the glass-stepped terraces, Glasswake City 2 represents the apex of post-Glassfall urban planning. Its spires catch Prismwell beams, routing communications and power throughout the Tempered Accord territories. Only shattered foundations remain, haunted by memories of pre-Glassfall prosperity. Trade routes connect it to Prism Dust Emporium."
+        "description": "Rising from the glass-stepped terraces, Glasswake City 2 represents the apex of post-Glassfall urban planning. Its spires catch Prismwell beams, routing communications and power throughout the Tempered Accord territories. Only shattered foundations remain, haunted by memories of pre-Glassfall prosperity."
       },
       {
         "id": "LOC-000017",
@@ -155,7 +155,7 @@
         "subkind": "district",
         "name": "Echo District 2",
         "status": "known",
-        "description": "Carved from the ruins of pre-Glassfall habitation, Echo District 2 has transformed into a vibrant community where salvagers, artisans, and charter scribes conduct the intricate dance of Accord politics. Locals speak of Trade Coin, whose presence influences the region's affairs. Trade routes connect it to Prism Dust Emporium."
+        "description": "Carved from the ruins of pre-Glassfall habitation, Echo District 2 has transformed into a vibrant community where salvagers, artisans, and charter scribes conduct the intricate dance of Accord politics."
       },
       {
         "id": "LOC-000018",
@@ -163,7 +163,7 @@
         "subkind": "shop_or_tavern",
         "name": "Resonance Tavern 2",
         "status": "known",
-        "description": "A gathering place for travelers, traders, and those seeking news from distant corridors, Resonance Tavern 2 serves contraband-free refreshments and facilitates the discrete exchange of information beneath custodian scrutiny. Locals speak of Trade Coin, whose presence influences the region's affairs. The Dust Cartel maintains significant interests here."
+        "description": "A gathering place for travelers, traders, and those seeking news from distant corridors, Resonance Tavern 2 serves contraband-free refreshments and facilitates the discrete exchange of information beneath custodian scrutiny."
       },
       {
         "id": "LOC-000019",
@@ -171,7 +171,7 @@
         "subkind": "habitat",
         "name": "Prism Quarters 2",
         "status": "known",
-        "description": "This modular settlement houses a diverse population of salvagers, refugees, and frontier prospectors. Its docking clamps accommodate everything from swift courier craft to lumbering cargo haulers bringing supplies from the surface. Locals speak of Researcher Study, whose presence influences the region's affairs. The Defense Force maintains significant interests here."
+        "description": "This modular settlement houses a diverse population of salvagers, refugees, and frontier prospectors. Its docking clamps accommodate everything from swift courier craft to lumbering cargo haulers bringing supplies from the surface."
       },
       {
         "id": "LOC-000020",
@@ -179,7 +179,7 @@
         "subkind": "station",
         "name": "Beacon Station 2",
         "status": "known",
-        "description": "Positioned at a critical juncture in the resonance network, Beacon Station 2 facilitates the flow of travelers, goods, and certified attunement records. Custodian proxies audit every transaction, ensuring Charter compliance. The Defense Force maintains significant interests here. Trade routes connect it to Verge Station."
+        "description": "Positioned at a critical juncture in the resonance network, Beacon Station 2 facilitates the flow of travelers, goods, and certified attunement records. Custodian proxies audit every transaction, ensuring Charter compliance."
       },
       {
         "id": "LOC-000021",
@@ -187,7 +187,7 @@
         "subkind": "space_anomaly",
         "name": "Glassfall Remnant 2",
         "status": "destroyed",
-        "description": "Discovered during the Signal Famine, Glassfall Remnant 2 continues to baffle custodian analytics and human researchers alike. Some factions petition for closer study; others advocate permanent exclusion zones. The Defense Force maintains significant interests here during the Signal Famine."
+        "description": "Discovered during the Signal Famine, Glassfall Remnant 2 continues to baffle custodian analytics and human researchers alike. Some factions petition for closer study; others advocate permanent exclusion zones."
       },
       {
         "id": "LOC-000022",
@@ -195,7 +195,7 @@
         "subkind": "site",
         "name": "Precursor Site 2",
         "status": "known",
-        "description": "Marked by weathered monuments and fading resonance signatures, Precursor Site 2 stands as memorial to events that shaped current Accord doctrine. Pilgrims visit during Cooling Interludes, seeking wisdom from the past. Trade routes connect it to Checkpoint Alpha."
+        "description": "Marked by weathered monuments and fading resonance signatures, Precursor Site 2 stands as memorial to events that shaped current Accord doctrine. Pilgrims visit during Cooling Interludes, seeking wisdom from the past."
       },
       {
         "id": "LOC-000023",
@@ -203,7 +203,7 @@
         "subkind": "dungeon",
         "name": "Deep Vault 2",
         "status": "known",
-        "description": "Stories circulate about the treasures and dangers within Deep Vault 2. The Lattice Proxy Synod maintains surveillance, ready to intervene should any expedition approach Prohibited Capabilities thresholds. The Regional Authority 2 maintains significant interests here."
+        "description": "Stories circulate about the treasures and dangers within Deep Vault 2. The Lattice Proxy Synod maintains surveillance, ready to intervene should any expedition approach Prohibited Capabilities thresholds."
       },
       {
         "id": "LOC-000024",
@@ -227,7 +227,7 @@
         "subkind": "moon",
         "name": "Echo Satellite 3",
         "status": "known",
-        "description": "This small satellite drifts through the Verge band, its surface pockmarked by meteor storms and ancient mining operations. Echo Satellite 3 serves as a waypoint for those brave enough to navigate the scrap-laden auroral seas. The Echo Enterprises 2 maintains significant interests here. Trade routes connect it to Resonance Tear."
+        "description": "This small satellite drifts through the Verge band, its surface pockmarked by meteor storms and ancient mining operations. Echo Satellite 3 serves as a waypoint for those brave enough to navigate the scrap-laden auroral seas."
       },
       {
         "id": "LOC-000027",
@@ -235,7 +235,7 @@
         "subkind": "region",
         "name": "Sable Crescent 3",
         "status": "known",
-        "description": "This expansive territory bears geological evidence of the Glassfall's devastation, yet has become a crucial corridor in the Tempered Accord's network. Resonance anchors pulse at regular intervals, marking safe passage for caravans and pilgrims. The Echo Enterprises 2 maintains significant interests here."
+        "description": "This expansive territory bears geological evidence of the Glassfall's devastation, yet has become a crucial corridor in the Tempered Accord's network. Resonance anchors pulse at regular intervals, marking safe passage for caravans and pilgrims."
       },
       {
         "id": "LOC-000028",
@@ -243,7 +243,7 @@
         "subkind": "city",
         "name": "Vigil Heights 3",
         "status": "known",
-        "description": "Rising from the glass-stepped terraces, Vigil Heights 3 represents the apex of post-Glassfall urban planning. Its spires catch Prismwell beams, routing communications and power throughout the Tempered Accord territories. Locals speak of Orin Grey 2, whose presence influences the region's affairs."
+        "description": "Rising from the glass-stepped terraces, Vigil Heights 3 represents the apex of post-Glassfall urban planning. Its spires catch Prismwell beams, routing communications and power throughout the Tempered Accord territories."
       },
       {
         "id": "LOC-000029",
@@ -251,7 +251,7 @@
         "subkind": "district",
         "name": "Salvage Sector 3",
         "status": "known",
-        "description": "Carved from the ruins of pre-Glassfall habitation, Salvage Sector 3 has transformed into a vibrant community where salvagers, artisans, and charter scribes conduct the intricate dance of Accord politics. The Rogue Alliance 2 maintains significant interests here."
+        "description": "Carved from the ruins of pre-Glassfall habitation, Salvage Sector 3 has transformed into a vibrant community where salvagers, artisans, and charter scribes conduct the intricate dance of Accord politics."
       },
       {
         "id": "LOC-000030",
@@ -259,7 +259,7 @@
         "subkind": "shop_or_tavern",
         "name": "Flora Market 3",
         "status": "known",
-        "description": "A gathering place for travelers, traders, and those seeking news from distant corridors, Flora Market 3 serves contraband-free refreshments and facilitates the discrete exchange of information beneath custodian scrutiny. Locals speak of Orin Grey 2, whose presence influences the region's affairs."
+        "description": "A gathering place for travelers, traders, and those seeking news from distant corridors, Flora Market 3 serves contraband-free refreshments and facilitates the discrete exchange of information beneath custodian scrutiny."
       }
     ],
     "npc": [
@@ -277,7 +277,7 @@
         "subkind": "leader",
         "name": "Captain Windlass",
         "status": "dead",
-        "description": "Wielding authority through a combination of elected mandate and custodian certification, Captain Windlass navigates the treacherous waters of factional politics while maintaining Charter compliance. Their death marks a turning point in recent events, consequences still rippling through affected communities during the Reclamation Epoch."
+        "description": "Wielding authority through a combination of elected mandate and custodian certification, Captain Windlass navigates the treacherous waters of factional politics while maintaining Charter compliance. Their death marks a turning point in recent events, consequences still rippling through affected communities."
       },
       {
         "id": "NPC-000003",
@@ -357,7 +357,7 @@
         "subkind": "ally",
         "name": "Protector Calm 2",
         "status": "alive",
-        "description": "Trusted by those who've shared hardships in the unforgiving corridors, Protector Calm 2 proves reliability through action rather than words. Their network spans multiple settlements, facilitating cooperation when official channels falter. Their allegiance to the Artisan Society shapes their every decision."
+        "description": "Trusted by those who've shared hardships in the unforgiving corridors, Protector Calm 2 proves reliability through action rather than words. Their network spans multiple settlements, facilitating cooperation when official channels falter."
       },
       {
         "id": "NPC-000013",
@@ -365,7 +365,7 @@
         "subkind": "notorious_villain",
         "name": "Shard Breaker 2",
         "status": "alive",
-        "description": "Once a respected guild member, Shard Breaker 2 turned to darker pursuits after witnessing what they perceived as Charter failures. Now they lead operations that skirt perilously close to Prohibited Capabilities thresholds. Their allegiance to the Protector Legion shapes their every decision."
+        "description": "Once a respected guild member, Shard Breaker 2 turned to darker pursuits after witnessing what they perceived as Charter failures. Now they lead operations that skirt perilously close to Prohibited Capabilities thresholds."
       },
       {
         "id": "NPC-000014",
@@ -373,7 +373,7 @@
         "subkind": "agent",
         "name": "Scout Hidden 2",
         "status": "alive",
-        "description": "Operating in the shadows where faction interests intersect with custodian blind spots, Scout Hidden 2 gathers intelligence and executes delicate operations that official channels cannot acknowledge. They command the Verge Bolt with practiced skill."
+        "description": "Operating in the shadows where faction interests intersect with custodian blind spots, Scout Hidden 2 gathers intelligence and executes delicate operations that official channels cannot acknowledge."
       },
       {
         "id": "NPC-000015",
@@ -389,7 +389,7 @@
         "subkind": "scholar",
         "name": "Archivist Kess 2",
         "status": "retired",
-        "description": "Dedicated to preserving knowledge and unraveling mysteries that predate the Glassfall, Archivist Kess 2 pores over Echo Well fragments and Precursor data cores, always seeking deeper understanding within Charter-approved bounds. Having stepped back from active involvement, they now observe from the sidelines, occasionally offering counsel to successors. Their allegiance to the Dust Cartel shapes their every decision. They command the Ground Touch with practiced skill."
+        "description": "Dedicated to preserving knowledge and unraveling mysteries that predate the Glassfall, Archivist Kess 2 pores over Echo Well fragments and Precursor data cores, always seeking deeper understanding within Charter-approved bounds. Having stepped back from active involvement, they now observe from the sidelines, occasionally offering counsel to successors."
       },
       {
         "id": "NPC-000017",
@@ -405,7 +405,7 @@
         "subkind": "mystic",
         "name": "Oracle Truth 2",
         "status": "alive",
-        "description": "Attuned to resonance frequencies beyond standard Charter cataloging, Oracle Truth 2 serves as interpreter between human consciousness and the metaphysical underpinnings of the Glass Frontier. Their visions guide, warn, and sometimes perplex. Their allegiance to the Dust Cartel shapes their every decision. They command the Ground Touch with practiced skill."
+        "description": "Attuned to resonance frequencies beyond standard Charter cataloging, Oracle Truth 2 serves as interpreter between human consciousness and the metaphysical underpinnings of the Glass Frontier. Their visions guide, warn, and sometimes perplex."
       },
       {
         "id": "NPC-000019",
@@ -421,7 +421,7 @@
         "subkind": "leader",
         "name": "Director Flux 3",
         "status": "alive",
-        "description": "Wielding authority through a combination of elected mandate and custodian certification, Director Flux 3 navigates the treacherous waters of factional politics while maintaining Charter compliance. They command the Heavy Step with practiced skill."
+        "description": "Wielding authority through a combination of elected mandate and custodian certification, Director Flux 3 navigates the treacherous waters of factional politics while maintaining Charter compliance."
       },
       {
         "id": "NPC-000021",
@@ -445,7 +445,7 @@
         "subkind": "agent",
         "name": "Operative Dark 3",
         "status": "alive",
-        "description": "Operative Dark 3 maintains covers across multiple settlements, their true allegiances known only to a select few. In the intricate game of Accord politics, they serve as both eyes and hands for hidden masters. Their allegiance to the Regional Authority 2 shapes their every decision."
+        "description": "Operative Dark 3 maintains covers across multiple settlements, their true allegiances known only to a select few. In the intricate game of Accord politics, they serve as both eyes and hands for hidden masters."
       },
       {
         "id": "NPC-000024",
@@ -453,7 +453,7 @@
         "subkind": "merchant",
         "name": "Vendor Quick 3",
         "status": "alive",
-        "description": "Vendor Quick 3's trading network exemplifies post-Glassfall commerce: carefully navigating resonance quotas, charter regulations, and the ever-present need to maintain custodian certification for inter-corridor trade. Their allegiance to the Regional Authority 2 shapes their every decision."
+        "description": "Vendor Quick 3's trading network exemplifies post-Glassfall commerce: carefully navigating resonance quotas, charter regulations, and the ever-present need to maintain custodian certification for inter-corridor trade."
       },
       {
         "id": "NPC-000025",
@@ -469,7 +469,7 @@
         "subkind": "captain",
         "name": "Thyra Windlass 3",
         "status": "alive",
-        "description": "Commanding vessels through prismwell lanes and Verge storms alike, Thyra Windlass 3 earned their credentials through years of successful navigation under the unforgiving conditions of post-Glassfall spacefaring. Their allegiance to the Echo Enterprises 2 shapes their every decision. They command the Desert Cross with practiced skill."
+        "description": "Commanding vessels through prismwell lanes and Verge storms alike, Thyra Windlass 3 earned their credentials through years of successful navigation under the unforgiving conditions of post-Glassfall spacefaring."
       },
       {
         "id": "NPC-000027",
@@ -477,7 +477,7 @@
         "subkind": "mystic",
         "name": "Prophet Dream 3",
         "status": "alive",
-        "description": "Prophet Dream 3 performs attunement rites and Echo Descent ceremonies, acting as spiritual anchor for communities navigating the strange intersection of technology and transcendence that characterizes post-Glassfall existence. They command the Desert Cross with practiced skill."
+        "description": "Prophet Dream 3 performs attunement rites and Echo Descent ceremonies, acting as spiritual anchor for communities navigating the strange intersection of technology and transcendence that characterizes post-Glassfall existence."
       },
       {
         "id": "NPC-000028",
@@ -493,7 +493,7 @@
         "subkind": "leader",
         "name": "Commander Stone 4",
         "status": "alive",
-        "description": "Commander Stone 4's leadership emerged during a crucial Cooling Interlude, demonstrating the diplomatic finesse required to balance competing interests across multiple resonance corridors. They command the Lattice Fortress 2 with practiced skill."
+        "description": "Commander Stone 4's leadership emerged during a crucial Cooling Interlude, demonstrating the diplomatic finesse required to balance competing interests across multiple resonance corridors."
       },
       {
         "id": "NPC-000030",
@@ -511,7 +511,7 @@
         "subkind": "capital_ship",
         "name": "Tempered Accord",
         "status": "operational",
-        "description": "Serving as both military asset and mobile command center, the Tempered Accord projects factional power throughout the Glass Frontier. Its custodian-approved systems ensure it operates within Charter parameters while maintaining formidable capability. It operates primarily in the Kaleidos territories."
+        "description": "Serving as both military asset and mobile command center, the Tempered Accord projects factional power throughout the Glass Frontier. Its custodian-approved systems ensure it operates within Charter parameters while maintaining formidable capability."
       },
       {
         "id": "SHI-000002",
@@ -519,7 +519,7 @@
         "subkind": "frigate",
         "name": "Storm Chaser",
         "status": "damaged",
-        "description": "The Storm Chaser strikes a balance between firepower and maneuverability, patrolling trade lanes and responding to distress calls across the resonance corridors. Its crew maintains constant readiness for everything from pirate interdiction to rescue operations. It operates primarily in the Kaleidos territories."
+        "description": "The Storm Chaser strikes a balance between firepower and maneuverability, patrolling trade lanes and responding to distress calls across the resonance corridors. Its crew maintains constant readiness for everything from pirate interdiction to rescue operations."
       },
       {
         "id": "SHI-000003",
@@ -535,7 +535,7 @@
         "subkind": "shuttle",
         "name": "Quick Drop",
         "status": "missing",
-        "description": "The Quick Drop handles routine passenger and cargo transfers between surface settlements and orbital facilities. Its reliability makes it essential infrastructure, though passengers rarely remember individual trips. Contact was lost under mysterious circumstances; search efforts continue, though hope fades with each passing cycle. Captain Windlass serves as its captain. It operates primarily in the Echo Satellite territories."
+        "description": "The Quick Drop handles routine passenger and cargo transfers between surface settlements and orbital facilities. Its reliability makes it essential infrastructure, though passengers rarely remember individual trips. Contact was lost under mysterious circumstances; search efforts continue, though hope fades with each passing cycle."
       },
       {
         "id": "SHI-000005",
@@ -543,7 +543,7 @@
         "subkind": "gunship",
         "name": "Verge Bolt",
         "status": "mothballed",
-        "description": "Equipped with resonance-focused weaponry that skirts Prohibited Capabilities restrictions, the Verge Bolt provides rapid response capability for situations requiring more than diplomatic solutions. It operates primarily in the Echo Satellite territories."
+        "description": "Equipped with resonance-focused weaponry that skirts Prohibited Capabilities restrictions, the Verge Bolt provides rapid response capability for situations requiring more than diplomatic solutions."
       },
       {
         "id": "SHI-000006",
@@ -591,7 +591,7 @@
         "subkind": "frigate",
         "name": "Vigil Guardian 2",
         "status": "destroyed",
-        "description": "Built during the Reclamation Epoch and retrofitted with modern resonance drives, the Vigil Guardian 2 serves its faction with distinction, earning commendations for successful convoy escorts and emergency response missions. Its wreckage serves as navigation hazard and grim memorial, a reminder of the dangers inherent in Glass Frontier operations. Registry lists it under Artisan Society colors."
+        "description": "Built during the Reclamation Epoch and retrofitted with modern resonance drives, the Vigil Guardian 2 serves its faction with distinction, earning commendations for successful convoy escorts and emergency response missions. Its wreckage serves as navigation hazard and grim memorial, a reminder of the dangers inherent in Glass Frontier operations."
       },
       {
         "id": "SHI-000012",
@@ -615,7 +615,7 @@
         "subkind": "gunship",
         "name": "Lattice Hammer 2",
         "status": "operational",
-        "description": "The Lattice Hammer 2 delivers concentrated firepower with frightening efficiency. Factions deploy such vessels cautiously, mindful that excessive force can trigger custodian intervention and Charter review. Spy Network serves as its captain. It operates primarily in the Grove Heights territories."
+        "description": "The Lattice Hammer 2 delivers concentrated firepower with frightening efficiency. Factions deploy such vessels cautiously, mindful that excessive force can trigger custodian intervention and Charter review."
       },
       {
         "id": "SHI-000015",
@@ -623,7 +623,7 @@
         "subkind": "lander",
         "name": "Low Flyer 2",
         "status": "operational",
-        "description": "Rugged and reliable, the Low Flyer 2 operates where glamorous vessels fear to tread: contested sites, unstable landing zones, and regions plagued by unpredictable resonance phenomena. Spy Network serves as its captain."
+        "description": "Rugged and reliable, the Low Flyer 2 operates where glamorous vessels fear to tread: contested sites, unstable landing zones, and regions plagued by unpredictable resonance phenomena."
       },
       {
         "id": "SHI-000016",
@@ -663,7 +663,7 @@
         "subkind": "frigate",
         "name": "Prism Blade 3",
         "status": "operational",
-        "description": "The Prism Blade 3 strikes a balance between firepower and maneuverability, patrolling trade lanes and responding to distress calls across the resonance corridors. Its crew maintains constant readiness for everything from pirate interdiction to rescue operations. Registry lists it under Defense Force colors."
+        "description": "The Prism Blade 3 strikes a balance between firepower and maneuverability, patrolling trade lanes and responding to distress calls across the resonance corridors. Its crew maintains constant readiness for everything from pirate interdiction to rescue operations."
       },
       {
         "id": "SHI-000021",
@@ -679,7 +679,7 @@
         "subkind": "shuttle",
         "name": "City Mover 3",
         "status": "operational",
-        "description": "The City Mover 3 handles routine passenger and cargo transfers between surface settlements and orbital facilities. Its reliability makes it essential infrastructure, though passengers rarely remember individual trips. Drake Storm serves as its captain. It operates primarily in the Checkpoint Alpha territories."
+        "description": "The City Mover 3 handles routine passenger and cargo transfers between surface settlements and orbital facilities. Its reliability makes it essential infrastructure, though passengers rarely remember individual trips."
       },
       {
         "id": "SHI-000023",
@@ -695,7 +695,7 @@
         "subkind": "lander",
         "name": "Dirt Kisser 3",
         "status": "operational",
-        "description": "The Dirt Kisser 3 specializes in atmospheric transitions, ferrying personnel and equipment between orbit and surface installations. Its heat-scarred hull testifies to countless reentry burns through Kaleidos' prism-laden atmosphere. Drake Storm serves as its captain."
+        "description": "The Dirt Kisser 3 specializes in atmospheric transitions, ferrying personnel and equipment between orbit and surface installations. Its heat-scarred hull testifies to countless reentry burns through Kaleidos' prism-laden atmosphere."
       },
       {
         "id": "SHI-000025",
@@ -703,7 +703,7 @@
         "subkind": "walker",
         "name": "Steel Foot 3",
         "status": "operational",
-        "description": "Originally designed for Precursor-era construction projects, walkers like the Steel Foot 3 now serve varied roles: cargo transport, mobile habitation, and when necessary, defensive platforms for isolated communities. It operates primarily in the Resonance Tear territories."
+        "description": "Originally designed for Precursor-era construction projects, walkers like the Steel Foot 3 now serve varied roles: cargo transport, mobile habitation, and when necessary, defensive platforms for isolated communities."
       },
       {
         "id": "SHI-000026",
@@ -711,7 +711,7 @@
         "subkind": "train",
         "name": "Switchline Express 3",
         "status": "operational",
-        "description": "The Switchline Express 3 connects settlements along carefully maintained tracks, its arrival marking the rhythm of daily life. Passengers trade news and goods while watching prism-lit landscapes roll past armored windows. It operates primarily in the Resonance Tear territories."
+        "description": "The Switchline Express 3 connects settlements along carefully maintained tracks, its arrival marking the rhythm of daily life. Passengers trade news and goods while watching prism-lit landscapes roll past armored windows."
       },
       {
         "id": "SHI-000027",
@@ -727,7 +727,7 @@
         "subkind": "capital_ship",
         "name": "Prismwell Carrier 4",
         "status": "operational",
-        "description": "The Prismwell Carrier 4 represents the peak of post-Glassfall naval engineering: massive, resonance-shielded, and capable of sustained operations across multiple corridor zones. Its complement includes fighters, shuttles, and diplomatic suites. It operates primarily in the Sacred Circle territories."
+        "description": "The Prismwell Carrier 4 represents the peak of post-Glassfall naval engineering: massive, resonance-shielded, and capable of sustained operations across multiple corridor zones. Its complement includes fighters, shuttles, and diplomatic suites."
       },
       {
         "id": "SHI-000029",
@@ -753,7 +753,7 @@
         "subkind": "relic",
         "name": "Precursor Shard",
         "status": "intact",
-        "description": "Discovered in a sealed vault during the Reclamation Epoch, the Precursor Shard represents technology that humanity still struggles to fully comprehend. Its activation requires attunement rites and triggers automatic monitoring systems. It was discovered in Kaleidos, harmonizing with ambient custodian telemetry."
+        "description": "Discovered in a sealed vault during the Reclamation Epoch, the Precursor Shard represents technology that humanity still struggles to fully comprehend. Its activation requires attunement rites and triggers automatic monitoring systems."
       },
       {
         "id": "ART-000002",
@@ -761,7 +761,7 @@
         "subkind": "weapon",
         "name": "Prism Cannon",
         "status": "broken",
-        "description": "The Prism Cannon channels focused resonance into devastating effect, its lethality carefully constrained by Charter-mandated limiters. Possession requires extensive documentation and custodian oversight. Jara Commons currently holds possession of it."
+        "description": "The Prism Cannon channels focused resonance into devastating effect, its lethality carefully constrained by Charter-mandated limiters. Possession requires extensive documentation and custodian oversight."
       },
       {
         "id": "ART-000003",
@@ -769,7 +769,7 @@
         "subkind": "focus",
         "name": "Power Crystal",
         "status": "lost",
-        "description": "This crystalline artifact enhances natural harmonic sensitivity, though custodian telemetry ensures it cannot exceed established power thresholds. Pilgrims and mystics prize such items for meditation and ritual work. Jara Commons currently holds possession of it. It was discovered in Kaleidos."
+        "description": "This crystalline artifact enhances natural harmonic sensitivity, though custodian telemetry ensures it cannot exceed established power thresholds. Pilgrims and mystics prize such items for meditation and ritual work."
       },
       {
         "id": "ART-000004",
@@ -777,7 +777,7 @@
         "subkind": "device",
         "name": "Power Cell",
         "status": "sealed",
-        "description": "The Power Cell performs specialized functions essential to post-Glassfall existence: scanning, communication, or environmental processing. Its certification markings indicate regular inspection and compliance verification, harmonizing with ambient resonance band."
+        "description": "The Power Cell performs specialized functions essential to post-Glassfall existence: scanning, communication, or environmental processing. Its certification markings indicate regular inspection and compliance verification."
       },
       {
         "id": "ART-000005",
@@ -793,7 +793,7 @@
         "subkind": "key",
         "name": "Phased Key",
         "status": "broken",
-        "description": "The Phased Key grants access to secured facilities, its resonance signature matching specific locks scattered throughout the Glass Frontier. Original purpose and complete key-set locations remain subjects of ongoing research. It was discovered in Echo Satellite."
+        "description": "The Phased Key grants access to secured facilities, its resonance signature matching specific locks scattered throughout the Glass Frontier. Original purpose and complete key-set locations remain subjects of ongoing research."
       },
       {
         "id": "ART-000007",
@@ -817,7 +817,7 @@
         "subkind": "weapon",
         "name": "Flux Rifle 2",
         "status": "intact",
-        "description": "Forged from prism-alloy composites, the Flux Rifle 2 embodies the careful balance between defensive capability and Prohibited Capabilities safeguards. Its wielder must maintain current attunement certification. Helper Bright currently holds possession of it."
+        "description": "Forged from prism-alloy composites, the Flux Rifle 2 embodies the careful balance between defensive capability and Prohibited Capabilities safeguards. Its wielder must maintain current attunement certification."
       },
       {
         "id": "ART-000010",
@@ -833,7 +833,7 @@
         "subkind": "device",
         "name": "Scanning Array 2",
         "status": "lost",
-        "description": "Combining Precursor design principles with modern fabrication, the Scanning Array 2 represents practical magitech divorced from mysticism. Engineers maintain such devices with practiced efficiency across the territories. Free the Radical currently holds possession of it."
+        "description": "Combining Precursor design principles with modern fabrication, the Scanning Array 2 represents practical magitech divorced from mysticism. Engineers maintain such devices with practiced efficiency across the territories."
       },
       {
         "id": "ART-000012",
@@ -857,7 +857,7 @@
         "subkind": "containment_relic",
         "name": "Trap Container 2",
         "status": "intact",
-        "description": "The Trap Container 2 seals away materials or entities deemed too dangerous for general handling. Breaking its containment fields would trigger immediate custodian response and potential regional lockdown. It was discovered in Grove Heights."
+        "description": "The Trap Container 2 seals away materials or entities deemed too dangerous for general handling. Breaking its containment fields would trigger immediate custodian response and potential regional lockdown."
       },
       {
         "id": "ART-000015",
@@ -865,7 +865,7 @@
         "subkind": "relic",
         "name": "Lattice Core 3",
         "status": "intact",
-        "description": "Discovered in a sealed vault during the Reclamation Epoch, the Lattice Core 3 represents technology that humanity still struggles to fully comprehend. Its activation requires attunement rites and triggers automatic monitoring systems. The Protector Legion claims rightful ownership."
+        "description": "Discovered in a sealed vault during the Reclamation Epoch, the Lattice Core 3 represents technology that humanity still struggles to fully comprehend. Its activation requires attunement rites and triggers automatic monitoring systems."
       },
       {
         "id": "ART-000016",
@@ -873,7 +873,7 @@
         "subkind": "weapon",
         "name": "Resonance Blade 3",
         "status": "sealed",
-        "description": "The Resonance Blade 3 channels focused resonance into devastating effect, its lethality carefully constrained by Charter-mandated limiters. Possession requires extensive documentation and custodian oversight. Trade Coin currently holds possession of it."
+        "description": "The Resonance Blade 3 channels focused resonance into devastating effect, its lethality carefully constrained by Charter-mandated limiters. Possession requires extensive documentation and custodian oversight."
       },
       {
         "id": "ART-000017",
@@ -881,7 +881,7 @@
         "subkind": "focus",
         "name": "Resonance Focus 3",
         "status": "intact",
-        "description": "This crystalline artifact enhances natural harmonic sensitivity, though custodian telemetry ensures it cannot exceed established power thresholds. Pilgrims and mystics prize such items for meditation and ritual work. The Dust Cartel claims rightful ownership."
+        "description": "This crystalline artifact enhances natural harmonic sensitivity, though custodian telemetry ensures it cannot exceed established power thresholds. Pilgrims and mystics prize such items for meditation and ritual work."
       },
       {
         "id": "ART-000018",
@@ -889,7 +889,7 @@
         "subkind": "device",
         "name": "Shield Generator 3",
         "status": "intact",
-        "description": "The Shield Generator 3 performs specialized functions essential to post-Glassfall existence: scanning, communication, or environmental processing. Its certification markings indicate regular inspection and compliance verification, harmonizing with ambient Charter compliance."
+        "description": "The Shield Generator 3 performs specialized functions essential to post-Glassfall existence: scanning, communication, or environmental processing. Its certification markings indicate regular inspection and compliance verification."
       },
       {
         "id": "ART-000019",
@@ -897,7 +897,7 @@
         "subkind": "data_relic",
         "name": "Knowledge Tablet 3",
         "status": "intact",
-        "description": "Recovered from shielded repositories, the Knowledge Tablet 3 offers tantalizing glimpses into pre-catastrophe civilization. Scholars debate its implications while custodians monitor for security-sensitive content. Researcher Study currently holds possession of it. It was discovered in Verge Station."
+        "description": "Recovered from shielded repositories, the Knowledge Tablet 3 offers tantalizing glimpses into pre-catastrophe civilization. Scholars debate its implications while custodians monitor for security-sensitive content."
       },
       {
         "id": "ART-000020",
@@ -905,7 +905,7 @@
         "subkind": "key",
         "name": "Unlock Code 3",
         "status": "intact",
-        "description": "The Unlock Code 3 grants access to secured facilities, its resonance signature matching specific locks scattered throughout the Glass Frontier. Original purpose and complete key-set locations remain subjects of ongoing research. Researcher Study currently holds possession of it. The Defense Force claims rightful ownership."
+        "description": "The Unlock Code 3 grants access to secured facilities, its resonance signature matching specific locks scattered throughout the Glass Frontier. Original purpose and complete key-set locations remain subjects of ongoing research."
       },
       {
         "id": "ART-000021",
@@ -913,7 +913,7 @@
         "subkind": "containment_relic",
         "name": "Sealed Box 3",
         "status": "corrupted",
-        "description": "Ancient safeguards keep the Sealed Box 3 isolated from casual interference. Faction leaders debate whether such artifacts should remain sealed indefinitely or studied under controlled conditions. Researcher Study currently holds possession of it. It was discovered in Verge Station."
+        "description": "Ancient safeguards keep the Sealed Box 3 isolated from casual interference. Faction leaders debate whether such artifacts should remain sealed indefinitely or studied under controlled conditions."
       },
       {
         "id": "ART-000022",
@@ -921,7 +921,7 @@
         "subkind": "relic",
         "name": "Ancient Key 4",
         "status": "intact",
-        "description": "The Ancient Key 4 dates to the Precursor era, its crystalline structure resonating with frequencies that predate the Glassfall. Custodian protocols restrict its usage to certified researchers and charter-approved applications. The Regional Authority 2 claims rightful ownership."
+        "description": "The Ancient Key 4 dates to the Precursor era, its crystalline structure resonating with frequencies that predate the Glassfall. Custodian protocols restrict its usage to certified researchers and charter-approved applications."
       },
       {
         "id": "ART-000023",
@@ -929,7 +929,7 @@
         "subkind": "weapon",
         "name": "Echo Lance 4",
         "status": "intact",
-        "description": "Forged from prism-alloy composites, the Echo Lance 4 embodies the careful balance between defensive capability and Prohibited Capabilities safeguards. Its wielder must maintain current attunement certification. Drake Storm currently holds possession of it. The Regional Authority 2 claims rightful ownership."
+        "description": "Forged from prism-alloy composites, the Echo Lance 4 embodies the careful balance between defensive capability and Prohibited Capabilities safeguards. Its wielder must maintain current attunement certification."
       },
       {
         "id": "ART-000024",
@@ -937,7 +937,7 @@
         "subkind": "focus",
         "name": "Energy Lens 4",
         "status": "intact",
-        "description": "The Energy Lens 4 serves as personal resonance amplifier, allowing its bearer to interface more effectively with ambient energy fields. Proper use requires training in attunement rites and Charter compliance protocols. It was discovered in Checkpoint Alpha."
+        "description": "The Energy Lens 4 serves as personal resonance amplifier, allowing its bearer to interface more effectively with ambient energy fields. Proper use requires training in attunement rites and Charter compliance protocols."
       },
       {
         "id": "ART-000025",
@@ -953,7 +953,7 @@
         "subkind": "data_relic",
         "name": "Memory Cube 4",
         "status": "intact",
-        "description": "The Memory Cube 4 contains archived information from before the Glassfall—historical records, technical schematics, or cultural memory preserved in resonance-stable matrices. Access requires Echo Ledger Conclave licensing. It was discovered in Resonance Tear. The Echo Enterprises 2 claims rightful ownership."
+        "description": "The Memory Cube 4 contains archived information from before the Glassfall—historical records, technical schematics, or cultural memory preserved in resonance-stable matrices. Access requires Echo Ledger Conclave licensing."
       },
       {
         "id": "ART-000027",
@@ -961,7 +961,7 @@
         "subkind": "key",
         "name": "Lattice Access 4",
         "status": "intact",
-        "description": "Phased to bypass Precursor security protocols, the Lattice Access 4 represents both opportunity and danger. The Lattice Proxy Synod tracks all known keys, intervening when their use risks awakening dormant systems. It was discovered in Resonance Tear."
+        "description": "Phased to bypass Precursor security protocols, the Lattice Access 4 represents both opportunity and danger. The Lattice Proxy Synod tracks all known keys, intervening when their use risks awakening dormant systems."
       },
       {
         "id": "ART-000028",
@@ -969,7 +969,7 @@
         "subkind": "containment_relic",
         "name": "Holding Vault 4",
         "status": "intact",
-        "description": "The Holding Vault 4 seals away materials or entities deemed too dangerous for general handling. Breaking its containment fields would trigger immediate custodian response and potential regional lockdown. Orin Grey 2 currently holds possession of it."
+        "description": "The Holding Vault 4 seals away materials or entities deemed too dangerous for general handling. Breaking its containment fields would trigger immediate custodian response and potential regional lockdown."
       },
       {
         "id": "ART-000029",
@@ -977,7 +977,7 @@
         "subkind": "relic",
         "name": "Echo Crystal 5",
         "status": "intact",
-        "description": "Discovered in a sealed vault during the Reclamation Epoch, the Echo Crystal 5 represents technology that humanity still struggles to fully comprehend. Its activation requires attunement rites and triggers automatic monitoring systems. It was discovered in Sacred Circle."
+        "description": "Discovered in a sealed vault during the Reclamation Epoch, the Echo Crystal 5 represents technology that humanity still struggles to fully comprehend. Its activation requires attunement rites and triggers automatic monitoring systems."
       },
       {
         "id": "ART-000030",
@@ -985,7 +985,7 @@
         "subkind": "weapon",
         "name": "Storm Hammer 5",
         "status": "intact",
-        "description": "The Storm Hammer 5 channels focused resonance into devastating effect, its lethality carefully constrained by Charter-mandated limiters. Possession requires extensive documentation and custodian oversight. Orin Grey 2 currently holds possession of it."
+        "description": "The Storm Hammer 5 channels focused resonance into devastating effect, its lethality carefully constrained by Charter-mandated limiters. Possession requires extensive documentation and custodian oversight."
       }
     ],
     "faction": [
@@ -1019,7 +1019,7 @@
         "subkind": "guild",
         "name": "Artisan Society",
         "status": "destroyed",
-        "description": "Artisan Society unites practitioners of specific trades or disciplines, maintaining standards, negotiating collective interests, and preserving knowledge across the post-Glassfall generations. Charter recognition grants its certifications legal weight during the Glassfall."
+        "description": "Artisan Society unites practitioners of specific trades or disciplines, maintaining standards, negotiating collective interests, and preserving knowledge across the post-Glassfall generations. Charter recognition grants its certifications legal weight."
       },
       {
         "id": "FAC-000005",
@@ -1059,7 +1059,7 @@
         "subkind": "corporate",
         "name": "Echo Enterprises 2",
         "status": "active",
-        "description": "Built on salvage operations during the Reclamation Epoch, Echo Enterprises 2 evolved into a diversified entity controlling refineries, transport networks, and research facilities. Union representatives negotiate constantly for improved labor conditions. Their primary stronghold lies in Kyther Range."
+        "description": "Built on salvage operations during the Reclamation Epoch, Echo Enterprises 2 evolved into a diversified entity controlling refineries, transport networks, and research facilities. Union representatives negotiate constantly for improved labor conditions."
       },
       {
         "id": "FAC-000010",
@@ -1075,7 +1075,7 @@
         "subkind": "guild",
         "name": "Kite Guild 2",
         "status": "dormant",
-        "description": "Through mutual aid and skill preservation, Kite Guild 2 ensures critical expertise survives the challenges of Glass Frontier existence. Its leadership mediates between member interests and broader societal obligations. Their primary stronghold lies in Hoarfrost Urban."
+        "description": "Through mutual aid and skill preservation, Kite Guild 2 ensures critical expertise survives the challenges of Glass Frontier existence. Its leadership mediates between member interests and broader societal obligations."
       },
       {
         "id": "FAC-000012",
@@ -1551,7 +1551,7 @@
         "subkind": "forbidden_technique",
         "name": "Void Touch 2",
         "status": "sanctioned",
-        "description": "Void Touch 2 exists at the boundary of what custodian protocols permit, its power undeniable yet its risks equally clear. The Charter classifies it as forbidden, though knowledge of its principles persists in restricted archives, harmonizing with ambient resonance band."
+        "description": "Void Touch 2 exists at the boundary of what custodian protocols permit, its power undeniable yet its risks equally clear. The Charter classifies it as forbidden, though knowledge of its principles persists in restricted archives."
       },
       {
         "id": "MAG-000011",
@@ -1607,7 +1607,7 @@
         "subkind": "spell",
         "name": "Echo Call 4",
         "status": "sanctioned",
-        "description": "The formula for Echo Call 4 combines Precursor principles with post-Glassfall innovations, carefully designed to remain below Prohibited Capabilities thresholds. Misuse triggers automatic custodian alerts, harmonizing with ambient Charter compliance."
+        "description": "The formula for Echo Call 4 combines Precursor principles with post-Glassfall innovations, carefully designed to remain below Prohibited Capabilities thresholds. Misuse triggers automatic custodian alerts."
       },
       {
         "id": "MAG-000018",
@@ -1655,7 +1655,7 @@
         "subkind": "ritual",
         "name": "Attunement Rite 5",
         "status": "sanctioned",
-        "description": "Performed during critical junctures—seasonal transitions, Cooling Interludes, or crisis responses—Attunement Rite 5 reinforces social bonds while satisfying Charter requirements for attunement verification. Elders teach youngsters the proper forms, harmonizing with ambient attunement."
+        "description": "Performed during critical junctures—seasonal transitions, Cooling Interludes, or crisis responses—Attunement Rite 5 reinforces social bonds while satisfying Charter requirements for attunement verification. Elders teach youngsters the proper forms."
       },
       {
         "id": "MAG-000024",
@@ -1711,7 +1711,7 @@
         "subkind": "forbidden_technique",
         "name": "Void Touch 6",
         "status": "sanctioned",
-        "description": "Void Touch 6 exists at the boundary of what custodian protocols permit, its power undeniable yet its risks equally clear. The Charter classifies it as forbidden, though knowledge of its principles persists in restricted archives, harmonizing with ambient prism dust."
+        "description": "Void Touch 6 exists at the boundary of what custodian protocols permit, its power undeniable yet its risks equally clear. The Charter classifies it as forbidden, though knowledge of its principles persists in restricted archives."
       }
     ],
     "faith": [
@@ -1979,7 +1979,7 @@
         "subkind": "insurgency",
         "name": "Guerrilla Force",
         "status": "stalemated",
-        "description": "Whether motivated by ideology, independence, or revenge, Guerrilla Force demonstrates that conventional force cannot guarantee control. Its persistence reflects genuine support among affected populations or effective coercion of neutrals. Much of the conflict centers on Kaleidos."
+        "description": "Whether motivated by ideology, independence, or revenge, Guerrilla Force demonstrates that conventional force cannot guarantee control. Its persistence reflects genuine support among affected populations or effective coercion of neutrals."
       },
       {
         "id": "CON-000004",
@@ -2003,7 +2003,7 @@
         "subkind": "shadow_conflict",
         "name": "Covert Operations",
         "status": "frozen",
-        "description": "Covert Operations occurs beneath public awareness: assassinations, sabotage, data theft, and influence operations that shape events without acknowledgment. Few outside intelligence circles comprehend its scope. The conflict remains unresolved but neither side currently has capacity or will to resume hostilities. Much of the conflict centers on Echo Satellite."
+        "description": "Covert Operations occurs beneath public awareness: assassinations, sabotage, data theft, and influence operations that shape events without acknowledgment. Few outside intelligence circles comprehend its scope. The conflict remains unresolved but neither side currently has capacity or will to resume hostilities."
       },
       {
         "id": "CON-000007",
@@ -2011,7 +2011,7 @@
         "subkind": "war",
         "name": "Regional Conflict 2",
         "status": "brewing",
-        "description": "The causes behind Regional Conflict 2 trace to competing resonance claims, territorial disputes, or ideological divisions that peace conferences could not reconcile. Custodian monitoring prevents escalation to Prohibited Capabilities thresholds. Much of the conflict centers on Kyther Range."
+        "description": "The causes behind Regional Conflict 2 trace to competing resonance claims, territorial disputes, or ideological divisions that peace conferences could not reconcile. Custodian monitoring prevents escalation to Prohibited Capabilities thresholds."
       },
       {
         "id": "CON-000008",
@@ -2043,7 +2043,7 @@
         "subkind": "proxy_war",
         "name": "Faction Proxy 2",
         "status": "stalemated",
-        "description": "Regional disputes become theaters for larger power struggles through Faction Proxy 2, as external factions provide weapons, resources, and advisors to local allies. Resolution requires addressing both local grievances and external interference. Much of the conflict centers on Hoarfrost Urban."
+        "description": "Regional disputes become theaters for larger power struggles through Faction Proxy 2, as external factions provide weapons, resources, and advisors to local allies. Resolution requires addressing both local grievances and external interference."
       },
       {
         "id": "CON-000012",
@@ -2067,7 +2067,7 @@
         "subkind": "rebellion",
         "name": "Uprising Force 3",
         "status": "brewing",
-        "description": "Uprising Force 3 represents organized resistance against perceived oppression, its participants risking custodian sanctions for what they view as necessary political change. Established authorities struggle to distinguish legitimate grievance from dangerous destabilization. Much of the conflict centers on Grove Heights."
+        "description": "Uprising Force 3 represents organized resistance against perceived oppression, its participants risking custodian sanctions for what they view as necessary political change. Established authorities struggle to distinguish legitimate grievance from dangerous destabilization."
       },
       {
         "id": "CON-000015",
@@ -2083,7 +2083,7 @@
         "subkind": "cold_war",
         "name": "Tense Standoff 3",
         "status": "won",
-        "description": "Tense Standoff 3 manifests as shadow operations, economic warfare, and propaganda campaigns while both sides avoid open hostilities. The specter of custodian intervention paradoxically enables this tense stalemate. Much of the conflict centers on Prism Dust Emporium."
+        "description": "Tense Standoff 3 manifests as shadow operations, economic warfare, and propaganda campaigns while both sides avoid open hostilities. The specter of custodian intervention paradoxically enables this tense stalemate."
       },
       {
         "id": "CON-000017",
@@ -2115,7 +2115,7 @@
         "subkind": "rebellion",
         "name": "Rebel Alliance 4",
         "status": "brewing",
-        "description": "Rebel Alliance 4 represents organized resistance against perceived oppression, its participants risking custodian sanctions for what they view as necessary political change. Established authorities struggle to distinguish legitimate grievance from dangerous destabilization. Much of the conflict centers on Verge Station."
+        "description": "Rebel Alliance 4 represents organized resistance against perceived oppression, its participants risking custodian sanctions for what they view as necessary political change. Established authorities struggle to distinguish legitimate grievance from dangerous destabilization."
       },
       {
         "id": "CON-000021",
@@ -2139,7 +2139,7 @@
         "subkind": "proxy_war",
         "name": "Indirect Conflict 4",
         "status": "brewing",
-        "description": "Regional disputes become theaters for larger power struggles through Indirect Conflict 4, as external factions provide weapons, resources, and advisors to local allies. Resolution requires addressing both local grievances and external interference. Much of the conflict centers on Checkpoint Alpha."
+        "description": "Regional disputes become theaters for larger power struggles through Indirect Conflict 4, as external factions provide weapons, resources, and advisors to local allies. Resolution requires addressing both local grievances and external interference."
       },
       {
         "id": "CON-000024",
@@ -2147,7 +2147,7 @@
         "subkind": "shadow_conflict",
         "name": "Under Surface 4",
         "status": "brewing",
-        "description": "Under Surface 4 occurs beneath public awareness: assassinations, sabotage, data theft, and influence operations that shape events without acknowledgment. Few outside intelligence circles comprehend its scope. Much of the conflict centers on Checkpoint Alpha."
+        "description": "Under Surface 4 occurs beneath public awareness: assassinations, sabotage, data theft, and influence operations that shape events without acknowledgment. Few outside intelligence circles comprehend its scope."
       },
       {
         "id": "CON-000025",
@@ -2155,7 +2155,7 @@
         "subkind": "war",
         "name": "Resource War 5",
         "status": "brewing",
-        "description": "The causes behind Resource War 5 trace to competing resonance claims, territorial disputes, or ideological divisions that peace conferences could not reconcile. Custodian monitoring prevents escalation to Prohibited Capabilities thresholds. Much of the conflict centers on Resonance Tear."
+        "description": "The causes behind Resource War 5 trace to competing resonance claims, territorial disputes, or ideological divisions that peace conferences could not reconcile. Custodian monitoring prevents escalation to Prohibited Capabilities thresholds."
       },
       {
         "id": "CON-000026",
@@ -2171,7 +2171,7 @@
         "subkind": "insurgency",
         "name": "Underground Movement 5",
         "status": "brewing",
-        "description": "Whether motivated by ideology, independence, or revenge, Underground Movement 5 demonstrates that conventional force cannot guarantee control. Its persistence reflects genuine support among affected populations or effective coercion of neutrals. Much of the conflict centers on Resonance Tear."
+        "description": "Whether motivated by ideology, independence, or revenge, Underground Movement 5 demonstrates that conventional force cannot guarantee control. Its persistence reflects genuine support among affected populations or effective coercion of neutrals."
       },
       {
         "id": "CON-000028",
@@ -2179,7 +2179,7 @@
         "subkind": "cold_war",
         "name": "Silent Conflict 5",
         "status": "brewing",
-        "description": "Silent Conflict 5 manifests as shadow operations, economic warfare, and propaganda campaigns while both sides avoid open hostilities. The specter of custodian intervention paradoxically enables this tense stalemate. Much of the conflict centers on Sacred Circle."
+        "description": "Silent Conflict 5 manifests as shadow operations, economic warfare, and propaganda campaigns while both sides avoid open hostilities. The specter of custodian intervention paradoxically enables this tense stalemate."
       },
       {
         "id": "CON-000029",

@@ -28,9 +28,24 @@ class BeatTrackerNode extends LlmClassifierNode<BeatTracker> {
   }
 
   #applyDecision(context: GraphContext, result: BeatTracker): GraphContext {
+    const loreTags = new Set<string>();
+    const anchorId = context.chronicleState.chronicle.anchorEntityId;
+    if (anchorId) {
+      loreTags.add(`lore:anchor:${anchorId}`);
+    }
+    for (const entityId of context.loreContext?.focusEntities ?? []) {
+      loreTags.add(`lore:entity:${entityId}`);
+    }
+    for (const tag of context.loreContext?.focusTags ?? []) {
+      loreTags.add(`lore:tag:${tag}`);
+    }
+
     return {
       ...context,
-      beatTracker: result
+      beatTracker: {
+        ...result,
+        tags: Array.from(loreTags),
+      }
     };
   }
 

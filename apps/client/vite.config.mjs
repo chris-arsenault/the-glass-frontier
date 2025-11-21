@@ -24,6 +24,8 @@ const chroniclePort = Number(process.env.CHRONICLE_API_PORT ?? process.env.NARRA
 const gmPort = Number(process.env.GM_API_PORT ?? 7001);
 const promptPort = Number(process.env.PROMPT_API_PORT ?? 7400);
 const locationPort = Number(process.env.LOCATION_API_PORT ?? 7300);
+const worldSchemaPort = Number(process.env.WORLD_SCHEMA_API_PORT ?? 4015);
+const atlasPort = Number(process.env.ATLAS_API_PORT ?? 4016);
 
 const proxy = {
   '/chronicle': {
@@ -45,6 +47,16 @@ const proxy = {
     target: buildTarget(gmPort),
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/gm/, ''),
+  },
+  '/world-schema-api': {
+    target: buildTarget(worldSchemaPort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/world-schema-api/, ''),
+  },
+  '/atlas-api': {
+    target: buildTarget(atlasPort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/atlas-api/, ''),
   },
 };
 

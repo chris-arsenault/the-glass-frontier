@@ -480,4 +480,23 @@ describe('WorldStateStore', () => {
     expect(state?.turnSequence).toBe(1);
     expect(state?.turns.map((t) => t.turnSequence)).toEqual([0, 1]);
   });
+
+  it('persists chronicle anchor entities', async () => {
+    const anchor = await worldState.world.upsertHardState({
+      kind: 'location',
+      name: 'Anchor Site',
+      status: 'known',
+      subkind: 'site',
+    });
+    const location = await worldState.locations.upsertLocation({ kind: 'region', name: 'Anchor Location' });
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      anchorEntityId: anchor.id,
+      locationId: location.id,
+      playerId: TEST_PLAYER_ID,
+      title: 'Anchored Chronicle',
+    });
+    const retrieved = await worldState.chronicles.getChronicle(chronicle.id);
+
+    expect(retrieved?.anchorEntityId).toBe(anchor.id);
+  });
 });

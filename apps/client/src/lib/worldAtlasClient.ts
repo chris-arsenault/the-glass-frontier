@@ -97,4 +97,19 @@ export const worldAtlasClient = {
     const res = await fetch(`${API_BASE}/fragments/${id}`, { method: 'DELETE' });
     await handle(res);
   },
+
+  async startChronicle(input: {
+    playerId: string;
+    anchorEntityId: string;
+    locationId: string;
+    title: string;
+    characterId?: string;
+  }) {
+    const res = await fetch(`${API_BASE}/chronicles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    return handle(res);
+  },
 };

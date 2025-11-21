@@ -194,5 +194,12 @@
     "summary": "World schema editor and API",
     "details": "Added a moderation page to manage world kinds, subkinds, statuses, and relationship rules, plus a dedicated world-schema API that surfaces the schema and allows updates backed by database constraints.",
     "type": "feature"
+  },
+  {
+    "id": "2025-11-27-world-atlas-anchor-chronicle",
+    "releasedAt": "2025-11-27",
+    "summary": "World Atlas with anchored chronicles",
+    "details": "Introduced the World Atlas wiki page for entities with editable hard state, relations, and lore, added anchor-aware chronicles via Atlas API, and exposed narrative anchor fragments to the GM prompts for better cohesion.",
+    "type": "feature"
   }
 ]

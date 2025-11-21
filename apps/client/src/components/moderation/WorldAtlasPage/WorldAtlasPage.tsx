@@ -1,6 +1,6 @@
 import type { HardState, HardStateLink, LoreFragment, WorldSchema } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
@@ -17,11 +17,19 @@ type FragmentDraft = {
 
 const toLine = (items: string[]) => items.join(', ');
 
+const isUuid = (value: string): boolean =>
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
+    value
+  );
+
 export function WorldAtlasPage(): JSX.Element {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const canModerate = useCanModerate();
   const chronicleId = useChronicleStore((state) => state.chronicleId);
+  const playerId = useChronicleStore((state) => state.playerId);
   const [entity, setEntity] = useState<HardState | null>(null);
+  const [entities, setEntities] = useState<HardState[]>([]);
   const [fragments, setFragments] = useState<LoreFragment[]>([]);
   const [schema, setSchema] = useState<WorldSchema | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +44,25 @@ export function WorldAtlasPage(): JSX.Element {
     relationship: '',
     targetId: '',
   });
+  const [startTitle, setStartTitle] = useState('');
+  const [startLocationId, setStartLocationId] = useState('');
 
   const load = async () => {
-    if (!slug) return;
+    if (!slug) {
+      setError(null);
+      setEntity(null);
+      setFragments([]);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
+      if (!isUuid(slug)) {
+        setError(null);
+        setEntity(null);
+        setFragments([]);
+        return;
+      }
       const [details, schemaResult] = await Promise.all([
         worldAtlasClient.getEntity(slug),
         worldSchemaClient.getSchema(),
@@ -49,6 +70,7 @@ export function WorldAtlasPage(): JSX.Element {
       setEntity(details.entity);
       setFragments(details.fragments);
       setSchema(schemaResult);
+      setStartTitle(details.entity.name);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load entity');
     } finally {
@@ -59,6 +81,23 @@ export function WorldAtlasPage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [slug]);
+
+  useEffect(() => {
+    if (entities.length > 0 || isLoading || schema) {
+      return;
+    }
+    setIsLoading(true);
+    void worldAtlasClient
+      .listEntities()
+      .then((list) => {
+        setEntities(list);
+        if (!schema) {
+          void worldSchemaClient.getSchema().then(setSchema).catch(() => {});
+        }
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load entities'))
+      .finally(() => setIsLoading(false));
+  }, [entities.length, isLoading, schema]);
 
   const statusOptions = useMemo(() => {
     if (!entity || !schema) return [];
@@ -182,9 +221,30 @@ export function WorldAtlasPage(): JSX.Element {
     }
   };
 
-  if (!slug) {
-    return <Navigate to="/" replace />;
-  }
+  const handleStartChronicle = async () => {
+    if (!entity) {
+      return;
+    }
+    if (!playerId) {
+      setError('Player identity unavailable.');
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      const chronicle = await worldAtlasClient.startChronicle({
+        anchorEntityId: entity.id,
+        locationId: startLocationId,
+        playerId,
+        title: startTitle || entity.name,
+      });
+      navigate(`/chron/${chronicle.id}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to start chronicle');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="atlas-page">
@@ -210,8 +270,52 @@ export function WorldAtlasPage(): JSX.Element {
         </div>
       ) : null}
 
-      {entity ? (
+      {!slug ? (
+        <div className="atlas-list">
+          <h2>Select an entity</h2>
+          <div className="atlas-list-grid">
+            {entities.map((item) => (
+              <button
+                key={item.id}
+                className="atlas-list-card"
+                type="button"
+                onClick={() => navigate(`/atlas/${item.id}`)}
+              >
+                <p className="atlas-list-kind">{item.kind}</p>
+                <p className="atlas-list-name">{item.name}</p>
+                <p className="atlas-list-meta">
+                  {item.subkind ? `${item.subkind} · ` : ''}
+                  {item.status ?? '—'}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : entity ? (
         <div className="atlas-layout">
+          <section className="atlas-start">
+            <div>
+              <h3>Start chronicle with this anchor</h3>
+              <p>Creates a new chronicle focused on this entity. Location is required.</p>
+            </div>
+            <div className="atlas-start-fields">
+              <label>
+                Title
+                <input value={startTitle} onChange={(e) => setStartTitle(e.target.value)} />
+              </label>
+              <label>
+                Location ID
+                <input
+                  value={startLocationId}
+                  onChange={(e) => setStartLocationId(e.target.value)}
+                  placeholder="Location UUID"
+                />
+              </label>
+              <button type="button" onClick={() => void handleStartChronicle()} disabled={isSaving || !startLocationId}>
+                Start chronicle
+              </button>
+            </div>
+          </section>
           <article className="atlas-article">
             <header className="atlas-article-head">
               <div>

@@ -82,6 +82,7 @@ class PostgresWorldStateStore implements WorldStateStore {
     status?: Chronicle['status'];
     seedText?: string | null;
     beatsEnabled?: boolean;
+    anchorEntityId?: string | null;
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
@@ -101,10 +102,12 @@ class PostgresWorldStateStore implements WorldStateStore {
       status?: Chronicle['status'];
       seedText?: string | null;
       beatsEnabled?: boolean;
+      anchorEntityId?: string | null;
     },
     chronicleId: string
   ): Chronicle {
     return normalizeChronicle({
+      anchorEntityId: params.anchorEntityId ?? undefined,
       beats: [],
       beatsEnabled: params.beatsEnabled ?? true,
       characterId: params.characterId,
@@ -219,11 +222,14 @@ class PostgresWorldStateStore implements WorldStateStore {
     await withTransaction(this.#pool, async (client) => {
       await this.#assertPlayerExists(normalized.playerId, client);
       await this.#ensureLocationExists(client, normalized.locationId, normalized.title);
+      if (isNonEmptyString(normalized.anchorEntityId)) {
+        await this.#assertAnchorExists(client, normalized.anchorEntityId);
+      }
       await this.#graph.upsertNode(client, normalized.id, 'chronicle', normalized);
       await client.query(
         `INSERT INTO chronicle (
-           id, title, primary_char_id, status, player_id, location_id, seed_text, beats_enabled, created_at, updated_at
-         ) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::uuid, $7, $8, now(), now())
+           id, title, primary_char_id, status, player_id, location_id, seed_text, beats_enabled, anchor_entity_id, created_at, updated_at
+         ) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::uuid, $7, $8, $9::uuid, now(), now())
          ON CONFLICT (id) DO UPDATE
          SET title = EXCLUDED.title,
              primary_char_id = EXCLUDED.primary_char_id,
@@ -232,6 +238,7 @@ class PostgresWorldStateStore implements WorldStateStore {
              location_id = EXCLUDED.location_id,
              seed_text = EXCLUDED.seed_text,
              beats_enabled = EXCLUDED.beats_enabled,
+             anchor_entity_id = EXCLUDED.anchor_entity_id,
              updated_at = now()`,
         [
           normalized.id,
@@ -242,6 +249,7 @@ class PostgresWorldStateStore implements WorldStateStore {
           normalized.locationId,
           normalized.seedText ?? null,
           normalized.beatsEnabled ?? true,
+          normalized.anchorEntityId ?? null,
         ]
       );
     });
@@ -250,7 +258,7 @@ class PostgresWorldStateStore implements WorldStateStore {
 
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
     const result = await this.#pool.query(
-      `SELECT n.props
+      `SELECT n.props, c.anchor_entity_id
        FROM chronicle c
        JOIN node n ON n.id = c.id
        WHERE c.id = $1::uuid`,
@@ -260,7 +268,11 @@ class PostgresWorldStateStore implements WorldStateStore {
     if (!row) {
       return null;
     }
-    return normalizeChronicle(row.props as Chronicle);
+    const normalizedProps = normalizeChronicle(row.props as Chronicle);
+    return normalizeChronicle({
+      ...normalizedProps,
+      anchorEntityId: row.anchor_entity_id ?? normalizedProps.anchorEntityId,
+    });
   }
 
   async listChroniclesByPlayer(playerId: string): Promise<Chronicle[]> {
@@ -492,6 +504,13 @@ class PostgresWorldStateStore implements WorldStateStore {
        ON CONFLICT (id) DO NOTHING`,
       [locationId, slug, name ?? 'Unknown Location', 'locale', name ?? null, []]
     );
+  }
+
+  async #assertAnchorExists(client: PoolClient, anchorEntityId: string): Promise<void> {
+    const lookup = await client.query('SELECT 1 FROM hard_state WHERE id = $1::uuid', [anchorEntityId]);
+    if (!lookup.rowCount) {
+      throw new Error(`Anchor entity ${anchorEntityId} not found`);
+    }
   }
 
 }

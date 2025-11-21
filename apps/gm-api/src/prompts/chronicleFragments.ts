@@ -19,6 +19,8 @@ import {
 export type ChronicleFragmentTypes =
   | 'character'
   | 'location'
+  | 'anchor'
+  | 'lore'
   | 'beats'
   | 'intent'
   | 'gm-response'
@@ -34,20 +36,20 @@ export type ChronicleFragmentTypes =
 
 // prettier-ignore
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
-  'action-resolver': ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
-  'beat-tracker': ['intent', 'beats'],
-  'check-planner': ['intent', 'character', 'location'],
-  'clarification-responder': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
-  'gm-summary': ['intent', 'character', 'skill-check', 'wrap'],
-  'inquiry-describer': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
-  'intent-beat-detector': ['intent', 'beats'],
+  'action-resolver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  'beat-tracker': ['intent', 'beats', 'lore'],
+  'check-planner': ['intent', 'character', 'location', 'lore'],
+  'clarification-responder': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
+  'gm-summary': ['intent', 'character', 'skill-check', 'lore', 'wrap'],
+  'inquiry-describer': ['recent-events', 'tone', 'intent', 'character', 'lore', 'location', 'inventory-detail', 'seed'],
+  'intent-beat-detector': ['intent', 'beats', 'lore'],
   'intent-classifier': ['character', 'location', 'beats', 'wrap'],
-  'inventory-delta': ['intent', 'user-message', 'inventory'],
-  'location-delta': ['intent', 'user-message', 'location-detail'],
-  'planning-narrator': ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
-  'possibility-advisor': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
-  'reflection-weaver': ['recent-events', 'tone', 'intent', 'character', 'location', 'inventory-detail', 'seed'],
-  'wrap-resolver': ['recent-events', 'tone', 'intent', 'character', 'skill-check', 'location', 'inventory-detail', 'wrap', 'seed'],
+  'inventory-delta': ['intent', 'user-message', 'inventory', 'lore'],
+  'location-delta': ['intent', 'user-message', 'location-detail', 'lore'],
+  'planning-narrator': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  'possibility-advisor': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
+  'reflection-weaver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
+  'wrap-resolver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'wrap', 'seed'],
 };
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
@@ -59,6 +61,8 @@ const fragmentHandlers: Record<ChronicleFragmentTypes, FragmentHandler> = {
   intent: intentFragment,
   inventory: inventoryFragment,
   'inventory-detail': inventoryDetailFragment,
+  anchor: anchorFragment,
+  lore: loreFragment,
   location: locationFragment,
   'location-detail': locationDetailFragment,
   'recent-events': recentEventsFragment,
@@ -84,6 +88,60 @@ function userMessageFragment(context: GraphContext): string {
 
 function characterFragment(context: GraphContext): Record<string, unknown> {
   return formatCharacter(context.chronicleState.character);
+}
+
+async function anchorFragment(context: GraphContext): Promise<Record<string, unknown>> {
+  const anchorId = context.chronicleState.chronicle.anchorEntityId;
+  if (!isNonEmptyString(anchorId)) {
+    return { anchor: null };
+  }
+  try {
+    const entity = await context.worldSchemaStore.getHardState({ id: anchorId });
+    if (!entity) {
+      return { anchor: null };
+    }
+    const fragments = await context.worldSchemaStore.listLoreFragmentsByEntity({
+      entityId: anchorId,
+      limit: 5,
+    });
+    return {
+      anchor: {
+        id: entity.id,
+        name: entity.name,
+        kind: entity.kind,
+        subkind: entity.subkind ?? null,
+        status: entity.status ?? null,
+        relationships: entity.links?.length ?? 0,
+        tags: Array.from(new Set(fragments.flatMap((f) => f.tags ?? []))),
+        recentLore: fragments.map((fragment) => ({
+          id: fragment.id,
+          title: fragment.title,
+          tags: fragment.tags ?? [],
+          prose: fragment.prose,
+        })),
+      },
+    };
+  } catch {
+    return { anchor: null };
+  }
+}
+
+function loreFragment(context: GraphContext): Array<{
+  id: string;
+  title: string;
+  summary: string;
+  tags: string[];
+  entityId: string;
+  score: number;
+}> {
+  return (context.loreContext?.offered ?? []).map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    summary: entry.summary,
+    tags: entry.tags,
+    entityId: entry.entityId,
+    score: entry.score,
+  }));
 }
 
 async function locationFragment(context: GraphContext): Promise<Record<string, unknown>> {

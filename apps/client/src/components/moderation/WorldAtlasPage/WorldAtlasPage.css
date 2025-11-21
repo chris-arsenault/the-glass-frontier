@@ -27,6 +27,57 @@
   grid-template-columns: 1fr;
 }
 
+.atlas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.atlas-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.atlas-list-card {
+  text-align: left;
+  background: #0c111a;
+  border: 1px solid #1f2a3a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #e8ecf5;
+  cursor: pointer;
+}
+
+.atlas-list-kind {
+  color: #8aa2c3;
+  margin: 0;
+}
+
+.atlas-list-name {
+  margin: 0.25rem 0;
+  font-weight: 700;
+}
+
+.atlas-list-meta {
+  margin: 0;
+  color: #9fb2cf;
+}
+
+.atlas-start {
+  border: 1px dashed #25354a;
+  padding: 1rem;
+  border-radius: 10px;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.atlas-start-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.5rem;
+}
+
 .atlas-article {
   background: #0c111a;
   border: 1px solid #1c2737;

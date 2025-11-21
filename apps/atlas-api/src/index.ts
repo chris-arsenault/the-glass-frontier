@@ -3,10 +3,15 @@ import express from 'express';
 import { z } from 'zod';
 
 import { WorldState } from '@glass-frontier/worldstate';
+import { log } from '@glass-frontier/utils';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use((req, _res, next) => {
+  log('info', 'atlas-api request', { method: req.method, path: req.path });
+  next();
+});
 
 const worldState = WorldState.create();
 const world = worldState.world;
@@ -50,7 +55,12 @@ app.get('/entities', async (req, res) => {
 
 app.get('/entities/:id', async (req, res) => {
   try {
-    const entity = await world.getHardState({ id: req.params.id });
+    const parsedId = z.string().uuid().safeParse(req.params.id);
+    if (!parsedId.success) {
+      res.status(400).json({ error: 'Invalid entity id' });
+      return;
+    }
+    const entity = await world.getHardState({ id: parsedId.data });
     if (!entity) {
       res.status(404).json({ error: 'Not found' });
       return;
@@ -163,6 +173,31 @@ app.delete('/fragments/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to delete fragment';
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post('/chronicles', async (req, res) => {
+  try {
+    const input = z
+      .object({
+        playerId: z.string().min(1),
+        title: z.string().min(1),
+        locationId: z.string().uuid(),
+        anchorEntityId: z.string().uuid(),
+        characterId: z.string().uuid().optional(),
+      })
+      .parse(req.body);
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      playerId: input.playerId,
+      locationId: input.locationId,
+      characterId: input.characterId,
+      title: input.title,
+      anchorEntityId: input.anchorEntityId,
+    });
+    res.json(chronicle);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create chronicle';
     res.status(400).json({ error: message });
   }
 });

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Metadata } from '../Metadata';
 import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
+import { LoreFocus } from '../world/LoreFocus';
 
 export const Chronicle = z.object({
   beats: z.array(ChronicleBeat).default([]),
@@ -11,6 +12,8 @@ export const Chronicle = z.object({
   id: z.string().min(1),
   locationId: z.string().min(1),
   playerId: z.string().min(1),
+  anchorEntityId: z.string().min(1).optional(),
+  loreFocus: LoreFocus.optional(),
   metadata: Metadata.optional(),
   seedText: z.string().optional(),
   status: z.enum(['open', 'closed']).default('open'),

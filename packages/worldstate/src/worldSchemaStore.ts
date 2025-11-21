@@ -558,6 +558,16 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     }
   }
 
+  async #assertKind(executor: PoolClient, kind: HardStateKind): Promise<void> {
+    const result = await executor.query(
+      `SELECT 1 FROM world_kind WHERE id = $1`,
+      [kind]
+    );
+    if (!result.rowCount) {
+      throw new Error(`Hard state kind ${kind} is not configured`);
+    }
+  }
+
   async #syncRelationships(
     executor: PoolClient,
     entityId: string,

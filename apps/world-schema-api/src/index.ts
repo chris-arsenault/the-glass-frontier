@@ -3,10 +3,15 @@ import express from 'express';
 import { z } from 'zod';
 
 import { WorldState } from '@glass-frontier/worldstate';
+import { log } from '@glass-frontier/utils';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use((req, _res, next) => {
+  log('info', 'world-schema-api request', { method: req.method, path: req.path });
+  next();
+});
 
 const worldState = WorldState.create();
 const store = worldState.world;
