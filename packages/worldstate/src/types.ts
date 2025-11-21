@@ -1,15 +1,16 @@
 import type {
+  Attribute,
   Character,
   Chronicle,
+  LocationBreadcrumbEntry,
+  LocationEdge,
   LocationEdgeKind,
   LocationEvent,
-  LocationGraphSnapshot,
-  LocationPlan,
+  LocationNeighbors,
   LocationPlace,
   LocationState,
   LocationSummary,
   Turn,
-  Attribute,
 } from '@glass-frontier/dto';
 
 export type ChronicleSnapshot = {
@@ -72,6 +73,15 @@ export type LocationGraphStore = {
   }) => Promise<LocationPlace>;
   deleteLocation: (input: { id: string }) => Promise<void>;
 
+  createLocationWithRelationship: (input: {
+    name: string;
+    kind: string;
+    description?: string | null;
+    tags?: string[];
+    anchorId: string;
+    relationship: 'inside' | 'adjacent' | 'linked';
+  }) => Promise<LocationPlace>;
+
   upsertEdge: (input: {
     src: string;
     dst: string;
@@ -85,14 +95,13 @@ export type LocationGraphStore = {
     place: LocationPlace;
     breadcrumb: LocationBreadcrumbEntry[];
     children: LocationPlace[];
-    neighbors: Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>;
+    neighbors: LocationNeighbors;
   }>;
   getLocationChain: (input: { anchorId: string }) => Promise<LocationBreadcrumbEntry[]>;
   getLocationNeighbors: (input: {
     id: string;
-    kind?: LocationEdgeKind;
     limit?: number;
-  }) => Promise<Array<{ edge: LocationEdge; neighbor: LocationPlace; direction: 'out' | 'in' }>>;
+  }) => Promise<LocationNeighbors>;
 
   appendLocationEvents: (input: {
     locationId: string;
@@ -105,58 +114,13 @@ export type LocationGraphStore = {
   }) => Promise<LocationEvent[]>;
   listLocationEvents: (input: { locationId: string }) => Promise<LocationEvent[]>;
 
-  // Legacy-compatible methods still used by upstream services
-  ensureLocation: (input: {
-    locationId?: string;
-    name: string;
-    description?: string;
-    tags?: string[];
-    characterId?: string;
-    kind?: string;
-  }) => Promise<LocationPlace>;
-  getLocationGraph: (locationId: string) => Promise<{ edges: LocationEdge[]; locationId: string; places: LocationPlace[] }>;
-  applyPlan: (input: {
-    locationId: string;
-    characterId: string;
-    plan: LocationPlan;
-  }) => Promise<LocationState | null>;
   getLocationState: (characterId: string) => Promise<LocationState | null>;
-  summarizeCharacterLocation: (input: {
-    locationId: string;
+  moveCharacterToLocation: (input: {
     characterId: string;
-  }) => Promise<LocationSummary | null>;
-  getPlace: (placeId: string) => Promise<LocationPlace | null>;
-  createPlace: (input: {
-    parentId?: string | null;
-    locationId?: string;
-    name: string;
-    kind: string;
-    tags?: string[];
-    description?: string;
-  }) => Promise<LocationPlace>;
-  updatePlace: (input: {
     placeId: string;
-    name?: string;
-    kind?: string;
-    description?: string | null;
-    tags?: string[];
-    canonicalParentId?: string | null;
-  }) => Promise<LocationPlace>;
-  addEdge: (input: {
-    locationId: string;
-    src: string;
-    dst: string;
-    kind: LocationEdgeKind;
-    metadata?: Record<string, unknown>;
-  }) => Promise<void>;
-  removeEdge: (input: {
-    locationId: string;
-    src: string;
-    dst: string;
-    kind: LocationEdgeKind;
-  }) => Promise<void>;
-  createLocationChain: (input: {
-    parentId?: string | null;
-    segments: Array<{ name: string; kind: string; tags?: string[]; description?: string }>;
-  }) => Promise<{ anchor: LocationPlace; created: LocationPlace[] }>;
+    certainty?: LocationState['certainty'];
+    note?: string | null;
+    status?: string[];
+  }) => Promise<LocationState>;
+  getPlace: (placeId: string) => Promise<LocationPlace | null>;
 };

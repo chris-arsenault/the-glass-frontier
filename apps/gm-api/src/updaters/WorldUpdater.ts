@@ -1,4 +1,4 @@
-import type { Character, Chronicle, LocationPlan, LocationPlanOp, LocationSummary } from '@glass-frontier/dto';
+import type { Character, Chronicle, LocationSummary } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 import type { LocationGraphStore, WorldStateStore } from '@glass-frontier/worldstate';
 
@@ -6,7 +6,7 @@ import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
 import { createUpdatedCharacter } from './characterUpdater';
 import { createUpdatedInventory } from './inventoryUpdater';
-import { createLocationPlan } from './locationUpdater';
+import { applyLocationUpdate } from './locationUpdater';
 
 
 export class WorldUpdater {
@@ -27,8 +27,7 @@ export class WorldUpdater {
     nextContext = this.#updateCharacter(nextContext);
     nextContext = this.#updateInventory(nextContext);
     nextContext = this.#updateBeats(nextContext);
-    const locationPlan = await createLocationPlan(nextContext);
-    nextContext = (await this.#saveLocation(nextContext, locationPlan)) ?? nextContext;
+    nextContext = (await this.#updateLocation(nextContext)) ?? nextContext;
 
     await this.#saveCharacter(nextContext.chronicleState.character);
     await this.#saveChronicle(nextContext.chronicleState.chronicle);
@@ -103,20 +102,18 @@ export class WorldUpdater {
     }
   }
 
-  async #saveLocation(context: GraphContext, plan: LocationPlan): Promise<GraphContext | undefined> {
-    const anchorPlaceId =
-      context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
-    if (!isNonEmptyString(anchorPlaceId)) {
-      return context;
-    }
-
+  async #updateLocation(context: GraphContext): Promise<GraphContext | undefined> {
     try {
-      const parentId = context.chronicleState.location?.breadcrumb.at(-2)?.id ?? null;
-      const nextAnchor = await this.#applyPlanWithNewApi(plan, anchorPlaceId, parentId);
-      const summary = await this.#buildLocationSummary(nextAnchor);
+      const locationState = await applyLocationUpdate(context);
+
+      if (!locationState) {
+        return context;
+      }
+
+      const summary = await this.#buildLocationSummary(locationState.anchorPlaceId);
       const updatedChronicle: Chronicle = {
         ...context.chronicleState.chronicle,
-        locationId: nextAnchor,
+        locationId: locationState.locationId,
       };
 
       return {
@@ -128,111 +125,9 @@ export class WorldUpdater {
         },
       };
     } catch (error) {
-      log('error', 'Error in saving location', error);
+      log('error', 'Error updating location', error);
       return context;
     }
-  }
-
-  async #applyPlanWithNewApi(
-    plan: LocationPlan,
-    anchorPlaceId: string,
-    parentPlaceId: string | null
-  ): Promise<string> {
-    if (plan.ops.length === 0) {
-      return anchorPlaceId;
-    }
-    const idMap = new Map<string, string>();
-    await this.#createPlannedPlaces(plan.ops, idMap, parentPlaceId);
-    return this.#applyEdgesAndMoves(plan.ops, idMap, anchorPlaceId, parentPlaceId);
-  }
-
-  #resolvePlaceId(placeId: string, idMap: Map<string, string>): string | undefined {
-    return idMap.get(placeId) ?? placeId;
-  }
-
-  #resolvePlannedParentId(
-    tempId: string,
-    ops: LocationPlan['ops'],
-    idMap: Map<string, string>,
-    fallbackParentId: string | null
-  ): string | null {
-    const edgeOp = ops.find(
-      (candidate): candidate is Extract<LocationPlanOp, { op: 'CREATE_EDGE' }> =>
-        candidate.op === 'CREATE_EDGE' &&
-        candidate.edge.dst === tempId &&
-        candidate.edge.kind === 'CONTAINS'
-    );
-    if (edgeOp === undefined) {
-      return fallbackParentId;
-    }
-    const resolvedSrc = this.#resolvePlaceId(edgeOp.edge.src, idMap);
-    return resolvedSrc ?? fallbackParentId;
-  }
-
-  async #createPlannedPlaces(
-    ops: LocationPlan['ops'],
-    idMap: Map<string, string>,
-    parentPlaceId: string | null
-  ): Promise<void> {
-    for (const op of ops) {
-      if (op.op !== 'CREATE_PLACE') {
-        continue;
-      }
-      const parentId = this.#resolvePlannedParentId(op.place.temp_id, ops, idMap, parentPlaceId);
-      // eslint-disable-next-line no-await-in-loop
-      const place = await this.#locationGraphStore.upsertLocation({
-        description: op.place.description ?? null,
-        kind: op.place.kind,
-        name: op.place.name,
-        parentId: parentId ?? null,
-        tags: op.place.tags,
-      });
-      idMap.set(op.place.temp_id, place.id);
-    }
-  }
-
-  async #applyEdgesAndMoves(
-    ops: LocationPlan['ops'],
-    idMap: Map<string, string>,
-    anchorPlaceId: string,
-    parentPlaceId: string | null
-  ): Promise<string> {
-    let nextAnchorId = anchorPlaceId;
-    for (const op of ops) {
-      switch (op.op) {
-      case 'CREATE_EDGE': {
-        const srcId = this.#resolvePlaceId(op.edge.src, idMap);
-        const dstId = this.#resolvePlaceId(op.edge.dst, idMap);
-        if (!isNonEmptyString(srcId) || !isNonEmptyString(dstId)) {
-          break;
-        }
-        // eslint-disable-next-line no-await-in-loop
-        await this.#locationGraphStore.upsertEdge({
-          dst: dstId,
-          kind: op.edge.kind,
-          src: srcId,
-        });
-        break;
-      }
-      case 'MOVE':
-      case 'ENTER': {
-        const resolvedAnchor = this.#resolvePlaceId(op.dst_place_id, idMap);
-        if (isNonEmptyString(resolvedAnchor)) {
-          nextAnchorId = resolvedAnchor;
-        }
-        break;
-      }
-      case 'EXIT': {
-        if (isNonEmptyString(parentPlaceId)) {
-          nextAnchorId = parentPlaceId;
-        }
-        break;
-      }
-      default:
-        break;
-      }
-    }
-    return nextAnchorId;
   }
 
   async #buildLocationSummary(anchorPlaceId: string): Promise<LocationSummary | null> {

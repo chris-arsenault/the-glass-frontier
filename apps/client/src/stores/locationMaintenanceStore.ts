@@ -1,8 +1,7 @@
 import type {
   LocationBreadcrumbEntry,
-  LocationGraphSnapshot,
-  LocationPlace,
   LocationEdgeKind,
+  LocationPlace,
 } from '@glass-frontier/dto';
 import { create } from 'zustand';
 
@@ -39,20 +38,26 @@ type ChildPlaceInput = {
   tags: string[];
 };
 
+type LocationDetails = {
+  place: LocationPlace;
+  breadcrumb: LocationBreadcrumbEntry[];
+  children: LocationPlace[];
+};
+
 type LocationMaintenanceStoreState = {
   addRelationship: (input: RelationshipInput) => Promise<void>;
   clearError: () => void;
   createChildPlace: (input: ChildPlaceInput) => Promise<void>;
   error: string | null;
   filters: LocationFilters;
-  graph: LocationGraphSnapshot | null;
+  locationDetails: LocationDetails | null;
   isCreatingChild: boolean;
-  isLoadingGraph: boolean;
+  isLoadingDetails: boolean;
   isLoadingRoots: boolean;
   isMutatingEdge: boolean;
   isSavingPlace: boolean;
   loadRoots: () => Promise<void>;
-  refreshGraph: () => Promise<void>;
+  refreshLocationDetails: () => Promise<void>;
   removeRelationship: (input: RelationshipInput) => Promise<void>;
   roots: LocationPlace[];
   selectPlace: (placeId: string) => Promise<void>;
@@ -112,39 +117,41 @@ const normalizeEdgeKind = (value: string): LocationEdgeKind => {
 };
 
 const submitPlaceUpdate = async (placeId: string, payload: UpdatePlacePayload) => {
-  return locationClient.updateLocationPlace.mutate({
+  const place = await locationClient.upsertLocation.mutate({
     description:
       payload.description === null
         ? ''
         : payload.description === undefined
           ? undefined
           : payload.description,
-    kind: normalizeString(payload.kind),
-    name: normalizeString(payload.name),
-    parentId: payload.parentId ?? undefined,
-    placeId,
+    id: placeId,
+    kind: normalizeString(payload.kind) ?? 'locale',
+    name: normalizeString(payload.name) ?? 'Unknown',
+    parentId: payload.parentId ?? null,
     tags: payload.tags ? normalizeTags(payload.tags) : undefined,
   });
+
+  const breadcrumb = await locationClient.getLocationChain.query({ anchorId: place.id });
+  return { breadcrumb, place };
 };
 
 export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>((set, get) => {
   return {
     addRelationship: async ({ kind, targetId }) => {
       const selectedPlaceId = get().selectedPlaceId;
-      const rootId = get().selectedRootId;
-      if (!selectedPlaceId || !rootId) {
+      if (!selectedPlaceId) {
         return;
       }
       set({ error: null, isMutatingEdge: true });
       try {
-        const snapshot = await locationClient.addLocationEdge.mutate({
+        await locationClient.upsertEdge.mutate({
           dst: targetId,
           kind: normalizeEdgeKind(kind),
-          locationId: rootId,
           metadata: { createdVia: 'maintenance-ui' },
           src: selectedPlaceId,
         });
-        set({ graph: snapshot, isMutatingEdge: false });
+        set({ isMutatingEdge: false });
+        await get().refreshLocationDetails();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to add relationship.';
         set({ error: message, isMutatingEdge: false });
@@ -158,7 +165,7 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
       }
       set({ error: null, isCreatingChild: true });
       try {
-        const result = await locationClient.createLocationPlace.mutate({
+        const place = await locationClient.upsertLocation.mutate({
           description: normalizeString(description),
           kind,
           name,
@@ -166,8 +173,8 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
           tags: normalizeTags(tags),
         });
         set({ isCreatingChild: false });
-        await get().refreshGraph();
-        await get().selectPlace(result.place.id);
+        await get().refreshLocationDetails();
+        await get().selectPlace(place.id);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to create location.';
         set({ error: message, isCreatingChild: false });
@@ -175,16 +182,16 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
     },
     error: null,
     filters: defaultFilters,
-    graph: null,
+    locationDetails: null,
     isCreatingChild: false,
-    isLoadingGraph: false,
+    isLoadingDetails: false,
     isLoadingRoots: false,
     isMutatingEdge: false,
     isSavingPlace: false,
     loadRoots: async () => {
       set({ error: null, isLoadingRoots: true });
       try {
-        const roots = await locationClient.listLocations.query({ limit: 100 });
+        const roots = await locationClient.listLocationRoots.query({ limit: 100 });
         set({ isLoadingRoots: false, roots });
         if (roots.length > 0 && !get().selectedRootId) {
           await get().selectRoot(roots[0].id);
@@ -202,42 +209,41 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
           selectedDetail:
             state.selectedDetail?.place.id === placeId ? detail : state.selectedDetail,
         }));
-        await get().refreshGraph();
+        await get().refreshLocationDetails();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to update location.';
         set({ error: message });
         throw error;
       }
     },
-    refreshGraph: async () => {
+    refreshLocationDetails: async () => {
       const rootId = get().selectedRootId;
       if (!rootId) {
         return;
       }
-      set({ error: null, isLoadingGraph: true });
+      set({ error: null, isLoadingDetails: true });
       try {
-        const snapshot = await locationClient.getLocationGraph.query({ locationId: rootId });
-        set({ graph: snapshot, isLoadingGraph: false });
+        const details = await locationClient.getLocationDetails.query({ id: rootId });
+        set({ locationDetails: details, isLoadingDetails: false });
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Failed to load graph.';
-        set({ error: message, isLoadingGraph: false });
+        const message = error instanceof Error ? error.message : 'Failed to load location details.';
+        set({ error: message, isLoadingDetails: false });
       }
     },
     removeRelationship: async ({ kind, targetId }) => {
       const selectedPlaceId = get().selectedPlaceId;
-      const rootId = get().selectedRootId;
-      if (!selectedPlaceId || !rootId) {
+      if (!selectedPlaceId) {
         return;
       }
       set({ error: null, isMutatingEdge: true });
       try {
-        const snapshot = await locationClient.removeLocationEdge.mutate({
+        await locationClient.deleteEdge.mutate({
           dst: targetId,
           kind: normalizeEdgeKind(kind),
-          locationId: rootId,
           src: selectedPlaceId,
         });
-        set({ graph: snapshot, isMutatingEdge: false });
+        set({ isMutatingEdge: false });
+        await get().refreshLocationDetails();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to remove relationship.';
         set({ error: message, isMutatingEdge: false });
@@ -250,8 +256,12 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
     selectPlace: async (placeId) => {
       set({ selectedPlaceId: placeId });
       try {
-        const detail = await locationClient.getLocationPlace.query({ placeId });
-        set({ selectedDetail: detail });
+        const place = await locationClient.getPlace.query({ placeId });
+        if (!place) {
+          throw new Error('Location not found');
+        }
+        const breadcrumb = await locationClient.getLocationChain.query({ anchorId: placeId });
+        set({ selectedDetail: { breadcrumb, place } });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to load location.';
         set({ error: message });
@@ -259,7 +269,7 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
     },
     selectRoot: async (rootId) => {
       set({ selectedDetail: null, selectedPlaceId: null, selectedRootId: rootId });
-      await get().refreshGraph();
+      await get().refreshLocationDetails();
     },
     setFilters: (updates) =>
       set((state) => ({
@@ -274,7 +284,7 @@ export const useLocationMaintenanceStore = create<LocationMaintenanceStoreState>
       try {
         const place = await submitPlaceUpdate(selectedPlaceId, payload);
         set({ isSavingPlace: false, selectedDetail: place });
-        await get().refreshGraph();
+        await get().refreshLocationDetails();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to update location.';
         set({ error: message, isSavingPlace: false });

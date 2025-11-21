@@ -1,5 +1,5 @@
 import type {
-  LocationGraphSnapshot,
+  LocationBreadcrumbEntry,
   LocationPlace,
   ChronicleSeed,
 } from '@glass-frontier/dto';
@@ -56,7 +56,7 @@ export function ChronicleStartWizard() {
 
   const {
     activePlaceId,
-    graph,
+    locationDetails,
     graphError,
     inspector,
     isGraphLoading,
@@ -127,7 +127,7 @@ export function ChronicleStartWizard() {
           rootError={rootError}
           selectedRootId={selectedRootId}
           onSelectRoot={selectRoot}
-          graph={graph}
+          locationDetails={locationDetails}
           graphError={graphError}
           isGraphLoading={isGraphLoading}
           activePlaceId={activePlaceId}
@@ -405,13 +405,19 @@ function Stepper({ currentStep, onNavigate }: StepperProps) {
   );
 }
 
+type LocationDetails = {
+  place: LocationPlace;
+  breadcrumb: LocationBreadcrumbEntry[];
+  children: LocationPlace[];
+};
+
 type LocationStepProps = {
   roots: LocationPlace[];
   isLoadingRoots: boolean;
   rootError: string | null;
   selectedRootId: string | null;
   onSelectRoot: (locationId: string) => void;
-  graph: LocationGraphSnapshot | null;
+  locationDetails: LocationDetails | null;
   graphError: string | null;
   isGraphLoading: boolean;
   activePlaceId: string | null;
@@ -425,7 +431,7 @@ type LocationStepProps = {
 
 function LocationStep({
   activePlaceId,
-  graph,
+  locationDetails,
   graphError,
   inspector,
   isGraphLoading,
@@ -443,15 +449,17 @@ function LocationStep({
   const [search, setSearch] = useState('');
 
   const filteredNodes = useMemo(() => {
-    if (!graph?.places) {
+    if (!locationDetails) {
       return [];
     }
+    // Combine root place with all its children
+    const allPlaces = [locationDetails.place, ...locationDetails.children];
     const value = search.trim().toLowerCase();
     if (!value) {
-      return graph.places;
+      return allPlaces;
     }
-    return graph.places.filter((place) => place.name.toLowerCase().includes(value));
-  }, [graph, search]);
+    return allPlaces.filter((place) => place.name.toLowerCase().includes(value));
+  }, [locationDetails, search]);
 
   return (
     <div className="location-step">
@@ -836,7 +844,7 @@ function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps)
     setIsSaving(true);
     setError(null);
     try {
-      const created = await locationClient.createLocationPlace.mutate({
+      const place = await locationClient.upsertLocation.mutate({
         description: description.trim() || undefined,
         kind: kind.trim() || 'locale',
         name: name.trim(),
@@ -846,7 +854,7 @@ function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps)
           .map((tag) => tag.trim())
           .filter(Boolean),
       });
-      onCreated(created.place.id);
+      onCreated(place.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create location.';
       setError(message);
@@ -946,19 +954,29 @@ function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalPr
     setIsSaving(true);
     setError(null);
     try {
-      const result = await locationClient.createLocationChain.mutate({
-        parentId: parent?.id,
-        segments: segments.map((segment) => ({
+      // Create locations one by one in sequence
+      let currentParentId: string | null = parent?.id ?? null;
+      let lastPlaceId: string | null = null;
+
+      for (const segment of segments) {
+        // eslint-disable-next-line no-await-in-loop
+        const place = await locationClient.upsertLocation.mutate({
           description: segment.description.trim() || undefined,
           kind: segment.kind.trim() || 'locale',
           name: segment.name.trim(),
+          parentId: currentParentId,
           tags: segment.tags
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean),
-        })),
-      });
-      onCreated(result.anchor.id);
+        });
+        lastPlaceId = place.id;
+        currentParentId = place.id;
+      }
+
+      if (lastPlaceId) {
+        onCreated(lastPlaceId);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create chain.';
       setError(message);

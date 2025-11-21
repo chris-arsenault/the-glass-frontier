@@ -133,15 +133,25 @@ class ChronicleClosureProcessor {
   }
 
   async #resolveLocationSummary(snapshot: ChronicleSnapshot): Promise<LocationSummary | null> {
-    const locationId = snapshot.chronicle.locationId;
     const characterId = snapshot.character?.id;
     if (typeof characterId !== 'string' || characterId.trim().length === 0) {
       return null;
     }
-    return this.#locationGraphStore.summarizeCharacterLocation({
-      characterId,
-      locationId,
+    const state = await this.#locationGraphStore.getLocationState(characterId);
+    if (!state) {
+      return null;
+    }
+    const breadcrumb = await this.#locationGraphStore.getLocationChain({
+      anchorId: state.anchorPlaceId,
     });
+    return {
+      anchorPlaceId: state.anchorPlaceId,
+      breadcrumb,
+      certainty: state.certainty,
+      description: undefined,
+      status: state.status ?? [],
+      tags: [],
+    };
   }
 
   async #generateChronicleStorySummary(

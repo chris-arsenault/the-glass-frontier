@@ -1,8 +1,4 @@
-import type {
-  LocationBreadcrumbEntry,
-  LocationGraphSnapshot,
-  LocationPlace,
-} from '@glass-frontier/dto';
+import type { LocationBreadcrumbEntry, LocationPlace } from '@glass-frontier/dto';
 import { useCallback, useEffect, useState } from 'react';
 
 import { locationClient } from '../../../../lib/locationClient';
@@ -14,13 +10,19 @@ import {
 export type LocationInspectorState = {
   place: LocationPlace | null;
   breadcrumb: LocationBreadcrumbEntry[];
-}
+};
+
+type LocationDetails = {
+  place: LocationPlace;
+  breadcrumb: LocationBreadcrumbEntry[];
+  children: LocationPlace[];
+};
 
 export type LocationExplorerState = {
   roots: LocationPlace[];
   rootError: string | null;
   isLoadingRoots: boolean;
-  graph: LocationGraphSnapshot | null;
+  locationDetails: LocationDetails | null;
   graphError: string | null;
   isGraphLoading: boolean;
   activePlaceId: string | null;
@@ -32,21 +34,19 @@ export type LocationExplorerState = {
   selectPlace: (placeId: string) => Promise<void>;
   bootstrapShardLocation: (stack: LocationBreadcrumbEntry[]) => Promise<string | null>;
   refreshRoots: () => Promise<void>;
-}
+};
 
-const buildSelectedLocation = (
-  details: Awaited<ReturnType<typeof locationClient.getLocationPlace.query>>
-): SelectedLocationSummary => ({
-  breadcrumb: details.breadcrumb,
-  id: details.place.id,
-  name: details.place.name,
+const buildSelectedLocation = (place: LocationPlace, breadcrumb: LocationBreadcrumbEntry[]): SelectedLocationSummary => ({
+  breadcrumb,
+  id: place.id,
+  name: place.name,
 });
 
 export const useLocationExplorer = (): LocationExplorerState => {
   const [roots, setRoots] = useState<LocationPlace[]>([]);
   const [rootError, setRootError] = useState<string | null>(null);
   const [isLoadingRoots, setIsLoadingRoots] = useState(false);
-  const [graph, setGraph] = useState<LocationGraphSnapshot | null>(null);
+  const [locationDetails, setLocationDetails] = useState<LocationDetails | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);
   const [isGraphLoading, setIsGraphLoading] = useState(false);
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
@@ -64,9 +64,13 @@ export const useLocationExplorer = (): LocationExplorerState => {
     async (placeId: string) => {
       setActivePlaceId(placeId);
       try {
-        const details = await locationClient.getLocationPlace.query({ placeId });
-        setInspector({ breadcrumb: details.breadcrumb, place: details.place });
-        setSelectedLocation(buildSelectedLocation(details));
+        const place = await locationClient.getPlace.query({ placeId });
+        if (!place) {
+          throw new Error('Location not found');
+        }
+        const breadcrumb = await locationClient.getLocationChain.query({ anchorId: placeId });
+        setInspector({ breadcrumb, place });
+        setSelectedLocation(buildSelectedLocation(place, breadcrumb));
         setGraphError(null);
       } catch (error: unknown) {
         const message =
@@ -84,8 +88,8 @@ export const useLocationExplorer = (): LocationExplorerState => {
       setIsGraphLoading(true);
       setGraphError(null);
       try {
-        const snapshot = await locationClient.getLocationGraph.query({ locationId });
-        setGraph(snapshot);
+        const details = await locationClient.getLocationDetails.query({ id: locationId });
+        setLocationDetails(details);
         setActivePlaceId(locationId);
         await selectPlace(locationId);
       } catch (error: unknown) {
@@ -110,7 +114,7 @@ export const useLocationExplorer = (): LocationExplorerState => {
     setIsLoadingRoots(true);
     setRootError(null);
     try {
-      const locations = await locationClient.listLocations.query({ limit: 100 });
+      const locations = await locationClient.listLocationRoots.query({ limit: 100 });
       setRoots(locations);
       if (!selectedRootId && locations.length) {
         void selectRoot(locations[0].id);
@@ -133,7 +137,7 @@ export const useLocationExplorer = (): LocationExplorerState => {
         return null;
       }
       const knownIndex = [...stack].reverse().findIndex((entry) => entry.id);
-      let parentId: string | undefined;
+      let parentId: string | null = null;
       let baseIndex = 0;
       if (knownIndex >= 0) {
         const realIndex = stack.length - 1 - knownIndex;
@@ -147,18 +151,33 @@ export const useLocationExplorer = (): LocationExplorerState => {
       if (!pending.length) {
         return null;
       }
-      const segments = pending.map((entry) => ({
-        description: undefined,
-        kind: entry.kind,
-        name: entry.name,
-        tags: [],
-      }));
-      const result = await locationClient.createLocationChain.mutate({
-        parentId,
-        segments,
-      });
-      await loadGraph(result.anchor.locationId);
-      return result.anchor.id;
+
+      // Create locations one by one in sequence
+      let currentParentId = parentId;
+      let lastPlaceId: string | null = null;
+
+      for (const entry of pending) {
+        // eslint-disable-next-line no-await-in-loop
+        const place = await locationClient.upsertLocation.mutate({
+          kind: entry.kind,
+          name: entry.name,
+          parentId: currentParentId,
+          tags: [],
+        });
+        lastPlaceId = place.id;
+        currentParentId = place.id;
+      }
+
+      if (lastPlaceId) {
+        // Load the root location details
+        const place = await locationClient.getPlace.query({ placeId: lastPlaceId });
+        if (place) {
+          await loadGraph(place.locationId);
+        }
+        return lastPlaceId;
+      }
+
+      return null;
     },
     [loadGraph]
   );
@@ -166,7 +185,7 @@ export const useLocationExplorer = (): LocationExplorerState => {
   return {
     activePlaceId,
     bootstrapShardLocation,
-    graph,
+    locationDetails,
     graphError,
     inspector,
     isGraphLoading,

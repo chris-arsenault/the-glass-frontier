@@ -1,10 +1,15 @@
-import type { LocationGraphSnapshot, LocationPlace } from '@glass-frontier/dto';
+import type { LocationPlace } from '@glass-frontier/dto';
 import { LocationEdgeKind as LocationEdgeKindEnum } from '@glass-frontier/dto';
 
 import type {
   LocationEdgeKind as LocationEdgeKindType,
   LocationFilters,
 } from '../../../stores/locationMaintenanceStore';
+
+type LocationDetails = {
+  place: LocationPlace;
+  children: LocationPlace[];
+};
 
 export const ROOT_FILTER_VALUE = '__root__';
 export const EDGE_KIND_OPTIONS = LocationEdgeKindEnum.options as readonly LocationEdgeKindType[];
@@ -17,11 +22,13 @@ export const decodeTags = (value: string): string[] =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-export const buildPlaceMap = (graph: LocationGraphSnapshot | null): Map<string, LocationPlace> => {
-  if (!graph) {
+export const buildPlaceMap = (locationDetails: LocationDetails | null): Map<string, LocationPlace> => {
+  if (!locationDetails) {
     return new Map();
   }
-  return new Map(graph.places.map((place) => [place.id, place] as const));
+  // Include root place and all its children
+  const places = [locationDetails.place, ...locationDetails.children];
+  return new Map(places.map((place) => [place.id, place] as const));
 };
 
 export const matchFilters = (

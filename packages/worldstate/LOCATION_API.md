@@ -21,8 +21,8 @@ This is the canonical surface area for location persistence and queries. Legacy 
   * `neighbors`: inbound/outbound edges with neighboring places.
 * `getLocationChain({ anchorId }) -> LocationBreadcrumbEntry[]`
   * Ancestor chain for breadcrumbs.
-* `getLocationNeighbors({ id, kind?, limit? }) -> [{ direction: 'out'|'in', edge, neighbor }]`
-  * Neighbor lookup with optional edge kind filter.
+* `getLocationNeighbors({ id, limit? }) -> { parent, children, siblings, adjacent, links }`
+  * Returns canonical parent, direct children, siblings (shared parent), adjacent places, and link neighbors (dock/teleport).
 
 ## Events
 * `appendLocationEvents`, `listLocationEvents` (unchanged).

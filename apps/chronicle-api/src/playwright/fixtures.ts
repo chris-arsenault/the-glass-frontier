@@ -138,21 +138,20 @@ export const seedPlaywrightLocationGraph = async (
   root: LocationPlace;
   places: Record<string, LocationPlace>;
 }> => {
-  const root = await store.ensureLocation({
-    characterId: options.characterId,
+  const root = await store.upsertLocation({
     description: LOCATION_ROOT_SEED.description,
+    id: options.locationId,
     kind: LOCATION_ROOT_SEED.kind,
-    locationId: options.locationId,
     name: LOCATION_ROOT_SEED.name,
+    parentId: null,
     tags: LOCATION_ROOT_SEED.tags,
   });
 
   const places: Record<string, LocationPlace> = {};
   for (const child of LOCATION_CHILDREN_SEED) {
-    const place = await store.createPlace({
+    const place = await store.upsertLocation({
       description: child.description,
       kind: child.kind,
-      locationId: root.id,
       name: child.name,
       parentId: root.id,
       tags: child.tags,
@@ -164,38 +163,27 @@ export const seedPlaywrightLocationGraph = async (
   const prism = places['Prism Walk'];
 
   if (auric && prism) {
-    await store.addEdge({
+    await store.upsertEdge({
       dst: prism.id,
       kind: 'ADJACENT_TO',
-      locationId: root.id,
       metadata: {},
       src: auric.id,
     });
-    await store.addEdge({
+    await store.upsertEdge({
       dst: auric.id,
       kind: 'ADJACENT_TO',
-      locationId: root.id,
       metadata: {},
       src: prism.id,
     });
   }
 
-  await store.applyPlan({
-    characterId: options.characterId,
-    locationId: root.id,
-    plan: {
-      character_id: options.characterId,
-      notes: 'seed-anchor',
-      ops: auric
-        ? [
-            {
-              dst_place_id: auric.id,
-              op: 'MOVE',
-            },
-          ]
-        : [],
-    },
-  });
+  // Move character to starting location
+  if (auric) {
+    await store.moveCharacterToLocation({
+      characterId: options.characterId,
+      placeId: auric.id,
+    });
+  }
 
   return { root, places };
 };

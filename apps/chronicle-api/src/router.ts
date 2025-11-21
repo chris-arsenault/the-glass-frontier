@@ -222,14 +222,22 @@ async function createChronicleHandler(
   ensureLocationSelection(existingPlace, input);
   const localeDetails = resolveLocaleDetails(input, existingPlace);
 
-  const locationRoot = await ctx.locationGraphStore.ensureLocation({
-    characterId: input.characterId,
+  const locationRoot = await ctx.locationGraphStore.upsertLocation({
     description: localeDetails.description,
+    id: existingPlace?.locationId ?? input.locationId,
     kind: localeDetails.kind,
-    locationId: existingPlace?.locationId ?? input.locationId,
     name: localeDetails.name,
+    parentId: null,
     tags: deriveLocationTags(localeDetails.description),
   });
+
+  // Move character to the location if characterId provided
+  if (isNonEmptyString(input.characterId)) {
+    await ctx.locationGraphStore.moveCharacterToLocation({
+      characterId: input.characterId,
+      placeId: locationRoot.id,
+    });
+  }
 
   const chronicle = await ctx.worldStateStore.ensureChronicle({
     beatsEnabled: input.beatsEnabled,
@@ -329,13 +337,9 @@ async function maybeMoveCharacterToExistingPlace(
   if (place === null) {
     return;
   }
-  await ctx.locationGraphStore.applyPlan({
+  await ctx.locationGraphStore.moveCharacterToLocation({
     characterId,
-    locationId: place.locationId,
-    plan: {
-      character_id: characterId,
-      ops: [{ dst_place_id: place.id, op: 'MOVE' }],
-    },
+    placeId: place.id,
   });
 }
 
@@ -350,11 +354,20 @@ async function augmentChronicleSnapshot(
   const characterId = snapshot.chronicle.characterId ?? snapshot.character?.id ?? null;
   const locationId = snapshot.chronicle.locationId;
   if (isNonEmptyString(characterId) && isNonEmptyString(locationId)) {
-    snapshot.location =
-      (await ctx.locationGraphStore.summarizeCharacterLocation({
-        characterId,
-        locationId,
-      })) ?? null;
+    const state = await ctx.locationGraphStore.getLocationState(characterId);
+    if (state) {
+      const breadcrumb = await ctx.locationGraphStore.getLocationChain({
+        anchorId: state.anchorPlaceId,
+      });
+      snapshot.location = {
+        anchorPlaceId: state.anchorPlaceId,
+        breadcrumb,
+        certainty: state.certainty,
+        description: undefined,
+        status: state.status ?? [],
+        tags: [],
+      };
+    }
   }
   return snapshot;
 }

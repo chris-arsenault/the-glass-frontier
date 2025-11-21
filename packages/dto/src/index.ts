@@ -5,6 +5,7 @@ export * from './locationGraph/LocationState';
 export * from './locationGraph/LocationSummary';
 export * from './locationGraph/LocationEvent';
 export * from './locationGraph/LocationPlan';
+export * from './locationGraph/LocationNeighbors';
 export * from './locationGraph/GraphSnapshot';
 export * from './mechanics';
 export * from './narrative/Chronicle';

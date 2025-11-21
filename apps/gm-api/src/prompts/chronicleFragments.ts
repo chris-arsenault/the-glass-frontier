@@ -1,10 +1,20 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 import type { PromptTemplateId } from '@glass-frontier/dto';
-import { getPromptInput } from '@glass-frontier/gm-api/prompts/locationHelpers';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
-import { trimBeatsList, trimBreadcrumbList, trimSkillsList } from './contextFormaters';
+import {
+  EMPTY_LOCATION,
+  EMPTY_LOCATION_DETAIL,
+  formatCharacter,
+  formatIntent,
+  formatInventoryItem,
+  formatInventoryItemDetail,
+  formatLocationNeighbors,
+  formatSkillCheck,
+  trimBeatsList,
+  trimBreadcrumbList,
+} from './contextFormaters';
 
 export type ChronicleFragmentTypes =
   | 'character'
@@ -73,27 +83,17 @@ function userMessageFragment(context: GraphContext): string {
 }
 
 function characterFragment(context: GraphContext): Record<string, unknown> {
-  return {
-    archetype: context.chronicleState.character?.archetype,
-    attributes: context.chronicleState.character?.attributes,
-    name: context.chronicleState.character?.name,
-    pronouns: context.chronicleState.character?.pronouns,
-    skills: trimSkillsList(Object.values(context.chronicleState.character?.skills ?? {})),
-  };
+  return formatCharacter(context.chronicleState.character);
 }
 
-// eslint-disable-next-line complexity
 async function locationFragment(context: GraphContext): Promise<Record<string, unknown>> {
   const anchorId =
     context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+
   if (!isNonEmptyString(anchorId)) {
-    return {
-      breadcrumbs: [],
-      description: null,
-      name: null,
-      tags: [],
-    };
+    return EMPTY_LOCATION;
   }
+
   try {
     const details = await context.locationGraphStore.getLocationDetails({ id: anchorId });
     return {
@@ -113,36 +113,30 @@ async function locationFragment(context: GraphContext): Promise<Record<string, u
 }
 
 async function locationDetailFragment(context: GraphContext): Promise<unknown> {
-  const promptInput = await getPromptInput(context);
-  if (promptInput === null) {
-    return 'Lost In Space';
+  const anchorId =
+    context.chronicleState.location?.anchorPlaceId ?? context.chronicleState.chronicle.locationId;
+
+  if (!isNonEmptyString(anchorId)) {
+    return EMPTY_LOCATION_DETAIL;
   }
 
-  return {
-    children: promptInput.children,
-    links: promptInput.links,
-    parent: promptInput.parent,
-    self: promptInput.current,
-    siblings: promptInput.adjacent,
-  };
+  try {
+    const neighbors = await context.locationGraphStore.getLocationNeighbors({
+      id: anchorId,
+      limit: 100,
+    });
+    return formatLocationNeighbors(neighbors);
+  } catch {
+    return EMPTY_LOCATION_DETAIL;
+  }
 }
 
 function inventoryFragment(context: GraphContext): Array<Record<string, unknown>> {
-  return (context.chronicleState.character?.inventory ?? []).map((item) => ({
-    kind: item.kind,
-    name: item.name,
-    quantity: item.quantity,
-  }));
+  return (context.chronicleState.character?.inventory ?? []).map(formatInventoryItem);
 }
 
 function inventoryDetailFragment(context: GraphContext): Array<Record<string, unknown>> {
-  return (context.chronicleState.character?.inventory ?? []).map((item) => ({
-    description: item.description,
-    effect: item.effect,
-    kind: item.kind,
-    name: item.name,
-    quantity: item.quantity,
-  }));
+  return (context.chronicleState.character?.inventory ?? []).map(formatInventoryItemDetail);
 }
 
 function beatsFragment(context: GraphContext): unknown {
@@ -150,12 +144,7 @@ function beatsFragment(context: GraphContext): unknown {
 }
 
 function intentFragment(context: GraphContext): Record<string, unknown> {
-  return {
-    beatDirective: context.playerIntent?.beatDirective.summary,
-    summary: context.playerIntent?.intentSummary,
-    targetBeat: context.playerIntent?.beatDirective.targetBeatId,
-    type: context.playerIntent?.intentType,
-  };
+  return formatIntent(context.playerIntent);
 }
 
 function toneFragment(context: GraphContext): string {
@@ -163,12 +152,7 @@ function toneFragment(context: GraphContext): string {
 }
 
 function skillCheckFragment(context: GraphContext): Record<string, unknown> {
-  return {
-    advantage: context.skillCheckResult?.advantage,
-    outcome: context.skillCheckResult?.outcomeTier,
-    riskLevel: context.skillCheckPlan?.riskLevel,
-    skill: context.skillCheckPlan?.skill,
-  };
+  return formatSkillCheck(context.skillCheckPlan, context.skillCheckResult);
 }
 
 function gmResponseFragment(context: GraphContext): string | undefined {

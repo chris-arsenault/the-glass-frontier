@@ -26,14 +26,14 @@ export function LocationMaintenancePage(): JSX.Element {
     createChildPlace,
     error,
     filters,
-    graph,
+    locationDetails,
     isCreatingChild,
-    isLoadingGraph,
+    isLoadingDetails,
     isLoadingRoots,
     isMutatingEdge,
     loadRoots,
     quickUpdatePlace,
-    refreshGraph,
+    refreshLocationDetails,
     removeRelationship,
     roots,
     selectedDetail,
@@ -49,14 +49,14 @@ export function LocationMaintenancePage(): JSX.Element {
       createChildPlace: state.createChildPlace,
       error: state.error,
       filters: state.filters,
-      graph: state.graph,
+      locationDetails: state.locationDetails,
       isCreatingChild: state.isCreatingChild,
-      isLoadingGraph: state.isLoadingGraph,
+      isLoadingDetails: state.isLoadingDetails,
       isLoadingRoots: state.isLoadingRoots,
       isMutatingEdge: state.isMutatingEdge,
       loadRoots: state.loadRoots,
       quickUpdatePlace: state.quickUpdatePlace,
-      refreshGraph: state.refreshGraph,
+      refreshLocationDetails: state.refreshLocationDetails,
       removeRelationship: state.removeRelationship,
       roots: state.roots,
       selectedDetail: state.selectedDetail,
@@ -68,7 +68,7 @@ export function LocationMaintenancePage(): JSX.Element {
     }))
   );
 
-  const placeMap = useMemo(() => buildPlaceMap(graph), [graph]);
+  const placeMap = useMemo(() => buildPlaceMap(locationDetails), [locationDetails]);
   const [relationshipPlaceId, setRelationshipPlaceId] = useState<string | null>(null);
   const [childParentId, setChildParentId] = useState<string | null>(null);
   const [descriptionPlaceId, setDescriptionPlaceId] = useState<string | null>(null);
@@ -188,8 +188,8 @@ export function LocationMaintenancePage(): JSX.Element {
         </div>
         <div className="lm-page-actions">
           <button type="button" onClick={goBackToPlayerSurface}>Back to Chronicle</button>
-          <button type="button" onClick={() => void refreshGraph()} disabled={isLoadingGraph}>
-            {isLoadingGraph ? 'Refreshing…' : 'Refresh Graph'}
+          <button type="button" onClick={() => void refreshLocationDetails()} disabled={isLoadingDetails}>
+            {isLoadingDetails ? 'Refreshing…' : 'Refresh Graph'}
           </button>
         </div>
       </header>
