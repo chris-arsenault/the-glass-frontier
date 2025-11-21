@@ -129,6 +129,12 @@ export const promptRouter = t.router({
       };
     }),
 
+  getPromptTemplate: t.procedure
+    .input(z.object({ playerId: z.string().min(1), templateId: templateIdSchema }))
+    .query(async ({ ctx, input }) =>
+      ctx.templateManager.getTemplate(input.playerId, input.templateId)
+    ),
+
   listPromptTemplates: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
     .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.playerId)),

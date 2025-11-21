@@ -10,9 +10,9 @@ import {
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";
 
-const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
+const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
 if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
-  throw new Error('WORLDSTATE_DATABASE_URL must be configured for the GM API.');
+  throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the GM API.');
 }
 
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });

@@ -86,9 +86,7 @@ class TokenUsageTracker {
 
 const resolveConnectionString = (): string | null => {
   const raw =
-    process.env.WORLDSTATE_DATABASE_URL ??
-    process.env.DATABASE_URL ??
-    'postgres://postgres:postgres@localhost:5432/worldstate';
+    process.env.GLASS_FRONTIER_DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/worldstate';
   const trimmed = raw.trim();
   return trimmed.length > 0 ? trimmed : null;
 };

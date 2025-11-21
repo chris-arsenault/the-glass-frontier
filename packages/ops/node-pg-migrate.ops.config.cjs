@@ -4,10 +4,9 @@ const DEFAULT_CONNECTION_STRING = 'postgres://postgres:postgres@localhost:5432/w
 
 module.exports = {
   dir: 'migrations',
-  migrationTable: 'ops_migrations',
+  'migrations-table': 'ops_migrations',
   databaseUrl:
-    process.env.OPS_DATABASE_URL ??
-    process.env.WORLDSTATE_DATABASE_URL ??
+    process.env.GLASS_FRONTIER_DATABASE_URL ??
     process.env.DATABASE_URL ??
     DEFAULT_CONNECTION_STRING,
 };

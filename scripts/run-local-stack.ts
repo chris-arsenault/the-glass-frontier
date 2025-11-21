@@ -21,7 +21,7 @@ const MOCK_ENV: Record<string, string> = {
   TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
   CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
   LLM_PROXY_ARCHIVE_BUCKET: 'gf-e2e-audit',
-  WORLDSTATE_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
+  GLASS_FRONTIER_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   OPENAI_API_BASE: 'http://localhost:8080/v1',
   OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
@@ -96,6 +96,52 @@ async function waitForWiremockReady(): Promise<void> {
   }
 }
 
+async function waitForPostgresReady(connectionString: string): Promise<void> {
+  const timeoutMs = 30_000;
+  const startTime = Date.now();
+
+  console.log('[run-local-stack] Waiting for PostgreSQL to be ready...');
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      // Get the container name
+      const psResult = await execa('docker-compose', [
+        '-f',
+        'docker-compose.e2e.yml',
+        'ps',
+        '-q',
+        'postgres',
+      ]);
+
+      const containerId = psResult.stdout.trim();
+      if (!containerId) {
+        console.log('[run-local-stack] PostgreSQL container not found, retrying...');
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      // Try pg_isready directly on the container
+      await execa('docker', ['exec', containerId, 'pg_isready', '-U', 'postgres'], {
+        timeout: 3000,
+      });
+
+      console.log('[run-local-stack] PostgreSQL is ready!');
+      return;
+    } catch (error) {
+      // Log error for debugging
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.log(`[run-local-stack] PostgreSQL check failed (${elapsed}s): ${errorMsg}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  throw new Error(
+    `[run-local-stack] PostgreSQL did not become ready within ${timeoutMs / 1000}s.`
+  );
+}
+
 async function main(): Promise<void> {
   process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
@@ -111,6 +157,8 @@ async function main(): Promise<void> {
     resources: ['tcp:4566', 'tcp:5432'],
     timeout: 120_000,
   });
+
+  await waitForPostgresReady(env.GLASS_FRONTIER_DATABASE_URL as string);
 
   if (mode === 'mock-openai') {
     await waitForWiremockReady();

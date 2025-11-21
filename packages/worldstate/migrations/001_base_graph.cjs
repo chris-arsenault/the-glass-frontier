@@ -23,9 +23,11 @@ exports.up = (pgm) => {
 
   pgm.createIndex('edge', ['src_id', 'type'], { name: 'edge_src_type_idx' });
   pgm.createIndex('edge', ['dst_id', 'type'], { name: 'edge_dst_type_idx' });
+  pgm.createIndex('edge', ['src_id', 'dst_id', 'type'], { name: 'edge_src_dst_type_idx', unique: true });
 };
 
 exports.down = (pgm) => {
+  pgm.dropIndex('edge', ['src_id', 'dst_id', 'type'], { ifExists: true, name: 'edge_src_dst_type_idx' });
   pgm.dropIndex('edge', ['dst_id', 'type'], { ifExists: true, name: 'edge_dst_type_idx' });
   pgm.dropIndex('edge', ['src_id', 'type'], { ifExists: true, name: 'edge_src_type_idx' });
   pgm.dropTable('edge', { ifExists: true });

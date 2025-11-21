@@ -56,7 +56,7 @@ exports.up = async (pgm) => {
      WHERE is_active = true`
   );
 
-  await seedOfficialTemplates(pgm);
+  seedOfficialTemplates(pgm);
 };
 
 exports.down = (pgm) => {
@@ -64,8 +64,8 @@ exports.down = (pgm) => {
   pgm.dropTable({ schema: 'app', name: 'prompt_template' }, { ifExists: true });
 };
 
-async function seedOfficialTemplates(pgm) {
-  const templateDir = path.resolve(__dirname, '../../apps/prompt-api/templates');
+function seedOfficialTemplates(pgm) {
+  const templateDir = path.resolve(__dirname, '../templates');
   if (!fs.existsSync(templateDir)) {
     throw new Error(`Prompt template directory not found at ${templateDir}`);
   }
@@ -73,12 +73,15 @@ async function seedOfficialTemplates(pgm) {
   for (const file of files) {
     const id = file.replace(/\.hbs$/, '');
     const body = normalizeTemplateBody(fs.readFileSync(path.join(templateDir, file), 'utf-8'));
-    await pgm.db.query(
+    // Use dollar-quoted strings to avoid escaping issues
+    // Replace single quotes with two single quotes for SQL escaping
+    const escapedId = id.replace(/'/g, "''");
+    const escapedBody = body.replace(/\$/g, '$$$$'); // Escape dollar signs
+    pgm.sql(
       `INSERT INTO app.prompt_template (id, body, updated_at)
-       VALUES ($1, $2, now())
+       VALUES ('${escapedId}', $$${escapedBody}$$, now())
        ON CONFLICT (id) DO UPDATE
-       SET body = EXCLUDED.body, updated_at = now()`,
-      [id, body]
+       SET body = EXCLUDED.body, updated_at = now()`
     );
   }
 }

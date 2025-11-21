@@ -24,7 +24,7 @@ module "chronicle_lambda" {
     NODE_ENV                    = var.environment
     NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX         = "${var.environment}/"
-    WORLDSTATE_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
@@ -64,7 +64,7 @@ module "prompt_api_lambda" {
     DOMAIN_NAME              = local.cloudfront_domain
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    WORLDSTATE_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
     LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
   }
@@ -100,7 +100,7 @@ module "location_api_lambda" {
     DOMAIN_NAME              = local.cloudfront_domain
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    WORLDSTATE_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
   }
 
   http_api_config = {
@@ -134,7 +134,7 @@ module "gm_api_lambda" {
     DOMAIN_NAME                 = local.cloudfront_domain
     NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX         = "${var.environment}/"
-    WORLDSTATE_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
@@ -173,7 +173,7 @@ module "chronicle_closer_lambda" {
     NODE_ENV                 = var.environment
     NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
     NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    WORLDSTATE_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
   }
 }
 

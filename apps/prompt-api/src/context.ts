@@ -1,9 +1,9 @@
 import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
 import { createOpsStore } from '@glass-frontier/ops';
 
-const worldstateDatabaseUrl = process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL;
+const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
 if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
-  throw new Error('WORLDSTATE_DATABASE_URL must be configured for the prompt API.');
+  throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the prompt API.');
 }
 
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });

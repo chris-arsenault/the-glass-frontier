@@ -46,10 +46,9 @@ class ChronicleClosureProcessor {
     locationGraphStore?: LocationStore;
     llmClient?: RetryLLMClient;
   }) {
-    const worldstateDatabaseUrl =
-      process.env.WORLDSTATE_DATABASE_URL ?? process.env.DATABASE_URL ?? '';
+    const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL ?? '';
     if (!options?.worldStateStore && worldstateDatabaseUrl.trim().length === 0) {
-      throw new Error('WORLDSTATE_DATABASE_URL must be configured for the chronicle closer.');
+      throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the chronicle closer.');
     }
 
     this.#locationGraphStore =

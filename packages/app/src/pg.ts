@@ -10,13 +10,10 @@ export type PgOptions = {
 
 export const resolveConnectionString = (options?: PgOptions): string => {
   const candidate =
-    options?.connectionString ??
-    process.env.WORLDSTATE_DATABASE_URL ??
-    process.env.DATABASE_URL ??
-    DEFAULT_CONNECTION_STRING;
+    options?.connectionString ?? process.env.GLASS_FRONTIER_DATABASE_URL ?? DEFAULT_CONNECTION_STRING;
   const trimmed = candidate.trim();
   if (trimmed.length === 0) {
-    throw new Error('WORLDSTATE_DATABASE_URL is required for the app store.');
+    throw new Error('GLASS_FRONTIER_DATABASE_URL is required for the app store.');
   }
   return trimmed;
 };
