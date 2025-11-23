@@ -440,11 +440,10 @@ export function ChronicleOverview({
       if (message.entry.role === 'gm' && message.entityUsage && message.turnSequence) {
         for (const entityUsageEntry of message.entityUsage) {
           // Skip if we've already seen this entity in a more recent turn
-          const key = `${entityUsageEntry.entityId}-${message.turnSequence}`;
-          if (seenEntities.has(key)) {
+          if (!entityUsageEntry.entityId || seenEntities.has(entityUsageEntry.entityId)) {
             continue;
           }
-          seenEntities.add(key);
+          seenEntities.add(entityUsageEntry.entityId);
 
           const entityData = entityMap.get(entityUsageEntry.entityId);
           usage.push({

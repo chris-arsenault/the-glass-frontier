@@ -14,6 +14,7 @@ export function trimSkillsList(skills: Skill[]) {
     return {
       name: s.name,
       tier: s.tier,
+      attribute: s.attribute,
     };
   });
 }

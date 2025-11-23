@@ -26,6 +26,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:update-snapshots": "playwright test -u",
     "local": "tsx scripts/run-local-stack.ts",
+    "local:ai": "tsx scripts/run-local-stack.ts --mode=live-openai",
     "local:e2e": "tsx scripts/run-local-stack.ts --seed=e2e-fixtures",
     "local:fresh": "tsx scripts/run-local-stack.ts --force-reseed",
     "reset:sessions": "tsx scripts/reset-session-data.ts"

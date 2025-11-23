@@ -9,14 +9,19 @@ Do **not** create beats for one-off tasks, momentary hazards, or flavor clues.
 Advance a beat only when narration **meaningfully progresses** its core objective.
 
 ## Resolve
-Resolve a beat when:
-- Narration **clearly ends** it (success or failure), **or**
-- The story has **moved on** and the beat is no longer relevant (“overcome by events”).
+Resolve a beat when **any** condition is met:
+1. Objective achieved → `changeKind: "resolve"`, `status: "succeeded"`
+2. Objective permanently failed → `changeKind: "resolve"`, `status: "failed"`
+3. Beat became irrelevant (NPC died, location destroyed, etc.) → `changeKind: "resolve"`, `status: "failed"`
+
+**Required**: When `changeKind: "resolve"`, you MUST set `status` to `"succeeded"` or `"failed"`.
 
 ## Spawn (strict)
 Spawn a new beat only if narration creates a **persistent, multi-turn** objective or consequence.
 Player-declared goals count only if narration confirms they are viable.
 If unsure → do **not** spawn.
+
+**Default**: When a beat's objective is achieved or impossible, resolve it. Do not keep beats open indefinitely.
 
 ## newBeat
 Provide `{title, description}` only when spawning.

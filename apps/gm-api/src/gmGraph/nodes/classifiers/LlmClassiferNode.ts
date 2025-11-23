@@ -46,7 +46,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
         metadata: {
           chronicleId: context.chronicleId,
           turnId: context.turnId,
-          turnSequence: context.turnSequence,
+          turnSequence: String(context.turnSequence),
           nodeId: this.options.id,
           playerId: context.chronicleState.chronicle.playerId
         },
