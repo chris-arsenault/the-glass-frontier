@@ -6,6 +6,7 @@ type UiState = {
   closeBugReportModal: () => void;
   closeChangelogModal: () => void;
   closeCharacterDrawer: () => void;
+  closeChronicleDrawer: () => void;
   closeCreateCharacterModal: () => void;
   closeGuideModal: () => void;
   closePlayerMenu: () => void;
@@ -16,6 +17,7 @@ type UiState = {
   isBugReportModalOpen: boolean;
   isChangelogModalOpen: boolean;
   isCharacterDrawerOpen: boolean;
+  isChronicleDrawerOpen: boolean;
   isCreateCharacterModalOpen: boolean;
   isGuideModalOpen: boolean;
   isPlayerMenuOpen: boolean;
@@ -31,6 +33,7 @@ type UiState = {
     next: ExpandedMessages | ((prev: ExpandedMessages) => ExpandedMessages)
   ) => void;
   toggleCharacterDrawer: () => void;
+  toggleChronicleDrawer: () => void;
   toggleMessageExpansion: (entryId: string) => void;
   togglePlayerMenu: () => void;
   toggleTemplateDrawer: () => void;
@@ -40,6 +43,7 @@ export const useUiStore = create<UiState>((set) => ({
   closeBugReportModal: () => set({ isBugReportModalOpen: false }),
   closeChangelogModal: () => set({ isChangelogModalOpen: false }),
   closeCharacterDrawer: () => set({ isCharacterDrawerOpen: false }),
+  closeChronicleDrawer: () => set({ isChronicleDrawerOpen: false }),
   closeCreateCharacterModal: () => set({ isCreateCharacterModalOpen: false }),
   closeGuideModal: () => set({ isGuideModalOpen: false }),
   closePlayerMenu: () => set({ isPlayerMenuOpen: false }),
@@ -49,6 +53,7 @@ export const useUiStore = create<UiState>((set) => ({
   isBugReportModalOpen: false,
   isChangelogModalOpen: false,
   isCharacterDrawerOpen: false,
+  isChronicleDrawerOpen: false,
   isCreateCharacterModalOpen: false,
   isGuideModalOpen: false,
   isPlayerMenuOpen: false,
@@ -70,6 +75,10 @@ export const useUiStore = create<UiState>((set) => ({
   toggleCharacterDrawer: () =>
     set((state) => ({
       isCharacterDrawerOpen: !state.isCharacterDrawerOpen,
+    })),
+  toggleChronicleDrawer: () =>
+    set((state) => ({
+      isChronicleDrawerOpen: !state.isChronicleDrawerOpen,
     })),
   toggleMessageExpansion: (entryId) =>
     set((state) => ({

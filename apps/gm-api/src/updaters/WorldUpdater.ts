@@ -1,8 +1,8 @@
 import type { Character, Chronicle, LocationEntity } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
-import type { ChronicleStore } from '@glass-frontier/worldstate';
+import type { ChronicleStore, LocationHelpers } from '@glass-frontier/worldstate';
 
-import type { GraphContext, LocationStore } from '../types';
+import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
 import { createUpdatedCharacter } from './characterUpdater';
 import { createUpdatedInventory } from './inventoryUpdater';
@@ -11,11 +11,11 @@ import { applyLocationUpdate } from './locationUpdater';
 
 export class WorldUpdater {
   readonly #chronicleStore: ChronicleStore;
-  readonly #locationGraphStore: LocationStore;
+  readonly #locationHelpers: LocationHelpers;
 
-  constructor(options: { chronicleStore: ChronicleStore; locationGraphStore: LocationStore }) {
+  constructor(options: { chronicleStore: ChronicleStore; locationHelpers: LocationHelpers }) {
     this.#chronicleStore = options.chronicleStore;
-    this.#locationGraphStore = options.locationGraphStore;
+    this.#locationHelpers = options.locationHelpers;
   }
 
   async update(context: GraphContext): Promise<GraphContext> {
@@ -132,7 +132,7 @@ export class WorldUpdater {
 
   async #buildLocationEntity(locationId: string): Promise<LocationEntity | null> {
     try {
-      const details = await this.#locationGraphStore.getLocationDetails({ id: locationId });
+      const details = await this.#locationHelpers.getDetails({ id: locationId });
       return mapLocationDetailsToSummary(details);
     } catch (error) {
       log('error', 'Failed to map location summary', error);

@@ -16,6 +16,7 @@ exports.up = (pgm) => {
     location_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'RESTRICT' },
     seed_text: { type: 'text' },
     beats_enabled: { type: 'boolean', notNull: true, default: true },
+    entity_focus: { type: 'jsonb', notNull: true, default: pgm.func(`'{"entityScores":{},"tagScores":{}}'::jsonb`) },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });

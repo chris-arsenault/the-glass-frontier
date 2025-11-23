@@ -192,21 +192,41 @@ app.post('/chronicles', async (req, res) => {
       .object({
         playerId: z.string().min(1),
         title: z.string().min(1),
-        locationSlug: z.string().min(1),
+        locationSlug: z.string().min(1).optional(),
         anchorSlug: z.string().min(1),
         characterId: z.string().uuid().optional(),
       })
       .parse(req.body);
     const anchor = await world.getEntityBySlug({ slug: input.anchorSlug });
-    const location = await world.getEntityBySlug({ slug: input.locationSlug });
     if (!anchor) {
       res.status(404).json({ error: 'Anchor not found' });
       return;
     }
-    if (!location || location.kind !== 'location') {
-      res.status(400).json({ error: 'Location not found or invalid kind' });
-      return;
+
+    // If locationSlug not provided, auto-select nearest location neighbor
+    let location;
+    if (input.locationSlug) {
+      location = await world.getEntityBySlug({ slug: input.locationSlug });
+      if (!location || location.kind !== 'location') {
+        res.status(400).json({ error: 'Location not found or invalid kind' });
+        return;
+      }
+    } else {
+      // Auto-select first location neighbor from anchor entity
+      const linkedIds = anchor.links.map((link) => link.targetId);
+      for (const linkedId of linkedIds) {
+        const entity = await world.getEntity({ id: linkedId });
+        if (entity && entity.kind === 'location') {
+          location = entity;
+          break;
+        }
+      }
+      if (!location) {
+        res.status(400).json({ error: 'No location neighbors found for anchor entity' });
+        return;
+      }
     }
+
     const chronicle = await worldState.chronicles.ensureChronicle({
       playerId: input.playerId,
       locationId: location.id,

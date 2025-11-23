@@ -171,8 +171,9 @@ async function seedPlaywrightChronicle(
 
   await playerStore.upsert(playerRecord);
   await chronicleStore.upsertCharacter(characterRecord);
-  await chronicleStore.upsertChronicle(chronicleRecord);
+  // Create world entities (including Glass Wardens anchor) before creating chronicle
   await seedPlaywrightFixtures(worldstateDatabaseUrl);
+  await chronicleStore.upsertChronicle(chronicleRecord);
 }
 
 main().catch((error) => {

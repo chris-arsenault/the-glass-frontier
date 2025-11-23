@@ -1,29 +1,29 @@
-import type { LoreFocusState } from '../types';
+import type { EntityFocusState } from '../types';
 
-export type LoreUsageClassification = {
-  fragmentId: string;
+export type EntityUsageClassification = {
   entityId: string;
+  entitySlug: string;
   tags: string[];
-  usage: 'unused' | 'glanced' | 'grounding';
-  emergentTags?: string[];
+  usage: 'unused' | 'mentioned' | 'central';
+  emergentTags: string[] | null;
 };
 
 const DECAY = 0.9;
 
 const clampScore = (value: number): number => Math.max(-50, Math.min(100, value));
 
-export const applyLoreUsage = (
-  current: LoreFocusState | null | undefined,
-  usage: LoreUsageClassification[],
+export const applyEntityUsage = (
+  current: EntityFocusState | null | undefined,
+  usage: EntityUsageClassification[],
   nowTs = Date.now()
-): LoreFocusState => {
-  const next: LoreFocusState = {
+): EntityFocusState => {
+  const next: EntityFocusState = {
     entityScores: { ...(current?.entityScores ?? {}) },
     tagScores: { ...(current?.tagScores ?? {}) },
     lastUpdated: nowTs,
   };
 
-  // passive decay
+  // Passive decay
   Object.keys(next.entityScores).forEach((key) => {
     next.entityScores[key] = clampScore(next.entityScores[key] * DECAY);
   });
@@ -32,8 +32,8 @@ export const applyLoreUsage = (
   });
 
   for (const entry of usage) {
-    const entityBump = entry.usage === 'grounding' ? 5 : entry.usage === 'glanced' ? 2 : 0;
-    const tagBump = entry.usage === 'grounding' ? 3 : entry.usage === 'glanced' ? 1 : 0;
+    const entityBump = entry.usage === 'central' ? 8 : entry.usage === 'mentioned' ? 3 : 0;
+    const tagBump = entry.usage === 'central' ? 4 : entry.usage === 'mentioned' ? 1 : 0;
 
     if (entityBump > 0) {
       next.entityScores[entry.entityId] = clampScore((next.entityScores[entry.entityId] ?? 0) + entityBump);
@@ -46,7 +46,7 @@ export const applyLoreUsage = (
       if (!normalized) {
         continue;
       }
-      next.tagScores[normalized] = clampScore((next.tagScores[normalized] ?? 0) + 1);
+      next.tagScores[normalized] = clampScore((next.tagScores[normalized] ?? 0) + 2);
     }
   }
 

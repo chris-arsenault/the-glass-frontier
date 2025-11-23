@@ -16,34 +16,27 @@ export type GraphNode = {
   execute: (context: GraphContext) => Promise<GraphNodeResult> | GraphNodeResult;
 }
 
-export type GraphNodeConfig =
-  | GraphNode
-  | {
-      node: GraphNode;
-      next?: string[];
-    };
+// Pipeline stage: either a single node or a parallel group
+export type PipelineStage =
+  | { type: 'sequential'; nodeId: string }
+  | { type: 'parallel'; nodeIds: string[] };
 
 type NodeDescriptor = {
-  next?: string[];
   node: GraphNode;
   nodeId: string;
   step: number;
   total: number;
 };
 
-const PARALLEL_GROUPS = new Map<string, string[]>([
-  ['intent-classifier', ['intent-beat-detector', 'check-planner']],
-  ['gm-response-node', ['lore-judge', 'gm-summary', 'inventory-delta', 'location-delta', 'beat-tracker']],
-]);
-
 class GmGraphOrchestrator {
   readonly #descriptors: Map<string, NodeDescriptor> = new Map();
+  readonly #pipeline: PipelineStage[];
   readonly #telemetry?: ChronicleTelemetry;
   readonly #progressEmitter?: TurnProgressPublisher;
-  readonly #entryNodeId: string;
 
   constructor(
-    nodes: GraphNodeConfig[],
+    nodes: GraphNode[],
+    pipeline: PipelineStage[],
     telemetry: ChronicleTelemetry,
     options?: { progressEmitter?: TurnProgressPublisher }
   ) {
@@ -51,7 +44,7 @@ class GmGraphOrchestrator {
     descriptors.forEach((descriptor) => {
       this.#descriptors.set(descriptor.nodeId, descriptor);
     });
-    this.#entryNodeId = descriptors[0]?.nodeId ?? '';
+    this.#pipeline = pipeline;
     this.#telemetry = telemetry;
     this.#progressEmitter = options?.progressEmitter;
   }
@@ -60,57 +53,29 @@ class GmGraphOrchestrator {
     const jobId = options?.jobId;
     let context: GraphContext = initialContext;
     const executed: string[] = [];
-    let queue: Array<{ nodeId: string; context: GraphContext }> = [
-      { nodeId: this.#entryNodeId, context: initialContext },
-    ];
 
-    while (queue.length > 0) {
-      const batch = queue;
-      queue = [];
-      const executions = await Promise.all(
-        batch.map(async ({ nodeId, context: nodeContext }) => {
-          const descriptor = this.#descriptors.get(nodeId);
-          if (!descriptor) {
-            return null;
-          }
-          const result = await this.#executeNode(descriptor, nodeContext, jobId);
-          return { descriptor, result };
-        })
-      );
+    for (const stage of this.#pipeline) {
+      if (context.failure) {
+        break;
+      }
 
-      for (const entry of executions) {
-        if (!entry) {
-          continue;
+      if (stage.type === 'sequential') {
+        const descriptor = this.#descriptors.get(stage.nodeId);
+        if (!descriptor) {
+          throw new Error(`Unknown node: ${stage.nodeId}`);
         }
-        const { descriptor, result } = entry;
+        const result = await this.#executeNode(descriptor, context, jobId);
         let ranNode = descriptor.nodeId;
-        if (ranNode == "gm-response-node") {
-          ranNode += ` (${result.context.playerIntent?.intentType})`
+        if (ranNode === 'gm-response-node') {
+          ranNode += ` (${result.context.playerIntent?.intentType})`;
         }
-
         executed.push(ranNode);
         context = result.context;
-
-        const parallelTargets = PARALLEL_GROUPS.get(descriptor.nodeId);
-        if (parallelTargets !== undefined) {
-          const parallelResult = await this.#runParallelGroup(parallelTargets, context, jobId);
-          executed.push(...parallelResult.executedNodes);
-          context = parallelResult.context;
-          parallelResult.next.forEach((target) => {
-            queue.push({ nodeId: target, context });
-          });
-          continue;
-        }
-
-        if (context.failure) {
-          queue = [];
-          break;
-        }
-
-        const targets = result.next ?? descriptor.next ?? [];
-        targets.forEach((target) => {
-          queue.push({ nodeId: target, context: result.context });
-        });
+      } else {
+        // parallel stage
+        const parallelResult = await this.#runParallelGroup(stage.nodeIds, context, jobId);
+        executed.push(...parallelResult.executedNodes);
+        context = parallelResult.context;
       }
     }
 
@@ -230,26 +195,19 @@ class GmGraphOrchestrator {
     }
   }
 
-  #buildNodeDescriptors(initializers: GraphNodeConfig[]): NodeDescriptor[] {
-    const resolved = initializers.map((entry) =>
-      'execute' in entry ? { node: entry, next: undefined } : entry
-    );
-    const total = resolved.length;
-    return resolved.map((entry, index) => {
-      const fallback = resolved[index + 1]?.node.id;
-      return {
-        next: entry.next ?? (fallback ? [fallback] : undefined),
-        node: entry.node,
-        nodeId: entry.node.id,
-        step: index + 1,
-        total,
-      };
-    });
+  #buildNodeDescriptors(nodes: GraphNode[]): NodeDescriptor[] {
+    const total = nodes.length;
+    return nodes.map((node, index) => ({
+      node,
+      nodeId: node.id,
+      step: index + 1,
+      total,
+    }));
   }
 
-  #unwrapResult(result: GraphNodeResult): { context: GraphContext; next?: string[] } {
+  #unwrapResult(result: GraphNodeResult): { context: GraphContext } {
     if (typeof (result as { context?: GraphContext }).context === 'object') {
-      return result as { context: GraphContext; next?: string[] };
+      return result as { context: GraphContext };
     }
     return { context: result as GraphContext };
   }
@@ -258,7 +216,7 @@ class GmGraphOrchestrator {
     nodeIds: string[],
     context: GraphContext,
     jobId?: string
-  ): Promise<{ context: GraphContext; executedNodes: string[]; next: string[] }> {
+  ): Promise<{ context: GraphContext; executedNodes: string[] }> {
     const executions = await Promise.all(
       nodeIds.map(async (nodeId) => {
         const descriptor = this.#descriptors.get(nodeId);
@@ -280,19 +238,9 @@ class GmGraphOrchestrator {
     ordered.forEach((entry) => {
       mergedContext = this.#mergeContexts(mergedContext, entry.result.context);
     });
-    const nextTargets = new Set<string>();
-    ordered.forEach((entry) => {
-      const references = entry.result.next ?? entry.descriptor.next ?? [];
-      references.forEach((target) => {
-        if (!nodeIds.includes(target)) {
-          nextTargets.add(target);
-        }
-      });
-    });
     return {
       context: mergedContext,
       executedNodes: ordered.map((entry) => entry.descriptor.nodeId),
-      next: [...nextTargets],
     };
   }
 
@@ -307,8 +255,8 @@ class GmGraphOrchestrator {
       handlerId: update.handlerId ?? base.handlerId,
       inventoryDelta: update.inventoryDelta ?? base.inventoryDelta,
       locationDelta: update.locationDelta ?? base.locationDelta,
-      loreContext: update.loreContext ?? base.loreContext,
-      loreUsage: update.loreUsage ?? base.loreUsage,
+      entityContext: update.entityContext ?? base.entityContext,
+      entityUsage: update.entityUsage ?? base.entityUsage,
       playerIntent: update.playerIntent ?? base.playerIntent,
       skillCheckPlan: update.skillCheckPlan ?? base.skillCheckPlan,
       skillCheckResult: update.skillCheckResult ?? base.skillCheckResult,

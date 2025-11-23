@@ -11,11 +11,11 @@ export const BeatDirectiveSchema = z.object({
     .string()
     .min(1)
     .describe('Brief rationale for the classification.'),
-  targetBeatId: z
+  targetBeatSlug: z
     .string()
     .min(1)
     .nullable()
-    .describe('Beat ID when kind="existing"; otherwise null.'),
+    .describe('Beat slug when kind="existing"; otherwise null.'),
 });
 
 export type BeatDirective = z.infer<typeof BeatDirectiveSchema>;
@@ -32,18 +32,24 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
     })
   }
 
-  #normalizeDirective(directive: BeatDirective): IntentBeatDirective {
-    if (directive.kind === 'existing') {
-      return directive;
+  #normalizeDirective(directive: BeatDirective, beats: typeof context.chronicleState.chronicle.beats): IntentBeatDirective {
+    if (directive.kind === 'existing' && directive.targetBeatSlug) {
+      const targetBeat = beats.find(b => b.slug === directive.targetBeatSlug);
+      return {
+        kind: directive.kind,
+        summary: directive.summary,
+        targetBeatId: targetBeat?.id ?? null,
+      };
     }
     return {
-      ...directive,
+      kind: directive.kind,
+      summary: directive.summary,
       targetBeatId: null
     }
   }
 
   #applyBeatDirective(context: GraphContext, result: BeatDirective): GraphContext  {
-    const beatDirective: IntentBeatDirective = this.#normalizeDirective(result)
+    const beatDirective: IntentBeatDirective = this.#normalizeDirective(result, context.chronicleState.chronicle.beats)
     return {
       ...context,
       playerIntent: {

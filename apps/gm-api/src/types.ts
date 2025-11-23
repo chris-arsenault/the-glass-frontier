@@ -3,18 +3,13 @@ import type {
   Character,
   Chronicle,
   Intent,
-  HardStateProminence,
-  LocationNeighbors,
-  LocationEntity,
-  LocationState,
-  LocationEntity,
   LlmTrace,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { WorldSchemaStore } from '@glass-frontier/worldstate';
+import type { WorldSchemaStore, LocationHelpers, ChronicleStore } from '@glass-frontier/worldstate';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";
@@ -30,23 +25,32 @@ export type ChronicleState = {
   turns: Turn[];
 }
 
-export type LoreFocusState = {
+export type EntityFocusState = {
   entityScores: Record<string, number>;
   tagScores: Record<string, number>;
   lastUpdated?: number;
 };
 
-export type LoreSnippet = {
+export type EntitySnippet = {
   id: string;
-  title: string;
-  entityId: string;
+  slug: string;
+  name: string;
+  kind: string;
+  subkind?: string;
+  description?: string;
+  status?: string;
   tags: string[];
-  summary: string;
+  loreFragments: Array<{
+    slug: string;
+    title: string;
+    summary: string;
+    tags: string[];
+  }>;
   score: number;
 };
 
-export type LoreContextSlice = {
-  offered: LoreSnippet[];
+export type EntityContextSlice = {
+  offered: EntitySnippet[];
   focusEntities: string[];
   focusTags: string[];
 };
@@ -58,7 +62,8 @@ export type GraphContext = {
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
-  locationGraphStore: LocationStore;
+  locationHelpers: LocationHelpers;
+  chronicleStore: ChronicleStore;
   worldSchemaStore: WorldSchemaStore;
 
   //operations
@@ -82,47 +87,15 @@ export type GraphContext = {
   locationDelta?: LocationDeltaDecision;
   inventoryDelta?: InventoryDelta;
   beatTracker?: BeatTracker;
-  loreContext?: LoreContextSlice;
-  loreUsage?: Array<{
-    fragmentId: string;
+  entityContext?: EntityContextSlice;
+  entityUsage?: Array<{
     entityId: string;
+    entitySlug: string;
     tags: string[];
-    usage: 'unused' | 'glanced' | 'grounding';
-    emergentTags?: string[];
+    usage: 'unused' | 'mentioned' | 'central';
+    emergentTags: string[] | null;
   }>;
 }
-
-export type LocationStore = {
-  createLocationWithRelationship: (input: {
-    name: string;
-    kind: string;
-    description?: string | null;
-    tags?: string[];
-    anchorId: string;
-    relationship: string;
-  }) => Promise<LocationEntity>;
-  getLocationDetails: (input: {
-    id: string;
-    minProminence?: HardStateProminence;
-    maxProminence?: HardStateProminence;
-    maxHops?: number;
-  }) => Promise<{
-    place: LocationEntity;
-    neighbors: LocationNeighbors;
-  }>;
-  getLocationNeighbors: (input: {
-    id: string;
-    limit?: number;
-    minProminence?: HardStateProminence;
-    maxProminence?: HardStateProminence;
-    maxHops?: number;
-  }) => Promise<LocationNeighbors>;
-  moveCharacterToLocation: (input: {
-    characterId: string;
-    placeId: string;
-    note?: string | null;
-  }) => Promise<LocationState>;
-};
 
 export type TelemetryLike = {
   recordToolError: (entry: {

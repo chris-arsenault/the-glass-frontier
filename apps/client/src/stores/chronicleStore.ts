@@ -78,6 +78,8 @@ const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): C
   attributeKey: extras?.attributeKey ?? null,
   beatTracker: extras?.beatTracker ?? null,
   entry,
+  entityOffered: extras?.entityOffered ?? null,
+  entityUsage: extras?.entityUsage ?? null,
   executedNodes: extras?.executedNodes ?? null,
   gmSummary: extras?.gmSummary ?? null,
   gmTrace: extras?.gmTrace ?? null,
@@ -107,6 +109,8 @@ const upsertChatEntry = (
       advancesTimeline: extras?.advancesTimeline ?? updated[index].advancesTimeline,
       attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
       entry,
+      entityOffered: extras?.entityOffered ?? updated[index].entityOffered,
+      entityUsage: extras?.entityUsage ?? updated[index].entityUsage,
       executedNodes: extras?.executedNodes ?? updated[index].executedNodes,
       gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
       gmTrace: extras?.gmTrace ?? updated[index].gmTrace,
@@ -135,6 +139,8 @@ const flattenTurns = (turns: Turn[]): ChatMessage[] =>
         typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
       attributeKey,
       beatTracker: turn.beatTracker ?? null,
+      entityOffered: turn.entityOffered ?? null,
+      entityUsage: turn.entityUsage ?? null,
       executedNodes: turn.executedNodes ?? null,
       gmSummary: turn.gmSummary ?? null,
       gmTrace: turn.gmTrace ?? null,
@@ -577,6 +583,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         ? details.title.trim()
         : deriveTitleFromSeed(trimmedSeed);
       const result = await trpcClient.createChronicle.mutate({
+        anchorEntityId: details.anchorEntityId ?? undefined,
         beatsEnabled,
         characterId: targetCharacterId,
         locationId: details.locationId,
@@ -834,6 +841,8 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         const extras = {
           attributeKey,
           beatTracker: turn.beatTracker ?? null,
+          entityOffered: turn.entityOffered ?? null,
+          entityUsage: turn.entityUsage ?? null,
           executedNodes: turn.executedNodes ?? null,
           gmSummary: turn.gmSummary ?? null,
           gmTrace: turn.gmTrace ?? null,

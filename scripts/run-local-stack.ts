@@ -1,3 +1,4 @@
+import { CreateQueueCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { execa } from 'execa';
 import waitOn from 'wait-on';
 
@@ -5,6 +6,7 @@ import { PidRegistry } from './pid-registry';
 
 type StackMode = 'mock-openai' | 'live-openai';
 type SeedMode = 'e2e-fixtures' | 'world-seed';
+type ReseedMode = 'auto' | 'force';
 
 const MOCK_ENV: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
@@ -71,10 +73,22 @@ function resolveSeedMode(): SeedMode {
       return 'e2e-fixtures';
     }
   }
-  if (process.env.LOCAL_STACK_SEED === 'world-seed') {
-    return 'world-seed';
+  if (process.env.LOCAL_STACK_SEED === 'e2e-fixtures') {
+    return 'e2e-fixtures';
   }
-  return 'e2e-fixtures';
+  // Default to world-seed for development (preserves world atlas between runs)
+  return 'world-seed';
+}
+
+function resolveReseedMode(): ReseedMode {
+  const flag = process.argv.find((entry) => entry === '--force-reseed');
+  if (flag) {
+    return 'force';
+  }
+  if (process.env.LOCAL_STACK_RESEED === 'force') {
+    return 'force';
+  }
+  return 'auto';
 }
 
 function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
@@ -90,6 +104,69 @@ function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
 let shuttingDown = false;
 let devProcess: ReturnType<typeof execa> | null = null;
 const pidRegistry = new PidRegistry();
+
+async function checkWorldDataExists(connectionString: string): Promise<boolean> {
+  try {
+    const result = await execa('docker', [
+      'exec',
+      '-i',
+      await getPostgresContainerId(),
+      'psql',
+      '-U',
+      'postgres',
+      '-d',
+      'worldstate',
+      '-t',
+      '-c',
+      'SELECT COUNT(*) FROM hard_state',
+    ]);
+    const count = parseInt(result.stdout.trim(), 10);
+    return count > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function getPostgresContainerId(): Promise<string> {
+  const result = await execa('docker-compose', [
+    '-f',
+    'docker-compose.e2e.yml',
+    'ps',
+    '-q',
+    'postgres',
+  ]);
+  return result.stdout.trim();
+}
+
+async function ensureSqsQueues(env: NodeJS.ProcessEnv): Promise<void> {
+  console.log('[run-local-stack] Ensuring SQS queues exist...');
+
+  const credentials = {
+    accessKeyId: env.AWS_ACCESS_KEY_ID ?? 'test',
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? 'test',
+  };
+
+  const region = env.AWS_REGION ?? env.AWS_DEFAULT_REGION ?? 'us-east-1';
+  const sqsEndpoint = env.AWS_SQS_ENDPOINT;
+
+  const sqs = new SQSClient({
+    credentials,
+    endpoint: sqsEndpoint,
+    region,
+  });
+
+  const queueNames = ['gf-e2e-turn-progress', 'gf-e2e-chronicle-closure'];
+
+  for (const queueName of queueNames) {
+    try {
+      await sqs.send(new CreateQueueCommand({ QueueName: queueName }));
+      console.log(`[run-local-stack] Queue ensured: ${queueName}`);
+    } catch (error) {
+      // Queue might already exist, that's okay
+      console.log(`[run-local-stack] Queue ${queueName}: ${error instanceof Error ? error.message : 'checked'}`);
+    }
+  }
+}
 
 async function waitForWiremockReady(): Promise<void> {
   const timeoutMs = 5_000;
@@ -158,6 +235,7 @@ async function main(): Promise<void> {
 
   const mode = resolveMode();
   const seedMode = resolveSeedMode();
+  const reseedMode = resolveReseedMode();
   const env = buildEnv(mode);
 
   await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
@@ -194,10 +272,42 @@ async function main(): Promise<void> {
       stdio: 'inherit',
     });
   } else {
-    await execa('pnpm', ['exec', 'tsx', 'packages/worldstate/seed-data/seed-world-entities.ts'], {
+    // For world-seed mode, check if we need full reseed or just session reset
+    const worldDataExists = await checkWorldDataExists(env.GLASS_FRONTIER_DATABASE_URL as string);
+    const needsFullReseed = reseedMode === 'force' || !worldDataExists;
+
+    if (needsFullReseed) {
+      if (reseedMode === 'force') {
+        console.log('[run-local-stack] Force reseed requested, performing full world seed...');
+      } else {
+        console.log('[run-local-stack] No world data found, performing initial world seed...');
+      }
+      await execa('pnpm', ['exec', 'tsx', 'packages/worldstate/seed-data/seed-world-entities.ts'], {
+        env,
+        stdio: 'inherit',
+      });
+      // Also clear any old session data after full reseed
+      await execa('pnpm', ['exec', 'tsx', 'scripts/reset-session-data.ts'], {
+        env,
+        stdio: 'inherit',
+      });
+    } else {
+      console.log('[run-local-stack] World data exists, resetting session data only...');
+      await execa('pnpm', ['exec', 'tsx', 'scripts/reset-session-data.ts'], {
+        env,
+        stdio: 'inherit',
+      });
+    }
+
+    // Create default dev fixtures (character + chronicle)
+    console.log('[run-local-stack] Creating default dev fixtures...');
+    await execa('pnpm', ['exec', 'tsx', 'scripts/seed-dev-fixtures.ts'], {
       env,
       stdio: 'inherit',
     });
+
+    // Ensure SQS queues exist for world-seed mode
+    await ensureSqsQueues(env);
   }
 
   devProcess = execa('pnpm', ['dev'], {
@@ -250,7 +360,8 @@ async function shutdown() {
       // already stopped
     }
   }
-  await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'down', '-v'], {
+  // Stop containers but preserve volumes to keep database data
+  await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'down'], {
     stdio: 'inherit',
   }).catch(() => undefined);
 }

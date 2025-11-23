@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"results\":[{\"slug\":\"glass_wardens\",\"usage\":\"central\",\"emergentTags\":[\"protector\",\"ancient-order\",\"archive-keeper\"]}]}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"results\":[{\"slug\":\"glass_wardens\",\"usage\":\"central\",\"emergentTags\":[\"protector\",\"ancient-order\",\"archive-keeper\"]}]}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 90,
+    "output_tokens": 30,
+    "total_tokens": 120
+  }
+}

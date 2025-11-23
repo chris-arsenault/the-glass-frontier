@@ -103,6 +103,7 @@ exports.up = async (pgm) => {
     entity_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'CASCADE' },
     chronicle_id: { type: 'uuid' },
     beat_id: { type: 'text' },
+    slug: { type: 'text', notNull: true, unique: true },
     title: { type: 'text', notNull: true },
     prose: { type: 'text', notNull: true },
     tags: { type: 'text[]', notNull: true, default: pgm.func(`'{}'::text[]`) },
@@ -112,11 +113,13 @@ exports.up = async (pgm) => {
     name: 'lore_fragment_entity_idx',
   });
   pgm.createIndex('lore_fragment', 'chronicle_id', { name: 'lore_fragment_chronicle_idx' });
+  pgm.createIndex('lore_fragment', 'slug', { name: 'lore_fragment_slug_idx', unique: true });
 
   await seedWorldSchema(pgm, worldSchema);
 };
 
 exports.down = (pgm) => {
+  pgm.dropIndex('lore_fragment', 'slug', { ifExists: true, name: 'lore_fragment_slug_idx' });
   pgm.dropIndex('lore_fragment', 'chronicle_id', { ifExists: true, name: 'lore_fragment_chronicle_idx' });
   pgm.dropIndex('lore_fragment', ['entity_id', 'created_at'], { ifExists: true, name: 'lore_fragment_entity_idx' });
   pgm.dropTable('lore_fragment', { ifExists: true });

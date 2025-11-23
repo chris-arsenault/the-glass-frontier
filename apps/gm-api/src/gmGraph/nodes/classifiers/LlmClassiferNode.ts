@@ -57,8 +57,10 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
         }
       }, 'json');
       const tryParsed = this.options.schema.safeParse(json.message)
-      const parsed = tryParsed.data
-      return this.options.applyResult(context, parsed);
+      if (!tryParsed.success) {
+        throw new Error(`Schema validation failed: ${tryParsed.error.message}`);
+      }
+      return this.options.applyResult(context, tryParsed.data);
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,

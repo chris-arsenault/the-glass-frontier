@@ -42,6 +42,7 @@ type HardStateRow = {
 
 type LoreFragmentRow = {
   id: string;
+  slug: string;
   entity_id: string;
   chronicle_id: string | null;
   beat_id: string | null;
@@ -68,6 +69,7 @@ const toHardState = (row: HardStateRow, links: HardStateLink[]): HardState => ({
 
 const toLoreFragment = (row: LoreFragmentRow): LoreFragment => ({
   id: row.id,
+  slug: row.slug,
   entityId: row.entity_id,
   source: {
     chronicleId: row.chronicle_id ?? undefined,
@@ -290,6 +292,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async createLoreFragment(input: {
     id?: string;
+    slug?: string;
     entityId: string;
     source: {
       chronicleId?: string;
@@ -301,6 +304,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     timestamp?: number;
   }): Promise<LoreFragment> {
     const id = input.id ?? randomUUID();
+    const slug = input.slug ?? `frag_${toSnakeCase(input.title)}_${id.slice(0, 8)}`;
     const timestamp = input.timestamp ?? now();
     const tags = normalizeTags(input.tags, 24);
 
@@ -308,6 +312,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       await this.#assertHardStatesExist(client, input.entityId);
       await this.#graph.upsertNode(client, id, 'lore_fragment', {
         id,
+        slug,
         entityId: input.entityId,
         source: input.source,
         title: input.title,
@@ -317,17 +322,18 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       });
       await client.query(
         `INSERT INTO lore_fragment (
-           id, entity_id, chronicle_id, beat_id,
+           id, entity_id, chronicle_id, beat_id, slug,
            title, prose, tags, created_at
          ) VALUES (
-           $1::uuid, $2::uuid, $3::uuid, $4,
-           $5, $6, $7::text[], to_timestamp($8 / 1000.0)
+           $1::uuid, $2::uuid, $3::uuid, $4, $5,
+           $6, $7, $8::text[], to_timestamp($9 / 1000.0)
          )`,
         [
           id,
           input.entityId,
           input.source.chronicleId ?? null,
           input.source.beatId ?? null,
+          slug,
           input.title,
           input.prose,
           tags,
@@ -791,7 +797,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
     const maxHops = Math.max(1, Math.min(input.maxHops ?? 2, 2));
     const minRank = PROMINENCE_RANK[input.minProminence] ?? PROMINENCE_RANK.recognized;
-    const maxRank = input.maxProminence ? PROMINENCE_RANK[input.maxProminence] : Number.MAX_SAFE_INTEGER;
+    const maxRank = input.maxProminence ? PROMINENCE_RANK[input.maxProminence] : PROMINENCE_RANK.mythic;
     const kindFilter = input.kind ?? null;
 
     const result = await this.#pool.query(

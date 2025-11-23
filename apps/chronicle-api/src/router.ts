@@ -34,6 +34,7 @@ const toneSchema = z.object({
 
 const createChronicleInputSchema = z
   .object({
+    anchorEntityId: z.string().uuid().optional(),
     beatsEnabled: z.boolean().optional(),
     characterId: z.string().min(1),
     chronicleId: z.string().uuid().optional(),
@@ -219,6 +220,7 @@ async function createChronicleHandler(
   });
 
   const chronicle = await ctx.chronicleStore.ensureChronicle({
+    anchorEntityId: input.anchorEntityId,
     beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,

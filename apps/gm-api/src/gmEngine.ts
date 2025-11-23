@@ -36,12 +36,12 @@ import {GmResponseNode} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandler
 import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
 import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
 import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
-import {LoreJudgeNode, LoreSelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LoreNodes";
-import type { LocationStore } from './types';
+import {EntityJudgeNode, EntitySelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes";
+import { LocationHelpers } from '@glass-frontier/worldstate';
 
 type GmEngineOptions = {
   chronicleStore: ChronicleStore;
-  locationGraphStore: LocationStore;
+  locationHelpers: LocationHelpers;
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
@@ -51,7 +51,7 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'chara
 
 class GmEngine {
   readonly chronicleStore: ChronicleStore;
-  readonly locationGraphStore: LocationStore;
+  readonly locationHelpers: LocationHelpers;
   readonly worldSchemaStore: WorldSchemaStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
@@ -63,7 +63,7 @@ class GmEngine {
   constructor(options: GmEngineOptions) {
     this.templateManager = options.templateManager;
     this.chronicleStore = options.chronicleStore;
-    this.locationGraphStore = options.locationGraphStore;
+    this.locationHelpers = options.locationHelpers;
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
@@ -98,13 +98,14 @@ class GmEngine {
       playerMessage,
       templateRuntime,
       turnSequence,
-      locationGraphStore: this.locationGraphStore,
+      locationHelpers: this.locationHelpers,
+      chronicleStore: this.chronicleStore,
       worldSchemaStore: this.worldSchemaStore,
     });
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
 
-    const worldUpdater = new WorldUpdater({chronicleStore: this.chronicleStore, locationGraphStore: this.locationGraphStore});
+    const worldUpdater = new WorldUpdater({chronicleStore: this.chronicleStore, locationHelpers: this.locationHelpers});
     const updatedContext = await worldUpdater.update(graphResult);
 
     const turn = this.#buildTurn({
@@ -141,21 +142,45 @@ class GmEngine {
 
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
-    const loreSelector = new LoreSelectorNode();
+    const entitySelector = new EntitySelectorNode();
     const beatDetector = new BeatDetectorNode();
     const beatTracker = new BeatTrackerNode();
     const checkPlanner = new CheckPlannerNode();
     const gmSummaryNode = new GmSummaryNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
-    const loreJudgeNode = new LoreJudgeNode();
+    const entityJudgeNode = new EntityJudgeNode();
     const locationDeltaNode = new LocationDeltaNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
 
+    // All nodes that can be executed
+    const nodes = [
+      intentClassifier,
+      beatDetector,
+      checkPlanner,
+      entitySelector,
+      checkRunner,
+      gmResponseNode,
+      entityJudgeNode,
+      beatTracker,
+      gmSummaryNode,
+      locationDeltaNode,
+      inventoryDeltaNode,
+    ];
+
+    // Canonical execution pipeline - defines the exact order and parallelism
+    const pipeline = [
+      { type: 'sequential' as const, nodeId: 'intent-classifier' },
+      { type: 'parallel' as const, nodeIds: ['intent-beat-detector', 'check-planner'] },
+      { type: 'sequential' as const, nodeId: 'entity-selector' },
+      { type: 'sequential' as const, nodeId: 'check-runner' },
+      { type: 'sequential' as const, nodeId: 'gm-response-node' },
+      { type: 'parallel' as const, nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'] },
+    ];
+
     return new GmGraphOrchestrator(
-      [intentClassifier, loreSelector, beatDetector, checkPlanner, checkRunner,
-        gmResponseNode, loreJudgeNode, beatTracker, gmSummaryNode,
-        locationDeltaNode, inventoryDeltaNode],
+      nodes,
+      pipeline,
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );
@@ -203,7 +228,8 @@ class GmEngine {
     playerMessage,
     templateRuntime,
     turnSequence,
-    locationGraphStore,
+    locationHelpers,
+    chronicleStore,
     worldSchemaStore,
   }: {
     authorizationHeader?: string;
@@ -213,7 +239,8 @@ class GmEngine {
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
-    locationGraphStore: LocationStore;
+    locationHelpers: LocationHelpers;
+    chronicleStore: ChronicleStore;
     worldSchemaStore: WorldSchemaStore;
   }): GraphContext {
     return {
@@ -222,7 +249,8 @@ class GmEngine {
       turnSequence,
       chronicleState,
       playerMessage,
-      locationGraphStore,
+      locationHelpers,
+      chronicleStore,
       worldSchemaStore,
       llm: this.llm,
       telemetry: this.telemetry,
@@ -231,6 +259,8 @@ class GmEngine {
       systemMessage: undefined,
       playerIntent: undefined,
       shouldUpdate: false,
+      shouldCloseChronicle: false,
+      advancesTimeline: false,
     };
   }
 
@@ -287,6 +317,8 @@ class GmEngine {
       advancesTimeline: graphResult.advancesTimeline,
       beatTracker: graphResult.beatTracker ?? undefined,
       chronicleId,
+      entityOffered: graphResult.entityContext?.offered ?? undefined,
+      entityUsage: graphResult.entityUsage ?? undefined,
       executedNodes: graphResult.executedNodes ?? undefined,
       failure,
       gmResponse: graphResult.gmResponse,
@@ -294,8 +326,6 @@ class GmEngine {
       gmTrace: graphResult.gmTrace ?? undefined,
       id: turnId,
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
-      loreOffered: graphResult.loreContext?.offered ?? undefined,
-      loreUsage: graphResult.loreUsage ?? undefined,
       playerIntent: graphResult.playerIntent,
       playerMessage,
       skillCheckPlan: graphResult.skillCheckPlan,

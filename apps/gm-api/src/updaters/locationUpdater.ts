@@ -36,10 +36,16 @@ export async function applyLocationUpdate(context: GraphContext): Promise<Locati
   }
 
   // Move character to the target location
-  return context.locationGraphStore.moveCharacterToLocation({
+  const result = await context.chronicleStore.moveCharacterToLocation({
     characterId,
-    placeId: targetPlaceId,
+    locationId: targetPlaceId,
   });
+  return {
+    characterId: result.characterId,
+    locationId: result.locationId,
+    note: result.note,
+    updatedAt: result.updatedAt,
+  };
 }
 
 async function findLocationByName(
@@ -54,7 +60,7 @@ async function findLocationByName(
   }
 
   try {
-    const neighbors = await context.locationGraphStore.getLocationNeighbors({
+    const neighbors = await context.locationHelpers.getNeighborsGrouped({
       id: currentLocationId,
       minProminence: 'recognized',
       maxHops: 2,
@@ -82,12 +88,10 @@ async function createNewLocation(
 ): Promise<LocationEntity> {
   const relationship = mapLinkToRelationship(delta.link);
 
-  return context.locationGraphStore.createLocationWithRelationship({
+  return context.locationHelpers.createWithRelationship({
     anchorId,
-    kind: 'location',
     name: delta.destination,
     relationship,
-    tags: [],
   });
 }
 

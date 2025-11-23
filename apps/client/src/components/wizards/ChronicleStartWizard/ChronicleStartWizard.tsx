@@ -9,6 +9,7 @@ import {
   useChronicleStartStore,
   type ChronicleWizardStep,
   type SelectedLocationEntity,
+  type SelectedAnchorEntity,
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
@@ -33,6 +34,8 @@ export function ChronicleStartWizard() {
   const setStep = useChronicleStartStore((state) => state.setStep);
   const resetWizard = useChronicleStartStore((state) => state.reset);
   const selectedLocation = useChronicleStartStore((state) => state.selectedLocation);
+  const selectedAnchorEntity = useChronicleStartStore((state) => state.selectedAnchorEntity);
+  const setSelectedAnchorEntity = useChronicleStartStore((state) => state.setSelectedAnchorEntity);
   const selectedSeedId = useChronicleStartStore((state) => state.chosenSeedId);
   const seeds = useChronicleStartStore((state) => state.seeds);
   const customSeedText = useChronicleStartStore((state) => state.customSeedText);
@@ -154,6 +157,7 @@ export function ChronicleStartWizard() {
     (step === 'location' && Boolean(selectedLocation)) ||
     step === 'tone' ||
     (step === 'seeds' && hasSeedPayload) ||
+    (step === 'anchor' && Boolean(selectedAnchorEntity)) ||
     step === 'create';
 
   const selectedCharacterName = useMemo(() => {
@@ -204,6 +208,14 @@ export function ChronicleStartWizard() {
           onCustomSeedChange={setCustomSeed}
         />
       );
+    case 'anchor':
+      return (
+        <AnchorStep
+          locationId={selectedLocation?.id ?? null}
+          selectedAnchorId={selectedAnchorEntity?.id ?? null}
+          onSelectAnchor={setSelectedAnchorEntity}
+        />
+      );
     case 'create':
       return (
         <CreateStep
@@ -228,9 +240,11 @@ export function ChronicleStartWizard() {
     isLoadingLocations,
     locationError,
     selectedLocation,
+    selectedAnchorEntity,
     handleCreateLocation,
     refreshLocations,
     handleSelectLocation,
+    setSelectedAnchorEntity,
     toneNotes,
     toneChips,
     toggleToneChip,
@@ -260,6 +274,8 @@ export function ChronicleStartWizard() {
     } else if (step === 'tone') {
       setStep('seeds');
     } else if (step === 'seeds') {
+      setStep('anchor');
+    } else if (step === 'anchor') {
       setStep('create');
     }
   };
@@ -280,8 +296,10 @@ export function ChronicleStartWizard() {
       setStep('location');
     } else if (step === 'seeds') {
       setStep('tone');
-    } else if (step === 'create') {
+    } else if (step === 'anchor') {
       setStep('seeds');
+    } else if (step === 'create') {
+      setStep('anchor');
     } else {
       goToDefaultSurface();
     }
@@ -308,6 +326,7 @@ export function ChronicleStartWizard() {
     setIsCreatingChronicle(true);
     setCreationError(null);
     const payload: ChronicleSeedCreationDetails = {
+      anchorEntityId: selectedAnchorEntity?.id ?? null,
       beatsEnabled,
       characterId: preferredCharacterId,
       locationId: selectedLocation.id,
@@ -627,6 +646,128 @@ function SeedStep({
   );
 }
 
+type AnchorStepProps = {
+  locationId: string | null;
+  selectedAnchorId: string | null;
+  onSelectAnchor: (anchor: SelectedAnchorEntity | null) => void;
+}
+
+function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStepProps) {
+  const [anchors, setAnchors] = useState<SelectedAnchorEntity[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!locationId) {
+      setAnchors([]);
+      return;
+    }
+
+    const fetchNeighbors = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const entity = await worldAtlasClient.getEntity(locationId);
+        if (!entity || !entity.links) {
+          setAnchors([]);
+          return;
+        }
+
+        // Get linked entity IDs and fetch them
+        const linkedIds = entity.links.map((link) => link.targetId);
+        const neighborPromises = linkedIds.map((id) => worldAtlasClient.getEntity(id));
+        const neighbors = await Promise.all(neighborPromises);
+
+        // Filter to non-location entities and take top 3
+        const nonLocationNeighbors = neighbors
+          .filter((n) => n && n.kind !== 'location')
+          .slice(0, 3)
+          .map((n) => ({
+            id: n.id,
+            slug: n.slug,
+            name: n.name,
+            kind: n.kind,
+            description: n.description ?? undefined,
+            subkind: n.subkind ?? undefined,
+          }));
+
+        setAnchors(nonLocationNeighbors);
+
+        // Auto-select first anchor if none selected
+        if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
+          onSelectAnchor(nonLocationNeighbors[0]);
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load anchor entities');
+        setAnchors([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchNeighbors();
+  }, [locationId, selectedAnchorId, onSelectAnchor]);
+
+  if (!locationId) {
+    return (
+      <div className="anchor-step">
+        <p>Select a location first to see available anchor entities.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="anchor-step">
+        <p>Loading anchor entities…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="anchor-step">
+        <p className="wizard-error">{error}</p>
+      </div>
+    );
+  }
+
+  if (anchors.length === 0) {
+    return (
+      <div className="anchor-step">
+        <p>No non-location neighbors found for this location. Please go back and select a different location.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="anchor-step">
+      <header className="anchor-step__header">
+        <div>
+          <h2>Choose an anchor entity</h2>
+          <p>Select an entity to anchor this chronicle. These are neighbors of your selected location.</p>
+        </div>
+      </header>
+      <div className="anchor-step__list">
+        {anchors.map((anchor) => (
+          <button
+            key={anchor.id}
+            type="button"
+            className={`anchor-card${anchor.id === selectedAnchorId ? ' active' : ''}`}
+            onClick={() => onSelectAnchor(anchor)}
+          >
+            <p className="anchor-card__name">{anchor.name}</p>
+            <p className="anchor-card__meta">
+              {anchor.kind} {anchor.subkind ? ` · ${anchor.subkind}` : ''} · {anchor.slug}
+            </p>
+            {anchor.description ? <p className="anchor-card__desc">{anchor.description}</p> : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type CreateStepProps = {
   selectedLocation: SelectedLocationEntity | null;
   selectedSeed: ChronicleSeed | null;
@@ -727,7 +868,7 @@ type StepperProps = {
   onNavigate: (step: ChronicleWizardStep) => void;
 }
 
-const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'create'];
+const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'anchor', 'create'];
 
 function Stepper({ currentStep, onNavigate }: StepperProps) {
   return (
@@ -745,7 +886,9 @@ function Stepper({ currentStep, onNavigate }: StepperProps) {
                 ? 'Tone'
                 : step === 'seeds'
                   ? 'Seeds'
-                  : 'Create'}
+                  : step === 'anchor'
+                    ? 'Anchor Entity'
+                    : 'Create'}
           </button>
         </li>
       ))}

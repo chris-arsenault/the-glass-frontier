@@ -19,7 +19,7 @@ export type ChronicleFragmentTypes =
   | 'character'
   | 'location'
   | 'anchor'
-  | 'lore'
+  | 'entities'
   | 'beats'
   | 'intent'
   | 'gm-response'
@@ -35,21 +35,21 @@ export type ChronicleFragmentTypes =
 
 // prettier-ignore
 export const templateFragmentMapping: Partial<Record<PromptTemplateId, ChronicleFragmentTypes[]>> = {
-  'action-resolver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
-  'beat-tracker': ['intent', 'beats', 'lore'],
-  'check-planner': ['intent', 'character', 'location', 'lore'],
-  'clarification-responder': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
-  'gm-summary': ['intent', 'character', 'skill-check', 'lore', 'wrap'],
-  'inquiry-describer': ['recent-events', 'tone', 'intent', 'character', 'lore', 'location', 'inventory-detail', 'seed'],
-  'intent-beat-detector': ['intent', 'beats', 'lore'],
+  'action-resolver': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  'beat-tracker': ['intent', 'beats', 'entities'],
+  'check-planner': ['intent', 'character', 'location', 'entities'],
+  'clarification-responder': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'location', 'inventory-detail', 'seed'],
+  'entity-judge': ['entities', 'gm-response'],
+  'gm-summary': ['intent', 'character', 'skill-check', 'entities', 'wrap'],
+  'inquiry-describer': ['recent-events', 'tone', 'intent', 'character', 'entities', 'location', 'inventory-detail', 'seed'],
+  'intent-beat-detector': ['intent', 'beats', 'entities'],
   'intent-classifier': ['character', 'location', 'beats', 'wrap'],
-  'inventory-delta': ['intent', 'user-message', 'inventory', 'lore'],
-  'location-delta': ['intent', 'user-message', 'location-detail', 'lore'],
-  'lore-judge': ['lore', 'gm-response'],
-  'planning-narrator': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
-  'possibility-advisor': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
-  'reflection-weaver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'location', 'inventory-detail', 'seed'],
-  'wrap-resolver': ['recent-events', 'tone', 'intent', 'anchor', 'lore', 'character', 'skill-check', 'location', 'inventory-detail', 'wrap', 'seed'],
+  'inventory-delta': ['intent', 'user-message', 'inventory', 'entities'],
+  'location-delta': ['intent', 'user-message', 'location-detail', 'entities'],
+  'planning-narrator': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'skill-check', 'location', 'inventory-detail', 'seed'],
+  'possibility-advisor': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'location', 'inventory-detail', 'seed'],
+  'reflection-weaver': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'location', 'inventory-detail', 'seed'],
+  'wrap-resolver': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'skill-check', 'location', 'inventory-detail', 'wrap', 'seed'],
 };
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
@@ -62,7 +62,7 @@ const fragmentHandlers: Record<ChronicleFragmentTypes, FragmentHandler> = {
   inventory: inventoryFragment,
   'inventory-detail': inventoryDetailFragment,
   anchor: anchorFragment,
-  lore: loreFragment,
+  entities: entitiesFragment,
   location: locationFragment,
   'location-detail': locationDetailFragment,
   'recent-events': recentEventsFragment,
@@ -106,7 +106,7 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
     });
     return {
       anchor: {
-        id: entity.id,
+        slug: entity.slug,
         name: entity.name,
         kind: entity.kind,
         subkind: entity.subkind ?? null,
@@ -115,7 +115,7 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
         relationships: entity.links?.length ?? 0,
         tags: Array.from(new Set(fragments.flatMap((f) => f.tags ?? []))),
         recentLore: fragments.map((fragment) => ({
-          id: fragment.id,
+          slug: fragment.slug,
           title: fragment.title,
           tags: fragment.tags ?? [],
           prose: fragment.prose,
@@ -127,21 +127,26 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
   }
 }
 
-function loreFragment(context: GraphContext): Array<{
-  id: string;
-  title: string;
-  summary: string;
+function entitiesFragment(context: GraphContext): Array<{
+  slug: string;
+  name: string;
+  kind: string;
+  status: string | undefined;
   tags: string[];
-  entityId: string;
-  score: number;
+  loreFragments: Array<{
+    slug: string;
+    title: string;
+    summary: string;
+    tags: string[];
+  }>;
 }> {
-  return (context.loreContext?.offered ?? []).map((entry) => ({
-    id: entry.id,
-    title: entry.title,
-    summary: entry.summary,
+  return (context.entityContext?.offered ?? []).map((entry) => ({
+    slug: entry.slug,
+    name: entry.name,
+    kind: entry.kind,
+    status: entry.status,
     tags: entry.tags,
-    entityId: entry.entityId,
-    score: entry.score,
+    loreFragments: entry.loreFragments,
   }));
 }
 
@@ -154,13 +159,12 @@ async function locationFragment(context: GraphContext): Promise<Record<string, u
   }
 
   try {
-    const details = await context.locationGraphStore.getLocationDetails({
+    const details = await context.locationHelpers.getDetails({
       id: anchorId,
       minProminence: 'recognized',
       maxHops: 2,
     });
     return {
-      id: details.place.id,
       name: details.place.name,
       slug: details.place.slug,
       status: details.place.status ?? null,
@@ -170,7 +174,6 @@ async function locationFragment(context: GraphContext): Promise<Record<string, u
     };
   } catch {
     return {
-      id: context.chronicleState.location?.id ?? null,
       name: context.chronicleState.location?.name ?? null,
       slug: context.chronicleState.location?.slug ?? null,
       status: context.chronicleState.location?.status ?? null,
@@ -190,7 +193,7 @@ async function locationDetailFragment(context: GraphContext): Promise<unknown> {
   }
 
   try {
-    const neighbors = await context.locationGraphStore.getLocationNeighbors({
+    const neighbors = await context.locationHelpers.getNeighborsGrouped({
       id: anchorId,
       minProminence: 'recognized',
       maxHops: 2,
@@ -214,7 +217,7 @@ function beatsFragment(context: GraphContext): unknown {
 }
 
 function intentFragment(context: GraphContext): Record<string, unknown> {
-  return formatIntent(context.playerIntent);
+  return formatIntent(context.playerIntent, context.chronicleState.chronicle.beats);
 }
 
 function toneFragment(context: GraphContext): string {

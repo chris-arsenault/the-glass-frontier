@@ -1,7 +1,7 @@
 import type { ChronicleSeed } from '@glass-frontier/dto';
 import { create } from 'zustand';
 
-export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'create';
+export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'anchor' | 'create';
 
 export type SelectedLocationEntity = {
   id: string;
@@ -12,9 +12,19 @@ export type SelectedLocationEntity = {
   subkind?: string;
 }
 
+export type SelectedAnchorEntity = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  description?: string;
+  subkind?: string;
+}
+
 export type ChronicleStartState = {
   step: ChronicleWizardStep;
   selectedLocation: SelectedLocationEntity | null;
+  selectedAnchorEntity: SelectedAnchorEntity | null;
   toneChips: string[];
   toneNotes: string;
   seeds: ChronicleSeed[];
@@ -29,6 +39,7 @@ type ChronicleStartActions = {
   reset: () => void;
   setStep: (step: ChronicleWizardStep) => void;
   setSelectedLocation: (selection: SelectedLocationEntity | null) => void;
+  setSelectedAnchorEntity: (selection: SelectedAnchorEntity | null) => void;
   toggleToneChip: (chip: string) => void;
   setToneNotes: (notes: string) => void;
   setSeeds: (seeds: ChronicleSeed[]) => void;
@@ -46,6 +57,7 @@ const initialState: ChronicleStartState = {
   listViewFallback: false,
   seeds: [],
   selectedLocation: null,
+  selectedAnchorEntity: null,
   step: 'location',
   toneChips: [],
   toneNotes: '',
@@ -80,6 +92,7 @@ export const useChronicleStartStore = create<ChronicleStartState & ChronicleStar
       selectedLocation: selection,
       step: selection ? state.step : 'location',
     })),
+  setSelectedAnchorEntity: (selection) => set({ selectedAnchorEntity: selection }),
   setStep: (step) => set({ step }),
   setToneNotes: (toneNotes) => set({ toneNotes }),
   toggleToneChip: (chip) =>

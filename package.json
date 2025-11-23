@@ -25,7 +25,10 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:update-snapshots": "playwright test -u",
-    "local": "tsx scripts/run-local-stack.ts"
+    "local": "tsx scripts/run-local-stack.ts",
+    "local:e2e": "tsx scripts/run-local-stack.ts --seed=e2e-fixtures",
+    "local:fresh": "tsx scripts/run-local-stack.ts --force-reseed",
+    "reset:sessions": "tsx scripts/reset-session-data.ts"
   },
   "keywords": [
     "glass-frontier",
@@ -41,6 +44,7 @@
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.11.10",
     "@vitest/coverage-v8": "^4.0.8",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
@@ -55,6 +59,7 @@
     "eslint-plugin-unicorn": "^62.0.0",
     "execa": "^9.3.0",
     "nodemon": "^3.1.11",
+    "pg": "^8.13.1",
     "playwright": "^1.56.1",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",

@@ -19,9 +19,37 @@ export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'c
 export type ChronicleLifecycle = 'open' | 'closed';
 export type DirectoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+type EntitySnippet = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  subkind?: string;
+  description?: string;
+  status?: string;
+  tags: string[];
+  loreFragments: Array<{
+    slug: string;
+    title: string;
+    summary: string;
+    tags: string[];
+  }>;
+  score: number;
+};
+
+type EntityUsageEntry = {
+  entityId: string;
+  entitySlug: string;
+  tags: string[];
+  usage: 'unused' | 'mentioned' | 'central';
+  emergentTags: string[] | null;
+};
+
 export type ChatMessage = {
   advancesTimeline?: boolean | null;
   entry: TranscriptEntry;
+  entityOffered?: EntitySnippet[] | null;
+  entityUsage?: EntityUsageEntry[] | null;
   executedNodes?: string[] | null;
   skillCheckPlan?: SkillCheckPlan | null;
   skillCheckResult?: SkillCheckResult | null;
@@ -134,6 +162,7 @@ export type ChronicleCreationDetails = {
 }
 
 export type ChronicleSeedCreationDetails = {
+  anchorEntityId?: string | null;
   characterId?: string | null;
   locationId: string;
   title?: string | null;

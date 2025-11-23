@@ -10,7 +10,6 @@ import {
 
 import { GmEngine } from './gmEngine';
 import {createLLMClient } from "@glass-frontier/llm-client";
-import type { LocationStore } from './types';
 
 const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
 if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
@@ -19,16 +18,16 @@ if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().le
 
 const appStore = createAppStore({ connectionString: worldstateDatabaseUrl });
 const worldSchemaStore = createWorldSchemaStore({ connectionString: worldstateDatabaseUrl });
-const locationGraphStore = new LocationHelpers(worldSchemaStore);
 const chronicleStore = createChronicleStore({
   connectionString: worldstateDatabaseUrl,
   worldStore: worldSchemaStore,
 });
+const locationHelpers = new LocationHelpers(worldSchemaStore);
 const templateManager = appStore.promptTemplateManager;
 const llmClient = createLLMClient();
 
 const engine = new GmEngine({
-  locationGraphStore,
+  locationHelpers,
   templateManager,
   worldSchemaStore,
   chronicleStore,
@@ -39,7 +38,7 @@ export type Context = {
   authorizationHeader?: string;
   appStore: typeof appStore;
   engine: GmEngine;
-  locationGraphStore: LocationStore;
+  locationHelpers: LocationHelpers;
   worldSchemaStore: WorldSchemaStore;
   playerStore: PlayerStore;
   templateManager: PromptTemplateManager;
@@ -51,7 +50,7 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     authorizationHeader: options?.authorizationHeader,
     appStore,
     engine,
-    locationGraphStore,
+    locationHelpers,
     worldSchemaStore,
     playerStore: appStore.playerStore,
     templateManager,

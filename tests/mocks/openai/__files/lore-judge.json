@@ -1,0 +1,21 @@
+{
+  "output": [
+    {
+      "content": [
+        {
+          "text": "{\"results\":[{\"slug\":\"frag_founding_oath_66666666\",\"usage\":\"grounding\",\"emergentTags\":[\"duty\",\"preservation\",\"guardian-oath\"]}]}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "output_text": [
+    "{\"results\":[{\"slug\":\"frag_founding_oath_66666666\",\"usage\":\"grounding\",\"emergentTags\":[\"duty\",\"preservation\",\"guardian-oath\"]}]}"
+  ],
+  "stop_reason": "stop",
+  "usage": {
+    "input_tokens": 85,
+    "output_tokens": 25,
+    "total_tokens": 110
+  }
+}

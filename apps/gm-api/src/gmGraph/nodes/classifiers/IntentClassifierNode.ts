@@ -50,8 +50,8 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       intentSummary: result.intentSummary,
       intentType: result.intentType,
       beatDirective: {
-        kind: 'new',
-        summary: "dummy",
+        kind: 'independent',
+        summary: "Placeholder - will be replaced by beat detector",
         targetBeatId: null
       },
       metadata: {

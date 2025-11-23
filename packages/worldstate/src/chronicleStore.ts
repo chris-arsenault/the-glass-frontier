@@ -239,8 +239,8 @@ class PostgresChronicleStore implements ChronicleStore {
       await this.#graph.upsertNode(client, normalized.id, 'chronicle', normalized);
       await client.query(
         `INSERT INTO chronicle (
-           id, title, primary_char_id, status, player_id, location_id, seed_text, beats_enabled, anchor_entity_id, created_at, updated_at
-         ) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::uuid, $7, $8, $9::uuid, now(), now())
+           id, title, primary_char_id, status, player_id, location_id, seed_text, beats_enabled, anchor_entity_id, entity_focus, created_at, updated_at
+         ) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::uuid, $7, $8, $9::uuid, $10::jsonb, now(), now())
          ON CONFLICT (id) DO UPDATE
          SET title = EXCLUDED.title,
              primary_char_id = EXCLUDED.primary_char_id,
@@ -250,6 +250,7 @@ class PostgresChronicleStore implements ChronicleStore {
              seed_text = EXCLUDED.seed_text,
              beats_enabled = EXCLUDED.beats_enabled,
              anchor_entity_id = EXCLUDED.anchor_entity_id,
+             entity_focus = EXCLUDED.entity_focus,
              updated_at = now()`,
         [
           normalized.id,
@@ -261,6 +262,7 @@ class PostgresChronicleStore implements ChronicleStore {
           normalized.seedText ?? null,
           normalized.beatsEnabled ?? true,
           normalized.anchorEntityId ?? null,
+          JSON.stringify(normalized.entityFocus ?? { entityScores: {}, tagScores: {} }),
         ]
       );
     });
@@ -269,7 +271,7 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
     const result = await this.#pool.query(
-      `SELECT n.props, c.anchor_entity_id
+      `SELECT n.props, c.anchor_entity_id, c.entity_focus
        FROM chronicle c
        JOIN node n ON n.id = c.id
        WHERE c.id = $1::uuid`,
@@ -283,6 +285,7 @@ class PostgresChronicleStore implements ChronicleStore {
     return normalizeChronicle({
       ...normalizedProps,
       anchorEntityId: row.anchor_entity_id ?? normalizedProps.anchorEntityId,
+      entityFocus: row.entity_focus ?? normalizedProps.entityFocus ?? { entityScores: {}, tagScores: {} },
     });
   }
 

@@ -26,7 +26,7 @@ export function trimBeatsList(beats: ChronicleBeat[]) {
     .map((b) => {
       return {
         description: b.description,
-        id: b.id,
+        slug: b.slug,
         status: b.status,
         title: b.title,
       };
@@ -55,11 +55,18 @@ export function formatCharacter(character: Character | null | undefined): Record
   };
 }
 
-export function formatIntent(intent: PlayerIntent | null | undefined): Record<string, unknown> {
+export function formatIntent(intent: PlayerIntent | null | undefined, beats?: ChronicleBeat[]): Record<string, unknown> {
+  // Look up beat slug from ID if targetBeatId is set
+  let targetBeatSlug = null;
+  if (intent?.beatDirective.targetBeatId && beats) {
+    const targetBeat = beats.find(b => b.id === intent.beatDirective.targetBeatId);
+    targetBeatSlug = targetBeat?.slug ?? null;
+  }
+
   return {
     beatDirective: intent?.beatDirective.summary,
     summary: intent?.intentSummary,
-    targetBeat: intent?.beatDirective.targetBeatId,
+    targetBeat: targetBeatSlug,
     type: intent?.intentType,
   };
 }
@@ -105,7 +112,12 @@ export function formatLocationNeighbors(neighbors: LocationNeighbors): Record<st
       description: entry.neighbor.description ?? null,
       subkind: entry.neighbor.subkind ?? null,
       status: entry.neighbor.status ?? null,
-      via: entry.via ?? null,
+      via: entry.via
+        ? {
+            direction: entry.via.direction,
+            relationship: entry.via.relationship,
+          }
+        : null,
     }));
   }
   return formatted;

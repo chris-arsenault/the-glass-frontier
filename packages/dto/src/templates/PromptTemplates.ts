@@ -7,6 +7,7 @@ export const PromptTemplateIds = [
   'check-planner',
   'chronicle-seed',
   'clarification-responder',
+  'entity-judge',
   'gm-summary',
   'inquiry-describer',
   'intent-beat-detector',
@@ -73,6 +74,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     label: 'Clarification Responder',
     officialObjectKey: 'official/clarification-responder.hbs',
     supportsVariants: true,
+  },
+  'entity-judge': {
+    description: 'Classifies how entities were involved in the GM response.',
+    id: 'entity-judge',
+    label: 'Entity Judge',
+    officialObjectKey: 'official/entity-judge.hbs',
+    supportsVariants: false,
   },
   'gm-summary': {
     description: 'Condenses narrated output into a log-friendly summary line.',

@@ -308,14 +308,14 @@ export function WorldAtlasPage(): JSX.Element {
                 <input value={startTitle} onChange={(e) => setStartTitle(e.target.value)} />
               </label>
               <label>
-                Location slug
+                Location slug (optional)
                 <input
                   value={startLocationSlug}
                   onChange={(e) => setStartLocationSlug(e.target.value)}
-                  placeholder="location_slug"
+                  placeholder="Auto-selects nearest location neighbor"
                 />
               </label>
-              <button type="button" onClick={() => void handleStartChronicle()} disabled={isSaving || !startLocationSlug}>
+              <button type="button" onClick={() => void handleStartChronicle()} disabled={isSaving}>
                 Start chronicle
               </button>
             </div>

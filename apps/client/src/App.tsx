@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-do
 
 import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
+import { ChronicleDrawer } from './components/drawers/ChronicleDrawer/ChronicleDrawer';
 import { TemplateDrawer } from './components/drawers/TemplateDrawer/TemplateDrawer';
 import { ChatCanvas } from './components/layout/ChatCanvas/ChatCanvas';
 import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
@@ -247,6 +248,7 @@ export function App(): JSX.Element {
         </div>
       </div>
       <CharacterDrawer />
+      <ChronicleDrawer />
       <TemplateDrawer />
       <CreateCharacterModal />
       <BugReportModal />

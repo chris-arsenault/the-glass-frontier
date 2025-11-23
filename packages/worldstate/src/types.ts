@@ -26,38 +26,6 @@ export type WorldNeighbor = {
   via?: { id: string; relationship: string; direction: 'out' | 'in' };
 };
 
-export type LocationStore = {
-  createLocationWithRelationship: (input: {
-    name: string;
-    kind: string;
-    description?: string | null;
-    tags?: string[];
-    anchorId: string;
-    relationship: string;
-  }) => Promise<LocationEntity>;
-  getLocationDetails: (input: {
-    id: string;
-    minProminence?: HardStateProminence;
-    maxProminence?: HardStateProminence;
-    maxHops?: number;
-  }) => Promise<{
-    place: LocationEntity;
-    neighbors: LocationNeighbors;
-  }>;
-  getLocationNeighbors: (input: {
-    id: string;
-    limit?: number;
-    minProminence?: HardStateProminence;
-    maxProminence?: HardStateProminence;
-    maxHops?: number;
-  }) => Promise<LocationNeighbors>;
-  moveCharacterToLocation: (input: {
-    characterId: string;
-    placeId: string;
-    note?: string | null;
-  }) => Promise<LocationState>;
-  worldSchemaStore?: WorldSchemaStore;
-};
 export type ChronicleSnapshot = {
   chronicleId: string;
   turnSequence: number;

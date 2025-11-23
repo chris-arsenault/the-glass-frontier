@@ -70,52 +70,19 @@ async function seedWorldEntities() {
   const pool = new Pool({ connectionString });
   const worldState = WorldState.create({ pool });
 
-  // Create a dummy chronicle for lore fragments (required by schema)
-  // First create a dummy player, location, and chronicle
   const dummyPlayerId = 'seed-system';
   let dummyChronicleId = randomUUID();
-  const dummyLocation = await worldState.world.upsertEntity({
-    slug: 'seed-chronicle-location',
-    kind: 'location' as any,
-    name: 'Seed Chronicle Location',
-    subkind: 'region' as any,
-    status: 'known' as any,
-  });
 
+  // Create dummy player first
   try {
-    // Create dummy player
     await pool.query(
       `INSERT INTO app.player (id, username) VALUES ($1, 'World Seed System')
        ON CONFLICT (id) DO NOTHING`,
       [dummyPlayerId]
     );
-
-    // Try to find existing chronicle first, or create new one
-    const existingChronicle = await pool.query(
-      `SELECT c.id FROM chronicle c
-       WHERE c.location_id = $1::uuid
-       LIMIT 1`,
-      [dummyLocation.id]
-    );
-
-    if (existingChronicle.rows.length > 0) {
-      // Reuse existing chronicle
-      dummyChronicleId = existingChronicle.rows[0].id;
-      console.log(`Reusing existing chronicle ${dummyChronicleId} for lore fragments`);
-    } else {
-      await worldState.chronicles.ensureChronicle({
-        chronicleId: dummyChronicleId,
-        playerId: dummyPlayerId,
-        locationId: dummyLocation.id,
-        title: 'World Seed Chronicle',
-        status: 'closed',
-        beatsEnabled: false,
-      });
-      console.log(`Created dummy chronicle ${dummyChronicleId} for lore fragments`);
-    }
   } catch (error) {
-    console.error('Failed to create or find dummy chronicle:', error instanceof Error ? error.message : String(error));
-    throw error; // Rethrow to prevent seeding with invalid chronicle
+    console.error('Failed to create dummy player:', error instanceof Error ? error.message : String(error));
+    throw error;
   }
 
   try {
@@ -203,6 +170,66 @@ async function seedWorldEntities() {
     console.log(`Missing ID errors: ${missingIdErrors}`);
 
     console.log(`✓ Seeded ${relationshipCount} relationships (${relationshipErrors} errors)`);
+
+    // Create chronicle with faction anchor and connected location
+    console.log('\n=== Creating Seed Chronicle ===');
+
+    // Find a faction->location relationship from seed data
+    const factionToLocationRel = seedData.relationships.find(r => {
+      const fromEntity = Object.values(seedData.entities)
+        .flat()
+        .find(e => e.id === r.from);
+      const toEntity = Object.values(seedData.entities)
+        .flat()
+        .find(e => e.id === r.to);
+      return fromEntity?.kind === 'faction' && toEntity?.kind === 'location';
+    });
+
+    if (!factionToLocationRel) {
+      throw new Error('No faction->location relationship found in seed data');
+    }
+
+    const anchorFactionId = idMap.get(factionToLocationRel.from);
+    const chronicleLocationId = idMap.get(factionToLocationRel.to);
+
+    if (!anchorFactionId || !chronicleLocationId) {
+      throw new Error('Failed to find UUIDs for anchor faction or chronicle location');
+    }
+
+    const anchorFaction = Object.values(seedData.entities)
+      .flat()
+      .find(e => e.id === factionToLocationRel.from);
+    const chronicleLocation = Object.values(seedData.entities)
+      .flat()
+      .find(e => e.id === factionToLocationRel.to);
+
+    console.log(`Using anchor: ${anchorFaction?.name} (faction)`);
+    console.log(`Chronicle location: ${chronicleLocation?.name}`);
+    console.log(`Relationship: ${factionToLocationRel.relationshipType}`);
+
+    // Try to find existing chronicle first
+    const existingChronicle = await pool.query(
+      `SELECT c.id FROM chronicle c
+       WHERE c.location_id = $1::uuid AND c.anchor_entity_id = $2::uuid
+       LIMIT 1`,
+      [chronicleLocationId, anchorFactionId]
+    );
+
+    if (existingChronicle.rows.length > 0) {
+      dummyChronicleId = existingChronicle.rows[0].id;
+      console.log(`✓ Reusing existing chronicle ${dummyChronicleId}`);
+    } else {
+      await worldState.chronicles.ensureChronicle({
+        chronicleId: dummyChronicleId,
+        playerId: dummyPlayerId,
+        locationId: chronicleLocationId,
+        anchorEntityId: anchorFactionId,
+        title: `World Seed Chronicle - ${anchorFaction?.name}`,
+        status: 'closed',
+        beatsEnabled: false,
+      });
+      console.log(`✓ Created chronicle ${dummyChronicleId} with anchor`);
+    }
 
     // Create lore fragments
     console.log('\n=== Seeding Lore Fragments ===');
