@@ -33,7 +33,7 @@ export const worldAtlasClient = {
     description?: string | null;
     status?: string | null;
     prominence?: string | null;
-    links?: Array<{ relationship: string; targetId: string }>;
+    links?: Array<{ relationship: string; targetId: string; strength?: number }>;
   }): Promise<HardState> {
     const res = await fetch(`${API_BASE}/entities`, {
       method: 'POST',
@@ -43,7 +43,7 @@ export const worldAtlasClient = {
     return handle<HardState>(res);
   },
 
-  async upsertRelationship(input: { srcId: string; dstId: string; relationship: string }): Promise<void> {
+  async upsertRelationship(input: { srcId: string; dstId: string; relationship: string; strength?: number | null }): Promise<void> {
     const res = await fetch(`${API_BASE}/relationships`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

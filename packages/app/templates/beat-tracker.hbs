@@ -1,41 +1,19 @@
-You decide how this turn affects long-term beats. Output **JSON only** matching the schema.
+Track how this turn affects long-term beats. Beats = **multi-turn arcs**, not one-off tasks. Output **JSON only**.
 
-## Core Rules
-- Narration overrides intent.
-- Beats = **multi-turn arcs** (investigation, quest, sustained problem).
-Do **not** create beats for one-off tasks, momentary hazards, or flavor clues.
+**Advance**: Narration meaningfully progresses the beat's objective.
 
-## Advance
-Advance a beat only when narration **meaningfully progresses** its core objective.
-
-## Resolve
-Resolve a beat when **any** condition is met:
+**Resolve** when:
 1. Objective achieved → `changeKind: "resolve"`, `status: "succeeded"`
-2. Objective permanently failed → `changeKind: "resolve"`, `status: "failed"`
-3. Beat became irrelevant (NPC died, location destroyed, etc.) → `changeKind: "resolve"`, `status: "failed"`
+2. Objective failed → `changeKind: "resolve"`, `status: "failed"`
+3. Beat irrelevant → `changeKind: "resolve"`, `status: "failed"`
 
-**Required**: When `changeKind: "resolve"`, you MUST set `status` to `"succeeded"` or `"failed"`.
+When `changeKind: "resolve"`, MUST set `status` to `"succeeded"` or `"failed"`.
 
-## Spawn (strict)
-Spawn a new beat only if narration creates a **persistent, multi-turn** objective or consequence.
-Player-declared goals count only if narration confirms they are viable.
-If unsure → do **not** spawn.
+**Spawn**: Only if narration creates a **persistent, multi-turn** objective. If unsure → don't spawn.
+When objective achieved or impossible, resolve it.
 
-**Default**: When a beat's objective is achieved or impossible, resolve it. Do not keep beats open indefinitely.
+**newBeat**: `{title, description}` when spawning. Title ≤6 words, description ≤240 chars.
 
-## newBeat
-Provide `{title, description}` only when spawning.
-Title ≤ 6 words; description ≤ 240 chars.
+**updates**: Changed beats only. `changeKind`: "advance"/"resolve". `status`: "in_progress"/"succeeded"/"failed"/null. Empty array if none.
 
-## updates
-List only beats that changed:
-- `changeKind`: "advance" or "resolve"
-- `status`: "in_progress" / "succeeded" / "failed" / null
-- `description`: only if the beat text changes
-If none → `[]`.
-
-## focusBeatId
-ID of the beat most affected; `null` only when no beats exist.
-
-## Output
-**JSON only.** No extra fields.
+**focusBeatId**: Most affected beat; `null` if none exist.

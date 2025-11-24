@@ -14,7 +14,7 @@ type LlmClassifierOptions<TParsed> = {
   telemetryTag?: string;
 };
 
-const CLASSIFIER_MAX_TOKEN = 1000;
+const CLASSIFIER_MAX_TOKEN = 1500;
 const CLASSIFIER_MODEL = 'gpt-5-nano';
 const CLASSIFIER_REASONING = { reasoning: { effort: 'low' as const } };
 const CLASSIFIER_VERBOSITY = 'low'

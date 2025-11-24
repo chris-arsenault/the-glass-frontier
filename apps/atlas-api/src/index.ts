@@ -29,6 +29,7 @@ const hardStateInput = z.object({
       z.object({
         relationship: z.string().min(1),
         targetId: z.string().uuid(),
+        strength: z.number().min(0).max(1).optional(), // 0.0 (weak/spatial) to 1.0 (strong/narrative)
       })
     )
     .optional(),
@@ -108,6 +109,7 @@ app.post('/relationships', async (req, res) => {
         srcId: z.string().uuid(),
         dstId: z.string().uuid(),
         relationship: z.string().min(1),
+        strength: z.number().min(0).max(1).optional().nullable(), // 0.0 (weak/spatial) to 1.0 (strong/narrative)
       })
       .parse(req.body);
     await world.upsertRelationship(input);

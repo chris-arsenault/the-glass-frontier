@@ -49,7 +49,7 @@ export class GraphOperations {
   /**
    * Insert or update an edge in the graph.
    * @param executor - Pool or PoolClient to execute the query
-   * @param edge - Edge data including src, dst, type, and optional props
+   * @param edge - Edge data including src, dst, type, optional props, and optional strength
    */
   async upsertEdge(
     executor: PoolClient | Pool,
@@ -59,6 +59,7 @@ export class GraphOperations {
       dst: string;
       type: string;
       props?: unknown;
+      strength?: number | null;
     }
   ): Promise<void> {
     const edgeId = edge.id ?? crypto.randomUUID();
@@ -67,9 +68,9 @@ export class GraphOperations {
       [edge.src, edge.dst, edge.type]
     );
     await executor.query(
-      `INSERT INTO edge (id, src_id, dst_id, type, props, created_at)
-       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::jsonb, now())`,
-      [edgeId, edge.src, edge.dst, edge.type, JSON.stringify(edge.props ?? {})]
+      `INSERT INTO edge (id, src_id, dst_id, type, props, strength, created_at)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::jsonb, $6, now())`,
+      [edgeId, edge.src, edge.dst, edge.type, JSON.stringify(edge.props ?? {}), edge.strength ?? null]
     );
   }
 
@@ -138,12 +139,12 @@ export class GraphOperations {
     nodeId: string,
     direction: 'out' | 'in' | 'both' = 'both',
     edgeType?: string
-  ): Promise<Array<{ id: string; src_id: string; dst_id: string; type: string; props: unknown }>> {
+  ): Promise<Array<{ id: string; src_id: string; dst_id: string; type: string; props: unknown; strength: number | null }>> {
     let query = '';
     const params: unknown[] = [nodeId];
 
     if (direction === 'out' || direction === 'both') {
-      query += `SELECT id, src_id, dst_id, type, props FROM edge WHERE src_id = $1::uuid`;
+      query += `SELECT id, src_id, dst_id, type, props, strength FROM edge WHERE src_id = $1::uuid`;
       if (edgeType) {
         query += ` AND type = $2`;
         params.push(edgeType);
@@ -156,7 +157,7 @@ export class GraphOperations {
 
     if (direction === 'in' || direction === 'both') {
       const paramIndex = params.length + 1;
-      query += `SELECT id, src_id, dst_id, type, props FROM edge WHERE dst_id = $1::uuid`;
+      query += `SELECT id, src_id, dst_id, type, props, strength FROM edge WHERE dst_id = $1::uuid`;
       if (edgeType) {
         query += ` AND type = $${paramIndex}`;
         if (direction === 'in') {

@@ -79,7 +79,7 @@ export type WorldSchemaStore = {
     description?: string | null;
     prominence?: HardStateProminence | null;
     status?: HardStateStatus | null;
-    links?: Array<{ relationship: string; targetId: string }>;
+    links?: Array<{ relationship: string; targetId: string; strength?: number }>;
   }) => Promise<HardState>;
   getEntity: (input: { id: string }) => Promise<HardState | null>;
   getEntityBySlug: (input: { slug: string }) => Promise<HardState | null>;
@@ -92,7 +92,7 @@ export type WorldSchemaStore = {
   deleteEntity: (input: { id: string }) => Promise<void>;
 
   // === Relationship Operations ===
-  upsertRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
+  upsertRelationship: (input: { srcId: string; dstId: string; relationship: string; strength?: number | null }) => Promise<void>;
   deleteRelationship: (input: { srcId: string; dstId: string; relationship: string }) => Promise<void>;
 
   // === Generic Neighbor Queries ===

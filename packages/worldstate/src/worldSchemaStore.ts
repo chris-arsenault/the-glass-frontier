@@ -109,7 +109,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     description?: string | null;
     prominence?: HardStateProminence | null;
     status?: HardStateStatus | null;
-    links?: Array<{ relationship: string; targetId: string }>;
+    links?: Array<{ relationship: string; targetId: string; strength?: number }>;
   }): Promise<HardState> {
     const id = input.id ?? randomUUID();
     const normalizedLinks = this.#sanitizeLinks(input.links);
@@ -179,6 +179,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     srcId: string;
     dstId: string;
     relationship: string;
+    strength?: number | null;
   }): Promise<void> {
     await withTransaction(this.#pool, async (client) => {
       await this.#assertRelationshipAllowed(client, input.relationship, input.srcId, input.dstId);
@@ -187,6 +188,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
         dst: input.dstId,
         type: input.relationship,
         props: {},
+        strength: input.strength ?? null,
       });
     });
   }
@@ -653,7 +655,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
   async #syncRelationships(
     executor: PoolClient,
     entityId: string,
-    links: Array<{ relationship: string; targetId: string }>
+    links: Array<{ relationship: string; targetId: string; strength?: number }>
   ): Promise<void> {
     await executor.query(
       `DELETE FROM edge
@@ -668,6 +670,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
         dst: link.targetId,
         type: link.relationship,
         props: {},
+        strength: link.strength ?? null,
       });
     }
   }
@@ -716,12 +719,12 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
   }
 
   #sanitizeLinks(
-    links?: Array<{ relationship: string; targetId: string }>
-  ): Array<{ relationship: string; targetId: string }> {
+    links?: Array<{ relationship: string; targetId: string; strength?: number }>
+  ): Array<{ relationship: string; targetId: string; strength?: number }> {
     if (!Array.isArray(links)) {
       return [];
     }
-    const unique = new Map<string, { relationship: string; targetId: string }>();
+    const unique = new Map<string, { relationship: string; targetId: string; strength?: number }>();
     for (const link of links) {
       if (!link || typeof link.relationship !== 'string' || typeof link.targetId !== 'string') {
         continue;
@@ -731,9 +734,15 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
       if (!trimmedRelationship || !trimmedTarget) {
         continue;
       }
+      // Validate strength if provided
+      const strength =
+        link.strength !== undefined && typeof link.strength === 'number'
+          ? Math.max(0, Math.min(1, link.strength))
+          : undefined;
       unique.set(`${trimmedRelationship}:${trimmedTarget}`, {
         relationship: trimmedRelationship,
         targetId: trimmedTarget,
+        strength,
       });
     }
     return Array.from(unique.values());
@@ -741,7 +750,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async #listLinks(entityId: string): Promise<HardStateLink[]> {
     const result = await this.#pool.query(
-      `SELECT e.src_id, e.dst_id, e.type
+      `SELECT e.src_id, e.dst_id, e.type, e.strength
        FROM edge e
        WHERE e.type IN (SELECT id FROM world_relationship_kind)
          AND (e.src_id = $1::uuid OR e.dst_id = $1::uuid)`,
@@ -750,9 +759,19 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     const links: HardStateLink[] = [];
     for (const row of result.rows) {
       if (row.src_id === entityId) {
-        links.push({ relationship: row.type, targetId: row.dst_id, direction: 'out' });
+        links.push({
+          relationship: row.type,
+          targetId: row.dst_id,
+          direction: 'out',
+          strength: row.strength ?? undefined,
+        });
       } else {
-        links.push({ relationship: row.type, targetId: row.src_id, direction: 'in' });
+        links.push({
+          relationship: row.type,
+          targetId: row.src_id,
+          direction: 'in',
+          strength: row.strength ?? undefined,
+        });
       }
     }
     return links;
@@ -765,7 +784,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     }
     const idSet = new Set(entityIds);
     const result = await this.#pool.query(
-      `SELECT e.src_id, e.dst_id, e.type
+      `SELECT e.src_id, e.dst_id, e.type, e.strength
        FROM edge e
        WHERE e.type IN (SELECT id FROM world_relationship_kind)
          AND (e.src_id = ANY($1::uuid[]) OR e.dst_id = ANY($1::uuid[]))`,
@@ -774,12 +793,22 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     for (const row of result.rows) {
       if (idSet.has(row.src_id)) {
         const current = linkMap.get(row.src_id) ?? [];
-        current.push({ relationship: row.type, targetId: row.dst_id, direction: 'out' });
+        current.push({
+          relationship: row.type,
+          targetId: row.dst_id,
+          direction: 'out',
+          strength: row.strength ?? undefined,
+        });
         linkMap.set(row.src_id, current);
       }
       if (idSet.has(row.dst_id)) {
         const current = linkMap.get(row.dst_id) ?? [];
-        current.push({ relationship: row.type, targetId: row.src_id, direction: 'in' });
+        current.push({
+          relationship: row.type,
+          targetId: row.src_id,
+          direction: 'in',
+          strength: row.strength ?? undefined,
+        });
         linkMap.set(row.dst_id, current);
       }
     }

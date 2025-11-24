@@ -35,9 +35,10 @@ export function WorldAtlasPage(): JSX.Element {
     prose: '',
     tags: '',
   });
-  const [linkDraft, setLinkDraft] = useState<{ relationship: string; targetId: string }>({
+  const [linkDraft, setLinkDraft] = useState<{ relationship: string; targetId: string; strength: string }>({
     relationship: '',
     targetId: '',
+    strength: '',
   });
   const [startTitle, setStartTitle] = useState('');
   const [startLocationSlug, setStartLocationSlug] = useState(slug ?? '');
@@ -127,7 +128,11 @@ export function WorldAtlasPage(): JSX.Element {
         description: entity.description ?? null,
         status: entity.status ?? null,
         subkind: entity.subkind ?? null,
-        links: entity.links.map((link) => ({ relationship: link.relationship, targetId: link.targetId })),
+        links: entity.links.map((link) => ({
+          relationship: link.relationship,
+          targetId: link.targetId,
+          strength: link.strength,
+        })),
       });
       setEntity(updated);
     } catch (err: unknown) {
@@ -142,13 +147,15 @@ export function WorldAtlasPage(): JSX.Element {
     setIsSaving(true);
     setError(null);
     try {
+      const strength = linkDraft.strength.trim() ? parseFloat(linkDraft.strength) : undefined;
       await worldAtlasClient.upsertRelationship({
         srcId: entity.id,
         dstId: linkDraft.targetId,
         relationship: linkDraft.relationship,
+        strength: strength !== undefined && !isNaN(strength) ? strength : undefined,
       });
       await load();
-      setLinkDraft({ relationship: '', targetId: '' });
+      setLinkDraft({ relationship: '', targetId: '', strength: '' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to add link');
     } finally {
@@ -406,6 +413,11 @@ export function WorldAtlasPage(): JSX.Element {
                         ) : (
                           <span className="atlas-link-target">{targetName}</span>
                         )}
+                        {link.strength !== undefined ? (
+                          <span className="atlas-link-strength" title="Strength: 0.0 (weak/spatial) to 1.0 (strong/narrative)">
+                            [{link.strength.toFixed(2)}]
+                          </span>
+                        ) : null}
                       </div>
                       {canModerate ? (
                         <button type="button" className="atlas-link-action" onClick={() => void handleRemoveLink(link)}>
@@ -433,6 +445,16 @@ export function WorldAtlasPage(): JSX.Element {
                     value={linkDraft.targetId}
                     onChange={(e) => setLinkDraft((prev) => ({ ...prev, targetId: e.target.value }))}
                     placeholder="Target entity id"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={linkDraft.strength}
+                    onChange={(e) => setLinkDraft((prev) => ({ ...prev, strength: e.target.value }))}
+                    placeholder="Strength (0-1)"
+                    title="0.0 = weak/spatial, 1.0 = strong/narrative"
                   />
                   <button type="button" onClick={() => void handleAddLink()} disabled={!linkDraft.relationship || !linkDraft.targetId || isSaving}>
                     Add link
