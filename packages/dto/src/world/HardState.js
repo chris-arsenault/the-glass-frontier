@@ -153,6 +153,7 @@ export const HardStateLink = z.object({
     relationship: z.string().min(1),
     targetId: z.string().min(1),
     direction: z.enum(['out', 'in']),
+    strength: z.number().min(0).max(1).optional(), // 0.0 (weak/spatial) to 1.0 (strong/narrative)
 });
 export const HardState = z.object({
     id: z.string().min(1),

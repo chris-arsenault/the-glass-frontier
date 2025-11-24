@@ -74,7 +74,7 @@ export class BugReportStore {
       updatedAt: now.toISOString(),
     };
     await this.#pool.query(
-      `INSERT INTO bug_report (
+      `INSERT INTO ops.bug_report (
          id, player_id, summary, details, status, chronicle_id, character_id, admin_notes, backlog_item, metadata, created_at, updated_at
        ) VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10::jsonb, $11, $12)`,
       [
@@ -117,7 +117,7 @@ export class BugReportStore {
       updatedAt: now.toISOString(),
     };
     await this.#pool.query(
-      `UPDATE bug_report
+      `UPDATE ops.bug_report
        SET admin_notes = $2,
            backlog_item = $3,
            status = $4,
@@ -137,7 +137,7 @@ export class BugReportStore {
   async getReport(reportId: string): Promise<BugReport | null> {
     const result = await this.#pool.query<BugReportRow>(
       `SELECT id, player_id, summary, details, status, chronicle_id, character_id, admin_notes, backlog_item, metadata, created_at, updated_at
-       FROM bug_report
+       FROM ops.bug_report
        WHERE id = $1::uuid`,
       [reportId]
     );
@@ -151,7 +151,7 @@ export class BugReportStore {
   async listReports(): Promise<BugReport[]> {
     const result = await this.#pool.query<BugReportRow>(
       `SELECT id, player_id, summary, details, status, chronicle_id, character_id, admin_notes, backlog_item, metadata, created_at, updated_at
-       FROM bug_report
+       FROM ops.bug_report
        ORDER BY created_at DESC`
     );
     return result.rows

@@ -3,7 +3,7 @@
 exports.shorthands = undefined;
 
 exports.up = (pgm) => {
-  pgm.createTable('audit_group', {
+  pgm.createTable({ schema: 'ops', name: 'audit_group' }, {
     id: { type: 'uuid', primaryKey: true, default: pgm.func('uuid_generate_v4()') },
     scope_type: { type: 'text', notNull: true },
     scope_ref: { type: 'text' },
@@ -14,16 +14,16 @@ exports.up = (pgm) => {
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.addConstraint('audit_group', 'audit_group_scope_unique', {
+  pgm.addConstraint({ schema: 'ops', name: 'audit_group' }, 'audit_group_scope_unique', {
     unique: ['scope_type', 'scope_ref', 'player_id'],
   });
-  pgm.createIndex('audit_group', ['scope_type', 'scope_ref'], { name: 'audit_group_scope_idx' });
-  pgm.createIndex('audit_group', 'player_id', { name: 'audit_group_player_idx' });
-  pgm.createIndex('audit_group', 'chronicle_id', { name: 'audit_group_chronicle_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_group' }, ['scope_type', 'scope_ref'], { name: 'audit_group_scope_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_group' }, 'player_id', { name: 'audit_group_player_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_group' }, 'chronicle_id', { name: 'audit_group_chronicle_idx' });
 
-  pgm.createTable('audit_entry', {
+  pgm.createTable({ schema: 'ops', name: 'audit_entry' }, {
     id: { type: 'uuid', primaryKey: true },
-    group_id: { type: 'uuid', notNull: true, references: 'audit_group(id)', onDelete: 'CASCADE' },
+    group_id: { type: 'uuid', notNull: true, references: 'ops.audit_group(id)', onDelete: 'CASCADE' },
     player_id: { type: 'text', notNull: true },
     chronicle_id: { type: 'uuid' },
     character_id: { type: 'uuid' },
@@ -34,16 +34,16 @@ exports.up = (pgm) => {
     metadata: { type: 'jsonb', notNull: true, default: pgm.func(`'{}'::jsonb`) },
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.createIndex('audit_entry', 'group_id', { name: 'audit_entry_group_idx' });
-  pgm.createIndex('audit_entry', ['created_at', 'id'], { name: 'audit_entry_created_idx' });
-  pgm.createIndex('audit_entry', 'player_id', { name: 'audit_entry_player_idx' });
-  pgm.createIndex('audit_entry', 'turn_id', { name: 'audit_entry_turn_idx' });
-  pgm.createIndex('audit_entry', 'chronicle_id', { name: 'audit_entry_chronicle_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_entry' }, 'group_id', { name: 'audit_entry_group_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_entry' }, ['created_at', 'id'], { name: 'audit_entry_created_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_entry' }, 'player_id', { name: 'audit_entry_player_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_entry' }, 'turn_id', { name: 'audit_entry_turn_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_entry' }, 'chronicle_id', { name: 'audit_entry_chronicle_idx' });
 
-  pgm.createTable('audit_review', {
+  pgm.createTable({ schema: 'ops', name: 'audit_review' }, {
     id: { type: 'uuid', primaryKey: true },
-    group_id: { type: 'uuid', notNull: true, references: 'audit_group(id)', onDelete: 'CASCADE' },
-    audit_id: { type: 'uuid', notNull: true, references: 'audit_entry(id)', onDelete: 'CASCADE' },
+    group_id: { type: 'uuid', notNull: true, references: 'ops.audit_group(id)', onDelete: 'CASCADE' },
+    audit_id: { type: 'uuid', notNull: true, references: 'ops.audit_entry(id)', onDelete: 'CASCADE' },
     reviewer_id: { type: 'text', notNull: true },
     status: { type: 'text', notNull: true },
     severity: { type: 'text', notNull: true },
@@ -52,14 +52,14 @@ exports.up = (pgm) => {
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.createIndex('audit_review', 'group_id', { name: 'audit_review_group_idx' });
-  pgm.createIndex('audit_review', 'audit_id', { name: 'audit_review_audit_idx' });
-  pgm.createIndex('audit_review', ['reviewer_id', 'created_at'], { name: 'audit_review_reviewer_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_review' }, 'group_id', { name: 'audit_review_group_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_review' }, 'audit_id', { name: 'audit_review_audit_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_review' }, ['reviewer_id', 'created_at'], { name: 'audit_review_reviewer_idx' });
 
-  pgm.createTable('audit_feedback', {
+  pgm.createTable({ schema: 'ops', name: 'audit_feedback' }, {
     id: { type: 'uuid', primaryKey: true },
-    group_id: { type: 'uuid', notNull: true, references: 'audit_group(id)', onDelete: 'CASCADE' },
-    audit_id: { type: 'uuid', references: 'audit_entry(id)', onDelete: 'CASCADE' },
+    group_id: { type: 'uuid', notNull: true, references: 'ops.audit_group(id)', onDelete: 'CASCADE' },
+    audit_id: { type: 'uuid', references: 'ops.audit_entry(id)', onDelete: 'CASCADE' },
     player_id: { type: 'text', notNull: true },
     sentiment: { type: 'text', notNull: true },
     note: { type: 'text' },
@@ -79,30 +79,30 @@ exports.up = (pgm) => {
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.createIndex('audit_feedback', 'group_id', { name: 'audit_feedback_group_idx' });
-  pgm.createIndex('audit_feedback', ['player_id', 'created_at'], { name: 'audit_feedback_player_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_feedback' }, 'group_id', { name: 'audit_feedback_group_idx' });
+  pgm.createIndex({ schema: 'ops', name: 'audit_feedback' }, ['player_id', 'created_at'], { name: 'audit_feedback_player_idx' });
 };
 
 exports.down = (pgm) => {
-  pgm.dropIndex('audit_feedback', ['player_id', 'created_at'], { ifExists: true, name: 'audit_feedback_player_idx' });
-  pgm.dropIndex('audit_feedback', 'group_id', { ifExists: true, name: 'audit_feedback_group_idx' });
-  pgm.dropTable('audit_feedback', { ifExists: true });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_feedback' }, ['player_id', 'created_at'], { ifExists: true, name: 'audit_feedback_player_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_feedback' }, 'group_id', { ifExists: true, name: 'audit_feedback_group_idx' });
+  pgm.dropTable({ schema: 'ops', name: 'audit_feedback' }, { ifExists: true });
 
-  pgm.dropIndex('audit_review', ['reviewer_id', 'created_at'], { ifExists: true, name: 'audit_review_reviewer_idx' });
-  pgm.dropIndex('audit_review', 'audit_id', { ifExists: true, name: 'audit_review_audit_idx' });
-  pgm.dropIndex('audit_review', 'group_id', { ifExists: true, name: 'audit_review_group_idx' });
-  pgm.dropTable('audit_review', { ifExists: true });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_review' }, ['reviewer_id', 'created_at'], { ifExists: true, name: 'audit_review_reviewer_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_review' }, 'audit_id', { ifExists: true, name: 'audit_review_audit_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_review' }, 'group_id', { ifExists: true, name: 'audit_review_group_idx' });
+  pgm.dropTable({ schema: 'ops', name: 'audit_review' }, { ifExists: true });
 
-  pgm.dropIndex('audit_entry', 'chronicle_id', { ifExists: true, name: 'audit_entry_chronicle_idx' });
-  pgm.dropIndex('audit_entry', 'turn_id', { ifExists: true, name: 'audit_entry_turn_idx' });
-  pgm.dropIndex('audit_entry', 'player_id', { ifExists: true, name: 'audit_entry_player_idx' });
-  pgm.dropIndex('audit_entry', ['created_at', 'id'], { ifExists: true, name: 'audit_entry_created_idx' });
-  pgm.dropIndex('audit_entry', 'group_id', { ifExists: true, name: 'audit_entry_group_idx' });
-  pgm.dropTable('audit_entry', { ifExists: true });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_entry' }, 'chronicle_id', { ifExists: true, name: 'audit_entry_chronicle_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_entry' }, 'turn_id', { ifExists: true, name: 'audit_entry_turn_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_entry' }, 'player_id', { ifExists: true, name: 'audit_entry_player_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_entry' }, ['created_at', 'id'], { ifExists: true, name: 'audit_entry_created_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_entry' }, 'group_id', { ifExists: true, name: 'audit_entry_group_idx' });
+  pgm.dropTable({ schema: 'ops', name: 'audit_entry' }, { ifExists: true });
 
-  pgm.dropIndex('audit_group', 'chronicle_id', { ifExists: true, name: 'audit_group_chronicle_idx' });
-  pgm.dropIndex('audit_group', 'player_id', { ifExists: true, name: 'audit_group_player_idx' });
-  pgm.dropIndex('audit_group', ['scope_type', 'scope_ref'], { ifExists: true, name: 'audit_group_scope_idx' });
-  pgm.dropConstraint('audit_group', 'audit_group_scope_unique', { ifExists: true });
-  pgm.dropTable('audit_group', { ifExists: true });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_group' }, 'chronicle_id', { ifExists: true, name: 'audit_group_chronicle_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_group' }, 'player_id', { ifExists: true, name: 'audit_group_player_idx' });
+  pgm.dropIndex({ schema: 'ops', name: 'audit_group' }, ['scope_type', 'scope_ref'], { ifExists: true, name: 'audit_group_scope_idx' });
+  pgm.dropConstraint({ schema: 'ops', name: 'audit_group' }, 'audit_group_scope_unique', { ifExists: true });
+  pgm.dropTable({ schema: 'ops', name: 'audit_group' }, { ifExists: true });
 };

@@ -56,6 +56,10 @@ export class WorldUpdater {
     if (context.inventoryDelta.ops.length === 0) {
       return context;
     }
+    if (!context.chronicleState.character) {
+      log('error', 'Cannot update inventory: character is null');
+      return context;
+    }
 
     const newInventory = createUpdatedInventory(context);
     return {

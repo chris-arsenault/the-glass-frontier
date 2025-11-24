@@ -7,6 +7,7 @@ import { PidRegistry } from './pid-registry';
 type StackMode = 'mock-openai' | 'live-openai';
 type SeedMode = 'e2e-fixtures' | 'world-seed';
 type ReseedMode = 'auto' | 'force';
+type DbMode = 'preserve' | 'drop';
 
 const MOCK_ENV: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
@@ -37,6 +38,9 @@ const LIVE_OPENAI_ENV: Record<string, string> = {
   OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? 'https://api.openai.com/v1',
   OPENAI_CLIENT_BASE: process.env.OPENAI_CLIENT_BASE ?? 'https://api.openai.com/v1',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '',
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? 'test',
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? 'test',
 };
 
 const APP_WAIT_RESOURCES = [
@@ -89,6 +93,17 @@ function resolveReseedMode(): ReseedMode {
     return 'force';
   }
   return 'auto';
+}
+
+function resolveDbMode(): DbMode {
+  const flag = process.argv.find((entry) => entry === '--drop-db');
+  if (flag) {
+    return 'drop';
+  }
+  if (process.env.LOCAL_STACK_DB === 'drop') {
+    return 'drop';
+  }
+  return 'preserve';
 }
 
 function buildEnv(mode: StackMode): NodeJS.ProcessEnv {
@@ -236,7 +251,16 @@ async function main(): Promise<void> {
   const mode = resolveMode();
   const seedMode = resolveSeedMode();
   const reseedMode = resolveReseedMode();
+  const dbMode = resolveDbMode();
   const env = buildEnv(mode);
+
+  // If drop-db flag is set, bring down containers with volumes first
+  if (dbMode === 'drop') {
+    console.log('[run-local-stack] Dropping database (removing volumes)...');
+    await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'down', '-v'], {
+      stdio: 'inherit',
+    }).catch(() => undefined);
+  }
 
   await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
     stdio: 'inherit',

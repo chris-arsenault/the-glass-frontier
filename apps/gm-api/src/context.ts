@@ -9,7 +9,7 @@ import {
 } from '@glass-frontier/worldstate';
 
 import { GmEngine } from './gmEngine';
-import {createLLMClient } from "@glass-frontier/llm-client";
+import {createLLMClient, createDefaultRegistry, syncRegistryToDatabase } from "@glass-frontier/llm-client";
 
 const worldstateDatabaseUrl = process.env.GLASS_FRONTIER_DATABASE_URL;
 if (typeof worldstateDatabaseUrl !== 'string' || worldstateDatabaseUrl.trim().length === 0) {
@@ -26,12 +26,19 @@ const locationHelpers = new LocationHelpers(worldSchemaStore);
 const templateManager = appStore.promptTemplateManager;
 const llmClient = createLLMClient();
 
+// Sync model registry to database on startup
+const registry = createDefaultRegistry();
+void syncRegistryToDatabase(registry, appStore.modelConfigStore).catch((error) => {
+  console.error('[GM-API] Failed to sync model registry to database:', error);
+});
+
 const engine = new GmEngine({
   locationHelpers,
   templateManager,
   worldSchemaStore,
   chronicleStore,
   llmClient,
+  modelConfigStore: appStore.modelConfigStore,
 });
 
 export type Context = {

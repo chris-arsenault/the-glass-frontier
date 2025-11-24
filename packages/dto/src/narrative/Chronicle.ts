@@ -5,8 +5,8 @@ import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
 
 const EntityFocusState = z.object({
-  entityScores: z.record(z.number()).default({}),
-  tagScores: z.record(z.number()).default({}),
+  entityScores: z.record(z.string(), z.number()).default({}),
+  tagScores: z.record(z.string(), z.number()).default({}),
   lastUpdated: z.number().int().nonnegative().optional(),
 });
 

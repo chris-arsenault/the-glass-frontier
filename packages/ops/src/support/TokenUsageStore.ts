@@ -35,7 +35,7 @@ export class TokenUsageStore {
     const cappedLimit = Math.min(Math.max(limit, 1), 24);
     const result = await this.#pool.query<TokenUsageRow>(
       `SELECT usage_period, total_requests, metrics, updated_at
-       FROM token_usage
+       FROM ops.token_usage
        WHERE player_id = $1
        ORDER BY usage_period DESC
        LIMIT $2`,
@@ -61,7 +61,7 @@ export class TokenUsageStore {
 
     await withTransaction(this.#pool, async (client) => {
       const existing = await client.query<TokenUsageRow>(
-        'SELECT metrics, total_requests FROM token_usage WHERE player_id = $1 AND usage_period = $2 FOR UPDATE',
+        'SELECT metrics, total_requests FROM ops.token_usage WHERE player_id = $1 AND usage_period = $2 FOR UPDATE',
         [playerId, usagePeriod]
       );
       const currentMetrics = this.#normalizeMetrics(existing.rows[0]?.metrics ?? {});
@@ -70,14 +70,14 @@ export class TokenUsageStore {
 
       if (existing.rowCount === 0) {
         await client.query(
-          `INSERT INTO token_usage (player_id, usage_period, total_requests, metrics, updated_at)
+          `INSERT INTO ops.token_usage (player_id, usage_period, total_requests, metrics, updated_at)
            VALUES ($1, $2, $3, $4::jsonb, $5)`,
           [playerId, usagePeriod, totalRequests, JSON.stringify(mergedMetrics), timestamp.toISOString()]
         );
         return;
       }
       await client.query(
-        `UPDATE token_usage
+        `UPDATE ops.token_usage
          SET total_requests = $3,
              metrics = $4::jsonb,
              updated_at = $5

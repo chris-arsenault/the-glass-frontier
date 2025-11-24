@@ -1,5 +1,5 @@
 // context.ts
-import { createAppStore, type PromptTemplateManager, type PlayerStore } from '@glass-frontier/app';
+import { createAppStore, type PromptTemplateManager, type PlayerStore, type ModelConfigStore } from '@glass-frontier/app';
 import { createOpsStore } from '@glass-frontier/ops';
 import { createChronicleStore, createWorldSchemaStore, type WorldSchemaStore, type ChronicleStore } from '@glass-frontier/worldstate';
 
@@ -29,6 +29,7 @@ export type Context = {
   authorizationHeader?: string;
   appStore: typeof appStore;
   bugReportStore: typeof opsStore.bugReportStore;
+  modelConfigStore: ModelConfigStore;
   playerStore: PlayerStore;
   seedService: ChronicleSeedService;
   templateManager: PromptTemplateManager;
@@ -42,6 +43,7 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     authorizationHeader: options?.authorizationHeader,
     appStore,
     bugReportStore: opsStore.bugReportStore,
+    modelConfigStore: appStore.modelConfigStore,
     playerStore: appStore.playerStore,
     seedService,
     templateManager,

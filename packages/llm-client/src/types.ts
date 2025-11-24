@@ -40,3 +40,5 @@ export type LLMResponse = {
   responseBody: Record<string, unknown>;
   usage: Record<string, unknown>;
 };
+
+export type ModelCategory = 'prose' | 'classification';

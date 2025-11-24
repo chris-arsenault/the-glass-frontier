@@ -7,7 +7,7 @@ import type {
   ChronicleClosureEvent,
   ChronicleSummaryKind,
 } from '@glass-frontier/dto';
-import type { PromptTemplateManager } from '@glass-frontier/app';
+import type { PromptTemplateManager, ModelConfigStore } from '@glass-frontier/app';
 import {
   type ChronicleStore,
   type WorldSchemaStore,
@@ -45,6 +45,7 @@ type GmEngineOptions = {
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
+  modelConfigStore: ModelConfigStore;
 };
 
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
@@ -59,6 +60,7 @@ class GmEngine {
   readonly progressEmitter: TurnProgressPublisher;
   readonly closureEmitter: ChronicleClosurePublisher;
   readonly templateManager: PromptTemplateManager;
+  readonly modelConfigStore: ModelConfigStore;
 
   constructor(options: GmEngineOptions) {
     this.templateManager = options.templateManager;
@@ -67,6 +69,7 @@ class GmEngine {
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
+    this.modelConfigStore = options.modelConfigStore;
     this.progressEmitter = createProgressEmitterFromEnv();
     this.closureEmitter = createClosureEmitterFromEnv();
     this.graph = this.#createGraph();
@@ -253,6 +256,7 @@ class GmEngine {
       chronicleStore,
       worldSchemaStore,
       llm: this.llm,
+      modelConfigStore: this.modelConfigStore,
       telemetry: this.telemetry,
       templates: templateRuntime,
       failure: false,

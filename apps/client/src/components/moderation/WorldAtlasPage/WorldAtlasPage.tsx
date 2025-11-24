@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCanModerate } from '../../../hooks/useUserRole';
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import { worldSchemaClient } from '../../../lib/worldSchemaClient';
+import { useChronicleStartStore } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './WorldAtlasPage.css';
 
@@ -22,7 +23,7 @@ export function WorldAtlasPage(): JSX.Element {
   const navigate = useNavigate();
   const canModerate = useCanModerate();
   const chronicleId = useChronicleStore((state) => state.chronicleId);
-  const playerId = useChronicleStore((state) => state.playerId);
+  const initFromAtlas = useChronicleStartStore((state) => state.initFromAtlas);
   const [entity, setEntity] = useState<HardState | null>(null);
   const [entities, setEntities] = useState<HardState[]>([]);
   const [fragments, setFragments] = useState<LoreFragment[]>([]);
@@ -40,8 +41,6 @@ export function WorldAtlasPage(): JSX.Element {
     targetId: '',
     strength: '',
   });
-  const [startTitle, setStartTitle] = useState('');
-  const [startLocationSlug, setStartLocationSlug] = useState(slug ?? '');
 
   const load = async () => {
     if (!slug) {
@@ -60,7 +59,6 @@ export function WorldAtlasPage(): JSX.Element {
       setEntity(details.entity);
       setFragments(details.fragments);
       setSchema(schemaResult);
-      setStartTitle(details.entity.name);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load entity');
     } finally {
@@ -88,12 +86,6 @@ export function WorldAtlasPage(): JSX.Element {
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load entities'))
       .finally(() => setIsLoading(false));
   }, [entities.length, isLoading, schema]);
-
-  useEffect(() => {
-    if (entity && entity.kind === 'location') {
-      setStartLocationSlug((prev) => (prev ? prev : entity.slug));
-    }
-  }, [entity]);
 
   const statusOptions = useMemo(() => {
     if (!entity || !schema) return [];
@@ -235,22 +227,73 @@ export function WorldAtlasPage(): JSX.Element {
     if (!entity) {
       return;
     }
-    if (!playerId) {
-      setError('Player identity unavailable.');
-      return;
-    }
     setIsSaving(true);
     setError(null);
     try {
-      const chronicle = await worldAtlasClient.startChronicle({
-        anchorSlug: entity.slug,
-        locationSlug: startLocationSlug,
-        playerId,
-        title: startTitle || entity.name,
+      let location: HardState | null = null;
+      let anchor: HardState | null = null;
+
+      if (entity.kind === 'location') {
+        // Entity is a location - use it as location, find anchor from neighbors
+        location = entity;
+        // Try to find a non-location neighbor to use as anchor
+        if (entity.links && entity.links.length > 0) {
+          for (const link of entity.links) {
+            const neighborResult = await worldAtlasClient.getEntity(link.targetId);
+            if (neighborResult && neighborResult.entity.kind !== 'location') {
+              anchor = neighborResult.entity;
+              break;
+            }
+          }
+        }
+      } else {
+        // Entity is not a location - use it as anchor, find location from neighbors
+        anchor = entity;
+        // Try to find a location neighbor
+        if (entity.links && entity.links.length > 0) {
+          for (const link of entity.links) {
+            const neighborResult = await worldAtlasClient.getEntity(link.targetId);
+            if (neighborResult && neighborResult.entity.kind === 'location') {
+              location = neighborResult.entity;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!location) {
+        setError('Could not find a location for this entity. Please select a location entity or one linked to a location.');
+        return;
+      }
+
+      console.log('[WorldAtlas] Starting chronicle with:', {
+        location: { id: location.id, name: location.name },
+        anchor: anchor ? { id: anchor.id, name: anchor.name } : null,
       });
-      navigate(`/chron/${chronicle.id}`);
+
+      initFromAtlas({
+        anchor: anchor
+          ? {
+              description: anchor.description ?? undefined,
+              id: anchor.id,
+              kind: anchor.kind,
+              name: anchor.name,
+              slug: anchor.slug,
+              subkind: anchor.subkind ?? undefined,
+            }
+          : null,
+        location: {
+          description: location.description ?? undefined,
+          id: location.id,
+          name: location.name,
+          slug: location.slug,
+          status: location.status ?? undefined,
+          subkind: location.subkind ?? undefined,
+        },
+      });
+      navigate('/chronicles/start');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to start chronicle');
+      setError(err instanceof Error ? err.message : 'Failed to prepare chronicle');
     } finally {
       setIsSaving(false);
     }
@@ -306,24 +349,12 @@ export function WorldAtlasPage(): JSX.Element {
         <div className="atlas-layout">
           <section className="atlas-start">
             <div>
-              <h3>Start chronicle with this anchor</h3>
-              <p>Creates a new chronicle focused on this entity. Location is required.</p>
+              <h3>Start chronicle with this entity</h3>
+              <p>Opens the chronicle wizard with this entity pre-selected.</p>
             </div>
             <div className="atlas-start-fields">
-              <label>
-                Title
-                <input value={startTitle} onChange={(e) => setStartTitle(e.target.value)} />
-              </label>
-              <label>
-                Location slug (optional)
-                <input
-                  value={startLocationSlug}
-                  onChange={(e) => setStartLocationSlug(e.target.value)}
-                  placeholder="Auto-selects nearest location neighbor"
-                />
-              </label>
               <button type="button" onClick={() => void handleStartChronicle()} disabled={isSaving}>
-                Start chronicle
+                {isSaving ? 'Preparing…' : 'Start chronicle'}
               </button>
             </div>
           </section>

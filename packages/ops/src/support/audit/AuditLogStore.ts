@@ -106,7 +106,7 @@ export class AuditLogStore {
     const now = entry.createdAt ?? new Date();
     const id = entry.id ?? randomUUID();
     await this.#pool.query(
-      `INSERT INTO audit_entry (
+      `INSERT INTO ops.audit_entry (
          id, group_id, player_id, chronicle_id, character_id, turn_id, provider_id, request, response, metadata, created_at
        ) VALUES ($1::uuid, $2::uuid, $3, $4::uuid, $5::uuid, $6::uuid, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11)
        ON CONFLICT (id) DO NOTHING`,
@@ -130,8 +130,8 @@ export class AuditLogStore {
     const result = await this.#pool.query<AuditEntryRow>(
       `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
               g.scope_type, g.scope_ref, t.turn_sequence
-       FROM audit_entry e
-       JOIN audit_group g ON g.id = e.group_id
+       FROM ops.audit_entry e
+       JOIN ops.audit_group g ON g.id = e.group_id
        LEFT JOIN chronicle_turn t ON t.id = e.turn_id
        WHERE e.id = $1::uuid`,
       [entryId]
@@ -198,8 +198,8 @@ export class AuditLogStore {
     const result = await this.#pool.query<AuditEntryRow>(
       `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
               g.scope_type, g.scope_ref, t.turn_sequence
-       FROM audit_entry e
-       JOIN audit_group g ON g.id = e.group_id
+       FROM ops.audit_entry e
+       JOIN ops.audit_group g ON g.id = e.group_id
        LEFT JOIN chronicle_turn t ON t.id = e.turn_id
        ${whereSql}
        ORDER BY e.created_at DESC, e.id DESC

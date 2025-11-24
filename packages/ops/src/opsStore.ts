@@ -14,6 +14,7 @@ import { AuditLogStore } from './support/audit/AuditLogStore';
 import { AuditReviewStore } from './support/audit/AuditReviewStore';
 import { BugReportStore } from './support/BugReportStore';
 import { TokenUsageStore } from './support/TokenUsageStore';
+import { ModelUsageStore } from './support/ModelUsageStore';
 
 type AuditQueueFilters = {
   cursor?: string;
@@ -41,6 +42,7 @@ export class OpsStore {
   readonly auditReviewStore: AuditReviewStore;
   readonly bugReportStore: BugReportStore;
   readonly tokenUsageStore: TokenUsageStore;
+  readonly modelUsageStore: ModelUsageStore;
 
   constructor(options?: { connectionString?: string; pool?: Pool }) {
     const pool =
@@ -54,6 +56,7 @@ export class OpsStore {
     this.auditReviewStore = new AuditReviewStore({ pool });
     this.bugReportStore = new BugReportStore({ pool });
     this.tokenUsageStore = new TokenUsageStore({ pool });
+    this.modelUsageStore = new ModelUsageStore(pool);
   }
 
   async listAuditQueue(filters: AuditQueueFilters): Promise<{

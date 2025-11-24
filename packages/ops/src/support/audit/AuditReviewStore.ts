@@ -61,7 +61,7 @@ export class AuditReviewStore {
       throw new Error('Invalid audit review payload.');
     }
     await this.#pool.query(
-      `INSERT INTO audit_review (
+      `INSERT INTO ops.audit_review (
          id, group_id, audit_id, reviewer_id, status, severity, tags, notes, created_at, updated_at
        ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7::text[], $8, $9, $10)`,
       [
@@ -83,7 +83,7 @@ export class AuditReviewStore {
   async get(reviewId: string): Promise<AuditReviewRecord | null> {
     const result = await this.#pool.query<AuditReviewRow>(
       `SELECT id, group_id, audit_id, reviewer_id, status, severity, tags, notes, created_at, updated_at
-       FROM audit_review
+       FROM ops.audit_review
        WHERE id = $1::uuid`,
       [reviewId]
     );
@@ -97,7 +97,7 @@ export class AuditReviewStore {
   async listByGroup(groupId: string): Promise<AuditReviewRecord[]> {
     const result = await this.#pool.query<AuditReviewRow>(
       `SELECT id, group_id, audit_id, reviewer_id, status, severity, tags, notes, created_at, updated_at
-       FROM audit_review
+       FROM ops.audit_review
        WHERE group_id = $1::uuid
        ORDER BY created_at DESC`,
       [groupId]

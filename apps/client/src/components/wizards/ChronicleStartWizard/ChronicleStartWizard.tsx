@@ -90,6 +90,14 @@ export function ChronicleStartWizard() {
     void refreshLocations();
   }, [refreshLocations]);
 
+  useEffect(() => {
+    console.log('[ChronicleWizard] State loaded:', {
+      step,
+      selectedLocation: selectedLocation?.name,
+      selectedAnchor: selectedAnchorEntity?.name,
+    });
+  }, [step, selectedLocation, selectedAnchorEntity]);
+
   const handleSelectLocation = useCallback(
     (location: SelectedLocationEntity) => {
       setSelectedLocation(location);
@@ -220,6 +228,7 @@ export function ChronicleStartWizard() {
       return (
         <CreateStep
           selectedLocation={selectedLocation}
+          selectedAnchorEntity={selectedAnchorEntity}
           selectedSeed={selectedSeed}
           customSeedTitle={customSeedTitle}
           customSeedText={customSeedText}
@@ -354,12 +363,13 @@ export function ChronicleStartWizard() {
     }
   };
 
+  // Cleanup on unmount - only reset if we're leaving the wizard entirely
   useEffect(() => {
     return () => {
-      resetWizard();
-      setStep('location');
+      // Don't reset here - let the wizard maintain state across navigation
+      // The wizard is reset explicitly after successful chronicle creation
     };
-  }, [resetWizard, setStep]);
+  }, []);
 
   return (
     <section className="chronicle-wizard" aria-label="Chronicle start wizard">
@@ -413,14 +423,48 @@ function LocationStep({
 }: LocationStepProps) {
   const [search, setSearch] = useState('');
   const [draftName, setDraftName] = useState('');
+  const [filterSubkind, setFilterSubkind] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+
+  // Get unique subkinds and statuses for filters
+  const { subkinds, statuses } = useMemo(() => {
+    const subkindSet = new Set<string>();
+    const statusSet = new Set<string>();
+    locations.forEach((loc) => {
+      if (loc.subkind) subkindSet.add(loc.subkind);
+      if (loc.status) statusSet.add(loc.status);
+    });
+    return {
+      subkinds: Array.from(subkindSet).sort(),
+      statuses: Array.from(statusSet).sort(),
+    };
+  }, [locations]);
 
   const filtered = useMemo(() => {
-    const value = search.trim().toLowerCase();
-    if (!value) {
-      return locations;
+    let result = locations;
+
+    // Filter by search
+    if (search.trim()) {
+      const value = search.trim().toLowerCase();
+      result = result.filter((loc) =>
+        loc.name.toLowerCase().includes(value) ||
+        loc.description?.toLowerCase().includes(value) ||
+        loc.slug.toLowerCase().includes(value)
+      );
     }
-    return locations.filter((loc) => loc.name.toLowerCase().includes(value));
-  }, [locations, search]);
+
+    // Filter by subkind
+    if (filterSubkind) {
+      result = result.filter((loc) => loc.subkind === filterSubkind);
+    }
+
+    // Filter by status
+    if (filterStatus) {
+      result = result.filter((loc) => loc.status === filterStatus);
+    }
+
+    return result;
+  }, [locations, search, filterSubkind, filterStatus]);
 
   return (
     <div className="location-step">
@@ -454,16 +498,38 @@ function LocationStep({
           Add location
         </button>
       </div>
-      <div className="location-step__search">
+      <div className="location-step__filters">
         <input
           type="search"
-          placeholder="Search locations"
+          placeholder="Search by name, description, or slug"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
+        <select
+          value={filterSubkind}
+          onChange={(event) => setFilterSubkind(event.target.value)}
+        >
+          <option value="">All subkinds</option>
+          {subkinds.map((subkind) => (
+            <option key={subkind} value={subkind}>
+              {subkind}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(event) => setFilterStatus(event.target.value)}
+        >
+          <option value="">All statuses</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
       </div>
       {isLoading ? <p>Loading locations…</p> : null}
-      <div className="location-step__list">
+      <div className="location-step__grid">
         {filtered.map((loc) => (
           <button
             key={loc.id}
@@ -473,12 +539,12 @@ function LocationStep({
           >
             <p className="location-card__name">{loc.name}</p>
             <p className="location-card__meta">
-              {loc.subkind ?? 'location'} · {loc.slug}
+              {loc.subkind ?? 'location'} · {loc.status ?? '—'}
             </p>
             {loc.description ? <p className="location-card__desc">{loc.description}</p> : null}
           </button>
         ))}
-        {!filtered.length && !isLoading ? <p>No locations found.</p> : null}
+        {!filtered.length && !isLoading ? <p className="location-step__empty">No locations found.</p> : null}
       </div>
     </div>
   );
@@ -667,28 +733,28 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
       setIsLoading(true);
       setError(null);
       try {
-        const entity = await worldAtlasClient.getEntity(locationId);
-        if (!entity || !entity.links) {
+        const result = await worldAtlasClient.getEntity(locationId);
+        if (!result || !result.entity || !result.entity.links) {
           setAnchors([]);
           return;
         }
 
         // Get linked entity IDs and fetch them
-        const linkedIds = entity.links.map((link) => link.targetId);
+        const linkedIds = result.entity.links.map((link) => link.targetId);
         const neighborPromises = linkedIds.map((id) => worldAtlasClient.getEntity(id));
-        const neighbors = await Promise.all(neighborPromises);
+        const neighborResults = await Promise.all(neighborPromises);
 
         // Filter to non-location entities and take top 3
-        const nonLocationNeighbors = neighbors
-          .filter((n) => n && n.kind !== 'location')
+        const nonLocationNeighbors = neighborResults
+          .filter((n) => n && n.entity && n.entity.kind !== 'location')
           .slice(0, 3)
           .map((n) => ({
-            id: n.id,
-            slug: n.slug,
-            name: n.name,
-            kind: n.kind,
-            description: n.description ?? undefined,
-            subkind: n.subkind ?? undefined,
+            id: n.entity.id,
+            slug: n.entity.slug,
+            name: n.entity.name,
+            kind: n.entity.kind,
+            description: n.entity.description ?? undefined,
+            subkind: n.entity.subkind ?? undefined,
           }));
 
         setAnchors(nonLocationNeighbors);
@@ -770,6 +836,7 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
 
 type CreateStepProps = {
   selectedLocation: SelectedLocationEntity | null;
+  selectedAnchorEntity: SelectedAnchorEntity | null;
   selectedSeed: ChronicleSeed | null;
   customSeedTitle: string;
   customSeedText: string;
@@ -788,6 +855,7 @@ function CreateStep({
   customTitle,
   preferredCharacterName,
   selectedLocation,
+  selectedAnchorEntity,
   selectedSeed,
   setBeatsEnabled,
   setCustomTitle,
@@ -808,9 +876,21 @@ function CreateStep({
         )}
       </section>
       <section>
+        <h3>Anchor Entity</h3>
+        {selectedAnchorEntity ? (
+          <>
+            <p className="summary-title">{selectedAnchorEntity.name}</p>
+            <p>{selectedAnchorEntity.kind}{selectedAnchorEntity.subkind ? ` · ${selectedAnchorEntity.subkind}` : ''} · {selectedAnchorEntity.slug}</p>
+            {selectedAnchorEntity.description ? <p className="summary-description">{selectedAnchorEntity.description}</p> : null}
+          </>
+        ) : (
+          <p>No anchor entity selected (optional).</p>
+        )}
+      </section>
+      <section>
         <h3>Tone</h3>
         <p>{tone.toneChips.length ? tone.toneChips.join(', ') : 'No chips selected.'}</p>
-        {tone.toneNotes ? <p className="tone-note">“{tone.toneNotes}”</p> : null}
+        {tone.toneNotes ? <p className="tone-note">"{tone.toneNotes}"</p> : null}
       </section>
       <section>
         <h3>Seed</h3>

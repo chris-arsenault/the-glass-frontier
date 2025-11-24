@@ -7,6 +7,7 @@ export const LoreFragmentSource = z.object({
 });
 export const LoreFragment = z.object({
     id: z.string().min(1),
+    slug: z.string().min(1),
     entityId: z.string().min(1),
     source: LoreFragmentSource,
     title: z.string().min(1),

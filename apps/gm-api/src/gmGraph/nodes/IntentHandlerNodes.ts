@@ -14,10 +14,10 @@ type HandlerOptions = {
   worldDeltaTag?: string;
 };
 
-const NARRATIVE_MAX_OUTPUT_TOKENS = 2000
-const NARRATIVE_MODEL = 'gpt-5-mini'
+const NARRATIVE_MAX_OUTPUT_TOKENS = 2000;
 const NARRATIVE_REASONING = { reasoning: { effort: 'minimal' as const } };
-const NARRATIVE_VERBOSITY = 'low'
+const NARRATIVE_VERBOSITY = 'low';
+const FALLBACK_NARRATIVE_MODEL = 'gpt-5-mini';
 
 class GmResponseNode implements GraphNode {
   readonly id: string;
@@ -95,18 +95,27 @@ abstract class BaseIntentHandlerNode implements GraphNode {
     }
 
     try {
+      const playerId = context.chronicleState.chronicle.playerId;
+      let model: string;
+      try {
+        model = await context.modelConfigStore.getModelForCategory('prose', playerId);
+      } catch (error) {
+        // Fallback to default model if lookup fails
+        model = FALLBACK_NARRATIVE_MODEL;
+      }
+
       const composer = new PromptComposer(context.templates)
       const prompt = await composer.buildPrompt(this.options.id, context);
       const narration = await context.llm.generate({
         max_output_tokens: NARRATIVE_MAX_OUTPUT_TOKENS,
-        model: NARRATIVE_MODEL,
+        model,
         ...prompt,
         metadata: {
           chronicleId: context.chronicleId,
           turnId: context.turnId,
           turnSequence: String(context.turnSequence),
           nodeId: this.options.id,
-          playerId: context.chronicleState.chronicle.playerId
+          playerId
         },
         reasoning: NARRATIVE_REASONING.reasoning,
         text: {
@@ -120,8 +129,18 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         return {...context, failure: true};
       }
 
+      // Clean up the response - remove "RESPONSE" heading/prefix if present
+      let cleanedContent = narration.message as string;
+      if (typeof cleanedContent === 'string') {
+        // Remove markdown headings like "# Response" or plain "RESPONSE:" at the start
+        cleanedContent = cleanedContent
+          .replace(/^#+\s*Response\s*\n/i, '')  // Remove "# Response" heading
+          .replace(/^RESPONSE:?\s*/i, '')        // Remove "RESPONSE:" prefix
+          .trim();
+      }
+
       const transcript: TranscriptEntry = {
-        content: narration.message,
+        content: cleanedContent,
         id: `intent-${this.id}-${context.chronicleId}-${context.turnSequence}`,
         metadata: {
           tags: [],
@@ -141,6 +160,11 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       };
 
     } catch (error) {
+      console.error('[IntentHandlerNode] Narrative generation failed:', {
+        nodeId: this.options.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       return {...context, failure: true};
     }
   }

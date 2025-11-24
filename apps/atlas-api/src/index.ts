@@ -67,10 +67,15 @@ app.get('/entities', async (req, res) => {
   }
 });
 
-app.get('/entities/:slug', async (req, res) => {
+app.get('/entities/:identifier', async (req, res) => {
   try {
-    const slug = req.params.slug;
-    const entity = await world.getEntityBySlug({ slug });
+    const identifier = req.params.identifier;
+    // Try ID lookup first if it looks like a UUID, otherwise try slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    let entity = isUuid ? await world.getEntity({ id: identifier }) : null;
+    if (!entity) {
+      entity = await world.getEntityBySlug({ slug: identifier });
+    }
     if (!entity) {
       res.status(404).json({ error: 'Not found' });
       return;

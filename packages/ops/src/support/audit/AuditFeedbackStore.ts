@@ -88,7 +88,7 @@ export class AuditFeedbackStore {
       throw new Error('Invalid player feedback payload.');
     }
     await this.#pool.query(
-      `INSERT INTO audit_feedback (
+      `INSERT INTO ops.audit_feedback (
          id, group_id, audit_id, player_id, sentiment, note, comment, chronicle_id, turn_id, turn_sequence, gm_entry_id,
          expected_intent_type, expected_inventory_delta, expected_inventory_notes, expected_location_change, expected_location_notes,
          expected_skill_check, expected_skill_notes, metadata, created_at, updated_at
@@ -127,7 +127,7 @@ export class AuditFeedbackStore {
       `SELECT id, group_id, audit_id, player_id, sentiment, note, comment, chronicle_id, turn_id, turn_sequence, gm_entry_id,
               expected_intent_type, expected_inventory_delta, expected_inventory_notes, expected_location_change, expected_location_notes,
               expected_skill_check, expected_skill_notes, metadata, created_at, updated_at
-       FROM audit_feedback
+       FROM ops.audit_feedback
        WHERE group_id = $1::uuid
        ORDER BY created_at DESC`,
       [groupId]

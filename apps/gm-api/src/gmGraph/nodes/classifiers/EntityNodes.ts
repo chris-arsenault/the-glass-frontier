@@ -11,7 +11,7 @@ const ENTITY_JUDGE_SCHEMA = z.object({
     z.object({
       slug: z.string().describe('The slug of the entity'),
       usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
-      emergentTags: z.array(z.string()).nullable().describe('2-4 word tags capturing new narrative themes about this entity'),
+      emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity'),
     })
   ),
 });

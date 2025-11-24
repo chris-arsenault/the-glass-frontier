@@ -20,8 +20,8 @@ export const worldAtlasClient = {
     return handle<HardState[]>(res);
   },
 
-  async getEntity(slug: string): Promise<{ entity: HardState; fragments: LoreFragment[] }> {
-    const res = await fetch(`${API_BASE}/entities/${slug}`);
+  async getEntity(idOrSlug: string): Promise<{ entity: HardState; fragments: LoreFragment[] }> {
+    const res = await fetch(`${API_BASE}/entities/${idOrSlug}`);
     return handle(res);
   },
 
@@ -96,20 +96,5 @@ export const worldAtlasClient = {
   async deleteFragment(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/fragments/${id}`, { method: 'DELETE' });
     await handle(res);
-  },
-
-  async startChronicle(input: {
-    playerId: string;
-    anchorSlug: string;
-    locationSlug: string;
-    title: string;
-    characterId?: string;
-  }) {
-    const res = await fetch(`${API_BASE}/chronicles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return handle(res);
   },
 };

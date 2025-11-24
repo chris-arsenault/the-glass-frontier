@@ -19,6 +19,9 @@
     "lint:css:fix": "pnpm -F ./apps/client run lint:css:fix",
     "test": "turbo run test",
     "clear:data": "pnpm -F @glass-frontier/worldstate migrate:reset",
+    "db:drop": "tsx scripts/drop-database.ts",
+    "db:reset": "pnpm db:drop && pnpm db:migrate",
+    "db:migrate": "pnpm -F @glass-frontier/app migrate:up && pnpm -F @glass-frontier/ops migrate:up && pnpm -F @glass-frontier/worldstate migrate:up",
     "seed:data": "pnpm -F @glass-frontier/worldstate seed:data",
     "seed:world": "pnpm -F @glass-frontier/worldstate seed:world",
     "generate:world-seed": "pnpm -F @glass-frontier/worldstate generate:world-seed",
@@ -29,6 +32,7 @@
     "local:ai": "tsx scripts/run-local-stack.ts --mode=live-openai",
     "local:e2e": "tsx scripts/run-local-stack.ts --seed=e2e-fixtures",
     "local:fresh": "tsx scripts/run-local-stack.ts --force-reseed",
+    "local:reset": "tsx scripts/run-local-stack.ts --drop-db",
     "reset:sessions": "tsx scripts/reset-session-data.ts"
   },
   "keywords": [
@@ -47,6 +51,7 @@
     "@types/node": "^24.10.1",
     "@types/pg": "^8.11.10",
     "@vitest/coverage-v8": "^4.0.8",
+    "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-eslint-comments": "^3.2.0",

@@ -11,6 +11,7 @@ const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
   "beat-tracker": 'both',
   "check-planner": 'player',
   "clarification-responder": 'player',
+  "entity-judge": 'gm',
   "gm-summary": 'gm',
   "inquiry-describer": 'player',
   "intent-beat-detector": 'player',

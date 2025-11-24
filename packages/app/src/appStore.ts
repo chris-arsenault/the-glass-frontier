@@ -4,10 +4,12 @@ import type { Pool } from 'pg';
 import { createPool } from './pg';
 import { PlayerStore } from './playerStore';
 import { PromptTemplateManager } from './promptTemplates/PromptTemplateManager';
+import { ModelConfigStore } from './modelConfigStore';
 
 export class AppStore {
   readonly playerStore: PlayerStore;
   readonly promptTemplateManager: PromptTemplateManager;
+  readonly modelConfigStore: ModelConfigStore;
 
   constructor(options?: { connectionString?: string; pool?: Pool }) {
     const pool =
@@ -21,6 +23,7 @@ export class AppStore {
       playerStore: this.playerStore,
       pool,
     });
+    this.modelConfigStore = new ModelConfigStore({ pool });
   }
 }
 

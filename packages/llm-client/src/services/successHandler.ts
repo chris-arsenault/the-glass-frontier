@@ -4,14 +4,21 @@ import type { LLMRequest, LLMResponse } from '@glass-frontier/llm-client/types';
 
 import { AuditArchive } from './AuditArchive';
 import { TokenUsageTracker } from './TokenUsageTracker';
+import { ModelUsageTracker } from './ModelUsageTracker';
 
 export class LLMSuccessHandler {
   #auditArchive: AuditArchive | null;
   #usageTracker: TokenUsageTracker | null;
+  #modelUsageTracker: ModelUsageTracker | null;
 
-  constructor(options: { auditArchive: AuditArchive | null; tokenUsageTracker: TokenUsageTracker | null }) {
+  constructor(options: {
+    auditArchive: AuditArchive | null;
+    tokenUsageTracker: TokenUsageTracker | null;
+    modelUsageTracker?: ModelUsageTracker | null;
+  }) {
     this.#auditArchive = options.auditArchive;
     this.#usageTracker = options.tokenUsageTracker;
+    this.#modelUsageTracker = options.modelUsageTracker ?? null;
   }
 
   async handleSuccess(payload: LLMResponse): Promise<void> {
@@ -25,6 +32,11 @@ export class LLMSuccessHandler {
     const usageTask = this.#queueUsageRecord(payload);
     if (usageTask !== null) {
       tasks.push(usageTask);
+    }
+
+    const modelUsageTask = this.#queueModelUsageRecord(payload);
+    if (modelUsageTask !== null) {
+      tasks.push(modelUsageTask);
     }
 
     if (tasks.length > 0) {
@@ -88,6 +100,43 @@ export class LLMSuccessHandler {
     );
   }
 
+  #queueModelUsageRecord(payload: LLMResponse): Promise<unknown> | null {
+    if (this.#modelUsageTracker === null) {
+      return null;
+    }
+
+    const playerId = this.#extractPlayerId(payload.metadata);
+    if (!playerId) {
+      return null;
+    }
+
+    const usage = this.#extractUsage(payload);
+    if (!usage) {
+      return null;
+    }
+
+    const inputTokens = this.#extractTokenCount(usage, 'input_tokens');
+    const outputTokens = this.#extractTokenCount(usage, 'output_tokens');
+
+    if (inputTokens === 0 && outputTokens === 0) {
+      return null;
+    }
+
+    return this.#modelUsageTracker
+      .record({
+        playerId,
+        modelId: payload.requestBody.model,
+        providerId: payload.providerId,
+        inputTokens,
+        outputTokens,
+      })
+      .catch((error) =>
+        log('error', 'llm-proxy.model_usage.failure', {
+          message: error instanceof Error ? error.message : 'unknown',
+        })
+      );
+  }
+
   #normalizeRequest(request: LLMRequest): Record<string, unknown> {
     const instructions = request.instructions;
     const messages = request.input.map((entry) => ({
@@ -148,6 +197,14 @@ export class LLMSuccessHandler {
       return bodyUsage;
     }
     return undefined;
+  }
+
+  #extractTokenCount(usage: Record<string, unknown>, key: string): number {
+    const value = usage[key];
+    if (typeof value === 'number' && value >= 0) {
+      return Math.floor(value);
+    }
+    return 0;
   }
 
   #extractNodeId(metadata: LoggableMetadata): string | undefined {

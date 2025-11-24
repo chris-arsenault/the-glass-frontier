@@ -35,6 +35,11 @@ export type ChronicleStartState = {
   beatsEnabled: boolean;
 }
 
+type InitFromAtlasParams = {
+  location: SelectedLocationEntity;
+  anchor: SelectedAnchorEntity | null;
+};
+
 type ChronicleStartActions = {
   reset: () => void;
   setStep: (step: ChronicleWizardStep) => void;
@@ -47,6 +52,7 @@ type ChronicleStartActions = {
   setCustomSeed: (details: { title: string; text: string }) => void;
   setListViewFallback: (enabled: boolean) => void;
   setBeatsEnabled: (enabled: boolean) => void;
+  initFromAtlas: (params: InitFromAtlasParams) => void;
 }
 
 const initialState: ChronicleStartState = {
@@ -71,6 +77,13 @@ export const useChronicleStartStore = create<ChronicleStartState & ChronicleStar
       customSeedText: seedId ? state.customSeedText : '',
       customSeedTitle: seedId ? state.customSeedTitle : '',
     })),
+  initFromAtlas: ({ anchor, location }) =>
+    set({
+      ...initialState,
+      selectedAnchorEntity: anchor,
+      selectedLocation: location,
+      step: 'tone',
+    }),
   reset: () => set(initialState),
   setBeatsEnabled: (enabled) => set({ beatsEnabled: enabled }),
   setCustomSeed: ({ text, title }) =>

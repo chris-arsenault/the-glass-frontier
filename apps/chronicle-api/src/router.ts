@@ -199,6 +199,38 @@ export const appRouter = t.router({
       return { preferences };
     }),
 
+  listModels: t.procedure
+    .query(async ({ ctx }) => {
+      const models = await ctx.modelConfigStore.listModels();
+      return { models };
+    }),
+
+  getPlayerModelCategories: t.procedure
+    .input(z.object({ playerId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const prose = await ctx.modelConfigStore.getModelForCategory('prose', input.playerId);
+      const classification = await ctx.modelConfigStore.getModelForCategory('classification', input.playerId);
+      return {
+        categories: {
+          prose,
+          classification
+        }
+      };
+    }),
+
+  setPlayerModelCategory: t.procedure
+    .input(
+      z.object({
+        playerId: z.string().min(1),
+        category: z.enum(['prose', 'classification']),
+        modelId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.modelConfigStore.setCategoryModel(input.category, input.modelId, input.playerId);
+      return { success: true };
+    }),
+
 });
 
 async function createChronicleHandler(

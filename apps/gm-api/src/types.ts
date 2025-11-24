@@ -10,6 +10,7 @@ import type {
   Turn,
 } from '@glass-frontier/dto';
 import type { WorldSchemaStore, LocationHelpers, ChronicleStore } from '@glass-frontier/worldstate';
+import type { ModelConfigStore } from '@glass-frontier/app';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";
@@ -68,6 +69,7 @@ export type GraphContext = {
 
   //operations
   llm: RetryLLMClient;
+  modelConfigStore: ModelConfigStore;
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;
   failure: boolean;
