@@ -40,7 +40,7 @@ export const templateFragmentMapping: Partial<Record<PromptTemplateId, Chronicle
   'check-planner': ['intent', 'character'],
   'clarification-responder': ['recent-events', 'tone', 'intent', 'anchor', 'entities', 'character', 'location', 'inventory-detail', 'seed'],
   'entity-judge': ['entities', 'gm-response'],
-  'gm-summary': ['intent', 'character', 'skill-check', 'entities', 'wrap'],
+  'gm-summary': ['intent', 'character', 'skill-check', 'wrap'],
   'inquiry-describer': ['recent-events', 'tone', 'intent', 'character', 'entities', 'location', 'inventory-detail', 'seed'],
   'intent-beat-detector': ['intent', 'beats'],
   'intent-classifier': ['character', 'beats', 'wrap'],

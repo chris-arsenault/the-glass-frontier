@@ -84,8 +84,12 @@ cd "$PROJECT_ROOT"
 
 # Build DATABASE_URL for node-pg-migrate (uses connection string)
 # URL-encode the password for safety (using stdin to handle special chars)
+# Note: RDS uses AWS CA which node-postgres doesn't trust by default
 ENCODED_PASSWORD=$(printf '%s' "$PGPASSWORD" | python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.stdin.read(), safe=''))")
-DATABASE_URL="postgres://${PGUSER}:${ENCODED_PASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require"
+DATABASE_URL="postgres://${PGUSER}:${ENCODED_PASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}?ssl=true"
+
+# Tell node-postgres to accept RDS certificate
+export NODE_TLS_REJECT_UNAUTHORIZED=0
 
 if [ "$RESET_MODE" = true ]; then
   echo ""

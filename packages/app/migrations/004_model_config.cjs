@@ -122,6 +122,15 @@ function seedModelConfigs(pgm) {
       supports_reasoning: true,
     },
     {
+      model_id: 'us.amazon.nova-micro-v1:0',
+      display_name: 'Amazon Nova Micro',
+      provider_id: 'bedrock',
+      max_tokens: 128000,
+      cost_per_1k_input: 0.000035,
+      cost_per_1k_output: 0.00014,
+      supports_reasoning: false,
+    },
+    {
       model_id: 'us.amazon.nova-lite-v1:0',
       display_name: 'Amazon Nova Lite',
       provider_id: 'bedrock',
@@ -162,9 +171,12 @@ function seedModelConfigs(pgm) {
 }
 
 function seedDefaultCategoryConfigs(pgm) {
+  // Default models:
+  // - prose: claude-haiku-4.5 (fast, good quality prose)
+  // - classification: us.amazon.nova-micro-v1:0 (cheapest, fast for structured output)
   pgm.sql(
     `INSERT INTO app.model_category_config (category, model_id, player_id)
-     VALUES ('prose', 'claude-sonnet-4.5', NULL), ('classification', 'claude-haiku-4.5', NULL)
+     VALUES ('prose', 'claude-haiku-4.5', NULL), ('classification', 'us.amazon.nova-micro-v1:0', NULL)
      ON CONFLICT (category, player_id) DO NOTHING`
   );
 }

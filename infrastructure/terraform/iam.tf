@@ -208,6 +208,7 @@ resource "aws_iam_role_policy_attachment" "gm_progress_queue" {
 }
 
 # Bedrock model invocation permissions for Nova Pro/Micro/Lite
+# Cross-region inference profiles can route to any region, so we use * for region
 data "aws_iam_policy_document" "bedrock_invoke" {
   statement {
     actions = [
@@ -215,9 +216,14 @@ data "aws_iam_policy_document" "bedrock_invoke" {
       "bedrock:InvokeModelWithResponseStream"
     ]
     resources = [
-      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-pro-v1:0",
-      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-lite-v1:0",
-      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-micro-v1:0"
+      # Cross-region inference profiles (us.amazon.nova-*) - can route to any US region
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-pro-v1:0",
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-lite-v1:0",
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-micro-v1:0",
+      # Foundation models (amazon.nova-*) - may be invoked in any region
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-micro-v1:0"
     ]
   }
 }

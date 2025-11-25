@@ -1,46 +1,25 @@
 import type { HardState, LoreFragment } from '@glass-frontier/dto';
+import { atlasClient } from './atlasClient';
 
-const API_BASE = import.meta.env.VITE_ATLAS_API_URL ?? '/atlas-api';
-
-const handle = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Request failed');
-  }
-  return (await response.json()) as T;
-};
-
+/**
+ * World Atlas API client - uses tRPC under the hood
+ * This maintains the same interface as the old REST client for backwards compatibility
+ */
 export const worldAtlasClient = {
   async listEntities(kind?: string): Promise<HardState[]> {
-    const url = new URL(`${API_BASE}/entities`, window.location.origin);
-    if (kind) {
-      url.searchParams.set('kind', kind);
-    }
-    const res = await fetch(url.toString());
-    return handle<HardState[]>(res);
+    return atlasClient.listEntities.query({ kind });
   },
 
   async getEntity(idOrSlug: string): Promise<{ entity: HardState; fragments: LoreFragment[] }> {
-    const res = await fetch(`${API_BASE}/entities/${idOrSlug}`);
-    return handle(res);
+    return atlasClient.getEntity.query({ identifier: idOrSlug });
   },
 
   async batchGetEntities(ids: string[]): Promise<HardState[]> {
-    const res = await fetch(`${API_BASE}/entities/batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    });
-    return handle<HardState[]>(res);
+    return atlasClient.batchGetEntities.query({ ids });
   },
 
   async getNeighbors(idOrSlug: string, kind?: string): Promise<{ entity: HardState; neighbors: HardState[] }> {
-    const url = new URL(`${API_BASE}/entities/${idOrSlug}/neighbors`, window.location.origin);
-    if (kind) {
-      url.searchParams.set('kind', kind);
-    }
-    const res = await fetch(url.toString());
-    return handle(res);
+    return atlasClient.getEntityNeighbors.query({ identifier: idOrSlug, kind });
   },
 
   async upsertEntity(input: {
@@ -53,30 +32,18 @@ export const worldAtlasClient = {
     prominence?: string | null;
     links?: Array<{ relationship: string; targetId: string; strength?: number }>;
   }): Promise<HardState> {
-    const res = await fetch(`${API_BASE}/entities`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
+    return atlasClient.upsertEntity.mutate({
+      ...input,
+      prominence: input.prominence as 'forgotten' | 'marginal' | 'recognized' | 'renowned' | 'mythic' | undefined,
     });
-    return handle<HardState>(res);
   },
 
   async upsertRelationship(input: { srcId: string; dstId: string; relationship: string; strength?: number | null }): Promise<void> {
-    const res = await fetch(`${API_BASE}/relationships`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    await handle(res);
+    await atlasClient.upsertRelationship.mutate(input);
   },
 
   async deleteRelationship(input: { srcId: string; dstId: string; relationship: string }): Promise<void> {
-    const res = await fetch(`${API_BASE}/relationships`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    await handle(res);
+    await atlasClient.deleteRelationship.mutate(input);
   },
 
   async createFragment(input: {
@@ -87,12 +54,7 @@ export const worldAtlasClient = {
     beatId?: string;
     tags?: string[];
   }): Promise<LoreFragment> {
-    const res = await fetch(`${API_BASE}/fragments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return handle<LoreFragment>(res);
+    return atlasClient.createFragment.mutate(input);
   },
 
   async updateFragment(input: {
@@ -103,16 +65,10 @@ export const worldAtlasClient = {
     chronicleId?: string;
     beatId?: string;
   }): Promise<LoreFragment> {
-    const res = await fetch(`${API_BASE}/fragments/${input.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return handle<LoreFragment>(res);
+    return atlasClient.updateFragment.mutate(input);
   },
 
   async deleteFragment(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/fragments/${id}`, { method: 'DELETE' });
-    await handle(res);
+    await atlasClient.deleteFragment.mutate({ id });
   },
 };

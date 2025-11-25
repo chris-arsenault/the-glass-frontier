@@ -4,21 +4,15 @@ import type {
   WorldRelationshipType,
   WorldSchema,
 } from '@glass-frontier/dto';
+import { worldSchemaTrpcClient } from './worldSchemaClientTrpc';
 
-const API_BASE = import.meta.env.VITE_WORLD_SCHEMA_API_URL ?? '/world-schema-api';
-
-const handle = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Request failed');
-  }
-  return (await response.json()) as T;
-};
-
+/**
+ * World Schema API client - uses tRPC under the hood
+ * This maintains the same interface as the old REST client for backwards compatibility
+ */
 export const worldSchemaClient = {
   async getSchema(): Promise<WorldSchema> {
-    const res = await fetch(`${API_BASE}/schema`);
-    return handle<WorldSchema>(res);
+    return worldSchemaTrpcClient.getSchema.query();
   },
 
   async upsertKind(input: {
@@ -29,38 +23,18 @@ export const worldSchemaClient = {
     subkinds?: string[];
     statuses?: string[];
   }): Promise<WorldKind> {
-    const res = await fetch(`${API_BASE}/kinds`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return handle<WorldKind>(res);
+    return worldSchemaTrpcClient.upsertKind.mutate(input);
   },
 
   async addRelationshipType(input: { id: string; description?: string | null }): Promise<WorldRelationshipType> {
-    const res = await fetch(`${API_BASE}/relationship-types`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return handle<WorldRelationshipType>(res);
+    return worldSchemaTrpcClient.addRelationshipType.mutate(input);
   },
 
   async upsertRelationshipRule(input: WorldRelationshipRule): Promise<void> {
-    const res = await fetch(`${API_BASE}/relationship-rules`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    await handle(res);
+    await worldSchemaTrpcClient.upsertRelationshipRule.mutate(input);
   },
 
   async deleteRelationshipRule(input: WorldRelationshipRule): Promise<void> {
-    const res = await fetch(`${API_BASE}/relationship-rules`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    await handle(res);
+    await worldSchemaTrpcClient.deleteRelationshipRule.mutate(input);
   },
 };

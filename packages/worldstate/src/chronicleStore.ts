@@ -499,18 +499,31 @@ class PostgresChronicleStore implements ChronicleStore {
     locationId: string,
     name?: string | null
   ): Promise<void> {
-    if (!this.#worldStore) {
+    // Use the transaction client directly to avoid deadlock.
+    // Previously this called worldStore.getEntity/upsertEntity which used separate
+    // pool connections, causing deadlocks when called within a transaction.
+    const existing = await client.query(
+      'SELECT 1 FROM hard_state WHERE id = $1::uuid AND kind = $2',
+      [locationId, 'location']
+    );
+    if (existing.rowCount && existing.rowCount > 0) {
       return;
     }
-    const existing = await this.#worldStore.getEntity({ id: locationId });
-    if (existing && existing.kind === 'location') {
-      return;
-    }
-    await this.#worldStore.upsertEntity({
+    // Location doesn't exist - create it using the transaction client
+    const slug = `location_${locationId.slice(0, 8)}`;
+    await this.#graph.upsertNode(client, locationId, 'world_entity', {
       id: locationId,
+      slug,
       kind: 'location',
       name: name ?? 'Unknown Location',
+      prominence: 'recognized',
     });
+    await client.query(
+      `INSERT INTO hard_state (id, slug, kind, name, prominence, created_at, updated_at)
+       VALUES ($1::uuid, $2, 'location', $3, 'recognized', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [locationId, slug, name ?? 'Unknown Location']
+    );
   }
 
   async #assertAnchorExists(client: PoolClient, anchorEntityId: string): Promise<void> {

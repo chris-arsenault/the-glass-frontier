@@ -258,8 +258,20 @@ async function createChronicleHandler(
   ctx: Context,
   input: CreateChronicleInput
 ): Promise<{ chronicle: EnsureChronicleResult }> {
+  const startTime = Date.now();
+  const logTiming = (step: string) => {
+    log('info', `createChronicle timing: ${step}`, { elapsedMs: Date.now() - startTime });
+  };
+
+  log('info', 'createChronicle: starting', { input: { ...input, seedText: input.seedText?.slice(0, 50) } });
+
+  logTiming('start - ensuring player');
   await ctx.playerStore.ensure(input.playerId);
+  logTiming('player ensured');
+
+  logTiming('fetching character');
   const character = await requireCharacter(ctx, input.characterId);
+  logTiming('character fetched');
   ensureCharacterOwnership(character, input.playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
@@ -270,14 +282,19 @@ async function createChronicleHandler(
   if (!locationId) {
     locationId = randomUUID();
     const locationName = resolveLocationName(input);
+    logTiming('creating new location entity');
     await ctx.worldSchemaStore.upsertEntity({
       id: locationId,
       kind: 'location',
       name: locationName,
       status: 'known',
     });
+    logTiming('location entity created');
+  } else {
+    logTiming('using existing locationId');
   }
 
+  logTiming('calling ensureChronicle');
   const chronicle = await ctx.chronicleStore.ensureChronicle({
     anchorEntityId: input.anchorEntityId,
     beatsEnabled: input.beatsEnabled,
@@ -289,8 +306,9 @@ async function createChronicleHandler(
     status: input.status,
     title: input.title,
   });
+  logTiming('ensureChronicle completed');
 
-  log('info', `Ensuring chronicle ${chronicle.id} for player ${chronicle.playerId}`);
+  log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`, { elapsedMs: Date.now() - startTime });
   return { chronicle };
 }
 

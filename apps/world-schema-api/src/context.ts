@@ -5,11 +5,19 @@ import {
   useIamAuth,
   createPool,
 } from '@glass-frontier/app';
-import { WorldState } from '@glass-frontier/worldstate';
+import {
+  createWorldSchemaStore,
+  type WorldSchemaStore,
+} from '@glass-frontier/worldstate';
+
+export type Context = {
+  authorizationHeader?: string;
+  worldSchemaStore: WorldSchemaStore;
+};
 
 // Singleton instances - initialized lazily
 let pool: Pool | undefined;
-let worldState: WorldState | undefined;
+let worldSchemaStore: WorldSchemaStore | undefined;
 
 /**
  * Initialize context for Lambda with IAM auth.
@@ -19,7 +27,7 @@ export async function initializeForLambda(): Promise<void> {
   if (pool) return; // Already initialized
 
   pool = await createPoolWithIamAuth();
-  worldState = WorldState.create({ pool });
+  worldSchemaStore = createWorldSchemaStore({ pool });
 }
 
 /**
@@ -34,25 +42,28 @@ function initializeLocal(): void {
   }
 
   pool = createPool({ connectionString });
-  worldState = WorldState.create({ pool });
+  worldSchemaStore = createWorldSchemaStore({ pool });
 }
 
 /**
- * Get the WorldState instance, initializing if needed for local development.
+ * Create the tRPC context, initializing stores if needed for local development.
  */
-export function getWorldState(): WorldState {
+export function createContext(options?: { authorizationHeader?: string }): Context {
   // For local development, initialize synchronously on first call
   if (!pool && !useIamAuth()) {
     initializeLocal();
   }
 
-  if (!worldState) {
+  if (!worldSchemaStore) {
     throw new Error(
-      'WorldState not initialized. For Lambda, call initializeForLambda() at cold start.'
+      'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
     );
   }
 
-  return worldState;
+  return {
+    authorizationHeader: options?.authorizationHeader,
+    worldSchemaStore,
+  };
 }
 
 export { useIamAuth };

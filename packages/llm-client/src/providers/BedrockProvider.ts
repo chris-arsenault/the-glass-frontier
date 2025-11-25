@@ -21,25 +21,23 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
   readonly #client: BedrockRuntimeClient;
 
   constructor() {
-    // Check for AWS credentials
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
     const region = process.env.AWS_REGION?.trim() || 'us-east-1';
 
-    if (!accessKeyId || !secretAccessKey) {
-      console.warn('[BedrockProvider] AWS credentials not configured - provider will be invalid');
-      this.valid = false;
-      this.#client = new BedrockRuntimeClient({ region });
-      return;
-    }
-
+    // Use AWS SDK's default credential provider chain which handles all environments:
+    // - Lambda: Uses AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN from env
+    // - Local with env vars: Same as above
+    // - Local with AWS profile: Uses ~/.aws/credentials
+    //
+    // IMPORTANT: Don't explicitly set credentials - the original code was broken because
+    // it set accessKeyId/secretAccessKey WITHOUT the sessionToken, which breaks Lambda's
+    // temporary credentials from IAM roles.
     this.valid = true;
-    this.#client = new BedrockRuntimeClient({
+    this.#client = new BedrockRuntimeClient({ region });
+
+    console.log('[BedrockProvider] Initialized', {
       region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
+      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+      hasSessionToken: !!process.env.AWS_SESSION_TOKEN,
     });
   }
 
