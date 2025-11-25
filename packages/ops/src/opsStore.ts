@@ -140,6 +140,7 @@ export class OpsStore {
         chronicleId: typeof metadata?.chronicleId === 'string' ? metadata.chronicleId : null,
         createdAt: bundle.entry.createdAt,
         createdAtMs: bundle.entry.createdAtMs,
+        durationMs: bundle.entry.durationMs ?? null,
         groupId: bundle.groupId,
         nodeId: bundle.entry.nodeId ?? null,
         notes: bundle.review?.notes ?? null,

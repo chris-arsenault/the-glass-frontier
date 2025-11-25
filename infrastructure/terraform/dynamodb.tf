@@ -1,42 +1,4 @@
-resource "aws_dynamodb_table" "world_index" {
-  name         = "${local.name_prefix}-world-index"
-  billing_mode = "PAY_PER_REQUEST"
-
-  hash_key  = "pk"
-  range_key = "sk"
-
-  attribute {
-    name = "pk"
-    type = "S"
-  }
-
-  attribute {
-    name = "sk"
-    type = "S"
-  }
-
-  tags = local.tags
-}
-
-resource "aws_dynamodb_table" "location_graph_index" {
-  name         = "${local.name_prefix}-location-graph"
-  billing_mode = "PAY_PER_REQUEST"
-
-  hash_key  = "pk"
-  range_key = "sk"
-
-  attribute {
-    name = "pk"
-    type = "S"
-  }
-
-  attribute {
-    name = "sk"
-    type = "S"
-  }
-
-  tags = local.tags
-}
+# NOTE: world_index and location_graph_index DynamoDB tables removed - data migrated to PostgreSQL
 
 resource "aws_dynamodb_table" "webservice_connections" {
   name         = "${local.name_prefix}-ws-connections"

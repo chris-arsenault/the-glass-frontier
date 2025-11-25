@@ -19,14 +19,7 @@ resource "aws_dynamodb_table" "tf_locks" {
   tags = local.tags
 }
 
-module "narrative_data_bucket" {
-  source = "./modules/s3-bucket"
-
-  name              = "${local.name_prefix}-narrative-data"
-  enable_versioning = true
-  enable_encryption = true
-  tags              = merge(local.tags, { Name = "${local.name_prefix}-narrative-data" })
-}
+# NOTE: narrative_data_bucket removed - data migrated to PostgreSQL
 
 module "prompt_templates_bucket" {
   source = "./modules/s3-bucket"

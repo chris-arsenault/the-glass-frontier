@@ -6,6 +6,14 @@ data "aws_secretsmanager_secret_version" "openai_api_key" {
   secret_id = data.aws_secretsmanager_secret.openai_api_key.id
 }
 
+data "aws_secretsmanager_secret" "anthropic_api_key" {
+  name = "anthropic-api-key"
+}
+
+data "aws_secretsmanager_secret_version" "anthropic_api_key" {
+  secret_id = data.aws_secretsmanager_secret.anthropic_api_key.id
+}
+
 module "chronicle_lambda" {
   source = "./modules/lambda-function"
 
@@ -22,15 +30,14 @@ module "chronicle_lambda" {
 
   environment_variables = {
     NODE_ENV                    = var.environment
-    NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX         = "${var.environment}/"
-    GLASS_FRONTIER_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
+    ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
   }
 
   http_api_config = {
@@ -60,13 +67,11 @@ module "prompt_api_lambda" {
   tags                 = local.tags
 
   environment_variables = {
-    NODE_ENV                 = var.environment
-    DOMAIN_NAME              = local.cloudfront_domain
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-    PROMPT_TEMPLATE_BUCKET   = module.prompt_templates_bucket.id
-    LLM_PROXY_ARCHIVE_BUCKET = module.llm_audit_bucket.id
+    NODE_ENV                    = var.environment
+    DOMAIN_NAME                 = local.cloudfront_domain
+    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
+    LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
   }
 
   http_api_config = {
@@ -96,11 +101,9 @@ module "location_api_lambda" {
   tags                 = local.tags
 
   environment_variables = {
-    NODE_ENV                 = var.environment
-    DOMAIN_NAME              = local.cloudfront_domain
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    NODE_ENV                    = var.environment
+    DOMAIN_NAME                 = local.cloudfront_domain
+    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
   }
 
   http_api_config = {
@@ -132,15 +135,14 @@ module "gm_api_lambda" {
   environment_variables = {
     NODE_ENV                    = var.environment
     DOMAIN_NAME                 = local.cloudfront_domain
-    NARRATIVE_S3_BUCKET         = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX         = "${var.environment}/"
-    GLASS_FRONTIER_DATABASE_URL     = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
     LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
+    ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
   }
 
   http_api_config = {
@@ -170,10 +172,8 @@ module "chronicle_closer_lambda" {
   tags                 = local.tags
 
   environment_variables = {
-    NODE_ENV                 = var.environment
-    NARRATIVE_S3_BUCKET      = module.narrative_data_bucket.id
-    NARRATIVE_S3_PREFIX      = "${var.environment}/"
-    GLASS_FRONTIER_DATABASE_URL  = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
+    NODE_ENV                    = var.environment
+    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
   }
 }
 

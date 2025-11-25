@@ -34,33 +34,7 @@ resource "aws_iam_role_policy_attachment" "chronicle_closer_sqs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
-data "aws_iam_policy_document" "chronicle_s3" {
-  statement {
-    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
-    resources = [module.narrative_data_bucket.arn, "${module.narrative_data_bucket.arn}/*"]
-  }
-}
-
-resource "aws_iam_policy" "chronicle_s3" {
-  name        = "${local.name_prefix}-chronicle-api-s3"
-  description = "Allow the chronicle lambda to read/write session data."
-  policy      = data.aws_iam_policy_document.chronicle_s3.json
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_s3" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_s3.arn
-}
-
-resource "aws_iam_role_policy_attachment" "gm_s3" {
-  role       = aws_iam_role.lambda["gm_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_s3.arn
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_closer_s3" {
-  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_s3.arn
-}
+# NOTE: chronicle_s3 policy removed - narrative_data_bucket migrated to PostgreSQL
 
 data "aws_iam_policy_document" "chronicle_closure_queue" {
   statement {
@@ -85,15 +59,7 @@ resource "aws_iam_role_policy_attachment" "gm_closure_queue" {
   policy_arn = aws_iam_policy.chronicle_closure_queue.arn
 }
 
-resource "aws_iam_role_policy_attachment" "prompt_api_s3" {
-  role       = aws_iam_role.lambda["prompt_api_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_s3.arn
-}
-
-resource "aws_iam_role_policy_attachment" "location_api_s3" {
-  role       = aws_iam_role.lambda["location_api_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_s3.arn
-}
+# NOTE: prompt_api_s3 and location_api_s3 attachments removed - narrative_data_bucket migrated to PostgreSQL
 
 data "aws_iam_policy_document" "prompt_templates" {
   statement {
@@ -123,83 +89,8 @@ resource "aws_iam_role_policy_attachment" "prompt_api_templates" {
   policy_arn = aws_iam_policy.prompt_templates.arn
 }
 
-data "aws_iam_policy_document" "chronicle_dynamodb" {
-  statement {
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:Query",
-      "dynamodb:BatchWriteItem",
-      "dynamodb:DeleteItem"
-    ]
-    resources = [aws_dynamodb_table.world_index.arn]
-  }
-}
-
-resource "aws_iam_policy" "chronicle_dynamodb" {
-  name        = "${local.name_prefix}-chronicle-api-dynamodb"
-  description = "Allow the chronicle lambda to query/write world index pointers."
-  policy      = data.aws_iam_policy_document.chronicle_dynamodb.json
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_dynamodb" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
-}
-
-resource "aws_iam_role_policy_attachment" "prompt_api_dynamodb" {
-  role       = aws_iam_role.lambda["prompt_api_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
-}
-
-resource "aws_iam_role_policy_attachment" "gm_dynamodb" {
-  role       = aws_iam_role.lambda["gm_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_closer_dynamodb" {
-  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_dynamodb.arn
-}
-
-resource "aws_iam_role_policy_attachment" "location_api_location_index" {
-  role       = aws_iam_role.lambda["location_api_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
-}
-
-data "aws_iam_policy_document" "location_graph_index" {
-  statement {
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:Query",
-      "dynamodb:BatchWriteItem",
-      "dynamodb:DeleteItem"
-    ]
-    resources = [aws_dynamodb_table.location_graph_index.arn]
-  }
-}
-
-resource "aws_iam_policy" "location_graph_index" {
-  name        = "${local.name_prefix}-location-graph-index"
-  description = "Allow the chronicle lambda to manage location graph indexes."
-  policy      = data.aws_iam_policy_document.location_graph_index.json
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_location_graph_index" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
-}
-
-resource "aws_iam_role_policy_attachment" "gm_location_graph_index" {
-  role       = aws_iam_role.lambda["gm_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_closer_location_graph_index" {
-  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
-  policy_arn = aws_iam_policy.location_graph_index.arn
-}
+# NOTE: chronicle_dynamodb policy removed - world_index table migrated to PostgreSQL
+# NOTE: location_graph_index policy removed - location_graph_index table migrated to PostgreSQL
 
 data "aws_iam_policy_document" "llm_audit_storage" {
   statement {
@@ -293,4 +184,35 @@ resource "aws_iam_role_policy_attachment" "chronicle_progress_queue" {
 resource "aws_iam_role_policy_attachment" "gm_progress_queue" {
   role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.chronicle_progress_queue.arn
+}
+
+# Bedrock model invocation permissions for Nova Pro/Micro/Lite
+data "aws_iam_policy_document" "bedrock_invoke" {
+  statement {
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ]
+    resources = [
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-pro-v1:0",
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-lite-v1:0",
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-micro-v1:0"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "bedrock_invoke" {
+  name        = "${local.name_prefix}-bedrock-invoke"
+  description = "Allow lambdas to invoke Bedrock Nova models."
+  policy      = data.aws_iam_policy_document.bedrock_invoke.json
+}
+
+resource "aws_iam_role_policy_attachment" "chronicle_bedrock" {
+  role       = aws_iam_role.lambda["chronicle_lambda"].name
+  policy_arn = aws_iam_policy.bedrock_invoke.arn
+}
+
+resource "aws_iam_role_policy_attachment" "gm_bedrock" {
+  role       = aws_iam_role.lambda["gm_lambda"].name
+  policy_arn = aws_iam_policy.bedrock_invoke.arn
 }

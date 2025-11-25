@@ -23,10 +23,7 @@ output "cognito_domain" {
   description = "Hostname for Cognito-hosted UI / auth."
 }
 
-output "narrative_data_bucket" {
-  value       = module.narrative_data_bucket.id
-  description = "S3 bucket used for session persistence."
-}
+# NOTE: narrative_data_bucket output removed - migrated to PostgreSQL
 
 output "prompt_template_bucket" {
   value       = module.prompt_templates_bucket.id

@@ -53,6 +53,7 @@ const BASE_CHRONICLE: Chronicle = {
   beats: [],
   beatsEnabled: true,
   characterId: PLAYWRIGHT_CHARACTER_ID,
+  entityFocus: { entityScores: {}, tagScores: {} },
   id: PLAYWRIGHT_CHRONICLE_ID,
   locationId: '99999999-8888-4777-8666-555555555555',
   playerId: PLAYWRIGHT_PLAYER_ID,
@@ -115,7 +116,6 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
   // Create lore fragments for world entities
   await worldSchemaStore.createLoreFragment({
     id: FOUNDING_OATH_FRAGMENT_ID,
-    slug: 'frag_founding_oath_66666666',
     entityId: warden.id,
     source: { chronicleId: undefined },
     title: 'Founding Oath',

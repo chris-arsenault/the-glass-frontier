@@ -32,6 +32,7 @@ export type LLMRequest = {
 
 export type LLMResponse = {
   attempts: number;
+  durationMs?: number;
   message: unknown;
   metadata: LoggableMetadata;
   providerId: string;

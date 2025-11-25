@@ -38,6 +38,26 @@ export type ModelUsage = {
   updatedAt: Date;
 };
 
+export type ModelUsageWithCost = {
+  modelId: string;
+  displayName: string;
+  providerId: string;
+  inputTokens: number;
+  outputTokens: number;
+  requestCount: number;
+  inputCost: number;
+  outputCost: number;
+  totalCost: number;
+};
+
+export type UsageCostSummary = {
+  byModel: ModelUsageWithCost[];
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalRequests: number;
+  totalCost: number;
+};
+
 export class ModelConfigStore {
   readonly #pool: Pool;
 
@@ -76,10 +96,9 @@ export class ModelConfigStore {
   }
 
   async getModelForCategory(category: ModelCategory, playerId?: string): Promise<string> {
-    const result = await this.#pool.query<{ model_id: string; api_model_id: string | null }>(
-      `SELECT mcc.model_id, mc.api_model_id
+    const result = await this.#pool.query<{ model_id: string }>(
+      `SELECT mcc.model_id
        FROM app.model_category_config mcc
-       JOIN app.model_config mc ON mcc.model_id = mc.model_id
        WHERE mcc.category = $1
          AND (mcc.player_id = $2 OR mcc.player_id IS NULL)
        ORDER BY mcc.player_id NULLS LAST
@@ -91,8 +110,7 @@ export class ModelConfigStore {
       throw new Error(`No model configured for category: ${category}`);
     }
 
-    // Return api_model_id if present, otherwise fall back to model_id
-    return result.rows[0].api_model_id ?? result.rows[0].model_id;
+    return result.rows[0].model_id;
   }
 
   async setCategoryModel(
@@ -195,5 +213,74 @@ export class ModelConfigStore {
         config.supportsReasoning,
       ]
     );
+  }
+
+  async getUsageCostSummary(
+    playerId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<UsageCostSummary> {
+    const result = await this.#pool.query<{
+      model_id: string;
+      display_name: string;
+      provider_id: string;
+      input_tokens: string;
+      output_tokens: string;
+      request_count: string;
+      cost_per_1k_input: string;
+      cost_per_1k_output: string;
+    }>(
+      `SELECT
+         mu.model_id,
+         COALESCE(mc.display_name, mu.model_id) as display_name,
+         mu.provider_id,
+         SUM(mu.input_tokens)::text as input_tokens,
+         SUM(mu.output_tokens)::text as output_tokens,
+         SUM(mu.request_count)::text as request_count,
+         COALESCE(mc.cost_per_1k_input, '0')::text as cost_per_1k_input,
+         COALESCE(mc.cost_per_1k_output, '0')::text as cost_per_1k_output
+       FROM ops.model_usage mu
+       LEFT JOIN app.model_config mc ON (mu.model_id = mc.model_id OR mu.model_id = mc.api_model_id)
+       WHERE mu.player_id = $1
+         AND ($2::date IS NULL OR mu.date >= $2)
+         AND ($3::date IS NULL OR mu.date <= $3)
+       GROUP BY mu.model_id, mc.display_name, mu.provider_id, mc.cost_per_1k_input, mc.cost_per_1k_output
+       ORDER BY SUM(mu.input_tokens + mu.output_tokens) DESC`,
+      [playerId, startDate ?? null, endDate ?? null]
+    );
+
+    const byModel: ModelUsageWithCost[] = result.rows.map((row) => {
+      const inputTokens = parseInt(row.input_tokens, 10);
+      const outputTokens = parseInt(row.output_tokens, 10);
+      const costPer1kInput = parseFloat(row.cost_per_1k_input);
+      const costPer1kOutput = parseFloat(row.cost_per_1k_output);
+      const inputCost = (inputTokens / 1000) * costPer1kInput;
+      const outputCost = (outputTokens / 1000) * costPer1kOutput;
+
+      return {
+        modelId: row.model_id,
+        displayName: row.display_name,
+        providerId: row.provider_id,
+        inputTokens,
+        outputTokens,
+        requestCount: parseInt(row.request_count, 10),
+        inputCost,
+        outputCost,
+        totalCost: inputCost + outputCost,
+      };
+    });
+
+    const totalInputTokens = byModel.reduce((sum, m) => sum + m.inputTokens, 0);
+    const totalOutputTokens = byModel.reduce((sum, m) => sum + m.outputTokens, 0);
+    const totalRequests = byModel.reduce((sum, m) => sum + m.requestCount, 0);
+    const totalCost = byModel.reduce((sum, m) => sum + m.totalCost, 0);
+
+    return {
+      byModel,
+      totalInputTokens,
+      totalOutputTokens,
+      totalRequests,
+      totalCost,
+    };
   }
 }

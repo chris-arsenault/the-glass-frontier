@@ -10,6 +10,7 @@
   },
   "include": ["src"],
   "references": [
-    { "path": "../dto" }
+    { "path": "../dto" },
+    { "path": "../utils" }
   ]
 }

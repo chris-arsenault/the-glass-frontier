@@ -77,6 +77,24 @@ export class ProviderRegistry {
     return config;
   }
 
+  /**
+   * Get the actual API model ID to use for provider calls.
+   * Returns apiModelId if configured, otherwise falls back to modelId.
+   */
+  getApiModelId(modelId: string): string {
+    const config = this.#models.get(modelId);
+    if (!config) {
+      // If not found as a user-facing ID, it might already be an API model ID
+      const userFacingId = this.#apiModelMap.get(modelId);
+      if (userFacingId) {
+        const mappedConfig = this.#models.get(userFacingId);
+        return mappedConfig?.apiModelId ?? modelId;
+      }
+      return modelId; // Return as-is if not found
+    }
+    return config.apiModelId ?? config.modelId;
+  }
+
   listAvailableModels(): ModelConfig[] {
     return Array.from(this.#models.values()).filter((config) => {
       const provider = this.#providers.get(config.providerId);

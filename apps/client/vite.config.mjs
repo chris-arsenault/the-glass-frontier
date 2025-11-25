@@ -96,6 +96,9 @@ export default defineConfig({
       react: r('node_modules/react'),
       'react-dom': r('node_modules/react-dom'),
       'react/jsx-runtime': r('node_modules/react/jsx-runtime.js'),
+      // Resolve workspace packages to source for HMR (avoids stale dist issues)
+      '@glass-frontier/utils': r('../../packages/utils/src/index.ts'),
+      '@glass-frontier/dto': r('../../packages/dto/src/index.ts'),
     },
     dedupe: ['react', 'react-dom'],
     preserveSymlinks: false, // treat linked packages by symlink path, avoid /@fs dupes

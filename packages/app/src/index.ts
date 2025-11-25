@@ -7,4 +7,6 @@ export {
   type ModelCategory,
   type ModelCategoryConfig,
   type ModelUsage,
+  type ModelUsageWithCost,
+  type UsageCostSummary,
 } from './modelConfigStore';

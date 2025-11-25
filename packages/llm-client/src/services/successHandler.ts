@@ -66,6 +66,7 @@ export class LLMSuccessHandler {
         request: requestPayload,
         requestContextId,
         response: responsePayload,
+        durationMs: payload.durationMs,
       })
       .catch((error) =>
         log('error', 'llm-proxy.audit.failure', {

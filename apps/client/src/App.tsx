@@ -234,11 +234,11 @@ export function App(): JSX.Element {
         <div className="app-route-surface">
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/chron/start" element={<ChronicleStartWizard />} />
             <Route path="/chron/:chronicleId" element={<ChronicleRoute />} />
             <Route path="/chron" element={<Navigate to="/" replace />} />
             <Route path="/chronicle/:chronicleId" element={<LegacyChronicleRedirect />} />
             <Route path="/chronicle" element={<Navigate to="/" replace />} />
-            <Route path="/chronicles/start" element={<ChronicleStartWizard />} />
             <Route path="/moderation/audit" element={<AuditReviewPage />} />
             <Route path="/moderation/bugs" element={<BugModerationPage />} />
             <Route path="/moderation/worldSchema" element={<WorldSchemaPage />} />

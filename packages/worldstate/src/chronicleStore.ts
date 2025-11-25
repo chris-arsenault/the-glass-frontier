@@ -112,6 +112,7 @@ class PostgresChronicleStore implements ChronicleStore {
       beats: [],
       beatsEnabled: params.beatsEnabled ?? true,
       characterId: params.characterId,
+      entityFocus: { entityScores: {}, tagScores: {} },
       id: chronicleId,
       locationId: params.locationId,
       playerId: params.playerId,

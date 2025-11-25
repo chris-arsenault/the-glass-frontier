@@ -26,7 +26,6 @@ export class EntitySelectorNode implements GraphNode {
       return context;
     }
     const entityContext = await buildEntityContext(context);
-    console.log('Entity context:', entityContext);
     return {
       ...context,
       entityContext,
@@ -51,9 +50,6 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
   }
 
   #applyEntityUsage(context: GraphContext, result: EntityJudgeResponse): GraphContext {
-    console.log('LLM returned entity slugs:', result.results.map(r => r.slug));
-    console.log('Offered entity slugs:', context.entityContext?.offered.map(o => o.slug));
-
     const usage: EntityUsageClassification[] = result.results.map((entry) => {
       const source = context.entityContext?.offered.find((candidate) => candidate.slug === entry.slug);
       if (!source) {

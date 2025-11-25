@@ -64,7 +64,6 @@ export class RetryLLMClient {
         // Strip markdown code fences if present (common with some providers)
         if (typeof jsonString === 'string' && jsonString.includes('```')) {
           const cleaned = stripMarkdownCodeFence(jsonString);
-          console.log('[RetryLLMClient] Stripped markdown code fence from response');
           jsonString = cleaned;
         }
 
@@ -107,10 +106,17 @@ export class RetryLLMClient {
 
     try {
       const provider = this.#registry.getProvider(request.model);
-      const response = await provider.execute(request, controller.signal);
+      // Resolve the API model ID (e.g., "claude-haiku-4.5" -> "claude-haiku-4-5-20251001")
+      const apiModelId = this.#registry.getApiModelId(request.model);
+      const resolvedRequest = { ...request, model: apiModelId };
+
+      const startTime = Date.now();
+      const response = await provider.execute(resolvedRequest, controller.signal);
+      const durationMs = Date.now() - startTime;
 
       return {
         attempts: attempt + 1,
+        durationMs,
         message: response.output_text,
         metadata: request.metadata,
         providerId: provider.id,
@@ -137,7 +143,6 @@ export class RetryLLMClient {
         throw this.#toError(error);
       }
 
-      console.log('[RetryLLMClient] Retrying after delay:', this.#retryDelay(attempt));
       await setTimeout(this.#retryDelay(attempt));
       return this.#execWithRetry(request, requestId, attempt + 1);
     }
@@ -192,20 +197,26 @@ export class RetryLLMClient {
       }
 
       const structuredProvider = provider as unknown as IStructuredOutputProvider;
+      // Resolve the API model ID (e.g., "claude-haiku-4.5" -> "claude-haiku-4-5-20251001")
+      const apiModelId = this.#registry.getApiModelId(request.model);
       const structuredRequest: StructuredOutputRequest = {
         ...request,
+        model: apiModelId,
         schema,
         schemaName,
       };
 
+      const startTime = Date.now();
       const response = await structuredProvider.executeStructured<T>(
         structuredRequest,
         controller.signal
       );
+      const durationMs = Date.now() - startTime;
 
       // Track usage for structured requests by converting to LLMResponse format
       const llmResponse: LLMResponse = {
         attempts: attempt + 1,
+        durationMs,
         message: response.data,
         metadata: request.metadata,
         providerId: provider.id,
@@ -229,7 +240,6 @@ export class RetryLLMClient {
         throw this.#toError(error);
       }
 
-      console.log('[RetryLLMClient] Retrying structured request after delay:', this.#retryDelay(attempt));
       await setTimeout(this.#retryDelay(attempt));
       return this.generateStructured(request, schema, schemaName, requestId, attempt + 1);
     }

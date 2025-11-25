@@ -1,4 +1,4 @@
-import type { ChronicleSeed } from '@glass-frontier/dto';
+import type { ChronicleSeed, HardState } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -34,6 +34,8 @@ export function ChronicleStartWizard() {
   const setStep = useChronicleStartStore((state) => state.setStep);
   const resetWizard = useChronicleStartStore((state) => state.reset);
   const selectedLocation = useChronicleStartStore((state) => state.selectedLocation);
+  const selectedLocationFull = useChronicleStartStore((state) => state.selectedLocationFull);
+  const setSelectedLocationFull = useChronicleStartStore((state) => state.setSelectedLocationFull);
   const selectedAnchorEntity = useChronicleStartStore((state) => state.selectedAnchorEntity);
   const setSelectedAnchorEntity = useChronicleStartStore((state) => state.setSelectedAnchorEntity);
   const selectedSeedId = useChronicleStartStore((state) => state.chosenSeedId);
@@ -53,6 +55,7 @@ export function ChronicleStartWizard() {
   const [locations, setLocations] = useState<SelectedLocationEntity[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [isLoadingLocationDetails, setIsLoadingLocationDetails] = useState(false);
   const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
   const setBeatsEnabled = useChronicleStartStore((state) => state.setBeatsEnabled);
   const [seedStatus, setSeedStatus] = useState<SeedStatus>('idle');
@@ -61,6 +64,9 @@ export function ChronicleStartWizard() {
   const toggleToneChip = useChronicleStartStore((state) => state.toggleToneChip);
   const chooseSeed = useChronicleStartStore((state) => state.chooseSeed);
   const setCustomSeed = useChronicleStartStore((state) => state.setCustomSeed);
+
+  // Prefetch state
+  const [isPrefetchingAnchors, setIsPrefetchingAnchors] = useState(false);
 
   const refreshLocations = useCallback(async () => {
     setIsLoadingLocations(true);
@@ -90,19 +96,22 @@ export function ChronicleStartWizard() {
     void refreshLocations();
   }, [refreshLocations]);
 
-  useEffect(() => {
-    console.log('[ChronicleWizard] State loaded:', {
-      step,
-      selectedLocation: selectedLocation?.name,
-      selectedAnchor: selectedAnchorEntity?.name,
-    });
-  }, [step, selectedLocation, selectedAnchorEntity]);
-
   const handleSelectLocation = useCallback(
-    (location: SelectedLocationEntity) => {
+    async (location: SelectedLocationEntity) => {
       setSelectedLocation(location);
+      setIsLoadingLocationDetails(true);
+      setLocationError(null);
+      try {
+        const result = await worldAtlasClient.getEntity(location.id);
+        setSelectedLocationFull(result.entity);
+      } catch (err: unknown) {
+        setLocationError(err instanceof Error ? err.message : 'Failed to load location details');
+        setSelectedLocationFull(null);
+      } finally {
+        setIsLoadingLocationDetails(false);
+      }
     },
-    [setSelectedLocation]
+    [setSelectedLocation, setSelectedLocationFull]
   );
 
   const handleCreateLocation = useCallback(
@@ -164,8 +173,8 @@ export function ChronicleStartWizard() {
   const canGoNext =
     (step === 'location' && Boolean(selectedLocation)) ||
     step === 'tone' ||
-    (step === 'seeds' && hasSeedPayload) ||
     (step === 'anchor' && Boolean(selectedAnchorEntity)) ||
+    (step === 'seeds' && hasSeedPayload) ||
     step === 'create';
 
   const selectedCharacterName = useMemo(() => {
@@ -184,6 +193,7 @@ export function ChronicleStartWizard() {
           activeLocationId={selectedLocation?.id ?? null}
           error={locationError}
           isLoading={isLoadingLocations}
+          isLoadingDetails={isLoadingLocationDetails}
           locations={locations}
           onCreate={handleCreateLocation}
           onRefresh={refreshLocations}
@@ -204,6 +214,7 @@ export function ChronicleStartWizard() {
         <SeedStep
           playerId={playerId}
           locationId={selectedLocation?.id ?? null}
+          anchorId={selectedAnchorEntity?.id ?? null}
           tone={{ toneChips, toneNotes }}
           seeds={seeds}
           selectedSeedId={selectedSeedId}
@@ -220,6 +231,7 @@ export function ChronicleStartWizard() {
       return (
         <AnchorStep
           locationId={selectedLocation?.id ?? null}
+          locationFull={selectedLocationFull}
           selectedAnchorId={selectedAnchorEntity?.id ?? null}
           onSelectAnchor={setSelectedAnchorEntity}
         />
@@ -274,6 +286,29 @@ export function ChronicleStartWizard() {
     setToneNotes,
   ]);
 
+  // Prefetch anchors when moving from tone to anchor step
+  const prefetchAnchors = useCallback(async () => {
+    if (!selectedLocationFull || isPrefetchingAnchors) {
+      return;
+    }
+
+    const neighborIds = selectedLocationFull.links.map((link) => link.targetId);
+    if (neighborIds.length === 0) {
+      return;
+    }
+
+    setIsPrefetchingAnchors(true);
+    try {
+      // Prefetch neighbor entities (will be used by AnchorStep)
+      await worldAtlasClient.batchGetEntities(neighborIds);
+    } catch (err) {
+      // Silent fail - AnchorStep will fetch again if needed
+      console.warn('Prefetch anchors failed:', err);
+    } finally {
+      setIsPrefetchingAnchors(false);
+    }
+  }, [selectedLocationFull, isPrefetchingAnchors]);
+
   const handleNext = () => {
     if (!canGoNext) {
       return;
@@ -281,10 +316,12 @@ export function ChronicleStartWizard() {
     if (step === 'location') {
       setStep('tone');
     } else if (step === 'tone') {
+      setStep('anchor');
+      // Prefetch anchors when moving to anchor step
+      void prefetchAnchors();
+    } else if (step === 'anchor') {
       setStep('seeds');
     } else if (step === 'seeds') {
-      setStep('anchor');
-    } else if (step === 'anchor') {
       setStep('create');
     }
   };
@@ -303,12 +340,12 @@ export function ChronicleStartWizard() {
   const handleBack = () => {
     if (step === 'tone') {
       setStep('location');
-    } else if (step === 'seeds') {
-      setStep('tone');
     } else if (step === 'anchor') {
-      setStep('seeds');
-    } else if (step === 'create') {
+      setStep('tone');
+    } else if (step === 'seeds') {
       setStep('anchor');
+    } else if (step === 'create') {
+      setStep('seeds');
     } else {
       goToDefaultSurface();
     }
@@ -406,6 +443,7 @@ type LocationStepProps = {
   locations: SelectedLocationEntity[];
   activeLocationId: string | null;
   isLoading: boolean;
+  isLoadingDetails: boolean;
   error: string | null;
   onSelect: (location: SelectedLocationEntity) => void;
   onCreate: (name: string) => void;
@@ -416,6 +454,7 @@ function LocationStep({
   activeLocationId,
   error,
   isLoading,
+  isLoadingDetails,
   locations,
   onCreate,
   onRefresh,
@@ -529,6 +568,7 @@ function LocationStep({
         </select>
       </div>
       {isLoading ? <p>Loading locations…</p> : null}
+      {isLoadingDetails ? <p className="location-step__loading-details">Loading location details…</p> : null}
       <div className="location-step__grid">
         {filtered.map((loc) => (
           <button
@@ -589,6 +629,7 @@ function ToneStep({ onToggleChip, onUpdateNotes, toneChips, toneNotes }: ToneSte
 type SeedStepProps = {
   playerId: string;
   locationId: string | null;
+  anchorId: string | null;
   tone: { toneChips: string[]; toneNotes: string };
   seeds: ChronicleSeed[];
   selectedSeedId: string | null;
@@ -605,6 +646,7 @@ function SeedStep({
   customSeedText,
   customSeedTitle,
   locationId,
+  anchorId,
   playerId,
   onCustomSeedChange,
   onSeedsLoaded,
@@ -616,6 +658,7 @@ function SeedStep({
   tone,
 }: SeedStepProps) {
   const [error, setError] = useState<string | null>(null);
+  const [generationProgress, setGenerationProgress] = useState(0);
   const hasSelection = Boolean(selectedSeedId);
   const handleCustomSeedTitleChange = (value: string) => {
     onCustomSeedChange({ text: customSeedText, title: value });
@@ -629,24 +672,39 @@ function SeedStep({
       setError('Select a location before generating seeds.');
       return;
     }
+    if (!anchorId) {
+      setError('Select an anchor entity before generating seeds.');
+      return;
+    }
     setSeedStatus('loading');
     setError(null);
+    setGenerationProgress(0);
+
+    // Simulate progress updates for user feedback
+    const progressInterval = setInterval(() => {
+      setGenerationProgress((prev) => Math.min(prev + 1, 3));
+    }, 3000);
+
     try {
       const result = await trpcClient.generateChronicleSeeds.mutate({
         count: 3,
         locationId,
+        anchorId,
         playerId,
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
       });
+      clearInterval(progressInterval);
       onSeedsLoaded(result ?? []);
     } catch (err: unknown) {
+      clearInterval(progressInterval);
       setSeedStatus('error');
       const message = err instanceof Error ? err.message : 'Failed to generate seeds.';
       setError(message);
       return;
     }
     setSeedStatus('idle');
+    setGenerationProgress(0);
   };
 
   return (
@@ -659,7 +717,9 @@ function SeedStep({
           disabled={seedStatus === 'loading'}
         >
           {seedStatus === 'loading'
-            ? 'Generating…'
+            ? generationProgress > 0
+              ? `Generating seeds (${generationProgress}/3)…`
+              : 'Generating seeds…'
             : hasSelection
               ? 'Regenerate 3'
               : 'Generate 3'}
@@ -669,18 +729,22 @@ function SeedStep({
       <div className="seed-list">
         {seeds.map((seed) => (
           <article key={seed.id} className={`seed-card${selectedSeedId === seed.id ? ' active' : ''}`}>
-            <header>
-              <h3>{seed.title}</h3>
-              <button type="button" onClick={() => onSelectSeed(seed.id)}>
-                Choose
-              </button>
-            </header>
-            <p>{seed.teaser}</p>
-            <div className="seed-tags">
-              {seed.tags?.map((tag) => (
-                <span key={tag}>{tag}</span>
-              ))}
+            <div className="seed-card-header">
+              <h3 className="seed-title">{seed.title}</h3>
+              <div className="seed-meta">
+                {seed.tags?.map((tag) => (
+                  <span key={tag} className="seed-tag">{tag}</span>
+                ))}
+                <button
+                  type="button"
+                  className="seed-choose-button"
+                  onClick={() => onSelectSeed(seed.id)}
+                >
+                  {selectedSeedId === seed.id ? '✓ Selected' : 'Choose'}
+                </button>
+              </div>
             </div>
+            <p className="seed-teaser">{seed.teaser}</p>
           </article>
         ))}
       </div>
@@ -714,11 +778,12 @@ function SeedStep({
 
 type AnchorStepProps = {
   locationId: string | null;
+  locationFull: HardState | null;
   selectedAnchorId: string | null;
   onSelectAnchor: (anchor: SelectedAnchorEntity | null) => void;
 }
 
-function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStepProps) {
+function AnchorStep({ locationId, locationFull, onSelectAnchor, selectedAnchorId }: AnchorStepProps) {
   const [anchors, setAnchors] = useState<SelectedAnchorEntity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -733,35 +798,52 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
       setIsLoading(true);
       setError(null);
       try {
-        const result = await worldAtlasClient.getEntity(locationId);
-        if (!result || !result.entity || !result.entity.links) {
-          setAnchors([]);
-          return;
-        }
+        // Use cached location data if available
+        if (locationFull && locationFull.links && locationFull.links.length > 0) {
+          // Batch fetch all neighbors in one request
+          const linkedIds = locationFull.links.map((link) => link.targetId);
+          const neighbors = await worldAtlasClient.batchGetEntities(linkedIds);
 
-        // Get linked entity IDs and fetch them
-        const linkedIds = result.entity.links.map((link) => link.targetId);
-        const neighborPromises = linkedIds.map((id) => worldAtlasClient.getEntity(id));
-        const neighborResults = await Promise.all(neighborPromises);
+          // Filter to non-location entities
+          const nonLocationNeighbors = neighbors
+            .filter((n) => n.kind !== 'location')
+            .slice(0, 3)
+            .map((n) => ({
+              id: n.id,
+              slug: n.slug,
+              name: n.name,
+              kind: n.kind,
+              description: n.description ?? undefined,
+              subkind: n.subkind ?? undefined,
+            }));
 
-        // Filter to non-location entities and take top 3
-        const nonLocationNeighbors = neighborResults
-          .filter((n) => n && n.entity && n.entity.kind !== 'location')
-          .slice(0, 3)
-          .map((n) => ({
-            id: n.entity.id,
-            slug: n.entity.slug,
-            name: n.entity.name,
-            kind: n.entity.kind,
-            description: n.entity.description ?? undefined,
-            subkind: n.entity.subkind ?? undefined,
-          }));
+          setAnchors(nonLocationNeighbors);
 
-        setAnchors(nonLocationNeighbors);
+          // Auto-select first anchor if none selected
+          if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
+            onSelectAnchor(nonLocationNeighbors[0]);
+          }
+        } else {
+          // Fallback: use neighbors endpoint if location not cached
+          const result = await worldAtlasClient.getNeighbors(locationId);
+          const nonLocationNeighbors = result.neighbors
+            .filter((n) => n.kind !== 'location')
+            .slice(0, 3)
+            .map((n) => ({
+              id: n.id,
+              slug: n.slug,
+              name: n.name,
+              kind: n.kind,
+              description: n.description ?? undefined,
+              subkind: n.subkind ?? undefined,
+            }));
 
-        // Auto-select first anchor if none selected
-        if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
-          onSelectAnchor(nonLocationNeighbors[0]);
+          setAnchors(nonLocationNeighbors);
+
+          // Auto-select first anchor if none selected
+          if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
+            onSelectAnchor(nonLocationNeighbors[0]);
+          }
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load anchor entities');
@@ -772,7 +854,7 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
     };
 
     void fetchNeighbors();
-  }, [locationId, selectedAnchorId, onSelectAnchor]);
+  }, [locationId, locationFull, selectedAnchorId, onSelectAnchor]);
 
   if (!locationId) {
     return (
@@ -863,69 +945,114 @@ function CreateStep({
 }: CreateStepProps) {
   return (
     <div className="create-step">
-      <section>
-        <h3>Location</h3>
+      <section className="create-summary-card">
+        <div className="create-summary-header">
+          <h3>Location</h3>
+          {selectedLocation && (
+            <div className="create-summary-badges">
+              {selectedLocation.subkind && <span className="create-badge">{selectedLocation.subkind}</span>}
+              <span className="create-badge create-badge-muted">{selectedLocation.slug}</span>
+            </div>
+          )}
+        </div>
         {selectedLocation ? (
           <>
-            <p className="summary-title">{selectedLocation.name}</p>
-            <p>{selectedLocation.subkind ? `${selectedLocation.subkind} · ${selectedLocation.slug}` : selectedLocation.slug}</p>
-            {selectedLocation.description ? <p className="summary-description">{selectedLocation.description}</p> : null}
+            <p className="create-summary-title">{selectedLocation.name}</p>
+            {selectedLocation.description && <p className="create-summary-desc">{selectedLocation.description}</p>}
           </>
         ) : (
-          <p>Select a location to continue.</p>
+          <p className="create-summary-empty">Select a location to continue.</p>
         )}
       </section>
-      <section>
-        <h3>Anchor Entity</h3>
+
+      <section className="create-summary-card">
+        <div className="create-summary-header">
+          <h3>Anchor Entity</h3>
+          {selectedAnchorEntity && (
+            <div className="create-summary-badges">
+              <span className="create-badge">{selectedAnchorEntity.kind}</span>
+              {selectedAnchorEntity.subkind && <span className="create-badge">{selectedAnchorEntity.subkind}</span>}
+              <span className="create-badge create-badge-muted">{selectedAnchorEntity.slug}</span>
+            </div>
+          )}
+        </div>
         {selectedAnchorEntity ? (
           <>
-            <p className="summary-title">{selectedAnchorEntity.name}</p>
-            <p>{selectedAnchorEntity.kind}{selectedAnchorEntity.subkind ? ` · ${selectedAnchorEntity.subkind}` : ''} · {selectedAnchorEntity.slug}</p>
-            {selectedAnchorEntity.description ? <p className="summary-description">{selectedAnchorEntity.description}</p> : null}
+            <p className="create-summary-title">{selectedAnchorEntity.name}</p>
+            {selectedAnchorEntity.description && <p className="create-summary-desc">{selectedAnchorEntity.description}</p>}
           </>
         ) : (
-          <p>No anchor entity selected (optional).</p>
+          <p className="create-summary-empty">No anchor entity selected (optional).</p>
         )}
       </section>
-      <section>
-        <h3>Tone</h3>
-        <p>{tone.toneChips.length ? tone.toneChips.join(', ') : 'No chips selected.'}</p>
-        {tone.toneNotes ? <p className="tone-note">"{tone.toneNotes}"</p> : null}
-      </section>
-      <section>
-        <h3>Seed</h3>
+
+      <section className="create-summary-card">
+        <div className="create-summary-header">
+          <h3>Seed</h3>
+          {(selectedSeed || customSeedText) && selectedSeed?.tags && (
+            <div className="create-summary-badges">
+              {selectedSeed.tags.map((tag) => (
+                <span key={tag} className="create-badge">{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
         {selectedSeed ? (
           <>
-            <p className="summary-title">{selectedSeed.title}</p>
-            <p>{selectedSeed.teaser}</p>
+            <p className="create-summary-title">{selectedSeed.title}</p>
+            <p className="create-summary-desc">{selectedSeed.teaser}</p>
           </>
         ) : customSeedText ? (
           <>
-            <p className="summary-title">{customSeedTitle || 'Custom seed'}</p>
-            <p>{customSeedText}</p>
+            <p className="create-summary-title">{customSeedTitle || 'Custom seed'}</p>
+            <p className="create-summary-desc">{customSeedText}</p>
           </>
         ) : (
-          <p>Select or write a seed.</p>
+          <p className="create-summary-empty">Select or write a seed.</p>
         )}
       </section>
-      <section>
+
+      <div className="create-summary-compact">
+        <section className="create-summary-card create-summary-inline">
+          <h3>Tone</h3>
+          <div className="create-summary-content">
+            {tone.toneChips.length > 0 ? (
+              <div className="create-summary-badges">
+                {tone.toneChips.map((chip) => (
+                  <span key={chip} className="create-badge">{chip}</span>
+                ))}
+              </div>
+            ) : (
+              <span className="create-summary-empty">No chips selected</span>
+            )}
+            {tone.toneNotes && <p className="create-tone-note">"{tone.toneNotes}"</p>}
+          </div>
+        </section>
+
+        <section className="create-summary-card create-summary-inline">
+          <h3>Character</h3>
+          <div className="create-summary-content">
+            {preferredCharacterName ? (
+              <span className="create-badge create-badge-accent">{preferredCharacterName}</span>
+            ) : (
+              <span className="create-summary-empty">Select character in session manager</span>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <section className="create-summary-card">
         <h3>Chronicle title</h3>
         <input
           type="text"
           placeholder="Optional title override"
           value={customTitle}
           onChange={(event) => setCustomTitle(event.target.value)}
+          className="create-title-input"
         />
       </section>
-      <section>
-        <h3>Character</h3>
-        {preferredCharacterName ? (
-          <p>{preferredCharacterName}</p>
-        ) : (
-          <p>Select a character in the session manager before creating a chronicle.</p>
-        )}
-      </section>
-      <section>
+
+      <section className="create-summary-card create-summary-inline">
         <h3>Chronicle beats</h3>
         <label className="beat-toggle">
           <input
@@ -948,7 +1075,7 @@ type StepperProps = {
   onNavigate: (step: ChronicleWizardStep) => void;
 }
 
-const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'anchor', 'create'];
+const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'anchor', 'seeds', 'create'];
 
 function Stepper({ currentStep, onNavigate }: StepperProps) {
   return (

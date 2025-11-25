@@ -226,18 +226,23 @@ export function PlayerSettingsModal(): JSX.Element | null {
                 onChange={(e) => void handleModelChange('prose', e.target.value)}
                 disabled={isLoadingModels || !models.length}
               >
-                {isLoadingModels || !proseModel ? (
+                {isLoadingModels ? (
                   <option value="">Loading...</option>
+                ) : models.length === 0 ? (
+                  <option value="">No models available</option>
                 ) : (
-                  models.map((model) => {
-                    const inputCostPerM = (model.costPer1kInput * 1000).toFixed(2);
-                    const outputCostPerM = (model.costPer1kOutput * 1000).toFixed(2);
-                    return (
-                      <option key={model.modelId} value={model.modelId}>
-                        {model.displayName} — ${inputCostPerM}/${outputCostPerM} per 1M
-                      </option>
-                    );
-                  })
+                  <>
+                    {!proseModel && <option value="">Select a model...</option>}
+                    {models.map((model) => {
+                      const inputCostPerM = (model.costPer1kInput * 1000).toFixed(2);
+                      const outputCostPerM = (model.costPer1kOutput * 1000).toFixed(2);
+                      return (
+                        <option key={model.modelId} value={model.modelId}>
+                          {model.displayName} — ${inputCostPerM}/${outputCostPerM} per 1M
+                        </option>
+                      );
+                    })}
+                  </>
                 )}
               </select>
             </div>
@@ -253,18 +258,23 @@ export function PlayerSettingsModal(): JSX.Element | null {
                 onChange={(e) => void handleModelChange('classification', e.target.value)}
                 disabled={isLoadingModels || !models.length}
               >
-                {isLoadingModels || !classificationModel ? (
+                {isLoadingModels ? (
                   <option value="">Loading...</option>
+                ) : models.length === 0 ? (
+                  <option value="">No models available</option>
                 ) : (
-                  models.map((model) => {
-                    const inputCostPerM = (model.costPer1kInput * 1000).toFixed(2);
-                    const outputCostPerM = (model.costPer1kOutput * 1000).toFixed(2);
-                    return (
-                      <option key={model.modelId} value={model.modelId}>
-                        {model.displayName} — ${inputCostPerM}/${outputCostPerM} per 1M
-                      </option>
-                    );
-                  })
+                  <>
+                    {!classificationModel && <option value="">Select a model...</option>}
+                    {models.map((model) => {
+                      const inputCostPerM = (model.costPer1kInput * 1000).toFixed(2);
+                      const outputCostPerM = (model.costPer1kOutput * 1000).toFixed(2);
+                      return (
+                        <option key={model.modelId} value={model.modelId}>
+                          {model.displayName} — ${inputCostPerM}/${outputCostPerM} per 1M
+                        </option>
+                      );
+                    })}
+                  </>
                 )}
               </select>
             </div>

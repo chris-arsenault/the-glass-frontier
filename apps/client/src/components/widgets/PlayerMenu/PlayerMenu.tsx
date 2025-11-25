@@ -1,6 +1,26 @@
-import type { LocationEntity, TokenUsagePeriod } from '@glass-frontier/dto';
+import type { LocationEntity } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+type ModelUsageWithCost = {
+  modelId: string;
+  displayName: string;
+  providerId: string;
+  inputTokens: number;
+  outputTokens: number;
+  requestCount: number;
+  inputCost: number;
+  outputCost: number;
+  totalCost: number;
+};
+
+type UsageCostSummary = {
+  byModel: ModelUsageWithCost[];
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalRequests: number;
+  totalCost: number;
+};
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { trpcClient } from '../../../lib/trpcClient';
@@ -105,6 +125,13 @@ const formatTokenCount = (value: number): string => {
   return '0';
 };
 
+const formatCost = (value: number): string => {
+  if (value < 0.01) {
+    return '<$0.01';
+  }
+  return `$${value.toFixed(2)}`;
+};
+
 
 export function PlayerMenu(): JSX.Element {
   const playerName = useChronicleStore((state) => state.playerName);
@@ -128,9 +155,10 @@ export function PlayerMenu(): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const panelId = 'player-menu-panel';
   const navigate = useNavigate();
-  const [usage, setUsage] = useState<TokenUsagePeriod[]>([]);
   const [usageState, setUsageState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [usageError, setUsageError] = useState<string | null>(null);
+  const [costSummary, setCostSummary] = useState<UsageCostSummary | null>(null);
+  const [showCostBreakdown, setShowCostBreakdown] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -201,11 +229,11 @@ export function PlayerMenu(): JSX.Element {
       setUsageState('loading');
       setUsageError(null);
       try {
-        const result = await trpcClient.getTokenUsageSummary.query({ limit: 6, playerId });
+        const costResult = await trpcClient.getModelUsageCostSummary.query({ playerId });
         if (cancelled) {
           return;
         }
-        setUsage(result.usage);
+        setCostSummary(costResult.summary);
         setUsageState('ready');
       } catch (error) {
         if (cancelled) {
@@ -220,9 +248,6 @@ export function PlayerMenu(): JSX.Element {
       cancelled = true;
     };
   }, [isOpen, playerId]);
-
-  const usagePreview = usage[0] ?? null;
-  const topMetrics = usagePreview?.metrics.slice(0, 3) ?? [];
 
   return (
     <div className="player-menu" data-open={isOpen ? 'true' : 'false'} ref={containerRef}>
@@ -287,35 +312,67 @@ export function PlayerMenu(): JSX.Element {
           </div>
         </div>
         <div className="player-menu-usage-row">
-          <p className="player-menu-pill-label">Total Token Usage</p>
+          <div className="player-menu-usage-header">
+            <p className="player-menu-pill-label">Token Usage & Cost</p>
+            {costSummary && costSummary.totalCost > 0 && (
+              <span
+                className="player-menu-usage-cost"
+                onMouseEnter={() => setShowCostBreakdown(true)}
+                onMouseLeave={() => setShowCostBreakdown(false)}
+              >
+                {formatCost(costSummary.totalCost)}
+                {showCostBreakdown && costSummary.byModel.length > 0 && (
+                  <div className="player-menu-cost-breakdown">
+                    <p className="player-menu-cost-breakdown-title">Cost by Model</p>
+                    <table className="player-menu-cost-breakdown-table">
+                      <thead>
+                        <tr>
+                          <th>Model</th>
+                          <th>Tokens</th>
+                          <th>Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {costSummary.byModel.map((model) => (
+                          <tr key={model.modelId}>
+                            <td className="player-menu-cost-model-name">{model.displayName}</td>
+                            <td>{formatTokenCount(model.inputTokens + model.outputTokens)}</td>
+                            <td>{formatCost(model.totalCost)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </span>
+            )}
+          </div>
           {usageState === 'loading' ? (
             <p className="player-menu-usage-note">Loading usage…</p>
           ) : usageState === 'error' ? (
             <p className="player-menu-usage-note">
               Unable to load usage{usageError ? ` · ${usageError}` : ''}.
             </p>
-          ) : usagePreview ? (
+          ) : costSummary && costSummary.totalRequests > 0 ? (
             <table className="player-menu-usage-table" aria-label="LLM token usage">
               <thead>
                 <tr>
                   <th className="player-menu-usage-label">Req</th>
-                  {topMetrics.map((metric) => (
-                    <th key={`header-${metric.key}`} className="player-menu-usage-label">
-                      {metric.key.slice(0, 4).toUpperCase()}
-                    </th>
-                  ))}
+                  <th className="player-menu-usage-label">Input</th>
+                  <th className="player-menu-usage-label">Output</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="player-menu-usage-value">
-                    {formatTokenCount(usagePreview.totalRequests)}
+                    {formatTokenCount(costSummary.totalRequests)}
                   </td>
-                  {topMetrics.map((metric) => (
-                    <td key={`value-${metric.key}`} className="player-menu-usage-value">
-                      {formatTokenCount(metric.value)}
-                    </td>
-                  ))}
+                  <td className="player-menu-usage-value">
+                    {formatTokenCount(costSummary.totalInputTokens)}
+                  </td>
+                  <td className="player-menu-usage-value">
+                    {formatTokenCount(costSummary.totalOutputTokens)}
+                  </td>
                 </tr>
               </tbody>
             </table>

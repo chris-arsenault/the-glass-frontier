@@ -9,10 +9,12 @@ export const tsupConfig = defineConfig({
     dispatcher: 'src/lambdas/dispatcher.ts',
     subscribe: 'src/lambdas/subscribe.ts',
   },
+  // AWS SDK is available in Lambda runtime, don't bundle it
+  external: [/^@aws-sdk\/.*/],
   format: 'cjs',
   metafile: true,
   minify: true,
-  noExternal: [/.*/],
+  noExternal: [/^(?!@aws-sdk).*/],
   outDir: 'dist',
   outExtension: () => ({ js: '.js' }),
   platform: 'node',

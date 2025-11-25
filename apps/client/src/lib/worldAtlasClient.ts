@@ -25,6 +25,24 @@ export const worldAtlasClient = {
     return handle(res);
   },
 
+  async batchGetEntities(ids: string[]): Promise<HardState[]> {
+    const res = await fetch(`${API_BASE}/entities/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    return handle<HardState[]>(res);
+  },
+
+  async getNeighbors(idOrSlug: string, kind?: string): Promise<{ entity: HardState; neighbors: HardState[] }> {
+    const url = new URL(`${API_BASE}/entities/${idOrSlug}/neighbors`, window.location.origin);
+    if (kind) {
+      url.searchParams.set('kind', kind);
+    }
+    const res = await fetch(url.toString());
+    return handle(res);
+  },
+
   async upsertEntity(input: {
     id?: string;
     kind: string;

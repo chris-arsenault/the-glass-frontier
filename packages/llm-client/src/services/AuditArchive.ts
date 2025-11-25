@@ -11,6 +11,7 @@ type ArchiveRecord = {
   requestContextId?: string;
   nodeId?: string;
   metadata?: Record<string, unknown>;
+  durationMs?: number;
 };
 
 export function createAuditArchive() {
@@ -68,6 +69,7 @@ class AuditArchive {
       chronicleId: typeof chronicleId === 'string' ? chronicleId : undefined,
       characterId: typeof characterId === 'string' ? characterId : undefined,
       turnId: typeof turnId === 'string' ? turnId : undefined,
+      durationMs: entry.durationMs,
     });
 
     log('info', `Wrote ${id} to audit log.`);

@@ -1,8 +1,9 @@
 import type { ChronicleBeat, Chronicle, Turn } from '@glass-frontier/dto';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import type { ChatMessage } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import './ChronicleOverview.css';
 
 const formatBeatStatus = (status: ChronicleBeat['status']): string => {
@@ -302,10 +303,13 @@ export function ChronicleOverview({
   const turnSequence = useChronicleStore((state) => state.turnSequence);
   const messages = useChronicleStore((state) => state.messages);
 
-  // Extract anchor entity from recent turns
-  const anchorEntity = useMemo((): AnchorEntityData | null => {
+  // Extract anchor entity from recent turns or fetch from world API
+  const [anchorEntity, setAnchorEntity] = useState<AnchorEntityData | null>(null);
+
+  useEffect(() => {
     if (!chronicle?.anchorEntityId) {
-      return null;
+      setAnchorEntity(null);
+      return;
     }
 
     // Look through recent turns to find entityOffered that matches the anchor
@@ -314,23 +318,40 @@ export function ChronicleOverview({
       if (message.entityOffered) {
         const found = message.entityOffered.find((e) => e.id === chronicle.anchorEntityId);
         if (found) {
-          return {
+          setAnchorEntity({
             id: found.id,
             name: found.name,
             kind: found.kind,
             slug: found.slug,
-          };
+          });
+          return;
         }
       }
     }
 
-    // Fallback: show ID if we can't resolve the name
-    return {
-      id: chronicle.anchorEntityId,
-      name: `Entity ${chronicle.anchorEntityId.substring(0, 8)}...`,
-      kind: 'Unknown',
-      slug: chronicle.anchorEntityId.substring(0, 12),
+    // If not found in messages, fetch from world API
+    const fetchAnchorEntity = async () => {
+      try {
+        const result = await worldAtlasClient.getEntity(chronicle.anchorEntityId);
+        setAnchorEntity({
+          id: result.entity.id,
+          name: result.entity.name,
+          kind: result.entity.kind,
+          slug: result.entity.slug,
+        });
+      } catch (error) {
+        console.error('Failed to fetch anchor entity:', error);
+        // Fallback: show ID if we can't resolve the name
+        setAnchorEntity({
+          id: chronicle.anchorEntityId,
+          name: `Entity ${chronicle.anchorEntityId.substring(0, 8)}...`,
+          kind: 'Unknown',
+          slug: chronicle.anchorEntityId.substring(0, 12),
+        });
+      }
     };
+
+    void fetchAnchorEntity();
   }, [chronicle?.anchorEntityId, messages]);
 
   // Extract entity focus with names from recent turns

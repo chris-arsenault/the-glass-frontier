@@ -87,6 +87,66 @@ app.get('/entities/:identifier', async (req, res) => {
   }
 });
 
+app.post('/entities/batch', async (req, res) => {
+  try {
+    const input = z.object({
+      ids: z.array(z.string().uuid()).min(1).max(100),
+    }).parse(req.body);
+
+    const entities = await Promise.all(
+      input.ids.map((id) => world.getEntity({ id }))
+    );
+
+    // Filter out nulls from failed lookups
+    const validEntities = entities.filter((e): e is NonNullable<typeof e> => e !== null);
+
+    res.json(validEntities);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to batch fetch entities';
+    res.status(400).json({ error: message });
+  }
+});
+
+app.get('/entities/:identifier/neighbors', async (req, res) => {
+  try {
+    const identifier = req.params.identifier;
+    const kind = typeof req.query.kind === 'string' ? req.query.kind : undefined;
+
+    // Fetch the entity
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    let entity = isUuid ? await world.getEntity({ id: identifier }) : null;
+    if (!entity) {
+      entity = await world.getEntityBySlug({ slug: identifier });
+    }
+    if (!entity) {
+      res.status(404).json({ error: 'Entity not found' });
+      return;
+    }
+
+    // Fetch all neighbors
+    const neighborIds = entity.links.map((link) => link.targetId);
+    if (neighborIds.length === 0) {
+      res.json({ entity, neighbors: [] });
+      return;
+    }
+
+    const neighbors = await Promise.all(
+      neighborIds.map((id) => world.getEntity({ id }))
+    );
+
+    // Filter out nulls and optionally filter by kind
+    let validNeighbors = neighbors.filter((e): e is NonNullable<typeof e> => e !== null);
+    if (kind) {
+      validNeighbors = validNeighbors.filter((n) => n.kind === kind);
+    }
+
+    res.json({ entity, neighbors: validNeighbors });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch neighbors';
+    res.status(500).json({ error: message });
+  }
+});
+
 app.post('/entities', async (req, res) => {
   try {
     const input = hardStateInput.parse(req.body);

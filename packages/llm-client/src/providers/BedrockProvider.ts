@@ -26,13 +26,6 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
     const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
     const region = process.env.AWS_REGION?.trim() || 'us-east-1';
 
-    console.log('[BedrockProvider] Initializing:', {
-      hasAccessKeyId: !!accessKeyId,
-      accessKeyIdPrefix: accessKeyId?.substring(0, 8) || 'none',
-      hasSecretAccessKey: !!secretAccessKey,
-      region,
-    });
-
     if (!accessKeyId || !secretAccessKey) {
       console.warn('[BedrockProvider] AWS credentials not configured - provider will be invalid');
       this.valid = false;
@@ -40,7 +33,6 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
       return;
     }
 
-    console.log('[BedrockProvider] Credentials found, provider is valid');
     this.valid = true;
     this.#client = new BedrockRuntimeClient({
       region,
@@ -141,6 +133,7 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
       const jsonSchema = z.toJSONSchema(request.schema);
 
       const toolConfig = this.#mapStructuredRequestTool(request, jsonSchema as Record<string, unknown>);
+
       const command = new ConverseCommand(toolConfig);
       const response = await this.#client.send(command);
 
@@ -154,6 +147,8 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
       );
 
       if (!toolUseBlock?.toolUse) {
+        console.error('[BedrockProvider] No toolUse block found. Content blocks:',
+          response.output.message.content.map((b: any) => Object.keys(b)));
         throw new Error('No toolUse block in response');
       }
 

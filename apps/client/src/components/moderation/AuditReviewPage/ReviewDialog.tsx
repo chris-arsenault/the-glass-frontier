@@ -81,6 +81,7 @@ type ReviewDialogContentProps = {
 
 const ReviewDialogContent = ({ detail, draft, updateDraft }: ReviewDialogContentProps) => (
   <>
+    <MetadataSection detail={detail} />
     <PayloadSection detail={detail} />
     <PlayerFeedbackSection feedback={detail.playerFeedback ?? []} />
     <NotesField value={draft.notes} onChange={(value) => updateDraft({ notes: value })} />
@@ -90,6 +91,24 @@ const ReviewDialogContent = ({ detail, draft, updateDraft }: ReviewDialogContent
     />
   </>
 );
+
+const formatDuration = (durationMs: number): string => {
+  if (durationMs >= 1000) {
+    return `${(durationMs / 1000).toFixed(2)}s`;
+  }
+  return `${durationMs}ms`;
+};
+
+const MetadataSection = ({ detail }: { detail: AuditLogEntry }) => {
+  if (!detail.durationMs) {
+    return null;
+  }
+  return (
+    <div className="audit-metadata" style={{ marginBottom: '16px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px', color: '#333' }}>
+      <strong>Request Duration:</strong> {formatDuration(detail.durationMs)}
+    </div>
+  );
+};
 
 const PayloadSection = ({ detail }: { detail: AuditLogEntry }) => (
   <div className="audit-body">

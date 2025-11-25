@@ -111,7 +111,7 @@ export function SessionManager() {
     }
     setPreferredCharacterId(targetId);
     setError(null);
-    void navigate('/chronicles/start');
+    void navigate('/chron/start');
   };
 
   const handleDeleteChronicle = async (chronicleId: string) => {

@@ -1,5 +1,5 @@
 // context.ts
-import { createAppStore, type PromptTemplateManager, type PlayerStore, type ModelConfigStore } from '@glass-frontier/app';
+import { createAppStore, type PlayerStore, type ModelConfigStore } from '@glass-frontier/app';
 import { createOpsStore } from '@glass-frontier/ops';
 import { createChronicleStore, createWorldSchemaStore, type WorldSchemaStore, type ChronicleStore } from '@glass-frontier/worldstate';
 
@@ -19,10 +19,9 @@ const chronicleStore = createChronicleStore({
 });
 
 const opsStore = createOpsStore({ connectionString: worldstateDatabaseUrl });
-const templateManager = appStore.promptTemplateManager;
 const seedService = new ChronicleSeedService({
-  templateManager,
   worldStore: worldSchemaStore,
+  modelConfigStore: appStore.modelConfigStore,
 });
 
 export type Context = {
@@ -32,7 +31,6 @@ export type Context = {
   modelConfigStore: ModelConfigStore;
   playerStore: PlayerStore;
   seedService: ChronicleSeedService;
-  templateManager: PromptTemplateManager;
   tokenUsageStore: typeof opsStore.tokenUsageStore;
   worldSchemaStore: WorldSchemaStore;
   chronicleStore: ChronicleStore;
@@ -46,7 +44,6 @@ export function createContext(options?: { authorizationHeader?: string }): Conte
     modelConfigStore: appStore.modelConfigStore,
     playerStore: appStore.playerStore,
     seedService,
-    templateManager,
     tokenUsageStore: opsStore.tokenUsageStore,
     worldSchemaStore,
     chronicleStore,

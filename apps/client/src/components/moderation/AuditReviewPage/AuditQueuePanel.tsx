@@ -8,8 +8,19 @@ import type { AuditFilters } from '../../../stores/auditReviewStore';
 import { QueueFilters } from './QueueFilters';
 import { formatDate, STATUS_LABELS } from './utils';
 
+const formatDuration = (durationMs: number | null | undefined): string => {
+  if (durationMs == null) {
+    return '—';
+  }
+  if (durationMs >= 1000) {
+    return `${(durationMs / 1000).toFixed(2)}s`;
+  }
+  return `${durationMs}ms`;
+};
+
 type AuditGridRow = {
   createdAt: number | string;
+  durationMs?: number | null;
   id: string;
   playerId: string;
   providerId: string;
@@ -115,6 +126,7 @@ const useQueueRows = (items: AuditQueueItem[], expandedGroups: Set<string>) =>
       // Add group row
       const groupRow: AuditGridRow = {
         createdAt: earliestItem.createdAt,
+        durationMs: null,
         groupId,
         id: groupId,
         isGroup: true,
@@ -133,6 +145,7 @@ const useQueueRows = (items: AuditQueueItem[], expandedGroups: Set<string>) =>
       for (const item of groupItems) {
         const childRow: AuditGridRow = {
           createdAt: item.createdAt,
+          durationMs: item.durationMs ?? null,
           id: item.storageKey,
           isGroup: false,
           playerId: item.playerId ?? 'n/a',
@@ -209,6 +222,14 @@ const useQueueColumns = (
           <span>{formatDate(params?.row?.createdAt)}</span>
         ),
         width: 200,
+      },
+      {
+        field: 'durationMs',
+        headerName: 'Duration',
+        renderCell: (params: GridRenderCellParams<AuditGridRow>) => (
+          <span>{formatDuration(params?.row?.durationMs)}</span>
+        ),
+        width: 100,
       },
       {
         field: 'actions',

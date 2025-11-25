@@ -88,24 +88,21 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
 
     try {
       // OpenAI has native structured output support via zodTextFormat
+      // Exclude schema and schemaName from the request - they're not valid OpenAI params
+      const { schema, schemaName, ...baseRequest } = request;
+      const textFormat = zodTextFormat(schema, schemaName);
+
       const structuredRequest: LLMRequest = {
-        ...request,
+        ...baseRequest,
         text: {
-          format: zodTextFormat(request.schema, request.schemaName),
+          format: textFormat,
           verbosity: request.text.verbosity,
         },
       };
 
-      console.log('[OpenAIProvider] Structured request with zodTextFormat:', {
-        model: request.model,
-        maxTokens: request.max_output_tokens,
-        schemaName: request.schemaName,
-      });
-
       const response = await this.#client.responses.create(structuredRequest, { signal });
-      const parsed = request.schema.parse(response.output_text);
-
-      console.log('[OpenAIProvider] Structured response validated');
+      const jsonData = JSON.parse(response.output_text);
+      const parsed = schema.parse(jsonData);
 
       return {
         data: parsed as T,
@@ -113,7 +110,17 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
         usage: (response.usage as Record<string, unknown>) ?? {},
       };
     } catch (error: unknown) {
-      console.error('[OpenAIProvider] Structured request failed');
+      console.error('[OpenAIProvider] Structured request failed:', JSON.stringify({
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error ? (error as any).cause : undefined,
+        status: (error as any)?.status,
+        code: (error as any)?.code,
+        type: (error as any)?.type,
+        error: (error as any)?.error,
+        fullError: error,
+      }, null, 2));
       const apiError = this.#asApiError(error);
       if (apiError !== null) {
         throw this.#normalizeApiError(apiError);

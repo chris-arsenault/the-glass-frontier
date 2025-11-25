@@ -206,7 +206,7 @@ export function LandingPage(): JSX.Element {
                 type="button"
                 className="landing-link-button"
                 onClick={() => {
-                  void navigate('/chronicles/start');
+                  void navigate('/chron/start');
                 }}
               >
                 Start new

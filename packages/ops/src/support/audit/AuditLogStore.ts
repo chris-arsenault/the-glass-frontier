@@ -37,6 +37,7 @@ type AuditEntryRow = {
   response: Record<string, unknown>;
   metadata: Record<string, unknown> | null;
   created_at: Date;
+  duration_ms: number | null;
   scope_type?: string;
   scope_ref?: string | null;
   turn_sequence?: number | null;
@@ -102,13 +103,14 @@ export class AuditLogStore {
     characterId?: string | null;
     turnId?: string | null;
     createdAt?: Date;
+    durationMs?: number | null;
   }): Promise<void> {
     const now = entry.createdAt ?? new Date();
     const id = entry.id ?? randomUUID();
     await this.#pool.query(
       `INSERT INTO ops.audit_entry (
-         id, group_id, player_id, chronicle_id, character_id, turn_id, provider_id, request, response, metadata, created_at
-       ) VALUES ($1::uuid, $2::uuid, $3, $4::uuid, $5::uuid, $6::uuid, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11)
+         id, group_id, player_id, chronicle_id, character_id, turn_id, provider_id, request, response, metadata, created_at, duration_ms
+       ) VALUES ($1::uuid, $2::uuid, $3, $4::uuid, $5::uuid, $6::uuid, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12)
        ON CONFLICT (id) DO NOTHING`,
       [
         id,
@@ -122,13 +124,14 @@ export class AuditLogStore {
         JSON.stringify(entry.response ?? {}),
         JSON.stringify(entry.metadata ?? {}),
         now.toISOString(),
+        entry.durationMs ?? null,
       ]
     );
   }
 
   async get(entryId: string): Promise<{ entry: AuditLogEntry; groupId: string } | null> {
     const result = await this.#pool.query<AuditEntryRow>(
-      `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
+      `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at, e.duration_ms,
               g.scope_type, g.scope_ref, t.turn_sequence
        FROM ops.audit_entry e
        JOIN ops.audit_group g ON g.id = e.group_id
@@ -196,7 +199,7 @@ export class AuditLogStore {
 
     const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const result = await this.#pool.query<AuditEntryRow>(
-      `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
+      `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at, e.duration_ms,
               g.scope_type, g.scope_ref, t.turn_sequence
        FROM ops.audit_entry e
        JOIN ops.audit_group g ON g.id = e.group_id
@@ -233,6 +236,7 @@ export class AuditLogStore {
       chronicleId: row.chronicle_id ?? undefined,
       createdAt: row.created_at.toISOString(),
       createdAtMs: row.created_at.getTime(),
+      durationMs: row.duration_ms ?? undefined,
       id: row.id,
       metadata,
       nodeId: (metadata as { nodeId?: string } | undefined)?.nodeId,

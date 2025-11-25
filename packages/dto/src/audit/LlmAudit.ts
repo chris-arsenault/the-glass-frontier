@@ -97,6 +97,7 @@ export type AuditReviewRecord = z.infer<typeof AuditReviewRecordSchema>;
 export const AuditLogEntrySchema = z.object({
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative().optional().nullable(),
   id: z.string().min(1),
   metadata: z.record(z.string(), z.any()).optional().nullable(),
   nodeId: z.string().optional().nullable(),
@@ -116,6 +117,7 @@ export const AuditQueueItemSchema = z.object({
   chronicleId: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative().optional().nullable(),
   groupId: z.string().min(1),
   nodeId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),

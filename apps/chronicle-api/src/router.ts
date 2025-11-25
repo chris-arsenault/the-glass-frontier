@@ -41,7 +41,7 @@ const createChronicleInputSchema = z
     location: locationDetailsSchema.optional(),
     locationId: z.string().uuid().optional(),
     playerId: z.string().min(1),
-    seedText: z.string().max(400).optional(),
+    seedText: z.string().max(800).optional(),
     status: z.enum(['open', 'closed']).optional(),
     title: z.string().min(1),
   })
@@ -96,6 +96,7 @@ export const appRouter = t.router({
         .object({
           count: z.number().int().positive().max(5).optional(),
           locationId: z.string().uuid(),
+          anchorId: z.string().uuid(),
           playerId: z.string().min(1),
         })
         .merge(toneSchema)
@@ -105,6 +106,7 @@ export const appRouter = t.router({
         authorizationHeader: ctx.authorizationHeader,
         count: input.count,
         locationId: input.locationId,
+        anchorId: input.anchorId,
         playerId: input.playerId,
         toneChips: input.toneChips,
         toneNotes: input.toneNotes,
@@ -231,6 +233,25 @@ export const appRouter = t.router({
       return { success: true };
     }),
 
+  getModelUsageCostSummary: t.procedure
+    .input(
+      z.object({
+        playerId: z.string().min(1),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const startDate = input.startDate ? new Date(input.startDate) : undefined;
+      const endDate = input.endDate ? new Date(input.endDate) : undefined;
+      const summary = await ctx.modelConfigStore.getUsageCostSummary(
+        input.playerId,
+        startDate,
+        endDate
+      );
+      return { summary };
+    }),
+
 });
 
 async function createChronicleHandler(
@@ -242,14 +263,20 @@ async function createChronicleHandler(
   ensureCharacterOwnership(character, input.playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
-  const locationId = input.locationId ?? randomUUID();
-  const locationName = resolveLocationName(input);
-  await ctx.worldSchemaStore.upsertEntity({
-    id: locationId,
-    kind: 'location',
-    name: locationName,
-    status: 'known',
-  });
+
+  // Only create a new location if locationId wasn't provided
+  // If locationId is provided, use the existing location from worldstate
+  let locationId = input.locationId;
+  if (!locationId) {
+    locationId = randomUUID();
+    const locationName = resolveLocationName(input);
+    await ctx.worldSchemaStore.upsertEntity({
+      id: locationId,
+      kind: 'location',
+      name: locationName,
+      status: 'known',
+    });
+  }
 
   const chronicle = await ctx.chronicleStore.ensureChronicle({
     anchorEntityId: input.anchorEntityId,

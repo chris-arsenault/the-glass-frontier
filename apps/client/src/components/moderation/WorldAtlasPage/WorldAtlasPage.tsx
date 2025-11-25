@@ -266,11 +266,6 @@ export function WorldAtlasPage(): JSX.Element {
         return;
       }
 
-      console.log('[WorldAtlas] Starting chronicle with:', {
-        location: { id: location.id, name: location.name },
-        anchor: anchor ? { id: anchor.id, name: anchor.name } : null,
-      });
-
       initFromAtlas({
         anchor: anchor
           ? {
@@ -291,7 +286,7 @@ export function WorldAtlasPage(): JSX.Element {
           subkind: location.subkind ?? undefined,
         },
       });
-      navigate('/chronicles/start');
+      navigate('/chron/start');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to prepare chronicle');
     } finally {
