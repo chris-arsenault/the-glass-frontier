@@ -312,6 +312,11 @@ export function ChronicleOverview({
       return;
     }
 
+    // If we already have this entity loaded, skip
+    if (anchorEntity?.id === chronicle.anchorEntityId) {
+      return;
+    }
+
     // Look through recent turns to find entityOffered that matches the anchor
     for (let i = messages.length - 1; i >= 0; i--) {
       const message = messages[i];
@@ -352,7 +357,8 @@ export function ChronicleOverview({
     };
 
     void fetchAnchorEntity();
-  }, [chronicle?.anchorEntityId, messages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chronicle?.anchorEntityId]);
 
   // Extract entity focus with names from recent turns
   const focusedEntities = useMemo((): EntityWithScore[] => {

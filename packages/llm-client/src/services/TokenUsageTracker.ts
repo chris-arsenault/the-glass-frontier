@@ -1,17 +1,30 @@
-import { createOpsStore } from '@glass-frontier/ops';
+import type { Pool } from 'pg';
+import { createOpsStore, useIamAuth } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 
 type UsageRecord = Map<string, number>;
 
 class TokenUsageTracker {
-  readonly #store = createOpsStore({ connectionString: resolveConnectionString() ?? undefined });
+  readonly #store: ReturnType<typeof createOpsStore>;
 
+  constructor(options: { pool?: Pool; connectionString?: string }) {
+    this.#store = createOpsStore(options);
+  }
+
+  /**
+   * Create tracker from environment (local dev only).
+   * For Lambda with IAM auth, use constructor with pool parameter.
+   */
   static fromEnv(): TokenUsageTracker | null {
+    if (useIamAuth()) {
+      // In Lambda, caller must provide pool via constructor
+      return null;
+    }
     const connectionString = resolveConnectionString();
     if (connectionString === null) {
       return null;
     }
-    return new TokenUsageTracker();
+    return new TokenUsageTracker({ connectionString });
   }
 
   async record(

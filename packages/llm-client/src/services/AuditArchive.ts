@@ -1,4 +1,5 @@
-import { createOpsStore, type OpsStore } from '@glass-frontier/ops';
+import type { Pool } from 'pg';
+import { createOpsStore, useIamAuth, type OpsStore } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -21,17 +22,24 @@ export function createAuditArchive() {
 class AuditArchive {
   readonly #store: OpsStore;
 
-  private constructor(store: OpsStore) {
-    this.#store = store;
+  constructor(options: { pool?: Pool; connectionString?: string }) {
+    this.#store = createOpsStore(options);
   }
 
+  /**
+   * Create archive from environment (local dev only).
+   * For Lambda with IAM auth, use constructor with pool parameter.
+   */
   static fromEnv(): AuditArchive | null {
+    if (useIamAuth()) {
+      // In Lambda, caller must provide pool via constructor
+      return null;
+    }
     const connectionString = resolveConnectionString();
     if (connectionString === null) {
       return null;
     }
-    const store = createOpsStore({ connectionString });
-    return new AuditArchive(store);
+    return new AuditArchive({ connectionString });
   }
 
   async record(entry: ArchiveRecord): Promise<void> {

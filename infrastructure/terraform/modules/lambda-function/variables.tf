@@ -116,3 +116,12 @@ variable "websocket_api_config" {
   })
   default = null
 }
+
+variable "vpc_config" {
+  description = "Optional VPC configuration for Lambda (required for RDS Proxy access)."
+  type = object({
+    subnet_ids         = list(string)
+    security_group_ids = list(string)
+  })
+  default = null
+}

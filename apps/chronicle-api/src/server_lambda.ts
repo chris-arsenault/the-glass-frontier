@@ -1,10 +1,14 @@
 import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 
-import { createContext } from './context';
+import { createContext, initializeForLambda } from './context';
 import { appRouter } from './router';
+import { useIamAuth } from '@glass-frontier/app';
 
 const ALLOW_ORIGINS = new Set([`"https://${process.env.DOMAIN_NAME}`]);
+
+// Cold start initialization promise
+let initPromise: Promise<void> | undefined;
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
@@ -51,6 +55,14 @@ export const handler = async (
   event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
+  // Initialize database pool at cold start (IAM auth is async)
+  if (useIamAuth() && !initPromise) {
+    initPromise = initializeForLambda();
+  }
+  if (initPromise) {
+    await initPromise;
+  }
+
   // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
   const requestMethod = resolveRequestMethod(event);
   if (requestMethod?.toUpperCase() === 'OPTIONS') {
@@ -75,11 +87,6 @@ export const handler = async (
       return { headers: corsFor(origin) };
     },
     router: appRouter,
-    /**
-     * Optionally enforce a base path. If your API route is "ANY /chronicle/{proxy+}",
-     * you can uncomment this to be explicit:
-     */
-    // endpoint: "/chronicle",
   })(event, context);
 };
 

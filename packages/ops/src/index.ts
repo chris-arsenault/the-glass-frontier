@@ -1,4 +1,5 @@
 export { createOpsStore, type OpsStore } from './opsStore';
+export { useIamAuth } from './pg';
 export { BugReportStore } from './support/BugReportStore';
 export { TokenUsageStore } from './support/TokenUsageStore';
 export { ModelUsageStore, type ModelUsageRecord } from './support/ModelUsageStore';

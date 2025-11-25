@@ -14,6 +14,18 @@ data "aws_secretsmanager_secret_version" "anthropic_api_key" {
   secret_id = data.aws_secretsmanager_secret.anthropic_api_key.id
 }
 
+# Common database environment variables for IAM auth
+# Lambda connects directly to public RDS instance (no VPC, no proxy)
+locals {
+  db_env_vars = {
+    PGHOST       = aws_db_instance.worldstate.address
+    PGPORT       = "5432"
+    PGDATABASE   = "worldstate"
+    PGUSER       = local.rds_iam_user
+    RDS_IAM_AUTH = "true"
+  }
+}
+
 module "chronicle_lambda" {
   source = "./modules/lambda-function"
 
@@ -28,17 +40,15 @@ module "chronicle_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = {
+  environment_variables = merge(local.db_env_vars, {
     NODE_ENV                    = var.environment
-    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
-    PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
     ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
-  }
+  })
 
   http_api_config = {
     api_id             = aws_apigatewayv2_api.http_api.id
@@ -66,13 +76,10 @@ module "prompt_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = {
-    NODE_ENV                    = var.environment
-    DOMAIN_NAME                 = local.cloudfront_domain
-    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-    PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
-    LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
-  }
+  environment_variables = merge(local.db_env_vars, {
+    NODE_ENV    = var.environment
+    DOMAIN_NAME = local.cloudfront_domain
+  })
 
   http_api_config = {
     api_id             = aws_apigatewayv2_api.http_api.id
@@ -86,13 +93,13 @@ module "prompt_api_lambda" {
   }
 }
 
-module "location_api_lambda" {
+module "atlas_api_lambda" {
   source = "./modules/lambda-function"
 
-  function_name        = "${local.name_prefix}-location-api"
-  source_dir           = local.location_api_dist_dir
-  artifact_output_path = "${local.artifacts_dir}/location-api.zip"
-  role_arn             = aws_iam_role.lambda["location_api_lambda"].arn
+  function_name        = "${local.name_prefix}-atlas-api"
+  source_dir           = local.atlas_api_dist_dir
+  artifact_output_path = "${local.artifacts_dir}/atlas-api.zip"
+  role_arn             = aws_iam_role.lambda["atlas_api_lambda"].arn
   handler              = "handler.handler"
   runtime              = var.lambda_node_version
   memory_size          = 384
@@ -100,11 +107,10 @@ module "location_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = {
-    NODE_ENV                    = var.environment
-    DOMAIN_NAME                 = local.cloudfront_domain
-    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-  }
+  environment_variables = merge(local.db_env_vars, {
+    NODE_ENV    = var.environment
+    DOMAIN_NAME = local.cloudfront_domain
+  })
 
   http_api_config = {
     api_id             = aws_apigatewayv2_api.http_api.id
@@ -112,8 +118,42 @@ module "location_api_lambda" {
     authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
     authorization_type = "JWT"
     routes = [
-      { route_key = "POST /location/{proxy+}" },
-      { route_key = "GET /location/{proxy+}" }
+      { route_key = "POST /atlas/{proxy+}" },
+      { route_key = "GET /atlas/{proxy+}" },
+      { route_key = "PUT /atlas/{proxy+}" },
+      { route_key = "DELETE /atlas/{proxy+}" }
+    ]
+  }
+}
+
+module "world_schema_api_lambda" {
+  source = "./modules/lambda-function"
+
+  function_name        = "${local.name_prefix}-world-schema-api"
+  source_dir           = local.world_schema_api_dist_dir
+  artifact_output_path = "${local.artifacts_dir}/world-schema-api.zip"
+  role_arn             = aws_iam_role.lambda["world_schema_api_lambda"].arn
+  handler              = "handler.handler"
+  runtime              = var.lambda_node_version
+  memory_size          = 384
+  timeout              = 15
+  log_retention_days   = 14
+  tags                 = local.tags
+
+  environment_variables = merge(local.db_env_vars, {
+    NODE_ENV    = var.environment
+    DOMAIN_NAME = local.cloudfront_domain
+  })
+
+  http_api_config = {
+    api_id             = aws_apigatewayv2_api.http_api.id
+    execution_arn      = aws_apigatewayv2_api.http_api.execution_arn
+    authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+    authorization_type = "JWT"
+    routes = [
+      { route_key = "POST /world-schema/{proxy+}" },
+      { route_key = "GET /world-schema/{proxy+}" },
+      { route_key = "DELETE /world-schema/{proxy+}" }
     ]
   }
 }
@@ -132,18 +172,15 @@ module "gm_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = {
+  environment_variables = merge(local.db_env_vars, {
     NODE_ENV                    = var.environment
     DOMAIN_NAME                 = local.cloudfront_domain
-    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-    PROMPT_TEMPLATE_BUCKET      = module.prompt_templates_bucket.id
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
-    LLM_PROXY_ARCHIVE_BUCKET    = module.llm_audit_bucket.id
     OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
     ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
-  }
+  })
 
   http_api_config = {
     api_id             = aws_apigatewayv2_api.http_api.id
@@ -171,12 +208,12 @@ module "chronicle_closer_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = {
-    NODE_ENV                    = var.environment
-    GLASS_FRONTIER_DATABASE_URL = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-  }
+  environment_variables = merge(local.db_env_vars, {
+    NODE_ENV = var.environment
+  })
 }
 
+# WebSocket lambdas don't need database access - no VPC config needed
 module "webservice_connect_lambda" {
   source = "./modules/lambda-function"
 
@@ -290,4 +327,29 @@ resource "aws_lambda_event_source_mapping" "webservice_progress" {
   event_source_arn = aws_sqs_queue.turn_progress.arn
   function_name    = module.webservice_push_lambda.arn
   batch_size       = 10
+}
+
+# DB Provisioner Lambda - for migrations, reset, and seeding
+# This Lambda is NOT exposed via API Gateway - invoke from console or CI/CD
+module "db_provisioner_lambda" {
+  source = "./modules/lambda-function"
+
+  function_name        = "${local.name_prefix}-db-provisioner"
+  source_dir           = local.db_provisioner_dist_dir
+  artifact_output_path = "${local.artifacts_dir}/db-provisioner.zip"
+  role_arn             = aws_iam_role.lambda["db_provisioner_lambda"].arn
+  handler              = "handler.handler"
+  runtime              = var.lambda_node_version
+  memory_size          = 512
+  timeout              = 300  # 5 minutes for migrations
+  log_retention_days   = 30
+  tags                 = local.tags
+
+  environment_variables = merge(local.db_env_vars, {
+    NODE_ENV              = var.environment
+    RDS_MASTER_SECRET_ARN = aws_db_instance.worldstate.master_user_secret[0].secret_arn
+    RDS_MASTER_USERNAME   = aws_db_instance.worldstate.username
+  })
+
+  # No http_api_config - this Lambda is invoked manually or from CI/CD
 }

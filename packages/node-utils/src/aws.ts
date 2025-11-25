@@ -1,5 +1,5 @@
-
 import { fromEnv } from '@aws-sdk/credential-providers';
+import { Signer } from '@aws-sdk/rds-signer';
 
 const isNonEmptyString = (value: unknown): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
@@ -54,4 +54,34 @@ const hasExplicitAwsCredentials = (): boolean => {
   const accessKey = process.env.AWS_ACCESS_KEY_ID ?? '';
   const secretKey = process.env.AWS_SECRET_ACCESS_KEY ?? '';
   return accessKey.trim().length > 0 && secretKey.trim().length > 0;
+};
+
+/**
+ * Check if we should use IAM authentication (Lambda environment)
+ */
+export const useRdsIamAuth = (): boolean => {
+  return process.env.RDS_IAM_AUTH === 'true';
+};
+
+/**
+ * Generate an IAM authentication token for RDS Proxy
+ */
+export const generateRdsIamToken = async (): Promise<string> => {
+  const host = process.env.PGHOST;
+  const port = parseInt(process.env.PGPORT || '5432', 10);
+  const user = process.env.PGUSER;
+  const region = resolveAwsRegion();
+
+  if (!host || !user) {
+    throw new Error('PGHOST and PGUSER environment variables are required for IAM auth');
+  }
+
+  const signer = new Signer({
+    hostname: host,
+    port,
+    username: user,
+    region,
+  });
+
+  return signer.getAuthToken();
 };

@@ -175,13 +175,6 @@
     "type": "improvement"
   },
   {
-    "id": "2025-11-27-location-relationship-fix",
-    "releasedAt": "2025-11-27",
-    "summary": "Location maintenance now returns proper relationships",
-    "details": "Corrected the descendant query to preserve canonical parent ids in the location graph and added a Postgres-backed vitest suite that exercises location, edge, character, chronicle, and event persistence to prevent regressions.",
-    "type": "bugfix"
-  },
-  {
     "id": "2025-11-27-world-hardstate-lore",
     "releasedAt": "2025-11-27",
     "summary": "World hard state and lore fragments persist in Postgres",
@@ -203,45 +196,10 @@
     "type": "feature"
   },
   {
-    "id": "2025-11-27-location-hardstate",
-    "releasedAt": "2025-11-27",
-    "summary": "Locations moved into world hard state",
-    "details": "Removed the legacy location maintenance UI and API, now storing locations as world hard state entities via the Atlas flows. Chronicle start uses atlas locations and GM location calls are stubbed while the new flow replaces the old graph.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-27-lore-fragments-detached",
-    "releasedAt": "2025-11-27",
-    "summary": "Lore fragments can outlive chronicles",
-    "details": "Chronicle IDs are now optional when creating lore fragments, and turn range metadata was removed so fragments can be authored from the UI or API and persist even if chronicles are deleted.",
-    "type": "improvement"
-  },
-  {
     "id": "2025-11-27-hardstate-prominence",
     "releasedAt": "2025-11-27",
     "summary": "Hard state prominence levels",
     "details": "Hard state entities now carry a five-level prominence field (forgotten → mythic) with slug-based lookups, allowing filtering by prominence and slug-friendly Atlas/chronicle links.",
     "type": "feature"
-  },
-  {
-    "id": "2025-11-28-location-schema-refresh",
-    "releasedAt": "2025-11-28",
-    "summary": "Location DTO refresh and neighbor graph",
-    "details": "Simplified location summaries to align with world hard state slugs, replaced legacy breadcrumb/adjacent buckets with dynamic relationship-keyed neighbors filtered by prominence, and wired GM location lookups to the world schema store.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-28-hardstate-descriptions",
-    "releasedAt": "2025-11-28",
-    "summary": "Hard state descriptions everywhere",
-    "details": "Hard state entities now persist and expose an optional description across the world schema, Atlas UI/API, GM location fragments, and location summaries, so narrative surfaces can render richer context.",
-    "type": "improvement"
-  },
-  {
-    "id": "2025-11-29-atlas-relationship-labels",
-    "releasedAt": "2025-11-29",
-    "summary": "Atlas relationships show entity names",
-    "details": "World Atlas relationship rows now display linked entity names instead of ids and link directly to the target Atlas page so moderators can quickly navigate between related entities.",
-    "type": "bugfix"
   }
 ]

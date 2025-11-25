@@ -2,10 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "esModuleInterop": true,
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "resolveJsonModule": true
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "declarationDir": "dist",
+    "declarationMap": false
   },
-  "include": ["src"]
+  "include": ["src", "tsup.config.ts"],
+  "references": [
+    { "path": "../../packages/worldstate" },
+    { "path": "../../packages/utils" }
+  ]
 }

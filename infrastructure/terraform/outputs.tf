@@ -24,11 +24,7 @@ output "cognito_domain" {
 }
 
 # NOTE: narrative_data_bucket output removed - migrated to PostgreSQL
-
-output "prompt_template_bucket" {
-  value       = module.prompt_templates_bucket.id
-  description = "S3 bucket containing official prompt templates and player overrides."
-}
+# NOTE: prompt_template_bucket output removed - migrated to PostgreSQL
 
 output "tf_state_bucket" {
   value       = module.tf_state_bucket.id
@@ -45,8 +41,20 @@ output "progress_websocket_url" {
   description = "WebSocket endpoint that streams GM turn progress."
 }
 
-output "worldstate_database_url" {
-  description = "Connection string for the worldstate Postgres instance."
-  value       = "postgres://gf_worldstate:${random_password.worldstate.result}@${aws_db_instance.worldstate.address}:${aws_db_instance.worldstate.port}/worldstate"
-  sensitive   = true
+output "rds_endpoint" {
+  description = "RDS instance endpoint for database connections."
+  value       = aws_db_instance.worldstate.address
+}
+
+output "rds_master_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing RDS master credentials."
+  value       = aws_db_instance.worldstate.master_user_secret[0].secret_arn
+}
+
+# Note: Master password managed via AWS Secrets Manager when manage_master_user_password = true
+# For IAM auth connections, no password is needed - Lambda uses IAM tokens
+
+output "db_provisioner_lambda_arn" {
+  description = "ARN of the DB provisioner Lambda for running migrations. Invoke with: aws lambda invoke --function-name <arn> --payload '{\"action\":\"migrate\"}' response.json"
+  value       = module.db_provisioner_lambda.arn
 }

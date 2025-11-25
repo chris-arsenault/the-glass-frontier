@@ -1,3 +1,4 @@
+import type { Pool } from 'pg';
 import { LLMRequest, LLMResponse } from './types';
 import { setTimeout } from 'timers/promises';
 import { isNonEmptyString, log, LoggableMetadata } from '@glass-frontier/utils';
@@ -27,11 +28,31 @@ function stripMarkdownCodeFence(text: string): string {
   return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 }
 
-export function createLLMClient() {
+export type CreateLLMClientOptions = {
+  /** Pre-created pool for Lambda with IAM auth. If not provided, uses connection string from env. */
+  pool?: Pool;
+};
+
+/**
+ * Create an LLM client with audit/usage tracking.
+ *
+ * For local development: call with no arguments
+ * For Lambda with IAM auth: pass the pre-created pool
+ */
+export function createLLMClient(options?: CreateLLMClientOptions) {
   const registry = createDefaultRegistry();
-  const auditArchive = AuditArchive.fromEnv();
-  const tokenUsageTracker = TokenUsageTracker.fromEnv();
-  const modelUsageTracker = ModelUsageTracker.fromEnv();
+
+  // If pool is provided (Lambda), use it; otherwise use fromEnv() for local dev
+  const auditArchive = options?.pool
+    ? new AuditArchive({ pool: options.pool })
+    : AuditArchive.fromEnv();
+  const tokenUsageTracker = options?.pool
+    ? new TokenUsageTracker({ pool: options.pool })
+    : TokenUsageTracker.fromEnv();
+  const modelUsageTracker = options?.pool
+    ? new ModelUsageTracker({ pool: options.pool })
+    : ModelUsageTracker.fromEnv();
+
   const successHandler = new LLMSuccessHandler({
     auditArchive,
     tokenUsageTracker,

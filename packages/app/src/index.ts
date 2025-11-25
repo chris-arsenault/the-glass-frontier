@@ -10,3 +10,10 @@ export {
   type ModelUsageWithCost,
   type UsageCostSummary,
 } from './modelConfigStore';
+export {
+  useIamAuth,
+  createPool,
+  createPoolWithIamAuth,
+  withTransaction,
+  type PgOptions,
+} from './pg';
