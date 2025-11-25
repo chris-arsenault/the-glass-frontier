@@ -23,7 +23,8 @@ const buildTarget = (port) => {
 const chroniclePort = Number(process.env.CHRONICLE_API_PORT ?? process.env.NARRATIVE_PORT ?? 7000);
 const gmPort = Number(process.env.GM_API_PORT ?? 7001);
 const promptPort = Number(process.env.PROMPT_API_PORT ?? 7400);
-const locationPort = Number(process.env.LOCATION_API_PORT ?? 7300);
+const worldSchemaPort = Number(process.env.WORLD_SCHEMA_API_PORT ?? 4015);
+const atlasPort = Number(process.env.ATLAS_API_PORT ?? 4016);
 
 const proxy = {
   '/chronicle': {
@@ -36,15 +37,20 @@ const proxy = {
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/prompt/, ''),
   },
-  '/location': {
-    target: buildTarget(locationPort),
-    changeOrigin: true,
-    rewrite: (p) => p.replace(/^\/location/, ''),
-  },
   '/gm': {
     target: buildTarget(gmPort),
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/gm/, ''),
+  },
+  '/world-schema-api': {
+    target: buildTarget(worldSchemaPort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/world-schema-api/, ''),
+  },
+  '/atlas-api': {
+    target: buildTarget(atlasPort),
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/atlas-api/, ''),
   },
 };
 
@@ -90,6 +96,9 @@ export default defineConfig({
       react: r('node_modules/react'),
       'react-dom': r('node_modules/react-dom'),
       'react/jsx-runtime': r('node_modules/react/jsx-runtime.js'),
+      // Resolve workspace packages to source for HMR (avoids stale dist issues)
+      '@glass-frontier/utils': r('../../packages/utils/src/index.ts'),
+      '@glass-frontier/dto': r('../../packages/dto/src/index.ts'),
     },
     dedupe: ['react', 'react-dom'],
     preserveSymlinks: false, // treat linked packages by symlink path, avoid /@fs dupes

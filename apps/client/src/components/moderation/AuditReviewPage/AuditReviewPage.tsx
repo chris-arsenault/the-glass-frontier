@@ -7,7 +7,6 @@ import { useCanModerate } from '../../../hooks/useUserRole';
 import { useAuditReviewStore } from '../../../stores/auditReviewStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './AuditReviewPage.css';
-import { AuditProposalsPanel } from './AuditProposalsPanel';
 import { AuditQueuePanel } from './AuditQueuePanel';
 import { ReviewDialog } from './ReviewDialog';
 
@@ -15,9 +14,9 @@ export function AuditReviewPage(): JSX.Element {
   const access = useModeratorAccess();
   const store = useAuditReviewState();
   const modal = useReviewModal(store.selectItem);
-  useAuditReviewSync(access.canModerate, store.loadQueue, store.refreshProposals);
+  useAuditReviewSync(access.canModerate, store.loadQueue);
   const detailTemplateLabel = useTemplateLabel(store.selectedItem);
-  const reviewActions = useReviewActions(access.loginId, store.saveReview);
+  const reviewActions = useReviewActions(access.playerId, store.saveReview);
 
   if (!access.canModerate) {
     const redirectTarget = access.activeChronicleId ? `/chron/${access.activeChronicleId}` : '/';
@@ -41,16 +40,11 @@ const selectAuditReviewState = (state: ReturnType<typeof useAuditReviewStore.get
   draft: state.draft,
   error: state.error,
   filters: state.filters,
-  generateProposals: state.generateProposals,
   isLoading: state.isLoading,
   isLoadingMore: state.isLoadingMore,
   items: state.items,
   loadMore: state.loadMore,
   loadQueue: state.loadQueue,
-  proposalGenerating: state.proposalGenerating,
-  proposalLoading: state.proposalLoading,
-  proposals: state.proposals,
-  refreshProposals: state.refreshProposals,
   saveReview: state.saveReview,
   selectedItem: state.selectedItem,
   selectItem: state.selectItem,
@@ -62,7 +56,7 @@ const useAuditReviewState = () => useAuditReviewStore(useShallow(selectAuditRevi
 
 const useModeratorAccess = () => {
   const canModerate = useCanModerate();
-  const loginId = useChronicleStore((state) => state.loginId);
+  const playerId = useChronicleStore((state) => state.playerId);
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const navigate = useNavigate();
   const goBackToPlayerSurface = useCallback(() => {
@@ -72,7 +66,7 @@ const useModeratorAccess = () => {
       void navigate('/');
     }
   }, [activeChronicleId, navigate]);
-  return { activeChronicleId, canModerate, goBackToPlayerSurface, loginId };
+  return { activeChronicleId, canModerate, goBackToPlayerSurface, playerId };
 };
 
 const useReviewModal = (selectItem: (key: string | null) => Promise<void>) => {
@@ -93,34 +87,32 @@ const useReviewModal = (selectItem: (key: string | null) => Promise<void>) => {
 
 const useAuditReviewSync = (
   enabled: boolean,
-  loadQueue: () => Promise<void>,
-  refreshProposals: () => Promise<void>
+  loadQueue: () => Promise<void>
 ) => {
   useEffect(() => {
     if (!enabled) {
       return;
     }
     void loadQueue();
-    void refreshProposals();
-  }, [enabled, loadQueue, refreshProposals]);
+  }, [enabled, loadQueue]);
 };
 
 const useReviewActions = (
-  loginId: string | null,
-  saveReview: (loginId: string, status: 'in_progress' | 'completed') => Promise<void>
+  playerId: string | null,
+  saveReview: (playerId: string, status: 'in_progress' | 'completed') => Promise<void>
 ) => {
   const saveDraft = useCallback(() => {
-    if (!loginId) {
+    if (!playerId) {
       return;
     }
-    void saveReview(loginId, 'in_progress');
-  }, [loginId, saveReview]);
+    void saveReview(playerId, 'in_progress');
+  }, [playerId, saveReview]);
   const complete = useCallback(() => {
-    if (!loginId) {
+    if (!playerId) {
       return;
     }
-    void saveReview(loginId, 'completed');
-  }, [loginId, saveReview]);
+    void saveReview(playerId, 'completed');
+  }, [playerId, saveReview]);
   return { complete, saveDraft };
 };
 
@@ -151,9 +143,7 @@ const AuditReviewLayout = ({
     <AuditReviewHeader
       goBackToPlayerSurface={access.goBackToPlayerSurface}
       isLoading={store.isLoading}
-      onGenerateProposals={() => void store.generateProposals()}
       onRefreshQueue={() => void store.loadQueue()}
-      proposalGenerating={store.proposalGenerating}
     />
     {store.error ? <p className="audit-error">{store.error}</p> : null}
     <div className="audit-layout">
@@ -168,20 +158,13 @@ const AuditReviewLayout = ({
         onLoadMore={() => void store.loadMore()}
         onOpenReview={modal.openReview}
       />
-      <AuditProposalsPanel
-        proposals={store.proposals}
-        proposalGenerating={store.proposalGenerating}
-        proposalLoading={store.proposalLoading}
-        onGenerate={() => void store.generateProposals()}
-        onRefresh={() => void store.refreshProposals()}
-      />
     </div>
     <ReviewDialog
       detail={store.detail}
       draft={store.draft}
       isOpen={Boolean(modal.modalKey)}
       isSaving={store.isLoading}
-      loginId={access.loginId}
+      playerId={access.playerId}
       onCancel={modal.closeReview}
       onComplete={reviewActions.complete}
       onSaveDraft={reviewActions.saveDraft}
@@ -194,22 +177,18 @@ const AuditReviewLayout = ({
 type AuditReviewHeaderProps = {
   goBackToPlayerSurface: () => void;
   isLoading: boolean;
-  onGenerateProposals: () => void;
   onRefreshQueue: () => void;
-  proposalGenerating: boolean;
 };
 
 const AuditReviewHeader = ({
   goBackToPlayerSurface,
   isLoading,
-  onGenerateProposals,
   onRefreshQueue,
-  proposalGenerating,
 }: AuditReviewHeaderProps) => (
   <header className="audit-page-header">
     <div>
       <h1>LLM Audit Review</h1>
-      <p>Browse archived requests, capture moderator reviews, and inspect template proposals.</p>
+      <p>Browse archived requests and capture moderator reviews.</p>
     </div>
     <div className="audit-header-actions">
       <button type="button" onClick={goBackToPlayerSurface}>
@@ -217,9 +196,6 @@ const AuditReviewHeader = ({
       </button>
       <button type="button" onClick={onRefreshQueue} disabled={isLoading}>
         {isLoading ? 'Refreshing…' : 'Refresh Queue'}
-      </button>
-      <button type="button" onClick={onGenerateProposals} disabled={proposalGenerating}>
-        {proposalGenerating ? 'Generating…' : 'Generate Proposals'}
       </button>
     </div>
   </header>

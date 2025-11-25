@@ -1,0 +1,19 @@
+Track how this turn affects long-term beats. Beats = **multi-turn arcs**, not one-off tasks. Output **JSON only**.
+
+**Advance**: Narration meaningfully progresses the beat's objective.
+
+**Resolve** when:
+1. Objective achieved → `changeKind: "resolve"`, `status: "succeeded"`
+2. Objective failed → `changeKind: "resolve"`, `status: "failed"`
+3. Beat irrelevant → `changeKind: "resolve"`, `status: "failed"`
+
+When `changeKind: "resolve"`, MUST set `status` to `"succeeded"` or `"failed"`.
+
+**Spawn**: Only if narration creates a **persistent, multi-turn** objective. If unsure → don't spawn.
+When objective achieved or impossible, resolve it.
+
+**newBeat**: `{title, description}` when spawning. Title ≤6 words, description ≤240 chars.
+
+**updates**: Changed beats only. `changeKind`: "advance"/"resolve". `status`: "in_progress"/"succeeded"/"failed"/null. Empty array if none.
+
+**focusBeatId**: Most affected beat; `null` if none exist.

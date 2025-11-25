@@ -2,16 +2,16 @@ import type {
   Character,
   TranscriptEntry,
   Turn,
-  LocationSummary,
+  LocationEntity,
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
 } from '@glass-frontier/dto';
-import type { PromptTemplateManager } from '@glass-frontier/persistence';
+import type { PromptTemplateManager, ModelConfigStore } from '@glass-frontier/app';
 import {
-  type WorldStateStore,
-  type LocationGraphStore,
-} from '@glass-frontier/persistence';
+  type ChronicleStore,
+  type WorldSchemaStore,
+} from '@glass-frontier/worldstate';
 import {formatTurnJobId, isDefined, isNonEmptyString, log} from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 
@@ -36,36 +36,40 @@ import {GmResponseNode} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandler
 import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
 import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
 import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
+import {EntityJudgeNode, EntitySelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes";
+import { LocationHelpers } from '@glass-frontier/worldstate';
 
 type GmEngineOptions = {
-  worldStateStore: WorldStateStore;
-  locationGraphStore: LocationGraphStore;
+  chronicleStore: ChronicleStore;
+  locationHelpers: LocationHelpers;
+  worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
+  modelConfigStore: ModelConfigStore;
 };
 
-const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = [
-  'chronicle_story',
-  'location_events',
-  'character_bio',
-];
+const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 
 class GmEngine {
-  readonly worldStateStore: WorldStateStore;
-  readonly locationGraphStore: LocationGraphStore;
+  readonly chronicleStore: ChronicleStore;
+  readonly locationHelpers: LocationHelpers;
+  readonly worldSchemaStore: WorldSchemaStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
   readonly llm: RetryLLMClient;
   readonly progressEmitter: TurnProgressPublisher;
   readonly closureEmitter: ChronicleClosurePublisher;
   readonly templateManager: PromptTemplateManager;
+  readonly modelConfigStore: ModelConfigStore;
 
   constructor(options: GmEngineOptions) {
     this.templateManager = options.templateManager;
-    this.worldStateStore = options.worldStateStore
-    this.locationGraphStore = options.locationGraphStore;
+    this.chronicleStore = options.chronicleStore;
+    this.locationHelpers = options.locationHelpers;
+    this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
+    this.modelConfigStore = options.modelConfigStore;
     this.progressEmitter = createProgressEmitterFromEnv();
     this.closureEmitter = createClosureEmitterFromEnv();
     this.graph = this.#createGraph();
@@ -75,42 +79,48 @@ class GmEngine {
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
+    _options?: { authorizationHeader?: string },
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
-    locationSummary: LocationSummary | null;
+    locationSummary: LocationEntity | null;
     chronicleStatus: Chronicle['status'];
   }> {
     this.#assertChronicleId(chronicleId);
     const chronicleState = await this.#loadChronicleState(chronicleId);
     this.#ensureChronicleOpen(chronicleState);
     const turnSequence = chronicleState.turnSequence + 1;
-    const loginId = this.#requireLoginId(chronicleState);
+    const turnId = randomUUID();
+    const playerId = this.#requirePlayerId(chronicleState);
     const jobId = formatTurnJobId(chronicleId, turnSequence);
-    const templateRuntime = this.#createTemplateRuntime(loginId);
+    const templateRuntime = this.#createTemplateRuntime(playerId);
     const graphInput = this.#buildGraphInput({
       chronicleId,
+      turnId,
       chronicleState,
       playerMessage,
       templateRuntime,
       turnSequence,
-      locationGraphStore: this.locationGraphStore
+      locationHelpers: this.locationHelpers,
+      chronicleStore: this.chronicleStore,
+      worldSchemaStore: this.worldSchemaStore,
     });
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
 
-    const worldUpdater = new WorldUpdater({worldStateStore: this.worldStateStore, locationGraphStore: this.locationGraphStore});
+    const worldUpdater = new WorldUpdater({chronicleStore: this.chronicleStore, locationHelpers: this.locationHelpers});
     const updatedContext = await worldUpdater.update(graphResult);
 
     const turn = this.#buildTurn({
       chronicleId,
+      turnId,
       graphResult: updatedContext,
       playerMessage,
       systemMessage,
       turnSequence,
     });
 
-    await this.worldStateStore.addTurn(turn);
+    await this.chronicleStore.addTurn(turn);
 
 
     if (graphResult.shouldCloseChronicle && chronicleState.chronicle?.status !== 'closed') {
@@ -135,19 +145,45 @@ class GmEngine {
 
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
+    const entitySelector = new EntitySelectorNode();
     const beatDetector = new BeatDetectorNode();
-    const beatDirector = new BeatTrackerNode();
+    const beatTracker = new BeatTrackerNode();
     const checkPlanner = new CheckPlannerNode();
     const gmSummaryNode = new GmSummaryNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
+    const entityJudgeNode = new EntityJudgeNode();
     const locationDeltaNode = new LocationDeltaNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
 
+    // All nodes that can be executed
+    const nodes = [
+      intentClassifier,
+      beatDetector,
+      checkPlanner,
+      entitySelector,
+      checkRunner,
+      gmResponseNode,
+      entityJudgeNode,
+      beatTracker,
+      gmSummaryNode,
+      locationDeltaNode,
+      inventoryDeltaNode,
+    ];
+
+    // Canonical execution pipeline - defines the exact order and parallelism
+    const pipeline = [
+      { type: 'sequential' as const, nodeId: 'intent-classifier' },
+      { type: 'parallel' as const, nodeIds: ['intent-beat-detector', 'check-planner'] },
+      { type: 'sequential' as const, nodeId: 'entity-selector' },
+      { type: 'sequential' as const, nodeId: 'check-runner' },
+      { type: 'sequential' as const, nodeId: 'gm-response-node' },
+      { type: 'parallel' as const, nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'] },
+    ];
+
     return new GmGraphOrchestrator(
-      [intentClassifier, beatDetector, checkPlanner, checkRunner,
-        gmResponseNode, beatDirector, gmSummaryNode,
-        locationDeltaNode, inventoryDeltaNode],
+      nodes,
+      pipeline,
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );
@@ -160,24 +196,24 @@ class GmEngine {
   }
 
   async #loadChronicleState(chronicleId: string): Promise<ChronicleState> {
-    const state = await this.worldStateStore.getChronicleState(chronicleId);
+    const state = await this.chronicleStore.getChronicleState(chronicleId);
     if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
     return state;
   }
 
-  #requireLoginId(state: ChronicleState): string {
-    const loginId = state.chronicle?.loginId;
-    if (!isNonEmptyString(loginId)) {
-      throw new Error('Chronicle state missing login identifier for template resolution');
+  #requirePlayerId(state: ChronicleState): string {
+    const playerId = state.chronicle?.playerId;
+    if (!isNonEmptyString(playerId)) {
+      throw new Error('Chronicle state missing player identifier for template resolution');
     }
-    return loginId.trim();
+    return playerId.trim();
   }
 
-  #createTemplateRuntime(loginId: string): PromptTemplateRuntime {
+  #createTemplateRuntime(playerId: string): PromptTemplateRuntime {
     return new PromptTemplateRuntime({
-      loginId,
+      playerId,
       manager: this.templateManager,
     });
   }
@@ -190,33 +226,45 @@ class GmEngine {
 
   #buildGraphInput({
     chronicleId,
+    turnId,
     chronicleState,
     playerMessage,
     templateRuntime,
     turnSequence,
-    locationGraphStore
+    locationHelpers,
+    chronicleStore,
+    worldSchemaStore,
   }: {
     authorizationHeader?: string;
     chronicleId: string;
+    turnId: string;
     chronicleState: ChronicleState;
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
-    locationGraphStore: LocationGraphStore;
+    locationHelpers: LocationHelpers;
+    chronicleStore: ChronicleStore;
+    worldSchemaStore: WorldSchemaStore;
   }): GraphContext {
     return {
       chronicleId,
+      turnId,
       turnSequence,
       chronicleState,
       playerMessage,
-      locationGraphStore,
+      locationHelpers,
+      chronicleStore,
+      worldSchemaStore,
       llm: this.llm,
+      modelConfigStore: this.modelConfigStore,
       telemetry: this.telemetry,
       templates: templateRuntime,
       failure: false,
       systemMessage: undefined,
       playerIntent: undefined,
       shouldUpdate: false,
+      shouldCloseChronicle: false,
+      advancesTimeline: false,
     };
   }
 
@@ -254,12 +302,14 @@ class GmEngine {
 
   #buildTurn({
     chronicleId,
+    turnId,
     graphResult,
     playerMessage,
     systemMessage,
     turnSequence,
   }: {
     chronicleId: string;
+    turnId: string;
     graphResult: GraphContext;
     playerMessage: TranscriptEntry;
     systemMessage?: TranscriptEntry;
@@ -271,12 +321,14 @@ class GmEngine {
       advancesTimeline: graphResult.advancesTimeline,
       beatTracker: graphResult.beatTracker ?? undefined,
       chronicleId,
+      entityOffered: graphResult.entityContext?.offered ?? undefined,
+      entityUsage: graphResult.entityUsage ?? undefined,
       executedNodes: graphResult.executedNodes ?? undefined,
       failure,
       gmResponse: graphResult.gmResponse,
       gmSummary: graphResult.gmSummary,
       gmTrace: graphResult.gmTrace ?? undefined,
-      id: randomUUID(),
+      id: turnId,
       inventoryDelta: graphResult.inventoryDelta ?? undefined,
       playerIntent: graphResult.playerIntent,
       playerMessage,
@@ -295,7 +347,7 @@ class GmEngine {
     if (record === undefined || record === null || record.status === 'closed') {
       return;
     }
-    await this.worldStateStore.upsertChronicle({
+    await this.chronicleStore.upsertChronicle({
       ...record,
       status: 'closed',
     });
@@ -316,7 +368,7 @@ class GmEngine {
       characterId: input.chronicle.characterId ?? undefined,
       chronicleId: input.chronicle.id,
       locationId: input.chronicle.locationId,
-      loginId: input.chronicle.loginId,
+      playerId: input.chronicle.playerId,
       requestedAt: Date.now(),
       summaryKinds: CLOSURE_SUMMARY_KINDS,
       turnSequence: input.closingTurnSequence,

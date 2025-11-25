@@ -32,7 +32,7 @@ const FEEDBACK_SENTIMENT_ENUM = [...PLAYER_FEEDBACK_SENTIMENTS] as [
 ];
 
 export const PlayerFeedbackRecordSchema = z.object({
-  auditId: z.string().min(1),
+  auditId: z.string().min(1).optional().nullable(),
   chronicleId: z.string().min(1),
   comment: z.string().max(2000).optional().nullable(),
   createdAt: z.string().min(1),
@@ -44,10 +44,10 @@ export const PlayerFeedbackRecordSchema = z.object({
   expectedSkillCheck: z.boolean().optional().nullable(),
   expectedSkillNotes: z.string().max(2000).optional().nullable(),
   gmEntryId: z.string().min(1),
+  groupId: z.string().min(1),
   id: z.string().min(1),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  playerId: z.string().optional().nullable(),
-  playerLoginId: z.string().min(1),
+  playerId: z.string().min(1),
   sentiment: z.enum(FEEDBACK_SENTIMENT_ENUM),
   turnId: z.string().min(1),
   turnSequence: z.number().int().nonnegative(),
@@ -80,9 +80,10 @@ export const AuditReviewRecordSchema = z.object({
   completedAt: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   draftAt: z.string().optional().nullable(),
+  id: z.string().min(1),
   nodeId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  reviewerLoginId: z.string().min(1),
+  reviewerId: z.string().min(1),
   reviewerName: z.string().optional().nullable(),
   status: z.enum(REVIEW_STATUS_ENUM),
   storageKey: z.string().min(1),
@@ -96,6 +97,7 @@ export type AuditReviewRecord = z.infer<typeof AuditReviewRecordSchema>;
 export const AuditLogEntrySchema = z.object({
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative().optional().nullable(),
   id: z.string().min(1),
   metadata: z.record(z.string(), z.any()).optional().nullable(),
   nodeId: z.string().optional().nullable(),
@@ -112,20 +114,25 @@ export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditQueueItemSchema = z.object({
   auditId: z.string().min(1),
+  chronicleId: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative().optional().nullable(),
+  groupId: z.string().min(1),
   nodeId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   playerFeedback: z.array(PlayerFeedbackRecordSchema).optional(),
   playerId: z.string().optional().nullable(),
   providerId: z.string().optional().nullable(),
   requestContextId: z.string().optional().nullable(),
-  reviewerLoginId: z.string().optional().nullable(),
+  reviewerId: z.string().optional().nullable(),
   reviewerName: z.string().optional().nullable(),
   status: z.enum(REVIEW_STATUS_ENUM),
   storageKey: z.string().min(1),
   tags: z.array(z.enum(REVIEW_TAG_ENUM)),
   templateId: z.enum(TEMPLATE_ID_ENUM).optional().nullable(),
+  turnId: z.string().optional().nullable(),
+  turnSequence: z.number().int().nonnegative().optional().nullable(),
 });
 
 export type AuditQueueItem = z.infer<typeof AuditQueueItemSchema>;

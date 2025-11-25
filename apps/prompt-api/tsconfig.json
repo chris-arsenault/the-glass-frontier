@@ -10,7 +10,7 @@
   },
   "include": ["src", "tsup.config.ts"],
   "references": [
-    { "path": "../../packages/dto" },
-    { "path": "../../packages/persistence" }
+    { "path": "../../packages/app" },
+    { "path": "../../packages/dto" }
   ]
 }

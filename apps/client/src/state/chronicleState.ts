@@ -4,7 +4,7 @@ import type {
   Chronicle,
   ChronicleBeat,
   Intent,
-  LocationSummary,
+  LocationEntity,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -19,9 +19,37 @@ export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'c
 export type ChronicleLifecycle = 'open' | 'closed';
 export type DirectoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+type EntitySnippet = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  subkind?: string;
+  description?: string;
+  status?: string;
+  tags: string[];
+  loreFragments: Array<{
+    slug: string;
+    title: string;
+    summary: string;
+    tags: string[];
+  }>;
+  score: number;
+};
+
+type EntityUsageEntry = {
+  entityId: string;
+  entitySlug: string;
+  tags: string[];
+  usage: 'unused' | 'mentioned' | 'central';
+  emergentTags: string[] | null;
+};
+
 export type ChatMessage = {
   advancesTimeline?: boolean | null;
   entry: TranscriptEntry;
+  entityOffered?: EntitySnippet[] | null;
+  entityUsage?: EntityUsageEntry[] | null;
   executedNodes?: string[] | null;
   skillCheckPlan?: SkillCheckPlan | null;
   skillCheckResult?: SkillCheckResult | null;
@@ -74,8 +102,8 @@ export type ChronicleState = {
   focusedBeatId: string | null;
   chronicleId: string | null;
   chronicleRecord: Chronicle | null;
-  loginId: string | null;
-  loginName: string | null;
+  playerId: string | null;
+  playerName: string | null;
   preferredCharacterId: string | null;
   messages: ChatMessage[];
   turnSequence: number;
@@ -86,7 +114,7 @@ export type ChronicleState = {
   queuedIntents: number;
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
-  location?: LocationSummary | null;
+  location?: LocationEntity | null;
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;
@@ -105,7 +133,7 @@ export type ChronicleStore = {
   hydrateChronicle: (chronicleId: string) => Promise<string>;
   sendPlayerMessage: (input: { content: string }) => Promise<void>;
   setPreferredCharacterId: (characterId: string | null) => void;
-  refreshLoginResources: () => Promise<void>;
+  refreshPlayerResources: () => Promise<void>;
   createChronicleForCharacter: (details: ChronicleCreationDetails) => Promise<string>;
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
@@ -134,6 +162,7 @@ export type ChronicleCreationDetails = {
 }
 
 export type ChronicleSeedCreationDetails = {
+  anchorEntityId?: string | null;
   characterId?: string | null;
   locationId: string;
   title?: string | null;

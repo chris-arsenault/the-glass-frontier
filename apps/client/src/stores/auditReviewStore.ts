@@ -1,12 +1,4 @@
-import type {
-  AuditLogEntry,
-  AuditProposalRecord,
-  AuditQueueItem,
-  AuditReviewRecord,
-  AuditReviewStatus,
-  AuditReviewTag,
-  PromptTemplateId,
-} from '@glass-frontier/dto';
+import type { AuditLogEntry, AuditQueueItem, AuditReviewRecord, AuditReviewStatus, AuditReviewTag } from '@glass-frontier/dto';
 import { create } from 'zustand';
 
 import { promptClient } from '../lib/promptClient';
@@ -18,7 +10,6 @@ type ReviewDraft = {
 
 export type AuditFilters = {
   status: AuditReviewStatus[];
-  templateId: PromptTemplateId | null;
   playerId: string;
   search: string;
   startDate: string | null;
@@ -37,18 +28,13 @@ type AuditReviewStoreState = {
   detail: AuditLogEntry | null;
   review: AuditReviewRecord | null;
   draft: ReviewDraft;
-  proposals: AuditProposalRecord[];
-  proposalLoading: boolean;
-  proposalGenerating: boolean;
   setFilters: (next: Partial<AuditFilters>) => void;
   loadQueue: () => Promise<void>;
   loadMore: () => Promise<void>;
   selectItem: (storageKey: string | null) => Promise<void>;
   updateDraft: (updates: Partial<ReviewDraft>) => void;
   resetDraft: () => void;
-  saveReview: (loginId: string, status: 'in_progress' | 'completed') => Promise<void>;
-  refreshProposals: () => Promise<void>;
-  generateProposals: () => Promise<void>;
+  saveReview: (playerId: string, status: 'in_progress' | 'completed') => Promise<void>;
 };
 
 const DEFAULT_QUEUE_LIMIT = 20;
@@ -59,7 +45,6 @@ const defaultFilters: AuditFilters = {
   search: '',
   startDate: null,
   status: [],
-  templateId: null,
 };
 
 const createDraft = (): ReviewDraft => ({
@@ -89,19 +74,6 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
   draft: createDraft(),
   error: null,
   filters: defaultFilters,
-  generateProposals: async () => {
-    set({ error: null, proposalGenerating: true });
-    try {
-      await promptClient.generateAuditProposals.mutate({});
-      set({ proposalGenerating: false });
-      void get().refreshProposals();
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Unable to generate proposals.',
-        proposalGenerating: false,
-      });
-    }
-  },
   isLoading: false,
   isLoadingMore: false,
   items: [],
@@ -117,12 +89,10 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
         cursor,
         endDate: filters.endDate ?? undefined,
         limit: DEFAULT_QUEUE_LIMIT,
-        nodeId: undefined,
         playerId: filters.playerId || undefined,
         search: filters.search || undefined,
         startDate: filters.startDate ?? undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
-        templateId: filters.templateId ?? undefined,
       });
       set((state) => ({
         cursor: result.cursor ?? null,
@@ -144,12 +114,10 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
         cursor: undefined,
         endDate: filters.endDate ?? undefined,
         limit: DEFAULT_QUEUE_LIMIT,
-        nodeId: undefined,
         playerId: filters.playerId || undefined,
         search: filters.search || undefined,
         startDate: filters.startDate ?? undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
-        templateId: filters.templateId ?? undefined,
       });
       set({
         cursor: result.cursor ?? null,
@@ -171,43 +139,29 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
       });
     }
   },
-  proposalGenerating: false,
-  proposalLoading: false,
-  proposals: [],
-  refreshProposals: async () => {
-    set({ proposalLoading: true });
-    try {
-      const proposals = await promptClient.listAuditProposals.query();
-      set({ proposalLoading: false, proposals });
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Unable to load proposals.',
-        proposalLoading: false,
-      });
-    }
-  },
   resetDraft: () => set({ draft: createDraft(), review: null }),
   review: null,
-  saveReview: async (loginId, status) => {
+  saveReview: async (playerId, status) => {
     const selectedKey = get().selectedKey;
     const detail = get().detail;
     if (!selectedKey || !detail) {
       return;
     }
+    const groupId = (detail.metadata as { groupId?: string } | null)?.groupId ?? null;
+    if (groupId === null) {
+      return;
+    }
     set({ error: null, isLoading: true });
     try {
       const draft = get().draft;
-      const templateId = get().selectedItem?.templateId ?? null;
       const record = await promptClient.saveAuditReview.mutate({
         auditId: detail.id,
-        loginId,
-        nodeId: detail.nodeId ?? undefined,
+        groupId,
         notes: draft.notes || undefined,
-        reviewerName: undefined,
+        reviewerId: playerId,
+        severity: 'info',
         status,
-        storageKey: selectedKey,
         tags: draft.tags,
-        templateId: templateId ?? undefined,
       });
       set((state) => ({
         draft: {
@@ -217,7 +171,7 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
         isLoading: false,
         items: updateItemEntry(state.items, record.auditId, {
           notes: record.notes ?? null,
-          reviewerLoginId: record.reviewerLoginId,
+          reviewerId: record.reviewerId,
           reviewerName: record.reviewerName ?? null,
           status: record.status,
           tags: record.tags ?? [],
@@ -251,8 +205,11 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
     }
     set({ error: null });
     try {
-      const detail = await promptClient.getAuditEntry.query({ storageKey });
       const selectedItem = get().items.find((item) => item.storageKey === storageKey) ?? null;
+      if (!selectedItem) {
+        throw new Error('Audit item not found in queue.');
+      }
+      const detail = await promptClient.getAuditEntry.query({ auditId: selectedItem.auditId });
       const draft: ReviewDraft = {
         notes: detail.review?.notes ?? '',
         tags: detail.review?.tags ?? [],

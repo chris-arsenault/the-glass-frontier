@@ -1,15 +1,13 @@
-
 import { fromEnv } from '@aws-sdk/credential-providers';
+import { Signer } from '@aws-sdk/rds-signer';
 
 const isNonEmptyString = (value: unknown): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
 };
 
-type AwsService = 's3' | 'dynamodb' | 'sqs';
+type AwsService = 'sqs';
 
 const SERVICE_ENV_LOOKUP: Record<AwsService, string> = {
-  dynamodb: 'AWS_DYNAMODB_ENDPOINT',
-  s3: 'AWS_S3_ENDPOINT',
   sqs: 'AWS_SQS_ENDPOINT',
 };
 
@@ -25,14 +23,6 @@ const toTrimmedOrNull = (value?: string): string | null => {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-};
-
-const normalizeBoolean = (value?: string): boolean => {
-  if (!isNonEmptyString(value)) {
-    return false;
-  }
-  const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
 
 export const resolveAwsEndpoint = (service: AwsService): string | undefined => {
@@ -57,13 +47,6 @@ export const resolveAwsRegion = (): string => {
   );
 };
 
-export const shouldForcePathStyle = (): boolean => {
-  if (normalizeBoolean(process.env.AWS_S3_FORCE_PATH_STYLE)) {
-    return true;
-  }
-  return resolveAwsEndpoint('s3') !== undefined;
-};
-
 export const resolveAwsCredentials = (): ReturnType<typeof fromEnv> | undefined =>
   hasExplicitAwsCredentials() ? fromEnv() : undefined;
 
@@ -71,4 +54,34 @@ const hasExplicitAwsCredentials = (): boolean => {
   const accessKey = process.env.AWS_ACCESS_KEY_ID ?? '';
   const secretKey = process.env.AWS_SECRET_ACCESS_KEY ?? '';
   return accessKey.trim().length > 0 && secretKey.trim().length > 0;
+};
+
+/**
+ * Check if we should use IAM authentication (Lambda environment)
+ */
+export const useRdsIamAuth = (): boolean => {
+  return process.env.RDS_IAM_AUTH === 'true';
+};
+
+/**
+ * Generate an IAM authentication token for RDS Proxy
+ */
+export const generateRdsIamToken = async (): Promise<string> => {
+  const host = process.env.PGHOST;
+  const port = parseInt(process.env.PGPORT || '5432', 10);
+  const user = process.env.PGUSER;
+  const region = resolveAwsRegion();
+
+  if (!host || !user) {
+    throw new Error('PGHOST and PGUSER environment variables are required for IAM auth');
+  }
+
+  const signer = new Signer({
+    hostname: host,
+    port,
+    username: user,
+    region,
+  });
+
+  return signer.getAuthToken();
 };

@@ -2,7 +2,6 @@ import type { ZodObject } from 'zod';
 
 import { GraphNode } from '../graphNode';
 import { PromptComposer } from '../../../prompts/prompts';
-import { zodTextFormat } from 'openai/helpers/zod';
 import {GraphContext} from "../../../types";
 
 type LlmClassifierOptions<TParsed> = {
@@ -14,10 +13,10 @@ type LlmClassifierOptions<TParsed> = {
   telemetryTag?: string;
 };
 
-const CLASSIFIER_MAX_TOKEN = 1000;
-const CLASSIFIER_MODEL = 'gpt-5-nano';
+const CLASSIFIER_MAX_TOKEN = 1500;
 const CLASSIFIER_REASONING = { reasoning: { effort: 'low' as const } };
-const CLASSIFIER_VERBOSITY = 'low'
+const CLASSIFIER_VERBOSITY = 'low';
+const FALLBACK_CLASSIFIER_MODEL = 'gpt-5-nano';
 
 export class LlmClassifierNode<TParsed> implements GraphNode {
   id = 'general-classifier';
@@ -25,7 +24,6 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
   constructor(
     private readonly options: LlmClassifierOptions<TParsed>,
   ) {}
-
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (context.failure || !this.options.shouldRun(context)) {
@@ -37,26 +35,40 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
       return context;
     }
     try {
+      const playerId = context.chronicleState.chronicle.playerId;
+      let model: string;
+      try {
+        model = await context.modelConfigStore.getModelForCategory('classification', playerId);
+      } catch (error) {
+        // Fallback to default model if lookup fails
+        model = FALLBACK_CLASSIFIER_MODEL;
+      }
+
       const composer = new PromptComposer(context.templates)
       const prompt = await composer.buildPrompt(this.options.id, context);
-      const json = await context.llm.generate({
-        max_output_tokens: CLASSIFIER_MAX_TOKEN,
-        model: CLASSIFIER_MODEL,
-        ...prompt,
-        metadata: {
-          chronicleId: context.chronicleId,
-          nodeId: this.options.id,
-          loginId: context.chronicleState.chronicle.loginId
+
+      const response = await context.llm.generateStructured(
+        {
+          max_output_tokens: CLASSIFIER_MAX_TOKEN,
+          model,
+          ...prompt,
+          metadata: {
+            chronicleId: context.chronicleId,
+            turnId: context.turnId,
+            turnSequence: String(context.turnSequence),
+            nodeId: this.options.id,
+            playerId
+          },
+          reasoning: CLASSIFIER_REASONING.reasoning,
+          text: {
+            verbosity: CLASSIFIER_VERBOSITY as const
+          }
         },
-        reasoning: CLASSIFIER_REASONING.reasoning,
-        text: {
-          format: zodTextFormat(this.options.schema, this.options.schemaName),
-          verbosity: CLASSIFIER_VERBOSITY as const
-        }
-      }, 'json');
-      const tryParsed = this.options.schema.safeParse(json.message)
-      const parsed = tryParsed.data
-      return this.options.applyResult(context, parsed);
+        this.options.schema,
+        this.options.schemaName
+      );
+
+      return this.options.applyResult(context, response.data);
     } catch (error) {
       context.telemetry?.recordToolError?.({
         attempt: 0,

@@ -3,14 +3,14 @@ import type {
   Character,
   Chronicle,
   Intent,
-  LocationSummary,
   LlmTrace,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { LocationGraphStore} from '@glass-frontier/persistence';
+import type { WorldSchemaStore, LocationHelpers, ChronicleStore } from '@glass-frontier/worldstate';
+import type { ModelConfigStore } from '@glass-frontier/app';
 
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { RetryLLMClient} from "@glass-frontier/llm-client";
@@ -22,20 +22,54 @@ export type ChronicleState = {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character;
-  location: LocationSummary;
+  location: LocationEntity;
   turns: Turn[];
 }
+
+export type EntityFocusState = {
+  entityScores: Record<string, number>;
+  tagScores: Record<string, number>;
+  lastUpdated?: number;
+};
+
+export type EntitySnippet = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  subkind?: string;
+  description?: string;
+  status?: string;
+  tags: string[];
+  loreFragments: Array<{
+    slug: string;
+    title: string;
+    summary: string;
+    tags: string[];
+  }>;
+  score: number;
+};
+
+export type EntityContextSlice = {
+  offered: EntitySnippet[];
+  focusEntities: string[];
+  focusTags: string[];
+};
 
 export type GraphContext = {
   //inputs
   chronicleId: string;
+  turnId: string;
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
-  locationGraphStore: LocationGraphStore;
+  locationHelpers: LocationHelpers;
+  chronicleStore: ChronicleStore;
+  worldSchemaStore: WorldSchemaStore;
 
   //operations
   llm: RetryLLMClient;
+  modelConfigStore: ModelConfigStore;
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;
   failure: boolean;
@@ -55,6 +89,14 @@ export type GraphContext = {
   locationDelta?: LocationDeltaDecision;
   inventoryDelta?: InventoryDelta;
   beatTracker?: BeatTracker;
+  entityContext?: EntityContextSlice;
+  entityUsage?: Array<{
+    entityId: string;
+    entitySlug: string;
+    tags: string[];
+    usage: 'unused' | 'mentioned' | 'central';
+    emergentTags: string[] | null;
+  }>;
 }
 
 export type TelemetryLike = {

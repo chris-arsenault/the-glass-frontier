@@ -124,5 +124,82 @@
     "summary": "GM API now handles player intents",
     "details": "Refactored the client’s send-and-wrap flows and updated the API Gateway/Lambda wiring so player turns now hit the dedicated gm-api while the chronicle service continues handling directory and setup endpoints.",
     "type": "improvement"
+  },
+  {
+    "id": "2025-11-21-postgres-worldstate",
+    "releasedAt": "2025-11-21",
+    "summary": "Worldstate moved to Postgres",
+    "details": "Replaced the hybrid S3/Dynamo persistence layer with a unified Postgres worldstate service, added a property-graph schema for chronicles, characters, turns, and locations, and wired the dev stack plus Terraform to provision and seed a shared RDS instance.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-22-player-identity-unified",
+    "releasedAt": "2025-11-22",
+    "summary": "Player identity replaces login everywhere",
+    "details": "Removed the legacy login table and login identifiers across the stack, rewired DTOs, audits, persistence, APIs, and the client to use player IDs exclusively, and cleaned up front-end flows and tooling to stop mapping between login and player fields.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-23-postgres-persistence-consolidation",
+    "releasedAt": "2025-11-23",
+    "summary": "Retired the legacy persistence package",
+    "details": "Moved prompt template, audit, and support data into the Postgres-backed stack, split bug reports and token usage into a dedicated ops module with its own migrations, removed the deprecated S3/Dynamo persistence layer (including the usage DynamoDB table), and pointed every API at the new canonical storage modules.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-24-app-schema-prompts",
+    "releasedAt": "2025-11-24",
+    "summary": "Prompt templates now live in the app schema",
+    "details": "Introduced the @glass-frontier/app package with its own Postgres schema for players and prompt templates, seeded official template bodies via migrations, removed the S3 prompt bucket dependency, and rewired the APIs to resolve templates and player settings through the new Postgres-backed app store.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-25-character-jsonb-fields",
+    "releasedAt": "2025-11-25",
+    "summary": "Characters now persist full state in Postgres",
+    "details": "Extended the worldstate character table to store archetype, pronouns, bio, attributes, skills, inventory, and momentum as jsonb fields so the Postgres-backed worldstate stays aligned with the Character DTO instead of only keeping name metadata.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-25-location-graph-slim",
+    "releasedAt": "2025-11-25",
+    "summary": "Location graph simplified onto Postgres edges",
+    "details": "Rebuilt the location schema as a thin table plus graph edges with a single-parent constraint, removed the legacy location-root path columns, and rewired the worldstate location store to use recursive CTEs instead of the custom locationGraph store.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-26-gm-location-contract",
+    "releasedAt": "2025-11-26",
+    "summary": "GM API now targets the new location contract",
+    "details": "Migrated the GM service to the new location contract by consuming the location details query, mapping it back to the existing UI shape, applying location moves through the canonical upsert/edge mutators, and exposing both legacy and new endpoints on the location API during the transition.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-11-27-world-hardstate-lore",
+    "releasedAt": "2025-11-27",
+    "summary": "World hard state and lore fragments persist in Postgres",
+    "details": "Seeded world kind/subkind/status and relationship rules from the shared world schema into Postgres, enforced typed hard-state links, and added lore fragment storage plus integration tests so narrative entities and their edges stay consistent.",
+    "type": "feature"
+  },
+  {
+    "id": "2025-11-27-world-schema-ui",
+    "releasedAt": "2025-11-27",
+    "summary": "World schema editor and API",
+    "details": "Added a moderation page to manage world kinds, subkinds, statuses, and relationship rules, plus a dedicated world-schema API that surfaces the schema and allows updates backed by database constraints.",
+    "type": "feature"
+  },
+  {
+    "id": "2025-11-27-world-atlas-anchor-chronicle",
+    "releasedAt": "2025-11-27",
+    "summary": "World Atlas with anchored chronicles",
+    "details": "Introduced the World Atlas wiki page for entities with editable hard state, relations, and lore, added anchor-aware chronicles via Atlas API, and exposed narrative anchor fragments to the GM prompts for better cohesion.",
+    "type": "feature"
+  },
+  {
+    "id": "2025-11-27-hardstate-prominence",
+    "releasedAt": "2025-11-27",
+    "summary": "Hard state prominence levels",
+    "details": "Hard state entities now carry a five-level prominence field (forgotten → mythic) with slug-based lookups, allowing filtering by prominence and slug-friendly Atlas/chronicle links.",
+    "type": "feature"
   }
 ]

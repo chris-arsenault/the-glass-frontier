@@ -6,6 +6,7 @@ export const ChronicleBeat = z.object({
   createdAt: z.number().int().nonnegative(),
   description: z.string().min(1),
   id: z.string().min(1),
+  slug: z.string().min(1),
   resolvedAt: z.number().int().nonnegative().optional(),
   status: ChronicleBeatStatus,
   title: z.string().min(1),
@@ -53,7 +54,8 @@ export const BeatTrackerSchema = z.object({
   newBeat: NewBeatSchema,
   updates: z
     .array(BeatUpdateSchema)
-    .describe("Only beats that changed; empty array if none.")
+    .describe("Only beats that changed; empty array if none."),
+  tags: z.array(z.string()).default([]),
 });
 
 export type BeatTracker = z.infer<typeof BeatTrackerSchema>;

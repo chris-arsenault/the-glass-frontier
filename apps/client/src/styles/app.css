@@ -1,6 +1,8 @@
+@import './design-tokens.css';
+
 :root {
-  color: #e2e8f0;
-  background-color: #0f172a;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
   color-scheme: dark;
   font-family:
     Inter,
@@ -20,8 +22,8 @@ body {
 .app-shell {
   display: flex;
   width: 100%;
-  padding: 2rem;
-  background: radial-gradient(circle at top left, rgb(59 130 246 / 20%), transparent 45%) #050b18;
+  padding: var(--space-6);
+  background: radial-gradient(circle at top left, rgb(59 130 246 / 20%), transparent 45%) var(--bg-shell);
   box-sizing: border-box;
   justify-content: center;
   min-height: 100vh;
@@ -31,22 +33,24 @@ body {
 .app-frame {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--space-4);
   width: 100%;
-  padding: 1.5rem 2rem;
-  background: linear-gradient(135deg, rgb(15 23 42 / 95%), rgb(2 6 23 / 90%));
-  border: 1px solid rgb(148 163 184 / 20%);
-  border-radius: 1.25rem;
+  padding: var(--space-4);
+  background: linear-gradient(135deg, var(--surface-elevated), rgb(2 6 23 / 90%));
+  border: none;
+  border-radius: var(--radius-md);
   box-shadow:
-    0 40px 120px rgb(2 6 23 / 60%),
-    inset 0 0 0 1px rgb(94 234 212 / 5%);
+    var(--shadow-lg),
+    var(--panel-glow-inset),
+    var(--panel-highlight);
   max-width: 1280px;
+  backdrop-filter: blur(8px);
 }
 
 .app-layout {
   display: flex;
   flex: 1;
-  gap: 1.5rem;
+  gap: var(--space-4);
 }
 
 .app-content {
@@ -59,22 +63,22 @@ body {
 .app-header {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgb(148 163 184 / 40%);
+  border-bottom: 1px solid var(--border-subtle);
   justify-content: space-between;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
 }
 
 .app-title {
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .app-session-id {
   margin: 0;
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 
 @media (prefers-reduced-motion: reduce) {

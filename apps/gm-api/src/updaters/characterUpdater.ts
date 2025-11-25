@@ -42,8 +42,8 @@ export function createUpdatedCharacter(context: GraphContext): Character {
   if (working.skills[normalizedSkill].xp > XP_PER_LEVEL) {
     log("info", `Level up skill ${normalizedSkill}`);
     working.skills[normalizedSkill].xp -= XP_PER_LEVEL;
-    const currentIndex = SKILL_TIER_SEQUENCE[working.skills[normalizedSkill].tier];
-    const newIndex = currentIndex == SKILL_TIER_SEQUENCE.length - 1 ?  currentIndex : currentIndex+ 1;
+    const currentIndex = SKILL_TIER_SEQUENCE.indexOf(working.skills[normalizedSkill].tier);
+    const newIndex = currentIndex == SKILL_TIER_SEQUENCE.length - 1 ?  currentIndex : currentIndex + 1;
     working.skills[normalizedSkill].tier = SKILL_TIER_SEQUENCE[newIndex];
   }
 

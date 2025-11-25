@@ -1,0 +1,25 @@
+{
+  "name": "@glass-frontier/db-provisioner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/handler.cjs",
+  "scripts": {
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node20 --outfile=dist/handler.cjs --format=cjs --external:pg-native && pnpm run copy-assets",
+    "copy-assets": "mkdir -p dist/packages/app/migrations dist/packages/ops/migrations dist/packages/worldstate/migrations dist/packages/app/templates && cp ../../packages/app/migrations/*.cjs dist/packages/app/migrations/ && cp ../../packages/ops/migrations/*.cjs dist/packages/ops/migrations/ && cp ../../packages/worldstate/migrations/*.cjs dist/packages/worldstate/migrations/ && cp ../../packages/app/templates/*.hbs dist/packages/app/templates/ && cp ../../worldSchema.json dist/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.682.0",
+    "@glass-frontier/node-utils": "workspace:*",
+    "node-pg-migrate": "^7.6.1",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.6",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.7.2"
+  }
+}

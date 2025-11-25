@@ -1,17 +1,32 @@
-import type { ChronicleSeed, LocationBreadcrumbEntry } from '@glass-frontier/dto';
+import type { ChronicleSeed, HardState } from '@glass-frontier/dto';
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'create';
+export type ChronicleWizardStep = 'location' | 'tone' | 'seeds' | 'anchor' | 'create';
 
-export type SelectedLocationSummary = {
+export type SelectedLocationEntity = {
   id: string;
+  slug: string;
   name: string;
-  breadcrumb: LocationBreadcrumbEntry[];
+  description?: string;
+  status?: string;
+  subkind?: string;
+}
+
+export type SelectedAnchorEntity = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  description?: string;
+  subkind?: string;
 }
 
 export type ChronicleStartState = {
   step: ChronicleWizardStep;
-  selectedLocation: SelectedLocationSummary | null;
+  selectedLocation: SelectedLocationEntity | null;
+  selectedLocationFull: HardState | null;
+  selectedAnchorEntity: SelectedAnchorEntity | null;
   toneChips: string[];
   toneNotes: string;
   seeds: ChronicleSeed[];
@@ -22,10 +37,17 @@ export type ChronicleStartState = {
   beatsEnabled: boolean;
 }
 
+type InitFromAtlasParams = {
+  location: SelectedLocationEntity;
+  anchor: SelectedAnchorEntity | null;
+};
+
 type ChronicleStartActions = {
   reset: () => void;
   setStep: (step: ChronicleWizardStep) => void;
-  setSelectedLocation: (selection: SelectedLocationSummary | null) => void;
+  setSelectedLocation: (selection: SelectedLocationEntity | null) => void;
+  setSelectedLocationFull: (entity: HardState | null) => void;
+  setSelectedAnchorEntity: (selection: SelectedAnchorEntity | null) => void;
   toggleToneChip: (chip: string) => void;
   setToneNotes: (notes: string) => void;
   setSeeds: (seeds: ChronicleSeed[]) => void;
@@ -33,6 +55,7 @@ type ChronicleStartActions = {
   setCustomSeed: (details: { title: string; text: string }) => void;
   setListViewFallback: (enabled: boolean) => void;
   setBeatsEnabled: (enabled: boolean) => void;
+  initFromAtlas: (params: InitFromAtlasParams) => void;
 }
 
 const initialState: ChronicleStartState = {
@@ -43,48 +66,67 @@ const initialState: ChronicleStartState = {
   listViewFallback: false,
   seeds: [],
   selectedLocation: null,
+  selectedLocationFull: null,
+  selectedAnchorEntity: null,
   step: 'location',
   toneChips: [],
   toneNotes: '',
 };
 
-export const useChronicleStartStore = create<ChronicleStartState & ChronicleStartActions>((set) => ({
-  ...initialState,
-  chooseSeed: (seedId) =>
-    set((state) => ({
-      chosenSeedId: seedId,
-      customSeedText: seedId ? state.customSeedText : '',
-      customSeedTitle: seedId ? state.customSeedTitle : '',
-    })),
-  reset: () => set(initialState),
-  setBeatsEnabled: (enabled) => set({ beatsEnabled: enabled }),
-  setCustomSeed: ({ text, title }) =>
-    set({
-      chosenSeedId: null,
-      customSeedText: text,
-      customSeedTitle: title,
+export const useChronicleStartStore = create<ChronicleStartState & ChronicleStartActions>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      chooseSeed: (seedId) =>
+        set((state) => ({
+          chosenSeedId: seedId,
+          customSeedText: seedId ? state.customSeedText : '',
+          customSeedTitle: seedId ? state.customSeedTitle : '',
+        })),
+      initFromAtlas: ({ anchor, location }) =>
+        set({
+          ...initialState,
+          selectedAnchorEntity: anchor,
+          selectedLocation: location,
+          step: 'anchor',
+        }),
+      reset: () => set(initialState),
+      setBeatsEnabled: (enabled) => set({ beatsEnabled: enabled }),
+      setCustomSeed: ({ text, title }) =>
+        set({
+          chosenSeedId: null,
+          customSeedText: text,
+          customSeedTitle: title,
+        }),
+      setListViewFallback: (enabled) => set({ listViewFallback: enabled }),
+      setSeeds: (seeds) =>
+        set({
+          chosenSeedId: seeds.length ? seeds[0].id : null,
+          customSeedText: '',
+          customSeedTitle: '',
+          seeds,
+        }),
+      setSelectedLocation: (selection) =>
+        set((state) => ({
+          selectedLocation: selection,
+          step: selection ? state.step : 'location',
+        })),
+      setSelectedLocationFull: (entity) => set({ selectedLocationFull: entity }),
+      setSelectedAnchorEntity: (selection) => set({ selectedAnchorEntity: selection }),
+      setStep: (step) => set({ step }),
+      setToneNotes: (toneNotes) => set({ toneNotes }),
+      toggleToneChip: (chip) =>
+        set((state) => {
+          const exists = state.toneChips.includes(chip);
+          const next = exists
+            ? state.toneChips.filter((value) => value !== chip)
+            : [...state.toneChips, chip].slice(0, 8);
+          return { toneChips: next };
+        }),
     }),
-  setListViewFallback: (enabled) => set({ listViewFallback: enabled }),
-  setSeeds: (seeds) =>
-    set({
-      chosenSeedId: seeds.length ? seeds[0].id : null,
-      customSeedText: '',
-      customSeedTitle: '',
-      seeds,
-    }),
-  setSelectedLocation: (selection) =>
-    set((state) => ({
-      selectedLocation: selection,
-      step: selection ? state.step : 'location',
-    })),
-  setStep: (step) => set({ step }),
-  setToneNotes: (toneNotes) => set({ toneNotes }),
-  toggleToneChip: (chip) =>
-    set((state) => {
-      const exists = state.toneChips.includes(chip);
-      const next = exists
-        ? state.toneChips.filter((value) => value !== chip)
-        : [...state.toneChips, chip].slice(0, 8);
-      return { toneChips: next };
-    }),
-}));
+    {
+      name: 'chronicle-start-wizard',
+      version: 1,
+    }
+  )
+);

@@ -2,7 +2,7 @@ import type {
   Character,
   Chronicle,
   ChronicleBeat,
-  LocationSummary,
+  LocationEntity,
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/worldstate';

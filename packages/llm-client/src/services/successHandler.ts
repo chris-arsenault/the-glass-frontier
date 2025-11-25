@@ -4,14 +4,21 @@ import type { LLMRequest, LLMResponse } from '@glass-frontier/llm-client/types';
 
 import { AuditArchive } from './AuditArchive';
 import { TokenUsageTracker } from './TokenUsageTracker';
+import { ModelUsageTracker } from './ModelUsageTracker';
 
 export class LLMSuccessHandler {
   #auditArchive: AuditArchive | null;
   #usageTracker: TokenUsageTracker | null;
+  #modelUsageTracker: ModelUsageTracker | null;
 
-  constructor(options: { auditArchive: AuditArchive | null; tokenUsageTracker: TokenUsageTracker | null }) {
+  constructor(options: {
+    auditArchive: AuditArchive | null;
+    tokenUsageTracker: TokenUsageTracker | null;
+    modelUsageTracker?: ModelUsageTracker | null;
+  }) {
     this.#auditArchive = options.auditArchive;
     this.#usageTracker = options.tokenUsageTracker;
+    this.#modelUsageTracker = options.modelUsageTracker ?? null;
   }
 
   async handleSuccess(payload: LLMResponse): Promise<void> {
@@ -25,6 +32,11 @@ export class LLMSuccessHandler {
     const usageTask = this.#queueUsageRecord(payload);
     if (usageTask !== null) {
       tasks.push(usageTask);
+    }
+
+    const modelUsageTask = this.#queueModelUsageRecord(payload);
+    if (modelUsageTask !== null) {
+      tasks.push(modelUsageTask);
     }
 
     if (tasks.length > 0) {
@@ -54,6 +66,7 @@ export class LLMSuccessHandler {
         request: requestPayload,
         requestContextId,
         response: responsePayload,
+        durationMs: payload.durationMs,
       })
       .catch((error) =>
         log('error', 'llm-proxy.audit.failure', {
@@ -86,6 +99,43 @@ export class LLMSuccessHandler {
         message: error instanceof Error ? error.message : 'unknown',
       })
     );
+  }
+
+  #queueModelUsageRecord(payload: LLMResponse): Promise<unknown> | null {
+    if (this.#modelUsageTracker === null) {
+      return null;
+    }
+
+    const playerId = this.#extractPlayerId(payload.metadata);
+    if (!playerId) {
+      return null;
+    }
+
+    const usage = this.#extractUsage(payload);
+    if (!usage) {
+      return null;
+    }
+
+    const inputTokens = this.#extractTokenCount(usage, 'input_tokens');
+    const outputTokens = this.#extractTokenCount(usage, 'output_tokens');
+
+    if (inputTokens === 0 && outputTokens === 0) {
+      return null;
+    }
+
+    return this.#modelUsageTracker
+      .record({
+        playerId,
+        modelId: payload.requestBody.model,
+        providerId: payload.providerId,
+        inputTokens,
+        outputTokens,
+      })
+      .catch((error) =>
+        log('error', 'llm-proxy.model_usage.failure', {
+          message: error instanceof Error ? error.message : 'unknown',
+        })
+      );
   }
 
   #normalizeRequest(request: LLMRequest): Record<string, unknown> {
@@ -150,6 +200,14 @@ export class LLMSuccessHandler {
     return undefined;
   }
 
+  #extractTokenCount(usage: Record<string, unknown>, key: string): number {
+    const value = usage[key];
+    if (typeof value === 'number' && value >= 0) {
+      return Math.floor(value);
+    }
+    return 0;
+  }
+
   #extractNodeId(metadata: LoggableMetadata): string | undefined {
     const raw = metadata?.nodeId;
     if (typeof raw !== 'string') {
@@ -160,17 +218,12 @@ export class LLMSuccessHandler {
   }
 
   #extractPlayerId(metadata: LoggableMetadata): string | undefined {
-    const keys = ['playerId', 'player_id', 'playerLoginId', 'loginId'] as const;
-    for (const key of keys) {
-      const raw = (metadata as Record<string, unknown>)[key];
-      if (typeof raw === 'string') {
-        const trimmed = raw.trim();
-        if (trimmed.length > 0) {
-          return trimmed;
-        }
-      }
+    const raw = (metadata as Record<string, unknown>).playerId;
+    if (typeof raw !== 'string') {
+      return undefined;
     }
-    return undefined;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
   }
 
   #extractRequestContextId(metadata: LoggableMetadata): string | undefined {

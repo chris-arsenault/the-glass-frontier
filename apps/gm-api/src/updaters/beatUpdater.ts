@@ -12,12 +12,14 @@ export function createUpdatedBeats(context: GraphContext): ChronicleBeat[] {
   const working = structuredClone(context.chronicleState.chronicle.beats);
   if (beatTracker.newBeat) {
     const newId = toSnakeCase(beatTracker.newBeat.title)
+    const slug = `beat_${newId}_${context.turnId.slice(0, 8)}`;
     const existingBeat = working.find(f => f.id === newId);
     if (existingBeat) {
       log("warn", `Found existing beat for new beat ${existingBeat.id}`);
     } else {
       working.push({
         id: toSnakeCase(beatTracker.newBeat.title),
+        slug,
         title: beatTracker.newBeat.title,
         description: beatTracker.newBeat.description,
         status: "in_progress",

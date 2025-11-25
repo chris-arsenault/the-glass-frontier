@@ -1,0 +1,30 @@
+import { z } from 'zod';
+export declare const PromptTemplateIds: readonly ["action-resolver", "wrap-resolver", "beat-tracker", "check-planner", "chronicle-seed", "clarification-responder", "entity-judge", "gm-summary", "inquiry-describer", "intent-beat-detector", "intent-classifier", "inventory-delta", "location-delta", "lore-judge", "planning-narrator", "possibility-advisor", "reflection-weaver"];
+export type PromptTemplateId = (typeof PromptTemplateIds)[number];
+export declare const PromptTemplateDescriptor: z.ZodObject<{
+    description: z.ZodString;
+    id: z.ZodEnum<{
+        "action-resolver": "action-resolver";
+        "wrap-resolver": "wrap-resolver";
+        "beat-tracker": "beat-tracker";
+        "check-planner": "check-planner";
+        "chronicle-seed": "chronicle-seed";
+        "clarification-responder": "clarification-responder";
+        "entity-judge": "entity-judge";
+        "gm-summary": "gm-summary";
+        "inquiry-describer": "inquiry-describer";
+        "intent-beat-detector": "intent-beat-detector";
+        "intent-classifier": "intent-classifier";
+        "inventory-delta": "inventory-delta";
+        "location-delta": "location-delta";
+        "lore-judge": "lore-judge";
+        "planning-narrator": "planning-narrator";
+        "possibility-advisor": "possibility-advisor";
+        "reflection-weaver": "reflection-weaver";
+    }>;
+    label: z.ZodString;
+    officialObjectKey: z.ZodString;
+    supportsVariants: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strip>;
+export type PromptTemplateDescriptor = z.infer<typeof PromptTemplateDescriptor>;
+export declare const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplateDescriptor>;

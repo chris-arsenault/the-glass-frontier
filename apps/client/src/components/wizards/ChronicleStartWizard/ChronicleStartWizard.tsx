@@ -1,25 +1,18 @@
-import type {
-  LocationGraphSnapshot,
-  LocationPlace,
-  ChronicleSeed,
-} from '@glass-frontier/dto';
+import type { ChronicleSeed, HardState } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { locationClient } from '../../../lib/locationClient';
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import { trpcClient } from '../../../lib/trpcClient';
 import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
 import {
   useChronicleStartStore,
   type ChronicleWizardStep,
-  type SelectedLocationSummary,
+  type SelectedLocationEntity,
+  type SelectedAnchorEntity,
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleStartWizard.css';
-import {
-  useLocationExplorer,
-  type LocationInspectorState,
-} from './hooks/useLocationExplorer';
 
 const toneOptions = [
   'gritty',
@@ -41,6 +34,10 @@ export function ChronicleStartWizard() {
   const setStep = useChronicleStartStore((state) => state.setStep);
   const resetWizard = useChronicleStartStore((state) => state.reset);
   const selectedLocation = useChronicleStartStore((state) => state.selectedLocation);
+  const selectedLocationFull = useChronicleStartStore((state) => state.selectedLocationFull);
+  const setSelectedLocationFull = useChronicleStartStore((state) => state.setSelectedLocationFull);
+  const selectedAnchorEntity = useChronicleStartStore((state) => state.selectedAnchorEntity);
+  const setSelectedAnchorEntity = useChronicleStartStore((state) => state.setSelectedAnchorEntity);
   const selectedSeedId = useChronicleStartStore((state) => state.chosenSeedId);
   const seeds = useChronicleStartStore((state) => state.seeds);
   const customSeedText = useChronicleStartStore((state) => state.customSeedText);
@@ -48,40 +45,110 @@ export function ChronicleStartWizard() {
   const toneNotes = useChronicleStartStore((state) => state.toneNotes);
   const toneChips = useChronicleStartStore((state) => state.toneChips);
 
-  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
+  const playerId = useChronicleStore((state) => state.playerId ?? '');
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const createChronicleFromSeed = useChronicleStore((state) => state.createChronicleFromSeed);
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
+  const setSelectedLocation = useChronicleStartStore((state) => state.setSelectedLocation);
 
-  const {
-    activePlaceId,
-    graph,
-    graphError,
-    inspector,
-    isGraphLoading,
-    isLoadingRoots,
-    listViewFallback,
-    refreshRoots,
-    rootError,
-    roots,
-    selectedRootId,
-    selectPlace,
-    selectRoot,
-    setListViewFallback,
-  } = useLocationExplorer();
+  const [locations, setLocations] = useState<SelectedLocationEntity[]>([]);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [isLoadingLocationDetails, setIsLoadingLocationDetails] = useState(false);
   const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
   const setBeatsEnabled = useChronicleStartStore((state) => state.setBeatsEnabled);
-
-  const [subModalOpen, setSubModalOpen] = useState(false);
-  const [chainModalOpen, setChainModalOpen] = useState(false);
-  const [chainModalParent, setChainModalParent] = useState<LocationPlace | null>(null);
   const [seedStatus, setSeedStatus] = useState<SeedStatus>('idle');
   const setSeeds = useChronicleStartStore((state) => state.setSeeds);
   const setToneNotes = useChronicleStartStore((state) => state.setToneNotes);
   const toggleToneChip = useChronicleStartStore((state) => state.toggleToneChip);
   const chooseSeed = useChronicleStartStore((state) => state.chooseSeed);
   const setCustomSeed = useChronicleStartStore((state) => state.setCustomSeed);
+
+  // Prefetch state
+  const [isPrefetchingAnchors, setIsPrefetchingAnchors] = useState(false);
+
+  const refreshLocations = useCallback(async () => {
+    setIsLoadingLocations(true);
+    setLocationError(null);
+    try {
+      const list = await worldAtlasClient.listEntities('location');
+      const mapped = list.map<SelectedLocationEntity>((entity) => ({
+        id: entity.id,
+        slug: entity.slug,
+        name: entity.name,
+        description: entity.description ?? undefined,
+        status: entity.status ?? undefined,
+        subkind: entity.subkind ?? undefined,
+      }));
+      setLocations(mapped);
+      if (!selectedLocation && mapped.length > 0) {
+        setSelectedLocation(mapped[0]);
+      }
+    } catch (err: unknown) {
+      setLocationError(err instanceof Error ? err.message : 'Failed to load locations');
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  }, [selectedLocation, setSelectedLocation]);
+
+  useEffect(() => {
+    void refreshLocations();
+  }, [refreshLocations]);
+
+  const handleSelectLocation = useCallback(
+    async (location: SelectedLocationEntity) => {
+      setSelectedLocation(location);
+      setIsLoadingLocationDetails(true);
+      setLocationError(null);
+      try {
+        const result = await worldAtlasClient.getEntity(location.id);
+        setSelectedLocationFull(result.entity);
+      } catch (err: unknown) {
+        setLocationError(err instanceof Error ? err.message : 'Failed to load location details');
+        setSelectedLocationFull(null);
+      } finally {
+        setIsLoadingLocationDetails(false);
+      }
+    },
+    [setSelectedLocation, setSelectedLocationFull]
+  );
+
+  const handleCreateLocation = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        return;
+      }
+      setIsLoadingLocations(true);
+      setLocationError(null);
+      try {
+        const created = await worldAtlasClient.upsertEntity({
+          kind: 'location',
+          links: [],
+          name: trimmed,
+          description: '',
+          status: 'known',
+          subkind: null,
+        });
+        const summary: SelectedLocationEntity = {
+          id: created.id,
+          slug: created.slug,
+          name: created.name,
+          description: created.description ?? undefined,
+          status: created.status ?? undefined,
+          subkind: created.subkind ?? undefined,
+        };
+        setLocations((prev) => [...prev, summary]);
+        setSelectedLocation(summary);
+      } catch (err: unknown) {
+        setLocationError(err instanceof Error ? err.message : 'Failed to create location');
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    },
+    [setSelectedLocation]
+  );
 
   const [customTitle, setCustomTitle] = useState('');
   const [creationError, setCreationError] = useState<string | null>(null);
@@ -106,6 +173,7 @@ export function ChronicleStartWizard() {
   const canGoNext =
     (step === 'location' && Boolean(selectedLocation)) ||
     step === 'tone' ||
+    (step === 'anchor' && Boolean(selectedAnchorEntity)) ||
     (step === 'seeds' && hasSeedPayload) ||
     step === 'create';
 
@@ -122,24 +190,14 @@ export function ChronicleStartWizard() {
     case 'location':
       return (
         <LocationStep
-          roots={roots}
-          isLoadingRoots={isLoadingRoots}
-          rootError={rootError}
-          selectedRootId={selectedRootId}
-          onSelectRoot={selectRoot}
-          graph={graph}
-          graphError={graphError}
-          isGraphLoading={isGraphLoading}
-          activePlaceId={activePlaceId}
-          onSelectPlace={selectPlace}
-          inspector={inspector}
-          listViewFallback={listViewFallback}
-          setListViewFallback={setListViewFallback}
-          onOpenSubModal={() => setSubModalOpen(true)}
-          onOpenChainModal={(parent) => {
-            setChainModalParent(parent ?? null);
-            setChainModalOpen(true);
-          }}
+          activeLocationId={selectedLocation?.id ?? null}
+          error={locationError}
+          isLoading={isLoadingLocations}
+          isLoadingDetails={isLoadingLocationDetails}
+          locations={locations}
+          onCreate={handleCreateLocation}
+          onRefresh={refreshLocations}
+          onSelect={handleSelectLocation}
         />
       );
     case 'tone':
@@ -154,8 +212,9 @@ export function ChronicleStartWizard() {
     case 'seeds':
       return (
         <SeedStep
-          loginId={loginId}
+          playerId={playerId}
           locationId={selectedLocation?.id ?? null}
+          anchorId={selectedAnchorEntity?.id ?? null}
           tone={{ toneChips, toneNotes }}
           seeds={seeds}
           selectedSeedId={selectedSeedId}
@@ -168,10 +227,20 @@ export function ChronicleStartWizard() {
           onCustomSeedChange={setCustomSeed}
         />
       );
+    case 'anchor':
+      return (
+        <AnchorStep
+          locationId={selectedLocation?.id ?? null}
+          locationFull={selectedLocationFull}
+          selectedAnchorId={selectedAnchorEntity?.id ?? null}
+          onSelectAnchor={setSelectedAnchorEntity}
+        />
+      );
     case 'create':
       return (
         <CreateStep
           selectedLocation={selectedLocation}
+          selectedAnchorEntity={selectedAnchorEntity}
           selectedSeed={selectedSeed}
           customSeedTitle={customSeedTitle}
           customSeedText={customSeedText}
@@ -188,22 +257,19 @@ export function ChronicleStartWizard() {
     }
   }, [
     step,
-    roots,
-    isLoadingRoots,
-    rootError,
-    selectedRootId,
-    graph,
-    graphError,
-    isGraphLoading,
-    activePlaceId,
-    inspector,
-    listViewFallback,
+    locations,
+    isLoadingLocations,
+    locationError,
+    selectedLocation,
+    selectedAnchorEntity,
+    handleCreateLocation,
+    refreshLocations,
+    handleSelectLocation,
+    setSelectedAnchorEntity,
     toneNotes,
     toneChips,
     toggleToneChip,
-    selectedLocation,
-    setListViewFallback,
-    loginId,
+    playerId,
     seeds,
     selectedSeedId,
     seedStatus,
@@ -214,13 +280,34 @@ export function ChronicleStartWizard() {
     selectedCharacterName,
     beatsEnabled,
     chooseSeed,
-    selectPlace,
-    selectRoot,
     setBeatsEnabled,
     setCustomSeed,
     setSeeds,
     setToneNotes,
   ]);
+
+  // Prefetch anchors when moving from tone to anchor step
+  const prefetchAnchors = useCallback(async () => {
+    if (!selectedLocationFull || isPrefetchingAnchors) {
+      return;
+    }
+
+    const neighborIds = selectedLocationFull.links.map((link) => link.targetId);
+    if (neighborIds.length === 0) {
+      return;
+    }
+
+    setIsPrefetchingAnchors(true);
+    try {
+      // Prefetch neighbor entities (will be used by AnchorStep)
+      await worldAtlasClient.batchGetEntities(neighborIds);
+    } catch (err) {
+      // Silent fail - AnchorStep will fetch again if needed
+      console.warn('Prefetch anchors failed:', err);
+    } finally {
+      setIsPrefetchingAnchors(false);
+    }
+  }, [selectedLocationFull, isPrefetchingAnchors]);
 
   const handleNext = () => {
     if (!canGoNext) {
@@ -229,6 +316,10 @@ export function ChronicleStartWizard() {
     if (step === 'location') {
       setStep('tone');
     } else if (step === 'tone') {
+      setStep('anchor');
+      // Prefetch anchors when moving to anchor step
+      void prefetchAnchors();
+    } else if (step === 'anchor') {
       setStep('seeds');
     } else if (step === 'seeds') {
       setStep('create');
@@ -249,8 +340,10 @@ export function ChronicleStartWizard() {
   const handleBack = () => {
     if (step === 'tone') {
       setStep('location');
-    } else if (step === 'seeds') {
+    } else if (step === 'anchor') {
       setStep('tone');
+    } else if (step === 'seeds') {
+      setStep('anchor');
     } else if (step === 'create') {
       setStep('seeds');
     } else {
@@ -279,6 +372,7 @@ export function ChronicleStartWizard() {
     setIsCreatingChronicle(true);
     setCreationError(null);
     const payload: ChronicleSeedCreationDetails = {
+      anchorEntityId: selectedAnchorEntity?.id ?? null,
       beatsEnabled,
       characterId: preferredCharacterId,
       locationId: selectedLocation.id,
@@ -306,12 +400,13 @@ export function ChronicleStartWizard() {
     }
   };
 
+  // Cleanup on unmount - only reset if we're leaving the wizard entirely
   useEffect(() => {
     return () => {
-      resetWizard();
-      setStep('location');
+      // Don't reset here - let the wizard maintain state across navigation
+      // The wizard is reset explicitly after successful chronicle creation
     };
-  }, [resetWizard, setStep]);
+  }, []);
 
   return (
     <section className="chronicle-wizard" aria-label="Chronicle start wizard">
@@ -340,219 +435,156 @@ export function ChronicleStartWizard() {
         </button>
       </footer>
       {creationError ? <p className="wizard-error">{creationError}</p> : null}
-      {subModalOpen && inspector.place ? (
-        <AddLocationModal
-          parent={inspector.place}
-          onClose={() => setSubModalOpen(false)}
-          onCreated={(placeId) => {
-            setSubModalOpen(false);
-            const rootId = inspector.place?.locationId ?? placeId;
-            selectRoot(rootId).catch(() => undefined);
-            selectPlace(placeId).catch(() => undefined);
-            refreshRoots().catch(() => undefined);
-          }}
-        />
-      ) : null}
-      {chainModalOpen ? (
-        <ChainLocationModal
-          parent={chainModalParent}
-          onClose={() => {
-            setChainModalOpen(false);
-            setChainModalParent(null);
-          }}
-          onCreated={(placeId) => {
-            setChainModalOpen(false);
-            setChainModalParent(null);
-            const rootId = inspector.place?.locationId ?? placeId;
-            selectRoot(rootId).catch(() => undefined);
-            selectPlace(placeId).catch(() => undefined);
-            refreshRoots().catch(() => undefined);
-          }}
-        />
-      ) : null}
     </section>
   );
 }
 
-type StepperProps = {
-  currentStep: ChronicleWizardStep;
-  onNavigate: (step: ChronicleWizardStep) => void;
-}
-
-const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'seeds', 'create'];
-
-function Stepper({ currentStep, onNavigate }: StepperProps) {
-  return (
-    <ol className="wizard-stepper">
-      {stepOrder.map((step) => (
-        <li key={step}>
-          <button
-            type="button"
-            className={`wizard-step${currentStep === step ? ' active' : ''}`}
-            onClick={() => onNavigate(step)}
-          >
-            {step === 'location'
-              ? 'Choose location'
-              : step === 'tone'
-                ? 'Tone'
-                : step === 'seeds'
-                  ? 'Seeds'
-                  : 'Create'}
-          </button>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 type LocationStepProps = {
-  roots: LocationPlace[];
-  isLoadingRoots: boolean;
-  rootError: string | null;
-  selectedRootId: string | null;
-  onSelectRoot: (locationId: string) => void;
-  graph: LocationGraphSnapshot | null;
-  graphError: string | null;
-  isGraphLoading: boolean;
-  activePlaceId: string | null;
-  onSelectPlace: (placeId: string) => void;
-  inspector: LocationInspectorState;
-  listViewFallback: boolean;
-  setListViewFallback: (enabled: boolean) => void;
-  onOpenSubModal: () => void;
-  onOpenChainModal: (parent?: LocationPlace | null) => void;
+  locations: SelectedLocationEntity[];
+  activeLocationId: string | null;
+  isLoading: boolean;
+  isLoadingDetails: boolean;
+  error: string | null;
+  onSelect: (location: SelectedLocationEntity) => void;
+  onCreate: (name: string) => void;
+  onRefresh: () => void;
 }
 
 function LocationStep({
-  activePlaceId,
-  graph,
-  graphError,
-  inspector,
-  isGraphLoading,
-  isLoadingRoots,
-  listViewFallback,
-  onOpenChainModal,
-  onOpenSubModal,
-  onSelectPlace,
-  onSelectRoot,
-  rootError,
-  roots,
-  selectedRootId,
-  setListViewFallback,
+  activeLocationId,
+  error,
+  isLoading,
+  isLoadingDetails,
+  locations,
+  onCreate,
+  onRefresh,
+  onSelect,
 }: LocationStepProps) {
   const [search, setSearch] = useState('');
+  const [draftName, setDraftName] = useState('');
+  const [filterSubkind, setFilterSubkind] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
 
-  const filteredNodes = useMemo(() => {
-    if (!graph?.places) {
-      return [];
+  // Get unique subkinds and statuses for filters
+  const { subkinds, statuses } = useMemo(() => {
+    const subkindSet = new Set<string>();
+    const statusSet = new Set<string>();
+    locations.forEach((loc) => {
+      if (loc.subkind) subkindSet.add(loc.subkind);
+      if (loc.status) statusSet.add(loc.status);
+    });
+    return {
+      subkinds: Array.from(subkindSet).sort(),
+      statuses: Array.from(statusSet).sort(),
+    };
+  }, [locations]);
+
+  const filtered = useMemo(() => {
+    let result = locations;
+
+    // Filter by search
+    if (search.trim()) {
+      const value = search.trim().toLowerCase();
+      result = result.filter((loc) =>
+        loc.name.toLowerCase().includes(value) ||
+        loc.description?.toLowerCase().includes(value) ||
+        loc.slug.toLowerCase().includes(value)
+      );
     }
-    const value = search.trim().toLowerCase();
-    if (!value) {
-      return graph.places;
+
+    // Filter by subkind
+    if (filterSubkind) {
+      result = result.filter((loc) => loc.subkind === filterSubkind);
     }
-    return graph.places.filter((place) => place.name.toLowerCase().includes(value));
-  }, [graph, search]);
+
+    // Filter by status
+    if (filterStatus) {
+      result = result.filter((loc) => loc.status === filterStatus);
+    }
+
+    return result;
+  }, [locations, search, filterSubkind, filterStatus]);
 
   return (
     <div className="location-step">
-      <aside className="location-sidebar">
-        <h2>Available locations</h2>
-        {roots.length === 0 ? (
-          <button
-            type="button"
-            className="location-root"
-            onClick={() => onOpenChainModal(null)}
-          >
-            Create first location chain
+      <header className="location-step__header">
+        <div>
+          <h2>Choose a location</h2>
+          <p>Locations are hard state entities from the World Atlas.</p>
+        </div>
+        <div className="location-step__actions">
+          <button type="button" onClick={onRefresh} disabled={isLoading}>
+            {isLoading ? 'Refreshing…' : 'Refresh'}
           </button>
-        ) : null}
-        {isLoadingRoots ? <p>Loading locations…</p> : null}
-        {rootError ? <p className="wizard-error">{rootError}</p> : null}
-        <ul>
-          {roots.map((root) => (
-            <li key={root.id}>
-              <button
-                type="button"
-                className={`location-root${selectedRootId === root.id ? ' active' : ''}`}
-                onClick={() => onSelectRoot(root.id)}
-              >
-                {root.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <div className="location-main">
-        <div className="location-map-header">
-          <input
-            type="search"
-            placeholder="Search nodes"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <label>
-            <input
-              type="checkbox"
-              checked={listViewFallback}
-              onChange={(event) => setListViewFallback(event.target.checked)}
-            />
-            List view
-          </label>
         </div>
-        {isGraphLoading ? <p>Loading map…</p> : null}
-        {graphError ? <p className="wizard-error">{graphError}</p> : null}
-        <div className={`location-map ${listViewFallback ? 'list' : 'grid'}`}>
-          {filteredNodes.map((place) => (
-            <button
-              key={place.id}
-              type="button"
-              className={`location-node${place.id === activePlaceId ? ' active' : ''}`}
-              onClick={() => onSelectPlace(place.id)}
-            >
-              <span>{place.name}</span>
-              <small>{place.kind}</small>
-            </button>
-          ))}
-          {!filteredNodes.length && graph ? <p>No nodes match this search.</p> : null}
-        </div>
+      </header>
+      {error ? <p className="wizard-error">{error}</p> : null}
+      <div className="location-step__create">
+        <input
+          type="text"
+          placeholder="New location name"
+          value={draftName}
+          onChange={(event) => setDraftName(event.target.value)}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            void onCreate(draftName);
+            setDraftName('');
+          }}
+          disabled={isLoading || draftName.trim().length === 0}
+        >
+          Add location
+        </button>
       </div>
-      <div className="location-inspector">
-        {inspector.place ? (
-          <>
-            <p className="inspector-name">{inspector.place.name}</p>
-            <p className="inspector-kind">{inspector.place.kind}</p>
-            <pre className="inspector-breadcrumb">
-              {inspector.breadcrumb.map((entry, index) => `${'  '.repeat(index)}${entry.name}`).join('\n')}
-            </pre>
-            <p className="inspector-description">
-              {inspector.place.description ?? 'No summary.'}
+      <div className="location-step__filters">
+        <input
+          type="search"
+          placeholder="Search by name, description, or slug"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <select
+          value={filterSubkind}
+          onChange={(event) => setFilterSubkind(event.target.value)}
+        >
+          <option value="">All subkinds</option>
+          {subkinds.map((subkind) => (
+            <option key={subkind} value={subkind}>
+              {subkind}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(event) => setFilterStatus(event.target.value)}
+        >
+          <option value="">All statuses</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </div>
+      {isLoading ? <p>Loading locations…</p> : null}
+      {isLoadingDetails ? <p className="location-step__loading-details">Loading location details…</p> : null}
+      <div className="location-step__grid">
+        {filtered.map((loc) => (
+          <button
+            key={loc.id}
+            type="button"
+            className={`location-card${loc.id === activeLocationId ? ' active' : ''}`}
+            onClick={() => onSelect(loc)}
+          >
+            <p className="location-card__name">{loc.name}</p>
+            <p className="location-card__meta">
+              {loc.subkind ?? 'location'} · {loc.status ?? '—'}
             </p>
-            <div className="inspector-tags">
-              {(inspector.place.tags ?? []).map((tag) => (
-                <span key={tag}>{tag}</span>
-              ))}
-            </div>
-            <div className="inspector-actions">
-              <button type="button" className="chip-button" onClick={onOpenSubModal}>
-                Add sub-location
-              </button>
-              <button
-                type="button"
-                className="chip-button"
-                onClick={() => onOpenChainModal(inspector.place)}
-              >
-                New multi-level
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="inspector-empty">
-            <p>Select a node to inspect or create a new root chain.</p>
-            <button type="button" className="chip-button" onClick={() => onOpenChainModal(null)}>
-              Create root chain
-            </button>
-          </div>
-        )}
+            {loc.description ? <p className="location-card__desc">{loc.description}</p> : null}
+          </button>
+        ))}
+        {!filtered.length && !isLoading ? <p className="location-step__empty">No locations found.</p> : null}
       </div>
     </div>
   );
@@ -595,8 +627,9 @@ function ToneStep({ onToggleChip, onUpdateNotes, toneChips, toneNotes }: ToneSte
 }
 
 type SeedStepProps = {
-  loginId: string;
+  playerId: string;
   locationId: string | null;
+  anchorId: string | null;
   tone: { toneChips: string[]; toneNotes: string };
   seeds: ChronicleSeed[];
   selectedSeedId: string | null;
@@ -613,7 +646,8 @@ function SeedStep({
   customSeedText,
   customSeedTitle,
   locationId,
-  loginId,
+  anchorId,
+  playerId,
   onCustomSeedChange,
   onSeedsLoaded,
   onSelectSeed,
@@ -624,6 +658,7 @@ function SeedStep({
   tone,
 }: SeedStepProps) {
   const [error, setError] = useState<string | null>(null);
+  const [generationProgress, setGenerationProgress] = useState(0);
   const hasSelection = Boolean(selectedSeedId);
   const handleCustomSeedTitleChange = (value: string) => {
     onCustomSeedChange({ text: customSeedText, title: value });
@@ -637,24 +672,39 @@ function SeedStep({
       setError('Select a location before generating seeds.');
       return;
     }
+    if (!anchorId) {
+      setError('Select an anchor entity before generating seeds.');
+      return;
+    }
     setSeedStatus('loading');
     setError(null);
+    setGenerationProgress(0);
+
+    // Simulate progress updates for user feedback
+    const progressInterval = setInterval(() => {
+      setGenerationProgress((prev) => Math.min(prev + 1, 3));
+    }, 3000);
+
     try {
       const result = await trpcClient.generateChronicleSeeds.mutate({
         count: 3,
         locationId,
-        loginId,
+        anchorId,
+        playerId,
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
       });
+      clearInterval(progressInterval);
       onSeedsLoaded(result ?? []);
     } catch (err: unknown) {
+      clearInterval(progressInterval);
       setSeedStatus('error');
       const message = err instanceof Error ? err.message : 'Failed to generate seeds.';
       setError(message);
       return;
     }
     setSeedStatus('idle');
+    setGenerationProgress(0);
   };
 
   return (
@@ -667,7 +717,9 @@ function SeedStep({
           disabled={seedStatus === 'loading'}
         >
           {seedStatus === 'loading'
-            ? 'Generating…'
+            ? generationProgress > 0
+              ? `Generating seeds (${generationProgress}/3)…`
+              : 'Generating seeds…'
             : hasSelection
               ? 'Regenerate 3'
               : 'Generate 3'}
@@ -677,18 +729,22 @@ function SeedStep({
       <div className="seed-list">
         {seeds.map((seed) => (
           <article key={seed.id} className={`seed-card${selectedSeedId === seed.id ? ' active' : ''}`}>
-            <header>
-              <h3>{seed.title}</h3>
-              <button type="button" onClick={() => onSelectSeed(seed.id)}>
-                Choose
-              </button>
-            </header>
-            <p>{seed.teaser}</p>
-            <div className="seed-tags">
-              {seed.tags?.map((tag) => (
-                <span key={tag}>{tag}</span>
-              ))}
+            <div className="seed-card-header">
+              <h3 className="seed-title">{seed.title}</h3>
+              <div className="seed-meta">
+                {seed.tags?.map((tag) => (
+                  <span key={tag} className="seed-tag">{tag}</span>
+                ))}
+                <button
+                  type="button"
+                  className="seed-choose-button"
+                  onClick={() => onSelectSeed(seed.id)}
+                >
+                  {selectedSeedId === seed.id ? '✓ Selected' : 'Choose'}
+                </button>
+              </div>
             </div>
+            <p className="seed-teaser">{seed.teaser}</p>
           </article>
         ))}
       </div>
@@ -720,8 +776,149 @@ function SeedStep({
   );
 }
 
+type AnchorStepProps = {
+  locationId: string | null;
+  locationFull: HardState | null;
+  selectedAnchorId: string | null;
+  onSelectAnchor: (anchor: SelectedAnchorEntity | null) => void;
+}
+
+function AnchorStep({ locationId, locationFull, onSelectAnchor, selectedAnchorId }: AnchorStepProps) {
+  const [anchors, setAnchors] = useState<SelectedAnchorEntity[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!locationId) {
+      setAnchors([]);
+      return;
+    }
+
+    const fetchNeighbors = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Use cached location data if available
+        if (locationFull && locationFull.links && locationFull.links.length > 0) {
+          // Batch fetch all neighbors in one request
+          const linkedIds = locationFull.links.map((link) => link.targetId);
+          const neighbors = await worldAtlasClient.batchGetEntities(linkedIds);
+
+          // Filter to non-location entities
+          const nonLocationNeighbors = neighbors
+            .filter((n) => n.kind !== 'location')
+            .slice(0, 3)
+            .map((n) => ({
+              id: n.id,
+              slug: n.slug,
+              name: n.name,
+              kind: n.kind,
+              description: n.description ?? undefined,
+              subkind: n.subkind ?? undefined,
+            }));
+
+          setAnchors(nonLocationNeighbors);
+
+          // Auto-select first anchor if none selected
+          if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
+            onSelectAnchor(nonLocationNeighbors[0]);
+          }
+        } else {
+          // Fallback: use neighbors endpoint if location not cached
+          const result = await worldAtlasClient.getNeighbors(locationId);
+          const nonLocationNeighbors = result.neighbors
+            .filter((n) => n.kind !== 'location')
+            .slice(0, 3)
+            .map((n) => ({
+              id: n.id,
+              slug: n.slug,
+              name: n.name,
+              kind: n.kind,
+              description: n.description ?? undefined,
+              subkind: n.subkind ?? undefined,
+            }));
+
+          setAnchors(nonLocationNeighbors);
+
+          // Auto-select first anchor if none selected
+          if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
+            onSelectAnchor(nonLocationNeighbors[0]);
+          }
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load anchor entities');
+        setAnchors([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchNeighbors();
+  }, [locationId, locationFull, selectedAnchorId, onSelectAnchor]);
+
+  if (!locationId) {
+    return (
+      <div className="anchor-step">
+        <p>Select a location first to see available anchor entities.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="anchor-step">
+        <p>Loading anchor entities…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="anchor-step">
+        <p className="wizard-error">{error}</p>
+      </div>
+    );
+  }
+
+  if (anchors.length === 0) {
+    return (
+      <div className="anchor-step">
+        <p>No non-location neighbors found for this location. Please go back and select a different location.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="anchor-step">
+      <header className="anchor-step__header">
+        <div>
+          <h2>Choose an anchor entity</h2>
+          <p>Select an entity to anchor this chronicle. These are neighbors of your selected location.</p>
+        </div>
+      </header>
+      <div className="anchor-step__list">
+        {anchors.map((anchor) => (
+          <button
+            key={anchor.id}
+            type="button"
+            className={`anchor-card${anchor.id === selectedAnchorId ? ' active' : ''}`}
+            onClick={() => onSelectAnchor(anchor)}
+          >
+            <p className="anchor-card__name">{anchor.name}</p>
+            <p className="anchor-card__meta">
+              {anchor.kind} {anchor.subkind ? ` · ${anchor.subkind}` : ''} · {anchor.slug}
+            </p>
+            {anchor.description ? <p className="anchor-card__desc">{anchor.description}</p> : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type CreateStepProps = {
-  selectedLocation: SelectedLocationSummary | null;
+  selectedLocation: SelectedLocationEntity | null;
+  selectedAnchorEntity: SelectedAnchorEntity | null;
   selectedSeed: ChronicleSeed | null;
   customSeedTitle: string;
   customSeedText: string;
@@ -740,6 +937,7 @@ function CreateStep({
   customTitle,
   preferredCharacterName,
   selectedLocation,
+  selectedAnchorEntity,
   selectedSeed,
   setBeatsEnabled,
   setCustomTitle,
@@ -747,56 +945,114 @@ function CreateStep({
 }: CreateStepProps) {
   return (
     <div className="create-step">
-      <section>
-        <h3>Location</h3>
+      <section className="create-summary-card">
+        <div className="create-summary-header">
+          <h3>Location</h3>
+          {selectedLocation && (
+            <div className="create-summary-badges">
+              {selectedLocation.subkind && <span className="create-badge">{selectedLocation.subkind}</span>}
+              <span className="create-badge create-badge-muted">{selectedLocation.slug}</span>
+            </div>
+          )}
+        </div>
         {selectedLocation ? (
           <>
-            <p className="summary-title">{selectedLocation.name}</p>
-            <p>{selectedLocation.breadcrumb.map((entry) => entry.name).join(' → ')}</p>
+            <p className="create-summary-title">{selectedLocation.name}</p>
+            {selectedLocation.description && <p className="create-summary-desc">{selectedLocation.description}</p>}
           </>
         ) : (
-          <p>Select a location to continue.</p>
+          <p className="create-summary-empty">Select a location to continue.</p>
         )}
       </section>
-      <section>
-        <h3>Tone</h3>
-        <p>{tone.toneChips.length ? tone.toneChips.join(', ') : 'No chips selected.'}</p>
-        {tone.toneNotes ? <p className="tone-note">“{tone.toneNotes}”</p> : null}
+
+      <section className="create-summary-card">
+        <div className="create-summary-header">
+          <h3>Anchor Entity</h3>
+          {selectedAnchorEntity && (
+            <div className="create-summary-badges">
+              <span className="create-badge">{selectedAnchorEntity.kind}</span>
+              {selectedAnchorEntity.subkind && <span className="create-badge">{selectedAnchorEntity.subkind}</span>}
+              <span className="create-badge create-badge-muted">{selectedAnchorEntity.slug}</span>
+            </div>
+          )}
+        </div>
+        {selectedAnchorEntity ? (
+          <>
+            <p className="create-summary-title">{selectedAnchorEntity.name}</p>
+            {selectedAnchorEntity.description && <p className="create-summary-desc">{selectedAnchorEntity.description}</p>}
+          </>
+        ) : (
+          <p className="create-summary-empty">No anchor entity selected (optional).</p>
+        )}
       </section>
-      <section>
-        <h3>Seed</h3>
+
+      <section className="create-summary-card">
+        <div className="create-summary-header">
+          <h3>Seed</h3>
+          {(selectedSeed || customSeedText) && selectedSeed?.tags && (
+            <div className="create-summary-badges">
+              {selectedSeed.tags.map((tag) => (
+                <span key={tag} className="create-badge">{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
         {selectedSeed ? (
           <>
-            <p className="summary-title">{selectedSeed.title}</p>
-            <p>{selectedSeed.teaser}</p>
+            <p className="create-summary-title">{selectedSeed.title}</p>
+            <p className="create-summary-desc">{selectedSeed.teaser}</p>
           </>
         ) : customSeedText ? (
           <>
-            <p className="summary-title">{customSeedTitle || 'Custom seed'}</p>
-            <p>{customSeedText}</p>
+            <p className="create-summary-title">{customSeedTitle || 'Custom seed'}</p>
+            <p className="create-summary-desc">{customSeedText}</p>
           </>
         ) : (
-          <p>Select or write a seed.</p>
+          <p className="create-summary-empty">Select or write a seed.</p>
         )}
       </section>
-      <section>
+
+      <div className="create-summary-compact">
+        <section className="create-summary-card create-summary-inline">
+          <h3>Tone</h3>
+          <div className="create-summary-content">
+            {tone.toneChips.length > 0 ? (
+              <div className="create-summary-badges">
+                {tone.toneChips.map((chip) => (
+                  <span key={chip} className="create-badge">{chip}</span>
+                ))}
+              </div>
+            ) : (
+              <span className="create-summary-empty">No chips selected</span>
+            )}
+            {tone.toneNotes && <p className="create-tone-note">"{tone.toneNotes}"</p>}
+          </div>
+        </section>
+
+        <section className="create-summary-card create-summary-inline">
+          <h3>Character</h3>
+          <div className="create-summary-content">
+            {preferredCharacterName ? (
+              <span className="create-badge create-badge-accent">{preferredCharacterName}</span>
+            ) : (
+              <span className="create-summary-empty">Select character in session manager</span>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <section className="create-summary-card">
         <h3>Chronicle title</h3>
         <input
           type="text"
           placeholder="Optional title override"
           value={customTitle}
           onChange={(event) => setCustomTitle(event.target.value)}
+          className="create-title-input"
         />
       </section>
-      <section>
-        <h3>Character</h3>
-        {preferredCharacterName ? (
-          <p>{preferredCharacterName}</p>
-        ) : (
-          <p>Select a character in the session manager before creating a chronicle.</p>
-        )}
-      </section>
-      <section>
+
+      <section className="create-summary-card create-summary-inline">
         <h3>Chronicle beats</h3>
         <label className="beat-toggle">
           <input
@@ -814,215 +1070,35 @@ function CreateStep({
   );
 }
 
-type AddLocationModalProps = {
-  parent: LocationPlace;
-  onClose: () => void;
-  onCreated: (placeId: string) => void;
+type StepperProps = {
+  currentStep: ChronicleWizardStep;
+  onNavigate: (step: ChronicleWizardStep) => void;
 }
 
-function AddLocationModal({ onClose, onCreated, parent }: AddLocationModalProps) {
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState('locale');
-  const [tags, setTags] = useState('');
-  const [description, setDescription] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'anchor', 'seeds', 'create'];
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      setError('Name is required.');
-      return;
-    }
-    setIsSaving(true);
-    setError(null);
-    try {
-      const created = await locationClient.createLocationPlace.mutate({
-        description: description.trim() || undefined,
-        kind: kind.trim() || 'locale',
-        name: name.trim(),
-        parentId: parent.id,
-        tags: tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      });
-      onCreated(created.place.id);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create location.';
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+function Stepper({ currentStep, onNavigate }: StepperProps) {
   return (
-    <div className="wizard-modal">
-      <div className="wizard-modal-content">
-        <h3>Add sub-location</h3>
-        <p>Parent: {parent.name}</p>
-        <label>
-          Name
-          <input value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          Type
-          <input value={kind} onChange={(event) => setKind(event.target.value)} />
-        </label>
-        <label>
-          Tags (comma separated)
-          <input value={tags} onChange={(event) => setTags(event.target.value)} />
-        </label>
-        <label>
-          Summary
-          <textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
-        </label>
-        {error ? <p className="wizard-error">{error}</p> : null}
-        <div className="wizard-modal-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
+    <ol className="wizard-stepper">
+      {stepOrder.map((step) => (
+        <li key={step}>
+          <button
+            type="button"
+            className={`wizard-step${currentStep === step ? ' active' : ''}`}
+            onClick={() => onNavigate(step)}
+          >
+            {step === 'location'
+              ? 'Choose location'
+              : step === 'tone'
+                ? 'Tone'
+                : step === 'seeds'
+                  ? 'Seeds'
+                  : step === 'anchor'
+                    ? 'Anchor Entity'
+                    : 'Create'}
           </button>
-          <button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ChainLocationModalProps = {
-  parent: LocationPlace | null;
-  onClose: () => void;
-  onCreated: (placeId: string) => void;
-}
-
-type SegmentDraft = {
-  description: string;
-  kind: string;
-  name: string;
-  tags: string;
-};
-
-function ChainLocationModal({ onClose, onCreated, parent }: ChainLocationModalProps) {
-  const [segments, setSegments] = useState<SegmentDraft[]>([
-    { description: '', kind: 'locale', name: '', tags: '' },
-  ]);
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const updateSegment = (index: number, field: keyof SegmentDraft, value: string) => {
-    setSegments((prev) =>
-      prev.map((segment, idx) => {
-        if (idx !== index) {
-          return segment;
-        }
-        if (field === 'description') {
-          return { ...segment, description: value };
-        }
-        if (field === 'kind') {
-          return { ...segment, kind: value };
-        }
-        if (field === 'name') {
-          return { ...segment, name: value };
-        }
-        return { ...segment, tags: value };
-      })
-    );
-  };
-
-  const handleAddRow = () => {
-    setSegments((prev) => [...prev, { description: '', kind: 'locale', name: '', tags: '' }]);
-  };
-
-  const handleRemoveRow = (index: number) => {
-    setSegments((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleSave = async () => {
-    if (segments.some((segment) => !segment.name.trim())) {
-      setError('All segments require a name.');
-      return;
-    }
-    setIsSaving(true);
-    setError(null);
-    try {
-      const result = await locationClient.createLocationChain.mutate({
-        parentId: parent?.id,
-        segments: segments.map((segment) => ({
-          description: segment.description.trim() || undefined,
-          kind: segment.kind.trim() || 'locale',
-          name: segment.name.trim(),
-          tags: segment.tags
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        })),
-      });
-      onCreated(result.anchor.id);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create chain.';
-      setError(message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="wizard-modal">
-      <div className="wizard-modal-content">
-        <h3>New multi-level path</h3>
-        <p>{parent ? `Parent: ${parent.name}` : 'Create a root location chain'}</p>
-        {segments.map((segment, index) => (
-          <div key={index} className="wizard-segment-row">
-            <label>
-              Name
-              <input
-                value={segment.name}
-                onChange={(event) => updateSegment(index, 'name', event.target.value)}
-              />
-            </label>
-            <label>
-              Type
-              <input
-                value={segment.kind}
-                onChange={(event) => updateSegment(index, 'kind', event.target.value)}
-              />
-            </label>
-            <label>
-              Tags
-              <input
-                value={segment.tags}
-                onChange={(event) => updateSegment(index, 'tags', event.target.value)}
-              />
-            </label>
-            <label>
-              Summary
-              <textarea
-                rows={2}
-                value={segment.description}
-                onChange={(event) => updateSegment(index, 'description', event.target.value)}
-              />
-            </label>
-            {segments.length > 1 ? (
-              <button type="button" onClick={() => handleRemoveRow(index)}>
-                Remove
-              </button>
-            ) : null}
-          </div>
-        ))}
-        <button type="button" onClick={handleAddRow}>
-          Add row
-        </button>
-        {error ? <p className="wizard-error">{error}</p> : null}
-        <div className="wizard-modal-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Creating…' : 'Create'}
-          </button>
-        </div>
-      </div>
-    </div>
+        </li>
+      ))}
+    </ol>
   );
 }

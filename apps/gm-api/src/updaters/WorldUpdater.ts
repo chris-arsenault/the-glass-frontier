@@ -1,41 +1,42 @@
-import {GraphContext} from "../types";
-import {isNonEmptyString, log} from "@glass-frontier/utils";
-import {Character, Chronicle, LocationPlan } from "@glass-frontier/dto";
-import { LocationGraphStore, WorldStateStore} from "@glass-frontier/persistence";
-import {createUpdatedBeats} from "./beatUpdater";
-import {createLocationPlan} from "./locationUpdater";
-import {createUpdatedInventory} from "./inventoryUpdater";
-import {createUpdatedCharacter} from "./characterUpdater";
+import type { Character, Chronicle, LocationEntity } from '@glass-frontier/dto';
+import { isNonEmptyString, log } from '@glass-frontier/utils';
+import type { ChronicleStore, LocationHelpers } from '@glass-frontier/worldstate';
+
+import type { GraphContext } from '../types';
+import { createUpdatedBeats } from './beatUpdater';
+import { createUpdatedCharacter } from './characterUpdater';
+import { createUpdatedInventory } from './inventoryUpdater';
+import { applyLocationUpdate } from './locationUpdater';
 
 
 export class WorldUpdater {
-  #worldStateStore: WorldStateStore;
-  #locationGraphStore: LocationGraphStore;
+  readonly #chronicleStore: ChronicleStore;
+  readonly #locationHelpers: LocationHelpers;
 
-  constructor(options: {worldStateStore: WorldStateStore, locationGraphStore: LocationGraphStore}) {
-    this.#worldStateStore = options.worldStateStore;
-    this.#locationGraphStore = options.locationGraphStore;
+  constructor(options: { chronicleStore: ChronicleStore; locationHelpers: LocationHelpers }) {
+    this.#chronicleStore = options.chronicleStore;
+    this.#locationHelpers = options.locationHelpers;
   }
 
   async update(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
-      return;
+      return context;
     }
 
-    context = this.#updateCharacter(context);
-    context = this.#updateInventory(context);
-    context = this.#updateBeats(context);
-    const locationPlan = await createLocationPlan(context);
+    let nextContext = context;
+    nextContext = this.#updateCharacter(nextContext);
+    nextContext = this.#updateInventory(nextContext);
+    nextContext = this.#updateBeats(nextContext);
+    nextContext = (await this.#updateLocation(nextContext)) ?? nextContext;
 
-    await this.#saveCharacter(context.chronicleState.character);
-    await this.#saveChronicle(context.chronicleState.chronicle);
-    context = await this.#saveLocation(context, locationPlan);
+    await this.#saveCharacter(nextContext.chronicleState.character);
+    await this.#saveChronicle(nextContext.chronicleState.chronicle);
 
-    return context;
+    return nextContext;
   }
 
   #updateCharacter(context: GraphContext): GraphContext {
-    log("info", "Updating Character");
+    log('info', 'Updating Character');
 
     const updatedCharacter = createUpdatedCharacter(context);
     return {
@@ -44,12 +45,19 @@ export class WorldUpdater {
         ...context.chronicleState,
         character: updatedCharacter
       }
-    }
+    };
   }
 
   #updateInventory(context: GraphContext): GraphContext {
-    log("info", "Updating Inventory");
-    if (!context.inventoryDelta || context.inventoryDelta?.ops.length == 0) {
+    log('info', 'Updating Inventory');
+    if (context.inventoryDelta === undefined || context.inventoryDelta === null) {
+      return context;
+    }
+    if (context.inventoryDelta.ops.length === 0) {
+      return context;
+    }
+    if (!context.chronicleState.character) {
+      log('error', 'Cannot update inventory: character is null');
       return context;
     }
 
@@ -63,11 +71,11 @@ export class WorldUpdater {
           inventory: newInventory,
         },
       }
-    }
+    };
   }
 
   #updateBeats(context: GraphContext): GraphContext {
-    log("info", "Updating Beats");
+    log('info', 'Updating Beats');
     const newBeats = createUpdatedBeats(context);
 
     return {
@@ -79,55 +87,85 @@ export class WorldUpdater {
           beats: newBeats
         }
       }
-    }
+    };
   }
 
   async #saveCharacter(character: Character): Promise<void> {
     try {
-      await this.#worldStateStore.upsertCharacter(character);
+      await this.#chronicleStore.upsertCharacter(character);
     } catch (error) {
-      log("error", `Error in saving character ${error}`);
+      log('error', `Error in saving character ${error}`);
     }
   }
 
   async #saveChronicle(chronicle: Chronicle): Promise<void> {
     try {
-      await this.#worldStateStore.upsertChronicle(chronicle);
+      await this.#chronicleStore.upsertChronicle(chronicle);
     } catch (error) {
-      log("error", `Error in saving chronicle ${error}`);
+      log('error', `Error in saving chronicle ${error}`);
     }
   }
 
-  async #saveLocation(context: GraphContext, plan: LocationPlan): Promise<GraphContext> {
-    const characterId = context.chronicleState.character?.id;
-    const locationId = context.chronicleState.chronicle.locationId;
-    if (!isNonEmptyString(characterId) || !isNonEmptyString(locationId)) {
-      return;
-    }
+  async #updateLocation(context: GraphContext): Promise<GraphContext | undefined> {
     try {
-      await this.#locationGraphStore.applyPlan({
-        characterId,
-        locationId,
-        plan,
-      });
-      const summary = await this.#locationGraphStore.summarizeCharacterLocation({
-        characterId,
-        locationId,
-      });
+      const locationState = await applyLocationUpdate(context);
 
-      if (!summary) {
+      if (!locationState) {
         return context;
       }
 
+      const summary = await this.#buildLocationEntity(locationState.locationId);
+      const updatedChronicle: Chronicle = {
+        ...context.chronicleState.chronicle,
+        locationId: locationState.locationId,
+      };
+
       return {
-      ...context,
+        ...context,
         chronicleState: {
-        ...context.chronicleState,
-          location: summary
-        }
-      }
+          ...context.chronicleState,
+          chronicle: updatedChronicle,
+          location: summary ?? context.chronicleState.location,
+        },
+      };
     } catch (error) {
-      log("error", "Error in saving location", error);
+      log('error', 'Error updating location', error);
+      return context;
+    }
+  }
+
+  async #buildLocationEntity(locationId: string): Promise<LocationEntity | null> {
+    try {
+      const details = await this.#locationHelpers.getDetails({ id: locationId });
+      return mapLocationDetailsToSummary(details);
+    } catch (error) {
+      log('error', 'Failed to map location summary', error);
+      return null;
     }
   }
 }
+
+export const mapLocationDetailsToSummary = (details: {
+  place: {
+    id: string;
+    kind: string;
+    name: string;
+    slug?: string;
+    subkind?: string;
+    status?: string;
+    prominence?: string;
+    description?: string;
+  };
+}): LocationEntity => {
+  return {
+    id: details.place.id,
+    slug: details.place.slug ?? details.place.id,
+    name: details.place.name,
+    kind: details.place.kind,
+    subkind: details.place.subkind,
+    prominence: (details.place.prominence as LocationEntity['prominence']) ?? 'recognized',
+    status: details.place.status,
+    description: details.place.description,
+    tags: [],
+  };
+};

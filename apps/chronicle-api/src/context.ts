@@ -1,78 +1,107 @@
 // context.ts
+import type { Pool } from 'pg';
 import {
-  createWorldStateStore,
-  createLocationGraphStore,
-  type WorldStateStore,
-  type LocationGraphStore,
-  PromptTemplateManager,
-  BugReportStore,
-  TokenUsageStore,
-} from '@glass-frontier/persistence';
+  createAppStore,
+  type AppStore,
+  type PlayerStore,
+  type ModelConfigStore,
+  createPoolWithIamAuth,
+  useIamAuth,
+  createPool,
+} from '@glass-frontier/app';
+import { createOpsStore, type OpsStore } from '@glass-frontier/ops';
+import {
+  createChronicleStore,
+  createWorldSchemaStore,
+  type WorldSchemaStore,
+  type ChronicleStore,
+} from '@glass-frontier/worldstate';
 
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
-const narrativeBucket = process.env.NARRATIVE_S3_BUCKET;
-if (typeof narrativeBucket !== 'string' || narrativeBucket.trim().length === 0) {
-  throw new Error('NARRATIVE_S3_BUCKET must be configured for the narrative service');
-}
-const narrativePrefix = process.env.NARRATIVE_S3_PREFIX ?? undefined;
-
-const locationGraphStore = createLocationGraphStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-});
-const worldStateStore = createWorldStateStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-  locationGraphStore,
-});
-
-const templateBucket = process.env.PROMPT_TEMPLATE_BUCKET;
-if (typeof templateBucket !== 'string' || templateBucket.trim().length === 0) {
-  throw new Error('PROMPT_TEMPLATE_BUCKET must be configured for the narrative service');
-}
-const templateManager = new PromptTemplateManager({
-  bucket: templateBucket.trim(),
-  worldStateStore,
-});
-const seedService = new ChronicleSeedService({
-  locationGraphStore,
-  templateManager,
-});
-
-const bugReportStore = new BugReportStore({
-  bucket: narrativeBucket,
-  prefix: narrativePrefix,
-});
-
-const tokenUsageStore = (() => {
-  const tableName = process.env.LLM_PROXY_USAGE_TABLE;
-  if (typeof tableName !== 'string' || tableName.trim().length === 0) {
-    return null;
-  }
-  return new TokenUsageStore({ tableName: tableName.trim() });
-})();
-
 export type Context = {
   authorizationHeader?: string;
-  bugReportStore: BugReportStore;
-  locationGraphStore: LocationGraphStore;
+  appStore: AppStore;
+  bugReportStore: OpsStore['bugReportStore'];
+  modelConfigStore: ModelConfigStore;
+  playerStore: PlayerStore;
   seedService: ChronicleSeedService;
-  templateManager: PromptTemplateManager;
-  tokenUsageStore: TokenUsageStore | null;
-  worldStateStore: WorldStateStore;
+  tokenUsageStore: OpsStore['tokenUsageStore'];
+  worldSchemaStore: WorldSchemaStore;
+  chronicleStore: ChronicleStore;
 };
 
-export function createContext(options?: { authorizationHeader?: string }): Context {
-  return {
-    authorizationHeader: options?.authorizationHeader,
-    bugReportStore,
-    locationGraphStore,
-    seedService,
-    templateManager,
-    tokenUsageStore,
-    worldStateStore,
-  };
+// Singleton instances - initialized lazily
+let pool: Pool | undefined;
+let appStore: AppStore | undefined;
+let opsStore: OpsStore | undefined;
+let worldSchemaStore: WorldSchemaStore | undefined;
+let chronicleStore: ChronicleStore | undefined;
+let seedService: ChronicleSeedService | undefined;
+
+/**
+ * Initialize context for Lambda with IAM auth.
+ * Call this once at cold start.
+ */
+export async function initializeForLambda(): Promise<void> {
+  if (pool) return; // Already initialized
+
+  pool = await createPoolWithIamAuth();
+
+  appStore = createAppStore({ pool });
+  opsStore = createOpsStore({ pool });
+  worldSchemaStore = createWorldSchemaStore({ pool });
+  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
+  seedService = new ChronicleSeedService({
+    worldStore: worldSchemaStore,
+    modelConfigStore: appStore.modelConfigStore,
+  });
 }
 
-// export type Context = Awaited<ReturnType<typeof createContext>>;
+/**
+ * Initialize context for local development with connection string.
+ */
+function initializeLocal(): void {
+  if (pool) return; // Already initialized
+
+  const connectionString = process.env.GLASS_FRONTIER_DATABASE_URL;
+  if (!connectionString?.trim()) {
+    throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured');
+  }
+
+  pool = createPool({ connectionString });
+
+  appStore = createAppStore({ pool });
+  opsStore = createOpsStore({ pool });
+  worldSchemaStore = createWorldSchemaStore({ pool });
+  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
+  seedService = new ChronicleSeedService({
+    worldStore: worldSchemaStore,
+    modelConfigStore: appStore.modelConfigStore,
+  });
+}
+
+export function createContext(options?: { authorizationHeader?: string }): Context {
+  // For local development, initialize synchronously on first call
+  if (!pool && !useIamAuth()) {
+    initializeLocal();
+  }
+
+  if (!appStore || !opsStore || !worldSchemaStore || !chronicleStore || !seedService) {
+    throw new Error(
+      'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
+    );
+  }
+
+  return {
+    authorizationHeader: options?.authorizationHeader,
+    appStore,
+    bugReportStore: opsStore.bugReportStore,
+    modelConfigStore: appStore.modelConfigStore,
+    playerStore: appStore.playerStore,
+    seedService,
+    tokenUsageStore: opsStore.tokenUsageStore,
+    worldSchemaStore,
+    chronicleStore,
+  };
+}

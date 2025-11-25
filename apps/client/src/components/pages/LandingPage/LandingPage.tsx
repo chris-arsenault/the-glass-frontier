@@ -23,7 +23,7 @@ export function LandingPage(): JSX.Element {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
-  const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
+  const refreshDirectory = useChronicleStore((state) => state.refreshPlayerResources);
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
@@ -206,7 +206,7 @@ export function LandingPage(): JSX.Element {
                 type="button"
                 className="landing-link-button"
                 onClick={() => {
-                  void navigate('/chronicles/start');
+                  void navigate('/chron/start');
                 }}
               >
                 Start new

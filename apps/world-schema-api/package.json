@@ -1,0 +1,27 @@
+{
+  "name": "@glass-frontier/world-schema-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "TARGET=local tsup && node dist/local.js",
+    "dev": "NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts --ignore dist --signal SIGTERM --exec \"tsx src/server_local.ts\"",
+    "build": "TARGET=lambda tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@glass-frontier/app": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
+    "@glass-frontier/utils": "workspace:*",
+    "@trpc/server": "^11.1.0",
+    "tsup": "^8.5.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.158",
+    "nodemon": "^3.1.11",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

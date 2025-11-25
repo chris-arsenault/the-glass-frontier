@@ -37,7 +37,7 @@ export function SessionManager() {
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
-  const refreshDirectory = useChronicleStore((state) => state.refreshLoginResources);
+  const refreshDirectory = useChronicleStore((state) => state.refreshPlayerResources);
   const connectionState = useChronicleStore((state) => state.connectionState);
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
   const directoryStatus = useChronicleStore((state) => state.directoryStatus);
@@ -53,6 +53,8 @@ export function SessionManager() {
   const navigate = useNavigate();
   const toggleCharacterDrawer = useUiStore((state) => state.toggleCharacterDrawer);
   const isCharacterDrawerOpen = useUiStore((state) => state.isCharacterDrawerOpen);
+  const toggleChronicleDrawer = useUiStore((state) => state.toggleChronicleDrawer);
+  const isChronicleDrawerOpen = useUiStore((state) => state.isChronicleDrawerOpen);
   const hasActiveChronicle = Boolean(currentChronicleId);
 
   const disabled = connectionState === 'connecting' || isWorking || directoryStatus === 'loading';
@@ -109,7 +111,7 @@ export function SessionManager() {
     }
     setPreferredCharacterId(targetId);
     setError(null);
-    void navigate('/chronicles/start');
+    void navigate('/chron/start');
   };
 
   const handleDeleteChronicle = async (chronicleId: string) => {
@@ -271,22 +273,34 @@ export function SessionManager() {
       <div className="session-manager-section">
         <div className="session-manager-section-header">
           <h4>Chronicles</h4>
-          <button
-            type="button"
-            className="chip-button"
-            onClick={() => handleOpenWizard()}
-            disabled={disabled}
-          >
-            New Chronicle
-          </button>
-          <button
-            type="button"
-            className="chip-button"
-            onClick={handleClearActive}
-            disabled={!currentChronicleId}
-          >
-            Clear Active
-          </button>
+          <div className="session-manager-section-controls">
+            {hasActiveChronicle ? (
+              <button
+                type="button"
+                className={`chip-button${isChronicleDrawerOpen ? ' chip-button-active' : ''}`}
+                onClick={toggleChronicleDrawer}
+                aria-pressed={isChronicleDrawerOpen}
+              >
+                {isChronicleDrawerOpen ? 'Close Details' : 'View Details'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="chip-button"
+              onClick={() => handleOpenWizard()}
+              disabled={disabled}
+            >
+              New Chronicle
+            </button>
+            <button
+              type="button"
+              className="chip-button"
+              onClick={handleClearActive}
+              disabled={!currentChronicleId}
+            >
+              Clear Active
+            </button>
+          </div>
         </div>
         {availableChronicles.length === 0 ? (
           <p className="session-manager-empty">No chronicles on record.</p>

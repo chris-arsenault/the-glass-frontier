@@ -1,0 +1,75 @@
+/* Design Tokens for Glass Frontier UI */
+
+:root {
+  /* Spacing System (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* Typography Scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+
+  /* Border Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-full: 999px;
+
+  /* Opacity Levels */
+  --opacity-muted: 0.08;
+  --opacity-low: 0.15;
+  --opacity-mid: 0.3;
+  --opacity-high: 0.6;
+
+  /* Elevation Shadows */
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 15%);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 20%);
+  --shadow-lg: 0 8px 32px rgb(0 0 0 / 30%);
+  --shadow-glow: 0 0 24px rgb(96 165 250 / 20%);
+
+  /* Color Palette */
+  --color-primary: #6c8bff;
+  --color-secondary: #4bd4aa;
+  --color-accent-pink: #ec4899;
+  --color-accent-blue: #3b82f6;
+  --color-accent-teal: #2dd4bf;
+  --color-accent-purple: #a78bfa;
+  --color-accent-yellow: #fde047;
+
+  /* Surface Colors */
+  --surface-primary: rgb(8 15 28);
+  --surface-secondary: rgb(15 23 42 / 60%);
+  --surface-tertiary: rgb(15 23 42 / 40%);
+  --surface-elevated: rgb(15 23 42 / 95%);
+
+  /* Background Colors */
+  --bg-base: #0f172a;
+  --bg-shell: #050b18;
+
+  /* Text Colors */
+  --text-primary: #f5f7ff;
+  --text-secondary: #cbd5f5;
+  --text-muted: #94a3b8;
+  --text-accent: #93c5fd;
+
+  /* Border Colors */
+  --border-subtle: rgb(148 163 184 / 8%);
+  --border-muted: rgb(148 163 184 / 15%);
+  --border-default: rgb(148 163 184 / 30%);
+  --border-accent: rgb(96 165 250 / 60%);
+
+  /* Holographic Panel Effects */
+  --panel-glow-inset: inset 0 0 0 1px rgb(96 165 250 / 12%);
+  --panel-highlight: inset 0 -1px 2px rgb(96 165 250 / 8%);
+  --panel-shadow: 0 8px 32px rgb(0 0 0 / 30%);
+
+  /* Focus Ring */
+  --focus-ring: 2px solid rgb(96 165 250 / 70%);
+  --focus-offset: 2px;
+}

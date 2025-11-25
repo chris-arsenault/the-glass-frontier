@@ -18,7 +18,7 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle?.status === 'closed') {
         throw new Error('Chronicle is closed.');
       }
@@ -38,21 +38,21 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.string().uuid(),
-        loginId: z.string().min(1),
+        playerId: z.string().min(1),
         targetEndTurn: z.number().int().min(0).nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const chronicle = await ctx.worldStateStore.getChronicle(input.chronicleId);
+      const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle === null || chronicle === undefined) {
         throw new Error('Chronicle not found.');
       }
-      if (chronicle.loginId !== input.loginId) {
-        throw new Error('Chronicle does not belong to the requesting login.');
+      if (chronicle.playerId !== input.playerId) {
+        throw new Error('Chronicle does not belong to the requesting player.');
       }
       const normalizedTarget =
         typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;
-      const updated = await ctx.worldStateStore.upsertChronicle({
+      const updated = await ctx.chronicleStore.upsertChronicle({
         ...chronicle,
         targetEndTurn: normalizedTarget,
       });

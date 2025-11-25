@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-do
 
 import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
+import { ChronicleDrawer } from './components/drawers/ChronicleDrawer/ChronicleDrawer';
 import { TemplateDrawer } from './components/drawers/TemplateDrawer/TemplateDrawer';
 import { ChatCanvas } from './components/layout/ChatCanvas/ChatCanvas';
 import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
@@ -14,12 +15,13 @@ import { PlayerSettingsModal } from './components/modals/PlayerSettingsModal/Pla
 import { UserGuideModal } from './components/modals/UserGuideModal/UserGuideModal';
 import { AuditReviewPage } from './components/moderation/AuditReviewPage/AuditReviewPage';
 import { BugModerationPage } from './components/moderation/BugModerationPage/BugModerationPage';
-import { LocationMaintenancePage } from './components/moderation/LocationMaintenancePage/LocationMaintenancePage';
+import { WorldAtlasPage } from './components/moderation/WorldAtlasPage/WorldAtlasPage';
+import { WorldSchemaPage } from './components/moderation/WorldSchemaPage/WorldSchemaPage';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
 import { LandingPage } from './components/pages/LandingPage/LandingPage';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
 import { ChronicleStartWizard } from './components/wizards/ChronicleStartWizard/ChronicleStartWizard';
-import { useLoginResources } from './hooks/useLoginResources';
+import { usePlayerResources } from './hooks/usePlayerResources';
 import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
 import { useAuthStore } from './stores/authStore';
 import { useChronicleStore } from './stores/chronicleStore';
@@ -218,7 +220,7 @@ const LegacyChronicleRedirect = (): JSX.Element => {
 
 export function App(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  useLoginResources(isAuthenticated);
+  usePlayerResources(isAuthenticated);
   useProgressStreamConnection(isAuthenticated);
 
   if (!isAuthenticated) {
@@ -232,19 +234,21 @@ export function App(): JSX.Element {
         <div className="app-route-surface">
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/chron/start" element={<ChronicleStartWizard />} />
             <Route path="/chron/:chronicleId" element={<ChronicleRoute />} />
             <Route path="/chron" element={<Navigate to="/" replace />} />
             <Route path="/chronicle/:chronicleId" element={<LegacyChronicleRedirect />} />
             <Route path="/chronicle" element={<Navigate to="/" replace />} />
-            <Route path="/chronicles/start" element={<ChronicleStartWizard />} />
             <Route path="/moderation/audit" element={<AuditReviewPage />} />
             <Route path="/moderation/bugs" element={<BugModerationPage />} />
-            <Route path="/moderation/locations" element={<LocationMaintenancePage />} />
+            <Route path="/moderation/worldSchema" element={<WorldSchemaPage />} />
+            <Route path="/atlas/:slug?" element={<WorldAtlasPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>
       <CharacterDrawer />
+      <ChronicleDrawer />
       <TemplateDrawer />
       <CreateCharacterModal />
       <BugReportModal />

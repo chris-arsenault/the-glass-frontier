@@ -1,6 +1,26 @@
-import type { LocationSummary, TokenUsagePeriod } from '@glass-frontier/dto';
+import type { LocationEntity } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+type ModelUsageWithCost = {
+  modelId: string;
+  displayName: string;
+  providerId: string;
+  inputTokens: number;
+  outputTokens: number;
+  requestCount: number;
+  inputCost: number;
+  outputCost: number;
+  totalCost: number;
+};
+
+type UsageCostSummary = {
+  byModel: ModelUsageWithCost[];
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalRequests: number;
+  totalCost: number;
+};
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import { trpcClient } from '../../../lib/trpcClient';
@@ -49,11 +69,20 @@ const BugIcon = () => (
   </svg>
 );
 
-const LocationIcon = () => (
+const GlobeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path
-      d="M12 2C8.134 2 5 5.018 5 8.8c0 4.778 5.875 11.684 6.127 11.979a1.17 1.17 0 0 0 1.746 0C13.125 20.484 19 13.578 19 8.8 19 5.018 15.866 2 12 2Zm0 3a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6Z"
       fill="currentColor"
+      d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm-1 2.07V6H8.5a8.04 8.04 0 0 1 2.5-1.93ZM7 7h4v3H6.39A7.967 7.967 0 0 1 7 7Zm-1 4h5v3H7.1A7.98 7.98 0 0 1 6 11Zm1 4h4v1.93A8.04 8.04 0 0 1 8.5 15ZM13 19.93V18h2.5A8.04 8.04 0 0 1 13 19.93ZM17 17h-4v-3h5.61A7.967 7.967 0 0 1 17 17Zm1-4h-5V10h4.9A7.98 7.98 0 0 1 18 13Zm-1-4h-4V5h2.5A8.04 8.04 0 0 1 17 9Z"
+    />
+  </svg>
+);
+
+const SchemaIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      fill="currentColor"
+      d="M6 3h12v4H6Zm0 14h12v4H6Zm0-7h12v4H6Z"
     />
   </svg>
 );
@@ -67,15 +96,15 @@ const SettingsIcon = () => (
   </svg>
 );
 
-const describeLocation = (location?: LocationSummary | null) => {
+const describeLocation = (location?: LocationEntity | null) => {
   if (!location) {
     return {
       breadcrumb: 'Select a chronicle to establish position.',
       edge: 'No location tracked',
     };
   }
-  const breadcrumb = location.breadcrumb.map((entry) => entry.name).join(' › ');
-  const edge = location.breadcrumb.at(-1)?.name ?? breadcrumb;
+  const edge = location.name ?? location.slug;
+  const breadcrumb = [location.subkind, location.status].filter(Boolean).join(' › ') || edge;
   return {
     breadcrumb,
     edge,
@@ -96,10 +125,17 @@ const formatTokenCount = (value: number): string => {
   return '0';
 };
 
+const formatCost = (value: number): string => {
+  if (value < 0.01) {
+    return '<$0.01';
+  }
+  return `$${value.toFixed(2)}`;
+};
+
 
 export function PlayerMenu(): JSX.Element {
-  const loginName = useChronicleStore((state) => state.loginName);
-  const loginId = useChronicleStore((state) => state.loginId ?? state.loginName ?? '');
+  const playerName = useChronicleStore((state) => state.playerName);
+  const playerId = useChronicleStore((state) => state.playerId ?? '');
   const character = useSelectedCharacter();
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const location = useChronicleStore((state) => state.location);
@@ -113,15 +149,16 @@ export function PlayerMenu(): JSX.Element {
   const highestRole = useMemo(() => getHighestRole(tokens?.idToken), [tokens?.idToken]);
   const canAccessAdminTools = canModerate(highestRole);
   const roleBadge = ROLE_BADGES[highestRole];
-  const playerLabel = (loginName?.trim() || 'Unnamed Player').toUpperCase();
+  const playerLabel = (playerName?.trim() || 'Unnamed Player').toUpperCase();
   const chronicleTitle = chronicle?.title?.trim() || 'No chronicle selected';
   const locationDetails = describeLocation(location);
   const containerRef = useRef<HTMLDivElement>(null);
   const panelId = 'player-menu-panel';
   const navigate = useNavigate();
-  const [usage, setUsage] = useState<TokenUsagePeriod[]>([]);
   const [usageState, setUsageState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [usageError, setUsageError] = useState<string | null>(null);
+  const [costSummary, setCostSummary] = useState<UsageCostSummary | null>(null);
+  const [showCostBreakdown, setShowCostBreakdown] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -168,8 +205,13 @@ export function PlayerMenu(): JSX.Element {
     close();
   };
 
-  const handleLocationMaintenanceShortcut = () => {
-    void navigate('/moderation/locations');
+  const handleWorldSchemaShortcut = () => {
+    void navigate('/moderation/worldSchema');
+    close();
+  };
+
+  const handleWorldAtlasShortcut = () => {
+    void navigate('/atlas');
     close();
   };
 
@@ -179,7 +221,7 @@ export function PlayerMenu(): JSX.Element {
   };
 
   useEffect(() => {
-    if (!isOpen || !loginId) {
+    if (!isOpen || !playerId) {
       return;
     }
     let cancelled = false;
@@ -187,11 +229,11 @@ export function PlayerMenu(): JSX.Element {
       setUsageState('loading');
       setUsageError(null);
       try {
-        const result = await trpcClient.getTokenUsageSummary.query({ limit: 6, loginId });
+        const costResult = await trpcClient.getModelUsageCostSummary.query({ playerId });
         if (cancelled) {
           return;
         }
-        setUsage(result.usage);
+        setCostSummary(costResult.summary);
         setUsageState('ready');
       } catch (error) {
         if (cancelled) {
@@ -205,10 +247,7 @@ export function PlayerMenu(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, loginId]);
-
-  const usagePreview = usage[0] ?? null;
-  const topMetrics = usagePreview?.metrics.slice(0, 3) ?? [];
+  }, [isOpen, playerId]);
 
   return (
     <div className="player-menu" data-open={isOpen ? 'true' : 'false'} ref={containerRef}>
@@ -273,35 +312,67 @@ export function PlayerMenu(): JSX.Element {
           </div>
         </div>
         <div className="player-menu-usage-row">
-          <p className="player-menu-pill-label">Total Token Usage</p>
+          <div className="player-menu-usage-header">
+            <p className="player-menu-pill-label">Token Usage & Cost</p>
+            {costSummary && costSummary.totalCost > 0 && (
+              <span
+                className="player-menu-usage-cost"
+                onMouseEnter={() => setShowCostBreakdown(true)}
+                onMouseLeave={() => setShowCostBreakdown(false)}
+              >
+                {formatCost(costSummary.totalCost)}
+                {showCostBreakdown && costSummary.byModel.length > 0 && (
+                  <div className="player-menu-cost-breakdown">
+                    <p className="player-menu-cost-breakdown-title">Cost by Model</p>
+                    <table className="player-menu-cost-breakdown-table">
+                      <thead>
+                        <tr>
+                          <th>Model</th>
+                          <th>Tokens</th>
+                          <th>Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {costSummary.byModel.map((model) => (
+                          <tr key={model.modelId}>
+                            <td className="player-menu-cost-model-name">{model.displayName}</td>
+                            <td>{formatTokenCount(model.inputTokens + model.outputTokens)}</td>
+                            <td>{formatCost(model.totalCost)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </span>
+            )}
+          </div>
           {usageState === 'loading' ? (
             <p className="player-menu-usage-note">Loading usage…</p>
           ) : usageState === 'error' ? (
             <p className="player-menu-usage-note">
               Unable to load usage{usageError ? ` · ${usageError}` : ''}.
             </p>
-          ) : usagePreview ? (
+          ) : costSummary && costSummary.totalRequests > 0 ? (
             <table className="player-menu-usage-table" aria-label="LLM token usage">
               <thead>
                 <tr>
                   <th className="player-menu-usage-label">Req</th>
-                  {topMetrics.map((metric) => (
-                    <th key={`header-${metric.key}`} className="player-menu-usage-label">
-                      {metric.key.slice(0, 4).toUpperCase()}
-                    </th>
-                  ))}
+                  <th className="player-menu-usage-label">Input</th>
+                  <th className="player-menu-usage-label">Output</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="player-menu-usage-value">
-                    {formatTokenCount(usagePreview.totalRequests)}
+                    {formatTokenCount(costSummary.totalRequests)}
                   </td>
-                  {topMetrics.map((metric) => (
-                    <td key={`value-${metric.key}`} className="player-menu-usage-value">
-                      {formatTokenCount(metric.value)}
-                    </td>
-                  ))}
+                  <td className="player-menu-usage-value">
+                    {formatTokenCount(costSummary.totalInputTokens)}
+                  </td>
+                  <td className="player-menu-usage-value">
+                    {formatTokenCount(costSummary.totalOutputTokens)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -373,22 +444,33 @@ export function PlayerMenu(): JSX.Element {
               <button
                 type="button"
                 className="player-menu-link-button"
-                onClick={handleLocationMaintenanceShortcut}
+                onClick={handleWorldSchemaShortcut}
               >
                 <span className="player-menu-link-icon" aria-hidden="true">
-                  <LocationIcon />
+                  <SchemaIcon />
                 </span>
                 <div className="player-menu-link-text">
-                  <span className="player-menu-link-title">Location Maintenance</span>
-                  <span className="player-menu-link-subtitle">
-                    Curate the dictionary and graph relationships
-                  </span>
+                  <span className="player-menu-link-title">World Schema</span>
+                  <span className="player-menu-link-subtitle">Edit kinds, statuses, and rules</span>
                 </div>
               </button>
             </>
           ) : (
             <p className="player-menu-empty">Admin and lore shortcuts will appear here.</p>
           )}
+          <button
+            type="button"
+            className="player-menu-link-button"
+            onClick={handleWorldAtlasShortcut}
+          >
+            <span className="player-menu-link-icon" aria-hidden="true">
+              <GlobeIcon />
+            </span>
+            <div className="player-menu-link-text">
+              <span className="player-menu-link-title">World Atlas</span>
+              <span className="player-menu-link-subtitle">Explore anchors and lore</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>
