@@ -55,6 +55,7 @@ export async function initializeForLambda(): Promise<void> {
   seedService = new ChronicleSeedService({
     worldStore: worldSchemaStore,
     modelConfigStore: appStore.modelConfigStore,
+    templateManager: appStore.promptTemplateManager,
   });
 }
 
@@ -78,6 +79,7 @@ function initializeLocal(): void {
   seedService = new ChronicleSeedService({
     worldStore: worldSchemaStore,
     modelConfigStore: appStore.modelConfigStore,
+    templateManager: appStore.promptTemplateManager,
   });
 }
 
