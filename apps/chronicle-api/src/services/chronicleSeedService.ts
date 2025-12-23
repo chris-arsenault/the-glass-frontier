@@ -1,15 +1,11 @@
+import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
 import type { ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
 import { createLLMClient, RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore } from '@glass-frontier/worldstate';
-import type { ModelConfigStore } from '@glass-frontier/app';
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { PromptTemplateRuntime } from './templateRuntime';
 
 type GenerateSeedRequest = {
   playerId: string;
@@ -33,20 +29,33 @@ const SeedArraySchema = z.object({
 
 type SingleSeed = z.infer<typeof SingleSeedSchema>;
 
+type SeedTemplatePayload = {
+  breadcrumb: string;
+  location_description: string;
+  location_kind: string;
+  location_name: string;
+  requested: number;
+  tags: string;
+  tone_chips: string;
+  tone_notes: string;
+};
+
 export class ChronicleSeedService {
   readonly #world: WorldSchemaStore;
   readonly #modelConfigStore: ModelConfigStore;
+  readonly #templateManager: PromptTemplateManager;
   readonly #llm: RetryLLMClient;
   readonly #clientCache = new Map<string, RetryLLMClient>();
-  #instructions: string | null = null;
 
   constructor(options: {
     worldStore: WorldSchemaStore;
     modelConfigStore: ModelConfigStore;
+    templateManager: PromptTemplateManager;
     llmClient?: RetryLLMClient;
   }) {
     this.#world = options.worldStore;
     this.#modelConfigStore = options.modelConfigStore;
+    this.#templateManager = options.templateManager;
     this.#llm = options.llmClient ?? createLLMClient();
   }
 
@@ -62,34 +71,34 @@ export class ChronicleSeedService {
       this.#world.listLoreFragmentsByEntity({ entityId: anchor.id, limit: 5 }),
     ]);
 
-    const instructions = await this.#loadInstructions();
-    const client = this.#resolveClient(request.authorizationHeader);
-    const classificationModel = await this.#modelConfigStore.getModelForCategory('classification', request.playerId);
-
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
-
-    try {
-      const seeds = await this.#generateAllSeeds({
+    const templateRuntime = this.#createTemplateRuntime(request.playerId);
+    const [instructions, classificationModel] = await Promise.all([
+      this.#renderSeedInstructions({
         anchor,
-        anchorLore,
-        client,
-        count: requested,
-        instructions,
         location,
-        locationLore,
-        model: classificationModel,
-        playerId: request.playerId,
+        requested,
+        templateRuntime,
         toneChips: request.toneChips,
         toneNotes: request.toneNotes,
-      });
-      return seeds;
-    } catch (error) {
-      console.error('[SeedService] Failed to generate seeds:', error);
-      // Return fallback seeds on error
-      return Array.from({ length: requested }, (_, i) =>
-        this.#fallbackSeed(location, anchor, i + 1)
-      );
-    }
+      }),
+      this.#modelConfigStore.getModelForCategory('classification', request.playerId),
+    ]);
+    const client = this.#resolveClient(request.authorizationHeader);
+
+    return this.#generateAllSeeds({
+      anchor,
+      anchorLore,
+      client,
+      count: requested,
+      instructions,
+      location,
+      locationLore,
+      model: classificationModel,
+      playerId: request.playerId,
+      toneChips: request.toneChips,
+      toneNotes: request.toneNotes,
+    });
   }
 
   async #generateAllSeeds(options: {
@@ -225,50 +234,103 @@ export class ChronicleSeedService {
     return anchor;
   }
 
-  async #loadInstructions(): Promise<string> {
-    if (this.#instructions !== null) {
-      return this.#instructions;
-    }
+  #createTemplateRuntime(playerId: string): PromptTemplateRuntime {
+    return new PromptTemplateRuntime({
+      playerId: playerId.trim(),
+      manager: this.#templateManager,
+    });
+  }
 
-    const templatePath = join(__dirname, '../prompts/templates/seed-generation.md');
-    this.#instructions = await readFile(templatePath, 'utf-8');
-    return this.#instructions;
+  async #renderSeedInstructions(options: {
+    templateRuntime: PromptTemplateRuntime;
+    location: HardState;
+    anchor: HardState;
+    toneChips?: string[];
+    toneNotes?: string;
+    requested: number;
+  }): Promise<string> {
+    const payload = this.#buildSeedTemplatePayload({
+      anchor: options.anchor,
+      location: options.location,
+      requested: options.requested,
+      toneChips: options.toneChips,
+      toneNotes: options.toneNotes,
+    });
+    return options.templateRuntime.render('chronicle-seed', payload);
+  }
+
+  #buildSeedTemplatePayload(options: {
+    location: HardState;
+    anchor: HardState;
+    toneChips?: string[];
+    toneNotes?: string;
+    requested: number;
+  }): SeedTemplatePayload {
+    const toneChips = this.#normalizeToneChips(options.toneChips);
+    const toneNotes = this.#normalizeToneNotes(options.toneNotes);
+    const tags = this.#buildSeedTags(options.location, options.anchor);
+
+    return {
+      breadcrumb: this.#buildBreadcrumb(options.location),
+      location_description: options.location.description ?? 'No description provided.',
+      location_kind: options.location.subkind ?? options.location.kind,
+      location_name: options.location.name,
+      requested: options.requested,
+      tags: tags.length > 0 ? tags.join(', ') : 'none',
+      tone_chips: toneChips.length > 0 ? toneChips.join(', ') : 'none',
+      tone_notes: toneNotes ?? 'none',
+    };
+  }
+
+  #buildBreadcrumb(location: HardState): string {
+    const segments = [location.subkind, location.status].filter(
+      (entry): entry is string => Boolean(entry)
+    );
+    return segments.length > 0 ? segments.join(' › ') : location.name;
+  }
+
+  #buildSeedTags(location: HardState, anchor: HardState): string[] {
+    return [
+      location.subkind,
+      location.status,
+      anchor.kind,
+      anchor.subkind,
+      anchor.status,
+    ].filter((tag): tag is string => Boolean(tag));
+  }
+
+  #normalizeToneChips(chips?: string[]): string[] {
+    if (!Array.isArray(chips)) {
+      return [];
+    }
+    return chips
+      .map((chip) => chip.trim())
+      .filter((chip) => chip.length > 0)
+      .slice(0, 8);
+  }
+
+  #normalizeToneNotes(notes?: string): string | null {
+    if (typeof notes !== 'string') {
+      return null;
+    }
+    const trimmed = notes.trim();
+    return trimmed.length > 0 ? trimmed.slice(0, 240) : null;
   }
 
   #formatTone(chips?: string[], notes?: string): string {
     const parts: string[] = [];
 
-    if (Array.isArray(chips) && chips.length > 0) {
-      const normalized = chips
-        .map((chip) => chip.trim())
-        .filter((chip) => chip.length > 0)
-        .slice(0, 8);
-      if (normalized.length > 0) {
-        parts.push(normalized.join(', '));
-      }
+    const normalizedChips = this.#normalizeToneChips(chips);
+    if (normalizedChips.length > 0) {
+      parts.push(normalizedChips.join(', '));
     }
 
-    if (typeof notes === 'string' && notes.trim().length > 0) {
-      parts.push(notes.trim().slice(0, 240));
+    const normalizedNotes = this.#normalizeToneNotes(notes);
+    if (normalizedNotes) {
+      parts.push(normalizedNotes);
     }
 
     return parts.join('; ');
-  }
-
-  #fallbackSeed(location: HardState, anchor: HardState, index: number): ChronicleSeed {
-    const tags = [
-      location.subkind,
-      location.status,
-      anchor.kind,
-      anchor.status,
-    ].filter((tag): tag is string => Boolean(tag)).slice(0, 4);
-
-    return {
-      id: randomUUID(),
-      tags: tags.length > 0 ? tags : ['mystery'],
-      teaser: `Something unusual is happening at ${location.name}, centered around ${anchor.name}. Investigation required.`,
-      title: `${location.name}: ${anchor.name} Mystery`,
-    };
   }
 
   #sanitizeHeader(header?: string): string | null {

@@ -201,5 +201,12 @@
     "summary": "Hard state prominence levels",
     "details": "Hard state entities now carry a five-level prominence field (forgotten → mythic) with slug-based lookups, allowing filtering by prominence and slug-friendly Atlas/chronicle links.",
     "type": "feature"
+  },
+  {
+    "id": "2025-12-22-seed-generation-template-bundle",
+    "releasedAt": "2025-12-22",
+    "summary": "Chronicle seeds now use app prompt templates",
+    "details": "Seed generation now resolves the chronicle-seed prompt through the app template manager (including player overrides) and removes the legacy local template path so Lambda never looks for bundled prompt files.",
+    "type": "bugfix"
   }
 ]
