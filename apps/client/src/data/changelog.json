@@ -208,5 +208,26 @@
     "summary": "Chronicle seeds now use app prompt templates",
     "details": "Seed generation now resolves the chronicle-seed prompt through the app template manager (including player overrides) and removes the legacy local template path so Lambda never looks for bundled prompt files.",
     "type": "bugfix"
+  },
+  {
+    "id": "2025-12-22-gm-api-timeout",
+    "releasedAt": "2025-12-22",
+    "summary": "GM API timeout increased",
+    "details": "Extended the GM API Lambda timeout to five minutes so longer narrative runs can complete without timing out.",
+    "type": "improvement"
+  },
+  {
+    "id": "2025-12-22-alb-http-api",
+    "releasedAt": "2025-12-22",
+    "summary": "HTTP APIs now run behind an ALB",
+    "details": "Replaced API Gateway with an ALB protected by Cognito auth so the HTTP Lambdas keep the same routes while supporting longer timeouts.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-02-14-auth-preflight-cors",
+    "releasedAt": "2026-02-14",
+    "summary": "Fixed authenticated API CORS preflight failures",
+    "details": "Corrected malformed origin allowlists in the chronicle and GM Lambda handlers, updated all API Lambdas to emit ALB-compatible 204 preflight payloads with explicit bodies/encoding metadata, switched ALB listener auth from cookie-based authenticate-cognito to strict bearer-token jwt-validation (access tokens only), enabled listener-level CORS response headers, moved API clients to send access tokens in Authorization headers, normalized ALB multiValueHeaders into standard headers before tRPC request planning so authenticated calls stop failing with 502 host-header adapter crashes, and normalized ALB query parameters (including URL-decoding encoded ALB values) before tRPC request planning so batched requests no longer fail with \"No procedure found\" or \"%7B... is not valid JSON\" errors.",
+    "type": "bugfix"
   }
 ]

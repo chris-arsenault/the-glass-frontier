@@ -36,7 +36,7 @@ module "chronicle_lambda" {
   handler              = "handler.handler"
   runtime              = var.lambda_node_version
   memory_size          = 512
-  timeout              = 30
+  timeout              = 300
   log_retention_days   = 14
   tags                 = local.tags
 
@@ -50,16 +50,6 @@ module "chronicle_lambda" {
     ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
   })
 
-  http_api_config = {
-    api_id             = aws_apigatewayv2_api.http_api.id
-    execution_arn      = aws_apigatewayv2_api.http_api.execution_arn
-    authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-    authorization_type = "JWT"
-    routes = [
-      { route_key = "POST /chronicle/{proxy+}" },
-      { route_key = "GET /chronicle/{proxy+}" }
-    ]
-  }
 }
 
 module "prompt_api_lambda" {
@@ -81,16 +71,6 @@ module "prompt_api_lambda" {
     DOMAIN_NAME = local.cloudfront_domain
   })
 
-  http_api_config = {
-    api_id             = aws_apigatewayv2_api.http_api.id
-    execution_arn      = aws_apigatewayv2_api.http_api.execution_arn
-    authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-    authorization_type = "JWT"
-    routes = [
-      { route_key = "POST /prompt/{proxy+}" },
-      { route_key = "GET /prompt/{proxy+}" }
-    ]
-  }
 }
 
 module "atlas_api_lambda" {
@@ -112,18 +92,6 @@ module "atlas_api_lambda" {
     DOMAIN_NAME = local.cloudfront_domain
   })
 
-  http_api_config = {
-    api_id             = aws_apigatewayv2_api.http_api.id
-    execution_arn      = aws_apigatewayv2_api.http_api.execution_arn
-    authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-    authorization_type = "JWT"
-    routes = [
-      { route_key = "POST /atlas/{proxy+}" },
-      { route_key = "GET /atlas/{proxy+}" },
-      { route_key = "PUT /atlas/{proxy+}" },
-      { route_key = "DELETE /atlas/{proxy+}" }
-    ]
-  }
 }
 
 module "world_schema_api_lambda" {
@@ -145,17 +113,6 @@ module "world_schema_api_lambda" {
     DOMAIN_NAME = local.cloudfront_domain
   })
 
-  http_api_config = {
-    api_id             = aws_apigatewayv2_api.http_api.id
-    execution_arn      = aws_apigatewayv2_api.http_api.execution_arn
-    authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-    authorization_type = "JWT"
-    routes = [
-      { route_key = "POST /world-schema/{proxy+}" },
-      { route_key = "GET /world-schema/{proxy+}" },
-      { route_key = "DELETE /world-schema/{proxy+}" }
-    ]
-  }
 }
 
 module "gm_api_lambda" {
@@ -168,7 +125,7 @@ module "gm_api_lambda" {
   handler              = "handler.handler"
   runtime              = var.lambda_node_version
   memory_size          = 512
-  timeout              = 30
+  timeout              = 300
   log_retention_days   = 14
   tags                 = local.tags
 
@@ -182,16 +139,6 @@ module "gm_api_lambda" {
     ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
   })
 
-  http_api_config = {
-    api_id             = aws_apigatewayv2_api.http_api.id
-    execution_arn      = aws_apigatewayv2_api.http_api.execution_arn
-    authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-    authorization_type = "JWT"
-    routes = [
-      { route_key = "POST /gm/{proxy+}" },
-      { route_key = "GET /gm/{proxy+}" }
-    ]
-  }
 }
 
 module "chronicle_closer_lambda" {

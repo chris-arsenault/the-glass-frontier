@@ -1,11 +1,12 @@
+import { useIamAuth } from '@glass-frontier/app';
+import { normalizeLambdaProxyEventForTrpc } from '@glass-frontier/node-utils';
 import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 
 import { createContext, initializeForLambda } from './context';
 import { appRouter } from './router';
-import { useIamAuth } from '@glass-frontier/app';
 
-const ALLOW_ORIGINS = new Set([`"https://${process.env.DOMAIN_NAME}`]);
+const ALLOW_ORIGINS = new Set([`https://${process.env.DOMAIN_NAME}`]);
 
 // Cold start initialization promise
 let initPromise: Promise<void> | undefined;
@@ -55,22 +56,29 @@ export const handler = async (
   event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResultV2> => {
+  const normalizedEvent = normalizeLambdaProxyEventForTrpc(event);
+
   // Initialize database pool at cold start (IAM auth is async)
-  if (useIamAuth() && !initPromise) {
+  if (useIamAuth() && initPromise === undefined) {
     initPromise = initializeForLambda();
   }
-  if (initPromise) {
+  if (initPromise !== undefined) {
     await initPromise;
   }
 
   // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
-  const requestMethod = resolveRequestMethod(event);
+  const requestMethod = resolveRequestMethod(normalizedEvent);
   if (requestMethod?.toUpperCase() === 'OPTIONS') {
-    const origin = resolveOriginHeader(event);
-    return { headers: corsFor(origin), statusCode: 204 };
+    const origin = resolveOriginHeader(normalizedEvent);
+    return {
+      body: '',
+      headers: corsFor(origin),
+      isBase64Encoded: false,
+      statusCode: 204,
+    };
   }
 
-  const origin = resolveOriginHeader(event);
+  const origin = resolveOriginHeader(normalizedEvent);
 
   // v11 handler. It reads event.rawPath like "/chronicle/foo.bar" and supports batching via ?batch=1
   return awsLambdaRequestHandler({
@@ -92,7 +100,7 @@ export const handler = async (
      * you can uncomment this to be explicit:
      */
     // endpoint: "/chronicle",
-  })(event, context);
+  })(normalizedEvent, context);
 };
 
 function getAuthorizationHeader(event: APIGatewayProxyEventV2): string | undefined {
