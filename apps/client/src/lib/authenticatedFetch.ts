@@ -46,7 +46,7 @@ export const authenticatedFetch: typeof fetch = async (input, init) => {
   }
 
   const headerBag = mergeHeaders(input, init);
-  headerBag.set('Authorization', `Bearer ${refreshedTokens.idToken}`);
+  headerBag.set('Authorization', `Bearer ${refreshedTokens.accessToken}`);
 
   const retryRequest = buildRequest(input, init, headerBag);
   response = await baseFetch(retryRequest);

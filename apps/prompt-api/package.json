@@ -16,6 +16,7 @@
   "dependencies": {
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
+    "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/ops": "workspace:*",
     "@trpc/server": "^11.7.1",
     "tsup": "^8.5.1",

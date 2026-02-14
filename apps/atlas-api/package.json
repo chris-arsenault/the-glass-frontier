@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@glass-frontier/app": "workspace:*",
+    "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@trpc/server": "^11.1.0",

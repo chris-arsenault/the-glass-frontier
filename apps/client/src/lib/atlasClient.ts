@@ -18,12 +18,13 @@ const resolveAtlasUrl = (): string => {
   return '/atlas';
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const atlasClient = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
       fetch: authenticatedFetch,
       headers() {
-        const token = useAuthStore.getState().tokens?.idToken;
+        const token = useAuthStore.getState().tokens?.accessToken;
         if (typeof token === 'string' && token.length > 0) {
           return { Authorization: `Bearer ${token}` };
         }

@@ -114,6 +114,9 @@ importers:
       '@glass-frontier/app':
         specifier: workspace:*
         version: link:../../packages/app
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../../packages/node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -448,6 +451,9 @@ importers:
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../../packages/dto
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../../packages/node-utils
       '@glass-frontier/ops':
         specifier: workspace:*
         version: link:../../packages/ops
@@ -504,6 +510,9 @@ importers:
       '@glass-frontier/app':
         specifier: workspace:*
         version: link:../../packages/app
+      '@glass-frontier/node-utils':
+        specifier: workspace:*
+        version: link:../../packages/node-utils
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils

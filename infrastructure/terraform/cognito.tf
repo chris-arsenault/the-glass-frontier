@@ -38,12 +38,34 @@ resource "aws_cognito_user_pool_client" "this" {
     "http://localhost:5379/oauth2/idpresponse",
     "https://dev.glass-frontier.com/oauth2/idpresponse",
     "https://glass-frontier.com/oauth2/idpresponse",
+    "https://${local.api_domain}/oauth2/idpresponse",
   ]
 
   logout_urls = [
     "http://localhost:5379/",
     "https://dev.glass-frontier.com/",
     "https://glass-frontier.com/",
+    "https://${local.api_domain}/",
+  ]
+}
+
+resource "aws_cognito_user_pool_client" "alb" {
+  name            = "${var.project}-alb-client"
+  user_pool_id    = aws_cognito_user_pool.this.id
+  generate_secret = true
+
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+
+  supported_identity_providers = ["COGNITO"]
+
+  callback_urls = [
+    "https://${local.api_domain}/oauth2/idpresponse",
+  ]
+
+  logout_urls = [
+    "https://${local.api_domain}/",
   ]
 }
 
