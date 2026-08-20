@@ -1,5 +1,8 @@
 .idea/
 node_modules/
+*.log
+package-lock.json
+/response.json
 coverage/
 dist/
 /playwright-report/
@@ -8,11 +11,12 @@ dist/
 deliveries/
 .env
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 artifacts/
 .turbo/
 tsconfig.tsbuildinfo
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
 /.beads/beads.left.jsonl
 /.beads/beads.left.meta.json

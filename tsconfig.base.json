@@ -28,6 +28,8 @@
       "@glass-frontier/skill-check-resolver/*": ["packages/skill-check-resolver/src/*"],
       "@glass-frontier/app": ["packages/app/src/index.ts"],
       "@glass-frontier/app/*": ["packages/app/src/*"],
+      "@glass-frontier/atlas-api": ["apps/atlas-api/src/index.ts"],
+      "@glass-frontier/atlas-api/*": ["apps/atlas-api/src/*"],
       "@glass-frontier/worldstate": ["packages/worldstate/src/index.ts"],
       "@glass-frontier/worldstate/*": ["packages/worldstate/src/*"],
       "@glass-frontier/ops": ["packages/ops/src/index.ts"],
@@ -41,7 +43,9 @@
       "@glass-frontier/playwright": ["apps/playwright/src/index.ts"],
       "@glass-frontier/playwright/*": ["apps/playwright/src/*"],
       "@glass-frontier/gm-api": ["apps/gm-api/src/index.ts"],
-      "@glass-frontier/gm-api/*": ["apps/gm-api/src/*"]
+      "@glass-frontier/gm-api/*": ["apps/gm-api/src/*"],
+      "@glass-frontier/world-schema-api": ["apps/world-schema-api/src/index.ts"],
+      "@glass-frontier/world-schema-api/*": ["apps/world-schema-api/src/*"]
     }
   }
 }

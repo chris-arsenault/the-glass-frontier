@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 
-import type { PlayerSettings } from '../../../state/chronicleState';
 import { trpcClient } from '../../../lib/trpcClient';
+import type { PlayerSettings } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import '../shared/modalBase.css';
@@ -17,7 +17,7 @@ type ModelConfig = {
   costPer1kOutput: number;
   supportsReasoning: boolean;
   metadata: Record<string, unknown>;
-  updatedAt: Date;
+  updatedAt: string;
 };
 
 const VISIBILITY_LEVELS: Array<{
@@ -55,7 +55,7 @@ const levelIndex = (value: PlayerSettings['feedbackVisibility']) =>
     VISIBILITY_LEVELS.findIndex((entry) => entry.value === value)
   );
 
-export function PlayerSettingsModal(): JSX.Element | null {
+export function PlayerSettingsModal(): React.JSX.Element | null {
   const isOpen = useUiStore((state) => state.isPlayerSettingsModalOpen);
   const close = useUiStore((state) => state.closePlayerSettingsModal);
   const playerSettings = useChronicleStore((state) => state.playerSettings);
@@ -79,7 +79,7 @@ export function PlayerSettingsModal(): JSX.Element | null {
   const [modelError, setModelError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !playerId) return;
+    if (!isOpen || !playerId) {return;}
 
     let cancelled = false;
 
@@ -134,7 +134,7 @@ export function PlayerSettingsModal(): JSX.Element | null {
   };
 
   const handleModelChange = async (category: 'prose' | 'classification', modelId: string) => {
-    if (!playerId) return;
+    if (!playerId) {return;}
 
     // Optimistically update UI
     if (category === 'prose') {
@@ -148,9 +148,9 @@ export function PlayerSettingsModal(): JSX.Element | null {
 
     try {
       await trpcClient.setPlayerModelCategory.mutate({
-        playerId,
         category,
         modelId,
+        playerId,
       });
     } catch (error) {
       console.error('Failed to update model:', error);

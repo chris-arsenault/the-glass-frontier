@@ -4,7 +4,7 @@ import type {
   AttributeTier as AttributeTierValue,
   SkillTier as SkillTierValue,
 } from '@glass-frontier/dto';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import type { CharacterCreationDraft } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
@@ -60,11 +60,10 @@ export function CreateCharacterModal() {
     setError(null);
   };
 
-  useEffect(() => {
-    if (!isOpen) {
-      resetForm();
-    }
-  }, [isOpen]);
+  const handleClose = () => {
+    resetForm();
+    close();
+  };
 
   const attributeOptions = useMemo(() => Attribute.options, []);
   const attributeTierOptions = useMemo(() => AttributeTier.options, []);
@@ -115,8 +114,7 @@ export function CreateCharacterModal() {
 
     try {
       await createCharacter(draft);
-      resetForm();
-      close();
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create character.');
     } finally {
@@ -130,11 +128,11 @@ export function CreateCharacterModal() {
 
   return (
     <>
-      <div className="modal-backdrop open" onClick={close} aria-hidden="true" />
+      <div className="modal-backdrop open" onClick={handleClose} aria-hidden="true" />
       <div className="modal open" role="dialog" aria-modal="true" aria-label="Create character">
         <header className="modal-header">
           <h2>Create Character</h2>
-          <button type="button" className="modal-close" onClick={close} aria-label="Close dialog">
+          <button type="button" className="modal-close" onClick={handleClose} aria-label="Close dialog">
             ×
           </button>
         </header>
@@ -253,7 +251,7 @@ export function CreateCharacterModal() {
           {error ? <p className="form-error">{error}</p> : null}
 
           <footer className="modal-footer">
-            <button type="button" className="modal-secondary" onClick={close}>
+            <button type="button" className="modal-secondary" onClick={handleClose}>
               Cancel
             </button>
             <button type="submit" className="modal-primary" disabled={isSubmitting || !playerId}>

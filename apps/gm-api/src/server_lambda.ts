@@ -81,7 +81,7 @@ export const handler = async (
   const origin = resolveOriginHeader(normalizedEvent);
 
   // v11 handler. It reads event.rawPath like "/chronicle/foo.bar" and supports batching via ?batch=1
-  return awsLambdaRequestHandler({
+  return awsLambdaRequestHandler<typeof appRouter, APIGatewayProxyEventV2>({
     batching: { enabled: true },
     // You can pass event/context into your own context factory if needed.
     createContext: ({ event }) =>

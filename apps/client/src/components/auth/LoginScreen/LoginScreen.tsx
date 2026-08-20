@@ -209,6 +209,7 @@ const PasswordField = ({ disabled, id, label, onChange, value }: PasswordFieldPr
 );
 
 const LOCAL_AUTH_ENABLED = String(import.meta.env.VITE_COGNITO_CLIENT_ID ?? '').toLowerCase() === 'local-e2e';
+const LOCAL_PLAYER_ID = 'playwright-e2e';
 
 const encodeSegment = (payload: Record<string, unknown>) => {
   const json = JSON.stringify(payload);
@@ -260,7 +261,14 @@ const useLoginViewModel = () => {
     if (!LOCAL_AUTH_ENABLED) {
       return;
     }
-    const idToken = `${encodeSegment({ alg: 'none', typ: 'JWT' })}.${encodeSegment({ 'cognito:groups': ['moderator'], sub: 'playwright-e2e' })}.signature`;
+    const header = encodeSegment({ alg: 'none', typ: 'JWT' });
+    const idToken = `${header}.${encodeSegment({ 'cognito:groups': ['moderator'], sub: LOCAL_PLAYER_ID })}.`;
+    const accessToken = `${header}.${encodeSegment({
+      client_id: 'local-e2e',
+      'cognito:groups': ['moderator'],
+      sub: LOCAL_PLAYER_ID,
+      token_use: 'access',
+    })}.`;
     useAuthStore.setState({
       challengeUser: null,
       error: null,
@@ -268,11 +276,11 @@ const useLoginViewModel = () => {
       isAuthenticating: false,
       newPasswordRequired: false,
       tokens: {
-        accessToken: 'test-access-token',
+        accessToken,
         idToken,
         refreshToken: 'test-refresh-token',
       },
-      username: 'playwright-e2e',
+      username: LOCAL_PLAYER_ID,
     });
   }, []);
 
@@ -280,8 +288,8 @@ const useLoginViewModel = () => {
     canLocalLogin: LOCAL_AUTH_ENABLED,
     error,
     fallbackUsername,
-    handleLogin,
     handleLocalLogin,
+    handleLogin,
     handlePasswordUpdate,
     isAuthenticating,
     newPasswordRequired,

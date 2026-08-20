@@ -1,6 +1,6 @@
-import type { Pool } from 'pg';
 import { createOpsStore, useIamAuth, type ModelUsageRecord } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
+import type { Pool } from 'pg';
 
 export class ModelUsageTracker {
   readonly #store: ReturnType<typeof createOpsStore>;

@@ -8,18 +8,18 @@ type LambdaProxyEventLike = {
   queryStringParameters?: HeaderMap;
   multiValueQueryStringParameters?: MultiValueMap;
   rawQueryString?: string;
-  requestContext?: {
-    elb?: unknown;
-  };
+  requestContext?: unknown;
 };
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 
-const isAlbEvent = (event: LambdaProxyEventLike): boolean =>
-  typeof event.requestContext === 'object' &&
-  event.requestContext !== null &&
-  'elb' in event.requestContext;
+const isAlbEvent = (event: LambdaProxyEventLike): boolean => {
+  const requestContext = event.requestContext;
+  return typeof requestContext === 'object' &&
+    requestContext !== null &&
+    'elb' in requestContext;
+};
 
 const collectHeaderEntries = (
   source: Record<string, string | undefined> | undefined
@@ -102,14 +102,14 @@ const collectMultiValueQueryEntries = (
 ): Array<[string, string]> => collectMultiValueEntries(source, decodeValues, false);
 
 const toHeaderMap = (entries: Array<[string, string]>): HeaderMap =>
-  Object.fromEntries(entries) as HeaderMap;
+  Object.fromEntries(entries);
 
 const toQueryMap = (source: HeaderMap): QueryMap =>
   Object.fromEntries(
-    Object.entries(source).flatMap(([key, value]) =>
-      typeof value === 'string' ? ([[key, value]] as Array<[string, string]>) : []
+    Object.entries(source).flatMap<[string, string]>(([key, value]) =>
+      typeof value === 'string' ? [[key, value]] : []
     )
-  ) as QueryMap;
+  );
 
 export const normalizeLambdaProxyEventForTrpc = <TEvent extends LambdaProxyEventLike>(
   event: TEvent

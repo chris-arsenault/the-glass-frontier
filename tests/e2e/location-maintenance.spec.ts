@@ -1,15 +1,17 @@
 import { expect, test } from '@playwright/test';
 
 import {
-  bootstrapChronicle,
+  authenticate,
   openPlayerMenu,
   resetPlaywrightState,
   resetWiremockScenarios,
-  sendTurn,
 } from './utils';
 
-test.describe('Location maintenance relationships', () => {
+const GLASS_WARDENS_ID = '88888888-7777-4666-8555-444444444444';
+
+test.describe('World Atlas relationships', () => {
   test.beforeEach(async ({ request }) => {
+    await resetPlaywrightState(request);
     await resetWiremockScenarios(request);
   });
 
@@ -17,53 +19,25 @@ test.describe('Location maintenance relationships', () => {
     await resetPlaywrightState(request);
   });
 
-  test('adds and removes adjacency for a newly created place', async ({ page }) => {
-    const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
-    await sendTurn(
-      page,
-      chatInput,
-      '#loc:maintenance #beat:update Survey the maintenance corridors.'
-    );
+  test('adds and removes a relationship between fixture entities', async ({ page }) => {
+    await page.goto('/');
+    await authenticate(page, { groups: ['moderator'] });
 
     const menu = await openPlayerMenu(page);
-    await menu.getByRole('button', { name: 'Location Maintenance' }).click();
-    await expect(page.getByRole('heading', { name: 'Location Maintenance' })).toBeVisible();
+    await menu.getByRole('button', { name: 'World Atlas' }).click();
+    await expect(page.getByRole('heading', { name: 'World Atlas' })).toBeVisible();
 
     await page.getByRole('button', { name: /Luminous Quay/i }).click();
-    const gridRows = page.locator('.MuiDataGrid-row');
-    const maintenanceRow = gridRows.filter({ hasText: 'Maintenance Bay' }).first();
-    await expect(maintenanceRow).toBeVisible({ timeout: 15_000 });
-    await maintenanceRow.scrollIntoViewIfNeeded();
-    const relationshipsButton = maintenanceRow.getByRole('button', {
-      name: /Manage relationships for Maintenance Bay/i,
-    });
-    await expect(relationshipsButton).toBeVisible({ timeout: 10_000 });
-    await relationshipsButton.click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Luminous Quay' })).toBeVisible();
 
-    const dialog = page.getByRole('dialog', { name: 'Manage relationships' });
-    await expect(dialog).toBeVisible();
+    const relationshipEditor = page.locator('.atlas-add-link');
+    await relationshipEditor.locator('select').selectOption('related_to');
+    await relationshipEditor.getByPlaceholder('Target entity id').fill(GLASS_WARDENS_ID);
+    await relationshipEditor.getByRole('button', { name: 'Add link' }).click();
 
-    await dialog.getByLabel('Target location').selectOption({ label: 'Prism Walk' });
-    await dialog.getByLabel('Relationship type').selectOption('ADJACENT_TO');
-    await dialog.getByRole('button', { name: 'Add relationship' }).click();
-
-    const newEdgeRow = dialog
-      .locator('.lm-edge-list')
-      .first()
-      .locator('li')
-      .filter({ hasText: 'Prism Walk' });
-    await expect(newEdgeRow).toBeVisible({ timeout: 10_000 });
-
-    await newEdgeRow.getByRole('button', { name: '×' }).click();
-    await expect(
-      dialog
-        .locator('.lm-edge-list')
-        .first()
-        .locator('li')
-        .filter({ hasText: 'Prism Walk' })
-    ).toHaveCount(0, { timeout: 15_000 });
-
-    await dialog.getByRole('button', { name: 'Close' }).click();
-    await expect(dialog).toBeHidden();
+    const relationship = page.locator('.atlas-link-row').filter({ hasText: 'Glass Wardens' });
+    await expect(relationship).toContainText('related_to', { timeout: 10_000 });
+    await relationship.getByRole('button', { name: 'Remove' }).click();
+    await expect(relationship).toHaveCount(0, { timeout: 10_000 });
   });
 });

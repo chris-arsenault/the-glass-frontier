@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { GraphContext } from '../../../types.js';
-import {LlmClassifierNode} from "./LlmClassiferNode";
+import { LlmClassifierNode } from './LlmClassiferNode';
 
 const SummaryResponseSchema = z.object({
   shouldCloseChronicle: z.boolean(),
@@ -14,13 +14,13 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
   readonly id = 'gm-summary';
   constructor() {
     super({
+      applyResult: (context, result) => this.#applySummary(context, result),
       id: 'gm-summary',
       schema: SummaryResponseSchema,
       schemaName: 'gm_summary_response',
-      applyResult: (context, result) => this.#applySummary(context, result),
       shouldRun: (context) => { return this.#canSummarize(context); },
       telemetryTag: 'llm.gm-summary'
-    })
+    });
   }
 
   #canSummarize(context: GraphContext): boolean {
@@ -34,7 +34,7 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
       ...context,
       gmSummary: response.summary,
       shouldCloseChronicle: response.shouldCloseChronicle,
-    }
+    };
   }
 }
 

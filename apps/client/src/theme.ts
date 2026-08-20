@@ -1,4 +1,5 @@
 import { createTheme } from '@mui/material/styles';
+import type {} from '@mui/x-data-grid/themeAugmentation';
 
 // Design tokens aligned with design-tokens.css
 const primaryAccent = '#6c8bff';
@@ -8,6 +9,17 @@ const backgroundColor = '#0f1729';
 
 export const glassFrontierTheme = createTheme({
   components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '999px', // --radius-full
+          fontSize: '0.875rem', // --text-sm
+          fontWeight: 600,
+          padding: '0.5rem 1rem', // --space-2 --space-4
+          textTransform: 'none',
+        },
+      },
+    },
     MuiDataGrid: {
       styleOverrides: {
         root: {
@@ -20,20 +32,9 @@ export const glassFrontierTheme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundImage: 'none',
           backgroundColor: surfaceColor,
+          backgroundImage: 'none',
           borderRadius: '0.75rem', // --radius-md
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: '999px', // --radius-full
-          textTransform: 'none',
-          fontSize: '0.875rem', // --text-sm
-          fontWeight: 600,
-          padding: '0.5rem 1rem', // --space-2 --space-4
         },
       },
     },
@@ -59,6 +60,15 @@ export const glassFrontierTheme = createTheme({
     borderRadius: 12, // --radius-md in pixels
   },
   typography: {
+    body1: {
+      fontSize: '1rem', // --text-base
+    },
+    body2: {
+      fontSize: '0.875rem', // --text-sm
+    },
+    caption: {
+      fontSize: '0.75rem', // --text-xs
+    },
     fontFamily: '"Inter", "Segoe UI", sans-serif',
     fontSize: 16, // --text-base
     h1: {
@@ -69,15 +79,6 @@ export const glassFrontierTheme = createTheme({
     h2: {
       fontSize: '1.25rem', // --text-lg
       fontWeight: 600,
-    },
-    body1: {
-      fontSize: '1rem', // --text-base
-    },
-    body2: {
-      fontSize: '0.875rem', // --text-sm
-    },
-    caption: {
-      fontSize: '0.75rem', // --text-xs
     },
   },
 });

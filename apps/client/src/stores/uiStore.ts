@@ -11,7 +11,6 @@ type UiState = {
   closeGuideModal: () => void;
   closePlayerMenu: () => void;
   closePlayerSettingsModal: () => void;
-  closePlayerMenu: () => void;
   closeTemplateDrawer: () => void;
   expandedMessages: ExpandedMessages;
   isBugReportModalOpen: boolean;

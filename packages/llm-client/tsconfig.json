@@ -11,6 +11,9 @@
   },
   "include": ["src"],
   "references": [
+    { "path": "../app" },
+    { "path": "../node-utils" },
+    { "path": "../ops" },
     { "path": "../utils" }
   ]
 }

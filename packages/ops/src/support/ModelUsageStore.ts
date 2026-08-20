@@ -1,5 +1,5 @@
-import type { Pool } from 'pg';
 import { log } from '@glass-frontier/utils';
+import type { Pool } from 'pg';
 
 export type ModelUsageRecord = {
   playerId: string;
@@ -39,8 +39,8 @@ export class ModelUsageStore {
     } catch (error) {
       log('error', 'model_usage.record_failed', {
         message: error instanceof Error ? error.message : 'unknown',
-        playerId: record.playerId,
         modelId: record.modelId,
+        playerId: record.playerId,
       });
       throw error;
     }

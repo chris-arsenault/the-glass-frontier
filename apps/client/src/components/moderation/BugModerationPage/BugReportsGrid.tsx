@@ -99,14 +99,14 @@ const useColumns = (): Array<GridColDef<GridRow>> =>
         field: 'status',
         headerName: 'Status',
         minWidth: 140,
-        valueFormatter: (params) => formatBugStatus(params.value as BugReportStatus),
+        valueFormatter: (value) => formatBugStatus(value as BugReportStatus),
       },
       { field: 'playerId', headerName: 'Player', minWidth: 160 },
       {
         field: 'chronicleId',
         headerName: 'Chronicle',
         minWidth: 220,
-        valueFormatter: (params) => (params.value ? String(params.value) : '—'),
+        valueFormatter: (value) => (value ? String(value) : '—'),
       },
       {
         field: 'createdAtLabel',
@@ -187,7 +187,7 @@ export const BugReportsGrid = ({
           disableColumnMenu
           disableRowSelectionOnClick
           getRowClassName={(params: GridRowClassNameParams) =>
-            params.id === selectedReportId ? 'bug-grid-row--selected' : ''
+            params.id === selectedReportId ? 'bug-grid-row-selected' : ''
           }
           loading={isLoading}
           onPaginationModelChange={setPaginationModel}

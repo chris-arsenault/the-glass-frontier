@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, complexity, max-lines-per-function */
+/* eslint-disable complexity, max-lines-per-function */
 import type { PlayerFeedbackRecord } from '@glass-frontier/dto';
 import { PlayerFeedbackRecordSchema } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';

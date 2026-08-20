@@ -63,8 +63,8 @@
 .session-manager-section-controls {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
   flex-wrap: wrap;
+  gap: 0.35rem;
   justify-content: flex-end;
 }
 
@@ -98,12 +98,12 @@
   display: inline-flex;
   flex: 1;
   padding: 0.2rem 0;
+  font: inherit;
   color: #e2e8f0;
   background: none;
   align-items: center;
   border: none;
   cursor: pointer;
-  font: inherit;
   font-weight: 600;
   gap: 0.4rem;
   justify-content: flex-start;
@@ -157,8 +157,8 @@
 }
 
 .session-manager-card-disabled {
-  opacity: 0.6;
   filter: grayscale(0.4);
+  opacity: 0.6;
 }
 
 .session-manager-actions {
@@ -260,22 +260,22 @@
 
 .session-manager-beat-list {
   display: flex;
+  margin: 0;
+  padding: 0;
   flex-direction: column;
   gap: 0.5rem;
   list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
 .session-manager-beat {
+  position: relative;
+  display: flex;
   padding: 0.5rem 0.6rem;
   background: rgb(2 6 23 / 85%);
   border: 1px solid rgb(148 163 184 / 30%);
   border-radius: 0.55rem;
-  display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  position: relative;
 }
 
 .session-manager-beat-focused {
@@ -286,22 +286,22 @@
 .session-manager-beat-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.35rem;
+  justify-content: space-between;
 }
 
 .session-manager-beat-title {
-  font-weight: 600;
   color: #e2e8f0;
+  font-weight: 600;
 }
 
 .session-manager-beat-status {
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   padding: 0.1rem 0.4rem;
   border: 1px solid rgb(148 163 184 / 40%);
   border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .session-manager-beat[data-status='succeeded'] .session-manager-beat-status {
@@ -318,14 +318,15 @@
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 0.4rem;
-  min-width: 220px;
-  max-width: 280px;
+  padding: 0.45rem 0.6rem;
+  color: #cbd5f5;
   background: rgb(15 23 42 / 95%);
   border: 1px solid rgb(96 165 250 / 35%);
   border-radius: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  color: #cbd5f5;
+  box-shadow: 0 8px 20px rgb(2 6 23 / 70%);
+  margin-top: 0.4rem;
+  max-width: 280px;
+  min-width: 220px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
@@ -333,25 +334,24 @@
     opacity 120ms ease,
     transform 120ms ease;
   z-index: 5;
-  box-shadow: 0 8px 20px rgb(2 6 23 / 70%);
 }
 
 .session-manager-beat-detail-label {
   display: inline-flex;
-  margin-bottom: 0.25rem;
   padding: 0.1rem 0.4rem;
+  color: #bfdbfe;
   border: 1px solid rgb(148 163 184 / 35%);
   border-radius: 999px;
   font-size: 0.65rem;
   letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
   text-transform: uppercase;
-  color: #bfdbfe;
 }
 
 .session-manager-beat-detail p {
   margin: 0;
-  font-size: 0.8rem;
   color: #dee6ff;
+  font-size: 0.8rem;
 }
 
 .session-manager-beat:focus-within .session-manager-beat-detail,

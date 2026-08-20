@@ -65,9 +65,9 @@ const initialState: ChronicleStartState = {
   customSeedTitle: '',
   listViewFallback: false,
   seeds: [],
+  selectedAnchorEntity: null,
   selectedLocation: null,
   selectedLocationFull: null,
-  selectedAnchorEntity: null,
   step: 'location',
   toneChips: [],
   toneNotes: '',
@@ -106,13 +106,13 @@ export const useChronicleStartStore = create<ChronicleStartState & ChronicleStar
           customSeedTitle: '',
           seeds,
         }),
+      setSelectedAnchorEntity: (selection) => set({ selectedAnchorEntity: selection }),
       setSelectedLocation: (selection) =>
         set((state) => ({
           selectedLocation: selection,
           step: selection ? state.step : 'location',
         })),
       setSelectedLocationFull: (entity) => set({ selectedLocationFull: entity }),
-      setSelectedAnchorEntity: (selection) => set({ selectedAnchorEntity: selection }),
       setStep: (step) => set({ step }),
       setToneNotes: (toneNotes) => set({ toneNotes }),
       toggleToneChip: (chip) =>

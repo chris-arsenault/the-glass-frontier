@@ -3,13 +3,13 @@
   display: inline-flex;
   padding: 0.125rem var(--space-2);
   color: var(--text-secondary);
+  background: rgb(148 163 184 / 10%);
   align-items: center;
   border: none;
   border-radius: var(--radius-full);
+  box-shadow: 0 0 0 1px var(--border-muted);
   cursor: default;
   gap: var(--space-2);
-  background: rgb(148 163 184 / 10%);
-  box-shadow: 0 0 0 1px var(--border-muted);
   transition: box-shadow 120ms ease, color 120ms ease;
 }
 
@@ -29,12 +29,12 @@
   width: max(260px, 18vw);
   padding: var(--space-3);
   background: var(--surface-primary);
+  backdrop-filter: blur(12px);
   border: none;
   border-radius: var(--radius-md);
   box-shadow:
     0 0 0 1px var(--border-accent),
     var(--shadow-lg);
-  backdrop-filter: blur(12px);
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -10px);
@@ -109,8 +109,8 @@
 }
 
 .inventory-delta-row .delta-quantity {
-  justify-self: end;
   font-weight: 600;
+  justify-self: end;
 }
 
 .inventory-delta-row .delta-description {

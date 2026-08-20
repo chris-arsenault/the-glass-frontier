@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 import type { AuditReviewRecord } from '@glass-frontier/dto';
 import { AuditReviewRecordSchema } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';

@@ -10,7 +10,7 @@ import './BugReportModal.css';
 
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
-export function BugReportModal(): JSX.Element | null {
+export function BugReportModal(): React.JSX.Element | null {
   const isOpen = useUiStore((state) => state.isBugReportModalOpen);
   if (!isOpen) {
     return null;
@@ -20,7 +20,7 @@ export function BugReportModal(): JSX.Element | null {
 
 const createInitialChronicle = (value: string | null): string => (value ?? '').trim();
 
-function BugReportModalContent(): JSX.Element {
+function BugReportModalContent(): React.JSX.Element {
   const close = useUiStore((state) => state.closeBugReportModal);
   const tokens = useAuthStore((state) => state.tokens);
   const payload = decodeJwtPayload(tokens?.idToken);

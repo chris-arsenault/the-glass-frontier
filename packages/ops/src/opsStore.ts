@@ -1,10 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import type {
   AuditLogEntry,
   AuditQueueItem,
   AuditReviewRecord,
   PlayerFeedbackRecord,
 } from '@glass-frontier/dto';
+import { PromptTemplateIds, type PromptTemplateId } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
 import { createPool } from './pg';
@@ -13,8 +14,8 @@ import { AuditGroupStore } from './support/audit/AuditGroupStore';
 import { AuditLogStore } from './support/audit/AuditLogStore';
 import { AuditReviewStore } from './support/audit/AuditReviewStore';
 import { BugReportStore } from './support/BugReportStore';
-import { TokenUsageStore } from './support/TokenUsageStore';
 import { ModelUsageStore } from './support/ModelUsageStore';
+import { TokenUsageStore } from './support/TokenUsageStore';
 
 type AuditQueueFilters = {
   cursor?: string;
@@ -26,6 +27,7 @@ type AuditQueueFilters = {
   scopeType?: string;
   search?: string;
   startDate?: number;
+  templateId?: PromptTemplateId;
 };
 
 type AuditEntryBundle = {
@@ -73,6 +75,7 @@ export class OpsStore {
       scopeType: filters.scopeType,
       search: filters.search,
       startDate: filters.startDate,
+      templateId: filters.templateId,
     });
     const groupIds = Array.from(new Set(entries.map((entry) => entry.groupId)));
     const reviewsByGroup = new Map<string, Map<string, AuditReviewRecord>>();
@@ -153,7 +156,9 @@ export class OpsStore {
         status: bundle.review?.status ?? 'unreviewed',
         storageKey: bundle.entry.storageKey,
         tags: bundle.review?.tags ?? [],
-        templateId: bundle.review?.templateId ?? null,
+        templateId: bundle.review?.templateId
+          ?? PromptTemplateIds.find((templateId) => templateId === bundle.entry.nodeId)
+          ?? null,
         turnId: typeof metadata?.turnId === 'string' ? metadata.turnId : null,
         turnSequence: typeof metadata?.turnSequence === 'number' ? metadata.turnSequence : null,
       };

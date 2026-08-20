@@ -1,119 +1,64 @@
-import type { LocationEntity, LocationState } from '@glass-frontier/dto';
-import type { LocationDeltaDecision } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
+import type { LocationDeltaDecision, LocationEntity } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
+import { randomUUID } from 'node:crypto';
 
 import type { GraphContext } from '../types';
 
-export async function applyLocationUpdate(context: GraphContext): Promise<LocationState | null> {
-  log('info', 'Applying Location Update');
-
-  const characterId = context.chronicleState.chronicle.characterId;
+export async function applyLocationUpdate(context: GraphContext): Promise<LocationEntity | null> {
+  log('info', 'Applying location update');
   const delta = context.locationDelta;
-  const currentLocationId =
-    context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
-
-  if (!isNonEmptyString(characterId) || !delta || delta.action === 'no_change') {
+  if (delta === undefined || delta.action === 'no_change') {
     return null;
   }
 
-  if (!isNonEmptyString(currentLocationId)) {
-    log('warn', 'Cannot apply location update: no current location');
-    return null;
-  }
-
-  // Look up destination by name
   const destination = await findLocationByName(context, delta.destination);
-
-  let targetPlaceId: string;
-
-  if (destination) {
-    // Move to existing location
-    targetPlaceId = destination.id;
-  } else {
-    // Create new location with relationship
-    const newPlace = await createNewLocation(context, currentLocationId, delta);
-    targetPlaceId = newPlace.id;
-  }
-
-  // Move character to the target location
-  const result = await context.chronicleStore.moveCharacterToLocation({
-    characterId,
-    locationId: targetPlaceId,
-  });
-  return {
-    characterId: result.characterId,
-    locationId: result.locationId,
-    note: result.note,
-    updatedAt: result.updatedAt,
-  };
+  return destination ?? createSessionLocation(delta);
 }
 
 async function findLocationByName(
   context: GraphContext,
   name: string
 ): Promise<LocationEntity | null> {
-  const currentLocationId =
-    context.chronicleState.location?.id ?? context.chronicleState.chronicle.locationId;
-
-  if (!isNonEmptyString(currentLocationId)) {
+  const currentLocation = context.chronicleState.location;
+  const currentLocationId = currentLocation?.id ?? context.chronicleState.chronicle.locationId;
+  if (
+    !isNonEmptyString(currentLocationId) ||
+    currentLocation?.status === 'session-only'
+  ) {
     return null;
   }
 
-  try {
-    const neighbors = await context.locationHelpers.getNeighborsGrouped({
-      id: currentLocationId,
-      minProminence: 'recognized',
-      maxHops: 2,
-    });
-
-    const normalizedName = normalizeName(name);
-    for (const entries of Object.values(neighbors)) {
-      for (const entry of entries) {
-        if (normalizeName(entry.neighbor.name) === normalizedName) {
-          return entry.neighbor;
-        }
-      }
-    }
-  } catch (error) {
-    log('error', 'Error finding location by name', { error });
-  }
-
-  return null;
-}
-
-async function createNewLocation(
-  context: GraphContext,
-  anchorId: string,
-  delta: LocationDeltaDecision
-): Promise<LocationEntity> {
-  const relationship = mapLinkToRelationship(delta.link);
-
-  return context.locationHelpers.createWithRelationship({
-    anchorId,
-    name: delta.destination,
-    relationship,
+  const neighbors = await context.locationHelpers.getNeighborsGrouped({
+    id: currentLocationId,
+    maxHops: 2,
+    minProminence: 'recognized',
   });
+  const normalizedName = normalizeName(name);
+  return (
+    Object.values(neighbors)
+      .flat()
+      .find((entry) => normalizeName(entry.neighbor.name) === normalizedName)?.neighbor ?? null
+  );
 }
 
-function mapLinkToRelationship(link: LocationDeltaDecision['link']): string {
-  switch (link) {
-    case 'inside':
-      return 'contains';
-    case 'adjacent':
-    case 'same':
-      return 'adjacent_to';
-    case 'linked':
-      return 'connected_by';
-    default:
-      return 'related_to';
-  }
-}
+const createSessionLocation = (delta: LocationDeltaDecision): LocationEntity => {
+  const id = randomUUID();
+  const timestamp = Date.now();
+  return {
+    createdAt: timestamp,
+    id,
+    kind: 'location',
+    name: delta.destination.trim(),
+    prominence: 'recognized',
+    slug: `session-${id}`,
+    status: 'session-only',
+    tags: [`relationship:${delta.link}`],
+    updatedAt: timestamp,
+  };
+};
 
 function normalizeName(value: string): string {
   const lower = value.toLowerCase();
   const stripped = lower.replace(/[^a-z0-9]+/g, '');
-  if (stripped.length > 0) {
-    return stripped;
-  }
-  return lower.trim();
+  return stripped.length > 0 ? stripped : lower.trim();
 }

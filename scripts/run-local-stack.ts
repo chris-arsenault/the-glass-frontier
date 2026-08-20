@@ -1,55 +1,55 @@
-import { CreateQueueCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { execa } from 'execa';
 import waitOn from 'wait-on';
 
 import { PidRegistry } from './pid-registry';
 
 type StackMode = 'mock-openai' | 'live-openai';
-type SeedMode = 'e2e-fixtures' | 'world-seed';
-type ReseedMode = 'auto' | 'force';
 type DbMode = 'preserve' | 'drop';
 
 const MOCK_ENV: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
-  AWS_SECRET_ACCESS_KEY: 'test',
-  AWS_REGION: 'us-east-1',
   AWS_DEFAULT_REGION: 'us-east-1',
+  AWS_REGION: 'us-east-1',
+  AWS_SECRET_ACCESS_KEY: 'test',
   AWS_SQS_ENDPOINT: 'http://127.0.0.1:4566',
-  TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
-  CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
-  GLASS_FRONTIER_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
-  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
-  OPENAI_API_BASE: 'http://localhost:8080/v1',
-  OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
-  OPENAI_API_KEY: 'test-openai-key',
   CHRONICLE_API_PORT: '7000',
-  NARRATIVE_PORT: '7000',
-  PROMPT_API_PORT: '7400',
-  LOCATION_API_PORT: '7300',
+  CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
+  COGNITO_APP_CLIENT_ID: 'local-e2e',
+  COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
+  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
+  GLASS_FRONTIER_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   GM_API_PORT: '7001',
-  VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
-  VITE_COGNITO_CLIENT_ID: 'local-e2e',
-  VITE_PROGRESS_WS_URL: 'ws://localhost:8787',
+  NARRATIVE_PORT: '7000',
+  OPENAI_API_BASE: 'http://localhost:8080/v1',
+  OPENAI_API_KEY: 'test-openai-key',
+  OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
   PLAYWRIGHT_RESET_ENABLED: '1',
+  PROMPT_API_PORT: '7400',
+  TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
+  VITE_COGNITO_CLIENT_ID: 'local-e2e',
+  VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
+  VITE_PROGRESS_WS_URL: 'ws://localhost:8787',
 };
 
 const LIVE_OPENAI_ENV: Record<string, string> = {
   ...MOCK_ENV,
-  OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? 'https://api.openai.com/v1',
-  OPENAI_CLIENT_BASE: process.env.OPENAI_CLIENT_BASE ?? 'https://api.openai.com/v1',
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '',
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? 'test',
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? 'test',
+  OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? 'https://api.openai.com/v1',
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+  OPENAI_CLIENT_BASE: process.env.OPENAI_CLIENT_BASE ?? 'https://api.openai.com/v1',
 };
 
 const APP_WAIT_RESOURCES = [
   'http-get://localhost:5173',
+  'tcp:4015',
+  'tcp:4016',
   'tcp:7000',
   'tcp:7001',
-  'tcp:7300',
   'tcp:7400',
-  'tcp:5432',
+  'tcp:7800',
+  'tcp:8787',
 ];
 
 function resolveMode(): StackMode {
@@ -64,35 +64,6 @@ function resolveMode(): StackMode {
     return 'live-openai';
   }
   return 'mock-openai';
-}
-
-function resolveSeedMode(): SeedMode {
-  const flag = process.argv.find((entry) => entry?.startsWith('--seed='));
-  if (flag) {
-    const value = flag.split('=')[1];
-    if (value === 'world-seed') {
-      return 'world-seed';
-    }
-    if (value === 'e2e-fixtures') {
-      return 'e2e-fixtures';
-    }
-  }
-  if (process.env.LOCAL_STACK_SEED === 'e2e-fixtures') {
-    return 'e2e-fixtures';
-  }
-  // Default to world-seed for development (preserves world atlas between runs)
-  return 'world-seed';
-}
-
-function resolveReseedMode(): ReseedMode {
-  const flag = process.argv.find((entry) => entry === '--force-reseed');
-  if (flag) {
-    return 'force';
-  }
-  if (process.env.LOCAL_STACK_RESEED === 'force') {
-    return 'force';
-  }
-  return 'auto';
 }
 
 function resolveDbMode(): DbMode {
@@ -120,28 +91,6 @@ let shuttingDown = false;
 let devProcess: ReturnType<typeof execa> | null = null;
 const pidRegistry = new PidRegistry();
 
-async function checkWorldDataExists(connectionString: string): Promise<boolean> {
-  try {
-    const result = await execa('docker', [
-      'exec',
-      '-i',
-      await getPostgresContainerId(),
-      'psql',
-      '-U',
-      'postgres',
-      '-d',
-      'worldstate',
-      '-t',
-      '-c',
-      'SELECT COUNT(*) FROM hard_state',
-    ]);
-    const count = parseInt(result.stdout.trim(), 10);
-    return count > 0;
-  } catch (error) {
-    return false;
-  }
-}
-
 async function getPostgresContainerId(): Promise<string> {
   const result = await execa('docker-compose', [
     '-f',
@@ -151,36 +100,6 @@ async function getPostgresContainerId(): Promise<string> {
     'postgres',
   ]);
   return result.stdout.trim();
-}
-
-async function ensureSqsQueues(env: NodeJS.ProcessEnv): Promise<void> {
-  console.log('[run-local-stack] Ensuring SQS queues exist...');
-
-  const credentials = {
-    accessKeyId: env.AWS_ACCESS_KEY_ID ?? 'test',
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? 'test',
-  };
-
-  const region = env.AWS_REGION ?? env.AWS_DEFAULT_REGION ?? 'us-east-1';
-  const sqsEndpoint = env.AWS_SQS_ENDPOINT;
-
-  const sqs = new SQSClient({
-    credentials,
-    endpoint: sqsEndpoint,
-    region,
-  });
-
-  const queueNames = ['gf-e2e-turn-progress', 'gf-e2e-chronicle-closure'];
-
-  for (const queueName of queueNames) {
-    try {
-      await sqs.send(new CreateQueueCommand({ QueueName: queueName }));
-      console.log(`[run-local-stack] Queue ensured: ${queueName}`);
-    } catch (error) {
-      // Queue might already exist, that's okay
-      console.log(`[run-local-stack] Queue ${queueName}: ${error instanceof Error ? error.message : 'checked'}`);
-    }
-  }
 }
 
 async function waitForWiremockReady(): Promise<void> {
@@ -249,8 +168,6 @@ async function main(): Promise<void> {
   process.on('SIGTERM', handleSignal);
 
   const mode = resolveMode();
-  const seedMode = resolveSeedMode();
-  const reseedMode = resolveReseedMode();
   const dbMode = resolveDbMode();
   const env = buildEnv(mode);
 
@@ -267,7 +184,7 @@ async function main(): Promise<void> {
   });
 
   await waitOn({
-    resources: ['tcp:4566', 'tcp:5432'],
+    resources: ['http-get://localhost:4566/_localstack/health', 'tcp:5432'],
     timeout: 120_000,
   });
 
@@ -290,62 +207,24 @@ async function main(): Promise<void> {
     stdio: 'inherit',
   });
 
-  if (seedMode === 'e2e-fixtures') {
-    await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
-      env,
-      stdio: 'inherit',
-    });
-  } else {
-    // For world-seed mode, check if we need full reseed or just session reset
-    const worldDataExists = await checkWorldDataExists(env.GLASS_FRONTIER_DATABASE_URL as string);
-    const needsFullReseed = reseedMode === 'force' || !worldDataExists;
-
-    if (needsFullReseed) {
-      if (reseedMode === 'force') {
-        console.log('[run-local-stack] Force reseed requested, performing full world seed...');
-      } else {
-        console.log('[run-local-stack] No world data found, performing initial world seed...');
-      }
-      await execa('pnpm', ['exec', 'tsx', 'packages/worldstate/seed-data/seed-world-entities.ts'], {
-        env,
-        stdio: 'inherit',
-      });
-      // Also clear any old session data after full reseed
-      await execa('pnpm', ['exec', 'tsx', 'scripts/reset-session-data.ts'], {
-        env,
-        stdio: 'inherit',
-      });
-    } else {
-      console.log('[run-local-stack] World data exists, resetting session data only...');
-      await execa('pnpm', ['exec', 'tsx', 'scripts/reset-session-data.ts'], {
-        env,
-        stdio: 'inherit',
-      });
-    }
-
-    // Create default dev fixtures (character + chronicle)
-    console.log('[run-local-stack] Creating default dev fixtures...');
-    await execa('pnpm', ['exec', 'tsx', 'scripts/seed-dev-fixtures.ts'], {
-      env,
-      stdio: 'inherit',
-    });
-
-    // Ensure SQS queues exist for world-seed mode
-    await ensureSqsQueues(env);
-  }
+  await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-local-fixtures.ts'], {
+    env,
+    stdio: 'inherit',
+  });
 
   devProcess = execa('pnpm', ['dev'], {
     env,
+    forceKillAfterDelay: 1000,
     stdio: 'inherit',
   });
   devProcess.catch(() => undefined);
   if (typeof devProcess.pid === 'number') {
     const trackedPid = devProcess.pid;
     await pidRegistry.register({
-      pid: trackedPid,
       command: 'pnpm dev',
-      label: `local-stack:${mode}`,
       cwd: process.cwd(),
+      label: `local-stack:${mode}`,
+      pid: trackedPid,
     });
     devProcess.on('exit', () => {
       void pidRegistry.unregister(trackedPid);
@@ -357,7 +236,7 @@ async function main(): Promise<void> {
     runtimeWait.unshift('http-get://localhost:8080/__admin');
   }
   await waitOn({ resources: runtimeWait, timeout: 180_000 }).catch(() => undefined);
-  console.log(`Local stack (${mode}) with seeds: ${seedMode} is running. Press Ctrl+C to stop.`);
+  console.log(`Local stack (${mode}) with test fixtures is running. Press Ctrl+C to stop.`);
 
   try {
     await devProcess;
@@ -379,7 +258,7 @@ async function shutdown() {
   await pidRegistry.clear();
   if (devProcess) {
     try {
-      devProcess.kill('SIGTERM', { forceKillAfterTimeout: 1000 });
+      devProcess.kill('SIGTERM');
     } catch {
       // already stopped
     }

@@ -15,10 +15,9 @@ const resolveWorldSchemaUrl = (): string => {
     return `${apiTarget.replace(/\/$/, '')}/world-schema`;
   }
 
-  return '/world-schema';
+  return '/world-schema-api';
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const worldSchemaTrpcClient = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({

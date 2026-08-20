@@ -14,6 +14,6 @@ test.describe('Landing page', () => {
     ).toBeVisible();
 
     await expect(page.getByRole('heading', { name: 'Your chronicles' })).toBeVisible();
-    await expect(page.locator('.landing-status-chip')).toBeVisible();
+    await expect(page.locator('.landing-status-chip').first()).toBeVisible();
   });
 });

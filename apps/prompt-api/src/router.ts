@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import {
   AUDIT_REVIEW_STATUSES,
   AUDIT_REVIEW_TAGS,
@@ -9,14 +8,28 @@ import {
   type AuditReviewStatus,
   type PromptTemplateId,
 } from '@glass-frontier/dto';
-import { initTRPC } from '@trpc/server';
+import { hasAnyGroup } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import type { Context } from './context';
 import { submitPlayerFeedbackInput } from './schemas/submitPlayerFeedback';
 
 const t = initTRPC.context<Context>().create();
+const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!hasAnyGroup(ctx.identity, ['admin', 'moderator'])) {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  return next({ ctx });
+});
+
+const requireCurrentPlayer = (ctx: Context, claimedPlayerId: string): string => {
+  if (claimedPlayerId !== ctx.identity.sub) {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  return ctx.identity.sub;
+};
 
 async function withMutationTelemetry<T>(
   action: string,
@@ -26,13 +39,16 @@ async function withMutationTelemetry<T>(
   try {
     return await fn();
   } catch (error: unknown) {
-    log('error', `Prompt mutation failed: ${action}`, { metadata, error });
+    log('error', `Prompt mutation failed: ${action}`, {
+      metadataKeys: Object.keys(metadata).join(','),
+      reason: error instanceof Error ? error.message : 'unknown',
+    });
     throw error;
   }
 }
 const auditStatusSchema = z.enum(AUDIT_REVIEW_STATUSES);
 const auditTagSchema = z.enum(AUDIT_REVIEW_TAGS);
-const templateIdSchema = z.enum(PromptTemplateIds as [PromptTemplateId, ...PromptTemplateId[]]);
+const templateIdSchema = z.enum(PromptTemplateIds);
 
 const listAuditQueueInput = z.object({
   cursor: z.string().optional(),
@@ -45,6 +61,7 @@ const listAuditQueueInput = z.object({
   search: z.string().optional(),
   startDate: z.string().optional(),
   status: z.array(auditStatusSchema).optional(),
+  templateId: templateIdSchema.optional(),
 });
 
 const saveAuditReviewInput = z.object({
@@ -66,6 +83,7 @@ type QueueFilters = {
   search?: string;
   startDate?: number;
   statusFilter: Set<AuditReviewStatus> | null;
+  templateId?: PromptTemplateId;
 };
 
 const parseDateFilter = (value?: string): number | undefined => {
@@ -101,11 +119,12 @@ const sanitizeQueueFilters = (input: z.infer<typeof listAuditQueueInput>): Queue
     search: search ?? undefined,
     startDate: parseDateFilter(input.startDate),
     statusFilter,
+    templateId: input.templateId,
   };
 };
 
 export const promptRouter = t.router({
-  getAuditEntry: t.procedure
+  getAuditEntry: moderatorProcedure
     .input(z.object({ auditId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const found = await ctx.opsStore.getAuditEntry(input.auditId);
@@ -117,11 +136,19 @@ export const promptRouter = t.router({
           ...found.entry,
           playerFeedback: found.feedback,
         }),
-        review: found.review ? AuditReviewRecordSchema.parse(found.review) : null,
+        review: found.review === null || found.review === undefined
+          ? null
+          : AuditReviewRecordSchema.parse(found.review),
       };
     }),
 
-  listAuditQueue: t.procedure
+  getPromptTemplate: t.procedure
+    .input(z.object({ playerId: z.string().min(1), templateId: templateIdSchema }))
+    .query(async ({ ctx, input }) =>
+      ctx.templateManager.getTemplate(requireCurrentPlayer(ctx, input.playerId), input.templateId)
+    ),
+
+  listAuditQueue: moderatorProcedure
     .input(listAuditQueueInput)
     .query(async ({ ctx, input }) => {
       const filters = sanitizeQueueFilters(input);
@@ -135,6 +162,7 @@ export const promptRouter = t.router({
         scopeType: filters.scopeType,
         search: filters.search,
         startDate: filters.startDate,
+        templateId: filters.templateId,
       });
       const queueItems = ctx.opsStore.toQueueItems(items, filters.statusFilter);
       return {
@@ -143,25 +171,22 @@ export const promptRouter = t.router({
       };
     }),
 
-  getPromptTemplate: t.procedure
-    .input(z.object({ playerId: z.string().min(1), templateId: templateIdSchema }))
-    .query(async ({ ctx, input }) =>
-      ctx.templateManager.getTemplate(input.playerId, input.templateId)
-    ),
-
   listPromptTemplates: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.templateManager.listTemplates(input.playerId)),
+    .query(async ({ ctx, input }) =>
+      ctx.templateManager.listTemplates(requireCurrentPlayer(ctx, input.playerId))
+    ),
 
   revertPromptTemplate: t.procedure
     .input(z.object({ playerId: z.string().min(1), templateId: templateIdSchema }))
-    .mutation(async ({ ctx, input }) =>
-      withMutationTelemetry('revert-template', { playerId: input.playerId, templateId: input.templateId }, () =>
-        ctx.templateManager.revertTemplate({ playerId: input.playerId, templateId: input.templateId })
-      )
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      return withMutationTelemetry('revert-template', { playerId, templateId: input.templateId }, () =>
+        ctx.templateManager.revertTemplate({ playerId, templateId: input.templateId })
+      );
+    }),
 
-  saveAuditReview: t.procedure
+  saveAuditReview: moderatorProcedure
     .input(saveAuditReviewInput)
     .mutation(async ({ ctx, input }) =>
       withMutationTelemetry('save-audit-review', { auditId: input.auditId, groupId: input.groupId }, async () => {
@@ -169,7 +194,7 @@ export const promptRouter = t.router({
           auditId: input.auditId,
           groupId: input.groupId,
           notes: normalizeString(input.notes),
-          reviewerId: input.reviewerId,
+          reviewerId: requireCurrentPlayer(ctx, input.reviewerId),
           severity: input.severity,
           status: input.status,
           tags: Array.from(new Set(input.tags ?? [])),
@@ -187,16 +212,17 @@ export const promptRouter = t.router({
         templateId: templateIdSchema,
       })
     )
-    .mutation(async ({ ctx, input }) =>
-      withMutationTelemetry('save-template', { playerId: input.playerId, templateId: input.templateId }, () =>
+    .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      return withMutationTelemetry('save-template', { playerId, templateId: input.templateId }, () =>
         ctx.templateManager.saveTemplate({
           editable: input.editable,
           label: input.label,
-          playerId: input.playerId,
+          playerId,
           templateId: input.templateId,
         })
-      )
-    ),
+      );
+    }),
 
   submitPlayerFeedback: t.procedure
     .input(submitPlayerFeedbackInput)
@@ -205,16 +231,13 @@ export const promptRouter = t.router({
         'submit-player-feedback',
         { auditId: input.auditId, chronicleId: input.chronicleId, turnId: input.turnId },
         async () => {
-          const playerId = normalizeString(input.playerId);
-          if (playerId === null) {
-            throw new Error('Player identifier required for feedback submission.');
-          }
+          const playerId = requireCurrentPlayer(ctx, input.playerId);
           // Get or create audit group for this turn
           const auditGroup = await ctx.opsStore.auditGroupStore.ensureGroup({
-            scopeType: 'turn',
-            scopeRef: input.turnId,
-            playerId,
             chronicleId: input.chronicleId,
+            playerId,
+            scopeRef: input.turnId,
+            scopeType: 'turn',
           });
           const record = await ctx.auditFeedbackStore.create({
             auditId: input.auditId,

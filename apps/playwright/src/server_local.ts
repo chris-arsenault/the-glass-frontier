@@ -1,9 +1,9 @@
-import express from 'express';
+import express, { type Express } from 'express';
 import { z } from 'zod';
 
 import { resetPlaywrightFixtures } from './fixtures';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 
 const connectionString = process.env.GLASS_FRONTIER_DATABASE_URL;
@@ -30,7 +30,7 @@ app.post('/reset', async (req, res) => {
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 7800);
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
+
   console.log(`Playwright fixture server listening on http://localhost:${port}`);
 });
 

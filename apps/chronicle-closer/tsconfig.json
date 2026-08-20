@@ -8,11 +8,12 @@
     "declarationDir": "dist",
     "declarationMap": false
   },
-  "include": ["src", "tsup.config.ts"],
+  "include": ["src"],
   "references": [
+    { "path": "../../packages/app" },
     { "path": "../../packages/dto" },
     { "path": "../../packages/utils" },
-    { "path": "../../packages/persistence" },
+    { "path": "../../packages/worldstate" },
     { "path": "../../packages/llm-client" }
   ]
 }

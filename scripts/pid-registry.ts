@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-export interface RegisteredProcess {
+export type RegisteredProcess = {
   pid: number;
   command: string;
   label?: string;
@@ -11,7 +11,7 @@ export interface RegisteredProcess {
   createdAt: string;
 }
 
-export interface PidRegistryOptions {
+export type PidRegistryOptions = {
   /**
    * Optional absolute path where registry contents should be persisted.
    * When set, register/unregister calls will flush to disk so that
@@ -20,7 +20,7 @@ export interface PidRegistryOptions {
   persistPath?: string;
 }
 
-interface PersistedRegistry {
+type PersistedRegistry = {
   processes: RegisteredProcess[];
 }
 

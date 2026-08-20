@@ -77,9 +77,9 @@ const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): C
   advancesTimeline: extras?.advancesTimeline ?? null,
   attributeKey: extras?.attributeKey ?? null,
   beatTracker: extras?.beatTracker ?? null,
-  entry,
   entityOffered: extras?.entityOffered ?? null,
   entityUsage: extras?.entityUsage ?? null,
+  entry,
   executedNodes: extras?.executedNodes ?? null,
   gmSummary: extras?.gmSummary ?? null,
   gmTrace: extras?.gmTrace ?? null,
@@ -108,9 +108,9 @@ const upsertChatEntry = (
       ...updated[index],
       advancesTimeline: extras?.advancesTimeline ?? updated[index].advancesTimeline,
       attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
-      entry,
       entityOffered: extras?.entityOffered ?? updated[index].entityOffered,
       entityUsage: extras?.entityUsage ?? updated[index].entityUsage,
+      entry,
       executedNodes: extras?.executedNodes ?? updated[index].executedNodes,
       gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
       gmTrace: extras?.gmTrace ?? updated[index].gmTrace,
@@ -243,11 +243,12 @@ const applyBeatTrackerUpdate = (
     const existing = working.find((beat) => beat.id === newId);
     if (!existing) {
       working.push({
-        id: newId,
-        title: tracker.newBeat.title,
-        description: tracker.newBeat.description,
-        status: 'in_progress',
         createdAt: now,
+        description: tracker.newBeat.description,
+        id: newId,
+        slug: fallbackId,
+        status: 'in_progress',
+        title: tracker.newBeat.title,
         updatedAt: now,
       });
       changed = true;
@@ -262,9 +263,9 @@ const applyBeatTrackerUpdate = (
     const target = working[index];
     const nextBeat: ChronicleBeat = {
       ...target,
-      updatedAt: now,
       description: update.description ?? target.description,
       status: update.status ?? target.status,
+      updatedAt: now,
     };
     if (
       (update.status === 'succeeded' || update.status === 'failed') &&
@@ -285,8 +286,8 @@ const applyBeatTrackerUpdate = (
 const DEFAULT_MOMENTUM = { ceiling: 3, current: 0, floor: -2 };
 
 const deriveSkillProgressBadges = (
-  previous: Character | null,
-  next: Character | null
+  previous: Character | null | undefined,
+  next: Character | null | undefined
 ): SkillProgressBadge[] => {
   if (!previous || !next) {
     return [];
@@ -309,8 +310,8 @@ const deriveSkillProgressBadges = (
 };
 
 const deriveMomentumTrend = (
-  previous: Character | null,
-  next: Character | null
+  previous: Character | null | undefined,
+  next: Character | null | undefined
 ): MomentumTrend | null => {
   if (!previous || !next) {
     return null;
@@ -348,7 +349,7 @@ const applyTurnProgressEvent = (
   const extras: Partial<ChatMessage> = {
     advancesTimeline:
       typeof payload.advancesTimeline === 'boolean' ? payload.advancesTimeline : null,
-    attributeKey: payload.playerIntent?.attribute ?? null,
+    attributeKey: payload.skillCheckPlan?.attribute ?? null,
     beatTracker: payload.beatTracker ?? null,
     executedNodes: payload.executedNodes ?? null,
     gmSummary: payload.gmSummary ?? null,
@@ -359,7 +360,7 @@ const applyTurnProgressEvent = (
     playerIntent: payload.playerIntent ?? null,
     skillCheckPlan: payload.skillCheckPlan ?? null,
     skillCheckResult: payload.skillCheckResult ?? null,
-    skillKey: payload.playerIntent?.skill ?? null,
+    skillKey: payload.skillCheckPlan?.skill ?? null,
     skillProgress: null,
     turnId: null,
     turnSequence: event.turnSequence ?? null,
@@ -380,7 +381,7 @@ const applyTurnProgressEvent = (
           typeof payload.advancesTimeline === 'boolean'
             ? payload.advancesTimeline
             : message.advancesTimeline ?? null,
-        attributeKey: payload.playerIntent?.attribute ?? message.attributeKey,
+        attributeKey: payload.skillCheckPlan?.attribute ?? message.attributeKey,
         beatTracker: payload.beatTracker ?? message.beatTracker ?? null,
         executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
         handlerId: payload.handlerId ?? message.handlerId ?? null,
@@ -393,14 +394,14 @@ const applyTurnProgressEvent = (
         playerIntent: payload.playerIntent ?? message.playerIntent,
         skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
         skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
-        skillKey: payload.playerIntent?.skill ?? message.skillKey,
+        skillKey: payload.skillCheckPlan?.skill ?? message.skillKey,
         worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
       };
     });
   }
 
-  if (payload.gmResponse) {
-    nextMessages = upsertChatEntry(nextMessages, payload.gmResponse, extras);
+  if (payload.gmMessage) {
+    nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, extras);
   }
 
   if (payload.systemMessage) {
@@ -445,11 +446,11 @@ const createBaseState = () => ({
   momentumTrend: null as MomentumTrend | null,
   pendingPlayerMessageId: null as string | null,
   pendingTurnJobId: null as string | null,
+  playerId: null as string | null,
+  playerName: null as string | null,
   playerSettings: DEFAULT_PLAYER_SETTINGS,
   playerSettingsError: null as Error | null,
   playerSettingsStatus: 'idle' as const,
-  playerId: null as string | null,
-  playerName: null as string | null,
   preferredCharacterId: null as string | null,
   queuedIntents: 0,
   recentChronicles: [],
@@ -490,9 +491,9 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       attributes: draft.attributes,
       id: generateId(),
       inventory: [],
-      playerId: identity.playerId,
       momentum: DEFAULT_MOMENTUM,
       name: draft.name,
+      playerId: identity.playerId,
       pronouns: draft.pronouns,
       skills: Object.entries(draft.skills).reduce<Character['skills']>((acc, [name, skill]) => {
         acc[name] = { ...skill, xp: 0 };
@@ -685,9 +686,9 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         connectionState: 'connected',
         focusedBeatId: initialFocusBeatId,
         location: chronicleState.location ?? null,
-        playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
+        playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
         transportError: null,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
       }));

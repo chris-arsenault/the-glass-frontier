@@ -1,16 +1,16 @@
 .audit-page {
   display: flex;
+  padding: 1.5rem;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 1.5rem;
 }
 
 .audit-page-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
+  justify-content: space-between;
 }
 
 .audit-page-header h1 {
@@ -28,13 +28,17 @@
 .audit-panel-footer button,
 .audit-form-actions button,
 .audit-panel-header button {
-  background: var(--gf-surface-3, #253047);
-  border: 1px solid var(--gf-border, rgba(255, 255, 255, 0.08));
-  border-radius: 6px;
-  color: #fff;
-  cursor: pointer;
   padding: 0.5rem 0.9rem;
+  color: #fff;
+  background: var(--gf-surface-3, #253047);
+  border: 1px solid var(--gf-border, rgb(255 255 255 / 8%));
+  border-radius: 6px;
+  cursor: pointer;
   transition: background 120ms ease;
+}
+
+.audit-filter-apply {
+  align-self: flex-start;
 }
 
 .audit-header-actions button:disabled,
@@ -42,8 +46,8 @@
 .audit-panel-footer button:disabled,
 .audit-form-actions button:disabled,
 .audit-panel-header button:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .audit-layout {
@@ -53,14 +57,14 @@
 }
 
 .audit-panel {
-  background: var(--gf-surface-2, #1b2335);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 1rem;
-  min-height: 0;
   display: flex;
+  padding: 1rem;
+  background: var(--gf-surface-2, #1b2335);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
   flex-direction: column;
   gap: 1rem;
+  min-height: 0;
 }
 
 .audit-grid-wrapper {
@@ -70,8 +74,8 @@
 .audit-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
+  justify-content: space-between;
 }
 
 .audit-panel-header h2 {
@@ -80,14 +84,14 @@
 }
 
 .audit-count {
+  color: rgb(255 255 255 / 70%);
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .audit-filters {
   display: flex;
-  flex-wrap: wrap;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
@@ -99,29 +103,29 @@
 
 .audit-filter-group label,
 .audit-filter-group span {
+  color: rgb(255 255 255 / 70%);
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .audit-filter-group input,
 .audit-filter-group select,
 .audit-filter-group textarea {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: #fff;
   padding: 0.45rem;
+  color: #fff;
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 6px;
 }
 
 .audit-filter-group select {
-  background: rgba(15, 23, 42, 0.92);
-  border-color: rgba(255, 255, 255, 0.18);
   color: #e2e8f0;
+  background: rgb(15 23 42 / 92%);
+  border-color: rgb(255 255 255 / 18%);
 }
 
 .audit-filter-group select option {
-  background: #0f172a;
   color: #e2e8f0;
+  background: #0f172a;
 }
 
 .audit-filter-row {
@@ -138,109 +142,104 @@
 .audit-filter-checkbox {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
   font-size: 0.8rem;
-}
-
-.audit-filter-apply {
-  align-self: flex-start;
+  gap: 0.25rem;
 }
 
 .audit-queue-list {
-  list-style: none;
   display: flex;
+  margin: 0;
+  padding: 0;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
+  list-style: none;
   max-height: 12rem;
+  overflow-y: auto;
 }
 
 .audit-queue-list.horizontal {
   flex-direction: row;
-  overflow-x: auto;
-  overflow-y: hidden;
-  max-height: none;
-  padding-bottom: 0.25rem;
   gap: 0.75rem;
+  max-height: none;
+  overflow: auto hidden;
+  padding-bottom: 0.25rem;
 }
 
 .audit-queue-list.horizontal > li {
-  min-width: 220px;
   flex: 0 0 auto;
+  min-width: 220px;
 }
 
 .audit-queue-item {
   width: 100%;
-  text-align: left;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
   padding: 0.75rem;
+  background: rgb(255 255 255 / 2%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 10px;
   cursor: pointer;
+  text-align: left;
   transition: border 120ms ease, background 120ms ease;
 }
 
 .audit-queue-item.selected {
+  background: rgb(108 139 255 / 8%);
   border-color: var(--gf-accent, #6c8bff);
-  background: rgba(108, 139, 255, 0.08);
 }
 
 .audit-queue-item-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 0.35rem;
 }
 
 .audit-chip {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
   padding: 0.15rem 0.6rem;
+  align-items: center;
+  border-radius: 999px;
   font-size: 0.75rem;
+  justify-content: center;
   text-transform: capitalize;
 }
 
 .audit-chip.status-completed {
-  background: rgba(76, 217, 100, 0.15);
   color: #4cd964;
+  background: rgb(76 217 100 / 15%);
 }
 
-.audit-chip.status-in_progress {
-  background: rgba(255, 179, 64, 0.15);
+.audit-chip.status-in-progress {
   color: #ffb740;
+  background: rgb(255 179 64 / 15%);
 }
 
 .audit-chip.status-unreviewed {
-  background: rgba(255, 255, 255, 0.08);
   color: #fff;
+  background: rgb(255 255 255 / 8%);
 }
 
 .audit-chip.severity-critical {
-  background: rgba(255, 107, 107, 0.18);
   color: #ff6b6b;
+  background: rgb(255 107 107 / 18%);
 }
 
 .audit-chip.severity-major {
-  background: rgba(255, 159, 67, 0.18);
   color: #ff9f43;
+  background: rgb(255 159 67 / 18%);
 }
 
 .audit-chip.severity-info,
 .audit-chip.severity-minor {
-  background: rgba(108, 139, 255, 0.15);
   color: #6c8bff;
+  background: rgb(108 139 255 / 15%);
 }
 
 .audit-grid-link {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
   padding: 0.25rem 0.8rem;
   color: inherit;
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
 }
@@ -256,14 +255,14 @@
 
 .audit-queue-item-meta,
 .audit-queue-item-date {
+  color: rgb(255 255 255 / 70%);
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .audit-queue-item-preview {
   margin: 0.25rem 0 0;
+  color: rgb(226 232 240 / 80%);
   font-size: 0.82rem;
-  color: rgba(226, 232, 240, 0.8);
 }
 
 .audit-panel-footer {
@@ -279,17 +278,17 @@
 
 .audit-context {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 10px;
   padding: 0.75rem;
+  background: rgb(255 255 255 / 2%);
+  border-radius: 10px;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .audit-context-label {
   margin: 0;
+  color: rgb(255 255 255 / 70%);
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .audit-context-value {
@@ -304,19 +303,19 @@
 }
 
 .audit-body h3 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.5rem;
 }
 
 .audit-blob {
-  background: rgba(0, 0, 0, 0.35);
-  border-radius: 8px;
   padding: 0.9rem;
-  min-height: 240px;
-  max-height: none;
-  overflow: auto;
+  background: rgb(0 0 0 / 35%);
+  border-radius: 8px;
   font-size: 0.9rem;
+  max-height: none;
+  min-height: 240px;
+  overflow: auto;
+  overflow-wrap: break-word;
   white-space: pre-wrap;
-  word-wrap: break-word;
 }
 
 .audit-form {
@@ -328,18 +327,18 @@
 .audit-form label {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
   font-size: 0.85rem;
+  gap: 0.35rem;
 }
 
 .audit-form input,
 .audit-form textarea,
 .audit-form select {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #fff;
   padding: 0.5rem;
+  color: #fff;
+  background: rgb(0 0 0 / 45%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
 }
 
 .audit-tags {
@@ -350,8 +349,8 @@
 
 .audit-tag-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .audit-dialog-content {
@@ -362,12 +361,12 @@
 
 .audit-dialog-notes textarea {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: inherit;
   padding: 0.5rem;
   font: inherit;
+  color: inherit;
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 6px;
 }
 
 .audit-dialog-tags {
@@ -378,14 +377,14 @@
 
 .audit-dialog-tags .audit-tag-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .audit-form-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 0.75rem;
+  justify-content: flex-end;
 }
 
 .audit-form-actions .primary {
@@ -394,35 +393,35 @@
 }
 
 .audit-form-actions .secondary {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(255 255 255 / 8%);
 }
 
 .audit-placeholder {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
 }
 
 .audit-proposal-list {
-  list-style: none;
   display: flex;
+  margin: 0;
+  padding: 0;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 0;
-  margin: 0;
+  list-style: none;
 }
 
 .audit-proposal-item {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgb(255 255 255 / 2%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 10px;
 }
 
 .audit-proposal-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
+  justify-content: space-between;
 }
 
 .audit-proposal-title {
@@ -436,8 +435,8 @@
 
 .audit-proposal-meta {
   margin: 0;
+  color: rgb(255 255 255 / 70%);
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .audit-proposal-tags {
@@ -448,31 +447,32 @@
 }
 
 .audit-chip.tag-chip {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
 }
 
 .audit-error {
   margin: 0;
   color: #ff6b6b;
 }
+
 .horizontal .audit-queue-item {
   min-width: 220px;
 }
 
 .audit-feedback-panel {
-  margin-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 1rem;
   display: flex;
+  border-top: 1px solid rgb(255 255 255 / 8%);
   flex-direction: column;
   gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
 }
 
 .audit-feedback-header {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 0.5rem;
+  justify-content: space-between;
 }
 
 .audit-feedback-header h3 {
@@ -481,63 +481,63 @@
 }
 
 .audit-feedback-count {
+  color: rgb(255 255 255 / 70%);
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .audit-feedback-list {
-  list-style: none;
+  display: flex;
   margin: 0;
   padding: 0;
-  display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  list-style: none;
 }
 
 .audit-feedback-item {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.02);
   display: flex;
+  padding: 0.75rem;
+  background: rgb(255 255 255 / 2%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 8px;
   flex-direction: column;
   gap: 0.4rem;
 }
 
 .audit-feedback-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgb(255 255 255 / 80%);
   align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 0.5rem;
 }
 
 .audit-feedback-comment {
   margin: 0;
+  color: rgb(255 255 255 / 85%);
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .audit-feedback-expectations {
   display: flex;
+  color: rgb(255 255 255 / 80%);
   flex-direction: column;
-  gap: 0.25rem;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
+  gap: 0.25rem;
 }
 
 .audit-feedback-expectation-row {
   display: flex;
-  justify-content: space-between;
   gap: 0.5rem;
+  justify-content: space-between;
 }
 
 .audit-feedback-expectation-row span {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: rgb(255 255 255 / 60%);
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .audit-feedback-expectation-row strong {
@@ -546,21 +546,21 @@
 
 .audit-feedback-note {
   margin: 0.15rem 0 0;
+  color: rgb(226 232 240 / 90%);
   font-size: 0.85rem;
-  color: rgba(226, 232, 240, 0.9);
 }
 
 .audit-feedback-item .sentiment-positive {
-  border-color: rgba(52, 211, 153, 0.8);
   color: #6ee7b7;
+  border-color: rgb(52 211 153 / 80%);
 }
 
 .audit-feedback-item .sentiment-neutral {
-  border-color: rgba(251, 191, 36, 0.6);
   color: #fde68a;
+  border-color: rgb(251 191 36 / 60%);
 }
 
 .audit-feedback-item .sentiment-negative {
-  border-color: rgba(248, 113, 113, 0.75);
   color: #fca5a5;
+  border-color: rgb(248 113 113 / 75%);
 }

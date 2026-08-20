@@ -9,8 +9,7 @@
     "dev": "NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec \"tsx src/server_local.ts\"",
     "build": "TARGET=lambda tsup",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "test": "vitest run"
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "glass-frontier",
@@ -20,7 +19,7 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
-    "@aws-sdk/client-sqs": "^3.930.0",
+    "@aws-sdk/client-sqs": "^3.1114.0",
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
@@ -28,16 +27,15 @@
     "@glass-frontier/skill-check-resolver": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
-    "@trpc/client": "^11.7.1",
-    "@trpc/server": "^11.7.1",
-    "handlebars": "^4.7.8",
-    "openai": "^6.8.1",
-    "tsup": "^8.5.1",
+    "@trpc/client": "^11.18.0",
+    "@trpc/server": "^11.18.0",
+    "handlebars": "^4.7.9",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
     "@types/express": "^5.0.5",
-    "eslint": "^9.39.1"
+    "eslint": "^9.39.1",
+    "tsup": "^8.5.1"
   }
 }

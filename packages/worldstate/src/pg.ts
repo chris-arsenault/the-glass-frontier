@@ -1,5 +1,5 @@
-import { Pool, type PoolClient, type PoolConfig } from 'pg';
 import { useRdsIamAuth, generateRdsIamToken } from '@glass-frontier/node-utils';
+import { Pool, type PoolClient, type PoolConfig } from 'pg';
 
 const DEFAULT_CONNECTION_STRING = 'postgres://postgres:postgres@localhost:5432/worldstate';
 
@@ -12,6 +12,18 @@ export type PgOptions = {
  * Check if we should use IAM authentication (Lambda environment)
  */
 export const useIamAuth = useRdsIamAuth;
+
+const requireEnvironment = (name: 'PGDATABASE' | 'PGHOST' | 'PGUSER'): string => {
+  const value = name === 'PGHOST'
+    ? process.env.PGHOST
+    : name === 'PGUSER'
+      ? process.env.PGUSER
+      : process.env.PGDATABASE;
+  if (value === undefined || value.length === 0) {
+    throw new Error(`${name} is required when RDS IAM authentication is enabled.`);
+  }
+  return value;
+};
 
 /**
  * Resolve connection string for local development
@@ -31,20 +43,20 @@ export const resolveConnectionString = (options?: PgOptions): string => {
  * Call this once at Lambda cold start and pass the pool to stores.
  */
 export const createPoolWithIamAuth = async (): Promise<Pool> => {
-  const host = process.env.PGHOST!;
-  const port = parseInt(process.env.PGPORT || '5432', 10);
-  const database = process.env.PGDATABASE!;
-  const user = process.env.PGUSER!;
+  const host = requireEnvironment('PGHOST');
+  const port = parseInt(process.env.PGPORT ?? '5432', 10);
+  const database = requireEnvironment('PGDATABASE');
+  const user = requireEnvironment('PGUSER');
   const password = await generateRdsIamToken();
 
   const config: PoolConfig = {
-    host,
-    port,
     database,
-    user,
-    password,
-    ssl: { rejectUnauthorized: false }, // RDS uses Amazon CA, IAM auth provides security
+    host,
     max: 1, // Lambda should use minimal connections since RDS Proxy handles pooling
+    password,
+    port,
+    ssl: { rejectUnauthorized: false }, // RDS uses Amazon CA, IAM auth provides security
+    user,
   };
 
   return new Pool(config);
@@ -58,7 +70,7 @@ export const createPoolWithIamAuth = async (): Promise<Pool> => {
  *             Use createPoolWithIamAuth() at Lambda cold start instead.
  */
 export const createPool = (options?: PgOptions): Pool => {
-  if (options?.pool) {
+  if (options?.pool !== undefined) {
     return options.pool;
   }
 

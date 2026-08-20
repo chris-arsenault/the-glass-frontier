@@ -5,10 +5,11 @@ import {
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
-  type TokenUsagePeriod,
+  type LocationEntity,
 } from '@glass-frontier/dto';
+import { hasAnyGroup } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
@@ -17,8 +18,22 @@ import type { Context } from './context';
 type EnsureChronicleResult = Awaited<
   ReturnType<Context['chronicleStore']['ensureChronicle']>
 >;
+type ChronicleSnapshot = Awaited<
+  ReturnType<Context['chronicleStore']['getChronicleState']>
+>;
+type ChronicleLocation = {
+  locationId: string;
+  sessionLocation: LocationEntity | undefined;
+};
+type TimingLogger = (step: string) => void;
 
 const t = initTRPC.context<Context>().create();
+const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!hasAnyGroup(ctx.identity, ['admin', 'moderator'])) {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  return next({ ctx });
+});
 const normalizePlayerPreferences = (prefs?: PlayerPreferences | null): PlayerPreferences => ({
   feedbackVisibility: prefs?.feedbackVisibility ?? 'all',
 });
@@ -61,9 +76,10 @@ const ensurePlayerRecord = async (ctx: Context, playerId: string): Promise<Playe
 
 export const appRouter = t.router({
   createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
+    const playerId = requireCurrentPlayer(ctx, input.playerId);
     log('info', `Creating Character ${input.name}`);
-    await ctx.playerStore.ensure(input.playerId);
-    const character = await ctx.chronicleStore.upsertCharacter(input);
+    await ctx.playerStore.ensure(playerId);
+    const character = await ctx.chronicleStore.upsertCharacter({ ...input, playerId });
     return { character };
   }),
   // POST /chronicles
@@ -79,12 +95,13 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
       const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle === null || chronicle === undefined) {
         return { chronicleId: input.chronicleId, deleted: false };
       }
-      if (chronicle.playerId !== input.playerId) {
-        throw new Error('Chronicle does not belong to the requesting player.');
+      if (chronicle.playerId !== playerId) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
       }
       await ctx.chronicleStore.deleteChronicle(input.chronicleId);
       return { chronicleId: input.chronicleId, deleted: true };
@@ -94,34 +111,68 @@ export const appRouter = t.router({
     .input(
       z
         .object({
+          anchorId: z.string().uuid(),
           count: z.number().int().positive().max(5).optional(),
           locationId: z.string().uuid(),
-          anchorId: z.string().uuid(),
           playerId: z.string().min(1),
         })
         .merge(toneSchema)
     )
-    .mutation(async ({ ctx, input }) =>
-      ctx.seedService.generateSeeds({
-        authorizationHeader: ctx.authorizationHeader,
+    .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      return ctx.seedService.generateSeeds({
+        anchorId: input.anchorId,
         count: input.count,
         locationId: input.locationId,
-        anchorId: input.anchorId,
-        playerId: input.playerId,
+        playerId,
         toneChips: input.toneChips,
         toneNotes: input.toneNotes,
-      })
-    ),
+      });
+    }),
 
   // GET /chronicles/:chronicleId
   getChronicle: t.procedure
     .input(z.object({ chronicleId: z.string().uuid() }))
     .query(async ({ ctx, input }) => augmentChronicleSnapshot(ctx, input.chronicleId)),
 
+  getModelUsageCostSummary: t.procedure
+    .input(
+      z.object({
+        endDate: z.string().optional(),
+        playerId: z.string().min(1),
+        startDate: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      const startDate = input.startDate === undefined ? undefined : new Date(input.startDate);
+      const endDate = input.endDate === undefined ? undefined : new Date(input.endDate);
+      const summary = await ctx.modelConfigStore.getUsageCostSummary(
+        playerId,
+        startDate,
+        endDate
+      );
+      return { summary };
+    }),
+
+  getPlayerModelCategories: t.procedure
+    .input(z.object({ playerId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      const prose = await ctx.modelConfigStore.getModelForCategory('prose', playerId);
+      const classification = await ctx.modelConfigStore.getModelForCategory('classification', playerId);
+      return {
+        categories: {
+          classification,
+          prose
+        }
+      };
+    }),
+
   getPlayerSettings: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const player = await ensurePlayerRecord(ctx, input.playerId);
+      const player = await ensurePlayerRecord(ctx, requireCurrentPlayer(ctx, input.playerId));
       return { preferences: normalizePlayerPreferences(player.preferences) };
     }),
 
@@ -133,23 +184,48 @@ export const appRouter = t.router({
       })
     )
     .query(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
       const limit = Math.min(input.limit ?? 6, 12);
-      const usage = await ctx.tokenUsageStore.listUsage(input.playerId, limit);
+      const usage = await ctx.tokenUsageStore.listUsage(playerId, limit);
       return { usage };
     }),
 
-  listBugReports: t.procedure.query(async ({ ctx }) => {
+  listBugReports: moderatorProcedure.query(async ({ ctx }) => {
     const reports = await ctx.bugReportStore.listReports();
     return { reports };
   }),
 
   listCharacters: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.chronicleStore.listCharactersByPlayer(input.playerId)),
+    .query(async ({ ctx, input }) =>
+      ctx.chronicleStore.listCharactersByPlayer(requireCurrentPlayer(ctx, input.playerId))
+    ),
 
   listChronicles: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => ctx.chronicleStore.listChroniclesByPlayer(input.playerId)),
+    .query(async ({ ctx, input }) =>
+      ctx.chronicleStore.listChroniclesByPlayer(requireCurrentPlayer(ctx, input.playerId))
+    ),
+
+  listModels: t.procedure
+    .query(async ({ ctx }) => {
+      const models = await ctx.modelConfigStore.listModels();
+      return { models };
+    }),
+
+  setPlayerModelCategory: t.procedure
+    .input(
+      z.object({
+        category: z.enum(['prose', 'classification']),
+        modelId: z.string().min(1),
+        playerId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      await ctx.modelConfigStore.setCategoryModel(input.category, input.modelId, playerId);
+      return { success: true };
+    }),
 
   submitBugReport: t.procedure
     .input(
@@ -160,17 +236,18 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
       const report = await ctx.bugReportStore.createReport({
         characterId: input.characterId ?? null,
         chronicleId: input.chronicleId ?? null,
         details: input.details,
-        playerId: input.playerId,
+        playerId,
         summary: input.summary,
       });
       return { report };
     }),
 
-  updateBugReport: t.procedure
+  updateBugReport: moderatorProcedure
     .input(
       z.object({
         adminNotes: z.string().max(4000).nullable().optional(),
@@ -196,60 +273,10 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
       const preferences = normalizePlayerPreferences(input.preferences);
-      await ctx.playerStore.setPreferences(input.playerId, preferences);
+      await ctx.playerStore.setPreferences(playerId, preferences);
       return { preferences };
-    }),
-
-  listModels: t.procedure
-    .query(async ({ ctx }) => {
-      const models = await ctx.modelConfigStore.listModels();
-      return { models };
-    }),
-
-  getPlayerModelCategories: t.procedure
-    .input(z.object({ playerId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => {
-      const prose = await ctx.modelConfigStore.getModelForCategory('prose', input.playerId);
-      const classification = await ctx.modelConfigStore.getModelForCategory('classification', input.playerId);
-      return {
-        categories: {
-          prose,
-          classification
-        }
-      };
-    }),
-
-  setPlayerModelCategory: t.procedure
-    .input(
-      z.object({
-        playerId: z.string().min(1),
-        category: z.enum(['prose', 'classification']),
-        modelId: z.string().min(1),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      await ctx.modelConfigStore.setCategoryModel(input.category, input.modelId, input.playerId);
-      return { success: true };
-    }),
-
-  getModelUsageCostSummary: t.procedure
-    .input(
-      z.object({
-        playerId: z.string().min(1),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const startDate = input.startDate ? new Date(input.startDate) : undefined;
-      const endDate = input.endDate ? new Date(input.endDate) : undefined;
-      const summary = await ctx.modelConfigStore.getUsageCostSummary(
-        input.playerId,
-        startDate,
-        endDate
-      );
-      return { summary };
     }),
 
 });
@@ -259,40 +286,30 @@ async function createChronicleHandler(
   input: CreateChronicleInput
 ): Promise<{ chronicle: EnsureChronicleResult }> {
   const startTime = Date.now();
-  const logTiming = (step: string) => {
+  const logTiming = (step: string): void => {
     log('info', `createChronicle timing: ${step}`, { elapsedMs: Date.now() - startTime });
   };
 
-  log('info', 'createChronicle: starting', { input: { ...input, seedText: input.seedText?.slice(0, 50) } });
+  const playerId = requireCurrentPlayer(ctx, input.playerId);
+  log('info', 'createChronicle: starting', {
+    characterId: input.characterId,
+    playerId,
+    seedPreview: input.seedText?.slice(0, 50) ?? '',
+    title: input.title,
+  });
 
   logTiming('start - ensuring player');
-  await ctx.playerStore.ensure(input.playerId);
+  await ctx.playerStore.ensure(playerId);
   logTiming('player ensured');
 
   logTiming('fetching character');
   const character = await requireCharacter(ctx, input.characterId);
   logTiming('character fetched');
-  ensureCharacterOwnership(character, input.playerId);
+  ensureCharacterOwnership(character, playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
 
-  // Only create a new location if locationId wasn't provided
-  // If locationId is provided, use the existing location from worldstate
-  let locationId = input.locationId;
-  if (!locationId) {
-    locationId = randomUUID();
-    const locationName = resolveLocationName(input);
-    logTiming('creating new location entity');
-    await ctx.worldSchemaStore.upsertEntity({
-      id: locationId,
-      kind: 'location',
-      name: locationName,
-      status: 'known',
-    });
-    logTiming('location entity created');
-  } else {
-    logTiming('using existing locationId');
-  }
+  const { locationId, sessionLocation } = prepareChronicleLocation(input, logTiming);
 
   logTiming('calling ensureChronicle');
   const chronicle = await ctx.chronicleStore.ensureChronicle({
@@ -301,8 +318,9 @@ async function createChronicleHandler(
     characterId: input.characterId,
     chronicleId,
     locationId,
-    playerId: input.playerId,
+    playerId,
     seedText: input.seedText,
+    sessionLocation,
     status: input.status,
     title: input.title,
   });
@@ -310,6 +328,32 @@ async function createChronicleHandler(
 
   log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`, { elapsedMs: Date.now() - startTime });
   return { chronicle };
+}
+
+function prepareChronicleLocation(
+  input: CreateChronicleInput,
+  logTiming: TimingLogger
+): ChronicleLocation {
+  if (input.locationId !== undefined) {
+    logTiming('using existing locationId');
+    return { locationId: input.locationId, sessionLocation: undefined };
+  }
+  const locationId = randomUUID();
+  const timestamp = Date.now();
+  const sessionLocation: LocationEntity = {
+    createdAt: timestamp,
+    description: input.location?.atmosphere,
+    id: locationId,
+    kind: 'location',
+    name: resolveLocationName(input),
+    prominence: 'recognized',
+    slug: `session-${locationId}`,
+    status: 'session-only',
+    tags: [],
+    updatedAt: timestamp,
+  };
+  logTiming('session location prepared');
+  return { locationId, sessionLocation };
 }
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {
@@ -339,9 +383,19 @@ function resolveLocationName(input: CreateChronicleInput): string {
 async function augmentChronicleSnapshot(
   ctx: Context,
   chronicleId: string
-): Promise<ChronicleState | null> {
+): Promise<ChronicleSnapshot> {
   const snapshot = await ctx.chronicleStore.getChronicleState(chronicleId);
+  if (snapshot !== null && snapshot.chronicle.playerId !== ctx.identity.sub) {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
   return snapshot;
+}
+
+function requireCurrentPlayer(ctx: Context, claimedPlayerId: string): string {
+  if (claimedPlayerId !== ctx.identity.sub) {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  return ctx.identity.sub;
 }
 
 const isNonEmptyString = (value: unknown): value is string =>

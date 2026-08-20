@@ -80,7 +80,7 @@ export const handler = async (
   const origin = resolveOriginHeader(normalizedEvent);
 
   // tRPC handler - reads event.rawPath like "/world-schema/getSchema" and supports batching via ?batch=1
-  return awsLambdaRequestHandler({
+  return awsLambdaRequestHandler<typeof appRouter, APIGatewayProxyEventV2>({
     batching: { enabled: true },
     createContext: ({ event }) =>
       createContext({ authorizationHeader: getAuthorizationHeader(event) }),

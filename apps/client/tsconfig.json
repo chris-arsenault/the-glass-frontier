@@ -8,10 +8,14 @@
     "declarationMap": false,
     "jsx": "react-jsx"
   },
-  "include": ["src"],
+  "include": ["src", "src/**/*.json"],
   "references": [
     { "path": "../../packages/dto" },
+    { "path": "../../packages/utils" },
+    { "path": "../atlas-api" },
     { "path": "../chronicle-api" },
-    { "path": "../prompt-api" }
+    { "path": "../gm-api" },
+    { "path": "../prompt-api" },
+    { "path": "../world-schema-api" }
   ]
 }

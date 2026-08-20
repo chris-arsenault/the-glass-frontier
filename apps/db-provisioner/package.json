@@ -10,16 +10,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.682.0",
+    "@aws-sdk/client-secrets-manager": "^3.1114.0",
     "@glass-frontier/node-utils": "workspace:*",
-    "node-pg-migrate": "^7.6.1",
+    "node-pg-migrate": "^9.0.0",
     "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
-    "@types/node": "^22.9.0",
+    "@types/node": "^24.10.1",
     "@types/pg": "^8.11.6",
-    "esbuild": "^0.21.5",
+    "esbuild": "^0.28.2",
     "typescript": "^5.7.2"
   }
 }

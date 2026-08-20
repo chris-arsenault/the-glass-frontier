@@ -64,7 +64,7 @@ export class GraphOperations {
   ): Promise<void> {
     const edgeId = edge.id ?? crypto.randomUUID();
     await executor.query(
-      `DELETE FROM edge WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3`,
+      'DELETE FROM edge WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3',
       [edge.src, edge.dst, edge.type]
     );
     await executor.query(
@@ -88,7 +88,7 @@ export class GraphOperations {
     }
   ): Promise<void> {
     await executor.query(
-      `DELETE FROM edge WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3`,
+      'DELETE FROM edge WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = $3',
       [edge.src, edge.dst, edge.type]
     );
   }
@@ -105,7 +105,7 @@ export class GraphOperations {
     limit = 100
   ): Promise<Array<{ id: string; kind: string; props: unknown; created_at: Date }>> {
     const result = await executor.query(
-      `SELECT id, kind, props, created_at FROM node WHERE kind = $1 LIMIT $2`,
+      'SELECT id, kind, props, created_at FROM node WHERE kind = $1 LIMIT $2',
       [kind, limit]
     );
     return result.rows;
@@ -121,7 +121,7 @@ export class GraphOperations {
     id: string
   ): Promise<{ id: string; kind: string; props: unknown; created_at: Date } | null> {
     const result = await executor.query(
-      `SELECT id, kind, props, created_at FROM node WHERE id = $1::uuid`,
+      'SELECT id, kind, props, created_at FROM node WHERE id = $1::uuid',
       [id]
     );
     return result.rows[0] ?? null;
@@ -144,9 +144,9 @@ export class GraphOperations {
     const params: unknown[] = [nodeId];
 
     if (direction === 'out' || direction === 'both') {
-      query += `SELECT id, src_id, dst_id, type, props, strength FROM edge WHERE src_id = $1::uuid`;
-      if (edgeType) {
-        query += ` AND type = $2`;
+      query += 'SELECT id, src_id, dst_id, type, props, strength FROM edge WHERE src_id = $1::uuid';
+      if (edgeType !== undefined) {
+        query += ' AND type = $2';
         params.push(edgeType);
       }
     }
@@ -157,8 +157,8 @@ export class GraphOperations {
 
     if (direction === 'in' || direction === 'both') {
       const paramIndex = params.length + 1;
-      query += `SELECT id, src_id, dst_id, type, props, strength FROM edge WHERE dst_id = $1::uuid`;
-      if (edgeType) {
+      query += 'SELECT id, src_id, dst_id, type, props, strength FROM edge WHERE dst_id = $1::uuid';
+      if (edgeType !== undefined) {
         query += ` AND type = $${paramIndex}`;
         if (direction === 'in') {
           params.push(edgeType);

@@ -9,7 +9,7 @@ import { QueueFilters } from './QueueFilters';
 import { formatDate, STATUS_LABELS } from './utils';
 
 const formatDuration = (durationMs: number | null | undefined): string => {
-  if (durationMs == null) {
+  if (durationMs === null || durationMs === undefined) {
     return '—';
   }
   if (durationMs >= 1000) {
@@ -68,7 +68,7 @@ export const AuditQueuePanel = ({
     });
   };
 
-  const { rows, allRows } = useQueueRows(items, expandedGroups);
+  const { allRows, rows } = useQueueRows(items, expandedGroups);
   const columns = useQueueColumns(onOpenReview, toggleGroup, expandedGroups);
 
   return (
@@ -163,7 +163,7 @@ const useQueueRows = (items: AuditQueueItem[], expandedGroups: Set<string>) =>
       }
     }
 
-    return { rows: visibleRows, allRows };
+    return { allRows, rows: visibleRows };
   }, [items, expandedGroups]);
 
 const useQueueColumns = (
@@ -181,7 +181,7 @@ const useQueueColumns = (
           if (params.row.isGroup) {
             const isExpanded = expandedGroups.has(params.row.groupId!);
             return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ alignItems: 'center', display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={() => toggleGroup(params.row.groupId!)}
@@ -189,8 +189,8 @@ const useQueueColumns = (
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '4px',
                     fontSize: '18px',
+                    padding: '4px',
                   }}
                   aria-label={isExpanded ? 'Collapse' : 'Expand'}
                 >
@@ -209,7 +209,7 @@ const useQueueColumns = (
         field: 'status',
         headerName: 'Status',
         renderCell: (params) => (
-          <span className={`audit-chip status-${params.row.status}`}>
+          <span className={`audit-chip status-${params.row.status.replaceAll('_', '-')}`}>
             {STATUS_LABELS[params.row.status]}
           </span>
         ),

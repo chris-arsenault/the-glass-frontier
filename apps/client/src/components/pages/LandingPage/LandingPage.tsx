@@ -17,7 +17,7 @@ const formatDate = (value: string, options?: Intl.DateTimeFormatOptions): string
   );
 };
 
-export function LandingPage(): JSX.Element {
+export function LandingPage(): React.JSX.Element {
   const navigate = useNavigate();
   const availableChronicles = useChronicleStore((state) => state.availableChronicles);
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);

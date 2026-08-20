@@ -5,11 +5,11 @@ export type InventoryEntryKind = z.infer<typeof InventoryEntryKindSchema>;
 
 export const InventoryDeltaOpSchema = z
   .object({
-    op: z.enum(['add', 'remove', 'update']),
-    name: z.string().min(1),
-    kind: InventoryEntryKindSchema,
     description: z.string().min(1),
     effect: z.string().min(1).optional().nullable(),
+    kind: InventoryEntryKindSchema,
+    name: z.string().min(1),
+    op: z.enum(['add', 'remove', 'update']),
     quantity: z.number().int().nonnegative(),
   });
 
@@ -23,11 +23,11 @@ export type InventoryDelta = z.infer<typeof InventoryDeltaSchema>;
 
 
 export const InventoryEntrySchema = z.object({
+  description: z.string().min(1),
+  effect: z.string().min(1).optional(),
   id: z.string().min(1),
   kind: InventoryEntryKindSchema,
   name: z.string().min(1),
-  description: z.string().min(1),
-  effect: z.string().min(1).optional(),
   quantity: z.number().int().nonnegative().default(1),
 });
 

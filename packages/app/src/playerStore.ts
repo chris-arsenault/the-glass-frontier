@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 import type { Metadata, Player, PlayerPreferences } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
@@ -24,7 +24,8 @@ const normalizePreferences = (
   preferences?: PlayerPreferences | Record<string, unknown> | null
 ): PlayerPreferences => {
   if (
-    preferences &&
+    preferences !== null &&
+    preferences !== undefined &&
     typeof preferences === 'object' &&
     'feedbackVisibility' in preferences &&
     typeof (preferences as PlayerPreferences).feedbackVisibility === 'string'
@@ -36,7 +37,8 @@ const normalizePreferences = (
 
 const normalizeMetadata = (metadata?: Metadata | Record<string, unknown> | null): Metadata => {
   if (
-    metadata &&
+    metadata !== null &&
+    metadata !== undefined &&
     typeof metadata === 'object' &&
     'tags' in metadata &&
     Array.isArray((metadata as Metadata).tags) &&

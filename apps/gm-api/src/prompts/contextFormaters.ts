@@ -1,28 +1,37 @@
 import type {
   Character,
   ChronicleBeat,
-  InventoryItem,
+  InventoryEntry,
+  Intent,
   LocationNeighbors,
-  PlayerIntent,
   Skill,
   SkillCheckPlan,
   SkillCheckResult,
 } from '@glass-frontier/dto';
 
-export function trimSkillsList(skills: Skill[]) {
+export function trimSkillsList(skills: Skill[]): Array<{
+  attribute: string;
+  name: string;
+  tier: string;
+}> {
   return skills.map((s) => {
     return {
+      attribute: s.attribute,
       name: s.name,
       tier: s.tier,
-      attribute: s.attribute,
     };
   });
 }
 
-export function trimBeatsList(beats: ChronicleBeat[]) {
+export function trimBeatsList(beats: ChronicleBeat[]): Array<{
+  description: string;
+  slug: string;
+  status: string;
+  title: string;
+}> {
   return beats
     .filter((b) => {
-      return b.status == 'in_progress';
+      return b.status === 'in_progress';
     })
     .map((b) => {
       return {
@@ -38,9 +47,9 @@ export function trimBeatsList(beats: ChronicleBeat[]) {
 export const EMPTY_LOCATION_DETAIL: Record<string, unknown> = {};
 
 export const EMPTY_LOCATION = {
+  description: null,
   name: null,
   slug: null,
-  description: null,
   status: null,
   tags: [],
 } as const;
@@ -56,11 +65,15 @@ export function formatCharacter(character: Character | null | undefined): Record
   };
 }
 
-export function formatIntent(intent: PlayerIntent | null | undefined, beats?: ChronicleBeat[]): Record<string, unknown> {
+export function formatIntent(
+  intent: Intent | null | undefined,
+  beats?: ChronicleBeat[]
+): Record<string, unknown> {
   // Look up beat slug from ID if targetBeatId is set
   let targetBeatSlug = null;
-  if (intent?.beatDirective.targetBeatId && beats) {
-    const targetBeat = beats.find(b => b.id === intent.beatDirective.targetBeatId);
+  const targetBeatId = intent?.beatDirective.targetBeatId;
+  if (targetBeatId !== null && targetBeatId !== undefined && beats !== undefined) {
+    const targetBeat = beats.find((beat) => beat.id === targetBeatId);
     targetBeatSlug = targetBeat?.slug ?? null;
   }
 
@@ -84,7 +97,7 @@ export function formatSkillCheck(
   };
 }
 
-export function formatInventoryItem(item: InventoryItem): Record<string, unknown> {
+export function formatInventoryItem(item: InventoryEntry): Record<string, unknown> {
   return {
     kind: item.kind,
     name: item.name,
@@ -92,7 +105,7 @@ export function formatInventoryItem(item: InventoryItem): Record<string, unknown
   };
 }
 
-export function formatInventoryItemDetail(item: InventoryItem): Record<string, unknown> {
+export function formatInventoryItemDetail(item: InventoryEntry): Record<string, unknown> {
   return {
     description: item.description,
     effect: item.effect,
@@ -103,23 +116,24 @@ export function formatInventoryItemDetail(item: InventoryItem): Record<string, u
 }
 
 export function formatLocationNeighbors(neighbors: LocationNeighbors): Record<string, unknown> {
-  const formatted: Record<string, unknown> = {};
-  for (const [relationship, entries] of Object.entries(neighbors)) {
-    formatted[relationship] = entries.map((entry) => ({
-      direction: entry.direction,
-      hops: entry.hops,
-      name: entry.neighbor.name,
-      slug: entry.neighbor.slug,
-      description: entry.neighbor.description ?? null,
-      subkind: entry.neighbor.subkind ?? null,
-      status: entry.neighbor.status ?? null,
-      via: entry.via
-        ? {
+  return Object.fromEntries(
+    Object.entries(neighbors).map(([relationship, entries]) => [
+      relationship,
+      entries.map((entry) => ({
+        description: entry.neighbor.description ?? null,
+        direction: entry.direction,
+        hops: entry.hops,
+        name: entry.neighbor.name,
+        slug: entry.neighbor.slug,
+        status: entry.neighbor.status ?? null,
+        subkind: entry.neighbor.subkind ?? null,
+        via: entry.via === undefined
+          ? null
+          : {
             direction: entry.via.direction,
             relationship: entry.via.relationship,
-          }
-        : null,
-    }));
-  }
-  return formatted;
+          },
+      })),
+    ])
+  );
 }

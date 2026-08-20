@@ -13,9 +13,9 @@
   align-items: center;
   border: none;
   border-radius: var(--radius-full);
+  box-shadow: 0 0 0 1px rgb(148 163 184 / 20%);
   cursor: pointer;
   justify-content: center;
-  box-shadow: 0 0 0 1px rgb(148 163 184 / 20%);
   transition: box-shadow 120ms ease, transform 120ms ease;
 }
 
@@ -36,12 +36,12 @@
   padding: var(--space-3);
   color: var(--text-primary);
   background: var(--surface-primary);
+  backdrop-filter: blur(12px);
   border: none;
   border-radius: var(--radius-md);
   box-shadow:
     0 0 0 1px var(--border-accent),
     var(--shadow-lg);
-  backdrop-filter: blur(12px);
   min-width: 220px;
   opacity: 0;
   pointer-events: none;

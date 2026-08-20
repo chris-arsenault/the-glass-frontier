@@ -1,37 +1,38 @@
 import { z } from 'zod';
 
 import { LlmTraceSchema } from '../audit/LlmAudit';
-import { InventoryDeltaSchema} from '../Inventory';
+import { InventoryDeltaSchema } from '../Inventory';
 import { BeatTrackerSchema } from './ChronicleBeat';
 import { Intent } from './Intent';
 import { IntentType as IntentTypeSchema } from './IntentType';
+import { LocationDeltaDecision } from './LocationState';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 
 const EntityUsageEntry = z.object({
+  emergentTags: z.array(z.string()).nullable(),
   entityId: z.string().min(1),
   entitySlug: z.string().min(1),
   tags: z.array(z.string()),
   usage: z.enum(['unused', 'mentioned', 'central']),
-  emergentTags: z.array(z.string()).nullable(),
 });
 
 const EntitySnippet = z.object({
-  id: z.string().min(1),
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  kind: z.string().min(1),
-  subkind: z.string().optional(),
   description: z.string().optional(),
-  status: z.string().optional(),
-  tags: z.array(z.string()),
+  id: z.string().min(1),
+  kind: z.string().min(1),
   loreFragments: z.array(z.object({
     slug: z.string().min(1),
-    title: z.string().min(1),
     summary: z.string().min(1),
     tags: z.array(z.string()),
+    title: z.string().min(1),
   })),
+  name: z.string().min(1),
   score: z.number(),
+  slug: z.string().min(1),
+  status: z.string().optional(),
+  subkind: z.string().optional(),
+  tags: z.array(z.string()),
 });
 
 export const TurnSchema = z.object({
@@ -48,6 +49,7 @@ export const TurnSchema = z.object({
   handlerId: z.string().optional(),
   id: z.string().min(1),
   inventoryDelta: InventoryDeltaSchema.optional(),
+  locationDelta: LocationDeltaDecision.optional(),
   playerIntent: Intent.optional(),
   playerMessage: TranscriptEntry,
   resolvedIntentConfidence: z.number().min(0).max(1).optional(),

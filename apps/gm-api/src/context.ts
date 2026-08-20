@@ -1,5 +1,3 @@
-// context.ts
-import type { Pool } from 'pg';
 import {
   createAppStore,
   type AppStore,
@@ -10,18 +8,27 @@ import {
   createPool,
 } from '@glass-frontier/app';
 import {
+  createDefaultRegistry,
+  createLLMClient,
+  loadLlmApiKeysFromSecrets,
+  syncRegistryToDatabase,
+} from '@glass-frontier/llm-client';
+import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
+import {
   createChronicleStore,
   createWorldSchemaStore,
   LocationHelpers,
   type ChronicleStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
+// context.ts
+import type { Pool } from 'pg';
 
 import { GmEngine } from './gmEngine';
-import { createLLMClient, createDefaultRegistry, syncRegistryToDatabase } from '@glass-frontier/llm-client';
 
 export type Context = {
   authorizationHeader?: string;
+  identity: AuthorizedIdentity;
   appStore: AppStore;
   engine: GmEngine;
   locationHelpers: LocationHelpers;
@@ -44,9 +51,12 @@ let engine: GmEngine | undefined;
  * Call this once at cold start.
  */
 export async function initializeForLambda(): Promise<void> {
-  if (pool) return; // Already initialized
+  if (pool !== undefined) {
+    return;
+  }
 
   pool = await createPoolWithIamAuth();
+  await loadLlmApiKeysFromSecrets();
 
   appStore = createAppStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
@@ -63,12 +73,12 @@ export async function initializeForLambda(): Promise<void> {
   });
 
   engine = new GmEngine({
-    locationHelpers,
-    templateManager: appStore.promptTemplateManager,
-    worldSchemaStore,
     chronicleStore,
     llmClient,
+    locationHelpers,
     modelConfigStore: appStore.modelConfigStore,
+    templateManager: appStore.promptTemplateManager,
+    worldSchemaStore,
   });
 }
 
@@ -76,10 +86,12 @@ export async function initializeForLambda(): Promise<void> {
  * Initialize context for local development with connection string.
  */
 function initializeLocal(): void {
-  if (pool) return; // Already initialized
+  if (pool !== undefined) {
+    return;
+  }
 
   const connectionString = process.env.GLASS_FRONTIER_DATABASE_URL;
-  if (!connectionString?.trim()) {
+  if (connectionString === undefined || connectionString.trim().length === 0) {
     throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the GM API.');
   }
 
@@ -99,35 +111,43 @@ function initializeLocal(): void {
   });
 
   engine = new GmEngine({
-    locationHelpers,
-    templateManager: appStore.promptTemplateManager,
-    worldSchemaStore,
     chronicleStore,
     llmClient,
+    locationHelpers,
     modelConfigStore: appStore.modelConfigStore,
+    templateManager: appStore.promptTemplateManager,
+    worldSchemaStore,
   });
 }
 
-export function createContext(options?: { authorizationHeader?: string }): Context {
+export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   // For local development, initialize synchronously on first call
-  if (!pool && !useIamAuth()) {
+  if (pool === undefined && !useIamAuth()) {
     initializeLocal();
   }
 
-  if (!appStore || !worldSchemaStore || !chronicleStore || !locationHelpers || !engine) {
+  if (
+    appStore === undefined ||
+    worldSchemaStore === undefined ||
+    chronicleStore === undefined ||
+    locationHelpers === undefined ||
+    engine === undefined
+  ) {
     throw new Error(
       'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
     );
   }
 
+  const identity = await verifyAuthorizationHeader(options?.authorizationHeader);
   return {
-    authorizationHeader: options?.authorizationHeader,
     appStore,
+    authorizationHeader: options?.authorizationHeader,
+    chronicleStore,
     engine,
+    identity,
     locationHelpers,
-    worldSchemaStore,
     playerStore: appStore.playerStore,
     templateManager: appStore.promptTemplateManager,
-    chronicleStore,
+    worldSchemaStore,
   };
 }

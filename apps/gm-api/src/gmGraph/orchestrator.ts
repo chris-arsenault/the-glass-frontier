@@ -3,18 +3,7 @@ import { log } from '@glass-frontier/utils';
 import type { TurnProgressPublisher, TurnProgressStatus } from '../eventEmitters/progressEmitter';
 import type { ChronicleTelemetry } from '../telemetry';
 import type { GraphContext } from '../types.js';
-
-export type GraphNodeResult =
-  | GraphContext
-  | {
-      context: GraphContext;
-      next?: string[];
-    };
-
-export type GraphNode = {
-  readonly id: string;
-  execute: (context: GraphContext) => Promise<GraphNodeResult> | GraphNodeResult;
-}
+import type { GraphNode, GraphNodeResult } from './nodes/graphNode';
 
 // Pipeline stage: either a single node or a parallel group
 export type PipelineStage =
@@ -27,6 +16,11 @@ type NodeDescriptor = {
   step: number;
   total: number;
 };
+
+type RunState = { context: GraphContext; executed: string[] };
+
+const preferUpdate = <T>(update: T | undefined, base: T | undefined): T | undefined =>
+  update ?? base;
 
 class GmGraphOrchestrator {
   readonly #descriptors: Map<string, NodeDescriptor> = new Map();
@@ -51,42 +45,18 @@ class GmGraphOrchestrator {
 
   async run(initialContext: GraphContext, options?: { jobId?: string }): Promise<GraphContext> {
     const jobId = options?.jobId;
-    let context: GraphContext = initialContext;
-    const executed: string[] = [];
-
-    for (const stage of this.#pipeline) {
-      if (context.failure) {
-        break;
-      }
-
-      if (stage.type === 'sequential') {
-        const descriptor = this.#descriptors.get(stage.nodeId);
-        if (!descriptor) {
-          throw new Error(`Unknown node: ${stage.nodeId}`);
-        }
-        const result = await this.#executeNode(descriptor, context, jobId);
-        let ranNode = descriptor.nodeId;
-        if (ranNode === 'gm-response-node') {
-          ranNode += ` (${result.context.playerIntent?.intentType})`;
-        }
-        executed.push(ranNode);
-        context = result.context;
-      } else {
-        // parallel stage
-        const parallelResult = await this.#runParallelGroup(stage.nodeIds, context, jobId);
-        executed.push(...parallelResult.executedNodes);
-        context = parallelResult.context;
-      }
+    const state = await this.#runPipeline(
+      0,
+      { context: initialContext, executed: [] },
+      jobId
+    );
+    if (state.executed.length === 0) {
+      return state.context;
     }
-
-    if (executed.length > 0) {
-      context = {
-        ...context,
-        executedNodes: [...(context.executedNodes ?? []), ...executed],
-      };
-    }
-
-    return context;
+    return {
+      ...state.context,
+      executedNodes: [...(state.context.executedNodes ?? []), ...state.executed],
+    };
   }
 
   private async emitProgress(
@@ -101,7 +71,7 @@ class GmGraphOrchestrator {
       context: GraphContext;
     }
   ): Promise<void> {
-    if (!jobId || this.#progressEmitter === undefined) {
+    if (jobId === undefined || this.#progressEmitter === undefined) {
       return;
     }
     try {
@@ -119,14 +89,14 @@ class GmGraphOrchestrator {
   }
 
   async #notifyStatus({
-                        context,
-                        jobId,
-                        metadata,
-                        nodeId,
-                        status,
-                        step,
-                        total,
-                      }: {
+    context,
+    jobId,
+    metadata,
+    nodeId,
+    status,
+    step,
+    total,
+  }: {
     context: GraphContext;
     jobId?: string;
     metadata?: Record<string, unknown>;
@@ -157,7 +127,7 @@ class GmGraphOrchestrator {
     descriptor: NodeDescriptor,
     context: GraphContext,
     jobId: string | undefined
-  ): Promise<GraphNodeResult> {
+  ): Promise<{ context: GraphContext }> {
     const { node, nodeId, step, total } = descriptor;
     await this.#notifyStatus({
       context,
@@ -206,10 +176,49 @@ class GmGraphOrchestrator {
   }
 
   #unwrapResult(result: GraphNodeResult): { context: GraphContext } {
-    if (typeof (result as { context?: GraphContext }).context === 'object') {
-      return result as { context: GraphContext };
+    if ('context' in result) {
+      return { context: result.context };
     }
-    return { context: result as GraphContext };
+    return { context: result };
+  }
+
+  async #runPipeline(
+    stageIndex: number,
+    state: RunState,
+    jobId: string | undefined
+  ): Promise<RunState> {
+    const stage = this.#pipeline.at(stageIndex);
+    if (stage === undefined || state.context.failure) {
+      return state;
+    }
+    const next = await this.#executeStage(stage, state, jobId);
+    return this.#runPipeline(stageIndex + 1, next, jobId);
+  }
+
+  async #executeStage(
+    stage: PipelineStage,
+    state: RunState,
+    jobId: string | undefined
+  ): Promise<RunState> {
+    if (state.context.failure) {
+      return state;
+    }
+    if (stage.type === 'parallel') {
+      const result = await this.#runParallelGroup(stage.nodeIds, state.context, jobId);
+      return {
+        context: result.context,
+        executed: [...state.executed, ...result.executedNodes],
+      };
+    }
+    const descriptor = this.#descriptors.get(stage.nodeId);
+    if (descriptor === undefined) {
+      throw new Error(`Unknown node: ${stage.nodeId}`);
+    }
+    const result = await this.#executeNode(descriptor, state.context, jobId);
+    const label = descriptor.nodeId === 'gm-response-node'
+      ? `${descriptor.nodeId} (${result.context.playerIntent?.intentType ?? 'unclassified'})`
+      : descriptor.nodeId;
+    return { context: result.context, executed: [...state.executed, label] };
   }
 
   async #runParallelGroup(
@@ -220,7 +229,7 @@ class GmGraphOrchestrator {
     const executions = await Promise.all(
       nodeIds.map(async (nodeId) => {
         const descriptor = this.#descriptors.get(nodeId);
-        if (!descriptor) {
+        if (descriptor === undefined) {
           throw new Error(`Unknown graph node ${nodeId}`);
         }
         const result = await this.#executeNode(descriptor, context, jobId);
@@ -229,7 +238,7 @@ class GmGraphOrchestrator {
     );
     const ordered = nodeIds.map((nodeId) => {
       const entry = executions.find((candidate) => candidate.descriptor.nodeId === nodeId);
-      if (!entry) {
+      if (entry === undefined) {
         throw new Error(`Missing execution result for ${nodeId}`);
       }
       return entry;
@@ -248,20 +257,19 @@ class GmGraphOrchestrator {
     return {
       ...base,
       ...update,
-      beatTracker: update.beatTracker ?? base.beatTracker,
-      chronicleState: update.chronicleState ?? base.chronicleState,
-      gmResponse: update.gmResponse ?? base.gmResponse,
-      gmSummary: update.gmSummary ?? base.gmSummary,
-      handlerId: update.handlerId ?? base.handlerId,
-      inventoryDelta: update.inventoryDelta ?? base.inventoryDelta,
-      locationDelta: update.locationDelta ?? base.locationDelta,
-      entityContext: update.entityContext ?? base.entityContext,
-      entityUsage: update.entityUsage ?? base.entityUsage,
-      playerIntent: update.playerIntent ?? base.playerIntent,
-      skillCheckPlan: update.skillCheckPlan ?? base.skillCheckPlan,
-      skillCheckResult: update.skillCheckResult ?? base.skillCheckResult,
-      systemMessage: update.systemMessage ?? base.systemMessage,
-      worldDeltaTags: update.worldDeltaTags ?? base.worldDeltaTags,
+      beatTracker: preferUpdate(update.beatTracker, base.beatTracker),
+      entityContext: preferUpdate(update.entityContext, base.entityContext),
+      entityUsage: preferUpdate(update.entityUsage, base.entityUsage),
+      gmResponse: preferUpdate(update.gmResponse, base.gmResponse),
+      gmSummary: preferUpdate(update.gmSummary, base.gmSummary),
+      handlerId: preferUpdate(update.handlerId, base.handlerId),
+      inventoryDelta: preferUpdate(update.inventoryDelta, base.inventoryDelta),
+      locationDelta: preferUpdate(update.locationDelta, base.locationDelta),
+      playerIntent: preferUpdate(update.playerIntent, base.playerIntent),
+      skillCheckPlan: preferUpdate(update.skillCheckPlan, base.skillCheckPlan),
+      skillCheckResult: preferUpdate(update.skillCheckResult, base.skillCheckResult),
+      systemMessage: preferUpdate(update.systemMessage, base.systemMessage),
+      worldDeltaTags: preferUpdate(update.worldDeltaTags, base.worldDeltaTags),
     };
   }
 }

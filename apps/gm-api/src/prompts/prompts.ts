@@ -1,123 +1,128 @@
-import { Prompt } from "@glass-frontier/llm-client";
-import { extractFragment, templateFragmentMapping} from "./chronicleFragments";
-import { GraphContext } from "../types";
-import { PromptTemplateRuntime } from "./templateRuntime";
-import type {PromptTemplateId} from "@glass-frontier/dto";
+import type { PromptTemplateId } from '@glass-frontier/dto';
+import type { Prompt } from '@glass-frontier/llm-client';
+
+import type { GraphContext } from '../types';
+import { extractFragment, templateFragmentMapping } from './chronicleFragments';
+import type { PromptTemplateRuntime } from './templateRuntime';
 
 type MessageOrder = 'player' | 'gm' | 'both';
-const messageOrder: Partial<Record<PromptTemplateId, MessageOrder>> = {
-  "action-resolver": 'player',
-  "wrap-resolver": 'player',
-  "beat-tracker": 'both',
-  "check-planner": 'player',
-  "clarification-responder": 'player',
-  "entity-judge": 'gm',
-  "gm-summary": 'gm',
-  "inquiry-describer": 'player',
-  "intent-beat-detector": 'player',
-  "intent-classifier": 'player',
-  "inventory-delta": 'gm',
-  "location-delta": 'gm',
-  "lore-judge": 'gm',
-  "planning-narrator": 'player',
-  "possibility-advisor": 'player',
-  "reflection-weaver": 'player',
-}
+const messageOrder = new Map<PromptTemplateId, MessageOrder>([
+  ['action-resolver', 'player'],
+  ['beat-tracker', 'both'],
+  ['check-planner', 'player'],
+  ['clarification-responder', 'player'],
+  ['entity-judge', 'gm'],
+  ['gm-summary', 'gm'],
+  ['inquiry-describer', 'player'],
+  ['intent-beat-detector', 'player'],
+  ['intent-classifier', 'player'],
+  ['inventory-delta', 'gm'],
+  ['location-delta', 'gm'],
+  ['lore-judge', 'gm'],
+  ['planning-narrator', 'player'],
+  ['possibility-advisor', 'player'],
+  ['reflection-weaver', 'player'],
+  ['wrap-resolver', 'player'],
+]);
 class PromptComposer {
-  #templateRuntime: PromptTemplateRuntime;
+  readonly #templateRuntime: PromptTemplateRuntime;
   constructor(
     readonly templateRuntime: PromptTemplateRuntime
   ) {
     this.#templateRuntime = templateRuntime;
   }
 
-  async buildPrompt(templateId, context): Promise<Prompt> {
-    const prompt = {
-      instructions: await this.#instructions(templateId),
-      input: []
+  async buildPrompt(templateId: PromptTemplateId, context: GraphContext): Promise<Prompt> {
+    const input: Prompt['input'] = [];
+    const order = messageOrder.get(templateId);
+    if (order === undefined) {
+      throw new Error(`No message order is registered for ${templateId}.`);
     }
-    const order = messageOrder[templateId];
-    if (order == 'player' || order == 'both') {
-      prompt.input.push({
-        role: 'user',
+    if (order === 'player' || order === 'both') {
+      input.push({
         content: [{
-          type: 'input_text',
-          text: this.#userMessage(context)
-        }]
+          text: this.#userMessage(context),
+          type: 'input_text'
+        }],
+        role: 'user'
       });
     }
-    if (order == 'gm' || order == 'both') {
-      prompt.input.push({
-        role: order == 'gm' ? 'user' : 'developer',
+    if (order === 'gm' || order === 'both') {
+      input.push({
         content: [{
-          type: 'input_text',
-          text: this.#gmMessage(context)
-        }]
+          text: this.#gmMessage(context),
+          type: 'input_text'
+        }],
+        role: order === 'gm' ? 'user' : 'developer'
       });
     }
-    prompt.input.push({
-      role: 'developer',
+    input.push({
       content: [{
-        type: 'input_text',
-        text: await this.#developerMessage(templateId, context)
-      }]
-    })
+        text: await this.#developerMessage(templateId, context),
+        type: 'input_text'
+      }],
+      role: 'developer'
+    });
 
-    return prompt;
+    return {
+      input,
+      instructions: await this.#instructions(templateId),
+    };
   }
 
-  async #instructions(templateId): Promise<string> {
-    return await this.#templateRuntime.render(templateId, {});
+  async #instructions(templateId: PromptTemplateId): Promise<string> {
+    return this.#templateRuntime.render(templateId, {});
   }
 
-  async #developerMessage(templateId, context): Promise<string>  {
-    const fragments = templateFragmentMapping[templateId]
-
-    const devMessageList = []
-    for (const f of fragments) {
-      const frag = await extractFragment(f, context)
-      if (this.#isEmptyFragment(frag)) {
-        continue;
-      }
-
-      devMessageList.push(`### ${f.toUpperCase()}`);
-      if (typeof frag === 'string') {
-        devMessageList.push(frag);
-      } else {
-        devMessageList.push(JSON.stringify(frag));
-      }
-      devMessageList.push('\n'); // double newline between fragments
+  async #developerMessage(
+    templateId: PromptTemplateId,
+    context: GraphContext
+  ): Promise<string> {
+    const fragmentTypes = templateFragmentMapping.get(templateId);
+    if (fragmentTypes === undefined) {
+      throw new Error(`No fragment mapping is registered for ${templateId}.`);
     }
-    return devMessageList.join('\n')
-
+    const fragments = await Promise.all(fragmentTypes.map(async (fragmentType) => ({
+      fragmentType,
+      value: await extractFragment(fragmentType, context),
+    })));
+    return fragments.flatMap(({ fragmentType, value }) =>
+      this.#formatFragment(fragmentType, value)
+    ).join('\n');
   }
 
-  #userMessage(context: GraphContext) {
-    return context.playerMessage.content
+  #userMessage(context: GraphContext): string {
+    return context.playerMessage.content;
   }
 
-  #gmMessage(context: GraphContext) {
-    return context.gmResponse?.content
+  #gmMessage(context: GraphContext): string {
+    return context.gmResponse?.content ?? '';
   }
 
-  #isEmptyFragment(frag: any): boolean {
-    // null or undefined
-    if (frag == null) return true;
-
-    // string
-    if (typeof frag === "string") return frag.trim().length === 0;
-
-    // array
-    if (Array.isArray(frag)) return frag.length === 0;
-
-    // object (but not Date, Map, etc.)
-    if (typeof frag === "object") {
-      return Object.keys(frag).length === 0;
+  #formatFragment(fragmentType: string, value: unknown): string[] {
+    if (this.#isEmptyFragment(value)) {
+      return [];
     }
+    const content = typeof value === 'string' ? value : JSON.stringify(value);
+    return [`### ${fragmentType.toUpperCase()}`, content, '\n'];
+  }
 
+  #isEmptyFragment(fragment: unknown): boolean {
+    if (fragment === null || fragment === undefined) {
+      return true;
+    }
+    if (typeof fragment === 'string') {
+      return fragment.trim().length === 0;
+    }
+    if (Array.isArray(fragment)) {
+      return fragment.length === 0;
+    }
+    if (typeof fragment === 'object') {
+      return Object.keys(fragment).length === 0;
+    }
     return false;
   }
 
 }
 
-export { PromptComposer }
+export { PromptComposer };

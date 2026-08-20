@@ -30,12 +30,12 @@ export const PlayerTemplateSlot = z.object({
 export type PlayerTemplateSlot = z.infer<typeof PlayerTemplateSlot>;
 
 export const Player = z.object({
-  id: z.string().min(1),
-  username: z.string().min(1),
   email: z.string().email().optional(),
+  id: z.string().min(1),
   metadata: Metadata.optional(),
   preferences: PlayerPreferencesSchema.optional(),
   templateOverrides: z.record(z.string(), PlayerTemplateSlot).optional(),
+  username: z.string().min(1),
 });
 
 export type Player = z.infer<typeof Player>;

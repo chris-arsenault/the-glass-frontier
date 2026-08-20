@@ -1,21 +1,22 @@
+import type { ModelConfigStore } from '@glass-frontier/app';
 import type {
   BeatTracker,
   Character,
   Chronicle,
   Intent,
   LlmTrace,
+  LocationEntity,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
+import type { RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore, LocationHelpers, ChronicleStore } from '@glass-frontier/worldstate';
-import type { ModelConfigStore } from '@glass-frontier/app';
 
+import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
+import type { LocationDeltaDecision } from './gmGraph/nodes/classifiers/LocationDeltaNode';
 import type { PromptTemplateRuntime } from './prompts/templateRuntime';
-import { RetryLLMClient} from "@glass-frontier/llm-client";
-import {LocationDeltaDecision} from "./gmGraph/nodes/classifiers/LocationDeltaNode";
-import {InventoryDelta} from "./gmGraph/nodes/classifiers/InventoryDeltaNode";
 
 export type ChronicleState = {
   chronicleId: string;
@@ -89,6 +90,8 @@ export type GraphContext = {
   locationDelta?: LocationDeltaDecision;
   inventoryDelta?: InventoryDelta;
   beatTracker?: BeatTracker;
+  executedNodes?: string[];
+  handlerId?: string;
   entityContext?: EntityContextSlice;
   entityUsage?: Array<{
     entityId: string;
@@ -97,13 +100,14 @@ export type GraphContext = {
     usage: 'unused' | 'mentioned' | 'central';
     emergentTags: string[] | null;
   }>;
+  worldDeltaTags?: string[];
 }
 
 export type TelemetryLike = {
   recordToolError: (entry: {
     chronicleId: string;
     operation: string;
-    referenceId?: string | null;
+    referenceId?: string;
     attempt: number;
     message: string;
   }) => void;

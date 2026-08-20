@@ -1,6 +1,4 @@
-import type { Character, Chronicle, LocationEntity } from '@glass-frontier/dto';
-import { isNonEmptyString, log } from '@glass-frontier/utils';
-import type { ChronicleStore, LocationHelpers } from '@glass-frontier/worldstate';
+import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
@@ -8,164 +6,72 @@ import { createUpdatedCharacter } from './characterUpdater';
 import { createUpdatedInventory } from './inventoryUpdater';
 import { applyLocationUpdate } from './locationUpdater';
 
-
 export class WorldUpdater {
-  readonly #chronicleStore: ChronicleStore;
-  readonly #locationHelpers: LocationHelpers;
-
-  constructor(options: { chronicleStore: ChronicleStore; locationHelpers: LocationHelpers }) {
-    this.#chronicleStore = options.chronicleStore;
-    this.#locationHelpers = options.locationHelpers;
-  }
-
   async update(context: GraphContext): Promise<GraphContext> {
     if (context.failure) {
       return context;
     }
 
-    let nextContext = context;
-    nextContext = this.#updateCharacter(nextContext);
-    nextContext = this.#updateInventory(nextContext);
-    nextContext = this.#updateBeats(nextContext);
-    nextContext = (await this.#updateLocation(nextContext)) ?? nextContext;
-
-    await this.#saveCharacter(nextContext.chronicleState.character);
-    await this.#saveChronicle(nextContext.chronicleState.chronicle);
-
-    return nextContext;
+    const characterContext = this.#updateCharacter(context);
+    const inventoryContext = this.#updateInventory(characterContext);
+    const beatContext = this.#updateBeats(inventoryContext);
+    return this.#updateLocation(beatContext);
   }
 
   #updateCharacter(context: GraphContext): GraphContext {
-    log('info', 'Updating Character');
-
-    const updatedCharacter = createUpdatedCharacter(context);
+    log('info', 'Updating character session state');
     return {
       ...context,
       chronicleState: {
         ...context.chronicleState,
-        character: updatedCharacter
-      }
+        character: createUpdatedCharacter(context),
+      },
     };
   }
 
   #updateInventory(context: GraphContext): GraphContext {
-    log('info', 'Updating Inventory');
-    if (context.inventoryDelta === undefined || context.inventoryDelta === null) {
-      return context;
-    }
-    if (context.inventoryDelta.ops.length === 0) {
-      return context;
-    }
-    if (!context.chronicleState.character) {
-      log('error', 'Cannot update inventory: character is null');
+    log('info', 'Updating inventory session state');
+    if (context.inventoryDelta === undefined || context.inventoryDelta.ops.length === 0) {
       return context;
     }
 
-    const newInventory = createUpdatedInventory(context);
     return {
       ...context,
       chronicleState: {
         ...context.chronicleState,
         character: {
           ...context.chronicleState.character,
-          inventory: newInventory,
+          inventory: createUpdatedInventory(context),
         },
-      }
+      },
     };
   }
 
   #updateBeats(context: GraphContext): GraphContext {
-    log('info', 'Updating Beats');
-    const newBeats = createUpdatedBeats(context);
-
+    log('info', 'Updating chronicle beats');
     return {
       ...context,
       chronicleState: {
         ...context.chronicleState,
         chronicle: {
           ...context.chronicleState.chronicle,
-          beats: newBeats
-        }
-      }
+          beats: createUpdatedBeats(context),
+        },
+      },
     };
   }
 
-  async #saveCharacter(character: Character): Promise<void> {
-    try {
-      await this.#chronicleStore.upsertCharacter(character);
-    } catch (error) {
-      log('error', `Error in saving character ${error}`);
-    }
-  }
-
-  async #saveChronicle(chronicle: Chronicle): Promise<void> {
-    try {
-      await this.#chronicleStore.upsertChronicle(chronicle);
-    } catch (error) {
-      log('error', `Error in saving chronicle ${error}`);
-    }
-  }
-
-  async #updateLocation(context: GraphContext): Promise<GraphContext | undefined> {
-    try {
-      const locationState = await applyLocationUpdate(context);
-
-      if (!locationState) {
-        return context;
-      }
-
-      const summary = await this.#buildLocationEntity(locationState.locationId);
-      const updatedChronicle: Chronicle = {
-        ...context.chronicleState.chronicle,
-        locationId: locationState.locationId,
-      };
-
-      return {
-        ...context,
-        chronicleState: {
-          ...context.chronicleState,
-          chronicle: updatedChronicle,
-          location: summary ?? context.chronicleState.location,
-        },
-      };
-    } catch (error) {
-      log('error', 'Error updating location', error);
+  async #updateLocation(context: GraphContext): Promise<GraphContext> {
+    const location = await applyLocationUpdate(context);
+    if (location === null) {
       return context;
     }
-  }
-
-  async #buildLocationEntity(locationId: string): Promise<LocationEntity | null> {
-    try {
-      const details = await this.#locationHelpers.getDetails({ id: locationId });
-      return mapLocationDetailsToSummary(details);
-    } catch (error) {
-      log('error', 'Failed to map location summary', error);
-      return null;
-    }
+    return {
+      ...context,
+      chronicleState: {
+        ...context.chronicleState,
+        location,
+      },
+    };
   }
 }
-
-export const mapLocationDetailsToSummary = (details: {
-  place: {
-    id: string;
-    kind: string;
-    name: string;
-    slug?: string;
-    subkind?: string;
-    status?: string;
-    prominence?: string;
-    description?: string;
-  };
-}): LocationEntity => {
-  return {
-    id: details.place.id,
-    slug: details.place.slug ?? details.place.id,
-    name: details.place.name,
-    kind: details.place.kind,
-    subkind: details.place.subkind,
-    prominence: (details.place.prominence as LocationEntity['prominence']) ?? 'recognized',
-    status: details.place.status,
-    description: details.place.description,
-    tags: [],
-  };
-};

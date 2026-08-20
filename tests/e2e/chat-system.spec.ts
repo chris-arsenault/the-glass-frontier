@@ -12,16 +12,19 @@ const PIPELINE_ORDER = [
   'intent-classifier',
   'intent-beat-detector',
   'check-planner',
+  'entity-selector',
   'check-runner',
   'gm-response-node (action)',
+  'entity-judge',
   'beat-tracker',
   'gm-summary',
-  'location-delta',
   'inventory-delta',
+  'location-delta',
 ] as const;
 
 test.describe('Chat system', () => {
   test.beforeEach(async ({ request }) => {
+    await resetPlaywrightState(request);
     await resetWiremockScenarios(request);
   });
 
@@ -86,6 +89,7 @@ test.describe('Chat system', () => {
     await expect(page.getByRole('heading', { name: 'LLM Audit Review' })).toBeVisible();
     await page.locator('#audit-filter-player').fill('playwright-e2e');
     await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await page.getByRole('button', { name: 'Expand' }).first().click();
     const reviewButtons = page.getByRole('button', { name: 'Open Review' });
     await expect(reviewButtons.first()).toBeEnabled({ timeout: 15_000 });
     const reviewCount = await reviewButtons.count();

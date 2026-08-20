@@ -106,7 +106,7 @@ export const AuditLogEntrySchema = z.object({
   providerId: z.string().min(1),
   request: z.record(z.string(), z.any()),
   requestContextId: z.string().optional().nullable(),
-  response: z.any(),
+  response: z.json(),
   storageKey: z.string().min(1),
 });
 

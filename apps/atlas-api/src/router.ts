@@ -1,64 +1,156 @@
+import {
+  HardStateKind,
+  HardStateProminence,
+  HardStateStatus,
+  HardStateSubkind,
+} from '@glass-frontier/dto';
+import { hasAnyGroup } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import type { Context } from './context';
 
 const t = initTRPC.context<Context>().create();
-
-const prominenceSchema = z.enum(['forgotten', 'marginal', 'recognized', 'renowned', 'mythic']);
+const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!hasAnyGroup(ctx.identity, ['admin', 'moderator'])) {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  return next({ ctx });
+});
 
 const hardStateInput = z.object({
-  id: z.string().uuid().optional(),
-  kind: z.string().min(1),
-  subkind: z.string().optional(),
-  name: z.string().min(1),
   description: z.string().max(2000).optional(),
-  status: z.string().optional(),
-  prominence: prominenceSchema.optional(),
+  id: z.string().uuid().optional(),
+  kind: HardStateKind,
   links: z
     .array(
       z.object({
         relationship: z.string().min(1),
-        targetId: z.string().uuid(),
         strength: z.number().min(0).max(1).optional(),
+        targetId: z.string().uuid(),
       })
     )
     .optional(),
+  name: z.string().min(1),
+  prominence: HardStateProminence.optional(),
+  status: HardStateStatus.optional(),
+  subkind: HardStateSubkind.optional(),
 });
 
 const fragmentInput = z.object({
-  id: z.string().uuid().optional(),
-  entityId: z.string().uuid(),
-  title: z.string().min(1),
-  prose: z.string().min(1),
-  chronicleId: z.string().uuid().optional(),
   beatId: z.string().optional(),
+  chronicleId: z.string().uuid().optional(),
+  entityId: z.string().uuid(),
+  id: z.string().uuid().optional(),
+  prose: z.string().min(1),
   tags: z.array(z.string()).optional(),
+  title: z.string().min(1),
 });
 
-const isUuid = (s: string) =>
+const isUuid = (s: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
 export const appRouter = t.router({
-  // GET /entities
-  listEntities: t.procedure
+  // POST /entities/batch
+  batchGetEntities: t.procedure
+    .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(100) }))
+    .query(async ({ ctx, input }) => {
+      log('info', 'atlas-api: batchGetEntities', { count: input.ids.length });
+      const entities = await Promise.all(
+        input.ids.map((id) => ctx.worldSchemaStore.getEntity({ id }))
+      );
+      return entities.filter((e): e is NonNullable<typeof e> => e !== null);
+    }),
+
+  // POST /chronicles
+  createChronicle: t.procedure
     .input(
       z.object({
-        kind: z.string().optional(),
-        minProminence: prominenceSchema.optional(),
-        maxProminence: prominenceSchema.optional(),
-        limit: z.number().int().min(1).max(200).optional(),
-      }).optional()
+        anchorSlug: z.string().min(1),
+        characterId: z.string().uuid().optional(),
+        locationSlug: z.string().min(1).optional(),
+        playerId: z.string().min(1),
+        title: z.string().min(1),
+      })
     )
-    .query(async ({ ctx, input }) => {
-      log('info', 'atlas-api: listEntities', { kind: input?.kind });
-      return ctx.worldSchemaStore.listEntities({
-        kind: input?.kind as never,
-        limit: input?.limit ?? 200,
-        minProminence: input?.minProminence as never,
-        maxProminence: input?.maxProminence as never,
+    .mutation(async ({ ctx, input }) => {
+      if (input.playerId !== ctx.identity.sub) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      log('info', 'atlas-api: createChronicle', { title: input.title });
+
+      const anchor = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.anchorSlug });
+      if (anchor === null) {
+        throw new Error('Anchor not found');
+      }
+
+      let location = null;
+      if (input.locationSlug !== undefined && input.locationSlug.length > 0) {
+        location = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.locationSlug });
+        if (location === null || location.kind !== 'location') {
+          throw new Error('Location not found or invalid kind');
+        }
+      } else {
+        const linkedIds = anchor.links.map((link) => link.targetId);
+        const linkedEntities = await Promise.all(
+          linkedIds.map((id) => ctx.worldSchemaStore.getEntity({ id }))
+        );
+        location = linkedEntities.find((entity) => entity?.kind === 'location') ?? null;
+        if (location === null) {
+          throw new Error('No location neighbors found for anchor entity');
+        }
+      }
+
+      return ctx.chronicleStore.ensureChronicle({
+        anchorEntityId: anchor.id,
+        characterId: input.characterId,
+        locationId: location.id,
+        playerId: ctx.identity.sub,
+        title: input.title,
       });
+    }),
+
+  // POST /fragments
+  createFragment: moderatorProcedure
+    .input(fragmentInput)
+    .mutation(async ({ ctx, input }) => {
+      log('info', 'atlas-api: createFragment', { title: input.title });
+      return ctx.worldSchemaStore.createLoreFragment({
+        entityId: input.entityId,
+        id: input.id,
+        prose: input.prose,
+        source: {
+          beatId: input.beatId,
+          chronicleId: input.chronicleId,
+        },
+        tags: input.tags,
+        title: input.title,
+      });
+    }),
+
+  // DELETE /fragments/:id
+  deleteFragment: moderatorProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      log('info', 'atlas-api: deleteFragment', { id: input.id });
+      await ctx.worldSchemaStore.deleteLoreFragment({ id: input.id });
+      return { ok: true };
+    }),
+
+  // DELETE /relationships
+  deleteRelationship: moderatorProcedure
+    .input(
+      z.object({
+        dstId: z.string().uuid(),
+        relationship: z.string().min(1),
+        srcId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      log('info', 'atlas-api: deleteRelationship', { relationship: input.relationship });
+      await ctx.worldSchemaStore.deleteRelationship(input);
+      return { ok: true };
     }),
 
   // GET /entities/:identifier
@@ -71,10 +163,10 @@ export const appRouter = t.router({
       let entity = isUuid(identifier)
         ? await ctx.worldSchemaStore.getEntity({ id: identifier })
         : null;
-      if (!entity) {
+      if (entity === null) {
         entity = await ctx.worldSchemaStore.getEntityBySlug({ slug: identifier });
       }
-      if (!entity) {
+      if (entity === null) {
         throw new Error('Entity not found');
       }
 
@@ -85,23 +177,12 @@ export const appRouter = t.router({
       return { entity, fragments };
     }),
 
-  // POST /entities/batch
-  batchGetEntities: t.procedure
-    .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(100) }))
-    .query(async ({ ctx, input }) => {
-      log('info', 'atlas-api: batchGetEntities', { count: input.ids.length });
-      const entities = await Promise.all(
-        input.ids.map((id) => ctx.worldSchemaStore.getEntity({ id }))
-      );
-      return entities.filter((e): e is NonNullable<typeof e> => e !== null);
-    }),
-
   // GET /entities/:identifier/neighbors
   getEntityNeighbors: t.procedure
     .input(
       z.object({
         identifier: z.string().min(1),
-        kind: z.string().optional(),
+        kind: HardStateKind.optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -111,10 +192,10 @@ export const appRouter = t.router({
       let entity = isUuid(identifier)
         ? await ctx.worldSchemaStore.getEntity({ id: identifier })
         : null;
-      if (!entity) {
+      if (entity === null) {
         entity = await ctx.worldSchemaStore.getEntityBySlug({ slug: identifier });
       }
-      if (!entity) {
+      if (entity === null) {
         throw new Error('Entity not found');
       }
 
@@ -128,37 +209,83 @@ export const appRouter = t.router({
       );
 
       let validNeighbors = neighbors.filter((e): e is NonNullable<typeof e> => e !== null);
-      if (kind) {
+      if (kind !== undefined && kind.length > 0) {
         validNeighbors = validNeighbors.filter((n) => n.kind === kind);
       }
 
       return { entity, neighbors: validNeighbors };
     }),
 
+  // GET /entities
+  listEntities: t.procedure
+    .input(
+      z.object({
+        kind: HardStateKind.optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        maxProminence: HardStateProminence.optional(),
+        minProminence: HardStateProminence.optional(),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      log('info', 'atlas-api: listEntities', { kind: input?.kind ?? '' });
+      return ctx.worldSchemaStore.listEntities({
+        kind: input?.kind,
+        limit: input?.limit ?? 200,
+        maxProminence: input?.maxProminence,
+        minProminence: input?.minProminence,
+      });
+    }),
+
+  // PUT /fragments/:id
+  updateFragment: moderatorProcedure
+    .input(
+      z.object({
+        beatId: z.string().optional(),
+        chronicleId: z.string().uuid().optional(),
+        id: z.string().uuid(),
+        prose: z.string().min(1).optional(),
+        tags: z.array(z.string()).optional(),
+        title: z.string().min(1).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      log('info', 'atlas-api: updateFragment', { id: input.id });
+      return ctx.worldSchemaStore.updateLoreFragment({
+        id: input.id,
+        prose: input.prose,
+        source: {
+          beatId: input.beatId,
+          chronicleId: input.chronicleId,
+        },
+        tags: input.tags,
+        title: input.title,
+      });
+    }),
+
   // POST /entities
-  upsertEntity: t.procedure
+  upsertEntity: moderatorProcedure
     .input(hardStateInput)
     .mutation(async ({ ctx, input }) => {
-      log('info', 'atlas-api: upsertEntity', { name: input.name, kind: input.kind });
+      log('info', 'atlas-api: upsertEntity', { kind: input.kind, name: input.name });
       return ctx.worldSchemaStore.upsertEntity({
-        id: input.id,
-        kind: input.kind as never,
-        subkind: input.subkind as never,
-        name: input.name,
         description: input.description ?? undefined,
-        prominence: (input.prominence as never) ?? undefined,
-        status: (input.status as never) ?? null,
+        id: input.id,
+        kind: input.kind,
         links: input.links,
+        name: input.name,
+        prominence: input.prominence,
+        status: input.status ?? null,
+        subkind: input.subkind ?? null,
       });
     }),
 
   // POST /relationships
-  upsertRelationship: t.procedure
+  upsertRelationship: moderatorProcedure
     .input(
       z.object({
-        srcId: z.string().uuid(),
         dstId: z.string().uuid(),
         relationship: z.string().min(1),
+        srcId: z.string().uuid(),
         strength: z.number().min(0).max(1).optional().nullable(),
       })
     )
@@ -166,122 +293,6 @@ export const appRouter = t.router({
       log('info', 'atlas-api: upsertRelationship', { relationship: input.relationship });
       await ctx.worldSchemaStore.upsertRelationship(input);
       return { ok: true };
-    }),
-
-  // DELETE /relationships
-  deleteRelationship: t.procedure
-    .input(
-      z.object({
-        srcId: z.string().uuid(),
-        dstId: z.string().uuid(),
-        relationship: z.string().min(1),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      log('info', 'atlas-api: deleteRelationship', { relationship: input.relationship });
-      await ctx.worldSchemaStore.deleteRelationship(input);
-      return { ok: true };
-    }),
-
-  // POST /fragments
-  createFragment: t.procedure
-    .input(fragmentInput)
-    .mutation(async ({ ctx, input }) => {
-      log('info', 'atlas-api: createFragment', { title: input.title });
-      return ctx.worldSchemaStore.createLoreFragment({
-        id: input.id,
-        entityId: input.entityId,
-        title: input.title,
-        prose: input.prose,
-        tags: input.tags,
-        source: {
-          chronicleId: input.chronicleId,
-          beatId: input.beatId,
-        },
-      });
-    }),
-
-  // PUT /fragments/:id
-  updateFragment: t.procedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        title: z.string().min(1).optional(),
-        prose: z.string().min(1).optional(),
-        chronicleId: z.string().uuid().optional(),
-        beatId: z.string().optional(),
-        tags: z.array(z.string()).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      log('info', 'atlas-api: updateFragment', { id: input.id });
-      return ctx.worldSchemaStore.updateLoreFragment({
-        id: input.id,
-        title: input.title,
-        prose: input.prose,
-        tags: input.tags,
-        source: {
-          chronicleId: input.chronicleId,
-          beatId: input.beatId,
-        },
-      });
-    }),
-
-  // DELETE /fragments/:id
-  deleteFragment: t.procedure
-    .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      log('info', 'atlas-api: deleteFragment', { id: input.id });
-      await ctx.worldSchemaStore.deleteLoreFragment({ id: input.id });
-      return { ok: true };
-    }),
-
-  // POST /chronicles
-  createChronicle: t.procedure
-    .input(
-      z.object({
-        playerId: z.string().min(1),
-        title: z.string().min(1),
-        locationSlug: z.string().min(1).optional(),
-        anchorSlug: z.string().min(1),
-        characterId: z.string().uuid().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      log('info', 'atlas-api: createChronicle', { title: input.title });
-
-      const anchor = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.anchorSlug });
-      if (!anchor) {
-        throw new Error('Anchor not found');
-      }
-
-      let location;
-      if (input.locationSlug) {
-        location = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.locationSlug });
-        if (!location || location.kind !== 'location') {
-          throw new Error('Location not found or invalid kind');
-        }
-      } else {
-        const linkedIds = anchor.links.map((link) => link.targetId);
-        for (const linkedId of linkedIds) {
-          const entity = await ctx.worldSchemaStore.getEntity({ id: linkedId });
-          if (entity && entity.kind === 'location') {
-            location = entity;
-            break;
-          }
-        }
-        if (!location) {
-          throw new Error('No location neighbors found for anchor entity');
-        }
-      }
-
-      return ctx.chronicleStore.ensureChronicle({
-        playerId: input.playerId,
-        locationId: location.id,
-        characterId: input.characterId,
-        title: input.title,
-        anchorEntityId: anchor.id,
-      });
     }),
 });
 

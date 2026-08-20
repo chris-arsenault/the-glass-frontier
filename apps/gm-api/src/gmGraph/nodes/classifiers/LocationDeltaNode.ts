@@ -1,53 +1,46 @@
-import {isNonEmptyString, log} from '@glass-frontier/utils';
-import { z } from 'zod';
+import {
+  type IntentType,
+  type LocationDeltaDecision,
+  LocationDeltaDecision as LocationDeltaDecisionSchema,
+} from '@glass-frontier/dto';
+import { LlmClassifierNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LlmClassiferNode';
+import { isNonEmptyString } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../../types';
 
-import {LlmClassifierNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LlmClassiferNode";
-
-const LocationDeltaDecisionSchema = z.object({
-  action: z
-    .enum(['no_change', 'move'])
-    .describe('Whether to stay put, move to a specific place.'),
-  destination: z
-    .string()
-    .min(1)
-    .describe('Name of the destination or best-known container.'),
-  link: z
-    .enum(['same', 'adjacent', 'inside', 'linked'])
-    .describe('How the destination relates to the current anchor.'),
-});
-
-export type LocationDeltaDecision = z.infer<typeof LocationDeltaDecisionSchema>;
+const NODE_ID = 'location-delta';
+const RUNNABLE_INTENTS = new Set<IntentType>(['action', 'planning', 'wrap']);
 
 class LocationDeltaNode extends LlmClassifierNode<LocationDeltaDecision> {
-  readonly id = 'location-delta';
+  readonly id = NODE_ID;
   constructor() {
     super({
-      id: 'location-delta',
+      applyResult: (context, result) => this.#saveLocationDelta(context, result),
+      id: NODE_ID,
       schema: LocationDeltaDecisionSchema,
       schemaName: 'location_delta_decision',
-      applyResult: (context, result) => this.#saveLocationDelta(context, result),
-      shouldRun: (context) => { return this.#isRunnable(context)},
-      telemetryTag: 'location-delta'
-    })
+      shouldRun: (context) => this.#isRunnable(context),
+      telemetryTag: NODE_ID
+    });
   }
 
   #isRunnable(context: GraphContext): boolean {
-    const correctAction = (context.playerIntent?.intentType == 'action' || context.playerIntent?.intentType == 'planning' || context.playerIntent?.intentType === 'wrap')
+    const intentType = context.playerIntent?.intentType;
     return (
-      correctAction &&
-      isNonEmptyString(context.gmResponse?.content) &&
-      isNonEmptyString(context.chronicleState.chronicle.characterId)
+      intentType !== undefined
+      && RUNNABLE_INTENTS.has(intentType)
+      && isNonEmptyString(context.gmResponse?.content)
+      && isNonEmptyString(context.chronicleState.chronicle.characterId)
     );
   }
 
   #saveLocationDelta(context: GraphContext, result: LocationDeltaDecision): GraphContext {
     return {
       ...context,
-      locationDelta: result
-    }
+      locationDelta: result,
+    };
   }
 }
 
 export { LocationDeltaNode };
+export type { LocationDeltaDecision } from '@glass-frontier/dto';

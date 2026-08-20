@@ -1,17 +1,19 @@
-// context.ts
-import type { Pool } from 'pg';
 import {
   createPoolWithIamAuth,
   useIamAuth,
   createPool,
 } from '@glass-frontier/app';
+import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import {
   createWorldSchemaStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
+// context.ts
+import type { Pool } from 'pg';
 
 export type Context = {
   authorizationHeader?: string;
+  identity: AuthorizedIdentity;
   worldSchemaStore: WorldSchemaStore;
 };
 
@@ -24,7 +26,9 @@ let worldSchemaStore: WorldSchemaStore | undefined;
  * Call this once at cold start.
  */
 export async function initializeForLambda(): Promise<void> {
-  if (pool) return; // Already initialized
+  if (pool !== undefined) {
+    return;
+  }
 
   pool = await createPoolWithIamAuth();
   worldSchemaStore = createWorldSchemaStore({ pool });
@@ -34,10 +38,12 @@ export async function initializeForLambda(): Promise<void> {
  * Initialize context for local development with connection string.
  */
 function initializeLocal(): void {
-  if (pool) return; // Already initialized
+  if (pool !== undefined) {
+    return;
+  }
 
   const connectionString = process.env.GLASS_FRONTIER_DATABASE_URL;
-  if (!connectionString?.trim()) {
+  if (connectionString === undefined || connectionString.trim().length === 0) {
     throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured for the world-schema API.');
   }
 
@@ -48,20 +54,22 @@ function initializeLocal(): void {
 /**
  * Create the tRPC context, initializing stores if needed for local development.
  */
-export function createContext(options?: { authorizationHeader?: string }): Context {
+export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   // For local development, initialize synchronously on first call
-  if (!pool && !useIamAuth()) {
+  if (pool === undefined && !useIamAuth()) {
     initializeLocal();
   }
 
-  if (!worldSchemaStore) {
+  if (worldSchemaStore === undefined) {
     throw new Error(
       'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
     );
   }
 
+  const identity = await verifyAuthorizationHeader(options?.authorizationHeader);
   return {
     authorizationHeader: options?.authorizationHeader,
+    identity,
     worldSchemaStore,
   };
 }

@@ -1,5 +1,5 @@
 import { type Character, type InventoryEntry, type InventoryEntryKind } from '@glass-frontier/dto';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
 import type { MomentumTrend } from '../../../state/chronicleState';
@@ -93,7 +93,7 @@ const groupInventoryByKind = (
   return groups;
 };
 
-const CharacterEmptyState = (): JSX.Element => (
+const CharacterEmptyState = (): React.JSX.Element => (
   <section className="session-panel" aria-live="polite">
     <header className="session-panel-header">
       <h2>Character</h2>
@@ -107,7 +107,7 @@ type HeaderProps = {
   momentumTrend: MomentumTrend | null;
 };
 
-const CharacterHeader = ({ character, momentumTrend }: HeaderProps): JSX.Element => (
+const CharacterHeader = ({ character, momentumTrend }: HeaderProps): React.JSX.Element => (
   <header className="session-panel-header">
     <div>
       <h2 id="character-panel-title">{character.name}</h2>
@@ -125,7 +125,7 @@ type AttributesPanelProps = {
   attributes: Character['attributes'];
 };
 
-const AttributesPanel = ({ attributes }: AttributesPanelProps): JSX.Element => (
+const AttributesPanel = ({ attributes }: AttributesPanelProps): React.JSX.Element => (
   <div>
     <h3 className="panel-label">Attributes</h3>
     <dl className="panel-list">
@@ -143,7 +143,7 @@ type SignatureSkillsPanelProps = {
   skills: NormalizedSkill[];
 };
 
-const SignatureSkillsPanel = ({ skills }: SignatureSkillsPanelProps): JSX.Element => (
+const SignatureSkillsPanel = ({ skills }: SignatureSkillsPanelProps): React.JSX.Element => (
   <div>
     <h3 className="panel-label">Signature Skills</h3>
     {skills.length === 0 ? (
@@ -163,7 +163,7 @@ const SignatureSkillsPanel = ({ skills }: SignatureSkillsPanelProps): JSX.Elemen
 
 type TagsPanelProps = { tags?: string[] | null };
 
-const TagsPanel = ({ tags }: TagsPanelProps): JSX.Element | null => {
+const TagsPanel = ({ tags }: TagsPanelProps): React.JSX.Element | null => {
   const tagList = Array.isArray(tags) ? tags : [];
   if (tagList.length === 0) {
     return null;
@@ -184,7 +184,7 @@ type InventoryGroupSectionProps = {
   kind: InventoryEntryKind;
 };
 
-const InventoryGroupSection = ({ items, kind }: InventoryGroupSectionProps): JSX.Element => {
+const InventoryGroupSection = ({ items, kind }: InventoryGroupSectionProps): React.JSX.Element => {
   const { empty, title } = inventoryKindLabels[kind];
   const hasItems = items.length > 0;
   return (
@@ -214,7 +214,7 @@ const InventoryGroupSection = ({ items, kind }: InventoryGroupSectionProps): JSX
   );
 };
 
-const InventoryList = ({ inventory }: { inventory: InventoryState }): JSX.Element => {
+const InventoryList = ({ inventory }: { inventory: InventoryState }): React.JSX.Element => {
   const groups = useMemo(() => groupInventoryByKind(inventory), [inventory]);
   return (
     <>
@@ -249,7 +249,7 @@ const useCharacterOverviewState = (): OverviewData => {
 
 export function CharacterOverview({
   showEmptyState = true,
-}: CharacterOverviewProps): JSX.Element | null {
+}: CharacterOverviewProps): React.JSX.Element | null {
   const overview = useCharacterOverviewState();
 
   if (overview.character === null) {

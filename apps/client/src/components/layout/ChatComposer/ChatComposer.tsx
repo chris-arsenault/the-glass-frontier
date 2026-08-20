@@ -53,7 +53,7 @@ export function ChatComposer() {
     return isSending ? 'Sending...' : 'Send to GM';
   })();
   const wrapButtonLabel = isWrapRequested ? 'Wrapping' : 'Wrap Up';
-  const wrapButtonClassName = `chat-wrap-toggle${isWrapRequested ? ' chat-wrap-toggle--active' : ''}`;
+  const wrapButtonClassName = `chat-wrap-toggle${isWrapRequested ? ' chat-wrap-toggle-active' : ''}`;
 
   const handleWrapToggle = async () => {
     if (chronicleUnavailable || isWrapPending) {

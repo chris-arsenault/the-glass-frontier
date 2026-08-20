@@ -19,7 +19,7 @@ const summarize = (prose: string, limit = 240): string => {
 };
 
 const topTags = (focus: EntityFocusState | null | undefined, count: number): string[] => {
-  if (!focus) {
+  if (focus === null || focus === undefined) {
     return [];
   }
   return Object.entries(focus.tagScores)
@@ -29,7 +29,7 @@ const topTags = (focus: EntityFocusState | null | undefined, count: number): str
 };
 
 const topEntities = (focus: EntityFocusState | null | undefined, count: number): string[] => {
-  if (!focus) {
+  if (focus === null || focus === undefined) {
     return [];
   }
   return Object.entries(focus.entityScores)
@@ -38,106 +38,133 @@ const topEntities = (focus: EntityFocusState | null | undefined, count: number):
     .map(([id]) => id);
 };
 
+type FocusedEntityResult = {
+  neighborIds: string[];
+  scored: ScoredEntity | null;
+};
+
+type FocusScoring = {
+  anchorId: string | undefined;
+  focusEntities: string[];
+  focusTags: Set<string>;
+  nowTs: number;
+};
+
+const loadFocusedEntity = async (
+  context: GraphContext,
+  entityId: string,
+  scoring: FocusScoring
+): Promise<FocusedEntityResult> => {
+  if (!isNonEmptyString(entityId)) {
+    return { neighborIds: [], scored: null };
+  }
+  const entity = await context.worldSchemaStore.getEntity({ id: entityId });
+  if (entity === null) {
+    return { neighborIds: [], scored: null };
+  }
+  const fragments = await context.worldSchemaStore.listLoreFragmentsByEntity({
+    entityId,
+    limit: 5,
+  });
+  const entityTags = new Set(fragments.flatMap((fragment) => fragment.tags));
+  const tagOverlap = Array.from(scoring.focusTags)
+    .filter((tag) => entityTags.has(tag)).length;
+  const hasRecentLore = fragments.some(
+    (fragment) => scoring.nowTs - fragment.timestamp < RECENCY_WINDOW_MS
+  );
+  const score = (scoring.anchorId === entityId ? 5 : 0)
+    + (scoring.focusEntities.includes(entityId) ? 3 : 0)
+    + tagOverlap
+    + (hasRecentLore ? 1 : 0);
+  return {
+    neighborIds: entity.links.map((link) => link.targetId),
+    scored: { entity, score },
+  };
+};
+
+const loadNeighbor = async (
+  context: GraphContext,
+  entityId: string
+): Promise<ScoredEntity | null> => {
+  const entity = await context.worldSchemaStore.getEntity({ id: entityId });
+  return entity === null ? null : { entity, score: 1 };
+};
+
+const selectTopEntities = (entries: ScoredEntity[]): ScoredEntity[] => {
+  const deduplicated = new Map<string, ScoredEntity>();
+  for (const entry of entries) {
+    const existing = deduplicated.get(entry.entity.id);
+    if (existing === undefined || existing.score < entry.score) {
+      deduplicated.set(entry.entity.id, entry);
+    }
+  }
+  return Array.from(deduplicated.values())
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 7);
+};
+
+const buildSnippet = async (
+  context: GraphContext,
+  entry: ScoredEntity
+): Promise<EntitySnippet> => {
+  const fragments = await context.worldSchemaStore.listLoreFragmentsByEntity({
+    entityId: entry.entity.id,
+    limit: 1,
+  });
+  return {
+    description: entry.entity.description,
+    id: entry.entity.id,
+    kind: entry.entity.kind,
+    loreFragments: fragments.map((fragment) => ({
+      slug: fragment.slug,
+      summary: summarize(fragment.prose, 80),
+      tags: fragment.tags,
+      title: fragment.title,
+    })),
+    name: entry.entity.name,
+    score: entry.score,
+    slug: entry.entity.slug,
+    status: entry.entity.status,
+    subkind: entry.entity.subkind,
+    tags: Array.from(new Set(fragments.flatMap((fragment) => fragment.tags))),
+  };
+};
+
 export const buildEntityContext = async (context: GraphContext): Promise<EntityContextSlice> => {
-  const anchorId = context.chronicleState.chronicle.anchorEntityId ?? null;
+  const anchorId = context.chronicleState.chronicle.anchorEntityId;
   const focusFromEntity = topEntities(context.chronicleState.chronicle.entityFocus, 3);
   const focusSet = new Set<string>();
-  if (anchorId) {
+  if (anchorId !== undefined) {
     focusSet.add(anchorId);
   }
   focusFromEntity.forEach((id) => focusSet.add(id));
-
   const focusEntities = Array.from(focusSet);
   const focusTags = topTags(context.chronicleState.chronicle.entityFocus, 5);
   const focusTagSet = new Set(focusTags);
-
-  const neighbors = new Set<string>();
-  const scored: ScoredEntity[] = [];
-  const nowTs = Date.now();
-
-  // Score primary focus entities
-  for (const entityId of focusEntities) {
-    if (!isNonEmptyString(entityId)) {
-      continue;
-    }
-    const entity = await context.worldSchemaStore.getEntity({ id: entityId });
-    if (!entity) {
-      continue;
-    }
-
-    // Collect neighbors for fallback
-    entity.links?.forEach((link) => neighbors.add(link.targetId));
-
-    // Get entity's lore fragments to calculate tag overlap score
-    const frags = await context.worldSchemaStore.listLoreFragmentsByEntity({ entityId, limit: 5 });
-    const entityTags = new Set(frags.flatMap((f) => f.tags ?? []));
-    const tagOverlap = focusTagSet.size > 0
-      ? Array.from(focusTagSet).filter((tag) => entityTags.has(tag)).length
-      : 0;
-
-    const hasRecentLore = frags.some((f) => f.timestamp && nowTs - f.timestamp < RECENCY_WINDOW_MS);
-
-    const score =
-      (anchorId === entityId ? 5 : 0) +
-      (focusEntities.includes(entityId) ? 3 : 0) +
-      tagOverlap +
-      (hasRecentLore ? 1 : 0);
-
-    scored.push({ entity, score });
-  }
-
-  // Add neighbor entities as fallback if needed
-  for (const neighborId of neighbors) {
-    const entity = await context.worldSchemaStore.getEntity({ id: neighborId });
-    if (!entity) {
-      continue;
-    }
-    scored.push({ entity, score: 1 });
-  }
-
-  // Deduplicate and sort
-  const dedup = new Map<string, ScoredEntity>();
-  for (const entry of scored) {
-    const prev = dedup.get(entry.entity.id);
-    if (!prev || prev.score < entry.score) {
-      dedup.set(entry.entity.id, entry);
-    }
-  }
-
-  const top = Array.from(dedup.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 7);
-
-  // Build entity snippets with nested lore
-  const offered: EntitySnippet[] = [];
-  for (const entry of top) {
-    const frags = await context.worldSchemaStore.listLoreFragmentsByEntity({
-      entityId: entry.entity.id,
-      limit: 1,
-    });
-
-    offered.push({
-      id: entry.entity.id,
-      slug: entry.entity.slug,
-      name: entry.entity.name,
-      kind: entry.entity.kind,
-      subkind: entry.entity.subkind,
-      description: entry.entity.description,
-      status: entry.entity.status,
-      tags: Array.from(new Set(frags.flatMap((f) => f.tags ?? []))),
-      loreFragments: frags.map((f) => ({
-        slug: f.slug,
-        title: f.title,
-        summary: summarize(f.prose ?? '', 80),
-        tags: f.tags ?? [],
-      })),
-      score: entry.score,
-    });
-  }
+  const scoring: FocusScoring = {
+    anchorId,
+    focusEntities,
+    focusTags: focusTagSet,
+    nowTs: Date.now(),
+  };
+  const focused = await Promise.all(focusEntities.map((entityId) =>
+    loadFocusedEntity(context, entityId, scoring)
+  ));
+  const neighborIds = new Set(focused.flatMap((result) => result.neighborIds));
+  const neighbors = await Promise.all(Array.from(neighborIds).map((entityId) =>
+    loadNeighbor(context, entityId)
+  ));
+  const scored = [
+    ...focused.map((result) => result.scored),
+    ...neighbors,
+  ].filter((entry): entry is ScoredEntity => entry !== null);
+  const offered = await Promise.all(
+    selectTopEntities(scored).map((entry) => buildSnippet(context, entry))
+  );
 
   return {
-    offered,
     focusEntities,
     focusTags,
+    offered,
   };
 };

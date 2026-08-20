@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
-
+import { createAppStore } from '@glass-frontier/app';
 import type { Character, Chronicle, HardState, Player } from '@glass-frontier/dto';
-import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
 import { log } from '@glass-frontier/utils';
+import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
+import { randomUUID } from 'node:crypto';
 
 export const PLAYWRIGHT_PLAYER_ID = 'playwright-e2e';
 export const PLAYWRIGHT_CHARACTER_ID = '11111111-2222-4333-8444-555555555555';
@@ -64,32 +64,32 @@ const BASE_CHRONICLE: Chronicle = {
 
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {
   id: BASE_CHRONICLE.locationId,
-  slug: 'luminous_quay',
   kind: 'location',
   name: 'Luminous Quay',
-  subkind: 'region',
-  status: 'known',
   prominence: 'recognized',
+  slug: 'luminous_quay',
+  status: 'known',
+  subkind: 'region',
 };
 
 const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | 'links'>> = [
   {
     id: GLASS_WARDENS_ID,
-    slug: 'glass_wardens',
     kind: 'faction',
     name: 'Glass Wardens',
-    subkind: 'order',
-    status: 'active',
     prominence: 'renowned',
+    slug: 'glass_wardens',
+    status: 'active',
+    subkind: 'order',
   },
   {
     id: ORACLE_VESSEL_ID,
-    slug: 'oracle_vessel',
     kind: 'artifact',
     name: 'Oracle Vessel',
-    subkind: 'relic',
-    status: 'intact',
     prominence: 'mythic',
+    slug: 'oracle_vessel',
+    status: 'intact',
+    subkind: 'relic',
   },
 ];
 
@@ -113,28 +113,66 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
   const warden = await worldSchemaStore.upsertEntity(NON_LOCATION_ENTITIES[0]);
   const relic = await worldSchemaStore.upsertEntity(NON_LOCATION_ENTITIES[1]);
 
-  // Create lore fragments for world entities
-  await worldSchemaStore.createLoreFragment({
-    id: FOUNDING_OATH_FRAGMENT_ID,
-    entityId: warden.id,
-    source: { chronicleId: undefined },
-    title: 'Founding Oath',
-    prose: 'The Glass Wardens swear to shield all archives from oblivion.',
-    tags: ['faction', 'oath', 'founding'],
-  });
-  await worldSchemaStore.createLoreFragment({
-    id: ORACLE_SIGNAL_FRAGMENT_ID,
-    entityId: relic.id,
-    source: { chronicleId: undefined },
-    title: 'Oracle Signal',
-    prose: 'When attuned, the vessel whispers coordinates to hidden gates.',
-    tags: ['artifact', 'oracle'],
-  });
+  await Promise.all(
+    [location, warden, relic].flatMap((entity) =>
+      entity.links
+        .filter((link) => link.direction === 'out')
+        .map(async (link) =>
+          worldSchemaStore.deleteRelationship({
+            dstId: link.targetId,
+            relationship: link.relationship,
+            srcId: entity.id,
+          })
+        )
+    )
+  );
+
+  await Promise.all([
+    worldSchemaStore.deleteLoreFragment({ id: FOUNDING_OATH_FRAGMENT_ID }),
+    worldSchemaStore.deleteLoreFragment({ id: ORACLE_SIGNAL_FRAGMENT_ID }),
+  ]);
+  await Promise.all([
+    worldSchemaStore.createLoreFragment({
+      entityId: warden.id,
+      id: FOUNDING_OATH_FRAGMENT_ID,
+      prose: 'The Glass Wardens swear to shield all archives from oblivion.',
+      source: { chronicleId: undefined },
+      tags: ['faction', 'oath', 'founding'],
+      title: 'Founding Oath',
+    }),
+    worldSchemaStore.createLoreFragment({
+      entityId: relic.id,
+      id: ORACLE_SIGNAL_FRAGMENT_ID,
+      prose: 'When attuned, the vessel whispers coordinates to hidden gates.',
+      source: { chronicleId: undefined },
+      tags: ['artifact', 'oracle'],
+      title: 'Oracle Signal',
+    }),
+  ]);
 
   return { location };
 }
 
 export async function resetPlaywrightFixtures(connectionString: string): Promise<void> {
+  const appStore = createAppStore({ connectionString });
+  const worldSchemaStore = createWorldSchemaStore({ connectionString });
+  const chronicleStore = createChronicleStore({
+    connectionString,
+    worldStore: worldSchemaStore,
+  });
+
+  await chronicleStore.deleteChronicle(PLAYWRIGHT_CHRONICLE_ID);
+  await appStore.playerStore.upsert(buildPlaywrightPlayerRecord());
+  await chronicleStore.upsertCharacter(buildPlaywrightCharacterRecord());
   await seedPlaywrightFixtures(connectionString);
+  await chronicleStore.upsertChronicle(buildPlaywrightChronicleRecord());
+  await Promise.all([
+    appStore.modelConfigStore.setCategoryModel(
+      'classification',
+      'gpt-5-nano',
+      PLAYWRIGHT_PLAYER_ID
+    ),
+    appStore.modelConfigStore.setCategoryModel('prose', 'gpt-5-nano', PLAYWRIGHT_PLAYER_ID),
+  ]);
   log('info', 'playwright fixtures reset');
 }

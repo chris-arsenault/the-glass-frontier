@@ -1,6 +1,6 @@
 import type { TurnProgressEvent } from '@glass-frontier/dto';
 
-import { getConfigValue } from '../utils/runtimeConfig';
+import { getConfigValue, getEnvValue } from '../utils/runtimeConfig';
 
 const listeners = new Set<(event: TurnProgressEvent) => void>();
 
@@ -9,8 +9,7 @@ const hasNonEmptyString = (value: string | undefined | null): value is string =>
 };
 
 const resolveEndpoint = (): string | null => {
-  const envValueRaw: unknown = import.meta.env.VITE_PROGRESS_WS_URL;
-  const envValue = typeof envValueRaw === 'string' ? envValueRaw : null;
+  const envValue = getEnvValue('VITE_PROGRESS_WS_URL') ?? null;
   const explicit = getConfigValue('VITE_PROGRESS_WS_URL') ?? envValue;
   if (!hasNonEmptyString(explicit)) {
     return null;

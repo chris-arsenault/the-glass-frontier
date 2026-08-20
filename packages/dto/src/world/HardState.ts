@@ -159,28 +159,28 @@ export const HardStateProminence = z.enum([
 export type HardStateProminence = z.infer<typeof HardStateProminence>;
 
 export const HardStateLink = z.object({
-  relationship: z.string().min(1),
-  targetId: z.string().min(1),
   direction: z.enum(['out', 'in']),
+  relationship: z.string().min(1),
   strength: z.number().min(0).max(1).optional(), // 0.0 (weak/spatial) to 1.0 (strong/narrative)
+  targetId: z.string().min(1),
 });
 export type HardStateLink = z.infer<typeof HardStateLink>;
 
 export const HardState = z.object({
-  id: z.string().min(1),
-  slug: z.string().min(1),
-  kind: HardStateKind,
-  subkind: HardStateSubkind.optional(),
-  name: z.string().min(1),
-  description: z.string().max(2000).optional(),
-  status: HardStateStatus.optional(),
-  prominence: HardStateProminence.default('recognized'),
-  links: z.array(HardStateLink).default([]),
   createdAt: z
     .number()
     .int()
     .nonnegative()
     .default(() => Date.now()),
+  description: z.string().max(2000).optional(),
+  id: z.string().min(1),
+  kind: HardStateKind,
+  links: z.array(HardStateLink).default([]),
+  name: z.string().min(1),
+  prominence: HardStateProminence.default('recognized'),
+  slug: z.string().min(1),
+  status: HardStateStatus.optional(),
+  subkind: HardStateSubkind.optional(),
   updatedAt: z
     .number()
     .int()

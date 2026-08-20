@@ -1,23 +1,20 @@
-import type {IntentType, TranscriptEntry,} from '@glass-frontier/dto';
+import type { IntentType, PromptTemplateId, TranscriptEntry } from '@glass-frontier/dto';
+import { PromptComposer } from '@glass-frontier/gm-api/prompts/prompts';
+import { isNonEmptyString, log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types';
-import type { GraphNode } from '../orchestrator';
-
-import {PromptComposer} from "@glass-frontier/gm-api/prompts/prompts";
-import {isNonEmptyString, log} from "@glass-frontier/utils";
+import type { GraphNode } from './graphNode';
 
 type HandlerOptions = {
   advancesTimeline: boolean;
-  id: string;
+  id: PromptTemplateId;
   intentType: IntentType;
-  temperature: number;
   worldDeltaTag?: string;
 };
 
 const NARRATIVE_MAX_OUTPUT_TOKENS = 2000;
-const NARRATIVE_REASONING = { reasoning: { effort: 'minimal' as const } };
+const NARRATIVE_REASONING = { effort: 'minimal' as const };
 const NARRATIVE_VERBOSITY = 'low';
-const FALLBACK_NARRATIVE_MODEL = 'gpt-5-mini';
 
 class GmResponseNode implements GraphNode {
   readonly id: string;
@@ -40,7 +37,7 @@ class GmResponseNode implements GraphNode {
   }
   async execute(context: GraphContext): Promise<GraphContext> {
     if (!this.#isEligible(context)) {
-      context.telemetry?.recordToolNotRun?.({
+      context.telemetry.recordToolNotRun({
         chronicleId: context.chronicleId,
         operation: this.id,
       });
@@ -49,17 +46,17 @@ class GmResponseNode implements GraphNode {
 
     try {
       const intentType = context.playerIntent?.intentType;
-
-      let handler = this.#handlers.find(handler => handler.options.intentType === intentType);
-
-      if (!handler) {
-        log("error", `Handler not found for ${context.playerIntent?.intentType}`)
+      const handler = this.#handlers.find(
+        (candidate) => candidate.options.intentType === intentType
+      );
+      if (handler === undefined) {
+        log('error', `Handler not found for ${context.playerIntent?.intentType}`);
         return { ...context, failure: true };
       }
-      log("info", `Using response type ${handler.id} for ${context.playerIntent?.intentType}`)
-      return await handler.execute(context) || context;
-    } catch (error) {
-      return {...context, failure: true};
+      log('info', `Using response type ${handler.id} for ${context.playerIntent?.intentType}`);
+      return handler.execute(context);
+    } catch {
+      return { ...context, failure: true };
     }
   }
 
@@ -71,8 +68,7 @@ class GmResponseNode implements GraphNode {
       return false;
     }
 
-    const utterance = context.playerMessage?.content;
-    return isNonEmptyString(utterance);
+    return isNonEmptyString(context.playerMessage.content);
   }
 }
 
@@ -87,24 +83,20 @@ abstract class BaseIntentHandlerNode implements GraphNode {
 
   async execute(context: GraphContext): Promise<GraphContext> {
     if (!this.#isEligible(context)) {
-      context.telemetry?.recordToolNotRun?.({
+      context.telemetry.recordToolNotRun({
         chronicleId: context.chronicleId,
         operation: this.options.id,
       });
       return context;
     }
+    return this.#generateNarration(context);
+  }
 
+  async #generateNarration(context: GraphContext): Promise<GraphContext> {
     try {
       const playerId = context.chronicleState.chronicle.playerId;
-      let model: string;
-      try {
-        model = await context.modelConfigStore.getModelForCategory('prose', playerId);
-      } catch (error) {
-        // Fallback to default model if lookup fails
-        model = FALLBACK_NARRATIVE_MODEL;
-      }
-
-      const composer = new PromptComposer(context.templates)
+      const model = await context.modelConfigStore.getModelForCategory('prose', playerId);
+      const composer = new PromptComposer(context.templates);
       const prompt = await composer.buildPrompt(this.options.id, context);
       const narration = await context.llm.generate({
         max_output_tokens: NARRATIVE_MAX_OUTPUT_TOKENS,
@@ -112,46 +104,21 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         ...prompt,
         metadata: {
           chronicleId: context.chronicleId,
-          turnId: context.turnId,
-          turnSequence: String(context.turnSequence),
           nodeId: this.options.id,
-          playerId
+          playerId,
+          turnId: context.turnId,
+          turnSequence: String(context.turnSequence)
         },
-        reasoning: NARRATIVE_REASONING.reasoning,
+        reasoning: NARRATIVE_REASONING,
         text: {
-          format: {
-            type: 'text'
-          },
-          verbosity: NARRATIVE_VERBOSITY
+          verbosity: NARRATIVE_VERBOSITY,
         }
       }, 'string');
-      if (narration === null) {
-        return {...context, failure: true};
-      }
-
-      // Clean up the response - remove "RESPONSE" heading/prefix if present
-      let cleanedContent = narration.message as string;
-      if (typeof cleanedContent === 'string') {
-        // Remove markdown headings like "# Response" or plain "RESPONSE:" at the start
-        cleanedContent = cleanedContent
-          .replace(/^#+\s*Response\s*\n/i, '')  // Remove "# Response" heading
-          .replace(/^RESPONSE:?\s*/i, '')        // Remove "RESPONSE:" prefix
-          .trim();
-      }
-
-      const transcript: TranscriptEntry = {
-        content: cleanedContent,
-        id: `intent-${this.id}-${context.chronicleId}-${context.turnSequence}`,
-        metadata: {
-          tags: [],
-          timestamp: Date.now(),
-        },
-        role: 'gm',
-      };
+      const cleanedContent = this.#cleanNarration(narration.message);
       return {
         ...context,
         advancesTimeline: this.options.advancesTimeline,
-        gmResponse: transcript,
+        gmResponse: this.#buildTranscript(context, cleanedContent),
         gmTrace: {
           auditId: narration.requestId,
           nodeId: this.options.id,
@@ -161,12 +128,34 @@ abstract class BaseIntentHandlerNode implements GraphNode {
 
     } catch (error) {
       console.error('[IntentHandlerNode] Narrative generation failed:', {
-        nodeId: this.options.id,
         error: error instanceof Error ? error.message : String(error),
+        nodeId: this.options.id,
         stack: error instanceof Error ? error.stack : undefined,
       });
-      return {...context, failure: true};
+      return { ...context, failure: true };
     }
+  }
+
+  #buildTranscript(context: GraphContext, content: string): TranscriptEntry {
+    return {
+      content,
+      id: `intent-${this.id}-${context.chronicleId}-${context.turnSequence}`,
+      metadata: {
+        tags: [],
+        timestamp: Date.now(),
+      },
+      role: 'gm',
+    };
+  }
+
+  #cleanNarration(message: unknown): string {
+    if (typeof message !== 'string') {
+      throw new Error(`Narrative response for ${this.id} was not text.`);
+    }
+    return message
+      .replace(/^#+\s*Response\s*\n/i, '')
+      .replace(/^RESPONSE:?\s*/i, '')
+      .trim();
   }
 
   #isEligible(context: GraphContext): boolean {
@@ -176,8 +165,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
     if (context.playerIntent === undefined) {
       return false;
     }
-    const utterance = context.playerMessage?.content;
-    if (!isNonEmptyString(utterance)) {
+    if (!isNonEmptyString(context.playerMessage.content)) {
       return false;
     }
     return context.playerIntent.intentType === this.options.intentType;
@@ -190,7 +178,6 @@ class ActionResolverNode extends BaseIntentHandlerNode {
       advancesTimeline: true,
       id: 'action-resolver',
       intentType: 'action',
-      temperature: 0.85,
     });
   }
 }
@@ -201,7 +188,6 @@ class WrapResolverNode extends BaseIntentHandlerNode {
       advancesTimeline: true,
       id: 'wrap-resolver',
       intentType: 'wrap',
-      temperature: 0.85,
     });
   }
 }
@@ -212,7 +198,6 @@ class InquiryResponderNode extends BaseIntentHandlerNode {
       advancesTimeline: false,
       id: 'inquiry-describer',
       intentType: 'inquiry',
-      temperature: 0.45,
     });
   }
 }
@@ -223,7 +208,6 @@ class ClarificationResponderNode extends BaseIntentHandlerNode {
       advancesTimeline: false,
       id: 'clarification-responder',
       intentType: 'clarification',
-      temperature: 0.1,
     });
   }
 }
@@ -234,7 +218,6 @@ class PossibilityAdvisorNode extends BaseIntentHandlerNode {
       advancesTimeline: false,
       id: 'possibility-advisor',
       intentType: 'possibility',
-      temperature: 0.55,
     });
   }
 }
@@ -245,7 +228,6 @@ class PlanningNarratorNode extends BaseIntentHandlerNode {
       advancesTimeline: true,
       id: 'planning-narrator',
       intentType: 'planning',
-      temperature: 0.6,
     });
   }
 }
@@ -256,7 +238,6 @@ class ReflectionWeaverNode extends BaseIntentHandlerNode {
       advancesTimeline: false,
       id: 'reflection-weaver',
       intentType: 'reflection',
-      temperature: 0.6,
     });
   }
 }

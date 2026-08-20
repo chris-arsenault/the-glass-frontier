@@ -9,15 +9,15 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@glass-frontier/app": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*",
-    "@glass-frontier/utils": "workspace:*",
-    "tsup": "^8.5.1",
-    "zod": "^4.1.12"
+    "@glass-frontier/utils": "workspace:*"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   }
 }

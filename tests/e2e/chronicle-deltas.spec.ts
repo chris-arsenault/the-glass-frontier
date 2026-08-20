@@ -10,6 +10,7 @@ import {
 
 test.describe('Chronicle deltas', () => {
   test.beforeEach(async ({ request }) => {
+    await resetPlaywrightState(request);
     await resetWiremockScenarios(request);
   });
 
@@ -17,10 +18,10 @@ test.describe('Chronicle deltas', () => {
     await resetPlaywrightState(request);
   });
 
-  test('tracks multi-turn location transitions and inventory changes', async ({ page }) => {
+  test('tracks session-scoped location transitions and inventory changes', async ({ page }) => {
+    test.setTimeout(30_000);
     const { chatInput } = await bootstrapChronicle(page, { groups: ['moderator'] });
     const locationPill = page.locator('.location-pill-value');
-    const locationPath = page.locator('.location-pill-path');
 
     await expect(locationPill).toContainText('Luminous Quay');
 
@@ -69,12 +70,6 @@ test.describe('Chronicle deltas', () => {
     );
     await expect(locationPill).not.toContainText('Maintenance Bay', { timeout: 15_000 });
     await expect(locationPill).toContainText('Luminous Quay', { timeout: 15_000 });
-    const breadcrumbText = ((await locationPath.textContent()) ?? '').replace(/\s+/g, ' ').trim();
-    if (breadcrumbText !== 'Luminous Quay') {
-      throw new Error(
-        `Location breadcrumb failed to return home (expected "Luminous Quay", saw "${breadcrumbText}")`
-      );
-    }
 
     await sendTurn(
       page,
@@ -84,14 +79,9 @@ test.describe('Chronicle deltas', () => {
     await expect(locationPill).toContainText('Prism Walk', { timeout: 15_000 });
 
     const menu = await openPlayerMenu(page);
-    await menu.getByRole('button', { name: 'Location Maintenance' }).click();
-    await expect(page.getByRole('heading', { name: 'Location Maintenance' })).toBeVisible();
-    await page.getByRole('button', { name: /Luminous Quay/i }).click();
-    const gridRows = page.locator('.MuiDataGrid-row');
-    await expect(gridRows.first()).toBeVisible({ timeout: 15_000 });
-    await expect(gridRows.filter({ hasText: 'Maintenance Bay' }).first()).toBeVisible({
-      timeout: 15_000,
-    });
-    await page.getByRole('button', { name: 'Back to Chronicle' }).click();
+    await menu.getByRole('button', { name: 'World Atlas' }).click();
+    await expect(page.getByRole('heading', { name: 'World Atlas' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Luminous Quay/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Maintenance Bay/i })).toHaveCount(0);
   });
 });

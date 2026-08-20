@@ -1,5 +1,4 @@
-/* eslint-env node */
-// eslint-disable-next-line no-undef
+/* global module */
 module.exports = {
   extends: ['stylelint-config-standard', 'stylelint-config-recommended-scss'],
   plugins: ['stylelint-order', '@stylistic/stylelint-plugin'],

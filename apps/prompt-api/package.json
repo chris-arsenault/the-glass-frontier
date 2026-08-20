@@ -18,12 +18,12 @@
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/ops": "workspace:*",
-    "@trpc/server": "^11.7.1",
-    "tsup": "^8.5.1",
+    "@trpc/server": "^11.18.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
-    "eslint": "^9.39.1"
+    "eslint": "^9.39.1",
+    "tsup": "^8.5.1"
   }
 }

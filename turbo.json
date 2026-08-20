@@ -5,10 +5,10 @@
       "outputs": ["dist/**", "build/**"]
     },
     "build:clean": {},
-    "dev": { "cache": false, "persistent": true, "dependsOn": ["^dev"]  },
+    "dev": { "cache": false, "persistent": true },
     "lint": {},
     "lint:fix": {},
-    "test": { "dependsOn": ["^build"] },
+    "test": { "dependsOn": ["^build"] }
   },
   "globalEnv": [
     "AWS_ACCESS_KEY_ID",
@@ -18,10 +18,11 @@
     "AWS_SQS_ENDPOINT",
     "CHRONICLE_API_PORT",
     "CHRONICLE_CLOSURE_QUEUE_URL",
+    "COGNITO_APP_CLIENT_ID",
+    "COGNITO_USER_POOL_ID",
     "DATABASE_URL",
     "GLASS_FRONTIER_DATABASE_URL",
     "GM_API_PORT",
-    "LOCATION_API_PORT",
     "NARRATIVE_PORT",
     "OPENAI_API_BASE",
     "OPENAI_API_KEY",

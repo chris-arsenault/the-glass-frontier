@@ -75,16 +75,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'moderation-tools',
     steps: [
-      'Moderators can open the Audit Review and Location Maintenance pages from the player menu.',
+      'Moderators can open the Audit Review, World Atlas, and World Schema pages from the player menu.',
       'Audit Review surfaces LLM request logs and template proposals for triage.',
-      'Location Maintenance lets you browse, annotate, and connect places in the world graph.',
+      'World Atlas lets you browse, annotate, and connect entities in the shared world graph.',
     ],
     summary: 'Specialized workspaces for admins and moderators to keep the world tidy.',
     title: 'Moderator Tools',
   },
 ];
 
-export function UserGuideModal(): JSX.Element | null {
+export function UserGuideModal(): React.JSX.Element | null {
   const isOpen = useUiStore((state) => state.isGuideModalOpen);
   const close = useUiStore((state) => state.closeGuideModal);
   const [expanded, setExpanded] = useState<string | null>(GUIDE_SECTIONS[0]?.id ?? null);

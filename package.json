@@ -12,26 +12,24 @@
   "scripts": {
     "build": "turbo run build",
     "build:clean": "turbo run build:clean",
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "lint:css": "pnpm -F ./apps/client run lint:css",
     "lint:css:fix": "pnpm -F ./apps/client run lint:css:fix",
+    "typecheck": "tsc -b --pretty false && tsc -p packages/node-utils/test/tsconfig.json --pretty false && tsc -p packages/worldstate/test/tsconfig.json --pretty false",
     "test": "turbo run test",
     "clear:data": "pnpm -F @glass-frontier/worldstate migrate:reset",
     "db:drop": "tsx scripts/drop-database.ts",
     "db:reset": "pnpm db:drop && pnpm db:migrate",
     "db:migrate": "pnpm -F @glass-frontier/app migrate:up && pnpm -F @glass-frontier/ops migrate:up && pnpm -F @glass-frontier/worldstate migrate:up",
-    "seed:data": "pnpm -F @glass-frontier/worldstate seed:data",
-    "seed:world": "pnpm -F @glass-frontier/worldstate seed:world",
-    "generate:world-seed": "pnpm -F @glass-frontier/worldstate generate:world-seed",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:update-snapshots": "playwright test -u",
     "local": "tsx scripts/run-local-stack.ts",
     "local:ai": "tsx scripts/run-local-stack.ts --mode=live-openai",
-    "local:e2e": "tsx scripts/run-local-stack.ts --seed=e2e-fixtures",
-    "local:fresh": "tsx scripts/run-local-stack.ts --force-reseed",
+    "local:e2e": "tsx scripts/run-local-stack.ts",
+    "local:fresh": "tsx scripts/run-local-stack.ts --drop-db",
     "local:reset": "tsx scripts/run-local-stack.ts --drop-db",
     "reset:sessions": "tsx scripts/reset-session-data.ts",
     "db:init-rds": "./scripts/init-rds.sh"
@@ -44,14 +42,22 @@
   ],
   "author": "Codex",
   "license": "Polyform-Noncommercial-1.0.0",
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.28.2"
+    }
+  },
   "devDependencies": {
-    "@aws-sdk/client-sqs": "^3.930.0",
-    "@aws-sdk/credential-providers": "^3.930.0",
+    "@aws-sdk/client-sqs": "^3.1114.0",
+    "@aws-sdk/credential-providers": "^3.1114.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.11.10",
+    "@types/wait-on": "^5.3.4",
+    "@types/ws": "8.5.12",
     "@vitest/coverage-v8": "^4.0.8",
+    "baseline-browser-mapping": "^2.11.15",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
@@ -61,6 +67,7 @@
     "eslint-plugin-perfectionist": "^4.15.1",
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-sonarjs": "^3.0.5",
     "eslint-plugin-unicorn": "^62.0.0",
@@ -75,10 +82,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
     "vitest": "^4.0.8",
-    "wait-on": "^8.0.2"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "wait-on": "^8.0.2",
+    "ws": "^8.21.3"
   }
 }

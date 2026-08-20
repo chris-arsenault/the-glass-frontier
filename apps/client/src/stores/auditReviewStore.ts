@@ -1,4 +1,11 @@
-import type { AuditLogEntry, AuditQueueItem, AuditReviewRecord, AuditReviewStatus, AuditReviewTag } from '@glass-frontier/dto';
+import type {
+  AuditLogEntry,
+  AuditQueueItem,
+  AuditReviewRecord,
+  AuditReviewStatus,
+  AuditReviewTag,
+  PromptTemplateId,
+} from '@glass-frontier/dto';
 import { create } from 'zustand';
 
 import { promptClient } from '../lib/promptClient';
@@ -13,6 +20,7 @@ export type AuditFilters = {
   playerId: string;
   search: string;
   startDate: string | null;
+  templateId: PromptTemplateId | null;
   endDate: string | null;
 };
 
@@ -45,6 +53,7 @@ const defaultFilters: AuditFilters = {
   search: '',
   startDate: null,
   status: [],
+  templateId: null,
 };
 
 const createDraft = (): ReviewDraft => ({
@@ -93,6 +102,7 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
         search: filters.search || undefined,
         startDate: filters.startDate ?? undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
+        templateId: filters.templateId ?? undefined,
       });
       set((state) => ({
         cursor: result.cursor ?? null,
@@ -118,6 +128,7 @@ export const useAuditReviewStore = create<AuditReviewStoreState>((set, get) => (
         search: filters.search || undefined,
         startDate: filters.startDate ?? undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
+        templateId: filters.templateId ?? undefined,
       });
       set({
         cursor: result.cursor ?? null,

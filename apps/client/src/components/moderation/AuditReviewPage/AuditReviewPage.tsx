@@ -10,7 +10,7 @@ import './AuditReviewPage.css';
 import { AuditQueuePanel } from './AuditQueuePanel';
 import { ReviewDialog } from './ReviewDialog';
 
-export function AuditReviewPage(): JSX.Element {
+export function AuditReviewPage(): React.JSX.Element {
   const access = useModeratorAccess();
   const store = useAuditReviewState();
   const modal = useReviewModal(store.selectItem);

@@ -24,7 +24,7 @@ const formatDate = (value: string): string => {
   }).format(date);
 };
 
-export function ChangelogModal(): JSX.Element | null {
+export function ChangelogModal(): React.JSX.Element | null {
   const isOpen = useUiStore((state) => state.isChangelogModalOpen);
   const close = useUiStore((state) => state.closeChangelogModal);
   const [showAll, setShowAll] = useState(false);

@@ -33,10 +33,10 @@ export const ReviewDialog = ({
   draft,
   isOpen,
   isSaving,
-  playerId,
   onCancel,
   onComplete,
   onSaveDraft,
+  playerId,
   templateLabel,
   updateDraft,
 }: ReviewDialogProps) => {
@@ -104,7 +104,7 @@ const MetadataSection = ({ detail }: { detail: AuditLogEntry }) => {
     return null;
   }
   return (
-    <div className="audit-metadata" style={{ marginBottom: '16px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px', color: '#333' }}>
+    <div className="audit-metadata" style={{ backgroundColor: '#f5f5f5', borderRadius: '4px', color: '#333', marginBottom: '16px', padding: '8px' }}>
       <strong>Request Duration:</strong> {formatDuration(detail.durationMs)}
     </div>
   );

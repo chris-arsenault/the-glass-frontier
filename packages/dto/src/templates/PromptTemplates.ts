@@ -40,13 +40,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/action-resolver.hbs',
     supportsVariants: true,
   },
-  'wrap-resolver': {
-    description: 'Tries to end the story with decisive action',
-    id: 'wrap-resolver',
-    label: 'Wrap Resolver',
-    officialObjectKey: 'official/wrap-resolver.hbs',
-    supportsVariants: true,
-  },
   'beat-tracker': {
     description: 'Evaluates and updates chronicle beats using player and GM context.',
     id: 'beat-tracker',
@@ -150,6 +143,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'reflection-weaver',
     label: 'Reflection Weaver',
     officialObjectKey: 'official/reflection-weaver.hbs',
+    supportsVariants: true,
+  },
+  'wrap-resolver': {
+    description: 'Tries to end the story with decisive action',
+    id: 'wrap-resolver',
+    label: 'Wrap Resolver',
+    officialObjectKey: 'official/wrap-resolver.hbs',
     supportsVariants: true,
   },
 };

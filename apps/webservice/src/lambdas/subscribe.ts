@@ -25,11 +25,12 @@ export const handler = async (
     const payload = typeof event.body === 'string' && event.body.length > 0 ? event.body : '{}';
     const body: unknown = JSON.parse(payload);
     const message = parseSubscribeMessage(body);
-    if (!hasText(message?.jobId ?? null)) {
+    const jobId = message?.jobId;
+    if (!hasText(jobId)) {
       return badRequest('jobId required');
     }
 
-    await repository.subscribe(message.jobId, connectionId);
+    await repository.subscribe(jobId, connectionId);
     return { body: 'ok', statusCode: 200 };
   } catch (error: unknown) {
     log('error', 'Failed to subscribe connection', {

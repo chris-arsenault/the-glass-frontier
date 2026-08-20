@@ -24,10 +24,17 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# RDS IAM authentication for Lambda to connect directly to RDS instance
+resource "aws_iam_role_policy_attachment" "database_lambda_vpc_access" {
+  for_each = local.database_lambda_role_keys
+
+  role       = aws_iam_role.lambda[each.value].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# RDS IAM authentication for Lambda to connect to the private RDS instance.
 data "aws_iam_policy_document" "rds_iam_auth" {
   statement {
-    actions   = ["rds-db:connect"]
+    actions = ["rds-db:connect"]
     resources = [
       "arn:aws:rds-db:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dbuser:${aws_db_instance.worldstate.resource_id}/${local.rds_iam_user}"
     ]
@@ -93,6 +100,29 @@ resource "aws_iam_policy" "db_provisioner_secrets" {
 resource "aws_iam_role_policy_attachment" "db_provisioner_secrets" {
   role       = aws_iam_role.lambda["db_provisioner_lambda"].name
   policy_arn = aws_iam_policy.db_provisioner_secrets.arn
+}
+
+data "aws_iam_policy_document" "llm_api_secrets" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      data.aws_secretsmanager_secret.anthropic_api_key.arn,
+      data.aws_secretsmanager_secret.openai_api_key.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "llm_api_secrets" {
+  name        = "${local.name_prefix}-llm-api-secrets"
+  description = "Allow narrative Lambdas to read the configured LLM API keys."
+  policy      = data.aws_iam_policy_document.llm_api_secrets.json
+}
+
+resource "aws_iam_role_policy_attachment" "llm_api_secrets" {
+  for_each = local.llm_lambda_role_keys
+
+  role       = aws_iam_role.lambda[each.value].name
+  policy_arn = aws_iam_policy.llm_api_secrets.arn
 }
 
 resource "aws_iam_role_policy_attachment" "webservice_sqs" {

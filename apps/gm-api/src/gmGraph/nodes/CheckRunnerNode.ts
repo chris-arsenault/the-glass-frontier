@@ -1,22 +1,17 @@
-import {GraphNode} from "./graphNode";
-import {GraphContext} from "../../types";
-import type { SkillCheckRequest } from "@glass-frontier/dto";
-import { SkillCheckResolver } from "@glass-frontier/skill-check-resolver";
-import {randomUUID} from "node:crypto";
+import type { SkillCheckRequest } from '@glass-frontier/dto';
+import { SkillCheckResolver } from '@glass-frontier/skill-check-resolver';
+import { randomUUID } from 'node:crypto';
+
+import type { GraphContext } from '../../types';
+import type { GraphNode } from './graphNode';
 
 export class CheckRunnerNode implements GraphNode {
   id = 'check-runner';
 
-  constructor(
-  ) {
-  }
-
-  async execute(context: GraphContext): Promise<GraphContext> {
-    if (context.failure
-      || !context.skillCheckPlan
-      || !context.skillCheckPlan.requiresCheck
-      || !context.chronicleState.character) {
-      context.telemetry?.recordToolNotRun?.({
+  execute(context: GraphContext): GraphContext {
+    const plan = context.skillCheckPlan;
+    if (context.failure || plan === undefined || plan.requiresCheck !== true) {
+      context.telemetry.recordToolNotRun({
         chronicleId: context.chronicleId,
         operation: this.id,
       });
@@ -24,7 +19,7 @@ export class CheckRunnerNode implements GraphNode {
     }
 
     const input: SkillCheckRequest = {
-      attribute: context.skillCheckPlan.attribute,
+      attribute: plan.attribute,
       character: context.chronicleState.character,
       checkId: randomUUID(),
       chronicleId: context.chronicleId,
@@ -33,18 +28,18 @@ export class CheckRunnerNode implements GraphNode {
         tags: [],
         timestamp: Date.now(),
       },
-      riskLevel: context.skillCheckPlan.riskLevel,
-      skill: context.skillCheckPlan.skill,
+      riskLevel: plan.riskLevel,
+      skill: plan.skill,
     };
-    if (context.skillCheckPlan.creativeSpark) {
+    if (plan.creativeSpark === true) {
       input.flags.push('creative-spark');
     }
 
-    const checkResult =  new SkillCheckResolver(input).resolveRequest();
+    const checkResult = new SkillCheckResolver(input).resolveRequest();
 
     return {
       ...context,
-      skillCheckResult: checkResult
-    }
+      skillCheckResult: checkResult,
+    };
   }
 }

@@ -12,6 +12,10 @@ import type { ChatMessage } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { BeatTrackerBadge } from '../../badges/BeatTrackerBadge/BeatTrackerBadge';
+import {
+  describeBeatTrackerEffect,
+  hasBeatTrackerDetails,
+} from '../../badges/beatTrackerPresentation';
 import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
 import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
@@ -26,6 +30,7 @@ type FeedbackTarget = {
 };
 
 const FEEDBACK_CACHE_KEY = 'chat-feedback-cache';
+const TRACKED_BEAT_LABEL = 'Tracked beat';
 const FEEDBACK_SENTIMENTS: PlayerFeedbackSentiment[] = ['positive', 'neutral', 'negative'];
 const FEEDBACK_LABELS: Record<PlayerFeedbackSentiment, string> = {
   negative: 'Needs work',
@@ -58,28 +63,10 @@ const FEEDBACK_BOOLEAN_OPTIONS: Array<{ label: string; value: FeedbackBooleanCho
   { label: 'False', value: 'false' },
 ];
 
-const BEAT_TURN_EFFECT_LABELS: Record<BeatTracker['turnEffect'], string> = {
-  advance_and_spawn: 'Advanced & Spawned',
-  advance_existing: 'Advanced Beat',
-  no_change: 'No Beat Change',
-  resolve_and_spawn: 'Resolved & Spawned',
-  resolve_existing: 'Resolved Beat',
-  spawn_new: 'Spawned Beat',
-};
-
 const describeBeatTurnEffect = (tracker?: BeatTracker | null): string | null => {
-  if (!tracker || !tracker.turnEffect) {
-    return null;
-  }
-  return BEAT_TURN_EFFECT_LABELS[tracker.turnEffect] ?? null;
-};
-
-const hasBeatTrackerDetails = (tracker?: BeatTracker | null): boolean => {
-  if (!tracker || tracker.turnEffect === 'no_change') {
-    return false;
-  }
-  const updates = tracker.updates ?? [];
-  return Boolean(tracker.newBeat || tracker.focusBeatId || updates.length > 0);
+  return tracker === null || tracker === undefined
+    ? null
+    : describeBeatTrackerEffect(tracker);
 };
 
 type PlayerBeatDirective = {
@@ -212,7 +199,7 @@ export function ChatCanvas() {
       if (prev[auditId]) {
         return prev;
       }
-      const next = { ...prev, [auditId]: true };
+      const next: Record<string, true> = { ...prev, [auditId]: true };
       writeFeedbackCache(next);
       return next;
     });
@@ -408,7 +395,7 @@ export function ChatCanvas() {
                 : null;
             const playerBeatLabel =
               entry.role === 'player'
-                ? describePlayerBeatLabel(readPlayerBeatDirective(playerIntent), beatLookup)
+                ? describePlayerBeatLabel(readPlayerBeatDirective(playerIntent))
                 : null;
             const playerIntentLabel = formatIntentBadgeLabel(playerIntent?.intentType ?? null);
             const timelineLabel = describeTimelineBadge(chatMessage.advancesTimeline ?? null);
@@ -466,6 +453,9 @@ export function ChatCanvas() {
                               skillKey={skillKey}
                               attributeKey={attributeKey}
                             />
+                            {beatTracker === null ? null : (
+                              <BeatTrackerBadge beatLookup={beatLookup} tracker={beatTracker} />
+                            )}
                             <InventoryDeltaBadge delta={chatMessage.inventoryDelta} />
                           </>
                         ) : null}
@@ -755,8 +745,8 @@ const BeatTag = ({ beatLookup, directive, label }: BeatTagProps) => {
   const isHoverable = directive.kind === 'new' || directive.kind === 'existing';
   const resolvedTitle =
     directive.kind === 'existing' && directive.targetBeatId
-      ? beatLookup.get(directive.targetBeatId) ?? 'Tracked beat'
-      : directive.summary ?? 'Tracked beat';
+      ? beatLookup.get(directive.targetBeatId) ?? TRACKED_BEAT_LABEL
+      : directive.summary ?? TRACKED_BEAT_LABEL;
   const resolvedDescription =
     directive.kind === 'existing' && directive.targetBeatId
       ? beatLookup.get(directive.targetBeatId) ?? directive.summary ?? null

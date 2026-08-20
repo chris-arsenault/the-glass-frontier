@@ -1,7 +1,7 @@
 import {
   TranscriptEntry,
 } from '@glass-frontier/dto';
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import type { Context } from './context';
@@ -19,8 +19,14 @@ export const appRouter = t.router({
     )
     .mutation(async ({ ctx, input }) => {
       const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
+      if (chronicle === null || chronicle === undefined) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+      if (chronicle.playerId !== ctx.identity.sub) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
       if (chronicle?.status === 'closed') {
-        throw new Error('Chronicle is closed.');
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Chronicle is closed.' });
       }
       const playerEntry = { ...input.content, role: 'player' as const };
       const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
@@ -45,10 +51,10 @@ export const appRouter = t.router({
     .mutation(async ({ ctx, input }) => {
       const chronicle = await ctx.chronicleStore.getChronicle(input.chronicleId);
       if (chronicle === null || chronicle === undefined) {
-        throw new Error('Chronicle not found.');
+        throw new TRPCError({ code: 'NOT_FOUND' });
       }
-      if (chronicle.playerId !== input.playerId) {
-        throw new Error('Chronicle does not belong to the requesting player.');
+      if (input.playerId !== ctx.identity.sub || chronicle.playerId !== ctx.identity.sub) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
       }
       const normalizedTarget =
         typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;

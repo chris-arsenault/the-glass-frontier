@@ -4,12 +4,12 @@
   height: fit-content;
   padding: var(--space-2);
   background: var(--surface-secondary);
+  backdrop-filter: blur(12px);
   border: none;
   border-radius: var(--radius-md);
   box-shadow:
     var(--shadow-md),
     var(--panel-glow-inset);
-  backdrop-filter: blur(12px);
   flex-direction: column;
   gap: var(--space-2);
 }

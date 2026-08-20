@@ -37,8 +37,8 @@
   {
     "id": "2025-11-13-location-maintenance",
     "releasedAt": "2025-11-13",
-    "summary": "Rolled out the moderator location maintenance workspace",
-    "details": "Moderators and admins can open the Location Maintenance page from the player menu to browse the world graph, edit location metadata, and manage relationships via the location API without feature flags.",
+    "summary": "Rolled out moderator world graph maintenance",
+    "details": "Moderators and admins can use the World Atlas from the player menu to browse shared entities, edit hard-state metadata, and manage canonical graph relationships.",
     "type": "feature"
   },
   {
@@ -80,7 +80,7 @@
     "id": "2025-11-14-chronicle-closer",
     "releasedAt": "2025-11-14",
     "summary": "Chronicle closures now generate epilogues",
-    "details": "When a chronicle is closed we enqueue a new chronicle-closer Lambda that fabricates a short-story recap, high-level location events, and character bio notes via SQS so completed runs get preserved across the world state.",
+    "details": "When a chronicle is closed we enqueue the chronicle-closer Lambda to generate a short-story recap and character bio note via SQS, then persist both as closure summaries without publishing live-session changes into shared world state.",
     "type": "feature"
   },
   {
@@ -229,5 +229,12 @@
     "summary": "Fixed authenticated API CORS preflight failures",
     "details": "Corrected malformed origin allowlists in the chronicle and GM Lambda handlers, updated all API Lambdas to emit ALB-compatible 204 preflight payloads with explicit bodies/encoding metadata, switched ALB listener auth from cookie-based authenticate-cognito to strict bearer-token jwt-validation (access tokens only), enabled listener-level CORS response headers, moved API clients to send access tokens in Authorization headers, normalized ALB multiValueHeaders into standard headers before tRPC request planning so authenticated calls stop failing with 502 host-header adapter crashes, and normalized ALB query parameters (including URL-decoding encoded ALB values) before tRPC request planning so batched requests no longer fail with \"No procedure found\" or \"%7B... is not valid JSON\" errors.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-20-development-baseline-restored",
+    "releasedAt": "2026-08-20",
+    "summary": "Restored the paused development baseline",
+    "details": "Repaired the workspace checks, local build, and full browser harness; enforced access-token identity and ownership across APIs; made live character and location changes chronicle-scoped; committed each narrative turn atomically; completed closure-summary persistence; aligned moderator audit, World Atlas, and world-schema controls with their canonical contracts; and replaced the obsolete bulk world seed with a deterministic local fixture containing three entities, two lore fragments, and one playable chronicle.",
+    "type": "improvement"
   }
 ]

@@ -28,7 +28,7 @@ import { useChronicleStore } from './stores/chronicleStore';
 import { useUiStore } from './stores/uiStore';
 import './App.css';
 
-const SiteHeader = (): JSX.Element => {
+const SiteHeader = (): React.JSX.Element => {
   const navigate = useNavigate();
   const openChangelog = useUiStore((state) => state.openChangelogModal);
   const openBugReport = useUiStore((state) => state.openBugReportModal);
@@ -84,7 +84,7 @@ const SiteHeader = (): JSX.Element => {
   );
 };
 
-const ChatExperience = (): JSX.Element => {
+const ChatExperience = (): React.JSX.Element => {
   return (
     <div className="app-layout">
       <SideNavigation />
@@ -103,7 +103,7 @@ const ChatExperience = (): JSX.Element => {
   );
 };
 
-const ChronicleRoute = (): JSX.Element => {
+const ChronicleRoute = (): React.JSX.Element => {
   const { chronicleId: routeChronicleId } = useParams();
   const navigate = useNavigate();
   const hydrateChronicle = useChronicleStore((state) => state.hydrateChronicle);
@@ -210,7 +210,7 @@ const ChronicleRoute = (): JSX.Element => {
   return <ChatExperience />;
 };
 
-const LegacyChronicleRedirect = (): JSX.Element => {
+const LegacyChronicleRedirect = (): React.JSX.Element => {
   const { chronicleId } = useParams();
   if (!chronicleId) {
     return <Navigate to="/" replace />;
@@ -218,7 +218,7 @@ const LegacyChronicleRedirect = (): JSX.Element => {
   return <Navigate to={`/chron/${chronicleId}`} replace />;
 };
 
-export function App(): JSX.Element {
+export function App(): React.JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   usePlayerResources(isAuthenticated);
   useProgressStreamConnection(isAuthenticated);

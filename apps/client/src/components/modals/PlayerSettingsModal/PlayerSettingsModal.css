@@ -25,11 +25,11 @@
 
 .player-settings-slider-labels {
   display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
   color: #94a3b8;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  justify-content: space-between;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .player-settings-level h3 {
@@ -53,8 +53,8 @@
 
 .player-settings-divider {
   height: 1px;
-  background: rgb(148 163 184 / 20%);
   margin: 0.5rem 0;
+  background: rgb(148 163 184 / 20%);
 }
 
 .player-settings-models {
@@ -80,30 +80,30 @@
 }
 
 .player-settings-model-row .model-description {
-  font-size: 0.85rem;
   color: #94a3b8;
+  font-size: 0.85rem;
 }
 
 .player-settings-model-row select {
   padding: 0.5rem;
-  border-radius: 0.35rem;
-  border: 1px solid rgb(148 163 184 / 40%);
-  background: rgb(30 41 59 / 50%);
   color: #f8fafc;
+  background: rgb(30 41 59 / 50%);
+  border: 1px solid rgb(148 163 184 / 40%);
+  border-radius: 0.35rem;
   cursor: pointer;
 }
 
 .player-settings-model-row select:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .player-settings-close {
-  align-self: flex-end;
   padding: 0.5rem 1.2rem;
-  border-radius: 0.65rem;
-  border: 1px solid rgb(148 163 184 / 40%);
-  background: transparent;
   color: #f8fafc;
+  background: transparent;
+  align-self: flex-end;
+  border: 1px solid rgb(148 163 184 / 40%);
+  border-radius: 0.65rem;
   cursor: pointer;
 }

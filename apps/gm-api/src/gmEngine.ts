@@ -1,3 +1,4 @@
+import type { PromptTemplateManager, ModelConfigStore } from '@glass-frontier/app';
 import type {
   Character,
   TranscriptEntry,
@@ -7,37 +8,36 @@ import type {
   ChronicleClosureEvent,
   ChronicleSummaryKind,
 } from '@glass-frontier/dto';
-import type { PromptTemplateManager, ModelConfigStore } from '@glass-frontier/app';
+import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
+import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
+import { EntityJudgeNode, EntitySelectorNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes';
+import { GmSummaryNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode';
+import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode';
+import { LocationDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
+import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
+import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
+import type { RetryLLMClient } from '@glass-frontier/llm-client';
+import { formatTurnJobId, isDefined, isNonEmptyString, log } from '@glass-frontier/utils';
 import {
   type ChronicleStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
-import {formatTurnJobId, isDefined, isNonEmptyString, log} from '@glass-frontier/utils';
+import type { LocationHelpers } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import {
   type ChronicleClosurePublisher,
   createClosureEmitterFromEnv
 } from './eventEmitters/closureEmitter';
-import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
+import { type TurnProgressPublisher } from './eventEmitters/progressEmitter';
+import { createProgressEmitterFromEnv } from './eventEmitters/progressEmitter';
 import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
 import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
+import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { GmGraphOrchestrator } from './gmGraph/orchestrator';
 import { PromptTemplateRuntime } from './prompts/templateRuntime';
-import { type TurnProgressPublisher } from './eventEmitters/progressEmitter';
 import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
-import {createProgressEmitterFromEnv} from "./eventEmitters/progressEmitter";
-import {RetryLLMClient} from "@glass-frontier/llm-client";
-import {CheckPlannerNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode";
-import {GmSummaryNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode";
-import {CheckRunnerNode} from "@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode";
-import {GmResponseNode} from "@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes";
-import {LocationDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode";
-import {InventoryDeltaNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode";
-import {WorldUpdater} from "@glass-frontier/gm-api/updaters/WorldUpdater";
-import {EntityJudgeNode, EntitySelectorNode} from "@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes";
-import { LocationHelpers } from '@glass-frontier/worldstate';
 
 type GmEngineOptions = {
   chronicleStore: ChronicleStore;
@@ -75,7 +75,7 @@ class GmEngine {
     this.graph = this.#createGraph();
   }
 
-  /* eslint-disable-next-line complexity, max-lines-per-function */
+  /* eslint-disable-next-line max-lines-per-function */
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
@@ -96,49 +96,64 @@ class GmEngine {
     const templateRuntime = this.#createTemplateRuntime(playerId);
     const graphInput = this.#buildGraphInput({
       chronicleId,
-      turnId,
       chronicleState,
+      chronicleStore: this.chronicleStore,
+      locationHelpers: this.locationHelpers,
       playerMessage,
       templateRuntime,
+      turnId,
       turnSequence,
-      locationHelpers: this.locationHelpers,
-      chronicleStore: this.chronicleStore,
       worldSchemaStore: this.worldSchemaStore,
     });
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
-    let chronicleStatus: Chronicle['status'] = chronicleState.chronicle?.status ?? 'open';
-
-    const worldUpdater = new WorldUpdater({chronicleStore: this.chronicleStore, locationHelpers: this.locationHelpers});
+    const worldUpdater = new WorldUpdater();
     const updatedContext = await worldUpdater.update(graphResult);
+    const shouldClose =
+      updatedContext.shouldCloseChronicle && updatedContext.chronicleState.chronicle.status !== 'closed';
+    const finalContext: GraphContext = shouldClose
+      ? {
+        ...updatedContext,
+        chronicleState: {
+          ...updatedContext.chronicleState,
+          chronicle: {
+            ...updatedContext.chronicleState.chronicle,
+            status: 'closed',
+          },
+        },
+      }
+      : updatedContext;
 
     const turn = this.#buildTurn({
       chronicleId,
-      turnId,
-      graphResult: updatedContext,
+      graphResult: finalContext,
       playerMessage,
       systemMessage,
+      turnId,
       turnSequence,
     });
 
-    await this.chronicleStore.addTurn(turn);
-
-
-    if (graphResult.shouldCloseChronicle && chronicleState.chronicle?.status !== 'closed') {
-      await this.#closeChronicle({
-        chronicleState,
+    if (shouldClose) {
+      await this.#emitClosureEvent({
+        chronicle: finalContext.chronicleState.chronicle,
         closingTurnSequence: turn.turnSequence,
       });
-      chronicleStatus = 'closed';
     }
 
+    await this.chronicleStore.commitTurn({
+      character: finalContext.chronicleState.character,
+      chronicle: finalContext.chronicleState.chronicle,
+      location: finalContext.chronicleState.location,
+      turn,
+    });
 
     log('info', 'Narrative engine resolved turn', {
       checkIssued: Boolean(graphResult.skillCheckPlan),
       chronicleId,
     });
 
-    const updatedCharacter = updatedContext.chronicleState.character ?? null;
-    const locationSummary = updatedContext.chronicleState.location ?? null;
+    const updatedCharacter = finalContext.chronicleState.character ?? null;
+    const locationSummary = finalContext.chronicleState.location ?? null;
+    const chronicleStatus = finalContext.chronicleState.chronicle.status;
 
     return { chronicleStatus, locationSummary, turn, updatedCharacter };
   }
@@ -173,12 +188,12 @@ class GmEngine {
 
     // Canonical execution pipeline - defines the exact order and parallelism
     const pipeline = [
-      { type: 'sequential' as const, nodeId: 'intent-classifier' },
-      { type: 'parallel' as const, nodeIds: ['intent-beat-detector', 'check-planner'] },
-      { type: 'sequential' as const, nodeId: 'entity-selector' },
-      { type: 'sequential' as const, nodeId: 'check-runner' },
-      { type: 'sequential' as const, nodeId: 'gm-response-node' },
-      { type: 'parallel' as const, nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'] },
+      { nodeId: 'intent-classifier', type: 'sequential' as const },
+      { nodeIds: ['intent-beat-detector', 'check-planner'], type: 'parallel' as const },
+      { nodeId: 'entity-selector', type: 'sequential' as const },
+      { nodeId: 'check-runner', type: 'sequential' as const },
+      { nodeId: 'gm-response-node', type: 'sequential' as const },
+      { nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'], type: 'parallel' as const },
     ];
 
     return new GmGraphOrchestrator(
@@ -200,7 +215,14 @@ class GmEngine {
     if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
-    return state;
+    const { character, location } = state;
+    if (character === null) {
+      throw new Error(`Chronicle ${chronicleId} has no session character state`);
+    }
+    if (location === null) {
+      throw new Error(`Chronicle ${chronicleId} has no session location state`);
+    }
+    return { ...state, character, location };
   }
 
   #requirePlayerId(state: ChronicleState): string {
@@ -213,8 +235,8 @@ class GmEngine {
 
   #createTemplateRuntime(playerId: string): PromptTemplateRuntime {
     return new PromptTemplateRuntime({
-      playerId,
       manager: this.templateManager,
+      playerId,
     });
   }
 
@@ -226,13 +248,13 @@ class GmEngine {
 
   #buildGraphInput({
     chronicleId,
-    turnId,
     chronicleState,
+    chronicleStore,
+    locationHelpers,
     playerMessage,
     templateRuntime,
+    turnId,
     turnSequence,
-    locationHelpers,
-    chronicleStore,
     worldSchemaStore,
   }: {
     authorizationHeader?: string;
@@ -247,24 +269,24 @@ class GmEngine {
     worldSchemaStore: WorldSchemaStore;
   }): GraphContext {
     return {
+      advancesTimeline: false,
       chronicleId,
-      turnId,
-      turnSequence,
       chronicleState,
-      playerMessage,
-      locationHelpers,
       chronicleStore,
-      worldSchemaStore,
+      failure: false,
       llm: this.llm,
+      locationHelpers,
       modelConfigStore: this.modelConfigStore,
+      playerIntent: undefined,
+      playerMessage,
+      shouldCloseChronicle: false,
+      shouldUpdate: false,
+      systemMessage: undefined,
       telemetry: this.telemetry,
       templates: templateRuntime,
-      failure: false,
-      systemMessage: undefined,
-      playerIntent: undefined,
-      shouldUpdate: false,
-      shouldCloseChronicle: false,
-      advancesTimeline: false,
+      turnId,
+      turnSequence,
+      worldSchemaStore,
     };
   }
 
@@ -302,10 +324,10 @@ class GmEngine {
 
   #buildTurn({
     chronicleId,
-    turnId,
     graphResult,
     playerMessage,
     systemMessage,
+    turnId,
     turnSequence,
   }: {
     chronicleId: string;
@@ -316,20 +338,21 @@ class GmEngine {
     turnSequence: number;
   }): Turn {
     const combinedSystemMessage = systemMessage ?? graphResult.systemMessage;
-    const failure = Boolean(graphResult.failure || combinedSystemMessage);
+    const failure = graphResult.failure || combinedSystemMessage !== undefined;
     return {
       advancesTimeline: graphResult.advancesTimeline,
-      beatTracker: graphResult.beatTracker ?? undefined,
+      beatTracker: graphResult.beatTracker,
       chronicleId,
-      entityOffered: graphResult.entityContext?.offered ?? undefined,
-      entityUsage: graphResult.entityUsage ?? undefined,
-      executedNodes: graphResult.executedNodes ?? undefined,
+      entityOffered: graphResult.entityContext?.offered,
+      entityUsage: graphResult.entityUsage,
+      executedNodes: graphResult.executedNodes,
       failure,
       gmResponse: graphResult.gmResponse,
       gmSummary: graphResult.gmSummary,
-      gmTrace: graphResult.gmTrace ?? undefined,
+      gmTrace: graphResult.gmTrace === null ? undefined : graphResult.gmTrace,
       id: turnId,
-      inventoryDelta: graphResult.inventoryDelta ?? undefined,
+      inventoryDelta: graphResult.inventoryDelta,
+      locationDelta: graphResult.locationDelta,
       playerIntent: graphResult.playerIntent,
       playerMessage,
       skillCheckPlan: graphResult.skillCheckPlan,
@@ -337,24 +360,6 @@ class GmEngine {
       systemMessage: combinedSystemMessage,
       turnSequence
     };
-  }
-
-  async #closeChronicle(input: {
-    chronicleState: ChronicleState;
-    closingTurnSequence: number;
-  }): Promise<void> {
-    const record = input.chronicleState.chronicle;
-    if (record === undefined || record === null || record.status === 'closed') {
-      return;
-    }
-    await this.chronicleStore.upsertChronicle({
-      ...record,
-      status: 'closed',
-    });
-    await this.#emitClosureEvent({
-      chronicle: record,
-      closingTurnSequence: input.closingTurnSequence,
-    });
   }
 
   async #emitClosureEvent(input: {

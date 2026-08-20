@@ -59,7 +59,11 @@ const FilterInput = ({ config, onChange, value }: FilterInputProps) => (
       type="text"
       placeholder={config.placeholder}
       value={value}
-      onChange={(event) => onChange({ [config.valueKey]: event.target.value })}
+      onChange={(event) => onChange(
+        config.valueKey === 'playerId'
+          ? { playerId: event.target.value }
+          : { search: event.target.value }
+      )}
     />
   </div>
 );

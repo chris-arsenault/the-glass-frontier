@@ -6,15 +6,18 @@
     "composite": true,
     "declaration": true,
     "declarationDir": "dist",
-    "declarationMap": false
+    "declarationMap": false,
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
   },
-  "include": ["src", "scripts/**/*.mjs", "tsup.config.ts"],
+  "include": ["src"],
   "references": [
     { "path": "../../packages/app" },
     { "path": "../../packages/skill-check-resolver" },
     { "path": "../../packages/dto" },
     { "path": "../../packages/utils" },
     { "path": "../../packages/node-utils" },
-    { "path": "../../packages/llm-client" }
+    { "path": "../../packages/llm-client" },
+    { "path": "../../packages/ops" },
+    { "path": "../../packages/worldstate" }
   ]
 }

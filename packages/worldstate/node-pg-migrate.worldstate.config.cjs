@@ -1,5 +1,4 @@
-/* eslint-env node */
-/* eslint-disable no-undef */
+/* global module, process */
 const DEFAULT_CONNECTION_STRING = 'postgres://postgres:postgres@localhost:5432/worldstate';
 
 module.exports = {

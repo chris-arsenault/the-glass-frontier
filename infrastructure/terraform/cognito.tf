@@ -1,5 +1,6 @@
 resource "aws_cognito_user_pool" "this" {
-  name = "${var.project}-users"
+  deletion_protection = "ACTIVE"
+  name                = "${var.project}-users"
 
   admin_create_user_config {
     allow_admin_create_user_only = true
@@ -11,7 +12,7 @@ resource "aws_cognito_user_pool" "this" {
 
 
   password_policy {
-    minimum_length    = 8
+    minimum_length    = 12
     require_lowercase = true
     require_symbols   = true
     require_numbers   = true

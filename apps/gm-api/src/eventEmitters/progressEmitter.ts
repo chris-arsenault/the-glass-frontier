@@ -1,9 +1,9 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import type { TurnProgressEvent, TurnProgressPayload } from '@glass-frontier/dto';
-import { log } from '@glass-frontier/utils';
 import { resolveAwsEndpoint, resolveAwsRegion } from '@glass-frontier/node-utils';
+import { log } from '@glass-frontier/utils';
 
-import type { GraphContext } from './types';
+import type { GraphContext } from '../types';
 
 export type TurnProgressStatus = 'start' | 'success' | 'error';
 
@@ -26,15 +26,14 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => {
   const optionalEntries: Array<[keyof TurnProgressPayload, unknown]> = [
     ['advancesTimeline', context.advancesTimeline],
     ['beatTracker', context.beatTracker],
-    ['chronicleShouldClose', context.chronicleShouldClose],
+    ['chronicleShouldClose', context.shouldCloseChronicle],
     ['executedNodes', context.executedNodes],
-    ['gmMessage', context.gmMessage],
+    ['gmMessage', context.gmResponse],
     ['gmSummary', context.gmSummary],
     ['gmTrace', context.gmTrace],
     ['handlerId', context.handlerId],
     ['inventoryDelta', context.inventoryDelta],
-    ['resolvedIntentConfidence', context.resolvedIntentConfidence],
-    ['resolvedIntentType', context.resolvedIntentType ?? context.playerIntent?.intentType],
+    ['resolvedIntentType', context.playerIntent?.intentType],
     ['systemMessage', context.systemMessage],
     ['worldDeltaTags', context.worldDeltaTags],
   ];
@@ -51,8 +50,8 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => {
 };
 
 class TurnProgressEmitter implements TurnProgressPublisher {
-  readonly #client: SQSClient;
-  readonly #queueUrl: string;
+  readonly #client: SQSClient | undefined;
+  readonly #queueUrl: string | undefined;
   readonly #valid: boolean;
 
   constructor(queueUrl: string, client?: SQSClient) {
@@ -76,7 +75,7 @@ class TurnProgressEmitter implements TurnProgressPublisher {
   }
 
   async publish(update: TurnProgressUpdate): Promise<void> {
-    if (!this.#valid) {
+    if (!this.#valid || this.#client === undefined || this.#queueUrl === undefined) {
       log('warn', 'Failed to enqueue turn progress', {
         jobId: update.jobId,
       });
@@ -93,6 +92,7 @@ class TurnProgressEmitter implements TurnProgressPublisher {
           : update.status === 'error'
             ? buildPayload(update.context)
             : undefined,
+      playerId: update.context.chronicleState.chronicle.playerId,
       status: update.status,
       step: update.step,
       total: update.total,
@@ -117,14 +117,14 @@ class TurnProgressEmitter implements TurnProgressPublisher {
 
 export function createProgressEmitterFromEnv(): TurnProgressPublisher {
   const queueUrl = process.env.TURN_PROGRESS_QUEUE_URL;
-  const trimmed = queueUrl.trim();
+  const trimmed = queueUrl?.trim() ?? '';
   try {
     return new TurnProgressEmitter(trimmed);
   } catch (error) {
     log('warn', 'Failed to initialize progress emitter', {
       reason: error instanceof Error ? error.message : 'unknown',
     });
-    throw error
+    throw error;
   }
 }
 

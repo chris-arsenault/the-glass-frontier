@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { LlmTraceSchema } from '../audit/LlmAudit';
-import { InventoryDeltaSchema} from '../Inventory';
-import { BeatTrackerSchema} from './ChronicleBeat';
+import { InventoryDeltaSchema } from '../Inventory';
+import { BeatTrackerSchema } from './ChronicleBeat';
 import { Intent } from './Intent';
 import { IntentType as IntentTypeSchema } from './IntentType';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
@@ -33,6 +33,7 @@ export const TurnProgressEventSchema = z.object({
   jobId: z.string().min(1),
   nodeId: z.string().min(1),
   payload: TurnProgressPayloadSchema.optional(),
+  playerId: z.string().min(1),
   status: z.enum(['start', 'success', 'error']),
   step: z.number().int().nonnegative(),
   total: z.number().int().positive(),

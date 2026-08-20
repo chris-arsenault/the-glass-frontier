@@ -1,6 +1,6 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
 import type { ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
-import { createLLMClient, RetryLLMClient } from '@glass-frontier/llm-client';
+import type { RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -14,20 +14,17 @@ type GenerateSeedRequest = {
   toneChips?: string[];
   toneNotes?: string;
   count?: number;
-  authorizationHeader?: string;
 };
 
 const SingleSeedSchema = z.object({
-  title: z.string().min(1).max(120),
-  teaser: z.string().min(200).max(800),
   tags: z.array(z.string()).min(1).max(4),
+  teaser: z.string().min(200).max(800),
+  title: z.string().min(1).max(120),
 });
 
 const SeedArraySchema = z.object({
   seeds: z.array(SingleSeedSchema).min(1).max(5),
 });
-
-type SingleSeed = z.infer<typeof SingleSeedSchema>;
 
 type SeedTemplatePayload = {
   breadcrumb: string;
@@ -40,23 +37,40 @@ type SeedTemplatePayload = {
   tone_notes: string;
 };
 
+type DeveloperMessage = {
+  content: Array<{ text: string; type: 'input_text' }>;
+  role: 'developer';
+};
+
+type GenerateAllSeedsOptions = {
+  anchor: HardState;
+  anchorLore: LoreFragment[];
+  count: number;
+  instructions: string;
+  location: HardState;
+  locationLore: LoreFragment[];
+  model: string;
+  playerId: string;
+  toneChips?: string[];
+  toneNotes?: string;
+};
+
 export class ChronicleSeedService {
   readonly #world: WorldSchemaStore;
   readonly #modelConfigStore: ModelConfigStore;
   readonly #templateManager: PromptTemplateManager;
   readonly #llm: RetryLLMClient;
-  readonly #clientCache = new Map<string, RetryLLMClient>();
 
   constructor(options: {
     worldStore: WorldSchemaStore;
     modelConfigStore: ModelConfigStore;
     templateManager: PromptTemplateManager;
-    llmClient?: RetryLLMClient;
+    llmClient: RetryLLMClient;
   }) {
     this.#world = options.worldStore;
     this.#modelConfigStore = options.modelConfigStore;
     this.#templateManager = options.templateManager;
-    this.#llm = options.llmClient ?? createLLMClient();
+    this.#llm = options.llmClient;
   }
 
   async generateSeeds(request: GenerateSeedRequest): Promise<ChronicleSeed[]> {
@@ -84,12 +98,9 @@ export class ChronicleSeedService {
       }),
       this.#modelConfigStore.getModelForCategory('classification', request.playerId),
     ]);
-    const client = this.#resolveClient(request.authorizationHeader);
-
     return this.#generateAllSeeds({
       anchor,
       anchorLore,
-      client,
       count: requested,
       instructions,
       location,
@@ -101,106 +112,29 @@ export class ChronicleSeedService {
     });
   }
 
-  async #generateAllSeeds(options: {
-    location: HardState;
-    anchor: HardState;
-    locationLore: LoreFragment[];
-    anchorLore: LoreFragment[];
-    toneChips?: string[];
-    toneNotes?: string;
-    instructions: string;
-    model: string;
-    playerId: string;
-    client: RetryLLMClient;
-    count: number;
-  }): Promise<ChronicleSeed[]> {
-    const { location, anchor, locationLore, anchorLore, toneChips, toneNotes, instructions, model, playerId, client, count } = options;
-
-    // Build dynamic fragments as developer messages
-    const developerMessages: Array<{ role: 'developer'; content: Array<{ type: 'input_text'; text: string }> }> = [];
-
-    // Location fragment
-    developerMessages.push({
-      role: 'developer',
-      content: [{
-        type: 'input_text',
-        text: JSON.stringify({
-          location: {
-            name: location.name,
-            kind: location.kind,
-            subkind: location.subkind ?? null,
-            status: location.status ?? null,
-            description: location.description ?? null,
-            tags: location.tags ?? [],
-            loreFragments: locationLore.map(f => ({
-              title: f.title,
-              prose: f.prose,
-              tags: f.tags ?? [],
-            })),
-          },
-        }, null, 2),
-      }],
-    });
-
-    // Anchor fragment
-    developerMessages.push({
-      role: 'developer',
-      content: [{
-        type: 'input_text',
-        text: JSON.stringify({
-          anchor: {
-            name: anchor.name,
-            kind: anchor.kind,
-            subkind: anchor.subkind ?? null,
-            status: anchor.status ?? null,
-            description: anchor.description ?? null,
-            tags: anchor.tags ?? [],
-            loreFragments: anchorLore.map(f => ({
-              title: f.title,
-              prose: f.prose,
-              tags: f.tags ?? [],
-            })),
-          },
-        }, null, 2),
-      }],
-    });
-
-    // Tone fragment
-    const toneDescription = this.#formatTone(toneChips, toneNotes);
-    if (toneDescription) {
-      developerMessages.push({
-        role: 'developer',
-        content: [{
-          type: 'input_text',
-          text: `Tone: ${toneDescription}`,
-        }],
-      });
-    }
-
-    // Build user message
-    const userMessage = `Create ${count} compelling and diverse seeds for chronicles set in ${location.name}, focusing on ${anchor.name}${toneDescription ? ` with a ${toneDescription} tone` : ''}. Each seed should offer a different narrative hook or approach.`;
-
-    const response = await client.generateStructured(
+  async #generateAllSeeds(options: GenerateAllSeedsOptions): Promise<ChronicleSeed[]> {
+    const developerMessages = this.#buildDeveloperMessages(options);
+    const response = await this.#llm.generateStructured(
       {
-        instructions,
         input: [
           ...developerMessages,
           {
-            role: 'user',
             content: [{
+              text: this.#buildUserMessage(options),
               type: 'input_text',
-              text: userMessage,
             }],
+            role: 'user',
           },
         ],
+        instructions: options.instructions,
         max_output_tokens: 2000,
-        model,
         metadata: {
-          locationId: location.id,
-          anchorId: anchor.id,
+          anchorId: options.anchor.id,
+          locationId: options.location.id,
           operation: 'seed-generation',
-          playerId,
+          playerId: options.playerId,
         },
+        model: options.model,
         reasoning: { effort: 'minimal' as const },
         text: {
           verbosity: 'low',
@@ -212,15 +146,64 @@ export class ChronicleSeedService {
 
     return response.data.seeds.map((seed) => ({
       id: randomUUID(),
-      title: seed.title.slice(0, 120),
-      teaser: seed.teaser.slice(0, 800),
       tags: seed.tags.slice(0, 4),
+      teaser: seed.teaser.slice(0, 800),
+      title: seed.title.slice(0, 120),
     }));
+  }
+
+  #buildDeveloperMessages(options: GenerateAllSeedsOptions): DeveloperMessage[] {
+    const messages = [
+      this.#createDeveloperMessage({
+        location: this.#buildEntityContext(options.location, options.locationLore),
+      }),
+      this.#createDeveloperMessage({
+        anchor: this.#buildEntityContext(options.anchor, options.anchorLore),
+      }),
+    ];
+    const toneDescription = this.#formatTone(options.toneChips, options.toneNotes);
+    if (toneDescription.length > 0) {
+      messages.push(this.#createDeveloperMessage(`Tone: ${toneDescription}`));
+    }
+    return messages;
+  }
+
+  #buildEntityContext(entity: HardState, lore: LoreFragment[]): Record<string, unknown> {
+    return {
+      description: entity.description ?? null,
+      kind: entity.kind,
+      loreFragments: lore.map((fragment) => ({
+        prose: fragment.prose,
+        tags: fragment.tags,
+        title: fragment.title,
+      })),
+      name: entity.name,
+      status: entity.status ?? null,
+      subkind: entity.subkind ?? null,
+    };
+  }
+
+  #buildUserMessage(options: GenerateAllSeedsOptions): string {
+    const toneDescription = this.#formatTone(options.toneChips, options.toneNotes);
+    const toneClause = toneDescription.length > 0
+      ? ` with a ${toneDescription} tone`
+      : '';
+    return `Create ${options.count} compelling and diverse seeds for chronicles set in ${options.location.name}, focusing on ${options.anchor.name}${toneClause}. Each seed should offer a different narrative hook or approach.`;
+  }
+
+  #createDeveloperMessage(payload: Record<string, unknown> | string): DeveloperMessage {
+    return {
+      content: [{
+        text: typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2),
+        type: 'input_text',
+      }],
+      role: 'developer',
+    };
   }
 
   async #ensurePlace(locationId: string): Promise<HardState> {
     const place = await this.#world.getEntity({ id: locationId });
-    if (!place || place.kind !== 'location') {
+    if (place === null || place.kind !== 'location') {
       throw new Error(`Location ${locationId} not found.`);
     }
     return place;
@@ -228,7 +211,7 @@ export class ChronicleSeedService {
 
   async #ensureAnchor(anchorId: string): Promise<HardState> {
     const anchor = await this.#world.getEntity({ id: anchorId });
-    if (!anchor) {
+    if (anchor === null) {
       throw new Error(`Anchor entity ${anchorId} not found.`);
     }
     return anchor;
@@ -236,8 +219,8 @@ export class ChronicleSeedService {
 
   #createTemplateRuntime(playerId: string): PromptTemplateRuntime {
     return new PromptTemplateRuntime({
-      playerId: playerId.trim(),
       manager: this.#templateManager,
+      playerId: playerId.trim(),
     });
   }
 
@@ -284,7 +267,7 @@ export class ChronicleSeedService {
 
   #buildBreadcrumb(location: HardState): string {
     const segments = [location.subkind, location.status].filter(
-      (entry): entry is string => Boolean(entry)
+      (entry) => entry !== undefined
     );
     return segments.length > 0 ? segments.join(' › ') : location.name;
   }
@@ -296,7 +279,7 @@ export class ChronicleSeedService {
       anchor.kind,
       anchor.subkind,
       anchor.status,
-    ].filter((tag): tag is string => Boolean(tag));
+    ].filter((tag) => tag !== undefined);
   }
 
   #normalizeToneChips(chips?: string[]): string[] {
@@ -326,32 +309,11 @@ export class ChronicleSeedService {
     }
 
     const normalizedNotes = this.#normalizeToneNotes(notes);
-    if (normalizedNotes) {
+    if (normalizedNotes !== null) {
       parts.push(normalizedNotes);
     }
 
     return parts.join('; ');
   }
 
-  #sanitizeHeader(header?: string): string | null {
-    if (typeof header !== 'string') {
-      return null;
-    }
-    const trimmed = header.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
-
-  #resolveClient(authorizationHeader?: string): RetryLLMClient {
-    const sanitized = this.#sanitizeHeader(authorizationHeader);
-    if (sanitized === null) {
-      return this.#llm;
-    }
-    const cached = this.#clientCache.get(sanitized);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const client = createLLMClient();
-    this.#clientCache.set(sanitized, client);
-    return client;
-  }
 }

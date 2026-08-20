@@ -1,13 +1,12 @@
-/* eslint-disable no-undef */
-const fs = require('fs');
-const path = require('path');
-
-const schemaPath = path.join(__dirname, '../../../worldSchema.json');
-const worldSchema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+/* global __dirname, exports */
 
 exports.shorthands = undefined;
 
 exports.up = async (pgm) => {
+  const { readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const schemaPath = join(__dirname, '../../../worldSchema.json');
+  const worldSchema = JSON.parse(await readFile(schemaPath, 'utf8'));
   pgm.createTable('world_prominence', {
     id: { type: 'text', primaryKey: true },
     rank: { type: 'integer', notNull: true },

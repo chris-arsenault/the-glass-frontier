@@ -1,4 +1,4 @@
-@import './design-tokens.css';
+@import url('./design-tokens.css');
 
 :root {
   color: var(--text-primary);
@@ -32,19 +32,19 @@ body {
 
 .app-frame {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
   width: 100%;
   padding: var(--space-4);
   background: linear-gradient(135deg, var(--surface-elevated), rgb(2 6 23 / 90%));
+  backdrop-filter: blur(8px);
   border: none;
   border-radius: var(--radius-md);
   box-shadow:
     var(--shadow-lg),
     var(--panel-glow-inset),
     var(--panel-highlight);
+  flex-direction: column;
+  gap: var(--space-4);
   max-width: 1280px;
-  backdrop-filter: blur(8px);
 }
 
 .app-layout {

@@ -1,9 +1,9 @@
-import type { ChronicleBeat, Chronicle, Turn } from '@glass-frontier/dto';
-import { useMemo, useState, useEffect } from 'react';
+import type { ChronicleBeat, Chronicle } from '@glass-frontier/dto';
+import React, { useMemo, useState, useEffect } from 'react';
 
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import type { ChatMessage } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
-import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import './ChronicleOverview.css';
 
 const formatBeatStatus = (status: ChronicleBeat['status']): string => {
@@ -22,7 +22,7 @@ type ChronicleHeaderProps = {
   turnSequence: number;
 };
 
-const ChronicleHeader = ({ chronicle, turnSequence }: ChronicleHeaderProps): JSX.Element => (
+const ChronicleHeader = ({ chronicle, turnSequence }: ChronicleHeaderProps): React.JSX.Element => (
   <header className="session-panel-header">
     <div>
       <h2 id="chronicle-panel-title">{chronicle.title}</h2>
@@ -40,11 +40,43 @@ type AnchorEntityData = {
   slug: string;
 };
 
+type RemoteAnchor = {
+  anchorId: string;
+  entity: AnchorEntityData;
+};
+
+type EntityUsage = NonNullable<ChatMessage['entityUsage']>[number];
+
+const countUsageTags = (counts: Map<string, number>, usage: EntityUsage): void => {
+  for (const tag of usage.tags) {
+    counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  for (const tag of usage.emergentTags ?? []) {
+    counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+};
+
+const findAnchorInMessages = (
+  messages: ChatMessage[],
+  anchorId: string | undefined
+): AnchorEntityData | null => {
+  if (anchorId === undefined) {
+    return null;
+  }
+  for (const message of messages.slice().reverse()) {
+    const found = message.entityOffered?.find((entity) => entity.id === anchorId);
+    if (found !== undefined) {
+      return { id: found.id, kind: found.kind, name: found.name, slug: found.slug };
+    }
+  }
+  return null;
+};
+
 type AnchorEntityPanelProps = {
   anchorEntity: AnchorEntityData | null;
 };
 
-const AnchorEntityPanel = ({ anchorEntity }: AnchorEntityPanelProps): JSX.Element | null => {
+const AnchorEntityPanel = ({ anchorEntity }: AnchorEntityPanelProps): React.JSX.Element | null => {
   if (!anchorEntity) {
     return null;
   }
@@ -78,7 +110,7 @@ type EntityFocusPanelProps = {
   tags: Array<{ tag: string; score: number }>;
 };
 
-const EntityFocusPanel = ({ entities, tags }: EntityFocusPanelProps): JSX.Element => {
+const EntityFocusPanel = ({ entities, tags }: EntityFocusPanelProps): React.JSX.Element => {
   const hasEntities = entities.length > 0;
   const hasTags = tags.length > 0;
 
@@ -116,7 +148,7 @@ const EntityFocusPanel = ({ entities, tags }: EntityFocusPanelProps): JSX.Elemen
         <div className="entity-focus-section">
           <h4 className="entity-focus-sublabel">Tracked Tags</h4>
           <div className="panel-tags">
-            {tags.map(({ tag, score }) => (
+            {tags.map(({ score, tag }) => (
               <span key={tag} className="session-chip chip-muted" title={`Score: ${score.toFixed(1)}`}>
                 {tag}
               </span>
@@ -134,7 +166,7 @@ type BeatsPanelProps = {
   beatsEnabled: boolean;
 };
 
-const BeatsPanel = ({ beats, focusedBeatId, beatsEnabled }: BeatsPanelProps): JSX.Element => {
+const BeatsPanel = ({ beats, beatsEnabled, focusedBeatId }: BeatsPanelProps): React.JSX.Element => {
   if (!beatsEnabled) {
     return (
       <div>
@@ -181,7 +213,7 @@ type SeedTextPanelProps = {
   seedText?: string | null;
 };
 
-const SeedTextPanel = ({ seedText }: SeedTextPanelProps): JSX.Element | null => {
+const SeedTextPanel = ({ seedText }: SeedTextPanelProps): React.JSX.Element | null => {
   if (!seedText || seedText.trim().length === 0) {
     return null;
   }
@@ -199,7 +231,7 @@ type WrapTargetPanelProps = {
   currentTurn: number;
 };
 
-const WrapTargetPanel = ({ targetEndTurn, currentTurn }: WrapTargetPanelProps): JSX.Element | null => {
+const WrapTargetPanel = ({ currentTurn, targetEndTurn }: WrapTargetPanelProps): React.JSX.Element | null => {
   if (!targetEndTurn) {
     return null;
   }
@@ -230,7 +262,7 @@ type RecentEntityUsagePanelProps = {
   recentUsage: RecentEntityUsage[];
 };
 
-const RecentEntityUsagePanel = ({ recentUsage }: RecentEntityUsagePanelProps): JSX.Element => {
+const RecentEntityUsagePanel = ({ recentUsage }: RecentEntityUsagePanelProps): React.JSX.Element => {
   if (recentUsage.length === 0) {
     return (
       <div>
@@ -280,7 +312,7 @@ const RecentEntityUsagePanel = ({ recentUsage }: RecentEntityUsagePanelProps): J
   );
 };
 
-const ChronicleEmptyState = (): JSX.Element => (
+const ChronicleEmptyState = (): React.JSX.Element => (
   <section className="session-panel" aria-live="polite">
     <header className="session-panel-header">
       <h2>Chronicle</h2>
@@ -295,7 +327,7 @@ type ChronicleOverviewProps = {
 
 export function ChronicleOverview({
   showEmptyState = true,
-}: ChronicleOverviewProps): JSX.Element | null {
+}: ChronicleOverviewProps): React.JSX.Element | null {
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const beats = useChronicleStore((state) => state.beats);
   const beatsEnabled = useChronicleStore((state) => state.beatsEnabled);
@@ -303,62 +335,48 @@ export function ChronicleOverview({
   const turnSequence = useChronicleStore((state) => state.turnSequence);
   const messages = useChronicleStore((state) => state.messages);
 
-  // Extract anchor entity from recent turns or fetch from world API
-  const [anchorEntity, setAnchorEntity] = useState<AnchorEntityData | null>(null);
+  const [remoteAnchor, setRemoteAnchor] = useState<RemoteAnchor | null>(null);
+  const anchorEntityFromMessages = findAnchorInMessages(
+    messages,
+    chronicle?.anchorEntityId
+  );
 
   useEffect(() => {
-    if (!chronicle?.anchorEntityId) {
-      setAnchorEntity(null);
-      return;
+    const anchorId = chronicle?.anchorEntityId;
+    if (anchorId === undefined || anchorEntityFromMessages !== null) {
+      return undefined;
     }
-
-    // If we already have this entity loaded, skip
-    if (anchorEntity?.id === chronicle.anchorEntityId) {
-      return;
-    }
-
-    // Look through recent turns to find entityOffered that matches the anchor
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i];
-      if (message.entityOffered) {
-        const found = message.entityOffered.find((e) => e.id === chronicle.anchorEntityId);
-        if (found) {
-          setAnchorEntity({
-            id: found.id,
-            name: found.name,
-            kind: found.kind,
-            slug: found.slug,
+    let cancelled = false;
+    void worldAtlasClient.getEntity(anchorId).then(
+      (result) => {
+        if (!cancelled) {
+          setRemoteAnchor({
+            anchorId,
+            entity: {
+              id: result.entity.id,
+              kind: result.entity.kind,
+              name: result.entity.name,
+              slug: result.entity.slug,
+            },
           });
-          return;
         }
-      }
-    }
-
-    // If not found in messages, fetch from world API
-    const fetchAnchorEntity = async () => {
-      try {
-        const result = await worldAtlasClient.getEntity(chronicle.anchorEntityId);
-        setAnchorEntity({
-          id: result.entity.id,
-          name: result.entity.name,
-          kind: result.entity.kind,
-          slug: result.entity.slug,
-        });
-      } catch (error) {
+        return undefined;
+      },
+      (error: unknown) => {
         console.error('Failed to fetch anchor entity:', error);
-        // Fallback: show ID if we can't resolve the name
-        setAnchorEntity({
-          id: chronicle.anchorEntityId,
-          name: `Entity ${chronicle.anchorEntityId.substring(0, 8)}...`,
-          kind: 'Unknown',
-          slug: chronicle.anchorEntityId.substring(0, 12),
-        });
+        return undefined;
       }
+    );
+    return () => {
+      cancelled = true;
     };
+  }, [anchorEntityFromMessages, chronicle?.anchorEntityId]);
 
-    void fetchAnchorEntity();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chronicle?.anchorEntityId]);
+  const remoteAnchorEntity = remoteAnchor !== null
+    && remoteAnchor.anchorId === chronicle?.anchorEntityId
+    ? remoteAnchor.entity
+    : null;
+  const anchorEntity = anchorEntityFromMessages ?? remoteAnchorEntity;
 
   // Extract entity focus with names from recent turns
   const focusedEntities = useMemo((): EntityWithScore[] => {
@@ -374,9 +392,9 @@ export function ChronicleOverview({
         for (const entity of message.entityOffered) {
           if (!entityMap.has(entity.id)) {
             entityMap.set(entity.id, {
+              kind: entity.kind,
               name: entity.name,
               slug: entity.slug,
-              kind: entity.kind,
             });
           }
         }
@@ -385,7 +403,7 @@ export function ChronicleOverview({
       // Compute scores from entityUsage (central=3, mentioned=1, unused=0)
       if (message.entry.role === 'gm' && message.entityUsage) {
         for (const usage of message.entityUsage) {
-          if (!usage.entityId) continue;
+          if (!usage.entityId) {continue;}
 
           const currentScore = entityScores.get(usage.entityId) ?? 0;
           const points = usage.usage === 'central' ? 3 : usage.usage === 'mentioned' ? 1 : 0;
@@ -404,10 +422,10 @@ export function ChronicleOverview({
       const entityData = entityMap.get(entityId);
       return {
         id: entityId,
-        name: entityData?.name ?? entityId.substring(0, 8),
-        slug: entityData?.slug ?? entityId.substring(0, 8),
         kind: entityData?.kind ?? 'unknown',
+        name: entityData?.name ?? entityId.substring(0, 8),
         score,
+        slug: entityData?.slug ?? entityId.substring(0, 8),
       };
     });
   }, [messages]);
@@ -422,17 +440,7 @@ export function ChronicleOverview({
       // Aggregate tags from entityUsage
       if (message.entry.role === 'gm' && message.entityUsage) {
         for (const usage of message.entityUsage) {
-          // Count regular tags
-          for (const tag of usage.tags) {
-            tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-          }
-
-          // Count emergent tags
-          if (usage.emergentTags) {
-            for (const tag of usage.emergentTags) {
-              tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-            }
-          }
+          countUsageTags(tagCounts, usage);
         }
       }
     }
@@ -440,7 +448,7 @@ export function ChronicleOverview({
     return Array.from(tagCounts.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15)
-      .map(([tag, score]) => ({ tag, score }));
+      .map(([tag, score]) => ({ score, tag }));
   }, [messages]);
 
   // Extract recent entity usage from recent turns
@@ -454,7 +462,7 @@ export function ChronicleOverview({
       if (message.entityOffered) {
         for (const entity of message.entityOffered) {
           if (!entityMap.has(entity.id)) {
-            entityMap.set(entity.id, { name: entity.name, kind: entity.kind });
+            entityMap.set(entity.id, { kind: entity.kind, name: entity.name });
           }
         }
       }
@@ -474,13 +482,13 @@ export function ChronicleOverview({
 
           const entityData = entityMap.get(entityUsageEntry.entityId);
           usage.push({
+            emergentTags: entityUsageEntry.emergentTags,
+            entityKind: entityData?.kind ?? 'unknown',
             entityName: entityData?.name ?? entityUsageEntry.entitySlug,
             entitySlug: entityUsageEntry.entitySlug,
-            entityKind: entityData?.kind ?? 'unknown',
-            usage: entityUsageEntry.usage,
             tags: entityUsageEntry.tags,
-            emergentTags: entityUsageEntry.emergentTags,
             turnSequence: message.turnSequence,
+            usage: entityUsageEntry.usage,
           });
 
           // Limit to 15 entities total

@@ -5,17 +5,7 @@ const isNonEmptyString = (value: unknown): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
 };
 
-type AwsService = 'sqs';
-
-const SERVICE_ENV_LOOKUP: Record<AwsService, string> = {
-  sqs: 'AWS_SQS_ENDPOINT',
-};
-
-const FALLBACK_ENDPOINT_ENV_VARS = [
-  'AWS_ENDPOINT_URL',
-  'AWS_LOCAL_ENDPOINT',
-  'AWS_LOCALSTACK_ENDPOINT',
-];
+type AwsService = 'dynamodb' | 'sqs';
 
 const toTrimmedOrNull = (value?: string): string | null => {
   if (!isNonEmptyString(value)) {
@@ -26,12 +16,20 @@ const toTrimmedOrNull = (value?: string): string | null => {
 };
 
 export const resolveAwsEndpoint = (service: AwsService): string | undefined => {
-  const serviceSpecific = toTrimmedOrNull(process.env[SERVICE_ENV_LOOKUP[service]]);
+  const serviceSpecific =
+    service === 'dynamodb'
+      ? toTrimmedOrNull(process.env.AWS_DYNAMODB_ENDPOINT)
+      : toTrimmedOrNull(process.env.AWS_SQS_ENDPOINT);
   if (serviceSpecific !== null) {
     return serviceSpecific;
   }
-  for (const fallback of FALLBACK_ENDPOINT_ENV_VARS) {
-    const candidate = toTrimmedOrNull(process.env[fallback]);
+  const fallbackEndpoints = [
+    process.env.AWS_ENDPOINT_URL,
+    process.env.AWS_LOCAL_ENDPOINT,
+    process.env.AWS_LOCALSTACK_ENDPOINT,
+  ];
+  for (const fallback of fallbackEndpoints) {
+    const candidate = toTrimmedOrNull(fallback);
     if (candidate !== null) {
       return candidate;
     }
@@ -68,19 +66,19 @@ export const useRdsIamAuth = (): boolean => {
  */
 export const generateRdsIamToken = async (): Promise<string> => {
   const host = process.env.PGHOST;
-  const port = parseInt(process.env.PGPORT || '5432', 10);
+  const port = parseInt(process.env.PGPORT ?? '5432', 10);
   const user = process.env.PGUSER;
   const region = resolveAwsRegion();
 
-  if (!host || !user) {
+  if (host === undefined || host.trim().length === 0 || user === undefined || user.trim().length === 0) {
     throw new Error('PGHOST and PGUSER environment variables are required for IAM auth');
   }
 
   const signer = new Signer({
     hostname: host,
     port,
-    username: user,
     region,
+    username: user,
   });
 
   return signer.getAuthToken();

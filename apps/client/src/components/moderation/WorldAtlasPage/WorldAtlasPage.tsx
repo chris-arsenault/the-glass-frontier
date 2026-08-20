@@ -1,5 +1,12 @@
-import type { HardState, HardStateLink, LoreFragment, WorldSchema } from '@glass-frontier/dto';
-import React, { useEffect, useMemo, useState } from 'react';
+import {
+  HardStateStatus,
+  HardStateSubkind,
+  type HardState,
+  type HardStateLink,
+  type LoreFragment,
+  type WorldSchema,
+} from '@glass-frontier/dto';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
@@ -18,7 +25,31 @@ type FragmentDraft = {
 
 const toLine = (items: string[]) => items.join(', ');
 
-export function WorldAtlasPage(): JSX.Element {
+type AtlasEntityView = {
+  entity: HardState;
+  fragments: LoreFragment[];
+  schema: WorldSchema;
+};
+
+const fetchEntityView = async (slug: string): Promise<AtlasEntityView> => {
+  const [details, schema] = await Promise.all([
+    worldAtlasClient.getEntity(slug),
+    worldSchemaClient.getSchema(),
+  ]);
+  return { entity: details.entity, fragments: details.fragments, schema };
+};
+
+const findLinkedEntity = async (
+  entity: HardState,
+  predicate: (candidate: HardState) => boolean
+): Promise<HardState | null> => {
+  const linked = await Promise.all(
+    entity.links.map(async (link) => worldAtlasClient.getEntity(link.targetId))
+  );
+  return linked.map((result) => result.entity).find(predicate) ?? null;
+};
+
+export function WorldAtlasPage(): React.JSX.Element {
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
   const canModerate = useCanModerate();
@@ -32,69 +63,98 @@ export function WorldAtlasPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [fragmentDraft, setFragmentDraft] = useState<FragmentDraft>({
-    title: '',
     prose: '',
     tags: '',
+    title: '',
   });
   const [linkDraft, setLinkDraft] = useState<{ relationship: string; targetId: string; strength: string }>({
     relationship: '',
-    targetId: '',
     strength: '',
+    targetId: '',
   });
 
-  const load = async () => {
-    if (!slug) {
-      setError(null);
-      setEntity(null);
-      setFragments([]);
+  const load = useCallback(async () => {
+    if (slug === undefined) {
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const [details, schemaResult] = await Promise.all([
-        worldAtlasClient.getEntity(slug),
-        worldSchemaClient.getSchema(),
-      ]);
-      setEntity(details.entity);
-      setFragments(details.fragments);
-      setSchema(schemaResult);
+      const view = await fetchEntityView(slug);
+      setEntity(view.entity);
+      setFragments(view.fragments);
+      setSchema(view.schema);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load entity');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void load();
   }, [slug]);
 
   useEffect(() => {
-    if (entities.length > 0 || isLoading || schema) {
-      return;
+    if (slug === undefined) {
+      return undefined;
     }
-    setIsLoading(true);
-    void worldAtlasClient
-      .listEntities()
-      .then((list) => {
-        setEntities(list);
-        if (!schema) {
-          void worldSchemaClient.getSchema().then(setSchema).catch(() => {});
+    let cancelled = false;
+    void fetchEntityView(slug).then(
+      (view) => {
+        if (!cancelled) {
+          setEntity(view.entity);
+          setFragments(view.fragments);
+          setSchema(view.schema);
+          setError(null);
+          setIsLoading(false);
         }
-      })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load entities'))
-      .finally(() => setIsLoading(false));
-  }, [entities.length, isLoading, schema]);
+        return undefined;
+      },
+      (reason: unknown) => {
+        if (!cancelled) {
+          setError(reason instanceof Error ? reason.message : 'Failed to load entity');
+          setIsLoading(false);
+        }
+        return undefined;
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      worldAtlasClient.listEntities(),
+      worldSchemaClient.getSchema(),
+    ]).then(
+      ([list, worldSchema]) => {
+        if (!cancelled) {
+          setEntities(list);
+          setSchema(worldSchema);
+          setIsLoading(false);
+        }
+        return undefined;
+      },
+      (reason: unknown) => {
+        if (!cancelled) {
+          setError(reason instanceof Error ? reason.message : 'Failed to load entities');
+          setIsLoading(false);
+        }
+        return undefined;
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const statusOptions = useMemo(() => {
-    if (!entity || !schema) return [];
+    if (!entity || !schema) {return [];}
     const kind = schema.kinds.find((k) => k.id === entity.kind);
     return kind?.statuses ?? [];
   }, [entity, schema]);
 
   const subkindOptions = useMemo(() => {
-    if (!entity || !schema) return [];
+    if (!entity || !schema) {return [];}
     const kind = schema.kinds.find((k) => k.id === entity.kind);
     return kind?.subkinds ?? [];
   }, [entity, schema]);
@@ -109,22 +169,22 @@ export function WorldAtlasPage(): JSX.Element {
   }, [entities]);
 
   const handleSaveEntity = async () => {
-    if (!entity) return;
+    if (!entity) {return;}
     setIsSaving(true);
     setError(null);
     try {
       const updated = await worldAtlasClient.upsertEntity({
+        description: entity.description,
         id: entity.id,
         kind: entity.kind,
-        name: entity.name,
-        description: entity.description ?? null,
-        status: entity.status ?? null,
-        subkind: entity.subkind ?? null,
         links: entity.links.map((link) => ({
           relationship: link.relationship,
-          targetId: link.targetId,
           strength: link.strength,
+          targetId: link.targetId,
         })),
+        name: entity.name,
+        status: entity.status,
+        subkind: entity.subkind,
       });
       setEntity(updated);
     } catch (err: unknown) {
@@ -135,19 +195,19 @@ export function WorldAtlasPage(): JSX.Element {
   };
 
   const handleAddLink = async () => {
-    if (!entity) return;
+    if (!entity) {return;}
     setIsSaving(true);
     setError(null);
     try {
       const strength = linkDraft.strength.trim() ? parseFloat(linkDraft.strength) : undefined;
       await worldAtlasClient.upsertRelationship({
-        srcId: entity.id,
         dstId: linkDraft.targetId,
         relationship: linkDraft.relationship,
+        srcId: entity.id,
         strength: strength !== undefined && !isNaN(strength) ? strength : undefined,
       });
       await load();
-      setLinkDraft({ relationship: '', targetId: '', strength: '' });
+      setLinkDraft({ relationship: '', strength: '', targetId: '' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to add link');
     } finally {
@@ -156,16 +216,16 @@ export function WorldAtlasPage(): JSX.Element {
   };
 
   const handleRemoveLink = async (link: HardStateLink) => {
-    if (!entity) return;
+    if (!entity) {return;}
     setIsSaving(true);
     setError(null);
     try {
       const srcId = link.direction === 'out' ? entity.id : link.targetId;
       const dstId = link.direction === 'out' ? link.targetId : entity.id;
       await worldAtlasClient.deleteRelationship({
-        srcId,
         dstId,
         relationship: link.relationship,
+        srcId,
       });
       await load();
     } catch (err: unknown) {
@@ -176,7 +236,7 @@ export function WorldAtlasPage(): JSX.Element {
   };
 
   const handleSaveFragment = async () => {
-    if (!entity) return;
+    if (!entity) {return;}
     setIsSaving(true);
     setError(null);
     try {
@@ -186,19 +246,19 @@ export function WorldAtlasPage(): JSX.Element {
         .filter(Boolean);
       const saved = fragmentDraft.id
         ? await worldAtlasClient.updateFragment({
-            id: fragmentDraft.id,
-            title: fragmentDraft.title,
-            prose: fragmentDraft.prose,
-            tags,
-          })
+          id: fragmentDraft.id,
+          prose: fragmentDraft.prose,
+          tags,
+          title: fragmentDraft.title,
+        })
         : await worldAtlasClient.createFragment({
-            entityId: entity.id,
-            title: fragmentDraft.title,
-            prose: fragmentDraft.prose,
-            tags,
-            chronicleId: chronicleId ?? entity.id,
-          });
-      setFragmentDraft({ id: undefined, title: '', prose: '', tags: '' });
+          chronicleId: chronicleId ?? entity.id,
+          entityId: entity.id,
+          prose: fragmentDraft.prose,
+          tags,
+          title: fragmentDraft.title,
+        });
+      setFragmentDraft({ id: undefined, prose: '', tags: '', title: '' });
       setFragments((prev) => {
         const next = prev.filter((f) => f.id !== saved.id);
         return [...next, saved];
@@ -230,53 +290,31 @@ export function WorldAtlasPage(): JSX.Element {
     setIsSaving(true);
     setError(null);
     try {
-      let location: HardState | null = null;
-      let anchor: HardState | null = null;
-
-      if (entity.kind === 'location') {
-        // Entity is a location - use it as location, find anchor from neighbors
-        location = entity;
-        // Try to find a non-location neighbor to use as anchor
-        if (entity.links && entity.links.length > 0) {
-          for (const link of entity.links) {
-            const neighborResult = await worldAtlasClient.getEntity(link.targetId);
-            if (neighborResult && neighborResult.entity.kind !== 'location') {
-              anchor = neighborResult.entity;
-              break;
-            }
-          }
-        }
-      } else {
-        // Entity is not a location - use it as anchor, find location from neighbors
-        anchor = entity;
-        // Try to find a location neighbor
-        if (entity.links && entity.links.length > 0) {
-          for (const link of entity.links) {
-            const neighborResult = await worldAtlasClient.getEntity(link.targetId);
-            if (neighborResult && neighborResult.entity.kind === 'location') {
-              location = neighborResult.entity;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!location) {
+      const isLocation = entity.kind === 'location';
+      const [location, anchor] = await Promise.all([
+        isLocation
+          ? Promise.resolve(entity)
+          : findLinkedEntity(entity, (candidate) => candidate.kind === 'location'),
+        isLocation
+          ? findLinkedEntity(entity, (candidate) => candidate.kind !== 'location')
+          : Promise.resolve(entity),
+      ]);
+      if (location === null) {
         setError('Could not find a location for this entity. Please select a location entity or one linked to a location.');
         return;
       }
 
       initFromAtlas({
-        anchor: anchor
-          ? {
-              description: anchor.description ?? undefined,
-              id: anchor.id,
-              kind: anchor.kind,
-              name: anchor.name,
-              slug: anchor.slug,
-              subkind: anchor.subkind ?? undefined,
-            }
-          : null,
+        anchor: anchor === null
+          ? null
+          : {
+            description: anchor.description ?? undefined,
+            id: anchor.id,
+            kind: anchor.kind,
+            name: anchor.name,
+            slug: anchor.slug,
+            subkind: anchor.subkind ?? undefined,
+          },
         location: {
           description: location.description ?? undefined,
           id: location.id,
@@ -286,7 +324,7 @@ export function WorldAtlasPage(): JSX.Element {
           subkind: location.subkind ?? undefined,
         },
       });
-      navigate('/chron/start');
+      void navigate('/chron/start');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to prepare chronicle');
     } finally {
@@ -392,7 +430,10 @@ export function WorldAtlasPage(): JSX.Element {
                   <select
                     disabled={!canModerate}
                     value={entity.subkind ?? ''}
-                    onChange={(e) => setEntity({ ...entity, subkind: e.target.value || undefined })}
+                    onChange={(e) => {
+                      const parsed = HardStateSubkind.safeParse(e.target.value);
+                      setEntity({ ...entity, subkind: parsed.success ? parsed.data : undefined });
+                    }}
                   >
                     <option value="">Unspecified</option>
                     {subkindOptions.map((subkind) => (
@@ -407,7 +448,10 @@ export function WorldAtlasPage(): JSX.Element {
                   <select
                     disabled={!canModerate}
                     value={entity.status ?? ''}
-                    onChange={(e) => setEntity({ ...entity, status: e.target.value || undefined })}
+                    onChange={(e) => {
+                      const parsed = HardStateStatus.safeParse(e.target.value);
+                      setEntity({ ...entity, status: parsed.success ? parsed.data : undefined });
+                    }}
                   >
                     <option value="">Unspecified</option>
                     {statusOptions.map((status) => (
@@ -506,9 +550,9 @@ export function WorldAtlasPage(): JSX.Element {
                             onClick={() =>
                               setFragmentDraft({
                                 id: fragment.id,
-                                title: fragment.title,
                                 prose: fragment.prose,
                                 tags: fragment.tags.join(', '),
+                                title: fragment.title,
                               })
                             }
                           >

@@ -3,7 +3,7 @@
 Use `pnpm run local` to boot the deterministic local stack without executing Playwright. The command:
 
 1. Starts LocalStack + WireMock via `docker-compose.e2e.yml`.
-2. Seeds the world state/inventory using `tests/bin/seed-localstack.ts`.
+2. Seeds three world entities, two lore fragments, and one playable chronicle using `tests/bin/seed-local-fixtures.ts`.
 3. Launches every dev service (`pnpm dev`) with the same environment variables that the e2e harness applies.
 4. Waits for the front-end (Vite), APIs, and mocks to become reachable.
 

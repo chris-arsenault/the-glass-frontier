@@ -6,20 +6,20 @@ import { ChronicleSummaryEntry } from './ChronicleSummary';
 
 const EntityFocusState = z.object({
   entityScores: z.record(z.string(), z.number()).default({}),
-  tagScores: z.record(z.string(), z.number()).default({}),
   lastUpdated: z.number().int().nonnegative().optional(),
+  tagScores: z.record(z.string(), z.number()).default({}),
 });
 
 export const Chronicle = z.object({
+  anchorEntityId: z.string().min(1).optional(),
   beats: z.array(ChronicleBeat).default([]),
   beatsEnabled: z.boolean().default(true),
   characterId: z.string().min(1).optional(),
+  entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
   id: z.string().min(1),
   locationId: z.string().min(1),
-  playerId: z.string().min(1),
-  anchorEntityId: z.string().min(1).optional(),
-  entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
   metadata: Metadata.optional(),
+  playerId: z.string().min(1),
   seedText: z.string().optional(),
   status: z.enum(['open', 'closed']).default('open'),
   summaries: z.array(ChronicleSummaryEntry).default([]),

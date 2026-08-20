@@ -22,8 +22,12 @@
   width: min(640px, 95vw);
   padding: 0;
   background: var(--surface-elevated);
+  backdrop-filter: blur(12px);
   border: none;
   border-radius: var(--radius-md);
+  box-shadow:
+    0 0 0 1px var(--border-default),
+    var(--shadow-lg);
   flex-direction: column;
   max-height: 90vh;
   opacity: 0;
@@ -33,10 +37,6 @@
     opacity 150ms ease,
     transform 150ms ease;
   z-index: 40;
-  box-shadow:
-    0 0 0 1px var(--border-default),
-    var(--shadow-lg);
-  backdrop-filter: blur(12px);
 }
 
 .modal.open {
@@ -100,10 +100,10 @@
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   font-weight: 600;
   transition: transform 120ms ease, box-shadow 120ms ease;
-  box-shadow: var(--shadow-sm);
 }
 
 .modal-primary {
@@ -112,8 +112,8 @@
 }
 
 .modal-primary:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md), 0 0 24px rgb(96 165 250 / 40%);
+  transform: translateY(-1px);
 }
 
 .modal-secondary {
@@ -122,6 +122,6 @@
 }
 
 .modal-secondary:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }

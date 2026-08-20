@@ -1,7 +1,8 @@
+import { type Intent, IntentType } from '@glass-frontier/dto';
+import type { GraphContext } from '@glass-frontier/gm-api/types';
 import { z } from 'zod';
-import  { type Intent, IntentType  } from '@glass-frontier/dto';
-import { LlmClassifierNode } from "./LlmClassiferNode";
-import {GraphContext} from "@glass-frontier/gm-api/types";
+
+import { LlmClassifierNode } from './LlmClassiferNode';
 
 const IntentResponseSchema = z.object({
   creativeSpark: z
@@ -29,33 +30,34 @@ const IntentResponseSchema = z.object({
 });
 
 type IntentResponse = z.infer<typeof IntentResponseSchema>;
+const NODE_ID = 'intent-classifier';
 
 class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
-  readonly id = 'intent-classifier';
+  readonly id = NODE_ID;
   constructor() {
     super({
-      id: 'intent-classifier',
+      applyResult: (context, result) => this.#applyIntent(context, result),
+      id: NODE_ID,
       schema: IntentResponseSchema,
       schemaName: 'intent_response_schema',
-      applyResult: (context, result) => this.#applyIntent(context, result),
-      shouldRun: (context) => {return true},
-      telemetryTag: 'llm.intent-classifier'
-    })
+      shouldRun: () => true,
+      telemetryTag: `llm.${NODE_ID}`
+    });
   }
 
-  #applyIntent(context, result: IntentResponse): GraphContext  {
+  #applyIntent(context: GraphContext, result: IntentResponse): GraphContext {
     const intent: Intent = {
+      beatDirective: {
+        kind: 'independent',
+        summary: 'Placeholder - will be replaced by beat detector',
+        targetBeatId: null
+      },
       creativeSpark: result.creativeSpark,
       handlerHints: result.handlerHints,
       intentSummary: result.intentSummary,
       intentType: result.intentType,
-      beatDirective: {
-        kind: 'independent',
-        summary: "Placeholder - will be replaced by beat detector",
-        targetBeatId: null
-      },
       metadata: {
-        source: 'intent-classifier',
+        tags: ['source:intent-classifier'],
         timestamp: Date.now(),
       },
       routerRationale: result.routerRationale,

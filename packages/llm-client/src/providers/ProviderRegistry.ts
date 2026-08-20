@@ -1,4 +1,4 @@
-import { IProvider } from './IProvider';
+import type { IProvider } from './IProvider';
 
 export type ModelConfig = {
   modelId: string;
@@ -30,7 +30,7 @@ export class ProviderRegistry {
     this.#models.set(config.modelId, config);
 
     // Map apiModelId -> providerId for provider lookup
-    if (config.apiModelId) {
+    if (config.apiModelId !== undefined && config.apiModelId.length > 0) {
       this.#apiModelMap.set(config.apiModelId, config.modelId);
     }
   }
@@ -39,15 +39,15 @@ export class ProviderRegistry {
     // Try to find by user-facing modelId first, then by API modelId
     let config = this.#models.get(modelId);
 
-    if (!config) {
+    if (config === undefined) {
       // Check if this is an API model ID that maps to a user-facing ID
       const userFacingId = this.#apiModelMap.get(modelId);
-      if (userFacingId) {
+      if (userFacingId !== undefined && userFacingId.length > 0) {
         config = this.#models.get(userFacingId);
       }
     }
 
-    if (!config) {
+    if (config === undefined) {
       console.error('[ProviderRegistry] Model not registered:', modelId);
       console.error('[ProviderRegistry] Available models:', Array.from(this.#models.keys()));
       console.error('[ProviderRegistry] Available API models:', Array.from(this.#apiModelMap.keys()));
@@ -55,7 +55,7 @@ export class ProviderRegistry {
     }
 
     const provider = this.#providers.get(config.providerId);
-    if (!provider) {
+    if (provider === undefined) {
       console.error('[ProviderRegistry] Provider not registered:', config.providerId);
       console.error('[ProviderRegistry] Available providers:', Array.from(this.#providers.keys()));
       throw new Error(`Provider ${config.providerId} not registered`);
@@ -71,7 +71,7 @@ export class ProviderRegistry {
 
   getModelConfig(modelId: string): ModelConfig {
     const config = this.#models.get(modelId);
-    if (!config) {
+    if (config === undefined) {
       throw new Error(`Model ${modelId} not registered`);
     }
     return config;
@@ -83,10 +83,10 @@ export class ProviderRegistry {
    */
   getApiModelId(modelId: string): string {
     const config = this.#models.get(modelId);
-    if (!config) {
+    if (config === undefined) {
       // If not found as a user-facing ID, it might already be an API model ID
       const userFacingId = this.#apiModelMap.get(modelId);
-      if (userFacingId) {
+      if (userFacingId !== undefined && userFacingId.length > 0) {
         const mappedConfig = this.#models.get(userFacingId);
         return mappedConfig?.apiModelId ?? modelId;
       }

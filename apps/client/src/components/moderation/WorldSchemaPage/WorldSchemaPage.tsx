@@ -1,15 +1,15 @@
-import type {
-  WorldKind,
-  WorldRelationshipRule,
-  WorldRelationshipType,
-  WorldSchema,
+import {
+  WorldKind as WorldKindSchema,
+  WorldRelationshipRule as WorldRelationshipRuleSchema,
+  type WorldRelationshipRule,
+  type WorldSchema,
 } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
 import { useCanModerate } from '../../../hooks/useUserRole';
-import { useChronicleStore } from '../../../stores/chronicleStore';
 import { worldSchemaClient } from '../../../lib/worldSchemaClient';
+import { useChronicleStore } from '../../../stores/chronicleStore';
 import './WorldSchemaPage.css';
 
 type KindFormState = {
@@ -29,7 +29,7 @@ type RelationshipRuleForm = {
 
 const toLine = (items: string[]) => items.join(', ');
 
-export function WorldSchemaPage(): JSX.Element {
+export function WorldSchemaPage(): React.JSX.Element {
   const canModerate = useCanModerate();
   const chronicleId = useChronicleStore((state) => state.chronicleId);
   const [schema, setSchema] = useState<WorldSchema | null>(null);
@@ -37,21 +37,21 @@ export function WorldSchemaPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [kindForm, setKindForm] = useState<KindFormState>({
-    id: '',
-    displayName: '',
     category: '',
     defaultStatus: '',
-    subkinds: '',
+    displayName: '',
+    id: '',
     statuses: '',
+    subkinds: '',
   });
   const [relationshipTypeForm, setRelationshipTypeForm] = useState<{ id: string; description: string }>({
-    id: '',
     description: '',
+    id: '',
   });
   const [ruleForm, setRuleForm] = useState<RelationshipRuleForm>({
+    dstKind: '',
     relationshipId: '',
     srcKind: '',
-    dstKind: '',
   });
 
   const loadSchema = async () => {
@@ -69,37 +69,62 @@ export function WorldSchemaPage(): JSX.Element {
 
   useEffect(() => {
     if (!canModerate) {
-      return;
+      return undefined;
     }
-    void loadSchema();
+    let cancelled = false;
+    void worldSchemaClient.getSchema().then(
+      (next) => {
+        if (!cancelled) {
+          setSchema(next);
+          setError(null);
+          setIsLoading(false);
+        }
+        return undefined;
+      },
+      (reason: unknown) => {
+        if (!cancelled) {
+          setError(reason instanceof Error ? reason.message : 'Failed to load schema');
+          setIsLoading(false);
+        }
+        return undefined;
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [canModerate]);
 
   const handleKindSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    const parsedKind = WorldKindSchema.safeParse({
+      category: kindForm.category.trim() || undefined,
+      defaultStatus: kindForm.defaultStatus.trim() || undefined,
+      displayName: kindForm.displayName.trim() || undefined,
+      id: kindForm.id.trim(),
+      statuses: kindForm.statuses
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+      subkinds: kindForm.subkinds
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    });
+    if (!parsedKind.success) {
+      setError(parsedKind.error.issues[0]?.message ?? 'Invalid world kind');
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
-      await worldSchemaClient.upsertKind({
-        id: kindForm.id.trim(),
-        category: kindForm.category.trim() || null,
-        defaultStatus: kindForm.defaultStatus.trim() || null,
-        displayName: kindForm.displayName.trim() || null,
-        subkinds: kindForm.subkinds
-          .split(',')
-          .map((entry) => entry.trim())
-          .filter(Boolean),
-        statuses: kindForm.statuses
-          .split(',')
-          .map((entry) => entry.trim())
-          .filter(Boolean),
-      });
+      await worldSchemaClient.upsertKind(parsedKind.data);
       setKindForm({
-        id: '',
-        displayName: '',
         category: '',
         defaultStatus: '',
-        subkinds: '',
+        displayName: '',
+        id: '',
         statuses: '',
+        subkinds: '',
       });
       await loadSchema();
     } catch (err: unknown) {
@@ -115,10 +140,10 @@ export function WorldSchemaPage(): JSX.Element {
     setError(null);
     try {
       await worldSchemaClient.addRelationshipType({
+        description: relationshipTypeForm.description.trim() || undefined,
         id: relationshipTypeForm.id.trim(),
-        description: relationshipTypeForm.description.trim() || null,
       });
-      setRelationshipTypeForm({ id: '', description: '' });
+      setRelationshipTypeForm({ description: '', id: '' });
       await loadSchema();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save relationship type');
@@ -129,15 +154,16 @@ export function WorldSchemaPage(): JSX.Element {
 
   const handleRuleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    const parsedRule = WorldRelationshipRuleSchema.safeParse(ruleForm);
+    if (!parsedRule.success) {
+      setError(parsedRule.error.issues[0]?.message ?? 'Invalid relationship rule');
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
-      await worldSchemaClient.upsertRelationshipRule({
-        relationshipId: ruleForm.relationshipId,
-        srcKind: ruleForm.srcKind as never,
-        dstKind: ruleForm.dstKind as never,
-      });
-      setRuleForm({ relationshipId: '', srcKind: '', dstKind: '' });
+      await worldSchemaClient.upsertRelationshipRule(parsedRule.data);
+      setRuleForm({ dstKind: '', relationshipId: '', srcKind: '' });
       await loadSchema();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save relationship rule');

@@ -4,7 +4,7 @@ import type {
   LocationEntity,
 } from '@glass-frontier/dto';
 
-import type { WorldSchemaStore, WorldNeighbor } from './types';
+import type { WorldSchemaStore } from './types';
 
 /**
  * LocationHelpers provides convenience methods for location-specific operations.
@@ -29,11 +29,11 @@ export class LocationHelpers {
     prominence?: HardStateProminence;
   }): Promise<LocationEntity> {
     const created = await this.#worldStore.upsertEntity({
-      kind: 'location',
-      name: input.name,
       description: input.description ?? undefined,
-      prominence: input.prominence,
+      kind: 'location',
       links: [{ relationship: input.relationship, targetId: input.anchorId }],
+      name: input.name,
+      prominence: input.prominence,
     });
     return toPlace(created);
   }
@@ -48,16 +48,16 @@ export class LocationHelpers {
     maxHops?: number;
   }): Promise<{ place: LocationEntity; neighbors: LocationNeighbors }> {
     const base = await this.#worldStore.getEntity({ id: input.id });
-    if (!base || base.kind !== 'location') {
+    if (base === null || base.kind !== 'location') {
       throw new Error('Location not found');
     }
     const neighbors = await this.getNeighborsGrouped({
       id: input.id,
-      minProminence: input.minProminence,
-      maxProminence: input.maxProminence,
       maxHops: input.maxHops,
+      maxProminence: input.maxProminence,
+      minProminence: input.minProminence,
     });
-    return { place: toPlace(base), neighbors };
+    return { neighbors, place: toPlace(base) };
   }
 
   /**
@@ -74,10 +74,10 @@ export class LocationHelpers {
     const raw = await this.#worldStore.listNeighbors({
       id: input.id,
       kind: 'location',
-      minProminence: input.minProminence,
-      maxProminence: input.maxProminence,
-      maxHops: input.maxHops,
       limit: input.limit,
+      maxHops: input.maxHops,
+      maxProminence: input.maxProminence,
+      minProminence: input.minProminence,
     });
 
     const grouped: LocationNeighbors = {};
@@ -109,10 +109,10 @@ const toPlace = (entity: {
   updatedAt?: number;
 }): LocationEntity => ({
   createdAt: entity.createdAt ?? Date.now(),
+  description: entity.description ?? undefined,
   id: entity.id,
   kind: 'location',
   name: entity.name,
-  description: entity.description ?? undefined,
   prominence: entity.prominence ?? 'recognized',
   slug: entity.slug,
   status: entity.status ?? undefined,

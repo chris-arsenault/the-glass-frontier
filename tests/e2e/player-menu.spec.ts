@@ -11,6 +11,7 @@ import {
 
 test.describe('Player menu moderation shortcuts', () => {
   test.beforeEach(async ({ request }) => {
+    await resetPlaywrightState(request);
     await resetWiremockScenarios(request);
   });
 
@@ -38,6 +39,7 @@ test.describe('Player menu moderation shortcuts', () => {
     await expect(page.getByRole('heading', { name: 'LLM Audit Review' })).toBeVisible();
     await page.locator('#audit-filter-player').fill('playwright-e2e');
     await page.getByRole('button', { name: 'Apply Filters' }).click();
+    await page.getByRole('button', { name: 'Expand' }).first().click();
     await expect(page.getByRole('button', { name: 'Open Review' }).first()).toBeEnabled({
       timeout: 15_000,
     });
@@ -50,9 +52,8 @@ test.describe('Player menu moderation shortcuts', () => {
     await page.getByRole('button', { name: 'Back to Chronicle' }).click();
 
     const locationPanel = await openPlayerMenu(page);
-    await locationPanel.getByRole('button', { name: 'Location Maintenance' }).click();
-    await expect(page.getByRole('heading', { name: 'Location Maintenance' })).toBeVisible();
+    await locationPanel.getByRole('button', { name: 'World Atlas' }).click();
+    await expect(page.getByRole('heading', { name: 'World Atlas' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Luminous Quay/i }).first()).toBeVisible();
-    await page.getByRole('button', { name: 'Back to Chronicle' }).click();
   });
 });

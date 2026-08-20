@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import type { Pool } from 'pg';
 
+import { ModelConfigStore } from './modelConfigStore';
 import { createPool } from './pg';
 import { PlayerStore } from './playerStore';
 import { PromptTemplateManager } from './promptTemplates/PromptTemplateManager';
-import { ModelConfigStore } from './modelConfigStore';
 
 export class AppStore {
   readonly playerStore: PlayerStore;

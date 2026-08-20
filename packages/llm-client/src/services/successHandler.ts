@@ -1,15 +1,15 @@
+import type { LLMRequest, LLMResponse } from '@glass-frontier/llm-client/types';
 import { log } from '@glass-frontier/utils';
 import type { LoggableMetadata } from '@glass-frontier/utils';
-import type { LLMRequest, LLMResponse } from '@glass-frontier/llm-client/types';
 
-import { AuditArchive } from './AuditArchive';
-import { TokenUsageTracker } from './TokenUsageTracker';
-import { ModelUsageTracker } from './ModelUsageTracker';
+import type { AuditArchive } from './AuditArchive';
+import type { ModelUsageTracker } from './ModelUsageTracker';
+import type { TokenUsageTracker } from './TokenUsageTracker';
 
 export class LLMSuccessHandler {
-  #auditArchive: AuditArchive | null;
-  #usageTracker: TokenUsageTracker | null;
-  #modelUsageTracker: ModelUsageTracker | null;
+  readonly #auditArchive: AuditArchive | null;
+  readonly #usageTracker: TokenUsageTracker | null;
+  readonly #modelUsageTracker: ModelUsageTracker | null;
 
   constructor(options: {
     auditArchive: AuditArchive | null;
@@ -58,6 +58,7 @@ export class LLMSuccessHandler {
 
     return this.#auditArchive
       .record({
+        durationMs: payload.durationMs,
         id: payload.requestId,
         metadata,
         nodeId,
@@ -66,7 +67,6 @@ export class LLMSuccessHandler {
         request: requestPayload,
         requestContextId,
         response: responsePayload,
-        durationMs: payload.durationMs,
       })
       .catch((error) =>
         log('error', 'llm-proxy.audit.failure', {
@@ -107,12 +107,12 @@ export class LLMSuccessHandler {
     }
 
     const playerId = this.#extractPlayerId(payload.metadata);
-    if (!playerId) {
+    if (playerId === undefined) {
       return null;
     }
 
     const usage = this.#extractUsage(payload);
-    if (!usage) {
+    if (usage === undefined) {
       return null;
     }
 
@@ -125,11 +125,11 @@ export class LLMSuccessHandler {
 
     return this.#modelUsageTracker
       .record({
-        playerId,
-        modelId: payload.requestBody.model,
-        providerId: payload.providerId,
         inputTokens,
+        modelId: payload.requestBody.model,
         outputTokens,
+        playerId,
+        providerId: payload.providerId,
       })
       .catch((error) =>
         log('error', 'llm-proxy.model_usage.failure', {
@@ -162,7 +162,7 @@ export class LLMSuccessHandler {
           content: [
             {
               text: preview,
-              type: 'text',
+              type: 'input_text',
             },
           ],
         },
@@ -190,18 +190,18 @@ export class LLMSuccessHandler {
   }
 
   #extractUsage(payload: LLMResponse): Record<string, unknown> | undefined {
-    if (payload.usage && Object.keys(payload.usage).length > 0) {
+    if (Object.keys(payload.usage).length > 0) {
       return payload.usage;
     }
     const bodyUsage = (payload.responseBody as { usage?: Record<string, unknown> }).usage;
-    if (bodyUsage && Object.keys(bodyUsage).length > 0) {
+    if (bodyUsage !== undefined && Object.keys(bodyUsage).length > 0) {
       return bodyUsage;
     }
     return undefined;
   }
 
   #extractTokenCount(usage: Record<string, unknown>, key: string): number {
-    const value = usage[key];
+    const value = new Map(Object.entries(usage)).get(key);
     if (typeof value === 'number' && value >= 0) {
       return Math.floor(value);
     }

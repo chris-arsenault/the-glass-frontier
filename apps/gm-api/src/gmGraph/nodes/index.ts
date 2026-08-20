@@ -1,2 +1,2 @@
-export * from './graphNode'
-export * from './classifiers'
+export * from './graphNode';
+export * from './classifiers';

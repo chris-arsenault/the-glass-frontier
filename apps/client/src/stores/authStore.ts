@@ -5,7 +5,7 @@ import {
   CognitoUser,
   CognitoUserPool,
 } from 'amazon-cognito-identity-js';
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
 
 import { getConfigValue, getEnvValue } from '../utils/runtimeConfig';
 
@@ -59,15 +59,9 @@ const extractTokens = (session: CognitoUserSession): AuthTokens => ({
   refreshToken: session.getRefreshToken().getToken(),
 });
 
-type StoreSet = (
-  partial:
-    | AuthState
-    | Partial<AuthState>
-    | ((state: AuthState) => AuthState | Partial<AuthState>),
-  replace?: boolean
-) => void;
-
-type StoreGet = () => AuthState;
+type AuthStateCreator = StateCreator<AuthState>;
+type StoreSet = Parameters<AuthStateCreator>[0];
+type StoreGet = Parameters<AuthStateCreator>[1];
 
 const NEW_PASSWORD_REQUIRED = 'NEW_PASSWORD_REQUIRED';
 

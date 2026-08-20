@@ -11,7 +11,10 @@ export type AuthOptions = {
 export const authenticate = async (page: Page, options?: AuthOptions) => {
   await page.evaluate(
     async ({ groups }) => {
-      const module = await import('/src/stores/authStore.ts');
+      const modulePath = '/src/stores/authStore.ts';
+      const module = await import(modulePath) as typeof import(
+        '../../apps/client/src/stores/authStore'
+      );
       const base64Url = (payload: Record<string, unknown>): string => {
         const json = JSON.stringify(payload);
         const encoded = globalThis.btoa(json);
@@ -26,6 +29,12 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
         sub: 'playwright-e2e',
       });
       const idToken = `${header}.${body}.signature`;
+      const accessToken = `${header}.${base64Url({
+        client_id: 'local-e2e',
+        'cognito:groups': normalizedGroups,
+        sub: 'playwright-e2e',
+        token_use: 'access',
+      })}.`;
       module.useAuthStore.setState({
         challengeUser: null,
         error: null,
@@ -33,7 +42,7 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
         isAuthenticating: false,
         newPasswordRequired: false,
         tokens: {
-          accessToken: 'test-access-token',
+          accessToken,
           idToken,
           refreshToken: 'test-refresh-token',
         },
@@ -46,7 +55,10 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
 
 export const seedChronicle = async (page: Page): Promise<{ chronicleId: string }> => {
   return page.evaluate(async () => {
-    const { useChronicleStore } = await import('/src/stores/chronicleStore.ts');
+    const modulePath = '/src/stores/chronicleStore.ts';
+    const { useChronicleStore } = await import(modulePath) as typeof import(
+      '../../apps/client/src/stores/chronicleStore'
+    );
     const store = useChronicleStore.getState();
 
     await store.refreshPlayerResources();
@@ -96,7 +108,8 @@ export const resetWiremockScenarios = async (request: APIRequestContext) => {
 
 export const resetPlaywrightState = async (request: APIRequestContext) => {
   const port = process.env.PLAYWRIGHT_PORT ? Number(process.env.PLAYWRIGHT_PORT) : 7800;
-  await request.post(`http://localhost:${port}/reset`, {
+  const response = await request.post(`http://localhost:${port}/reset`, {
     data: {},
   });
+  expect(response.ok()).toBeTruthy();
 };

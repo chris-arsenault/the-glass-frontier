@@ -39,7 +39,7 @@ const processRecord = async (record: SQSRecord): Promise<void> => {
     payload = JSON.parse(body);
   } catch {
     log('error', 'Progress event payload is not JSON', { messageId: record.messageId });
-    return;
+    throw new Error('Progress event payload is not JSON');
   }
 
   const parsed = TurnProgressEventSchema.safeParse(payload);
@@ -48,11 +48,11 @@ const processRecord = async (record: SQSRecord): Promise<void> => {
       messageId: record.messageId,
       reason: parsed.error.message,
     });
-    return;
+    throw new Error(`Progress event failed validation: ${parsed.error.message}`);
   }
 
   const eventPayload = parsed.data;
-  const targets = await repository.listTargets(eventPayload.jobId);
+  const targets = await repository.listTargets(eventPayload.jobId, eventPayload.playerId);
   if (targets.length === 0) {
     return;
   }
@@ -77,6 +77,7 @@ const processRecord = async (record: SQSRecord): Promise<void> => {
           connectionId: target.connectionId,
           reason: error instanceof Error ? error.message : 'unknown',
         });
+        throw error;
       }
     })
   );

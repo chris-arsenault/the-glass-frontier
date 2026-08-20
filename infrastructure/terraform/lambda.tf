@@ -2,27 +2,29 @@ data "aws_secretsmanager_secret" "openai_api_key" {
   name = "openai-api-key"
 }
 
-data "aws_secretsmanager_secret_version" "openai_api_key" {
-  secret_id = data.aws_secretsmanager_secret.openai_api_key.id
-}
-
 data "aws_secretsmanager_secret" "anthropic_api_key" {
   name = "anthropic-api-key"
 }
 
-data "aws_secretsmanager_secret_version" "anthropic_api_key" {
-  secret_id = data.aws_secretsmanager_secret.anthropic_api_key.id
-}
-
-# Common database environment variables for IAM auth
-# Lambda connects directly to public RDS instance (no VPC, no proxy)
 locals {
+  auth_env_vars = {
+    COGNITO_APP_CLIENT_ID = aws_cognito_user_pool_client.this.id
+    COGNITO_USER_POOL_ID  = aws_cognito_user_pool.this.id
+  }
   db_env_vars = {
     PGHOST       = aws_db_instance.worldstate.address
     PGPORT       = "5432"
     PGDATABASE   = "worldstate"
     PGUSER       = local.rds_iam_user
     RDS_IAM_AUTH = "true"
+  }
+  db_lambda_vpc_config = {
+    security_group_ids = [aws_security_group.database_lambda.id]
+    subnet_ids         = aws_subnet.private[*].id
+  }
+  llm_secret_env_vars = {
+    ANTHROPIC_API_KEY_SECRET_ARN = data.aws_secretsmanager_secret.anthropic_api_key.arn
+    OPENAI_API_KEY_SECRET_ARN    = data.aws_secretsmanager_secret.openai_api_key.arn
   }
 }
 
@@ -40,15 +42,15 @@ module "chronicle_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = merge(local.db_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.llm_secret_env_vars, {
     NODE_ENV                    = var.environment
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
-    OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
-    ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
   })
+
+  vpc_config = local.db_lambda_vpc_config
 
 }
 
@@ -66,10 +68,12 @@ module "prompt_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = merge(local.db_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, {
     NODE_ENV    = var.environment
     DOMAIN_NAME = local.cloudfront_domain
   })
+
+  vpc_config = local.db_lambda_vpc_config
 
 }
 
@@ -87,10 +91,12 @@ module "atlas_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = merge(local.db_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, {
     NODE_ENV    = var.environment
     DOMAIN_NAME = local.cloudfront_domain
   })
+
+  vpc_config = local.db_lambda_vpc_config
 
 }
 
@@ -108,10 +114,12 @@ module "world_schema_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = merge(local.db_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, {
     NODE_ENV    = var.environment
     DOMAIN_NAME = local.cloudfront_domain
   })
+
+  vpc_config = local.db_lambda_vpc_config
 
 }
 
@@ -129,15 +137,15 @@ module "gm_api_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = merge(local.db_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.llm_secret_env_vars, {
     NODE_ENV                    = var.environment
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
     CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
-    OPENAI_API_KEY              = data.aws_secretsmanager_secret_version.openai_api_key.secret_string
     OPENAI_API_BASE             = "https://api.openai.com/v1"
-    ANTHROPIC_API_KEY           = data.aws_secretsmanager_secret_version.anthropic_api_key.secret_string
   })
+
+  vpc_config = local.db_lambda_vpc_config
 
 }
 
@@ -155,9 +163,11 @@ module "chronicle_closer_lambda" {
   log_retention_days   = 14
   tags                 = local.tags
 
-  environment_variables = merge(local.db_env_vars, {
+  environment_variables = merge(local.db_env_vars, local.llm_secret_env_vars, {
     NODE_ENV = var.environment
   })
+
+  vpc_config = local.db_lambda_vpc_config
 }
 
 # WebSocket lambdas don't need database access - no VPC config needed
@@ -221,6 +231,7 @@ resource "aws_lambda_event_source_mapping" "chronicle_closer_queue" {
   function_name                      = module.chronicle_closer_lambda.arn
   batch_size                         = 5
   maximum_batching_window_in_seconds = 5
+  function_response_types            = ["ReportBatchItemFailures"]
 }
 
 module "webservice_subscribe_lambda" {
@@ -288,7 +299,7 @@ module "db_provisioner_lambda" {
   handler              = "handler.handler"
   runtime              = var.lambda_node_version
   memory_size          = 512
-  timeout              = 300  # 5 minutes for migrations
+  timeout              = 300 # 5 minutes for migrations
   log_retention_days   = 30
   tags                 = local.tags
 
@@ -297,6 +308,8 @@ module "db_provisioner_lambda" {
     RDS_MASTER_SECRET_ARN = aws_db_instance.worldstate.master_user_secret[0].secret_arn
     RDS_MASTER_USERNAME   = aws_db_instance.worldstate.username
   })
+
+  vpc_config = local.db_lambda_vpc_config
 
   # No http_api_config - this Lambda is invoked manually or from CI/CD
 }

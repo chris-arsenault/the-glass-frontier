@@ -1,15 +1,13 @@
 import type {
   Character,
   Chronicle,
+  ChronicleSummaryEntry,
   HardState,
   HardStateProminence,
   HardStateKind,
-  HardStateLink,
   HardStateStatus,
   HardStateSubkind,
   LocationEntity,
-  LocationNeighbors,
-  LocationState,
   Turn,
   LoreFragment,
   WorldKind,
@@ -46,6 +44,7 @@ export type ChronicleStore = {
     seedText?: string | null;
     beatsEnabled?: boolean;
     anchorEntityId?: string | null;
+    sessionLocation?: LocationEntity;
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;
@@ -55,18 +54,23 @@ export type ChronicleStore = {
   listCharactersByPlayer: (playerId: string) => Promise<Character[]>;
 
   upsertChronicle: (chronicle: Chronicle) => Promise<Chronicle>;
+  commitClosureSummary: (input: {
+    character?: Character;
+    chronicleId: string;
+    entry: ChronicleSummaryEntry;
+  }) => Promise<boolean>;
   getChronicle: (chronicleId: string) => Promise<Chronicle | null>;
   listChroniclesByPlayer: (playerId: string) => Promise<Chronicle[]>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
 
-  addTurn: (turn: Turn) => Promise<Turn>;
+  commitTurn: (input: {
+    character: Character | null;
+    chronicle: Chronicle;
+    location: LocationEntity | null;
+    turn: Turn;
+  }) => Promise<Turn>;
   listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
 
-  moveCharacterToLocation: (input: {
-    characterId: string;
-    locationId: string;
-    note?: string | null;
-  }) => Promise<{ characterId: string; locationId: string; note?: string; updatedAt: number }>;
 };
 
 export type WorldSchemaStore = {

@@ -1,6 +1,6 @@
 services:
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:4.14.0
     environment:
       - SERVICES=s3,dynamodb,sqs
       - AWS_DEFAULT_REGION=us-east-1
@@ -9,7 +9,6 @@ services:
       - '4566:4566'
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - 'localstack-data:/var/lib/localstack'
 
   openai-mock:
     image: wiremock/wiremock:latest
@@ -37,5 +36,4 @@ services:
       retries: 10
 
 volumes:
-  localstack-data:
   pgdata:

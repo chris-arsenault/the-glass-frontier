@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import {Inventory as CharacterInventory, createEmptyInventory, InventorySchema} from './Inventory';
+import { InventorySchema } from './Inventory';
 import type {
   Attribute,
   AttributeTier,

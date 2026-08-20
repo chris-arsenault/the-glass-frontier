@@ -6,10 +6,14 @@
     "composite": true,
     "declaration": true,
     "declarationDir": "dist",
-    "declarationMap": false
+    "declarationMap": false,
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
   },
-  "include": ["src", "tsup.config.ts"],
+  "include": ["src"],
   "references": [
+    { "path": "../../packages/app" },
+    { "path": "../../packages/dto" },
+    { "path": "../../packages/node-utils" },
     { "path": "../../packages/worldstate" },
     { "path": "../../packages/utils" }
   ]

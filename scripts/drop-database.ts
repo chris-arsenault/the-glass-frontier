@@ -80,11 +80,7 @@ async function dropDatabaseDirect() {
 async function dropDatabase() {
   const useDocker = await isDockerCompose();
 
-  if (useDocker) {
-    await dropDatabaseViaDocker();
-  } else {
-    await dropDatabaseDirect();
-  }
+  await (useDocker ? dropDatabaseViaDocker() : dropDatabaseDirect());
 }
 
 dropDatabase().catch((error) => {

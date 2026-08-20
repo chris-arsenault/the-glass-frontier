@@ -23,7 +23,7 @@ const selectBugModerationState = (state: ReturnType<typeof useBugModerationStore
   updateReport: state.updateReport,
 });
 
-export function BugModerationPage(): JSX.Element {
+export function BugModerationPage(): React.JSX.Element {
   const canModerate = useCanModerate();
   const chronicleId = useChronicleStore((state) => state.chronicleId);
   const navigate = useNavigate();

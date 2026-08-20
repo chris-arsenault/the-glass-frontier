@@ -36,7 +36,7 @@ resource "aws_lb_listener" "api_https" {
   load_balancer_arn                                                   = aws_lb.api.arn
   port                                                                = 443
   protocol                                                            = "HTTPS"
-  ssl_policy                                                          = "ELBSecurityPolicy-2016-08"
+  ssl_policy                                                          = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn                                                     = aws_acm_certificate.api.arn
   routing_http_response_access_control_allow_credentials_header_value = "true"
   routing_http_response_access_control_allow_headers_header_value     = "content-type,authorization,x-trpc-source"

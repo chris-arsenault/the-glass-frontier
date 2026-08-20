@@ -1,5 +1,3 @@
-// context.ts
-import type { Pool } from 'pg';
 import {
   createAppStore,
   type AppStore,
@@ -9,6 +7,8 @@ import {
   useIamAuth,
   createPool,
 } from '@glass-frontier/app';
+import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
+import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import { createOpsStore, type OpsStore } from '@glass-frontier/ops';
 import {
   createChronicleStore,
@@ -16,11 +16,14 @@ import {
   type WorldSchemaStore,
   type ChronicleStore,
 } from '@glass-frontier/worldstate';
+// context.ts
+import type { Pool } from 'pg';
 
 import { ChronicleSeedService } from './services/chronicleSeedService';
 
 export type Context = {
   authorizationHeader?: string;
+  identity: AuthorizedIdentity;
   appStore: AppStore;
   bugReportStore: OpsStore['bugReportStore'];
   modelConfigStore: ModelConfigStore;
@@ -44,18 +47,22 @@ let seedService: ChronicleSeedService | undefined;
  * Call this once at cold start.
  */
 export async function initializeForLambda(): Promise<void> {
-  if (pool) return; // Already initialized
+  if (pool !== undefined) {
+    return;
+  }
 
   pool = await createPoolWithIamAuth();
+  await loadLlmApiKeysFromSecrets();
 
   appStore = createAppStore({ pool });
   opsStore = createOpsStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
   seedService = new ChronicleSeedService({
-    worldStore: worldSchemaStore,
+    llmClient: createLLMClient({ pool }),
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
+    worldStore: worldSchemaStore,
   });
 }
 
@@ -63,10 +70,12 @@ export async function initializeForLambda(): Promise<void> {
  * Initialize context for local development with connection string.
  */
 function initializeLocal(): void {
-  if (pool) return; // Already initialized
+  if (pool !== undefined) {
+    return;
+  }
 
   const connectionString = process.env.GLASS_FRONTIER_DATABASE_URL;
-  if (!connectionString?.trim()) {
+  if (connectionString === undefined || connectionString.trim().length === 0) {
     throw new Error('GLASS_FRONTIER_DATABASE_URL must be configured');
   }
 
@@ -77,33 +86,42 @@ function initializeLocal(): void {
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
   seedService = new ChronicleSeedService({
-    worldStore: worldSchemaStore,
+    llmClient: createLLMClient(),
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
+    worldStore: worldSchemaStore,
   });
 }
 
-export function createContext(options?: { authorizationHeader?: string }): Context {
+export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   // For local development, initialize synchronously on first call
-  if (!pool && !useIamAuth()) {
+  if (pool === undefined && !useIamAuth()) {
     initializeLocal();
   }
 
-  if (!appStore || !opsStore || !worldSchemaStore || !chronicleStore || !seedService) {
+  if (
+    appStore === undefined ||
+    opsStore === undefined ||
+    worldSchemaStore === undefined ||
+    chronicleStore === undefined ||
+    seedService === undefined
+  ) {
     throw new Error(
       'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
     );
   }
 
+  const identity = await verifyAuthorizationHeader(options?.authorizationHeader);
   return {
-    authorizationHeader: options?.authorizationHeader,
     appStore,
+    authorizationHeader: options?.authorizationHeader,
     bugReportStore: opsStore.bugReportStore,
+    chronicleStore,
+    identity,
     modelConfigStore: appStore.modelConfigStore,
     playerStore: appStore.playerStore,
     seedService,
     tokenUsageStore: opsStore.tokenUsageStore,
     worldSchemaStore,
-    chronicleStore,
   };
 }

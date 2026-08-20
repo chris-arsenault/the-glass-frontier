@@ -1,6 +1,5 @@
 import { execa } from 'execa';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 import waitOn from 'wait-on';
 
 import { PidRegistry } from '../scripts/pid-registry';
@@ -9,33 +8,40 @@ const STACK_STATE_PATH = path.resolve(process.cwd(), 'tests/.e2e-stack.json');
 
 const sharedEnv: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test',
-  AWS_SECRET_ACCESS_KEY: 'test',
-  AWS_REGION: 'us-east-1',
   AWS_DEFAULT_REGION: 'us-east-1',
+  AWS_REGION: 'us-east-1',
+  AWS_SECRET_ACCESS_KEY: 'test',
   AWS_SQS_ENDPOINT: 'http://127.0.0.1:4566',
-  TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
-  CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
-  OPENAI_API_BASE: 'http://localhost:8080/v1',
-  OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
-  OPENAI_API_KEY: 'test-openai-key',
   CHRONICLE_API_PORT: '7000',
-  NARRATIVE_PORT: '7000',
-  PROMPT_API_PORT: '7400',
-  LOCATION_API_PORT: '7300',
+  CHRONICLE_CLOSURE_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-chronicle-closure',
+  COGNITO_APP_CLIENT_ID: 'local-e2e',
+  COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
+  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
+  GLASS_FRONTIER_DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/worldstate',
   GM_API_PORT: '7001',
-  VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
-  VITE_COGNITO_CLIENT_ID: 'local-e2e',
+  NARRATIVE_PORT: '7000',
+  OPENAI_API_BASE: 'http://localhost:8080/v1',
+  OPENAI_API_KEY: 'test-openai-key',
+  OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
   PLAYWRIGHT_RESET_ENABLED: '1',
+  PROMPT_API_PORT: '7400',
+  TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
+  VITE_COGNITO_CLIENT_ID: 'local-e2e',
+  VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
+  VITE_PROGRESS_WS_URL: 'ws://localhost:8787',
 };
 
 const waitResources = [
-  'tcp:4566',
+  'http-get://localhost:4566/_localstack/health',
   'http-get://localhost:8080/__admin',
   'http-get://localhost:5173',
+  'tcp:4015',
+  'tcp:4016',
   'tcp:7000',
   'tcp:7001',
-  'tcp:7300',
   'tcp:7400',
+  'tcp:7800',
+  'tcp:8787',
 ];
 
 const withEnv = (): NodeJS.ProcessEnv => ({ ...process.env, ...sharedEnv });
@@ -56,13 +62,26 @@ export default async function globalSetup(): Promise<void> {
   });
 
   await waitOn({
-    resources: ['tcp:4566', 'http-get://localhost:8080/__admin'],
+    resources: [
+      'http-get://localhost:4566/_localstack/health',
+      'http-get://localhost:8080/__admin',
+      'tcp:5432',
+    ],
     timeout: 120_000,
   });
 
-  await delay(2_000);
+  for (const workspace of [
+    '@glass-frontier/app',
+    '@glass-frontier/worldstate',
+    '@glass-frontier/ops',
+  ]) {
+    await execa('pnpm', ['-F', workspace, 'migrate'], {
+      env: withEnv(),
+      stdio: 'inherit',
+    });
+  }
 
-  await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-localstack.ts'], {
+  await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-local-fixtures.ts'], {
     env: withEnv(),
     stdio: 'inherit',
   });
@@ -77,11 +96,11 @@ export default async function globalSetup(): Promise<void> {
 
   if (typeof devServer.pid === 'number') {
     await pidRegistry.register({
-      pid: devServer.pid,
       command: 'pnpm dev',
-      label: 'playwright-dev-server',
       cwd: process.cwd(),
       killGroup: true,
+      label: 'playwright-dev-server',
+      pid: devServer.pid,
     });
   }
 

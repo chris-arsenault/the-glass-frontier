@@ -1,9 +1,8 @@
+import type { Character, Chronicle, HardStateStatus, Turn } from '@glass-frontier/dto';
+import { runner, type RunnerOption } from 'node-pg-migrate';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import type { Character, Chronicle, HardStateStatus, Turn } from '@glass-frontier/dto';
-import { runner, type RunnerOption } from 'node-pg-migrate';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -22,7 +21,8 @@ let worldState: WorldState;
 
 const parseDatabaseName = (connectionString: string): { adminUrl: string; dbName: string } => {
   const url = new URL(connectionString);
-  const candidate = url.pathname.replace(/^\//, '') || 'worldstate_test';
+  const pathname = url.pathname.replace(/^\//, '');
+  const candidate = pathname.length === 0 ? 'worldstate_test' : pathname;
   if (!/^[a-zA-Z0-9_]+$/.test(candidate)) {
     throw new Error(`Unsafe database name for tests: ${candidate}`);
   }
@@ -113,6 +113,7 @@ const defaultCharacter = (overrides?: Partial<Character>): Character => ({
 const defaultChronicle = (locationId: string, overrides?: Partial<Chronicle>): Chronicle => ({
   beats: [],
   beatsEnabled: true,
+  entityFocus: { entityScores: {}, tagScores: {} },
   id: randomUUID(),
   locationId,
   metadata: undefined,
@@ -141,7 +142,7 @@ const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Turn => ({
   playerMessage: {
     content: 'A move is made',
     id: randomUUID(),
-    metadata: {},
+    metadata: { tags: [], timestamp: Date.now() },
     role: 'player',
   },
   resolvedIntentConfidence: undefined,
@@ -153,6 +154,16 @@ const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Turn => ({
   worldDeltaTags: [],
   ...overrides,
 });
+
+const commitChronicleTurn = async (chronicle: Chronicle, turn: Turn): Promise<Turn> => {
+  const state = await worldState.chronicles.getChronicleState(chronicle.id);
+  return worldState.chronicles.commitTurn({
+    character: state?.character ?? null,
+    chronicle,
+    location: state?.location ?? null,
+    turn,
+  });
+};
 
 beforeAll(async () => {
   await ensureTestDatabase(TEST_DATABASE_URL);
@@ -171,19 +182,19 @@ afterAll(async () => {
 });
 
 describe('Locations as hard state', () => {
-  it('creates missing location entries as hard state when starting a chronicle', async () => {
+  it('rejects missing canonical locations without chronicle-scoped state', async () => {
     const locationId = randomUUID();
-    const chronicle = await worldState.chronicles.ensureChronicle({
-      characterId: undefined,
-      locationId,
-      playerId: TEST_PLAYER_ID,
-      title: 'Missing Location Chronicle',
-    });
+    await expect(
+      worldState.chronicles.ensureChronicle({
+        characterId: undefined,
+        locationId,
+        playerId: TEST_PLAYER_ID,
+        title: 'Missing Location Chronicle',
+      })
+    ).rejects.toThrow('provide chronicle-scoped session location state');
     const hardState = await worldState.world.getEntity({ id: locationId });
 
-    expect(chronicle.locationId).toBe(locationId);
-    expect(hardState?.kind).toBe('location');
-    expect(hardState?.name).toBe('Missing Location Chronicle');
+    expect(hardState).toBeNull();
   });
 
   it('summarizes chronicle locations from hard state records', async () => {
@@ -228,7 +239,7 @@ describe('World schema', () => {
     });
     const linked = await worldState.world.getEntity({ id: npc.id });
 
-    expect(updated.links).toEqual([{ relationship: 'ally_of', targetId: npc.id, direction: 'out' }]);
+    expect(updated.links).toEqual([{ direction: 'out', relationship: 'ally_of', targetId: npc.id }]);
     expect(linked?.links).toContainEqual({
       direction: 'in',
       relationship: 'ally_of',
@@ -236,7 +247,9 @@ describe('World schema', () => {
     });
     expect(updated.status).toBe('active');
   });
+});
 
+describe('World schema validation', () => {
   it('rejects unsupported hard state status', async () => {
     await expect(
       worldState.world.upsertEntity({
@@ -262,13 +275,15 @@ describe('World schema', () => {
     });
     await expect(
       worldState.world.upsertRelationship({
+        dstId: artifact.id,
         relationship: 'controls',
         srcId: location.id,
-        dstId: artifact.id,
       })
     ).rejects.toThrowError(/not allowed/);
   });
+});
 
+describe('World lore', () => {
   it('creates lore fragments linked to hard state', async () => {
     const root = await worldState.world.upsertEntity({
       kind: 'location',
@@ -296,7 +311,7 @@ describe('World schema', () => {
   });
 });
 
-describe('ChronicleStore', () => {
+describe('Chronicle turn history', () => {
   it('creates characters and chronicles with turn history', async () => {
     const startingLocation = await worldState.world.upsertEntity({
       kind: 'location',
@@ -309,7 +324,8 @@ describe('ChronicleStore', () => {
       defaultChronicle(startingLocation.id, { characterId: character.id })
     );
 
-    const turn = await worldState.chronicles.addTurn(
+    const turn = await commitChronicleTurn(
+      chronicle,
       defaultTurn(chronicle.id, {
         gmSummary: 'Summary',
         turnSequence: 0,
@@ -323,7 +339,9 @@ describe('ChronicleStore', () => {
     expect(snapshot?.character?.id).toBe(character.id);
     expect(snapshot?.location?.id).toBe(startingLocation.id);
   });
+});
 
+describe('Chronicle retrieval', () => {
   it('ensures chronicle retrieval respects the most recent turn ordering', async () => {
     const location = await worldState.world.upsertEntity({
       kind: 'location',
@@ -337,11 +355,13 @@ describe('ChronicleStore', () => {
       playerId: TEST_PLAYER_ID,
       title: 'Ordering',
     });
-    await worldState.chronicles.addTurn(
-      defaultTurn(chronicle.id, { turnSequence: 0, gmSummary: 'first' })
+    await commitChronicleTurn(
+      chronicle,
+      defaultTurn(chronicle.id, { gmSummary: 'first', turnSequence: 0 })
     );
-    await worldState.chronicles.addTurn(
-      defaultTurn(chronicle.id, { turnSequence: 1, gmSummary: 'second' })
+    await commitChronicleTurn(
+      chronicle,
+      defaultTurn(chronicle.id, { gmSummary: 'second', turnSequence: 1 })
     );
 
     const state = await worldState.chronicles.getChronicleState(chronicle.id);
@@ -349,7 +369,9 @@ describe('ChronicleStore', () => {
     expect(state?.turnSequence).toBe(1);
     expect(state?.turns.map((t) => t.turnSequence)).toEqual([0, 1]);
   });
+});
 
+describe('Chronicle anchors', () => {
   it('persists chronicle anchor entities', async () => {
     const anchor = await worldState.world.upsertEntity({
       kind: 'location',

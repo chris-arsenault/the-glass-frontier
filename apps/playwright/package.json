@@ -13,7 +13,7 @@
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*",
-    "express": "^4.19.2",
+    "express": "^5.2.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {

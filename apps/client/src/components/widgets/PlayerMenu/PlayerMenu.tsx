@@ -2,6 +2,14 @@ import type { LocationEntity } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
+import { trpcClient } from '../../../lib/trpcClient';
+import { useAuthStore } from '../../../stores/authStore';
+import { useChronicleStore } from '../../../stores/chronicleStore';
+import { useUiStore } from '../../../stores/uiStore';
+import { canModerate, getHighestRole, type RoleKey } from '../../../utils/roles';
+import './PlayerMenu.css';
+
 type ModelUsageWithCost = {
   modelId: string;
   displayName: string;
@@ -21,14 +29,6 @@ type UsageCostSummary = {
   totalRequests: number;
   totalCost: number;
 };
-
-import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
-import { trpcClient } from '../../../lib/trpcClient';
-import { useAuthStore } from '../../../stores/authStore';
-import { useChronicleStore } from '../../../stores/chronicleStore';
-import { useUiStore } from '../../../stores/uiStore';
-import { canModerate, getHighestRole, type RoleKey } from '../../../utils/roles';
-import './PlayerMenu.css';
 
 const TemplateIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -133,7 +133,7 @@ const formatCost = (value: number): string => {
 };
 
 
-export function PlayerMenu(): JSX.Element {
+export function PlayerMenu(): React.JSX.Element {
   const playerName = useChronicleStore((state) => state.playerName);
   const playerId = useChronicleStore((state) => state.playerId ?? '');
   const character = useSelectedCharacter();

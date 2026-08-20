@@ -7,19 +7,19 @@ import { HardStateProminence } from './HardState';
  * This consolidates the previous LocationEntity and LocationEntity types.
  */
 export const LocationEntity = z.object({
-  id: z.string().min(1),
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  kind: z.literal('location'),
-  subkind: z.string().optional(),
-  description: z.string().optional(),
-  prominence: HardStateProminence.default('recognized'),
-  status: z.string().optional(),
-  tags: z.array(z.string()).default([]),
   createdAt: z
     .number()
     .int()
     .nonnegative(),
+  description: z.string().optional(),
+  id: z.string().min(1),
+  kind: z.literal('location'),
+  name: z.string().min(1),
+  prominence: HardStateProminence.default('recognized'),
+  slug: z.string().min(1),
+  status: z.string().optional(),
+  subkind: z.string().optional(),
+  tags: z.array(z.string()).default([]),
   updatedAt: z
     .number()
     .int()

@@ -1,51 +1,61 @@
-import {GraphContext} from "../types";
-import {Character, Skill, SKILL_TIER_SEQUENCE} from "@glass-frontier/dto";
-import {log, toSnakeCase} from "@glass-frontier/utils";
+import type { Character, Skill, SkillCheckResult } from '@glass-frontier/dto';
+import { SKILL_TIER_SEQUENCE } from '@glass-frontier/dto';
+import { log, toSnakeCase } from '@glass-frontier/utils';
+
+import type { GraphContext } from '../types';
 
 const XP_PER_LEVEL = 5;
 
+const addOutcomeExperience = (
+  skill: Skill,
+  outcome: SkillCheckResult['outcomeTier']
+): void => {
+  if (outcome === 'collapse') {
+    skill.xp += 2;
+  } else if (outcome === 'regress') {
+    skill.xp += 1;
+  }
+};
+
 export function createUpdatedCharacter(context: GraphContext): Character {
-  if (!context.skillCheckResult || !context.skillCheckPlan?.skill) {
+  const result = context.skillCheckResult;
+  const plan = context.skillCheckPlan;
+  if (result === undefined || plan === undefined) {
     return context.chronicleState.character;
   }
 
   const working = structuredClone(context.chronicleState.character);
 
-  //update momentum
-  working.momentum.current = context.skillCheckResult.newMomentum ?? working.momentum.current;
-
-  // add skills
-  const normalizedSkill = toSnakeCase(context.skillCheckPlan.skill);
-  log("info", `Updating for skill ${normalizedSkill}`);
-  const existing = normalizedSkill in working.skills;
-  if (!existing) {
-    log("info", `Adding skill ${normalizedSkill}`);
-    working.skills[normalizedSkill] = {
-      attribute: context.skillCheckPlan.attribute,
-      name: context.skillCheckPlan.skill,
-      tier: "fool",
-      xp: 0
-    } as Skill;
+  working.momentum.current = result.newMomentum ?? working.momentum.current;
+  const normalizedSkill = toSnakeCase(plan.skill);
+  log('info', `Updating for skill ${normalizedSkill}`);
+  const skills = new Map(Object.entries(working.skills));
+  let skill = skills.get(normalizedSkill);
+  if (skill === undefined) {
+    log('info', `Adding skill ${normalizedSkill}`);
+    skill = {
+      attribute: plan.attribute,
+      name: plan.skill,
+      tier: 'fool',
+      xp: 0,
+    };
   }
-  // add skill xp
-  switch (context.skillCheckResult.outcomeTier) {
-    case "collapse":
-      working.skills[normalizedSkill].xp += 2
-      break;
-    case "regress":
-      working.skills[normalizedSkill].xp += 1
-      break;
-    default:
-      break;
+  addOutcomeExperience(skill, result.outcomeTier);
+  if (skill.xp > XP_PER_LEVEL) {
+    log('info', `Level up skill ${normalizedSkill}`);
+    skill.xp -= XP_PER_LEVEL;
+    const currentIndex = SKILL_TIER_SEQUENCE.indexOf(skill.tier);
+    const newIndex = currentIndex === SKILL_TIER_SEQUENCE.length - 1
+      ? currentIndex
+      : currentIndex + 1;
+    const nextTier = SKILL_TIER_SEQUENCE.at(newIndex);
+    if (nextTier === undefined) {
+      throw new Error(`Invalid skill tier index ${newIndex}.`);
+    }
+    skill.tier = nextTier;
   }
-
-  if (working.skills[normalizedSkill].xp > XP_PER_LEVEL) {
-    log("info", `Level up skill ${normalizedSkill}`);
-    working.skills[normalizedSkill].xp -= XP_PER_LEVEL;
-    const currentIndex = SKILL_TIER_SEQUENCE.indexOf(working.skills[normalizedSkill].tier);
-    const newIndex = currentIndex == SKILL_TIER_SEQUENCE.length - 1 ?  currentIndex : currentIndex + 1;
-    working.skills[normalizedSkill].tier = SKILL_TIER_SEQUENCE[newIndex];
-  }
+  skills.set(normalizedSkill, skill);
+  working.skills = Object.fromEntries(skills);
 
   return working;
 }

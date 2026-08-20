@@ -1,16 +1,31 @@
 import OpenAI, { APIError } from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
+
 import { ProviderError } from '../ProviderError';
-import { LLMRequest } from '../types';
-import { IProvider, ProviderResponse } from './IProvider';
-import {
+import type { LLMRequest } from '../types';
+import type { IProvider, ProviderResponse } from './IProvider';
+import type {
   IStructuredOutputProvider,
   StructuredOutputRequest,
   StructuredOutputResponse,
 } from './IStructuredOutputProvider';
 
-const sanitizeEnv = (value?: string): string =>
-  typeof value === 'string' ? value.trim() : '';
+const sanitizeEnv = (value?: string): string => value?.trim() ?? '';
+
+const describeError = (error: unknown): Record<string, unknown> => {
+  if (error instanceof APIError) {
+    return {
+      error: error.error,
+      message: error.message,
+      name: error.name,
+      status: error.status,
+    };
+  }
+  if (error instanceof Error) {
+    return { message: error.message, name: error.name, stack: error.stack };
+  }
+  return { error: String(error) };
+};
 
 export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
   readonly id = 'openai';
@@ -22,62 +37,48 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
   constructor() {
     const baseURL = sanitizeEnv(process.env.OPENAI_API_BASE);
     const apiKey = sanitizeEnv(process.env.OPENAI_API_KEY);
-
     if (apiKey.length === 0 || baseURL.length === 0) {
       this.valid = false;
       return;
     }
-
-    this.#client = new OpenAI({
-      apiKey,
-      baseURL,
-    });
+    this.#client = new OpenAI({ apiKey, baseURL });
     this.valid = true;
   }
 
   async execute(request: LLMRequest, signal?: AbortSignal): Promise<ProviderResponse> {
-    if (!this.#client) {
-      throw new ProviderError({
-        code: 'openai_not_configured',
-        details: { message: 'OpenAI API key or base URL not configured' },
-        retryable: false,
-        status: 500,
-      });
-    }
-
+    const client = this.#requireClient();
     try {
-      const response = await this.#client.responses.create(request, { signal });
+      const response = await client.responses.create(this.#mapRequest(request), { signal });
       return this.#mapResponse(response);
     } catch (error: unknown) {
-      const apiError = this.#asApiError(error);
-      if (apiError !== null) {
-        throw this.#normalizeApiError(apiError);
-      }
-
-      throw this.#normalizeUnknownError(error);
+      throw this.#normalizeError(error);
     }
-  }
-
-  #mapResponse(response: any): ProviderResponse {
-    const usage = (response.usage as Record<string, any>) ?? {};
-    const outputText = response.output_text ?? '';
-
-    return {
-      output_text: outputText,
-      usage: {
-        input_tokens: usage.input_tokens ?? 0,
-        output_tokens: usage.output_tokens ?? 0,
-        ...usage,
-      },
-      rawResponse: response as Record<string, unknown>,
-    };
   }
 
   async executeStructured<T>(
-    request: StructuredOutputRequest,
+    request: StructuredOutputRequest<T>,
     signal?: AbortSignal
   ): Promise<StructuredOutputResponse<T>> {
-    if (!this.#client) {
+    const client = this.#requireClient();
+    try {
+      const response = await client.responses.create(
+        this.#mapStructuredRequest(request),
+        { signal }
+      );
+      const data = request.schema.parse(JSON.parse(response.output_text) as unknown);
+      return {
+        data,
+        rawResponse: response as unknown as Record<string, unknown>,
+        usage: this.#mapStructuredUsage(response),
+      };
+    } catch (error: unknown) {
+      console.error('[OpenAIProvider] Structured request failed:', describeError(error));
+      throw this.#normalizeError(error);
+    }
+  }
+
+  #requireClient(): OpenAI {
+    if (this.#client === null) {
       throw new ProviderError({
         code: 'openai_not_configured',
         details: { message: 'OpenAI API key or base URL not configured' },
@@ -85,68 +86,71 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
         status: 500,
       });
     }
-
-    try {
-      // OpenAI has native structured output support via zodTextFormat
-      // Exclude schema and schemaName from the request - they're not valid OpenAI params
-      const { schema, schemaName, ...baseRequest } = request;
-      const textFormat = zodTextFormat(schema, schemaName);
-
-      const structuredRequest: LLMRequest = {
-        ...baseRequest,
-        text: {
-          format: textFormat,
-          verbosity: request.text.verbosity,
-        },
-      };
-
-      const response = await this.#client.responses.create(structuredRequest, { signal });
-      const jsonData = JSON.parse(response.output_text);
-      const parsed = schema.parse(jsonData);
-
-      return {
-        data: parsed as T,
-        rawResponse: response as unknown as Record<string, unknown>,
-        usage: (response.usage as Record<string, unknown>) ?? {},
-      };
-    } catch (error: unknown) {
-      console.error('[OpenAIProvider] Structured request failed:', JSON.stringify({
-        message: error instanceof Error ? error.message : String(error),
-        name: error instanceof Error ? error.name : typeof error,
-        stack: error instanceof Error ? error.stack : undefined,
-        cause: error instanceof Error ? (error as any).cause : undefined,
-        status: (error as any)?.status,
-        code: (error as any)?.code,
-        type: (error as any)?.type,
-        error: (error as any)?.error,
-        fullError: error,
-      }, null, 2));
-      const apiError = this.#asApiError(error);
-      if (apiError !== null) {
-        throw this.#normalizeApiError(apiError);
-      }
-
-      throw this.#normalizeUnknownError(error);
-    }
+    return this.#client;
   }
 
-  #normalizeApiError(error: APIError): ProviderError {
-    const rawDetails: unknown = (error as { error?: unknown }).error;
-    const details = this.#coerceRecord(rawDetails);
-    const detailLookup = new Map<string, unknown>(Object.entries(details));
-    const upstreamType = this.#extractStringField(detailLookup, 'type') ?? 'openai_error';
-    const upstreamMessage = this.#extractStringField(detailLookup, 'message') ?? error.message;
+  #mapResponse(response: OpenAI.Responses.Response): ProviderResponse {
+    return {
+      output_text: response.output_text,
+      rawResponse: response as unknown as Record<string, unknown>,
+      usage: {
+        input_tokens: response.usage?.input_tokens ?? 0,
+        output_tokens: response.usage?.output_tokens ?? 0,
+      },
+    };
+  }
 
-    return new ProviderError({
-      code: upstreamType,
-      details,
-      message: upstreamMessage,
-      retryable: (error.status ?? 500) >= 500,
-      status: error.status ?? 500,
+  #mapRequest(request: LLMRequest): OpenAI.Responses.ResponseCreateParamsNonStreaming {
+    const metadata = Object.fromEntries(
+      Object.entries(request.metadata).map(([key, value]) => [key, String(value)])
+    );
+    return {
+      input: request.input,
+      instructions: request.instructions,
+      max_output_tokens: request.max_output_tokens,
+      metadata,
+      model: request.model,
+      reasoning: request.reasoning,
+      stream: false,
+      text: request.text,
+    };
+  }
+
+  #mapStructuredRequest<T>(
+    request: StructuredOutputRequest<T>
+  ): OpenAI.Responses.ResponseCreateParamsNonStreaming {
+    const { schema, schemaName, ...baseRequest } = request;
+    return this.#mapRequest({
+      ...baseRequest,
+      text: {
+        format: zodTextFormat(schema, schemaName),
+        verbosity: request.text.verbosity,
+      },
     });
   }
 
-  #normalizeUnknownError(error: unknown): ProviderError {
+  #mapStructuredUsage(response: OpenAI.Responses.Response): Record<string, number> {
+    return {
+      input_tokens: response.usage?.input_tokens ?? 0,
+      output_tokens: response.usage?.output_tokens ?? 0,
+      total_tokens: response.usage?.total_tokens ?? 0,
+    };
+  }
+
+  #normalizeError(error: unknown): ProviderError {
+    if (error instanceof APIError) {
+      const details = this.#coerceRecord(error.error);
+      const type = this.#extractString(details, 'type') ?? 'openai_error';
+      const message = this.#extractString(details, 'message') ?? error.message;
+      const status = typeof error.status === 'number' ? error.status : 500;
+      return new ProviderError({
+        code: type,
+        details,
+        message,
+        retryable: status >= 500,
+        status,
+      });
+    }
     const message = error instanceof Error ? error.message : 'unknown';
     return new ProviderError({
       code: 'openai_sdk_failure',
@@ -157,24 +161,13 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
   }
 
   #coerceRecord(value: unknown): Record<string, unknown> {
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      return value as Record<string, unknown>;
-    }
-    return {};
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : {};
   }
 
-  #extractStringField(source: Map<string, unknown>, key: string): string | undefined {
-    if (!source.has(key)) {
-      return undefined;
-    }
-    const value = source.get(key);
+  #extractString(source: Record<string, unknown>, key: string): string | undefined {
+    const value = new Map(Object.entries(source)).get(key);
     return typeof value === 'string' ? value : undefined;
-  }
-
-  #asApiError(error: unknown): APIError | null {
-    if (error instanceof APIError && typeof error.status === 'number') {
-      return error;
-    }
-    return null;
   }
 }

@@ -4,7 +4,7 @@ import { progressStream } from '../lib/progressStream';
 import { useAuthStore } from '../stores/authStore';
 
 export function useProgressStreamConnection(isAuthenticated: boolean) {
-  const token = useAuthStore((state) => state.tokens?.idToken);
+  const token = useAuthStore((state) => state.tokens?.accessToken);
 
   useEffect(() => {
     if (!isAuthenticated || !token) {

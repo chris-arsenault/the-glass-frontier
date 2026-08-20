@@ -1,10 +1,10 @@
 import type { Pool } from 'pg';
 
+import { createChronicleStore } from './chronicleStore';
 import { GraphOperations } from './graphOperations';
 import { LocationHelpers } from './locationHelpers';
 import { createPool } from './pg';
 import type { WorldSchemaStore, ChronicleStore } from './types';
-import { createChronicleStore } from './chronicleStore';
 import { createWorldSchemaStore } from './worldSchemaStore';
 
 /**
@@ -28,38 +28,6 @@ export class WorldState {
     this.#chronicles = options.chronicles;
     this.#world = options.world;
     this.#locations = options.locations;
-  }
-
-  /**
-   * Create a new WorldState instance with all knowledge domain stores.
-   * @param options - Configuration options
-   */
-  static create(options?: {
-    connectionString?: string;
-    pool?: Pool;
-  }): WorldState {
-    const pool = createPool({
-      connectionString: options?.connectionString,
-      pool: options?.pool,
-    });
-
-    // Shared graph operations for all knowledge domains
-    const graph = new GraphOperations(pool);
-
-    const world = createWorldSchemaStore({ pool, graph });
-    const chronicles = createChronicleStore({
-      pool,
-      graph,
-      worldStore: world,
-    });
-    const locations = new LocationHelpers(world);
-
-    return new WorldState({
-      graph,
-      chronicles,
-      world,
-      locations,
-    });
   }
 
   /**
@@ -92,6 +60,27 @@ export class WorldState {
    */
   get locations(): LocationHelpers {
     return this.#locations;
+  }
+
+  /**
+   * Create a new WorldState instance with all knowledge domain stores.
+   * @param options - Configuration options
+   */
+  static create(options?: {
+    connectionString?: string;
+    pool?: Pool;
+  }): WorldState {
+    const pool = createPool({
+      connectionString: options?.connectionString,
+      pool: options?.pool,
+    });
+
+    const graph = new GraphOperations(pool);
+    const world = createWorldSchemaStore({ graph, pool });
+    const chronicles = createChronicleStore({ graph, pool, worldStore: world });
+    const locations = new LocationHelpers(world);
+
+    return new WorldState({ chronicles, graph, locations, world });
   }
 
   // Future knowledge domains can be added here:

@@ -15,10 +15,9 @@ const resolveAtlasUrl = (): string => {
     return `${apiTarget.replace(/\/$/, '')}/atlas`;
   }
 
-  return '/atlas';
+  return '/atlas-api';
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const atlasClient = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({

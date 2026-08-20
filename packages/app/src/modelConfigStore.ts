@@ -58,6 +58,52 @@ export type UsageCostSummary = {
   totalCost: number;
 };
 
+type UsageCostRow = {
+  model_id: string;
+  display_name: string;
+  provider_id: string;
+  input_tokens: string;
+  output_tokens: string;
+  request_count: string;
+  cost_per_1k_input: string;
+  cost_per_1k_output: string;
+};
+
+type UsageRecord = {
+  playerId: string;
+  modelId: string;
+  providerId: string;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+const toUsageWithCost = (row: UsageCostRow): ModelUsageWithCost => {
+  const inputTokens = parseInt(row.input_tokens, 10);
+  const outputTokens = parseInt(row.output_tokens, 10);
+  const inputCost = (inputTokens / 1000) * parseFloat(row.cost_per_1k_input);
+  const outputCost = (outputTokens / 1000) * parseFloat(row.cost_per_1k_output);
+
+  return {
+    displayName: row.display_name,
+    inputCost,
+    inputTokens,
+    modelId: row.model_id,
+    outputCost,
+    outputTokens,
+    providerId: row.provider_id,
+    requestCount: parseInt(row.request_count, 10),
+    totalCost: inputCost + outputCost,
+  };
+};
+
+const summarizeUsage = (byModel: ModelUsageWithCost[]): UsageCostSummary => ({
+  byModel,
+  totalCost: byModel.reduce((sum, model) => sum + model.totalCost, 0),
+  totalInputTokens: byModel.reduce((sum, model) => sum + model.inputTokens, 0),
+  totalOutputTokens: byModel.reduce((sum, model) => sum + model.outputTokens, 0),
+  totalRequests: byModel.reduce((sum, model) => sum + model.requestCount, 0),
+});
+
 export class ModelConfigStore {
   readonly #pool: Pool;
 
@@ -81,16 +127,16 @@ export class ModelConfigStore {
     }>('SELECT * FROM app.model_config WHERE is_enabled = true ORDER BY display_name');
 
     return result.rows.map((row) => ({
-      modelId: row.model_id,
       apiModelId: row.api_model_id,
-      displayName: row.display_name,
-      providerId: row.provider_id,
-      isEnabled: row.is_enabled,
-      maxTokens: row.max_tokens,
       costPer1kInput: parseFloat(row.cost_per_1k_input),
       costPer1kOutput: parseFloat(row.cost_per_1k_output),
-      supportsReasoning: row.supports_reasoning,
+      displayName: row.display_name,
+      isEnabled: row.is_enabled,
+      maxTokens: row.max_tokens,
       metadata: row.metadata,
+      modelId: row.model_id,
+      providerId: row.provider_id,
+      supportsReasoning: row.supports_reasoning,
       updatedAt: row.updated_at,
     }));
   }
@@ -127,13 +173,7 @@ export class ModelConfigStore {
     );
   }
 
-  async recordUsage(
-    playerId: string,
-    modelId: string,
-    providerId: string,
-    inputTokens: number,
-    outputTokens: number
-  ): Promise<void> {
+  async recordUsage(record: UsageRecord): Promise<void> {
     await this.#pool.query(
       `INSERT INTO ops.model_usage (player_id, model_id, provider_id, input_tokens, output_tokens, request_count, date)
        VALUES ($1, $2, $3, $4, $5, 1, CURRENT_DATE)
@@ -143,7 +183,13 @@ export class ModelConfigStore {
          output_tokens = ops.model_usage.output_tokens + EXCLUDED.output_tokens,
          request_count = ops.model_usage.request_count + 1,
          updated_at = now()`,
-      [playerId, modelId, providerId, inputTokens, outputTokens]
+      [
+        record.playerId,
+        record.modelId,
+        record.providerId,
+        record.inputTokens,
+        record.outputTokens,
+      ]
     );
   }
 
@@ -173,15 +219,15 @@ export class ModelConfigStore {
     );
 
     return result.rows.map((row) => ({
-      id: row.id,
-      playerId: row.player_id,
-      modelId: row.model_id,
-      providerId: row.provider_id,
-      inputTokens: parseInt(row.input_tokens, 10),
-      outputTokens: parseInt(row.output_tokens, 10),
-      requestCount: parseInt(row.request_count, 10),
-      date: row.date,
       createdAt: row.created_at,
+      date: row.date,
+      id: row.id,
+      inputTokens: parseInt(row.input_tokens, 10),
+      modelId: row.model_id,
+      outputTokens: parseInt(row.output_tokens, 10),
+      playerId: row.player_id,
+      providerId: row.provider_id,
+      requestCount: parseInt(row.request_count, 10),
       updatedAt: row.updated_at,
     }));
   }
@@ -220,16 +266,7 @@ export class ModelConfigStore {
     startDate?: Date,
     endDate?: Date
   ): Promise<UsageCostSummary> {
-    const result = await this.#pool.query<{
-      model_id: string;
-      display_name: string;
-      provider_id: string;
-      input_tokens: string;
-      output_tokens: string;
-      request_count: string;
-      cost_per_1k_input: string;
-      cost_per_1k_output: string;
-    }>(
+    const result = await this.#pool.query<UsageCostRow>(
       `SELECT
          mu.model_id,
          COALESCE(mc.display_name, mu.model_id) as display_name,
@@ -249,38 +286,6 @@ export class ModelConfigStore {
       [playerId, startDate ?? null, endDate ?? null]
     );
 
-    const byModel: ModelUsageWithCost[] = result.rows.map((row) => {
-      const inputTokens = parseInt(row.input_tokens, 10);
-      const outputTokens = parseInt(row.output_tokens, 10);
-      const costPer1kInput = parseFloat(row.cost_per_1k_input);
-      const costPer1kOutput = parseFloat(row.cost_per_1k_output);
-      const inputCost = (inputTokens / 1000) * costPer1kInput;
-      const outputCost = (outputTokens / 1000) * costPer1kOutput;
-
-      return {
-        modelId: row.model_id,
-        displayName: row.display_name,
-        providerId: row.provider_id,
-        inputTokens,
-        outputTokens,
-        requestCount: parseInt(row.request_count, 10),
-        inputCost,
-        outputCost,
-        totalCost: inputCost + outputCost,
-      };
-    });
-
-    const totalInputTokens = byModel.reduce((sum, m) => sum + m.inputTokens, 0);
-    const totalOutputTokens = byModel.reduce((sum, m) => sum + m.outputTokens, 0);
-    const totalRequests = byModel.reduce((sum, m) => sum + m.requestCount, 0);
-    const totalCost = byModel.reduce((sum, m) => sum + m.totalCost, 0);
-
-    return {
-      byModel,
-      totalInputTokens,
-      totalOutputTokens,
-      totalRequests,
-      totalCost,
-    };
+    return summarizeUsage(result.rows.map(toUsageWithCost));
   }
 }

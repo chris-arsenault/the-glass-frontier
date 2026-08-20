@@ -11,6 +11,6 @@ export type ChronicleSeed = z.infer<typeof ChronicleSeedSchema>;
 
 export const ChronicleSeedListSchema = z.object({
   seeds: z.array(ChronicleSeedSchema).min(3).max(3),
-})
+});
 
 export type ChronicleSeedList = z.infer<typeof ChronicleSeedListSchema>;

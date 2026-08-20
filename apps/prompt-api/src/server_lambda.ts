@@ -79,7 +79,7 @@ export const handler = async (
 
   const origin = resolveOriginHeader(normalizedEvent);
 
-  return awsLambdaRequestHandler({
+  return awsLambdaRequestHandler<typeof promptRouter, APIGatewayProxyEventV2>({
     batching: { enabled: true },
     createContext: ({ event }) =>
       createContext({ authorizationHeader: getAuthorizationHeader(event) }),

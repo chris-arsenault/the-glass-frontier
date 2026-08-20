@@ -1,6 +1,7 @@
-import { DynamoDBClient, type WriteRequest } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   BatchWriteCommand,
+  type BatchWriteCommandInput,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -24,6 +25,7 @@ const client = DynamoDBDocumentClient.from(
 );
 const hasText = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
+type DocumentWriteRequest = NonNullable<BatchWriteCommandInput['RequestItems']>[string][number];
 
 export type ConnectionMetadata = {
   connectionId: string;
@@ -37,6 +39,22 @@ export type JobTarget = {
   domainName: string;
   stage: string;
 }
+
+const toJobTarget = (item: Record<string, unknown>, userId: string): JobTarget | null => {
+  const connectionId = hasText(item.connectionId) ? item.connectionId : null;
+  const domainName = hasText(item.domainName) ? item.domainName : null;
+  const stage = hasText(item.stage) ? item.stage : null;
+  const subscriberId = hasText(item.userId) ? item.userId : null;
+  if (
+    connectionId === null ||
+    domainName === null ||
+    stage === null ||
+    subscriberId !== userId
+  ) {
+    return null;
+  }
+  return { connectionId, domainName, stage };
+};
 
 export class ConnectionRepository {
   private readonly tableName = websocketConfig.tableName;
@@ -63,7 +81,7 @@ export class ConnectionRepository {
       throw new Error('Connection not registered');
     }
     const ttl = this.ttlFromNow(this.subscriptionTtlSeconds);
-    const writes: WriteRequest[] = [
+    const writes: DocumentWriteRequest[] = [
       {
         PutRequest: {
           Item: {
@@ -74,6 +92,7 @@ export class ConnectionRepository {
             sk: connectionKey(connectionId),
             stage: meta.stage,
             ttl,
+            userId: meta.userId,
           },
         },
       },
@@ -93,7 +112,7 @@ export class ConnectionRepository {
     await this.batchWrite(writes);
   }
 
-  async listTargets(jobId: string): Promise<JobTarget[]> {
+  async listTargets(jobId: string, userId: string): Promise<JobTarget[]> {
     const response = await client.send(
       new QueryCommand({
         ConsistentRead: true,
@@ -108,13 +127,11 @@ export class ConnectionRepository {
     const items = response.Items ?? [];
     const deduped = new Map<string, JobTarget>();
     for (const item of items) {
-      const connectionId = hasText(item.connectionId) ? item.connectionId : null;
-      const domainName = hasText(item.domainName) ? item.domainName : null;
-      const stage = hasText(item.stage) ? item.stage : null;
-      if (connectionId === null || domainName === null || stage === null) {
+      const target = toJobTarget(item, userId);
+      if (target === null) {
         continue;
       }
-      deduped.set(connectionId, { connectionId, domainName, stage });
+      deduped.set(target.connectionId, target);
     }
 
     return Array.from(deduped.values());
@@ -131,7 +148,7 @@ export class ConnectionRepository {
     );
 
     const items = response.Items ?? [];
-    const deletes: WriteRequest[] = [];
+    const deletes: DocumentWriteRequest[] = [];
 
     if (items.length === 0) {
       deletes.push({ DeleteRequest: { Key: { pk, sk: 'META' } } });
@@ -181,7 +198,7 @@ export class ConnectionRepository {
     return Math.floor(Date.now() / 1000) + seconds;
   }
 
-  private async batchWrite(requests: WriteRequest[]): Promise<void> {
+  private async batchWrite(requests: DocumentWriteRequest[]): Promise<void> {
     if (requests.length === 0) {
       return;
     }
@@ -194,15 +211,19 @@ export class ConnectionRepository {
     await sequence;
   }
 
-  private async #writeChunk(batch: WriteRequest[]): Promise<void> {
+  async #writeChunk(batch: DocumentWriteRequest[]): Promise<void> {
     if (batch.length === 0) {
       return;
     }
-    const pending: Record<string, WriteRequest[]> = { [this.tableName]: batch };
+    const pending: NonNullable<BatchWriteCommandInput['RequestItems']> = {
+      [this.tableName]: batch,
+    };
     await this.#processBatch(pending);
   }
 
-  private async #processBatch(pending: Record<string, WriteRequest[]>): Promise<void> {
+  async #processBatch(
+    pending: NonNullable<BatchWriteCommandInput['RequestItems']>
+  ): Promise<void> {
     const response = await client.send(
       new BatchWriteCommand({
         RequestItems: pending,

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 import type { TokenUsageMetric, TokenUsagePeriod } from '@glass-frontier/dto';
 import { TokenUsagePeriodSchema } from '@glass-frontier/dto';
 import type { Pool } from 'pg';

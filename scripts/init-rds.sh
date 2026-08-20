@@ -118,14 +118,9 @@ echo "Running @glass-frontier/worldstate migrations..."
 (cd packages/worldstate && DATABASE_URL="$DATABASE_URL" npx node-pg-migrate -f node-pg-migrate.worldstate.config.cjs --envPath /dev/null up)
 
 echo ""
-echo "=== Seeding world data ==="
-# Use individual PG* vars for seed script (avoids URL encoding issues)
-pnpm exec tsx packages/worldstate/seed-data/seed-world-entities.ts
-
-echo ""
 echo "=== Database initialization complete! ==="
 if [ "$RESET_MODE" = true ]; then
-  echo "✓ Database has been fully reset and reseeded."
+  echo "✓ Database has been fully reset and migrated."
 else
-  echo "✓ Migrations applied and world data seeded."
+  echo "✓ Migrations applied."
 fi

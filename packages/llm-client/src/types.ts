@@ -1,7 +1,8 @@
-import { LoggableMetadata } from '@glass-frontier/utils';
+import type { LoggableMetadata } from '@glass-frontier/utils';
+import type { ResponseFormatTextConfig } from 'openai/resources/responses/responses';
 
 export type PromptContentSegment = {
-  type: 'text' | 'input_text';
+  type: 'input_text';
   text: string;
 };
 
@@ -25,7 +26,7 @@ export type LLMRequest = {
     effort: 'minimal' | 'high';
   };
   text: {
-    format: unknown;
+    format?: ResponseFormatTextConfig;
     verbosity: 'low' | 'high';
   };
 };

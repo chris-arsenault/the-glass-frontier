@@ -2,8 +2,8 @@ import type { ChronicleSeed, HardState } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import { trpcClient } from '../../../lib/trpcClient';
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import type { ChronicleSeedCreationDetails } from '../../../state/chronicleState';
 import {
   useChronicleStartStore,
@@ -26,6 +26,24 @@ const toneOptions = [
 ];
 
 type SeedStatus = 'idle' | 'loading' | 'error';
+
+const mapLocation = (entity: HardState): SelectedLocationEntity => ({
+  description: entity.description ?? undefined,
+  id: entity.id,
+  name: entity.name,
+  slug: entity.slug,
+  status: entity.status ?? undefined,
+  subkind: entity.subkind ?? undefined,
+});
+
+const mapAnchor = (entity: HardState): SelectedAnchorEntity => ({
+  description: entity.description ?? undefined,
+  id: entity.id,
+  kind: entity.kind,
+  name: entity.name,
+  slug: entity.slug,
+  subkind: entity.subkind ?? undefined,
+});
 
 export function ChronicleStartWizard() {
   const navigate = useNavigate();
@@ -73,14 +91,7 @@ export function ChronicleStartWizard() {
     setLocationError(null);
     try {
       const list = await worldAtlasClient.listEntities('location');
-      const mapped = list.map<SelectedLocationEntity>((entity) => ({
-        id: entity.id,
-        slug: entity.slug,
-        name: entity.name,
-        description: entity.description ?? undefined,
-        status: entity.status ?? undefined,
-        subkind: entity.subkind ?? undefined,
-      }));
+      const mapped = list.map(mapLocation);
       setLocations(mapped);
       if (!selectedLocation && mapped.length > 0) {
         setSelectedLocation(mapped[0]);
@@ -93,12 +104,38 @@ export function ChronicleStartWizard() {
   }, [selectedLocation, setSelectedLocation]);
 
   useEffect(() => {
-    void refreshLocations();
-  }, [refreshLocations]);
+    let cancelled = false;
+    void worldAtlasClient.listEntities('location').then(
+      (list) => {
+        if (!cancelled) {
+          const mapped = list.map(mapLocation);
+          setLocations(mapped);
+          setIsLoadingLocations(false);
+          if (selectedLocation === null && mapped.length > 0) {
+            setSelectedLocation(mapped[0]);
+          }
+        }
+        return undefined;
+      },
+      (reason: unknown) => {
+        if (!cancelled) {
+          setLocationError(
+            reason instanceof Error ? reason.message : 'Failed to load locations'
+          );
+          setIsLoadingLocations(false);
+        }
+        return undefined;
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLocation, setSelectedLocation]);
 
   const handleSelectLocation = useCallback(
     async (location: SelectedLocationEntity) => {
       setSelectedLocation(location);
+      setSelectedAnchorEntity(null);
       setIsLoadingLocationDetails(true);
       setLocationError(null);
       try {
@@ -111,7 +148,7 @@ export function ChronicleStartWizard() {
         setIsLoadingLocationDetails(false);
       }
     },
-    [setSelectedLocation, setSelectedLocationFull]
+    [setSelectedAnchorEntity, setSelectedLocation, setSelectedLocationFull]
   );
 
   const handleCreateLocation = useCallback(
@@ -124,18 +161,17 @@ export function ChronicleStartWizard() {
       setLocationError(null);
       try {
         const created = await worldAtlasClient.upsertEntity({
+          description: '',
           kind: 'location',
           links: [],
           name: trimmed,
-          description: '',
           status: 'known',
-          subkind: null,
         });
         const summary: SelectedLocationEntity = {
-          id: created.id,
-          slug: created.slug,
-          name: created.name,
           description: created.description ?? undefined,
+          id: created.id,
+          name: created.name,
+          slug: created.slug,
           status: created.status ?? undefined,
           subkind: created.subkind ?? undefined,
         };
@@ -150,7 +186,7 @@ export function ChronicleStartWizard() {
     [setSelectedLocation]
   );
 
-  const [customTitle, setCustomTitle] = useState('');
+  const [customTitleOverride, setCustomTitleOverride] = useState<string | null>(null);
   const [creationError, setCreationError] = useState<string | null>(null);
   const [isCreatingChronicle, setIsCreatingChronicle] = useState(false);
 
@@ -159,15 +195,11 @@ export function ChronicleStartWizard() {
     [selectedSeedId, seeds]
   );
 
-  useEffect(() => {
-    if (!customTitle) {
-      if (selectedSeed?.title) {
-        setCustomTitle(selectedSeed.title);
-      } else if (customSeedTitle) {
-        setCustomTitle(customSeedTitle);
-      }
-    }
-  }, [selectedSeed, customSeedTitle, customTitle]);
+  const customTitle = customTitleOverride ?? selectedSeed?.title ?? customSeedTitle;
+  const handleSeedSelection = useCallback((seedId: string | null) => {
+    setCustomTitleOverride(null);
+    chooseSeed(seedId);
+  }, [chooseSeed]);
 
   const hasSeedPayload = Boolean(selectedSeed || customSeedText.trim().length > 0);
   const canGoNext =
@@ -220,7 +252,7 @@ export function ChronicleStartWizard() {
           selectedSeedId={selectedSeedId}
           seedStatus={seedStatus}
           setSeedStatus={setSeedStatus}
-          onSelectSeed={chooseSeed}
+          onSelectSeed={handleSeedSelection}
           onSeedsLoaded={setSeeds}
           customSeedTitle={customSeedTitle}
           customSeedText={customSeedText}
@@ -231,7 +263,6 @@ export function ChronicleStartWizard() {
       return (
         <AnchorStep
           locationId={selectedLocation?.id ?? null}
-          locationFull={selectedLocationFull}
           selectedAnchorId={selectedAnchorEntity?.id ?? null}
           onSelectAnchor={setSelectedAnchorEntity}
         />
@@ -247,7 +278,7 @@ export function ChronicleStartWizard() {
           tone={{ toneChips, toneNotes }}
           preferredCharacterName={selectedCharacterName}
           customTitle={customTitle}
-          setCustomTitle={setCustomTitle}
+          setCustomTitle={setCustomTitleOverride}
           beatsEnabled={beatsEnabled}
           setBeatsEnabled={setBeatsEnabled}
         />
@@ -259,6 +290,7 @@ export function ChronicleStartWizard() {
     step,
     locations,
     isLoadingLocations,
+    isLoadingLocationDetails,
     locationError,
     selectedLocation,
     selectedAnchorEntity,
@@ -279,7 +311,7 @@ export function ChronicleStartWizard() {
     selectedSeed,
     selectedCharacterName,
     beatsEnabled,
-    chooseSeed,
+    handleSeedSelection,
     setBeatsEnabled,
     setCustomSeed,
     setSeeds,
@@ -466,16 +498,16 @@ function LocationStep({
   const [filterStatus, setFilterStatus] = useState<string>('');
 
   // Get unique subkinds and statuses for filters
-  const { subkinds, statuses } = useMemo(() => {
+  const { statuses, subkinds } = useMemo(() => {
     const subkindSet = new Set<string>();
     const statusSet = new Set<string>();
     locations.forEach((loc) => {
-      if (loc.subkind) subkindSet.add(loc.subkind);
-      if (loc.status) statusSet.add(loc.status);
+      if (loc.subkind) {subkindSet.add(loc.subkind);}
+      if (loc.status) {statusSet.add(loc.status);}
     });
     return {
-      subkinds: Array.from(subkindSet).sort(),
       statuses: Array.from(statusSet).sort(),
+      subkinds: Array.from(subkindSet).sort(),
     };
   }, [locations]);
 
@@ -507,19 +539,19 @@ function LocationStep({
 
   return (
     <div className="location-step">
-      <header className="location-step__header">
+      <header className="location-step-header">
         <div>
           <h2>Choose a location</h2>
           <p>Locations are hard state entities from the World Atlas.</p>
         </div>
-        <div className="location-step__actions">
+        <div className="location-step-actions">
           <button type="button" onClick={onRefresh} disabled={isLoading}>
             {isLoading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
       </header>
       {error ? <p className="wizard-error">{error}</p> : null}
-      <div className="location-step__create">
+      <div className="location-step-create">
         <input
           type="text"
           placeholder="New location name"
@@ -537,7 +569,7 @@ function LocationStep({
           Add location
         </button>
       </div>
-      <div className="location-step__filters">
+      <div className="location-step-filters">
         <input
           type="search"
           placeholder="Search by name, description, or slug"
@@ -568,8 +600,8 @@ function LocationStep({
         </select>
       </div>
       {isLoading ? <p>Loading locations…</p> : null}
-      {isLoadingDetails ? <p className="location-step__loading-details">Loading location details…</p> : null}
-      <div className="location-step__grid">
+      {isLoadingDetails ? <p className="location-step-loading-details">Loading location details…</p> : null}
+      <div className="location-step-grid">
         {filtered.map((loc) => (
           <button
             key={loc.id}
@@ -577,14 +609,14 @@ function LocationStep({
             className={`location-card${loc.id === activeLocationId ? ' active' : ''}`}
             onClick={() => onSelect(loc)}
           >
-            <p className="location-card__name">{loc.name}</p>
-            <p className="location-card__meta">
+            <p className="location-card-name">{loc.name}</p>
+            <p className="location-card-meta">
               {loc.subkind ?? 'location'} · {loc.status ?? '—'}
             </p>
-            {loc.description ? <p className="location-card__desc">{loc.description}</p> : null}
+            {loc.description ? <p className="location-card-desc">{loc.description}</p> : null}
           </button>
         ))}
-        {!filtered.length && !isLoading ? <p className="location-step__empty">No locations found.</p> : null}
+        {!filtered.length && !isLoading ? <p className="location-step-empty">No locations found.</p> : null}
       </div>
     </div>
   );
@@ -643,14 +675,14 @@ type SeedStepProps = {
 }
 
 function SeedStep({
+  anchorId,
   customSeedText,
   customSeedTitle,
   locationId,
-  anchorId,
-  playerId,
   onCustomSeedChange,
   onSeedsLoaded,
   onSelectSeed,
+  playerId,
   seeds,
   seedStatus,
   selectedSeedId,
@@ -687,9 +719,9 @@ function SeedStep({
 
     try {
       const result = await trpcClient.generateChronicleSeeds.mutate({
+        anchorId,
         count: 3,
         locationId,
-        anchorId,
         playerId,
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
@@ -778,85 +810,61 @@ function SeedStep({
 
 type AnchorStepProps = {
   locationId: string | null;
-  locationFull: HardState | null;
   selectedAnchorId: string | null;
   onSelectAnchor: (anchor: SelectedAnchorEntity | null) => void;
 }
 
-function AnchorStep({ locationId, locationFull, onSelectAnchor, selectedAnchorId }: AnchorStepProps) {
-  const [anchors, setAnchors] = useState<SelectedAnchorEntity[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type AnchorLoadState = {
+  anchors: SelectedAnchorEntity[];
+  error: string | null;
+  locationId: string;
+};
+
+function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStepProps) {
+  const [loadState, setLoadState] = useState<AnchorLoadState | null>(null);
 
   useEffect(() => {
-    if (!locationId) {
-      setAnchors([]);
-      return;
+    if (locationId === null) {
+      return undefined;
     }
-
-    const fetchNeighbors = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // Use cached location data if available
-        if (locationFull && locationFull.links && locationFull.links.length > 0) {
-          // Batch fetch all neighbors in one request
-          const linkedIds = locationFull.links.map((link) => link.targetId);
-          const neighbors = await worldAtlasClient.batchGetEntities(linkedIds);
-
-          // Filter to non-location entities
-          const nonLocationNeighbors = neighbors
-            .filter((n) => n.kind !== 'location')
+    let cancelled = false;
+    void worldAtlasClient.getNeighbors(locationId).then(
+      (result) => {
+        if (!cancelled) {
+          const anchors = result.neighbors
+            .filter((neighbor) => neighbor.kind !== 'location')
             .slice(0, 3)
-            .map((n) => ({
-              id: n.id,
-              slug: n.slug,
-              name: n.name,
-              kind: n.kind,
-              description: n.description ?? undefined,
-              subkind: n.subkind ?? undefined,
-            }));
-
-          setAnchors(nonLocationNeighbors);
-
-          // Auto-select first anchor if none selected
-          if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
-            onSelectAnchor(nonLocationNeighbors[0]);
-          }
-        } else {
-          // Fallback: use neighbors endpoint if location not cached
-          const result = await worldAtlasClient.getNeighbors(locationId);
-          const nonLocationNeighbors = result.neighbors
-            .filter((n) => n.kind !== 'location')
-            .slice(0, 3)
-            .map((n) => ({
-              id: n.id,
-              slug: n.slug,
-              name: n.name,
-              kind: n.kind,
-              description: n.description ?? undefined,
-              subkind: n.subkind ?? undefined,
-            }));
-
-          setAnchors(nonLocationNeighbors);
-
-          // Auto-select first anchor if none selected
-          if (!selectedAnchorId && nonLocationNeighbors.length > 0) {
-            onSelectAnchor(nonLocationNeighbors[0]);
+            .map(mapAnchor);
+          setLoadState({ anchors, error: null, locationId });
+          if (selectedAnchorId === null && anchors.length > 0) {
+            onSelectAnchor(anchors[0]);
           }
         }
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load anchor entities');
-        setAnchors([]);
-      } finally {
-        setIsLoading(false);
+        return undefined;
+      },
+      (reason: unknown) => {
+        if (!cancelled) {
+          setLoadState({
+            anchors: [],
+            error: reason instanceof Error
+              ? reason.message
+              : 'Failed to load anchor entities',
+            locationId,
+          });
+        }
+        return undefined;
       }
+    );
+    return () => {
+      cancelled = true;
     };
+  }, [locationId, onSelectAnchor, selectedAnchorId]);
 
-    void fetchNeighbors();
-  }, [locationId, locationFull, selectedAnchorId, onSelectAnchor]);
+  const isLoading = locationId !== null && loadState?.locationId !== locationId;
+  const anchors = loadState?.locationId === locationId ? loadState.anchors : [];
+  const error = loadState?.locationId === locationId ? loadState.error : null;
 
-  if (!locationId) {
+  if (locationId === null) {
     return (
       <div className="anchor-step">
         <p>Select a location first to see available anchor entities.</p>
@@ -890,13 +898,13 @@ function AnchorStep({ locationId, locationFull, onSelectAnchor, selectedAnchorId
 
   return (
     <div className="anchor-step">
-      <header className="anchor-step__header">
+      <header className="anchor-step-header">
         <div>
           <h2>Choose an anchor entity</h2>
           <p>Select an entity to anchor this chronicle. These are neighbors of your selected location.</p>
         </div>
       </header>
-      <div className="anchor-step__list">
+      <div className="anchor-step-list">
         {anchors.map((anchor) => (
           <button
             key={anchor.id}
@@ -904,11 +912,11 @@ function AnchorStep({ locationId, locationFull, onSelectAnchor, selectedAnchorId
             className={`anchor-card${anchor.id === selectedAnchorId ? ' active' : ''}`}
             onClick={() => onSelectAnchor(anchor)}
           >
-            <p className="anchor-card__name">{anchor.name}</p>
-            <p className="anchor-card__meta">
+            <p className="anchor-card-name">{anchor.name}</p>
+            <p className="anchor-card-meta">
               {anchor.kind} {anchor.subkind ? ` · ${anchor.subkind}` : ''} · {anchor.slug}
             </p>
-            {anchor.description ? <p className="anchor-card__desc">{anchor.description}</p> : null}
+            {anchor.description ? <p className="anchor-card-desc">{anchor.description}</p> : null}
           </button>
         ))}
       </div>
@@ -936,8 +944,8 @@ function CreateStep({
   customSeedTitle,
   customTitle,
   preferredCharacterName,
-  selectedLocation,
   selectedAnchorEntity,
+  selectedLocation,
   selectedSeed,
   setBeatsEnabled,
   setCustomTitle,
@@ -1025,7 +1033,9 @@ function CreateStep({
             ) : (
               <span className="create-summary-empty">No chips selected</span>
             )}
-            {tone.toneNotes && <p className="create-tone-note">"{tone.toneNotes}"</p>}
+            {tone.toneNotes.length > 0
+              ? <p className="create-tone-note">&ldquo;{tone.toneNotes}&rdquo;</p>
+              : null}
           </div>
         </section>
 

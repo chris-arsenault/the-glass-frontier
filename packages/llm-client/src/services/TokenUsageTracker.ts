@@ -1,6 +1,6 @@
-import type { Pool } from 'pg';
 import { createOpsStore, useIamAuth } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
+import type { Pool } from 'pg';
 
 type UsageRecord = Map<string, number>;
 
@@ -54,7 +54,7 @@ class TokenUsageTracker {
       return new Map();
     }
     const summary: UsageRecord = new Map();
-    this.#walkUsage(candidate as Record<string, unknown>, summary, []);
+    this.#walkUsage(candidate, summary, []);
     return summary;
   }
 
@@ -80,11 +80,6 @@ class TokenUsageTracker {
         this.#walkUsage(nested, summary, [...path, key]);
       }
     }
-  }
-
-  #metricAttributeName(raw: string): string {
-    const safe = raw.replace(/[^A-Za-z0-9_]+/g, '_').slice(0, 80);
-    return `metric_${safe.length > 0 ? safe : 'unknown'}`;
   }
 
   #normalizePlayerId(playerId: string | undefined): string | null {

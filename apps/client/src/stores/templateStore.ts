@@ -1,20 +1,14 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
 
 import { promptClient } from '../lib/promptClient';
 
 type TemplateSummary = Awaited<ReturnType<typeof promptClient.listPromptTemplates.query>>[number];
 type TemplateDetail = Awaited<ReturnType<typeof promptClient.getPromptTemplate.query>>;
 
-type TemplateStoreSet = (
-  partial:
-    | TemplateStoreState
-    | Partial<TemplateStoreState>
-    | ((state: TemplateStoreState) => TemplateStoreState | Partial<TemplateStoreState>),
-  replace?: boolean
-) => void;
-
-type TemplateStoreGet = () => TemplateStoreState;
+type TemplateStateCreator = StateCreator<TemplateStoreState>;
+type TemplateStoreSet = Parameters<TemplateStateCreator>[0];
+type TemplateStoreGet = Parameters<TemplateStateCreator>[1];
 
 const isNonEmptyString = (value: string | null | undefined): value is string => {
   return typeof value === 'string' && value.trim().length > 0;

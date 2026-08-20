@@ -1,13 +1,13 @@
-import type { Context } from 'aws-lambda';
-import { Pool, type PoolConfig } from 'pg';
-import { useRdsIamAuth, generateRdsIamToken } from '@glass-frontier/node-utils';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { default as migrate } from 'node-pg-migrate';
+import { useRdsIamAuth, generateRdsIamToken } from '@glass-frontier/node-utils';
+import type { Context } from 'aws-lambda';
+import { runner as migrate } from 'node-pg-migrate';
 import * as path from 'path';
+import { Pool, type PoolConfig } from 'pg';
 
 export type ProvisionerEvent = {
   action: 'migrate' | 'reset' | 'seed' | 'setup-iam-user';
-  packages?: ('app' | 'ops' | 'worldstate')[];
+  packages?: Array<'app' | 'ops' | 'worldstate'>;
 };
 
 type ProvisionerResult = {
@@ -49,7 +49,7 @@ const getMasterCredentials = async (): Promise<{ username: string; password: str
   }
 
   console.log(`Master username from secret: ${username}`);
-  return { username, password };
+  return { password, username };
 };
 
 /**
@@ -58,19 +58,19 @@ const getMasterCredentials = async (): Promise<{ username: string; password: str
 const createMasterPool = async (database = 'postgres'): Promise<Pool> => {
   const host = process.env.PGHOST!;
   const port = parseInt(process.env.PGPORT || '5432', 10);
-  const { username, password } = await getMasterCredentials();
+  const { password, username } = await getMasterCredentials();
 
   console.log(`Connecting to ${host}:${port}/${database} as ${username}`);
 
   const config: PoolConfig = {
-    host,
-    port,
-    database,
-    user: username,
-    password,
-    ssl: { rejectUnauthorized: false },
-    max: 1,
     connectionTimeoutMillis: 10000,
+    database,
+    host,
+    max: 1,
+    password,
+    port,
+    ssl: { rejectUnauthorized: false },
+    user: username,
   };
 
   const pool = new Pool(config);
@@ -95,13 +95,13 @@ const createPool = async (): Promise<Pool> => {
     const password = await generateRdsIamToken();
 
     const config: PoolConfig = {
-      host,
-      port,
       database,
-      user,
-      password,
-      ssl: { rejectUnauthorized: false }, // RDS uses Amazon CA, IAM auth provides security
+      host,
       max: 1,
+      password,
+      port,
+      ssl: { rejectUnauthorized: false }, // RDS uses Amazon CA, IAM auth provides security
+      user,
     };
 
     return new Pool(config);
@@ -118,16 +118,16 @@ const createPool = async (): Promise<Pool> => {
 
 const PACKAGE_CONFIGS: Record<string, { migrationsTable: string; migrationsDir: string }> = {
   app: {
-    migrationsTable: 'app_migrations',
     migrationsDir: 'packages/app/migrations',
+    migrationsTable: 'app_migrations',
   },
   ops: {
-    migrationsTable: 'ops_migrations',
     migrationsDir: 'packages/ops/migrations',
+    migrationsTable: 'ops_migrations',
   },
   worldstate: {
-    migrationsTable: 'worldstate_migrations',
     migrationsDir: 'packages/worldstate/migrations',
+    migrationsTable: 'worldstate_migrations',
   },
 };
 
@@ -153,12 +153,12 @@ const runMigrations = async (
   const client = await pool.connect();
   try {
     await migrate({
+      count,
       dbClient: client,
-      migrationsTable: config.migrationsTable,
       dir: migrationsDir,
       direction,
-      count,
       log: (msg) => console.log(`[${packageName}] ${msg}`),
+      migrationsTable: config.migrationsTable,
     });
     console.log(`[${packageName}] Migrations ${direction} completed`);
   } finally {
@@ -253,7 +253,7 @@ const setupIamUser = async (): Promise<void> => {
       } else {
         // Check if user exists
         const userExists = await client.query(
-          `SELECT 1 FROM pg_roles WHERE rolname = $1`,
+          'SELECT 1 FROM pg_roles WHERE rolname = $1',
           [iamUser]
         );
 
@@ -271,7 +271,7 @@ const setupIamUser = async (): Promise<void> => {
 
       // Check if database exists
       const dbExists = await client.query(
-        `SELECT 1 FROM pg_database WHERE datname = $1`,
+        'SELECT 1 FROM pg_database WHERE datname = $1',
         [database]
       );
 
@@ -335,70 +335,70 @@ export const handler = async (
     if (action === 'setup-iam-user') {
       await setupIamUser();
       return {
-        success: true,
         action,
-        packages: [],
         message: 'IAM user setup completed successfully',
+        packages: [],
+        success: true,
       };
     }
 
     pool = await createPool();
 
     switch (action) {
-      case 'migrate':
-        console.log(`Running migrations for packages: ${packages.join(', ')}`);
-        for (const pkg of packages) {
-          await runMigrations(pool, pkg, 'up');
-        }
-        return {
-          success: true,
-          action,
-          packages,
-          message: `Migrations completed successfully for: ${packages.join(', ')}`,
-        };
+    case 'migrate':
+      console.log(`Running migrations for packages: ${packages.join(', ')}`);
+      for (const pkg of packages) {
+        await runMigrations(pool, pkg, 'up');
+      }
+      return {
+        action,
+        message: `Migrations completed successfully for: ${packages.join(', ')}`,
+        packages,
+        success: true,
+      };
 
-      case 'reset':
-        console.log(`Resetting database and running migrations for packages: ${packages.join(', ')}`);
-        await resetDatabase(pool, packages);
-        for (const pkg of packages) {
-          await runMigrations(pool, pkg, 'up');
-        }
-        return {
-          success: true,
-          action,
-          packages,
-          message: `Database reset and migrations completed for: ${packages.join(', ')}`,
-        };
+    case 'reset':
+      console.log(`Resetting database and running migrations for packages: ${packages.join(', ')}`);
+      await resetDatabase(pool, packages);
+      for (const pkg of packages) {
+        await runMigrations(pool, pkg, 'up');
+      }
+      return {
+        action,
+        message: `Database reset and migrations completed for: ${packages.join(', ')}`,
+        packages,
+        success: true,
+      };
 
-      case 'seed':
-        console.log('Running migrations and seeding database');
-        for (const pkg of packages) {
-          await runMigrations(pool, pkg, 'up');
-        }
-        await seedDatabase(pool);
-        return {
-          success: true,
-          action,
-          packages,
-          message: 'Migrations and seeding completed successfully',
-        };
+    case 'seed':
+      console.log('Running migrations and seeding database');
+      for (const pkg of packages) {
+        await runMigrations(pool, pkg, 'up');
+      }
+      await seedDatabase(pool);
+      return {
+        action,
+        message: 'Migrations and seeding completed successfully',
+        packages,
+        success: true,
+      };
 
-      default:
-        return {
-          success: false,
-          action,
-          packages,
-          message: `Unknown action: ${action}`,
-        };
+    default:
+      return {
+        action,
+        message: `Unknown action: ${action}`,
+        packages,
+        success: false,
+      };
     }
   } catch (error) {
     console.error('Provisioner error:', error);
     return {
-      success: false,
       action,
-      packages,
-      message: 'Provisioner failed',
       error: error instanceof Error ? error.message : String(error),
+      message: 'Provisioner failed',
+      packages,
+      success: false,
     };
   } finally {
     if (pool) {

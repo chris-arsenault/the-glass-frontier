@@ -1,12 +1,10 @@
 import type {
   Character,
   Chronicle,
-  ChronicleSummaryKind,
   InventoryDeltaOp,
   LocationEntity,
   Turn,
 } from '@glass-frontier/dto';
-import { z } from 'zod';
 
 export type SummaryContext = {
   chronicle: Chronicle;
@@ -19,54 +17,37 @@ export type SummaryContext = {
   transcript: string;
 };
 
-export const LocationEventsResponseSchema = z.object({
-  locations: z
-    .array(
-      z.object({
-        events: z.array(z.string().min(1)).default([]),
-        name: z.string().min(1),
-      })
-    )
-    .default([]),
-});
-
-export type LocationEventsResponse = z.infer<typeof LocationEventsResponseSchema>;
-
-export const hasSummary = (chronicle: Chronicle, kind: ChronicleSummaryKind): boolean => {
-  return Array.isArray(chronicle.summaries)
-    ? chronicle.summaries.some((entry) => entry.kind === kind)
-    : false;
-};
-
 export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
   const chronicle = context.chronicle;
-  const character = context.character;
-  const characterName = character?.name ?? 'the protagonist';
-  const pronouns = character?.pronouns ?? 'they/them';
-  const archetype = character?.archetype ?? 'Unknown Archetype';
-  const tags = formatTags(character?.tags);
   const beatsBlock = formatListBlock('Chronicle beats', context.beatLines);
   const skillBlock = formatListBlock('Skill checks', context.skillHighlights);
   const inventoryBlock = formatListBlock('Inventory changes', context.inventoryHighlights);
-  const locationDetails = [
-    context.locationName,
-    context.locationSummary?.description ?? null,
-    context.locationSummary?.subkind ?? null,
-    context.locationSummary?.status ?? null,
-  ]
-    .filter(Boolean)
-    .join(' — ');
   return [
     `You are an archivist finalizing the Glass Frontier chronicle '${chronicle.title}'.`,
     'Write a concise short story (<= 250 words) in third-person past tense.',
-    `The protagonist is ${characterName} (${pronouns}), an ${archetype} with tags: ${tags}.`,
-    `Weave in the location context (${locationDetails}) and honor every listed beat, skill check, and inventory change.`,
+    buildCharacterDescription(context.character),
+    `Weave in the location context (${formatLocationDetails(context)}) and honor every listed beat, skill check, and inventory change.`,
     beatsBlock,
     skillBlock,
     inventoryBlock,
     'Transcript timeline:',
     context.transcript,
   ].join('\n');
+};
+
+const buildCharacterDescription = (character: Character | null): string => {
+  return `The protagonist is ${character?.name ?? 'the protagonist'} (${character?.pronouns ?? 'they/them'}), an ${character?.archetype ?? 'Unknown Archetype'} with tags: ${formatTags(character?.tags)}.`;
+};
+
+const formatLocationDetails = (context: SummaryContext): string => {
+  return [
+    context.locationName,
+    context.locationSummary?.description,
+    context.locationSummary?.subkind,
+    context.locationSummary?.status,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' — ');
 };
 
 export const buildLocationEventsPrompt = (context: SummaryContext): string => {
@@ -126,7 +107,7 @@ const formatTurn = (turn: Turn): string => {
   const lines = [`Turn ${turn.turnSequence + 1}`];
   appendIf(lines, 'Player', truncate(turn.playerMessage?.content));
   appendIf(lines, 'Intent', turn.playerIntent?.intentSummary ?? '');
-  appendIf(lines, 'GM', truncate(turn.gmMessage?.content));
+  appendIf(lines, 'GM', truncate(turn.gmResponse?.content));
   appendIf(lines, 'GM Summary', turn.gmSummary?.trim() ?? '');
   const inventory = describeInventoryDelta(turn);
   if (inventory.length > 0) {
@@ -172,29 +153,17 @@ const describeInventoryDelta = (turn: Turn): string[] => {
     .filter((entry): entry is string => entry !== null);
 };
 
-const inventoryOpHandlers: Partial<
-Record<
-  InventoryDeltaOp['op'],
-  (op: InventoryDeltaOp, target: string) => string
->
+const inventoryOpHandlers: Record<
+InventoryDeltaOp['op'],
+(op: InventoryDeltaOp) => string
 > = {
-  add: (op, target) =>
-    `Added ${formatAmount(op.amount)} ${target} to ${op.bucket ?? 'inventory'}`,
-  consume: (op, target) => `Consumed ${formatAmount(op.amount)} ${target}`,
-  equip: (op, target) => `Equipped ${target} on ${op.slot ?? 'slot'}`,
-  remove: (op, target) => `Removed ${target} from ${op.bucket ?? 'inventory'}`,
-  spend_shard: (_op, target) => `Spent chronicle shard ${target}`,
-  unequip: (op, _target) => `Unequipped ${op.slot ?? 'gear slot'}`,
+  add: (op) => `Added ${formatAmount(op.quantity)} ${op.name}`,
+  remove: (op) => `Removed ${formatAmount(op.quantity)} ${op.name}`,
+  update: (op) => `Updated ${op.name}: ${op.description}`,
 };
 
-const describeInventoryOp = (op: InventoryDeltaOp): string | null => {
-  const target = op.name ?? op.hook ?? 'item';
-  const handler = inventoryOpHandlers[op.op];
-  if (typeof handler !== 'function') {
-    return null;
-  }
-  return handler(op, target);
-};
+const describeInventoryOp = (op: InventoryDeltaOp): string =>
+  inventoryOpHandlers[op.op](op);
 
 const describeSkillCheck = (turn: Turn): string | null => {
   if (!hasSkillPlan(turn) && !hasSkillResult(turn)) {
@@ -216,8 +185,8 @@ const hasSkillResult = (turn: Turn): boolean =>
   turn.skillCheckResult !== undefined && turn.skillCheckResult !== null;
 
 const resolveSkillBundle = (turn: Turn): string => {
-  const skill = turn.playerIntent?.skill ?? 'unknown skill';
-  const attribute = turn.playerIntent?.attribute ?? 'resolve';
+  const skill = turn.skillCheckPlan?.skill ?? 'unknown skill';
+  const attribute = turn.skillCheckPlan?.attribute ?? 'resolve';
   return `${skill}/${attribute}`;
 };
 
@@ -298,24 +267,4 @@ export const sanitizeSentence = (value: string): string => {
     return '';
   }
   return trimmed.replace(/\s+/g, ' ');
-};
-
-export type LocationEventFragment = {
-  name: string;
-  summary: string;
-};
-
-export const flattenLocationEvents = (
-  payload: LocationEventsResponse
-): LocationEventFragment[] => {
-  return payload.locations.flatMap((location) => {
-    const scope = location.name.trim();
-    if (scope.length === 0) {
-      return [];
-    }
-    return location.events
-      .map((summary) => summary.trim())
-      .filter((summary) => summary.length > 0)
-      .map((summary) => ({ name: scope, summary }));
-  });
 };

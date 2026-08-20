@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "Node10",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts", "tests/**/*.ts"],
+  "references": [
+    { "path": "apps/chronicle-closer" },
+    { "path": "apps/client" },
+    { "path": "apps/db-provisioner" },
+    { "path": "apps/playwright" },
+    { "path": "apps/webservice" }
+  ]
+}

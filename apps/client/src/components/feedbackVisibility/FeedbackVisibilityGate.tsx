@@ -23,7 +23,7 @@ type GateProps = {
   minimum: PlayerFeedbackVisibilityLevel;
 };
 
-export function FeedbackVisibilityGate({ children, minimum }: GateProps): JSX.Element | null {
+export function FeedbackVisibilityGate({ children, minimum }: GateProps): React.JSX.Element | null {
   const { isAtLeast } = useFeedbackVisibility();
   if (!isAtLeast(minimum)) {
     return null;

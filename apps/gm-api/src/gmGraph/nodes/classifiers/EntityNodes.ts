@@ -1,17 +1,17 @@
 import { z } from 'zod';
 
-import { buildEntityContext } from '../../../entity/entitySelector';
 import { applyEntityUsage, type EntityUsageClassification } from '../../../entity/entityFocus';
-import type { GraphNode } from '../graphNode';
+import { buildEntityContext } from '../../../entity/entitySelector';
 import type { GraphContext } from '../../../types';
+import type { GraphNode } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const ENTITY_JUDGE_SCHEMA = z.object({
   results: z.array(
     z.object({
+      emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity'),
       slug: z.string().describe('The slug of the entity'),
       usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
-      emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity'),
     })
   ),
 });
@@ -38,30 +38,31 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
 
   constructor() {
     super({
+      applyResult: (context, result) => this.#applyEntityUsage(context, result),
       id: 'entity-judge',
       schema: ENTITY_JUDGE_SCHEMA,
       schemaName: 'entity_judge_schema',
-      applyResult: (context, result) => this.#applyEntityUsage(context, result),
-      shouldRun: (context) => {
-        return !context.failure && Boolean(context.gmResponse) && Boolean(context.entityContext?.offered.length);
-      },
+      shouldRun: (context) => !context.failure
+        && context.gmResponse !== undefined
+        && (context.entityContext?.offered.length ?? 0) > 0,
       telemetryTag: 'llm.entity-judge'
     });
   }
 
   #applyEntityUsage(context: GraphContext, result: EntityJudgeResponse): GraphContext {
-    const usage: EntityUsageClassification[] = result.results.map((entry) => {
+    const usage: EntityUsageClassification[] = result.results.flatMap((entry) => {
       const source = context.entityContext?.offered.find((candidate) => candidate.slug === entry.slug);
-      if (!source) {
+      if (source === undefined) {
         console.warn(`No matching entity found for slug: ${entry.slug}`);
+        return [];
       }
-      return {
-        entityId: source?.id ?? '',
+      return [{
+        emergentTags: entry.emergentTags ?? null,
+        entityId: source.id,
         entitySlug: entry.slug,
-        tags: source?.tags ?? [],
+        tags: source.tags,
         usage: entry.usage,
-        emergentTags: entry.emergentTags,
-      };
+      }];
     });
 
     const nextFocus = applyEntityUsage(context.chronicleState.chronicle.entityFocus, usage);

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, complexity, max-lines-per-function */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, complexity, max-lines-per-function */
 import type { AuditLogEntry } from '@glass-frontier/dto';
 import { AuditLogEntrySchema } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
@@ -18,6 +18,7 @@ export type AuditLogListOptions = {
   startDate?: number;
   endDate?: number;
   search?: string;
+  templateId?: string;
 };
 
 export type AuditLogListResult = {
@@ -195,6 +196,10 @@ export class AuditLogStore {
       where.push(
         `(LOWER(e.provider_id) LIKE ${term} OR LOWER(e.player_id) LIKE ${term} OR LOWER(CAST(e.request AS text)) LIKE ${term} OR LOWER(CAST(e.response AS text)) LIKE ${term})`
       );
+    }
+    if (options?.templateId) {
+      params.push(options.templateId);
+      where.push(`e.metadata->>'nodeId' = $${params.length}`);
     }
 
     const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';

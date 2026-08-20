@@ -4,7 +4,7 @@ import { useUiStore } from '../../../stores/uiStore';
 import { ChronicleOverview } from '../../overview/ChronicleOverview/ChronicleOverview';
 import './ChronicleDrawer.css';
 
-export function ChronicleDrawer(): JSX.Element {
+export function ChronicleDrawer(): React.JSX.Element {
   const isOpen = useUiStore((state) => state.isChronicleDrawerOpen);
   const close = useUiStore((state) => state.closeChronicleDrawer);
 
