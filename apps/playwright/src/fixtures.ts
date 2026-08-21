@@ -107,49 +107,42 @@ export const buildPlaywrightChronicleRecord = (options?: {
 export async function seedPlaywrightFixtures(connectionString: string): Promise<{ location: HardState }> {
   const worldSchemaStore = createWorldSchemaStore({ connectionString });
 
-  // Create world entities (location, faction, artifact)
-  const location = await worldSchemaStore.upsertEntity(LOCATION_ROOT);
+  // The fixture world is a seed batch like any other, with pinned ids so tests
+  // can reference the entities they assert on.
+  await worldSchemaStore.commitBatch({
+    entities: [
+      { ...LOCATION_ROOT, ref: 'location' },
+      { ...NON_LOCATION_ENTITIES[0], ref: 'warden' },
+      { ...NON_LOCATION_ENTITIES[1], ref: 'relic' },
+    ],
+    lore: [
+      {
+        entity: { ref: 'warden' },
+        id: FOUNDING_OATH_FRAGMENT_ID,
+        prose: 'The Glass Wardens swear to shield all archives from oblivion.',
+        tags: ['faction', 'oath', 'founding'],
+        title: 'Founding Oath',
+      },
+      {
+        entity: { ref: 'relic' },
+        id: ORACLE_SIGNAL_FRAGMENT_ID,
+        prose: 'When attuned, the vessel whispers coordinates to hidden gates.',
+        tags: ['artifact', 'oracle'],
+        title: 'Oracle Signal',
+      },
+    ],
+    relationships: [
+      { dst: { ref: 'location' }, relationship: 'controls', src: { ref: 'warden' } },
+      { dst: { ref: 'location' }, relationship: 'stored_at', src: { ref: 'relic' } },
+    ],
+    source: 'seed',
+    sourceId: 'playwright-fixtures',
+  });
 
-  const warden = await worldSchemaStore.upsertEntity(NON_LOCATION_ENTITIES[0]);
-  const relic = await worldSchemaStore.upsertEntity(NON_LOCATION_ENTITIES[1]);
-
-  await Promise.all(
-    [location, warden, relic].flatMap((entity) =>
-      entity.links
-        .filter((link) => link.direction === 'out')
-        .map(async (link) =>
-          worldSchemaStore.deleteRelationship({
-            dstId: link.targetId,
-            relationship: link.relationship,
-            srcId: entity.id,
-          })
-        )
-    )
-  );
-
-  await Promise.all([
-    worldSchemaStore.deleteLoreFragment({ id: FOUNDING_OATH_FRAGMENT_ID }),
-    worldSchemaStore.deleteLoreFragment({ id: ORACLE_SIGNAL_FRAGMENT_ID }),
-  ]);
-  await Promise.all([
-    worldSchemaStore.createLoreFragment({
-      entityId: warden.id,
-      id: FOUNDING_OATH_FRAGMENT_ID,
-      prose: 'The Glass Wardens swear to shield all archives from oblivion.',
-      source: { chronicleId: undefined },
-      tags: ['faction', 'oath', 'founding'],
-      title: 'Founding Oath',
-    }),
-    worldSchemaStore.createLoreFragment({
-      entityId: relic.id,
-      id: ORACLE_SIGNAL_FRAGMENT_ID,
-      prose: 'When attuned, the vessel whispers coordinates to hidden gates.',
-      source: { chronicleId: undefined },
-      tags: ['artifact', 'oracle'],
-      title: 'Oracle Signal',
-    }),
-  ]);
-
+  const location = await worldSchemaStore.getEntity({ id: LOCATION_ROOT.id });
+  if (location === null) {
+    throw new Error('Playwright fixture location was not committed');
+  }
   return { location };
 }
 
@@ -169,10 +162,10 @@ export async function resetPlaywrightFixtures(connectionString: string): Promise
   await Promise.all([
     appStore.modelConfigStore.setCategoryModel(
       'classification',
-      'gpt-5-nano',
+      'gpt-5.6-luna',
       PLAYWRIGHT_PLAYER_ID
     ),
-    appStore.modelConfigStore.setCategoryModel('prose', 'gpt-5-nano', PLAYWRIGHT_PLAYER_ID),
+    appStore.modelConfigStore.setCategoryModel('prose', 'gpt-5.6-luna', PLAYWRIGHT_PLAYER_ID),
   ]);
   log('info', 'playwright fixtures reset');
 }

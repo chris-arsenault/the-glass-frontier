@@ -33,6 +33,15 @@ const usageBumps = (
   return { entity: 0, tag: 0 };
 };
 
+/**
+ * Folds this turn's usage into the chronicle's focus.
+ *
+ * Only tags that already exist on lore fragments are scored. The judge's
+ * `emergentTags` are free text describing themes the world has no vocabulary
+ * for yet, so scoring them against authored tags could never match anything —
+ * they are kept on the turn record (`entity_usage`) where a later pass can use
+ * them, and left out of retrieval scoring.
+ */
 export const applyEntityUsage = (
   current: EntityFocusState | null | undefined,
   usage: EntityUsageClassification[],
@@ -48,12 +57,6 @@ export const applyEntityUsage = (
     }
     for (const tag of entry.tags) {
       addScore(tagScores, tag, bumps.tag);
-    }
-    for (const emergent of entry.emergentTags ?? []) {
-      const normalized = emergent.trim().toLowerCase();
-      if (normalized.length > 0) {
-        addScore(tagScores, normalized, 2);
-      }
     }
   }
 

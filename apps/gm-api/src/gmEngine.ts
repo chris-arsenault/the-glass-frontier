@@ -142,6 +142,7 @@ class GmEngine {
     await this.chronicleStore.commitTurn({
       character: finalContext.chronicleState.character,
       chronicle: finalContext.chronicleState.chronicle,
+      discoveredLocations: finalContext.chronicleState.discoveredLocations,
       location: finalContext.chronicleState.location,
       turn,
     });

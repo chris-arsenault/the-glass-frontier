@@ -3,13 +3,14 @@ import type {
   Chronicle,
   ChronicleSummaryEntry,
   LocationEntity,
+  SessionLocationChain,
   Turn,
 } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
 import { ChronicleTurnPersistence } from './chronicleTurnPersistence';
-import { GraphOperations } from './graphOperations';
+import { upsertNodeIdentity } from './nodeIdentity';
 import { createPool, withTransaction } from './pg';
 import type {
   ChronicleSnapshot,
@@ -50,6 +51,7 @@ type SessionStateRow = {
   character_state: Character | null;
   last_turn_sequence: number;
   location_state: LocationEntity | null;
+  discovered_locations: SessionLocationChain | null;
 };
 
 type CharacterRow = { inventory: Character['inventory'] | null; props: Character };
@@ -66,19 +68,13 @@ const resolveSessionTurnSequence = (
 
 class PostgresChronicleStore implements ChronicleStore {
   readonly #pool: Pool;
-  readonly #graph: GraphOperations;
   readonly #worldStore: WorldSchemaStore | null;
   readonly #turns: ChronicleTurnPersistence;
 
-  constructor(options: { pool: Pool; graph?: GraphOperations; worldStore?: WorldSchemaStore | null }) {
+  constructor(options: { pool: Pool; worldStore?: WorldSchemaStore | null }) {
     this.#pool = options.pool;
-    this.#graph = options.graph ?? new GraphOperations(options.pool);
-    this.#worldStore = options.worldStore ?? createWorldSchemaStore({ graph: this.#graph, pool: this.#pool });
-    this.#turns = new ChronicleTurnPersistence(this.#pool, this.#graph);
-  }
-
-  get graph(): GraphOperations {
-    return this.#graph;
+    this.#worldStore = options.worldStore ?? createWorldSchemaStore({ pool: this.#pool });
+    this.#turns = new ChronicleTurnPersistence(this.#pool);
   }
 
   async ensureChronicle(params: {
@@ -142,6 +138,7 @@ class PostgresChronicleStore implements ChronicleStore {
       character: session?.character_state ?? canonicalCharacter,
       chronicle,
       chronicleId: chronicle.id,
+      discoveredLocations: session?.discovered_locations ?? [],
       location: session?.location_state ?? canonicalLocation,
       turns,
       turnSequence: resolveSessionTurnSequence(session, turns),
@@ -161,9 +158,8 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async getCharacter(characterId: string): Promise<Character | null> {
     const result = await this.#pool.query<CharacterRow>(
-      `SELECT n.props, c.inventory
+      `SELECT c.props, c.inventory
        FROM character c
-       JOIN node n ON n.id = c.id
        WHERE c.id = $1::uuid`,
       [characterId]
     );
@@ -181,9 +177,8 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async listCharactersByPlayer(playerId: string): Promise<Character[]> {
     const result = await this.#pool.query<CharacterRow>(
-      `SELECT n.props, c.inventory
+      `SELECT c.props, c.inventory
        FROM character c
-       JOIN node n ON n.id = c.id
        WHERE c.player_id = $1
        ORDER BY c.created_at ASC`,
       [playerId]
@@ -212,11 +207,10 @@ class PostgresChronicleStore implements ChronicleStore {
   }): Promise<boolean> {
     return withTransaction(this.#pool, async (client) => {
       const result = await client.query<{ props: Chronicle }>(
-        `SELECT n.props
+        `SELECT c.props
          FROM chronicle c
-         JOIN node n ON n.id = c.id
          WHERE c.id = $1::uuid
-         FOR UPDATE OF c, n`,
+         FOR UPDATE OF c`,
         [input.chronicleId]
       );
       const stored = result.rows[0]?.props;
@@ -246,9 +240,8 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
     const result = await this.#pool.query<ChronicleRow>(
-      `SELECT n.props, c.anchor_entity_id, c.entity_focus
+      `SELECT c.props, c.anchor_entity_id, c.entity_focus
        FROM chronicle c
-       JOIN node n ON n.id = c.id
        WHERE c.id = $1::uuid`,
       [chronicleId]
     );
@@ -266,9 +259,8 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async listChroniclesByPlayer(playerId: string): Promise<Chronicle[]> {
     const result = await this.#pool.query<{ props: Chronicle }>(
-      `SELECT n.props
+      `SELECT c.props
        FROM chronicle c
-       JOIN node n ON n.id = c.id
        WHERE c.player_id = $1
        ORDER BY c.created_at ASC`,
       [playerId]
@@ -288,6 +280,7 @@ class PostgresChronicleStore implements ChronicleStore {
     character: Character | null;
     chronicle: Chronicle;
     location: LocationEntity | null;
+    discoveredLocations?: SessionLocationChain;
     turn: Turn;
   }): Promise<Turn> {
     const chronicle = normalizeChronicle(input.chronicle);
@@ -342,7 +335,7 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async #getSessionState(chronicleId: string): Promise<SessionStateRow | undefined> {
     const result = await this.#pool.query<SessionStateRow>(
-      `SELECT character_state, last_turn_sequence, location_state
+      `SELECT character_state, last_turn_sequence, location_state, discovered_locations
        FROM chronicle_session_state WHERE chronicle_id = $1::uuid`,
       [chronicleId]
     );
@@ -363,21 +356,21 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async #persistCharacter(client: PoolClient, character: Character): Promise<void> {
     await this.#assertPlayerExists(character.playerId, client);
-    await this.#graph.upsertNode(client, character.id, 'character', character);
+    await upsertNodeIdentity(client, character.id, 'character');
     await client.query(
       `INSERT INTO character (
          id, player_id, name, tags, archetype, pronouns, bio,
-         attributes, skills, inventory, momentum, created_at, updated_at
+         attributes, skills, inventory, momentum, props, created_at, updated_at
        ) VALUES (
          $1::uuid, $2, $3, $4::text[], $5, $6, $7,
-         $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, now(), now()
+         $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, now(), now()
        ) ON CONFLICT (id) DO UPDATE SET
          player_id = EXCLUDED.player_id, name = EXCLUDED.name,
          tags = EXCLUDED.tags, archetype = EXCLUDED.archetype,
          pronouns = EXCLUDED.pronouns, bio = EXCLUDED.bio,
          attributes = EXCLUDED.attributes, skills = EXCLUDED.skills,
          inventory = EXCLUDED.inventory, momentum = EXCLUDED.momentum,
-         updated_at = now()`,
+         props = EXCLUDED.props, updated_at = now()`,
       [
         character.id,
         character.playerId,
@@ -390,6 +383,7 @@ class PostgresChronicleStore implements ChronicleStore {
         serializeJson(character.skills),
         serializeJson(character.inventory),
         serializeJson(character.momentum),
+        serializeJson(character),
       ]
     );
   }
@@ -399,21 +393,23 @@ class PostgresChronicleStore implements ChronicleStore {
     if (isNonEmptyString(chronicle.anchorEntityId)) {
       await this.#assertAnchorExists(client, chronicle.anchorEntityId);
     }
-    await this.#graph.upsertNode(client, chronicle.id, 'chronicle', chronicle);
+    await upsertNodeIdentity(client, chronicle.id, 'chronicle');
     await client.query(
       `INSERT INTO chronicle (
          id, title, primary_char_id, status, player_id, location_id,
-         seed_text, beats_enabled, anchor_entity_id, entity_focus, created_at, updated_at
+         seed_text, beats_enabled, anchor_entity_id, entity_focus, props,
+         created_at, updated_at
        ) VALUES (
          $1::uuid, $2, $3::uuid, $4, $5, $6::uuid,
-         $7, $8, $9::uuid, $10::jsonb, now(), now()
+         $7, $8, $9::uuid, $10::jsonb, $11::jsonb, now(), now()
        ) ON CONFLICT (id) DO UPDATE SET
          title = EXCLUDED.title, primary_char_id = EXCLUDED.primary_char_id,
          status = EXCLUDED.status, player_id = EXCLUDED.player_id,
          location_id = EXCLUDED.location_id, seed_text = EXCLUDED.seed_text,
          beats_enabled = EXCLUDED.beats_enabled,
          anchor_entity_id = EXCLUDED.anchor_entity_id,
-         entity_focus = EXCLUDED.entity_focus, updated_at = now()`,
+         entity_focus = EXCLUDED.entity_focus, props = EXCLUDED.props,
+         updated_at = now()`,
       [
         chronicle.id,
         chronicle.title,
@@ -425,6 +421,7 @@ class PostgresChronicleStore implements ChronicleStore {
         chronicle.beatsEnabled ?? true,
         chronicle.anchorEntityId ?? null,
         JSON.stringify(chronicle.entityFocus ?? { entityScores: {}, tagScores: {} }),
+        serializeJson(chronicle),
       ]
     );
   }
@@ -457,7 +454,7 @@ class PostgresChronicleStore implements ChronicleStore {
   }
 
   async #assertAnchorExists(client: PoolClient, anchorEntityId: string): Promise<void> {
-    const lookup = await client.query('SELECT 1 FROM hard_state WHERE id = $1::uuid', [anchorEntityId]);
+    const lookup = await client.query('SELECT 1 FROM entity WHERE id = $1::uuid', [anchorEntityId]);
     if (lookup.rowCount === 0) {
       throw new Error(`Anchor entity ${anchorEntityId} not found`);
     }
@@ -468,17 +465,14 @@ class PostgresChronicleStore implements ChronicleStore {
 export function createChronicleStore(options?: {
   connectionString?: string;
   pool?: Pool;
-  graph?: GraphOperations;
   worldStore?: WorldSchemaStore | null;
 }): ChronicleStore {
   const pool = createPool({
     connectionString: options?.connectionString,
     pool: options?.pool,
   });
-  const store = new PostgresChronicleStore({
-    graph: options?.graph,
+  return new PostgresChronicleStore({
     pool,
     worldStore: options?.worldStore ?? null,
   });
-  return store;
 }

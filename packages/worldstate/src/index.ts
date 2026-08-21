@@ -1,13 +1,19 @@
-// === Unified Interface (Recommended) ===
+// === Entry point ===
 export { WorldState } from './worldState';
 
-// === Core Stores ===
-export { GraphOperations } from './graphOperations';
+// === Stores ===
 export { createChronicleStore } from './chronicleStore';
 export { createWorldSchemaStore } from './worldSchemaStore';
 
+// === The write surface ===
+export { CanonWriter } from './canonWriter';
+export { ProposalRejected, validateProposal } from './canonValidation';
+
 // === Domain Helpers ===
 export { LocationHelpers } from './locationHelpers';
+
+// === Vocabulary ===
+export { seedVocabulary } from './seedVocabulary';
 
 // === Types ===
 export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor } from './types';

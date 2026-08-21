@@ -1,374 +1,142 @@
 # WorldState Architecture
 
-## Overview
+`@glass-frontier/worldstate` holds two things that change at different rates and
+for different reasons:
 
-The worldstate package provides a **unified graph-based knowledge management system** for The Glass Frontier. It separates concerns between low-level graph operations and domain-specific logic, enabling extensibility for new knowledge domains.
-
-## Architecture Layers
+- **Canon** — the world's entities, the typed relationships between them, and
+  the lore attached to them. Written only by ingest, read on every turn.
+- **Chronicle state** — one player's session: character, turns, beats, where
+  they are, and what they have found. Written constantly during play, and never
+  promoted to canon except by an ingest batch.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     WorldState                          │
-│              (Unified Entry Point)                      │
-│                                                          │
-│  .graph       → GraphOperations (low-level)             │
-│  .chronicles  → ChronicleStore (domain logic)           │
-│  .locations   → LocationStore (domain logic)            │
-│  .characters  → (future)                                 │
-│  .factions    → (future)                                 │
-└─────────────────────────────────────────────────────────┘
-                         ▲
-          ┌──────────────┼──────────────┐
-          │              │              │
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Chronicle  │  │   Location   │  │    Graph     │
-│    Store    │  │     Store    │  │ Operations   │
-│  (domain)   │  │   (domain)   │  │  (generic)   │
-└─────────────┘  └──────────────┘  └──────────────┘
-      │                │                    │
-      └────────────────┴────────────────────┘
-                       │
-              ┌────────────────┐
-              │  PostgreSQL    │
-              │  (node, edge,  │
-              │   domain tabs) │
-              └────────────────┘
+                      WorldState
+                          │
+        ┌─────────────────┴─────────────────┐
+        │                                   │
+    .world                            .chronicles
+  (canon storage)                  (session storage)
+        │                                   │
+  commitBatch  ← the only writer       commitTurn
+  getContextSlice ← the turn read      getChronicleState
+  listNeighbors / getEntity / lore     upsertCharacter
+        │                                   │
+        └─────────────── Postgres ──────────┘
 ```
 
-## Core Components
+## Canon has one writer
 
-### 1. GraphOperations (Low-Level)
-**Purpose:** Domain-agnostic graph operations on nodes and edges.
+Every change to canon goes through `commitBatch`, which takes a whole proposal —
+entities, the relationships among them, and their lore — validates it against the
+world vocabulary, and commits it in one transaction under a batch id.
 
-**Responsibilities:**
-- `upsertNode()` - Insert/update nodes in the graph
-- `deleteNode()` - Remove nodes
-- `upsertEdge()` - Create/update edges between nodes
-- `deleteEdge()` - Remove edges
-- `queryNodesByKind()` - Query nodes by type
-- `getEdges()` - Get edges connected to a node
-
-**When to use:**
-- ❌ Rarely! Prefer domain stores for business logic
-- ✅ When creating new knowledge domain stores
-- ✅ When implementing cross-domain operations
-
-```typescript
-// Access via WorldState
-const graph = worldState.graph;
-await graph.upsertNode(client, id, 'custom_type', { ...props });
-```
-
-### 2. LocationStore (Domain Logic)
-**Purpose:** Location graph management (places, edges, character positioning).
-
-**Renamed from:** `LocationGraphStore` → `LocationStore`
-
-**Responsibilities:**
-- Location CRUD operations
-- Location hierarchies (parent-child relationships)
-- Location relationships (adjacent, linked, docked)
-- Character positioning in the world
-- Location events and history
-
-**Key Methods:**
-```typescript
-// Core operations
-upsertLocation(input) → LocationPlace
-deleteLocation(input) → void
-createLocationWithRelationship(input) → LocationPlace
-
-// Edges
-upsertEdge(input) → void
-deleteEdge(input) → void
-
-// Queries
-listLocationRoots(input?) → LocationPlace[]
-getLocationDetails(input) → { place, breadcrumb, children, neighbors }
-getLocationNeighbors(input) → LocationNeighbors
-getLocationChain(input) → LocationBreadcrumbEntry[]
-
-// Character positioning
-getLocationState(characterId) → LocationState | null
-moveCharacterToLocation(input) → LocationState
-
-// Events
-appendLocationEvents(input) → LocationEvent[]
-listLocationEvents(input) → LocationEvent[]
-```
-
-**Architectural Pattern:**
-- Calls `GraphOperations` for node/edge operations
-- Manages `location` table and domain-specific queries
-- Handles location-specific business logic
-
-```typescript
-// Internal implementation pattern
-async upsertLocation(input) {
-  await withTransaction(this.#pool, async (client) => {
-    // Use GraphOperations for node
-    await this.#graph.upsertNode(client, id, 'location', props);
-
-    // Manage domain-specific table
-    await client.query(`INSERT INTO location ...`);
-
-    // Handle domain logic (parent relationships, etc.)
-    await this.#setCanonicalParent(client, id, parentId);
-  });
-}
-```
-
-### 3. ChronicleStore (WorldStateStore)
-**Purpose:** Chronicle and turn management.
-
-**Responsibilities:**
-- Chronicle CRUD operations
-- Turn history and persistence
-- Character management
-- Integration with LocationStore for chronicle context
-
-**Key Methods:**
-```typescript
-// Chronicles
-ensureChronicle(params) → Chronicle
-getChronicle(id) → Chronicle | null
-getChronicleState(id) → ChronicleSnapshot | null
-listChroniclesByPlayer(playerId) → Chronicle[]
-deleteChronicle(id) → void
-
-// Characters
-upsertCharacter(character) → Character
-getCharacter(id) → Character | null
-listCharactersByPlayer(playerId) → Character[]
-
-// Turns
-addTurn(turn) → Turn
-listChronicleTurns(chronicleId) → Turn[]
-```
-
-**Architectural Pattern:**
-- Calls `GraphOperations` for node operations
-- Integrates with `LocationStore` for location context
-- Exposes `graph` property for extensibility
-
-```typescript
-// Internal implementation pattern
-constructor(options: { pool, graph?, locationStore? }) {
-  this.#graph = options.graph ?? new GraphOperations(pool);
-  this.#locationStore = options.locationStore ?? null;
-}
-
-async addTurn(turn) {
-  // Use GraphOperations for node
-  await this.#graph.upsertNode(client, turn.id, 'chronicle_turn', turn);
-
-  // Manage chronicle_turn table with full column structure
-  await client.query(`INSERT INTO chronicle_turn (...) VALUES (...)`);
-}
-```
-
-### 4. WorldState (Unified Interface)
-**Purpose:** Single entry point for all world state operations.
-
-**Benefits:**
-- ✅ Single instantiation manages all stores
-- ✅ Shared `GraphOperations` instance across domains
-- ✅ Automatic dependency injection (LocationStore → ChronicleStore)
-- ✅ Clear domain boundaries
-- ✅ Easy to add new knowledge domains
-
-**Usage:**
-```typescript
-// Recommended: Use unified interface
-import { WorldState } from '@glass-frontier/worldstate';
-
-const worldState = WorldState.create({
-  connectionString: process.env.DATABASE_URL,
-});
-
-// Access domain stores
-await worldState.locations.upsertLocation({ ... });
-await worldState.chronicles.ensureChronicle({ ... });
-
-// Low-level operations (rare)
-await worldState.graph.upsertNode(client, id, 'custom', { ... });
-```
-
-**Alternative: Individual Stores (Advanced)**
-```typescript
-// For advanced use cases that need fine-grained control
-import {
-  createLocationStore,
-  createWorldStateStore,
-  GraphOperations
-} from '@glass-frontier/worldstate';
-
-const pool = createPool({ ... });
-const graph = new GraphOperations(pool);
-const locations = createLocationStore({ pool, graph });
-const chronicles = createWorldStateStore({ pool, graph, locationStore: locations });
-```
-
-## Database Schema
-
-### Core Tables
-
-**`node` table** - Generic node storage
-```sql
-CREATE TABLE node (
-  id uuid PRIMARY KEY,
-  kind text NOT NULL,        -- 'location', 'character', 'chronicle', etc.
-  props jsonb NOT NULL,      -- Domain-specific properties
-  created_at timestamptz
-);
-```
-
-**`edge` table** - Generic edge storage
-```sql
-CREATE TABLE edge (
-  id uuid PRIMARY KEY,
-  src_id uuid REFERENCES node(id),
-  dst_id uuid REFERENCES node(id),
-  type text NOT NULL,        -- 'location_parent', 'ADJACENT_TO', 'character_at', etc.
-  props jsonb,
-  created_at timestamptz
-);
-```
-
-### Domain Tables
-
-**`location` table** - Location-specific data
-- Managed by `LocationStore`
-- Contains queryable fields (name, kind, tags, etc.)
-- Links to `node` via `id` foreign key
-
-**`chronicle` table** - Chronicle-specific data
-- Managed by `ChronicleStore`
-- Contains queryable fields (title, status, player_id, etc.)
-- Links to `node` via `id` foreign key
-
-**`chronicle_turn` table** - Turn-specific data
-- Managed by `ChronicleStore`
-- Structured columns for all turn data (no payload JSONB!)
-- See migration `005_chronicle.cjs` for full schema
-
-## Migration Guide
-
-### Before (Old Pattern)
-```typescript
-import {
-  createLocationGraphStore,
-  type LocationGraphStore
-} from '@glass-frontier/worldstate';
-
-const locationGraphStore = createLocationGraphStore({ ... });
-await locationGraphStore.upsertLocation({ ... });
-```
-
-### After (New Pattern)
-```typescript
-// Option 1: Unified Interface (Recommended)
-import { WorldState } from '@glass-frontier/worldstate';
-
-const worldState = WorldState.create({ ... });
-await worldState.locations.upsertLocation({ ... });
-await worldState.chronicles.ensureChronicle({ ... });
-
-// Option 2: Individual Stores (Advanced)
-import { createLocationStore, type LocationStore } from '@glass-frontier/worldstate';
-
-const locationStore = createLocationStore({ ... });
-await locationStore.upsertLocation({ ... });
-```
-
-### Naming Changes
-- ❌ `LocationGraphStore` → ✅ `LocationStore`
-- ❌ `createLocationGraphStore()` → ✅ `createLocationStore()`
-- ❌ `#locationGraphStore` → ✅ `#locationStore`
-
-## Adding New Knowledge Domains
-
-To add a new knowledge domain (e.g., `CharacterRelationshipStore`):
-
-1. **Create the store** - `src/characterRelationshipStore.ts`
-```typescript
-import { GraphOperations } from './graphOperations';
-
-class PostgresCharacterRelationshipStore implements CharacterRelationshipStore {
-  readonly #pool: Pool;
-  readonly #graph: GraphOperations;
-
-  constructor(options: { pool: Pool; graph?: GraphOperations }) {
-    this.#pool = options.pool;
-    this.#graph = options.graph ?? new GraphOperations(options.pool);
-  }
-
-  async createRelationship(input) {
-    // Use GraphOperations for edge
-    await this.#graph.upsertEdge(this.#pool, {
-      src: input.characterA,
-      dst: input.characterB,
-      type: 'relationship',
-      props: { kind: input.kind, strength: input.strength },
-    });
-  }
-}
-```
-
-2. **Add to `WorldState`**
-```typescript
-class WorldState {
-  readonly #relationships: CharacterRelationshipStore;
-
-  static create(options) {
-    // ...
-    const relationships = createCharacterRelationshipStore({ pool, graph });
-    return new WorldState({ graph, chronicles, locations, relationships });
-  }
-
-  get relationships(): CharacterRelationshipStore {
-    return this.#relationships;
-  }
-}
-```
-
-3. **Use it**
-```typescript
-await worldState.relationships.createRelationship({
-  characterA: 'char-1',
-  characterB: 'char-2',
-  kind: 'ally',
-  strength: 0.8,
+```ts
+const result = await worldState.world.commitBatch({
+  entities: [
+    { ref: 'cartel', kind: 'faction', name: 'Ash Cartel', subkind: 'cartel' },
+    { ref: 'row', kind: 'location', name: 'Cinder Row', subkind: 'district' },
+  ],
+  relationships: [
+    { src: { ref: 'cartel' }, dst: { ref: 'row' }, relationship: 'controls' },
+  ],
+  lore: [{ entity: { ref: 'cartel' }, title: 'The Ledgers', prose: '…' }],
+  source: 'import',
+  sourceId: 'tsonu-export-2026-08',
 });
 ```
 
-## Design Principles
+Three properties make this the only write path worth having:
 
-1. **Separation of Concerns**
-   - GraphOperations = generic graph mechanics
-   - Domain stores = business logic and queries
+**Within-batch references.** `ref` names an entity inside the proposal so
+relationships and lore can point at entities that do not exist yet. Entities
+already stored are addressed by `{ id }` or `{ externalKey }`.
 
-2. **Single Responsibility**
-   - Each store manages one knowledge domain
-   - Node/edge operations are centralized
+**Validation before any write.** The whole proposal is checked first — kinds,
+subkinds, statuses, relationship rules, banned verbs, unresolved references — and
+every failure is reported together as `ProposalRejected.violations`. A proposal
+either lands whole or not at all.
 
-3. **Extensibility**
-   - New domains = new store + add to WorldState
-   - No changes to existing stores required
+**Reversibility.** `revertBatch(batchId)` removes everything a batch wrote. This
+is the correction path: there is no per-entity mutation, because a full-object
+upsert cannot tell an absent relationship from a removed one and has to guess.
 
-4. **Encapsulation**
-   - WorldState hides complexity
-   - Domain stores hide graph implementation
+`(source, external_key)` is the import identity. Re-ingesting the same source
+updates the entity it wrote last time rather than duplicating it, and slugs get
+counted suffixes (`grey_harbor_2`) so they stay stable across runs.
 
-5. **Consistency**
-   - All stores use GraphOperations
-   - Uniform patterns across domains
+## The per-turn read is one query
 
-## Future Knowledge Domains
+`getContextSlice` answers "what should the GM know right now" in a single
+statement: it walks out from the focus set along relationships weighted by
+`COALESCE(edge.strength, world_relationship_kind.default_strength)`, keeps the
+strongest path to each entity, ranks the result, and attaches recent lore.
 
-Potential additions:
-- `CharacterStore` - Character relationships, progression, history
-- `FactionStore` - Organization management, reputation
-- `QuestStore` - Quest states, dependencies, progress
-- `TimelineStore` - Temporal events, causality chains
-- `KnowledgeStore` - Character knowledge, discoveries, clues
+```ts
+const slice = await worldState.world.getContextSlice({
+  anchorId: chronicle.anchorEntityId,
+  focusIds: recentlyUsedEntityIds,
+  focusTags: activeTags,
+  limit: 7,
+  maxHops: 2,
+  minProminence: 'recognized',
+});
+```
+
+Weighting is why this beats a hop count: `leader_of` carries a path further than
+`adjacent_to`, so a defining relationship two steps out can outrank an incidental
+one next door. `listNeighbors` uses the same traversal when a caller wants the
+relationships themselves rather than a ranked slice.
+
+## The vocabulary is repo content
+
+Kinds, subkinds, statuses, prominence tiers, relationship types and the rules
+constraining them live in `@glass-frontier/dto` (`world/vocabulary.ts`). That file
+is the authority:
+
+- the DTO validators are derived from it, so a kind it does not declare cannot
+  reach the wire;
+- `seedVocabulary(pool)` applies it to the database after migrations, so the
+  vocabulary tables are its materialized form;
+- ingest validation reads it to decide what a proposal may say.
+
+Nothing writes the vocabulary at runtime. Changing the world's shape means
+editing that file and redeploying. Verbs marked `category: 'banned'` — `related_to`
+today — are declared precisely so validation can reject them by name rather than
+by silence.
+
+## Tables
+
+| Table | Holds |
+|---|---|
+| `node` | identity only: `(id, kind)`. The row an edge points at. |
+| `edge` | typed relationships, with strength and batch attribution |
+| `entity` | canon entities, with `source`, `external_key`, `batch_id` |
+| `lore_fragment` | prose attached to an entity, with a generated `tsvector` |
+| `ingest_batch` | one row per commit; the unit of attribution and reversal |
+| `world_kind` / `world_subkind` / `world_kind_status` / `world_prominence` | materialized entity vocabulary |
+| `world_relationship_kind` / `world_relationship_rule` | materialized edge vocabulary |
+| `chronicle` / `chronicle_turn` / `chronicle_session_state` / `character` | session state |
+
+`node` carries no properties. Each domain owns its own table; the shared table
+exists so an edge can span an entity, a character, and a chronicle with one
+foreign key.
+
+## Places discovered during play
+
+When a player moves somewhere canon does not contain, the GM invents it. That
+place is recorded in `chronicle_session_state.discovered_locations` with the step
+that reached it — never in the graph. The chain is what lets the GM keep its
+bearings off-graph and lets the player walk back the way they came, and it is the
+record a close-time canon batch would draw on.
+
+## Adding a knowledge domain
+
+New canon shapes are vocabulary changes, not code: add the kind, its subkinds and
+statuses, and the relationship rules connecting it to what already exists, then
+redeploy. `commitBatch` accepts it, traversal weights it, and the context slice
+returns it without any new store code.
+
+Code is only needed for a domain that is *not* canon — something with its own
+lifecycle and write pattern, like chronicle state. That gets its own table and
+its own store alongside `chronicles`, and joins the graph through `node` if its
+rows need to be edge endpoints.

@@ -1,7 +1,8 @@
-import type { PromptTemplateId } from '@glass-frontier/dto';
+import { SESSION_ONLY_STATUS, type PromptTemplateId } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
+import { sessionNeighbors } from '../updaters/locationUpdater';
 import {
   EMPTY_LOCATION,
   EMPTY_LOCATION_DETAIL,
@@ -61,6 +62,60 @@ ChronicleFragmentTypes[]
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
 
+type LocationDetails = Awaited<ReturnType<GraphContext['locationHelpers']['getDetails']>>;
+
+/**
+ * Several prompts in the same turn ask for the location's surroundings, and the
+ * traversal is the same each time. Memoized per turn context, which is a fresh
+ * object per turn, so nothing outlives the turn it belongs to.
+ */
+const locationDetailsByContext = new WeakMap<GraphContext, Promise<LocationDetails>>();
+
+/**
+ * Neighbours of a place invented during play, grouped the same way canon
+ * neighbours are so the prompt shape does not change underneath the model.
+ */
+const formatSessionNeighbors = (
+  context: GraphContext,
+  locationId: string
+): Record<string, unknown> => {
+  const entries = sessionNeighbors(context.chronicleState.discoveredLocations ?? [], locationId);
+  const grouped: Record<string, unknown[]> = {};
+  for (const entry of entries) {
+    grouped[entry.relationship] = [
+      ...(grouped[entry.relationship] ?? []),
+      {
+        description: null,
+        direction: entry.direction,
+        hops: 1,
+        name: entry.name,
+        slug: null,
+        status: SESSION_ONLY_STATUS,
+        subkind: null,
+        via: null,
+      },
+    ];
+  }
+  return grouped;
+};
+
+const locationDetails = async (
+  context: GraphContext,
+  locationId: string
+): Promise<LocationDetails> => {
+  const cached = locationDetailsByContext.get(context);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const pending = context.locationHelpers.getDetails({
+    id: locationId,
+    maxHops: 2,
+    minProminence: 'recognized',
+  });
+  locationDetailsByContext.set(context, pending);
+  return pending;
+};
+
 const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['anchor', anchorFragment],
   ['beats', beatsFragment],
@@ -104,14 +159,13 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
   if (!isNonEmptyString(anchorId)) {
     return { anchor: null };
   }
-  const entity = await context.worldSchemaStore.getEntity({ id: anchorId });
+  const [entity, fragments] = await Promise.all([
+    context.worldSchemaStore.getEntity({ id: anchorId }),
+    context.worldSchemaStore.listLoreFragmentsByEntity({ entityId: anchorId, limit: 5 }),
+  ]);
   if (entity === null) {
     return { anchor: null };
   }
-  const fragments = await context.worldSchemaStore.listLoreFragmentsByEntity({
-    entityId: anchorId,
-    limit: 5,
-  });
   return {
     anchor: {
       description: entity.description ?? null,
@@ -160,21 +214,17 @@ async function locationFragment(context: GraphContext): Promise<Record<string, u
   if (!isNonEmptyString(location.id)) {
     return EMPTY_LOCATION;
   }
-  if (location.status === 'session-only') {
+  if (location.status === SESSION_ONLY_STATUS) {
     return {
       description: location.description ?? null,
       name: location.name,
-      neighbors: {},
+      neighbors: formatSessionNeighbors(context, location.id),
       slug: location.slug,
       status: location.status,
       tags: location.tags,
     };
   }
-  const details = await context.locationHelpers.getDetails({
-    id: location.id,
-    maxHops: 2,
-    minProminence: 'recognized',
-  });
+  const details = await locationDetails(context, location.id);
   return {
     description: details.place.description ?? null,
     name: details.place.name,
@@ -187,15 +237,14 @@ async function locationFragment(context: GraphContext): Promise<Record<string, u
 
 async function locationDetailFragment(context: GraphContext): Promise<unknown> {
   const location = context.chronicleState.location;
-  if (!isNonEmptyString(location.id) || location.status === 'session-only') {
+  if (!isNonEmptyString(location.id)) {
     return EMPTY_LOCATION_DETAIL;
   }
-  const neighbors = await context.locationHelpers.getNeighborsGrouped({
-    id: location.id,
-    maxHops: 2,
-    minProminence: 'recognized',
-  });
-  return formatLocationNeighbors(neighbors);
+  if (location.status === SESSION_ONLY_STATUS) {
+    return formatSessionNeighbors(context, location.id);
+  }
+  const details = await locationDetails(context, location.id);
+  return formatLocationNeighbors(details.neighbors);
 }
 
 function inventoryFragment(context: GraphContext): Array<Record<string, unknown>> {

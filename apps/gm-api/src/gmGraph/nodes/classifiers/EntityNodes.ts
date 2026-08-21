@@ -9,7 +9,7 @@ import { LlmClassifierNode } from './LlmClassiferNode';
 const ENTITY_JUDGE_SCHEMA = z.object({
   results: z.array(
     z.object({
-      emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity'),
+      emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity. Recorded on the turn for later canon review; they do not steer this chronicle\'s retrieval.'),
       slug: z.string().describe('The slug of the entity'),
       usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
     })

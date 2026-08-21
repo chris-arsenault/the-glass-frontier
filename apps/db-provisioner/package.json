@@ -6,12 +6,13 @@
   "main": "dist/handler.cjs",
   "scripts": {
     "build": "esbuild src/handler.ts --bundle --platform=node --target=node20 --outfile=dist/handler.cjs --format=cjs --external:pg-native && pnpm run copy-assets",
-    "copy-assets": "mkdir -p dist/packages/app/migrations dist/packages/ops/migrations dist/packages/worldstate/migrations dist/packages/app/templates && cp ../../packages/app/migrations/*.cjs dist/packages/app/migrations/ && cp ../../packages/ops/migrations/*.cjs dist/packages/ops/migrations/ && cp ../../packages/worldstate/migrations/*.cjs dist/packages/worldstate/migrations/ && cp ../../packages/app/templates/*.hbs dist/packages/app/templates/ && cp ../../worldSchema.json dist/",
+    "copy-assets": "rm -rf dist/packages && mkdir -p dist/packages/app/migrations dist/packages/app/src dist/packages/ops/migrations dist/packages/worldstate/migrations dist/packages/app/templates && cp ../../packages/app/migrations/*.cjs dist/packages/app/migrations/ && cp ../../packages/app/src/modelCatalog.json dist/packages/app/src/ && cp ../../packages/ops/migrations/*.cjs dist/packages/ops/migrations/ && cp ../../packages/worldstate/migrations/*.cjs dist/packages/worldstate/migrations/ && cp ../../packages/app/templates/*.hbs dist/packages/app/templates/",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1114.0",
     "@glass-frontier/node-utils": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.13.1"
   },

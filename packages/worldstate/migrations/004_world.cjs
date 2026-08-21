@@ -1,12 +1,13 @@
-/* global __dirname, exports */
+/* global exports */
 
 exports.shorthands = undefined;
 
-exports.up = async (pgm) => {
-  const { readFile } = await import('node:fs/promises');
-  const { join } = await import('node:path');
-  const schemaPath = join(__dirname, '../../../worldSchema.json');
-  const worldSchema = JSON.parse(await readFile(schemaPath, 'utf8'));
+/**
+ * DDL only. The vocabulary itself lives in `@glass-frontier/dto` and is applied
+ * by the idempotent seed step (`pnpm -F @glass-frontier/worldstate seed:vocabulary`),
+ * which `pnpm db:migrate` runs after migrations.
+ */
+exports.up = (pgm) => {
   pgm.createTable('world_prominence', {
     id: { type: 'text', primaryKey: true },
     rank: { type: 'integer', notNull: true },
@@ -113,8 +114,6 @@ exports.up = async (pgm) => {
   });
   pgm.createIndex('lore_fragment', 'chronicle_id', { name: 'lore_fragment_chronicle_idx' });
   pgm.createIndex('lore_fragment', 'slug', { name: 'lore_fragment_slug_idx', unique: true });
-
-  await seedWorldSchema(pgm, worldSchema);
 };
 
 exports.down = (pgm) => {
@@ -143,60 +142,3 @@ exports.down = (pgm) => {
 
   pgm.dropTable('world_kind', { ifExists: true });
 };
-
-async function seedWorldSchema(pgm, schema) {
-  if (!schema || !schema.kinds) {
-    return;
-  }
-
-  pgm.sql(`INSERT INTO world_prominence (id, rank) VALUES
-    ('forgotten', 0),
-    ('marginal', 1),
-    ('recognized', 2),
-    ('renowned', 3),
-    ('mythic', 4)
-  ON CONFLICT (id) DO NOTHING`);
-
-  const escape = (value) => {
-    if (value === null || value === undefined) {
-      return 'NULL';
-    }
-    return `'${String(value).replace(/'/g, "''")}'`;
-  };
-
-  for (const [kindId, kindDef] of Object.entries(schema.kinds)) {
-    pgm.sql(`INSERT INTO world_kind (id, category, display_name, default_status)
-             VALUES (${escape(kindId)}, ${escape(kindDef.category ?? null)}, ${escape(kindDef.displayName ?? null)}, ${escape(kindDef.defaultStatus ?? null)})
-             ON CONFLICT (id) DO NOTHING`);
-    for (const subkind of kindDef.subkinds ?? []) {
-      pgm.sql(`INSERT INTO world_subkind (id, kind_id)
-               VALUES (${escape(subkind)}, ${escape(kindId)})
-               ON CONFLICT ON CONSTRAINT world_subkind_pk DO NOTHING`);
-    }
-    for (const status of kindDef.statuses ?? []) {
-      pgm.sql(`INSERT INTO world_kind_status (kind_id, status)
-               VALUES (${escape(kindId)}, ${escape(status)})
-               ON CONFLICT ON CONSTRAINT world_kind_status_pk DO NOTHING`);
-    }
-  }
-
-  if (schema.relationshipTypes) {
-    for (const [relId, description] of Object.entries(schema.relationshipTypes)) {
-      pgm.sql(`INSERT INTO world_relationship_kind (id, description)
-               VALUES (${escape(relId)}, ${escape(description ?? null)})
-               ON CONFLICT (id) DO NOTHING`);
-    }
-  }
-
-  if (schema.relationships) {
-    for (const [srcKind, destinations] of Object.entries(schema.relationships)) {
-      for (const [dstKind, relationships] of Object.entries(destinations)) {
-        for (const relationship of relationships) {
-          pgm.sql(`INSERT INTO world_relationship_rule (relationship_id, src_kind, dst_kind)
-                   VALUES (${escape(relationship)}, ${escape(srcKind)}, ${escape(dstKind)})
-                   ON CONFLICT ON CONSTRAINT world_relationship_rule_pk DO NOTHING`);
-        }
-      }
-    }
-  }
-}

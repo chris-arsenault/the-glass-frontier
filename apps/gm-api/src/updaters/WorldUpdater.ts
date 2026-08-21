@@ -62,15 +62,16 @@ export class WorldUpdater {
   }
 
   async #updateLocation(context: GraphContext): Promise<GraphContext> {
-    const location = await applyLocationUpdate(context);
-    if (location === null) {
+    const update = await applyLocationUpdate(context);
+    if (update === null) {
       return context;
     }
     return {
       ...context,
       chronicleState: {
         ...context.chronicleState,
-        location,
+        discoveredLocations: update.discoveredLocations,
+        location: update.location,
       },
     };
   }

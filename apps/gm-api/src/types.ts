@@ -6,6 +6,7 @@ import type {
   Intent,
   LlmTrace,
   LocationEntity,
+  SessionLocationChain,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
@@ -24,6 +25,8 @@ export type ChronicleState = {
   chronicle: Chronicle;
   character: Character;
   location: LocationEntity;
+  /** Places invented during this chronicle. Session state, never canon. */
+  discoveredLocations: SessionLocationChain;
   turns: Turn[];
 }
 

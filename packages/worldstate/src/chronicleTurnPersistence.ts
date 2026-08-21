@@ -1,13 +1,21 @@
-import type { Character, Chronicle, LocationEntity, Turn } from '@glass-frontier/dto';
+import type {
+  Character,
+  Chronicle,
+  LocationEntity,
+  SessionLocationChain,
+  Turn,
+} from '@glass-frontier/dto';
 import type { Pool, PoolClient } from 'pg';
 
-import type { GraphOperations } from './graphOperations';
+import { upsertNodeIdentity } from './nodeIdentity';
 import { withTransaction } from './pg';
 
 export type CommitTurnInput = {
   character: Character | null;
   chronicle: Chronicle;
   location: LocationEntity | null;
+  /** Places discovered so far this chronicle; session state, never canon. */
+  discoveredLocations?: SessionLocationChain;
   turn: Turn;
 };
 
@@ -39,6 +47,8 @@ type TurnRow = {
   location_delta: Turn['locationDelta'] | null;
   beat_tracker: Turn['beatTracker'] | null;
   gm_trace: Turn['gmTrace'] | null;
+  entity_offered: Turn['entityOffered'] | null;
+  entity_usage: Turn['entityUsage'] | null;
 };
 
 const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
@@ -48,7 +58,7 @@ const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace
+  beat_tracker, gm_trace, entity_offered, entity_usage
   FROM chronicle_turn`;
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
@@ -59,12 +69,12 @@ const TURN_INSERT = `INSERT INTO chronicle_turn (
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace
+  beat_tracker, gm_trace, entity_offered, entity_usage
 ) VALUES (
   $1::uuid, $2::uuid, $3, now(), $4, $5, $6, $7, $8,
   $9, $10, $11::jsonb, $12, $13::jsonb, $14, $15, $16::jsonb, $17,
   $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23::jsonb,
-  $24::jsonb, $25::jsonb, $26::jsonb
+  $24::jsonb, $25::jsonb, $26::jsonb, $27::jsonb, $28::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -110,6 +120,8 @@ const toTurn = (row: TurnRow): Turn => ({
   advancesTimeline: optional(row.advances_timeline),
   beatTracker: optional(row.beat_tracker),
   chronicleId: row.chronicle_id,
+  entityOffered: optional(row.entity_offered),
+  entityUsage: optional(row.entity_usage),
   executedNodes: optional(row.executed_nodes),
   failure: row.failure,
   gmResponse: toGmResponse(row),
@@ -161,15 +173,15 @@ const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unkn
   optionalJson(turn.locationDelta),
   optionalJson(turn.beatTracker),
   optionalJson(turn.gmTrace),
+  optionalJson(turn.entityOffered),
+  optionalJson(turn.entityUsage),
 ];
 
 export class ChronicleTurnPersistence {
   readonly #pool: Pool;
-  readonly #graph: GraphOperations;
 
-  constructor(pool: Pool, graph: GraphOperations) {
+  constructor(pool: Pool) {
     this.#pool = pool;
-    this.#graph = graph;
   }
 
   async commit(input: CommitTurnInput, persistChronicle: PersistChronicle): Promise<Turn> {
@@ -216,7 +228,7 @@ export class ChronicleTurnPersistence {
   async #persist(
     client: PoolClient, turn: Turn, chronicleId: string, sequence: number
   ): Promise<void> {
-    await this.#graph.upsertNode(client, turn.id, 'chronicle_turn', turn);
+    await upsertNodeIdentity(client, turn.id, 'chronicle_turn');
     await client.query(TURN_INSERT, turnParameters(turn, chronicleId, sequence));
   }
 
@@ -258,11 +270,13 @@ export class ChronicleTurnPersistence {
   ): Promise<void> {
     await client.query(
       `UPDATE chronicle_session_state SET character_state = $2::jsonb,
-       location_state = $3::jsonb, last_turn_sequence = $4, updated_at = now()
+       location_state = $3::jsonb, discovered_locations = $5::jsonb,
+       last_turn_sequence = $4, updated_at = now()
        WHERE chronicle_id = $1::uuid`,
       [input.chronicle.id,
         input.character === null ? null : serializeJson(input.character),
-        input.location === null ? null : serializeJson(input.location), sequence]
+        input.location === null ? null : serializeJson(input.location), sequence,
+        serializeJson(input.discoveredLocations ?? [])]
     );
   }
 }

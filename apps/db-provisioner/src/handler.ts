@@ -1,5 +1,6 @@
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { useRdsIamAuth, generateRdsIamToken } from '@glass-frontier/node-utils';
+import { seedVocabulary } from '@glass-frontier/worldstate';
 import type { Context } from 'aws-lambda';
 import { runner as migrate } from 'node-pg-migrate';
 import * as path from 'path';
@@ -178,45 +179,15 @@ const resetDatabase = async (pool: Pool, packages: string[]): Promise<void> => {
   console.log('Database reset complete');
 };
 
+/**
+ * Applies the world vocabulary from `@glass-frontier/dto`. Idempotent, and run
+ * after every migration because the vocabulary tables are no longer seeded by
+ * the migrations themselves.
+ */
 const seedDatabase = async (pool: Pool): Promise<void> => {
-  console.log('Seeding database...');
-
-  // Insert default seed data
-  const client = await pool.connect();
-  try {
-    // Seed world schema kinds
-    await client.query(`
-      INSERT INTO kinds (id, display_name, category, default_status)
-      VALUES
-        ('location', 'Location', 'world', 'active'),
-        ('character', 'Character', 'entity', 'active'),
-        ('npc', 'NPC', 'entity', 'active'),
-        ('item', 'Item', 'entity', 'active'),
-        ('faction', 'Faction', 'entity', 'active'),
-        ('event', 'Event', 'narrative', 'active'),
-        ('quest', 'Quest', 'narrative', 'active')
-      ON CONFLICT (id) DO NOTHING
-    `);
-
-    // Seed relationship types
-    await client.query(`
-      INSERT INTO relationship_types (id, description)
-      VALUES
-        ('located_in', 'Entity is located in a location'),
-        ('connected_to', 'Location connects to another location'),
-        ('member_of', 'Character is a member of a faction'),
-        ('owns', 'Character owns an item'),
-        ('knows', 'Character knows another character'),
-        ('related_to', 'Generic relationship between entities')
-      ON CONFLICT (id) DO NOTHING
-    `);
-
-    console.log('Basic seed data inserted');
-  } finally {
-    client.release();
-  }
-
-  console.log('Database seeding complete');
+  console.log('Seeding world vocabulary...');
+  await seedVocabulary(pool);
+  console.log('World vocabulary seeded');
 };
 
 /**
@@ -350,6 +321,7 @@ export const handler = async (
       for (const pkg of packages) {
         await runMigrations(pool, pkg, 'up');
       }
+      await seedDatabase(pool);
       return {
         action,
         message: `Migrations completed successfully for: ${packages.join(', ')}`,
@@ -363,6 +335,7 @@ export const handler = async (
       for (const pkg of packages) {
         await runMigrations(pool, pkg, 'up');
       }
+      await seedDatabase(pool);
       return {
         action,
         message: `Database reset and migrations completed for: ${packages.join(', ')}`,

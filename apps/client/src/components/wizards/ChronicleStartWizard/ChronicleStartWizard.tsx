@@ -151,41 +151,6 @@ export function ChronicleStartWizard() {
     [setSelectedAnchorEntity, setSelectedLocation, setSelectedLocationFull]
   );
 
-  const handleCreateLocation = useCallback(
-    async (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) {
-        return;
-      }
-      setIsLoadingLocations(true);
-      setLocationError(null);
-      try {
-        const created = await worldAtlasClient.upsertEntity({
-          description: '',
-          kind: 'location',
-          links: [],
-          name: trimmed,
-          status: 'known',
-        });
-        const summary: SelectedLocationEntity = {
-          description: created.description ?? undefined,
-          id: created.id,
-          name: created.name,
-          slug: created.slug,
-          status: created.status ?? undefined,
-          subkind: created.subkind ?? undefined,
-        };
-        setLocations((prev) => [...prev, summary]);
-        setSelectedLocation(summary);
-      } catch (err: unknown) {
-        setLocationError(err instanceof Error ? err.message : 'Failed to create location');
-      } finally {
-        setIsLoadingLocations(false);
-      }
-    },
-    [setSelectedLocation]
-  );
-
   const [customTitleOverride, setCustomTitleOverride] = useState<string | null>(null);
   const [creationError, setCreationError] = useState<string | null>(null);
   const [isCreatingChronicle, setIsCreatingChronicle] = useState(false);
@@ -227,7 +192,6 @@ export function ChronicleStartWizard() {
           isLoading={isLoadingLocations}
           isLoadingDetails={isLoadingLocationDetails}
           locations={locations}
-          onCreate={handleCreateLocation}
           onRefresh={refreshLocations}
           onSelect={handleSelectLocation}
         />
@@ -294,7 +258,6 @@ export function ChronicleStartWizard() {
     locationError,
     selectedLocation,
     selectedAnchorEntity,
-    handleCreateLocation,
     refreshLocations,
     handleSelectLocation,
     setSelectedAnchorEntity,
@@ -478,7 +441,6 @@ type LocationStepProps = {
   isLoadingDetails: boolean;
   error: string | null;
   onSelect: (location: SelectedLocationEntity) => void;
-  onCreate: (name: string) => void;
   onRefresh: () => void;
 }
 
@@ -488,12 +450,10 @@ function LocationStep({
   isLoading,
   isLoadingDetails,
   locations,
-  onCreate,
   onRefresh,
   onSelect,
 }: LocationStepProps) {
   const [search, setSearch] = useState('');
-  const [draftName, setDraftName] = useState('');
   const [filterSubkind, setFilterSubkind] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
 
@@ -551,24 +511,6 @@ function LocationStep({
         </div>
       </header>
       {error ? <p className="wizard-error">{error}</p> : null}
-      <div className="location-step-create">
-        <input
-          type="text"
-          placeholder="New location name"
-          value={draftName}
-          onChange={(event) => setDraftName(event.target.value)}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            void onCreate(draftName);
-            setDraftName('');
-          }}
-          disabled={isLoading || draftName.trim().length === 0}
-        >
-          Add location
-        </button>
-      </div>
       <div className="location-step-filters">
         <input
           type="search"

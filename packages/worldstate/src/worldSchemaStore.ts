@@ -1,74 +1,75 @@
 import type {
+  CanonProposal,
+  CommitBatchResult,
+  ContextSliceEntity,
+  ContextSliceInput,
   HardState,
   LoreFragment,
-  WorldKind,
-  WorldRelationshipRule,
-  WorldRelationshipType,
   WorldSchema,
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
-import { GraphOperations } from './graphOperations';
+import { CanonWriter } from './canonWriter';
+import { ContextSliceReader } from './contextSlice';
+import type { EntityListInput, NeighborListInput } from './entityReader';
+import { EntityReader } from './entityReader';
+import { LoreReader } from './loreReader';
 import { createPool } from './pg';
 import type { WorldNeighbor, WorldSchemaStore } from './types';
-import type {
-  EntityInput,
-  EntityListInput,
-  NeighborListInput,
-  RelationshipInput,
-} from './worldEntityPersistence';
-import { WorldEntityPersistence } from './worldEntityPersistence';
-import type { LoreCreateInput, LoreUpdateInput } from './worldLorePersistence';
-import { WorldLorePersistence } from './worldLorePersistence';
-import type { KindInput } from './worldSchemaConfiguration';
 import { WorldSchemaConfiguration } from './worldSchemaConfiguration';
 
+/**
+ * Canon storage: batch in, slice out.
+ *
+ * `commitBatch` is the only writer. Everything else reads. There is no
+ * per-entity mutation, so a caller cannot express a partial update whose
+ * missing fields have to be guessed at.
+ */
 class PostgresWorldSchemaStore implements WorldSchemaStore {
-  readonly #entities: WorldEntityPersistence;
-  readonly #lore: WorldLorePersistence;
+  readonly #entities: EntityReader;
+  readonly #lore: LoreReader;
   readonly #schema: WorldSchemaConfiguration;
+  readonly #writer: CanonWriter;
+  readonly #context: ContextSliceReader;
 
-  constructor(options: { pool: Pool; graph?: GraphOperations }) {
-    const graph = options.graph ?? new GraphOperations(options.pool);
-    this.#entities = new WorldEntityPersistence(options.pool, graph);
-    this.#lore = new WorldLorePersistence(options.pool, graph);
+  constructor(options: { pool: Pool }) {
+    this.#entities = new EntityReader(options.pool);
+    this.#lore = new LoreReader(options.pool);
     this.#schema = new WorldSchemaConfiguration(options.pool);
+    this.#writer = new CanonWriter(options.pool);
+    this.#context = new ContextSliceReader(options.pool);
   }
 
-  async upsertEntity(input: EntityInput): Promise<HardState> {
-    return this.#entities.upsertEntity(input);
+  async commitBatch(proposal: CanonProposal): Promise<CommitBatchResult> {
+    return this.#writer.commitBatch(proposal);
   }
 
-  async deleteEntity(input: { id: string }): Promise<void> {
-    return this.#entities.deleteEntity(input);
+  async getContextSlice(input: ContextSliceInput): Promise<ContextSliceEntity[]> {
+    return this.#context.getContextSlice(input);
   }
 
-  async upsertRelationship(input: RelationshipInput): Promise<void> {
-    return this.#entities.upsertRelationship(input);
-  }
-
-  async deleteRelationship(input: Omit<RelationshipInput, 'strength'>): Promise<void> {
-    return this.#entities.deleteRelationship(input);
+  async revertBatch(batchId: string): Promise<void> {
+    return this.#writer.revertBatch(batchId);
   }
 
   async getEntity(input: { id: string }): Promise<HardState | null> {
     return this.#entities.getEntity(input);
   }
 
-  async listEntities(input?: EntityListInput): Promise<HardState[]> {
-    return this.#entities.listEntities(input);
-  }
-
   async getEntityBySlug(input: { slug: string }): Promise<HardState | null> {
     return this.#entities.getEntityBySlug(input);
   }
 
-  async listNeighbors(input: NeighborListInput): Promise<WorldNeighbor[]> {
-    return this.#entities.listNeighbors(input);
+  async listEntities(input?: EntityListInput): Promise<HardState[]> {
+    return this.#entities.listEntities(input);
   }
 
-  async createLoreFragment(input: LoreCreateInput): Promise<LoreFragment> {
-    return this.#lore.create(input);
+  async listEntitiesByIds(ids: string[]): Promise<HardState[]> {
+    return this.#entities.listEntitiesByIds(ids);
+  }
+
+  async listNeighbors(input: NeighborListInput): Promise<WorldNeighbor[]> {
+    return this.#entities.listNeighbors(input);
   }
 
   async getLoreFragment(input: { id: string }): Promise<LoreFragment | null> {
@@ -82,43 +83,22 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return this.#lore.listByEntity(input);
   }
 
-  async updateLoreFragment(input: LoreUpdateInput): Promise<LoreFragment> {
-    return this.#lore.update(input);
-  }
-
-  async deleteLoreFragment(input: { id: string }): Promise<void> {
-    return this.#lore.delete(input);
+  async listLoreFragmentsByEntities(input: {
+    entityIds: string[];
+    perEntityLimit?: number;
+  }): Promise<Map<string, LoreFragment[]>> {
+    return this.#lore.listByEntities(input);
   }
 
   async getWorldSchema(): Promise<WorldSchema> {
     return this.#schema.getSchema();
-  }
-
-  async upsertKind(input: KindInput): Promise<WorldKind> {
-    return this.#schema.upsertKind(input);
-  }
-
-  async addRelationshipType(input: {
-    id: string;
-    description?: string | null;
-  }): Promise<WorldRelationshipType> {
-    return this.#schema.addRelationshipType(input);
-  }
-
-  async upsertRelationshipRule(input: WorldRelationshipRule): Promise<void> {
-    return this.#schema.upsertRelationshipRule(input);
-  }
-
-  async deleteRelationshipRule(input: WorldRelationshipRule): Promise<void> {
-    return this.#schema.deleteRelationshipRule(input);
   }
 }
 
 export const createWorldSchemaStore = (options?: {
   pool?: Pool;
   connectionString?: string;
-  graph?: GraphOperations;
 }): WorldSchemaStore => {
   const pool = options?.pool ?? createPool({ connectionString: options?.connectionString });
-  return new PostgresWorldSchemaStore({ graph: options?.graph, pool });
+  return new PostgresWorldSchemaStore({ pool });
 };

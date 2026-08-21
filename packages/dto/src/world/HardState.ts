@@ -1,166 +1,37 @@
 import { z } from 'zod';
 
-export const HardStateKind = z.enum([
-  'location',
-  'npc',
-  'ship_or_vehicle',
-  'artifact',
-  'faction',
-  'resource',
-  'magic',
-  'faith',
-  'conflict',
-  'rumor',
-  'law_or_edict',
-]);
+import {
+  RELATIONSHIP_TYPE_IDS,
+  WORLD_KIND_IDS,
+  WORLD_PROMINENCE_IDS,
+  WORLD_STATUS_IDS,
+  WORLD_SUBKIND_IDS,
+} from './vocabulary';
+
+/**
+ * Every value set here is derived from the world vocabulary in `vocabulary.ts`.
+ * Add a kind, subkind, status, or relationship verb there and it becomes valid
+ * on the wire, in the database seed, and in the ingest validator at once.
+ */
+
+export const HardStateKind = z.enum(WORLD_KIND_IDS);
 export type HardStateKind = z.infer<typeof HardStateKind>;
 
-export const HardStateSubkind = z.enum([
-  'planet',
-  'moon',
-  'region',
-  'city',
-  'district',
-  'shop_or_tavern',
-  'habitat',
-  'station',
-  'space_anomaly',
-  'site',
-  'dungeon',
-  'facility',
-  'civilian',
-  'leader',
-  'ally',
-  'notorious_villain',
-  'agent',
-  'merchant',
-  'scholar',
-  'captain',
-  'mystic',
-  'capital_ship',
-  'frigate',
-  'courier',
-  'shuttle',
-  'gunship',
-  'lander',
-  'walker',
-  'train',
-  'caravan',
-  'relic',
-  'weapon',
-  'focus',
-  'device',
-  'data_relic',
-  'key',
-  'containment_relic',
-  'government',
-  'corporate',
-  'outlaw',
-  'guild',
-  'order',
-  'cartel',
-  'militia',
-  'strategic',
-  'mundane',
-  'hyperdrive_fuel',
-  'spirit_dust',
-  'ore',
-  'data',
-  'biomass',
-  'school',
-  'spell',
-  'ritual',
-  'tradition',
-  'forbidden_technique',
-  'religion',
-  'cult',
-  'philosophy',
-  'mystery_cult',
-  'state_church',
-  'war',
-  'rebellion',
-  'insurgency',
-  'cold_war',
-  'proxy_war',
-  'shadow_conflict',
-  'local',
-  'regional',
-  'cosmic',
-  'personal',
-  'prophecy',
-  'civil_law',
-  'religious_law',
-  'martial_law',
-  'corporate_policy',
-  'treaty',
-]);
+export const HardStateSubkind = z.enum(WORLD_SUBKIND_IDS);
 export type HardStateSubkind = z.infer<typeof HardStateSubkind>;
 
-export const HardStateStatus = z.enum([
-  'known',
-  'hidden',
-  'lost',
-  'ruined',
-  'destroyed',
-  'alive',
-  'dead',
-  'missing',
-  'retired',
-  'ascended',
-  'operational',
-  'damaged',
-  'mothballed',
-  'intact',
-  'broken',
-  'sealed',
-  'corrupted',
-  'active',
-  'fragmented',
-  'dormant',
-  'outlawed',
-  'abundant',
-  'common',
-  'scarce',
-  'depleted',
-  'mythical',
-  'sanctioned',
-  'forbidden',
-  'forgotten',
-  'experimental',
-  'dominant',
-  'major',
-  'minority',
-  'heresy',
-  'suppressed',
-  'extinct',
-  'brewing',
-  'stalemated',
-  'won',
-  'frozen',
-  'fresh',
-  'spreading',
-  'confirmed',
-  'debunked',
-  'drafted',
-  'enacted',
-  'contested',
-  'ignored',
-  'repealed',
-]);
+export const HardStateStatus = z.enum(WORLD_STATUS_IDS);
 export type HardStateStatus = z.infer<typeof HardStateStatus>;
 
-export const HardStateProminence = z.enum([
-  'forgotten',
-  'marginal',
-  'recognized',
-  'renowned',
-  'mythic',
-]);
+export const HardStateProminence = z.enum(WORLD_PROMINENCE_IDS);
 export type HardStateProminence = z.infer<typeof HardStateProminence>;
+
+export const RelationshipType = z.enum(RELATIONSHIP_TYPE_IDS);
+export type RelationshipType = z.infer<typeof RelationshipType>;
 
 export const HardStateLink = z.object({
   direction: z.enum(['out', 'in']),
-  relationship: z.string().min(1),
+  relationship: RelationshipType,
   strength: z.number().min(0).max(1).optional(), // 0.0 (weak/spatial) to 1.0 (strong/narrative)
   targetId: z.string().min(1),
 });

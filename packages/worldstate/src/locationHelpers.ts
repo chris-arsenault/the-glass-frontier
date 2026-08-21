@@ -18,27 +18,6 @@ export class LocationHelpers {
   }
 
   /**
-   * Create a location with a relationship to an anchor entity.
-   * Convenience wrapper around worldStore.upsertEntity.
-   */
-  async createWithRelationship(input: {
-    name: string;
-    description?: string | null;
-    anchorId: string;
-    relationship: string;
-    prominence?: HardStateProminence;
-  }): Promise<LocationEntity> {
-    const created = await this.#worldStore.upsertEntity({
-      description: input.description ?? undefined,
-      kind: 'location',
-      links: [{ relationship: input.relationship, targetId: input.anchorId }],
-      name: input.name,
-      prominence: input.prominence,
-    });
-    return toPlace(created);
-  }
-
-  /**
    * Get location details including neighbors grouped by relationship.
    */
   async getDetails(input: {

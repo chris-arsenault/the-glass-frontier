@@ -189,5 +189,19 @@ export default [
       // if your rule name was namespaced differently, disable that too:
       "importPlugin/no-default-export": "off",
     },
+  },
+
+  // 6) Test suites and their shared harnesses: a describe block is one long
+  // arrow function by construction, and test-only tooling is a devDependency.
+  {
+    files: ['**/test/**/*.ts', '**/*.test.ts'],
+    rules: {
+      'importPlugin/no-extraneous-dependencies': [
+        'error',
+        { devDependencies: ['**/test/**/*.ts', '**/*.test.ts', '**/vite.config.*'] },
+      ],
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+    },
   }
 ];

@@ -13,6 +13,8 @@ export const WorldKind = z.object({
 export type WorldKind = z.infer<typeof WorldKind>;
 
 export const WorldRelationshipType = z.object({
+  category: z.string().min(1),
+  defaultStrength: z.number().min(0).max(1),
   description: z.string().optional(),
   id: z.string().min(1),
 });
