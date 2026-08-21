@@ -9,9 +9,6 @@ export { createWorldSchemaStore } from './worldSchemaStore';
 export { CanonWriter } from './canonWriter';
 export { ProposalRejected, validateProposal } from './canonValidation';
 
-// === Domain Helpers ===
-export { LocationHelpers } from './locationHelpers';
-
 // === Vocabulary ===
 export { seedVocabulary } from './seedVocabulary';
 

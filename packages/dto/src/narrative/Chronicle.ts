@@ -17,7 +17,14 @@ export const Chronicle = z.object({
   characterId: z.string().min(1).optional(),
   entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
   id: z.string().min(1),
-  locationId: z.string().min(1),
+  /**
+   * The canon place the chronicle started from, when it started from one.
+   * Absent for a chronicle that began somewhere the world does not know about.
+   * Play never changes it.
+   */
+  locationId: z.string().min(1).optional(),
+  /** Where the chronicle is now. A name, nothing more. */
+  locationName: z.string().min(1),
   metadata: Metadata.optional(),
   playerId: z.string().min(1),
   seedText: z.string().optional(),

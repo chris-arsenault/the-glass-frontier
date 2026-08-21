@@ -9,8 +9,6 @@ import type {
   HardState,
   HardStateProminence,
   HardStateKind,
-  LocationEntity,
-  SessionLocationChain,
   Turn,
   LoreFragment,
   WorldSchema,
@@ -29,9 +27,8 @@ export type ChronicleSnapshot = {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character | null;
-  location: LocationEntity | null;
-  /** Places invented during this chronicle, and how each was reached. */
-  discoveredLocations: SessionLocationChain;
+  /** Where the chronicle is now. A name; play is the only thing that sets it. */
+  locationName: string;
   turns: Turn[];
 };
 
@@ -39,14 +36,14 @@ export type ChronicleStore = {
   ensureChronicle: (params: {
     chronicleId?: string;
     playerId: string;
-    locationId: string;
+    locationName: string;
+    locationId?: string | null;
     characterId?: string;
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
     beatsEnabled?: boolean;
     anchorEntityId?: string | null;
-    sessionLocation?: LocationEntity;
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;
@@ -68,12 +65,9 @@ export type ChronicleStore = {
   commitTurn: (input: {
     character: Character | null;
     chronicle: Chronicle;
-    location: LocationEntity | null;
-    discoveredLocations?: SessionLocationChain;
     turn: Turn;
   }) => Promise<Turn>;
   listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
-
 };
 
 /**

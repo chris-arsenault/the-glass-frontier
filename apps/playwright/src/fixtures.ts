@@ -48,6 +48,8 @@ const ORACLE_VESSEL_ID = '77777777-6666-4555-8444-333333333333';
 const FOUNDING_OATH_FRAGMENT_ID = PLAYWRIGHT_FOUNDING_OATH_FRAGMENT_ID;
 const ORACLE_SIGNAL_FRAGMENT_ID = '55555555-4444-4333-8222-111111111111';
 
+const LOCATION_ROOT_ID = '99999999-8888-4777-8666-555555555555';
+
 const BASE_CHRONICLE: Chronicle = {
   anchorEntityId: GLASS_WARDENS_ID,
   beats: [],
@@ -55,7 +57,8 @@ const BASE_CHRONICLE: Chronicle = {
   characterId: PLAYWRIGHT_CHARACTER_ID,
   entityFocus: { entityScores: {}, tagScores: {} },
   id: PLAYWRIGHT_CHRONICLE_ID,
-  locationId: '99999999-8888-4777-8666-555555555555',
+  locationId: LOCATION_ROOT_ID,
+  locationName: 'Luminous Quay',
   playerId: PLAYWRIGHT_PLAYER_ID,
   status: 'open',
   summaries: [],
@@ -63,7 +66,7 @@ const BASE_CHRONICLE: Chronicle = {
 };
 
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {
-  id: BASE_CHRONICLE.locationId,
+  id: LOCATION_ROOT_ID,
   kind: 'location',
   name: 'Luminous Quay',
   prominence: 'recognized',
@@ -149,10 +152,7 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
 export async function resetPlaywrightFixtures(connectionString: string): Promise<void> {
   const appStore = createAppStore({ connectionString });
   const worldSchemaStore = createWorldSchemaStore({ connectionString });
-  const chronicleStore = createChronicleStore({
-    connectionString,
-    worldStore: worldSchemaStore,
-  });
+  const chronicleStore = createChronicleStore({ connectionString });
 
   await chronicleStore.deleteChronicle(PLAYWRIGHT_CHRONICLE_ID);
   await appStore.playerStore.upsert(buildPlaywrightPlayerRecord());

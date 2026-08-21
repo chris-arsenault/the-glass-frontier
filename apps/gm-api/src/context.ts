@@ -12,7 +12,6 @@ import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-front
 import {
   createChronicleStore,
   createWorldSchemaStore,
-  LocationHelpers,
   type ChronicleStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
@@ -26,7 +25,6 @@ export type Context = {
   identity: AuthorizedIdentity;
   appStore: AppStore;
   engine: GmEngine;
-  locationHelpers: LocationHelpers;
   worldSchemaStore: WorldSchemaStore;
   playerStore: PlayerStore;
   templateManager: PromptTemplateManager;
@@ -38,7 +36,6 @@ let pool: Pool | undefined;
 let appStore: AppStore | undefined;
 let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
-let locationHelpers: LocationHelpers | undefined;
 let engine: GmEngine | undefined;
 
 /**
@@ -55,8 +52,7 @@ export async function initializeForLambda(): Promise<void> {
 
   appStore = createAppStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
-  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
-  locationHelpers = new LocationHelpers(worldSchemaStore);
+  chronicleStore = createChronicleStore({ pool });
 
   // Pass pool to LLM client for audit/usage tracking with IAM auth
   const llmClient = createLLMClient({ pool });
@@ -64,7 +60,6 @@ export async function initializeForLambda(): Promise<void> {
   engine = new GmEngine({
     chronicleStore,
     llmClient,
-    locationHelpers,
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
     worldSchemaStore,
@@ -88,15 +83,13 @@ function initializeLocal(): void {
 
   appStore = createAppStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
-  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
-  locationHelpers = new LocationHelpers(worldSchemaStore);
+  chronicleStore = createChronicleStore({ pool });
 
   const llmClient = createLLMClient();
 
   engine = new GmEngine({
     chronicleStore,
     llmClient,
-    locationHelpers,
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
     worldSchemaStore,
@@ -113,7 +106,6 @@ export async function createContext(options?: { authorizationHeader?: string }):
     appStore === undefined ||
     worldSchemaStore === undefined ||
     chronicleStore === undefined ||
-    locationHelpers === undefined ||
     engine === undefined
   ) {
     throw new Error(
@@ -128,7 +120,6 @@ export async function createContext(options?: { authorizationHeader?: string }):
     chronicleStore,
     engine,
     identity,
-    locationHelpers,
     playerStore: appStore.playerStore,
     templateManager: appStore.promptTemplateManager,
     worldSchemaStore,

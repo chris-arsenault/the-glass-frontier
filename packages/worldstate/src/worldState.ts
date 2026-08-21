@@ -1,7 +1,6 @@
 import type { Pool } from 'pg';
 
 import { createChronicleStore } from './chronicleStore';
-import { LocationHelpers } from './locationHelpers';
 import { createPool } from './pg';
 import type { WorldSchemaStore, ChronicleStore } from './types';
 import { createWorldSchemaStore } from './worldSchemaStore';
@@ -10,22 +9,17 @@ import { createWorldSchemaStore } from './worldSchemaStore';
  * Entry point for world state.
  *
  * `world` holds canon — written only by `commitBatch`, read by everything else.
- * `chronicles` holds session state, which play mutates freely and which never
- * reaches canon except through a committed batch.
+ * `chronicles` holds session state, which play mutates freely. The two do not
+ * reach into each other: a chronicle names the canon entity it is anchored to,
+ * and nothing a player does during a turn touches the graph.
  */
 export class WorldState {
   readonly #chronicles: ChronicleStore;
   readonly #world: WorldSchemaStore;
-  readonly #locations: LocationHelpers;
 
-  private constructor(options: {
-    chronicles: ChronicleStore;
-    world: WorldSchemaStore;
-    locations: LocationHelpers;
-  }) {
+  private constructor(options: { chronicles: ChronicleStore; world: WorldSchemaStore }) {
     this.#chronicles = options.chronicles;
     this.#world = options.world;
-    this.#locations = options.locations;
   }
 
   /** Chronicle, character, and turn state for a play session. */
@@ -38,11 +32,6 @@ export class WorldState {
     return this.#world;
   }
 
-  /** Location-shaped reads over canon, for the GM's spatial context. */
-  get locations(): LocationHelpers {
-    return this.#locations;
-  }
-
   static create(options?: {
     connectionString?: string;
     pool?: Pool;
@@ -52,10 +41,9 @@ export class WorldState {
       pool: options?.pool,
     });
 
-    const world = createWorldSchemaStore({ pool });
-    const chronicles = createChronicleStore({ pool, worldStore: world });
-    const locations = new LocationHelpers(world);
-
-    return new WorldState({ chronicles, locations, world });
+    return new WorldState({
+      chronicles: createChronicleStore({ pool }),
+      world: createWorldSchemaStore({ pool }),
+    });
   }
 }

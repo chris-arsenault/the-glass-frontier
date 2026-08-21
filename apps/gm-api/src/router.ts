@@ -35,7 +35,7 @@ export const appRouter = t.router({
       return {
         character: result.updatedCharacter,
         chronicleStatus: result.chronicleStatus,
-        location: result.locationSummary,
+        locationName: result.locationName,
         turn: result.turn,
       };
     }),

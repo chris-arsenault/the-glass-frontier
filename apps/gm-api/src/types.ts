@@ -5,15 +5,13 @@ import type {
   Chronicle,
   Intent,
   LlmTrace,
-  LocationEntity,
-  SessionLocationChain,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
 import type { RetryLLMClient } from '@glass-frontier/llm-client';
-import type { WorldSchemaStore, LocationHelpers, ChronicleStore } from '@glass-frontier/worldstate';
+import type { WorldSchemaStore, ChronicleStore } from '@glass-frontier/worldstate';
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
 import type { LocationDeltaDecision } from './gmGraph/nodes/classifiers/LocationDeltaNode';
@@ -24,9 +22,8 @@ export type ChronicleState = {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character;
-  location: LocationEntity;
-  /** Places invented during this chronicle. Session state, never canon. */
-  discoveredLocations: SessionLocationChain;
+  /** Where the scene is. A name; the GM never resolves it against the graph. */
+  locationName: string;
   turns: Turn[];
 }
 
@@ -67,7 +64,6 @@ export type GraphContext = {
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
-  locationHelpers: LocationHelpers;
   chronicleStore: ChronicleStore;
   worldSchemaStore: WorldSchemaStore;
 

@@ -60,7 +60,7 @@ class ChronicleClosureProcessor {
     }
     if (
       chronicle.playerId !== event.playerId ||
-      chronicle.locationId !== event.locationId ||
+      chronicle.locationName !== event.locationName ||
       chronicle.characterId !== event.characterId
     ) {
       throw new Error(`Closure event does not match chronicle ${chronicle.id}.`);
@@ -99,8 +99,7 @@ class ChronicleClosureProcessor {
       character: snapshot.character,
       chronicle: snapshot.chronicle,
       inventoryHighlights,
-      locationName: snapshot.location?.name ?? 'Unknown Location',
-      locationSummary: snapshot.location,
+      locationName: snapshot.locationName,
       skillHighlights,
       transcript,
     };

@@ -57,7 +57,7 @@ export async function initializeForLambda(): Promise<void> {
   appStore = createAppStore({ pool });
   opsStore = createOpsStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
-  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
+  chronicleStore = createChronicleStore({ pool });
   seedService = new ChronicleSeedService({
     llmClient: createLLMClient({ pool }),
     modelConfigStore: appStore.modelConfigStore,
@@ -84,7 +84,7 @@ function initializeLocal(): void {
   appStore = createAppStore({ pool });
   opsStore = createOpsStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
-  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
+  chronicleStore = createChronicleStore({ pool });
   seedService = new ChronicleSeedService({
     llmClient: createLLMClient(),
     modelConfigStore: appStore.modelConfigStore,

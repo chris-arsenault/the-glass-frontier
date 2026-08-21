@@ -1,10 +1,4 @@
-import type {
-  Character,
-  Chronicle,
-  LocationEntity,
-  SessionLocationChain,
-  Turn,
-} from '@glass-frontier/dto';
+import type { Character, Chronicle, Turn } from '@glass-frontier/dto';
 import type { Pool, PoolClient } from 'pg';
 
 import { upsertNodeIdentity } from './nodeIdentity';
@@ -13,9 +7,6 @@ import { withTransaction } from './pg';
 export type CommitTurnInput = {
   character: Character | null;
   chronicle: Chronicle;
-  location: LocationEntity | null;
-  /** Places discovered so far this chronicle; session state, never canon. */
-  discoveredLocations?: SessionLocationChain;
   turn: Turn;
 };
 
@@ -270,13 +261,10 @@ export class ChronicleTurnPersistence {
   ): Promise<void> {
     await client.query(
       `UPDATE chronicle_session_state SET character_state = $2::jsonb,
-       location_state = $3::jsonb, discovered_locations = $5::jsonb,
-       last_turn_sequence = $4, updated_at = now()
+       last_turn_sequence = $3, updated_at = now()
        WHERE chronicle_id = $1::uuid`,
       [input.chronicle.id,
-        input.character === null ? null : serializeJson(input.character),
-        input.location === null ? null : serializeJson(input.location), sequence,
-        serializeJson(input.discoveredLocations ?? [])]
+        input.character === null ? null : serializeJson(input.character), sequence]
     );
   }
 }

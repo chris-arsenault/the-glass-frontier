@@ -3,7 +3,6 @@ import type {
   Character,
   TranscriptEntry,
   Turn,
-  LocationEntity,
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
@@ -22,7 +21,6 @@ import {
   type ChronicleStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
-import type { LocationHelpers } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -41,7 +39,6 @@ import type { GraphContext, ChronicleState } from './types';
 
 type GmEngineOptions = {
   chronicleStore: ChronicleStore;
-  locationHelpers: LocationHelpers;
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
@@ -52,7 +49,6 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'chara
 
 class GmEngine {
   readonly chronicleStore: ChronicleStore;
-  readonly locationHelpers: LocationHelpers;
   readonly worldSchemaStore: WorldSchemaStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
@@ -65,7 +61,6 @@ class GmEngine {
   constructor(options: GmEngineOptions) {
     this.templateManager = options.templateManager;
     this.chronicleStore = options.chronicleStore;
-    this.locationHelpers = options.locationHelpers;
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
@@ -83,7 +78,7 @@ class GmEngine {
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
-    locationSummary: LocationEntity | null;
+    locationName: string;
     chronicleStatus: Chronicle['status'];
   }> {
     this.#assertChronicleId(chronicleId);
@@ -98,7 +93,6 @@ class GmEngine {
       chronicleId,
       chronicleState,
       chronicleStore: this.chronicleStore,
-      locationHelpers: this.locationHelpers,
       playerMessage,
       templateRuntime,
       turnId,
@@ -142,8 +136,6 @@ class GmEngine {
     await this.chronicleStore.commitTurn({
       character: finalContext.chronicleState.character,
       chronicle: finalContext.chronicleState.chronicle,
-      discoveredLocations: finalContext.chronicleState.discoveredLocations,
-      location: finalContext.chronicleState.location,
       turn,
     });
 
@@ -153,10 +145,10 @@ class GmEngine {
     });
 
     const updatedCharacter = finalContext.chronicleState.character ?? null;
-    const locationSummary = finalContext.chronicleState.location ?? null;
+    const locationName = finalContext.chronicleState.locationName;
     const chronicleStatus = finalContext.chronicleState.chronicle.status;
 
-    return { chronicleStatus, locationSummary, turn, updatedCharacter };
+    return { chronicleStatus, locationName, turn, updatedCharacter };
   }
 
   #createGraph(): GmGraphOrchestrator {
@@ -216,14 +208,11 @@ class GmEngine {
     if (!isDefined(state)) {
       throw new Error(`Chronicle ${chronicleId} not found`);
     }
-    const { character, location } = state;
+    const { character } = state;
     if (character === null) {
       throw new Error(`Chronicle ${chronicleId} has no session character state`);
     }
-    if (location === null) {
-      throw new Error(`Chronicle ${chronicleId} has no session location state`);
-    }
-    return { ...state, character, location };
+    return { ...state, character };
   }
 
   #requirePlayerId(state: ChronicleState): string {
@@ -251,7 +240,6 @@ class GmEngine {
     chronicleId,
     chronicleState,
     chronicleStore,
-    locationHelpers,
     playerMessage,
     templateRuntime,
     turnId,
@@ -265,8 +253,7 @@ class GmEngine {
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
-    locationHelpers: LocationHelpers;
-    chronicleStore: ChronicleStore;
+      chronicleStore: ChronicleStore;
     worldSchemaStore: WorldSchemaStore;
   }): GraphContext {
     return {
@@ -276,7 +263,6 @@ class GmEngine {
       chronicleStore,
       failure: false,
       llm: this.llm,
-      locationHelpers,
       modelConfigStore: this.modelConfigStore,
       playerIntent: undefined,
       playerMessage,
@@ -373,7 +359,7 @@ class GmEngine {
     const event: ChronicleClosureEvent = {
       characterId: input.chronicle.characterId ?? undefined,
       chronicleId: input.chronicle.id,
-      locationId: input.chronicle.locationId,
+      locationName: input.chronicle.locationName,
       playerId: input.chronicle.playerId,
       requestedAt: Date.now(),
       summaryKinds: CLOSURE_SUMMARY_KINDS,

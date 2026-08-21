@@ -5,7 +5,6 @@ import {
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
-  type LocationEntity,
 } from '@glass-frontier/dto';
 import { hasAnyGroup } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
@@ -21,11 +20,6 @@ type EnsureChronicleResult = Awaited<
 type ChronicleSnapshot = Awaited<
   ReturnType<Context['chronicleStore']['getChronicleState']>
 >;
-type ChronicleLocation = {
-  locationId: string;
-  sessionLocation: LocationEntity | undefined;
-};
-type TimingLogger = (step: string) => void;
 
 const t = initTRPC.context<Context>().create();
 const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
@@ -38,7 +32,6 @@ const normalizePlayerPreferences = (prefs?: PlayerPreferences | null): PlayerPre
   feedbackVisibility: prefs?.feedbackVisibility ?? 'all',
 });
 const locationDetailsSchema = z.object({
-  atmosphere: z.string().min(1),
   locale: z.string().min(1),
 });
 
@@ -309,18 +302,16 @@ async function createChronicleHandler(
 
   const chronicleId = input.chronicleId ?? randomUUID();
 
-  const { locationId, sessionLocation } = prepareChronicleLocation(input, logTiming);
-
   logTiming('calling ensureChronicle');
   const chronicle = await ctx.chronicleStore.ensureChronicle({
     anchorEntityId: input.anchorEntityId,
     beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,
-    locationId,
+    locationId: input.locationId,
+    locationName: resolveLocationName(input),
     playerId,
     seedText: input.seedText,
-    sessionLocation,
     status: input.status,
     title: input.title,
   });
@@ -328,32 +319,6 @@ async function createChronicleHandler(
 
   log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`, { elapsedMs: Date.now() - startTime });
   return { chronicle };
-}
-
-function prepareChronicleLocation(
-  input: CreateChronicleInput,
-  logTiming: TimingLogger
-): ChronicleLocation {
-  if (input.locationId !== undefined) {
-    logTiming('using existing locationId');
-    return { locationId: input.locationId, sessionLocation: undefined };
-  }
-  const locationId = randomUUID();
-  const timestamp = Date.now();
-  const sessionLocation: LocationEntity = {
-    createdAt: timestamp,
-    description: input.location?.atmosphere,
-    id: locationId,
-    kind: 'location',
-    name: resolveLocationName(input),
-    prominence: 'recognized',
-    slug: `session-${locationId}`,
-    status: 'session-only',
-    tags: [],
-    updatedAt: timestamp,
-  };
-  logTiming('session location prepared');
-  return { locationId, sessionLocation };
 }
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {

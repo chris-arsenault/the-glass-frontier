@@ -3,10 +3,19 @@ import React from 'react';
 import './LocationOverview.css';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 
+/**
+ * Where the scene is, as the GM named it.
+ *
+ * The Atlas link appears only while the chronicle is still at the canon place
+ * it started from — once play moves on, the location is a name and there is
+ * nothing in the world to link to.
+ */
 export function LocationOverview() {
-  const location = useChronicleStore((state) => state.location);
+  const locationName = useChronicleStore((state) => state.locationName);
+  const locationSlug = useChronicleStore((state) => state.locationSlug);
+  const startedAt = useChronicleStore((state) => state.chronicleRecord?.locationName ?? null);
 
-  if (!location) {
+  if (!locationName) {
     return (
       <div className="location-pill location-pill-empty" aria-live="polite">
         <span className="location-pill-label">Location</span>
@@ -15,27 +24,24 @@ export function LocationOverview() {
     );
   }
 
-  const locationName = location.name ?? 'Unknown';
-  const locationSlug = location.slug;
-  const status = location.status ?? '';
-  const tagSnippet = location.tags.slice(0, 3).join(', ');
-  const meta = [location.subkind, status].filter(Boolean).join(' · ');
-  const detail = location.description || tagSnippet || 'Exploring new ground.';
+  const isAtCanonStart = locationSlug !== null && locationName === startedAt;
 
   return (
     <div className="location-pill">
       <div className="location-pill-label">Location</div>
       <div className="location-pill-value">
-        <button
-          type="button"
-          className="location-pill-link"
-          title="Open in World Atlas"
-          onClick={() => window.open(`/atlas/${locationSlug}`, '_blank', 'noopener,noreferrer')}
-        >
-          {locationName}
-        </button>
-        <span>{detail}</span>
-        {meta ? <span className="location-pill-meta">{meta}</span> : null}
+        {isAtCanonStart ? (
+          <button
+            type="button"
+            className="location-pill-link"
+            title="Open in World Atlas"
+            onClick={() => window.open(`/atlas/${locationSlug}`, '_blank', 'noopener,noreferrer')}
+          >
+            {locationName}
+          </button>
+        ) : (
+          <span>{locationName}</span>
+        )}
       </div>
     </div>
   );

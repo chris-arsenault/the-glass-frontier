@@ -2,8 +2,6 @@
 exports.shorthands = undefined;
 
 exports.up = (pgm) => {
-  pgm.dropConstraint('chronicle', 'chronicle_location_id_fkey', { ifExists: true });
-
   pgm.createTable('chronicle_session_state', {
     character_state: { type: 'jsonb' },
     chronicle_id: {
@@ -13,7 +11,6 @@ exports.up = (pgm) => {
       onDelete: 'CASCADE',
     },
     last_turn_sequence: { type: 'integer', notNull: true, default: -1 },
-    location_state: { type: 'jsonb' },
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
 
@@ -28,11 +25,4 @@ exports.up = (pgm) => {
 
 exports.down = (pgm) => {
   pgm.dropTable('chronicle_session_state', { ifExists: true });
-  pgm.addConstraint('chronicle', 'chronicle_location_id_fkey', {
-    foreignKeys: {
-      columns: 'location_id',
-      references: 'hard_state(id)',
-      onDelete: 'RESTRICT',
-    },
-  });
 };

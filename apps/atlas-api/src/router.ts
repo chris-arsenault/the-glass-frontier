@@ -69,6 +69,7 @@ export const appRouter = t.router({
         anchorEntityId: anchor.id,
         characterId: input.characterId,
         locationId: location.id,
+        locationName: location.name,
         playerId: ctx.identity.sub,
         title: input.title,
       });

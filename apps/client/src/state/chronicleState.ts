@@ -4,7 +4,6 @@ import type {
   Chronicle,
   ChronicleBeat,
   Intent,
-  LocationEntity,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -114,7 +113,12 @@ export type ChronicleState = {
   queuedIntents: number;
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
-  location?: LocationEntity | null;
+  /** Where the scene is, as the GM last named it. */
+  locationName: string | null;
+  /** The canon place the chronicle started from, if it started from one. */
+  locationId: string | null;
+  /** Slug of that canon place, for the Atlas link while still there. */
+  locationSlug: string | null;
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;
@@ -157,7 +161,6 @@ export type ChronicleCreationDetails = {
   characterId?: string | null;
   title: string;
   locationName: string;
-  locationAtmosphere: string;
   beatsEnabled?: boolean;
 }
 

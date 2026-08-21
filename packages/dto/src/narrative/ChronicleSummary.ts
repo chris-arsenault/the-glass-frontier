@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-export const ChronicleSummaryKind = z.enum([
-  'chronicle_story',
-  'location_events',
-  'character_bio',
-]);
+export const ChronicleSummaryKind = z.enum(['chronicle_story', 'character_bio']);
 
 export const ChronicleSummaryEntry = z.object({
   createdAt: z.number().int().nonnegative(),

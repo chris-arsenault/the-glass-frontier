@@ -121,13 +121,21 @@ by silence.
 exists so an edge can span an entity, a character, and a chronicle with one
 foreign key.
 
-## Places discovered during play
+## Location is a name
 
-When a player moves somewhere canon does not contain, the GM invents it. That
-place is recorded in `chronicle_session_state.discovered_locations` with the step
-that reached it — never in the graph. The chain is what lets the GM keep its
-bearings off-graph and lets the player walk back the way they came, and it is the
-record a close-time canon batch would draw on.
+A chronicle carries `location_name` — where the scene is — and, when it started
+from a canon place, the `location_id` it began at. Play only ever changes the
+name.
+
+The GM's location classifier answers one question after a turn: did the scene
+move, and what is the place called. It does not match the answer against the
+graph, create an entity for it, or reason about how places connect. Everything
+the world knows about where the players are reaches the prompt through the
+context slice, which ranks locations alongside every other kind.
+
+That keeps the two halves of this package genuinely separate: `chronicles` never
+reads canon, and canon never learns anything from a turn. A place that play
+invented becomes real only if a close-time batch proposes it.
 
 ## Adding a knowledge domain
 

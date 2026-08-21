@@ -8,7 +8,7 @@ import type { ChronicleClosureEvent } from '@glass-frontier/dto';
 import { ChronicleClosureEventSchema } from '@glass-frontier/dto';
 import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
-import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
+import { createChronicleStore } from '@glass-frontier/worldstate';
 import type { SQSBatchResponse, SQSHandler, SQSRecord } from 'aws-lambda';
 
 import { ChronicleClosureProcessor } from './processor';
@@ -24,9 +24,8 @@ const initializeProcessor = async (): Promise<ChronicleClosureProcessor> => {
     await loadLlmApiKeysFromSecrets();
   }
   const appStore = createAppStore({ pool });
-  const worldSchemaStore = createWorldSchemaStore({ pool });
   return new ChronicleClosureProcessor({
-    chronicleStore: createChronicleStore({ pool, worldStore: worldSchemaStore }),
+    chronicleStore: createChronicleStore({ pool }),
     llmClient: createLLMClient({ pool }),
     modelConfigStore: appStore.modelConfigStore,
   });

@@ -3,7 +3,6 @@ import type {
   ChronicleBeat,
   InventoryEntry,
   Intent,
-  LocationNeighbors,
   Skill,
   SkillCheckPlan,
   SkillCheckResult,
@@ -42,17 +41,6 @@ export function trimBeatsList(beats: ChronicleBeat[]): Array<{
       };
     });
 }
-
-// Default objects
-export const EMPTY_LOCATION_DETAIL: Record<string, unknown> = {};
-
-export const EMPTY_LOCATION = {
-  description: null,
-  name: null,
-  slug: null,
-  status: null,
-  tags: [],
-} as const;
 
 // Formatters
 export function formatCharacter(character: Character | null | undefined): Record<string, unknown> {
@@ -115,25 +103,3 @@ export function formatInventoryItemDetail(item: InventoryEntry): Record<string, 
   };
 }
 
-export function formatLocationNeighbors(neighbors: LocationNeighbors): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(neighbors).map(([relationship, entries]) => [
-      relationship,
-      entries.map((entry) => ({
-        description: entry.neighbor.description ?? null,
-        direction: entry.direction,
-        hops: entry.hops,
-        name: entry.neighbor.name,
-        slug: entry.neighbor.slug,
-        status: entry.neighbor.status ?? null,
-        subkind: entry.neighbor.subkind ?? null,
-        via: entry.via === undefined
-          ? null
-          : {
-            direction: entry.via.direction,
-            relationship: entry.via.relationship,
-          },
-      })),
-    ])
-  );
-}

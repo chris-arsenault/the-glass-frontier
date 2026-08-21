@@ -5,7 +5,7 @@ import { InventoryDeltaSchema } from '../Inventory';
 import { BeatTrackerSchema } from './ChronicleBeat';
 import { Intent } from './Intent';
 import { IntentType as IntentTypeSchema } from './IntentType';
-import { LocationDeltaDecision } from './LocationState';
+import { LocationDeltaDecision } from './LocationDelta';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 

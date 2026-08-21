@@ -1,16 +1,9 @@
-import type {
-  Character,
-  Chronicle,
-  InventoryDeltaOp,
-  LocationEntity,
-  Turn,
-} from '@glass-frontier/dto';
+import type { Character, Chronicle, InventoryDeltaOp, Turn } from '@glass-frontier/dto';
 
 export type SummaryContext = {
   chronicle: Chronicle;
   character: Character | null;
   locationName: string;
-  locationSummary: LocationEntity | null;
   beatLines: string[];
   inventoryHighlights: string[];
   skillHighlights: string[];
@@ -26,7 +19,7 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
     `You are an archivist finalizing the Glass Frontier chronicle '${chronicle.title}'.`,
     'Write a concise short story (<= 250 words) in third-person past tense.',
     buildCharacterDescription(context.character),
-    `Weave in the location context (${formatLocationDetails(context)}) and honor every listed beat, skill check, and inventory change.`,
+    `The chronicle ends at ${context.locationName}. Honor every listed beat, skill check, and inventory change.`,
     beatsBlock,
     skillBlock,
     inventoryBlock,
@@ -37,35 +30,6 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
 
 const buildCharacterDescription = (character: Character | null): string => {
   return `The protagonist is ${character?.name ?? 'the protagonist'} (${character?.pronouns ?? 'they/them'}), an ${character?.archetype ?? 'Unknown Archetype'} with tags: ${formatTags(character?.tags)}.`;
-};
-
-const formatLocationDetails = (context: SummaryContext): string => {
-  return [
-    context.locationName,
-    context.locationSummary?.description,
-    context.locationSummary?.subkind,
-    context.locationSummary?.status,
-  ]
-    .filter((value): value is string => typeof value === 'string' && value.length > 0)
-    .join(' — ');
-};
-
-export const buildLocationEventsPrompt = (context: SummaryContext): string => {
-  const chronicle = context.chronicle;
-  const beats =
-    context.beatLines.length === 0
-      ? 'No beats were logged.'
-      : context.beatLines.map((line, index) => `${index + 1}. ${line}`).join(' ');
-  return [
-    `Produce a JSON summary of high-level events for the chronicle '${chronicle.title}'.`,
-    'Group events by distinct places or sub-locations mentioned in the transcript.',
-    'Return JSON shaped exactly like: {"locations":[{"name":"PLACE","events":["Sentence one.","Sentence two."]}]}',
-    'Each event MUST be 1-2 sentences in third-person past tense and describe the outcome or change that location experienced.',
-    `Beats guidance: ${beats}`,
-    `Location context: ${context.locationName} ${context.locationSummary?.status ?? ''}`.trim(),
-    'Transcript timeline:',
-    context.transcript,
-  ].join('\n');
 };
 
 export const buildCharacterImpactPrompt = (context: SummaryContext): string => {

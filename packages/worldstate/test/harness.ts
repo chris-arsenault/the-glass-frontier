@@ -95,7 +95,6 @@ export const startHarness = async (): Promise<Harness> => {
 export const resetDatabase = async (executor: Pool): Promise<void> => {
   const tables = [
     'lore_fragment',
-    'location_event',
     'chronicle_turn',
     'chronicle',
     'entity',
@@ -165,14 +164,14 @@ export const defaultCharacter = (overrides?: Partial<Character>): Character => (
 });
 
 export const defaultChronicle = (
-  locationId: string,
+  locationName: string,
   overrides?: Partial<Chronicle>
 ): Chronicle => ({
   beats: [],
   beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
   id: randomUUID(),
-  locationId,
+  locationName,
   metadata: undefined,
   playerId: TEST_PLAYER_ID,
   seedText: undefined,
@@ -221,7 +220,6 @@ export const commitChronicleTurn = async (
   return worldState.chronicles.commitTurn({
     character: state?.character ?? null,
     chronicle,
-    location: state?.location ?? null,
     turn,
   });
 };

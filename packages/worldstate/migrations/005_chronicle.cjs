@@ -13,7 +13,11 @@ exports.up = (pgm) => {
       references: '"app"."player"(id)',
       onDelete: 'CASCADE',
     },
-    location_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'RESTRICT' },
+    // Where the chronicle is right now, as a name. Play only ever changes this.
+    location_name: { type: 'text', notNull: true },
+    // The canon place it started from, when it started from one. Null for a
+    // chronicle that began somewhere the world does not know about.
+    location_id: { type: 'uuid', references: 'hard_state(id)', onDelete: 'SET NULL' },
     seed_text: { type: 'text' },
     beats_enabled: { type: 'boolean', notNull: true, default: true },
     entity_focus: { type: 'jsonb', notNull: true, default: pgm.func(`'{"entityScores":{},"tagScores":{}}'::jsonb`) },
@@ -109,19 +113,6 @@ exports.up = (pgm) => {
     method: 'gin',
   });
 
-  pgm.createTable('location_event', {
-    id: { type: 'uuid', primaryKey: true, default: pgm.func('uuid_generate_v4()') },
-    location_id: { type: 'uuid', notNull: true, references: 'hard_state(id)', onDelete: 'CASCADE' },
-    chronicle_id: { type: 'uuid', references: 'chronicle(id)', onDelete: 'SET NULL' },
-    summary: { type: 'text', notNull: true },
-    scope: { type: 'text' },
-    metadata: { type: 'jsonb', notNull: true, default: pgm.func(`'{}'::jsonb`) },
-    created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
-  });
-  pgm.createIndex('location_event', ['location_id', 'created_at'], {
-    name: 'location_event_location_idx',
-  });
-
   pgm.addConstraint('lore_fragment', 'lore_fragment_chronicle_fk', {
     foreignKeys: {
       columns: 'chronicle_id',
@@ -133,11 +124,6 @@ exports.up = (pgm) => {
 
 exports.down = (pgm) => {
   pgm.dropConstraint('lore_fragment', 'lore_fragment_chronicle_fk', { ifExists: true });
-  pgm.dropIndex('location_event', ['location_id', 'created_at'], {
-    ifExists: true,
-    name: 'location_event_location_idx',
-  });
-  pgm.dropTable('location_event', { ifExists: true });
 
   // Drop chronicle_turn indexes
   pgm.dropIndex('chronicle_turn', 'gm_trace', {

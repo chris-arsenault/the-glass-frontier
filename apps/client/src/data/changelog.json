@@ -248,7 +248,14 @@
     "id": "2026-08-20-canon-graph-rewrite",
     "releasedAt": "2026-08-20",
     "summary": "Rebuilt the world graph around one writer and one per-turn read",
-    "details": "The world vocabulary now lives in a single versioned artifact that the validators, the database seed, and ingest all read, replacing a root JSON file and a duplicate set of hand-written enums; the generic 'related_to' link is banned so every relationship states an actual fact. Canon is written only by validated batches that commit entities, relationships, and lore together and can be reverted whole, replacing per-entity editing that silently reversed a saved entity's incoming relationships. The Atlas and world-schema pages are now readers. Choosing what the GM knows each turn is a single ranked query that walks relationships by strength, so a defining connection reaches further than an incidental one, replacing roughly twenty separate lookups per turn. Places invented mid-chronicle are kept with the route that reached them, so the GM keeps its bearings off the map and players can walk back the way they came.",
+    "details": "The world vocabulary now lives in a single versioned artifact that the validators, the database seed, and ingest all read, replacing a root JSON file and a duplicate set of hand-written enums; the generic 'related_to' link is banned so every relationship states an actual fact. Canon is written only by validated batches that commit entities, relationships, and lore together and can be reverted whole, replacing per-entity editing that silently reversed a saved entity's incoming relationships. The Atlas and world-schema pages are now readers. Choosing what the GM knows each turn is a single ranked query that walks relationships by strength, so a defining connection reaches further than an incidental one, replacing roughly twenty separate lookups per turn.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-21-location-is-a-name",
+    "releasedAt": "2026-08-21",
+    "summary": "Simplified where a chronicle is to a place name",
+    "details": "A chronicle now tracks where it is as a name, plus the canon place it started from when it started from one. After each turn the game master answers one question about location — did the scene move, and what is it called — instead of matching the answer against the world map, inventing places on it, or working out how places connect. What the world knows about the surroundings still reaches the storyteller, through the same ranked selection that supplies everything else. The location display shows the current place and links to the Atlas only while the chronicle is still where it began.",
     "type": "improvement"
   }
 ]

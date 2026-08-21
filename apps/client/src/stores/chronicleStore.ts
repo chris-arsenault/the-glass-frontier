@@ -2,7 +2,6 @@ import type {
   Character,
   Chronicle,
   ChronicleBeat,
-  LocationEntity,
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
@@ -52,7 +51,9 @@ type ChronicleSnapshot = {
   character: Character | null;
   chronicle: (Chronicle & { beats?: ChronicleBeat[]; seedText?: string | null }) | null;
   chronicleId: string;
-  location: LocationEntity | null;
+  locationName: string | null;
+  locationId: string | null;
+  locationSlug: string | null;
   turnSequence?: number | null;
   turns?: Turn[];
 };
@@ -441,7 +442,9 @@ const createBaseState = () => ({
   isOffline: false,
   isSending: false,
   isUpdatingPlayerSettings: false,
-  location: null as LocationEntity | null,
+  locationId: null as string | null,
+  locationName: null as string | null,
+  locationSlug: null as string | null,
   messages: [] as ChatMessage[],
   momentumTrend: null as MomentumTrend | null,
   pendingPlayerMessageId: null as string | null,
@@ -473,7 +476,9 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       connectionState: 'idle',
       focusedBeatId: null,
       isSending: false,
-      location: null,
+      locationId: null,
+      locationName: null,
+      locationSlug: null,
       messages: [],
       momentumTrend: null,
       pendingPlayerMessageId: null,
@@ -527,24 +532,20 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const title = details.title?.trim() ?? '';
     const locationName = details.locationName?.trim() ?? '';
-    const locationAtmosphere = details.locationAtmosphere?.trim() ?? '';
     const beatsEnabled = details.beatsEnabled ?? true;
 
     if (!targetCharacterId) {
       throw new Error('Select a character before starting a chronicle.');
     }
-    if (!title || !locationName || !locationAtmosphere) {
-      throw new Error('Chronicle title, location name, and atmosphere are required.');
+    if (!title || !locationName) {
+      throw new Error('Chronicle title and location name are required.');
     }
 
     try {
       const result = await trpcClient.createChronicle.mutate({
         beatsEnabled,
         characterId: targetCharacterId,
-        location: {
-          atmosphere: locationAtmosphere,
-          locale: locationName,
-        },
+        location: { locale: locationName },
         playerId: identity.playerId,
         title,
       });
@@ -685,7 +686,8 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         chronicleStatus: chronicleState.chronicle?.status ?? 'open',
         connectionState: 'connected',
         focusedBeatId: initialFocusBeatId,
-        location: chronicleState.location ?? null,
+        locationId: chronicleState.chronicle?.locationId ?? null,
+        locationName: chronicleState.chronicle?.locationName ?? null,
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
@@ -823,7 +825,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { character, chronicleStatus, location, turn } = await gmClient.postMessage.mutate({
+      const { character, chronicleStatus, locationName, turn } = await gmClient.postMessage.mutate({
         chronicleId,
         content: playerEntry,
       });
@@ -900,7 +902,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           connectionState: 'connected',
           focusedBeatId: beatResult.focusBeatId ?? prev.focusedBeatId,
           isSending: false,
-          location: location ?? prev.location,
+          locationName: locationName ?? prev.locationName,
           messages: nextMessages,
           momentumTrend: nextMomentumTrend,
           pendingPlayerMessageId:

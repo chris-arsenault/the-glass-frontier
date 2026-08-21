@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -29,23 +28,21 @@ afterAll(async () => {
   await pool.end();
 });
 
-describe('Locations as canon entities', () => {
-  it('rejects missing canonical locations without chronicle-scoped state', async () => {
-    const locationId = randomUUID();
-    await expect(
-      worldState.chronicles.ensureChronicle({
-        characterId: undefined,
-        locationId,
-        playerId: TEST_PLAYER_ID,
-        title: 'Missing Location Chronicle',
-      })
-    ).rejects.toThrow('provide chronicle-scoped session location state');
-    const entity = await worldState.world.getEntity({ id: locationId });
+describe('Chronicle location', () => {
+  it('starts somewhere the world has never heard of', async () => {
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      characterId: undefined,
+      locationName: 'A Nameless Ridge',
+      playerId: TEST_PLAYER_ID,
+      title: 'Off the Map',
+    });
+    const state = await worldState.chronicles.getChronicleState(chronicle.id);
 
-    expect(entity).toBeNull();
+    expect(state?.locationName).toBe('A Nameless Ridge');
+    expect(chronicle.locationId).toBeUndefined();
   });
 
-  it('summarizes chronicle locations from canon records', async () => {
+  it('remembers the canon place it started from', async () => {
     const location = await seedEntity(worldState, {
       kind: 'location',
       name: 'Atlas Landing',
@@ -55,14 +52,44 @@ describe('Locations as canon entities', () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,
       locationId: location.id,
+      locationName: location.name,
       playerId: TEST_PLAYER_ID,
       title: 'Anchored Chronicle',
     });
     const state = await worldState.chronicles.getChronicleState(chronicle.id);
 
-    expect(state?.location?.id).toBe(location.id);
-    expect(state?.location?.name).toBe('Atlas Landing');
-    expect(state?.location?.status).toBe('known');
+    expect(state?.locationName).toBe('Atlas Landing');
+    expect(chronicle.locationId).toBe(location.id);
+  });
+
+  it('moves by name without touching canon', async () => {
+    const location = await seedEntity(worldState, {
+      kind: 'location',
+      name: 'Departure Point',
+      status: 'known',
+      subkind: 'site',
+    });
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      locationId: location.id,
+      locationName: location.name,
+      playerId: TEST_PLAYER_ID,
+      title: 'Wandering',
+    });
+
+    await commitChronicleTurn(
+      worldState,
+      { ...chronicle, locationName: 'The Sunken Stair' },
+      defaultTurn(chronicle.id, { turnSequence: 0 })
+    );
+    const state = await worldState.chronicles.getChronicleState(chronicle.id);
+
+    expect(state?.locationName).toBe('The Sunken Stair');
+    // The place the player walked to is a name; the world never learned it.
+    const canon = await worldState.world.listEntities({
+      kind: 'location',
+      minProminence: 'forgotten',
+    });
+    expect(canon.map((entity) => entity.name)).toEqual(['Departure Point']);
   });
 });
 
@@ -76,7 +103,7 @@ describe('Chronicle turn history', () => {
     });
     const character = await worldState.chronicles.upsertCharacter(defaultCharacter());
     const chronicle = await worldState.chronicles.upsertChronicle(
-      defaultChronicle(startingLocation.id, { characterId: character.id })
+      defaultChronicle(startingLocation.name, { characterId: character.id })
     );
 
     const turn = await commitChronicleTurn(
@@ -90,7 +117,7 @@ describe('Chronicle turn history', () => {
     expect(turn.turnSequence).toBe(0);
     expect(snapshot?.turns).toHaveLength(1);
     expect(snapshot?.character?.id).toBe(character.id);
-    expect(snapshot?.location?.id).toBe(startingLocation.id);
+    expect(snapshot?.locationName).toBe(startingLocation.name);
   });
 
   it('persists the entities the GM was offered and how it used them', async () => {
@@ -100,7 +127,7 @@ describe('Chronicle turn history', () => {
       status: 'known',
       subkind: 'region',
     });
-    const chronicle = await worldState.chronicles.upsertChronicle(defaultChronicle(location.id));
+    const chronicle = await worldState.chronicles.upsertChronicle(defaultChronicle(location.name));
     await commitChronicleTurn(
       worldState,
       chronicle,
@@ -149,6 +176,7 @@ describe('Chronicle retrieval', () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,
       locationId: location.id,
+      locationName: location.name,
       playerId: TEST_PLAYER_ID,
       title: 'Ordering',
     });
@@ -187,6 +215,7 @@ describe('Chronicle anchors', () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
       anchorEntityId: anchor.id,
       locationId: location.id,
+      locationName: location.name,
       playerId: TEST_PLAYER_ID,
       title: 'Anchored Chronicle',
     });

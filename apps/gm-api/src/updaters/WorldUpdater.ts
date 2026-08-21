@@ -4,10 +4,10 @@ import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
 import { createUpdatedCharacter } from './characterUpdater';
 import { createUpdatedInventory } from './inventoryUpdater';
-import { applyLocationUpdate } from './locationUpdater';
+import { resolveLocationName } from './locationUpdater';
 
 export class WorldUpdater {
-  async update(context: GraphContext): Promise<GraphContext> {
+  update(context: GraphContext): GraphContext {
     if (context.failure) {
       return context;
     }
@@ -61,17 +61,17 @@ export class WorldUpdater {
     };
   }
 
-  async #updateLocation(context: GraphContext): Promise<GraphContext> {
-    const update = await applyLocationUpdate(context);
-    if (update === null) {
+  #updateLocation(context: GraphContext): GraphContext {
+    const locationName = resolveLocationName(context);
+    if (locationName === context.chronicleState.locationName) {
       return context;
     }
     return {
       ...context,
       chronicleState: {
         ...context.chronicleState,
-        discoveredLocations: update.discoveredLocations,
-        location: update.location,
+        chronicle: { ...context.chronicleState.chronicle, locationName },
+        locationName,
       },
     };
   }

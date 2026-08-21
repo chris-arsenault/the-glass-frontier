@@ -36,7 +36,7 @@ export async function initializeForLambda(): Promise<void> {
 
   pool = await createPoolWithIamAuth();
   worldSchemaStore = createWorldSchemaStore({ pool });
-  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
+  chronicleStore = createChronicleStore({ pool });
 }
 
 /**
@@ -54,7 +54,7 @@ function initializeLocal(): void {
 
   pool = createPool({ connectionString });
   worldSchemaStore = createWorldSchemaStore({ pool });
-  chronicleStore = createChronicleStore({ pool, worldStore: worldSchemaStore });
+  chronicleStore = createChronicleStore({ pool });
 }
 
 /**

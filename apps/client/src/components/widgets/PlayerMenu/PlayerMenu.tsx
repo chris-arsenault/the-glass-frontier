@@ -1,4 +1,3 @@
-import type { LocationEntity } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -96,18 +95,16 @@ const SettingsIcon = () => (
   </svg>
 );
 
-const describeLocation = (location?: LocationEntity | null) => {
-  if (!location) {
+const describeLocation = (locationName: string | null) => {
+  if (!locationName) {
     return {
       breadcrumb: 'Select a chronicle to establish position.',
       edge: 'No location tracked',
     };
   }
-  const edge = location.name ?? location.slug;
-  const breadcrumb = [location.subkind, location.status].filter(Boolean).join(' › ') || edge;
   return {
-    breadcrumb,
-    edge,
+    breadcrumb: locationName,
+    edge: locationName,
   };
 };
 
@@ -138,7 +135,7 @@ export function PlayerMenu(): React.JSX.Element {
   const playerId = useChronicleStore((state) => state.playerId ?? '');
   const character = useSelectedCharacter();
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
-  const location = useChronicleStore((state) => state.location);
+  const locationName = useChronicleStore((state) => state.locationName);
   const tokens = useAuthStore((state) => state.tokens);
   const logout = useAuthStore((state) => state.logout);
   const isOpen = useUiStore((state) => state.isPlayerMenuOpen);
@@ -151,7 +148,7 @@ export function PlayerMenu(): React.JSX.Element {
   const roleBadge = ROLE_BADGES[highestRole];
   const playerLabel = (playerName?.trim() || 'Unnamed Player').toUpperCase();
   const chronicleTitle = chronicle?.title?.trim() || 'No chronicle selected';
-  const locationDetails = describeLocation(location);
+  const locationDetails = describeLocation(locationName);
   const containerRef = useRef<HTMLDivElement>(null);
   const panelId = 'player-menu-panel';
   const navigate = useNavigate();

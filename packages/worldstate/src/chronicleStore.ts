@@ -1,24 +1,12 @@
-import type {
-  Character,
-  Chronicle,
-  ChronicleSummaryEntry,
-  LocationEntity,
-  SessionLocationChain,
-  Turn,
-} from '@glass-frontier/dto';
+import type { Character, Chronicle, ChronicleSummaryEntry, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
 import { ChronicleTurnPersistence } from './chronicleTurnPersistence';
 import { upsertNodeIdentity } from './nodeIdentity';
 import { createPool, withTransaction } from './pg';
-import type {
-  ChronicleSnapshot,
-  WorldSchemaStore,
-  ChronicleStore,
-} from './types';
+import type { ChronicleSnapshot, ChronicleStore } from './types';
 import { isNonEmptyString } from './utils';
-import { createWorldSchemaStore } from './worldSchemaStore';
 
 const ensureInventory = (character: Character): Character => {
   if (character.inventory !== undefined) {
@@ -50,8 +38,6 @@ const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
 type SessionStateRow = {
   character_state: Character | null;
   last_turn_sequence: number;
-  location_state: LocationEntity | null;
-  discovered_locations: SessionLocationChain | null;
 };
 
 type CharacterRow = { inventory: Character['inventory'] | null; props: Character };
@@ -66,28 +52,33 @@ const resolveSessionTurnSequence = (
   turns: Turn[]
 ): number => session?.last_turn_sequence ?? turns.at(-1)?.turnSequence ?? -1;
 
+/**
+ * Session storage. Holds one player's chronicle, character, and turns.
+ *
+ * It does not read canon. A chronicle names the canon entity it was anchored to
+ * and the place it started from, but where it is now is a name that play sets,
+ * so nothing here traverses the graph.
+ */
 class PostgresChronicleStore implements ChronicleStore {
   readonly #pool: Pool;
-  readonly #worldStore: WorldSchemaStore | null;
   readonly #turns: ChronicleTurnPersistence;
 
-  constructor(options: { pool: Pool; worldStore?: WorldSchemaStore | null }) {
+  constructor(options: { pool: Pool }) {
     this.#pool = options.pool;
-    this.#worldStore = options.worldStore ?? createWorldSchemaStore({ pool: this.#pool });
     this.#turns = new ChronicleTurnPersistence(this.#pool);
   }
 
   async ensureChronicle(params: {
     chronicleId?: string;
     playerId: string;
-    locationId: string;
+    locationName: string;
+    locationId?: string | null;
     characterId?: string;
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
     beatsEnabled?: boolean;
     anchorEntityId?: string | null;
-    sessionLocation?: LocationEntity;
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
@@ -98,26 +89,14 @@ class PostgresChronicleStore implements ChronicleStore {
     const character = isNonEmptyString(record.characterId)
       ? await this.getCharacter(record.characterId)
       : null;
-    const location =
-      params.sessionLocation ??
-      (this.#worldStore === null ? null : await this.#summarizeLocation(record.locationId));
-    if (location === null) {
-      throw new Error(
-        `Location ${record.locationId} not found; provide chronicle-scoped session location state.`
-      );
-    }
     await withTransaction(this.#pool, async (client) => {
       await this.#persistChronicle(client, record);
       await client.query(
         `INSERT INTO chronicle_session_state (
-           chronicle_id, character_state, location_state, last_turn_sequence, updated_at
-         ) VALUES ($1::uuid, $2::jsonb, $3::jsonb, -1, now())
+           chronicle_id, character_state, last_turn_sequence, updated_at
+         ) VALUES ($1::uuid, $2::jsonb, -1, now())
          ON CONFLICT (chronicle_id) DO NOTHING`,
-        [
-          chronicleId,
-          character === null ? null : serializeJson(character),
-          location === null ? null : serializeJson(location),
-        ]
+        [chronicleId, character === null ? null : serializeJson(character)]
       );
     });
     return record;
@@ -128,18 +107,16 @@ class PostgresChronicleStore implements ChronicleStore {
     if (chronicle === null) {
       return null;
     }
-    const [session, canonicalCharacter, canonicalLocation, turns] = await Promise.all([
+    const [session, canonicalCharacter, turns] = await Promise.all([
       this.#getSessionState(chronicleId),
       this.#getCanonicalCharacter(chronicle),
-      this.#getCanonicalLocation(chronicle),
       this.listChronicleTurns(chronicleId),
     ]);
     return {
       character: session?.character_state ?? canonicalCharacter,
       chronicle,
       chronicleId: chronicle.id,
-      discoveredLocations: session?.discovered_locations ?? [],
-      location: session?.location_state ?? canonicalLocation,
+      locationName: chronicle.locationName,
       turns,
       turnSequence: resolveSessionTurnSequence(session, turns),
     };
@@ -279,8 +256,6 @@ class PostgresChronicleStore implements ChronicleStore {
   async commitTurn(input: {
     character: Character | null;
     chronicle: Chronicle;
-    location: LocationEntity | null;
-    discoveredLocations?: SessionLocationChain;
     turn: Turn;
   }): Promise<Turn> {
     const chronicle = normalizeChronicle(input.chronicle);
@@ -307,7 +282,8 @@ class PostgresChronicleStore implements ChronicleStore {
   #buildChronicleRecord(
     params: {
       playerId: string;
-      locationId: string;
+      locationName: string;
+      locationId?: string | null;
       characterId?: string;
       title?: string;
       status?: Chronicle['status'];
@@ -324,7 +300,8 @@ class PostgresChronicleStore implements ChronicleStore {
       characterId: params.characterId,
       entityFocus: { entityScores: {}, tagScores: {} },
       id: chronicleId,
-      locationId: params.locationId,
+      locationId: params.locationId ?? undefined,
+      locationName: params.locationName,
       playerId: params.playerId,
       seedText: params.seedText ?? undefined,
       status: params.status ?? 'open',
@@ -335,7 +312,7 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async #getSessionState(chronicleId: string): Promise<SessionStateRow | undefined> {
     const result = await this.#pool.query<SessionStateRow>(
-      `SELECT character_state, last_turn_sequence, location_state, discovered_locations
+      `SELECT character_state, last_turn_sequence
        FROM chronicle_session_state WHERE chronicle_id = $1::uuid`,
       [chronicleId]
     );
@@ -345,12 +322,6 @@ class PostgresChronicleStore implements ChronicleStore {
   async #getCanonicalCharacter(chronicle: Chronicle): Promise<Character | null> {
     return isNonEmptyString(chronicle.characterId)
       ? this.getCharacter(chronicle.characterId)
-      : null;
-  }
-
-  async #getCanonicalLocation(chronicle: Chronicle): Promise<LocationEntity | null> {
-    return this.#worldStore !== null && isNonEmptyString(chronicle.locationId)
-      ? this.#summarizeLocation(chronicle.locationId)
       : null;
   }
 
@@ -396,15 +367,16 @@ class PostgresChronicleStore implements ChronicleStore {
     await upsertNodeIdentity(client, chronicle.id, 'chronicle');
     await client.query(
       `INSERT INTO chronicle (
-         id, title, primary_char_id, status, player_id, location_id,
+         id, title, primary_char_id, status, player_id, location_name, location_id,
          seed_text, beats_enabled, anchor_entity_id, entity_focus, props,
          created_at, updated_at
        ) VALUES (
-         $1::uuid, $2, $3::uuid, $4, $5, $6::uuid,
-         $7, $8, $9::uuid, $10::jsonb, $11::jsonb, now(), now()
+         $1::uuid, $2, $3::uuid, $4, $5, $6, $7::uuid,
+         $8, $9, $10::uuid, $11::jsonb, $12::jsonb, now(), now()
        ) ON CONFLICT (id) DO UPDATE SET
          title = EXCLUDED.title, primary_char_id = EXCLUDED.primary_char_id,
          status = EXCLUDED.status, player_id = EXCLUDED.player_id,
+         location_name = EXCLUDED.location_name,
          location_id = EXCLUDED.location_id, seed_text = EXCLUDED.seed_text,
          beats_enabled = EXCLUDED.beats_enabled,
          anchor_entity_id = EXCLUDED.anchor_entity_id,
@@ -416,7 +388,8 @@ class PostgresChronicleStore implements ChronicleStore {
         chronicle.characterId ?? null,
         chronicle.status ?? 'open',
         chronicle.playerId,
-        chronicle.locationId,
+        chronicle.locationName,
+        chronicle.locationId ?? null,
         chronicle.seedText ?? null,
         chronicle.beatsEnabled ?? true,
         chronicle.anchorEntityId ?? null,
@@ -424,33 +397,6 @@ class PostgresChronicleStore implements ChronicleStore {
         serializeJson(chronicle),
       ]
     );
-  }
-
-  async #summarizeLocation(locationId: string): Promise<LocationEntity | null> {
-    if (this.#worldStore === null) {
-      return null;
-    }
-    try {
-      const state = await this.#worldStore.getEntity({ id: locationId });
-      if (state === null || state.kind !== 'location') {
-        return null;
-      }
-      return {
-        createdAt: state.createdAt,
-        description: state.description ?? undefined,
-        id: state.id,
-        kind: 'location',
-        name: state.name,
-        prominence: state.prominence ?? 'recognized',
-        slug: state.slug,
-        status: state.status ?? undefined,
-        subkind: state.subkind ?? undefined,
-        tags: [],
-        updatedAt: state.updatedAt,
-      };
-    } catch {
-      return null;
-    }
   }
 
   async #assertAnchorExists(client: PoolClient, anchorEntityId: string): Promise<void> {
@@ -465,14 +411,10 @@ class PostgresChronicleStore implements ChronicleStore {
 export function createChronicleStore(options?: {
   connectionString?: string;
   pool?: Pool;
-  worldStore?: WorldSchemaStore | null;
 }): ChronicleStore {
   const pool = createPool({
     connectionString: options?.connectionString,
     pool: options?.pool,
   });
-  return new PostgresChronicleStore({
-    pool,
-    worldStore: options?.worldStore ?? null,
-  });
+  return new PostgresChronicleStore({ pool });
 }
