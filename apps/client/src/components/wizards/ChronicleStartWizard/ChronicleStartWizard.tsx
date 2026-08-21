@@ -742,8 +742,9 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
     void worldAtlasClient.getNeighbors(locationId).then(
       (result) => {
         if (!cancelled) {
+          // Every neighbor is anchor-eligible: some locations' only local
+          // support is another location (a landing, an interior).
           const anchors = result.neighbors
-            .filter((neighbor) => neighbor.kind !== 'location')
             .slice(0, 9)
             .map(mapAnchor);
           setLoadState({ anchors, error: null, locationId });

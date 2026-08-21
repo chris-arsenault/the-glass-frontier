@@ -95,6 +95,7 @@ export type WorldSchemaStore = {
   // === Entity reads ===
   getEntity: (input: { id: string }) => Promise<HardState | null>;
   getEntityBySlug: (input: { slug: string }) => Promise<HardState | null>;
+  findLocationByName: (input: { name: string }) => Promise<HardState | null>;
   listEntities: (input?: {
     kind?: HardStateKind;
     limit?: number;

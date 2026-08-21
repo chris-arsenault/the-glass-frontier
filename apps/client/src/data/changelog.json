@@ -271,5 +271,12 @@
     "summary": "Repaired the play loop from chronicle start through wrap-up",
     "details": "Story beats now actually advance and resolve: the GM sees each beat's real identifier, resolutions are recorded permanently, and the beat list you see is the one the server saved. A new chronicle now starts at the location you picked instead of a name invented from the title, and the tone you choose in the wizard follows the whole chronicle into every narration. Wrapping up now guarantees an ending within the requested turns. While the GM works you see which step of the turn it is on, the pipeline survives sign-in refreshes, and a failed send no longer breaks live updates for the rest of the session. The seed that opened your chronicle stays at the top of the transcript, the anchor step is optional, choosing a generated seed now wins over leftover custom text as the summary shows, and a finished chronicle says plainly that its story is complete.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-21-local-lore-surfacing",
+    "releasedAt": "2026-08-21",
+    "summary": "Let local lore reach the table",
+    "details": "The world now knows about creatures — a new entity kind with its own subkinds, statuses, and relationships, including a preys_on verb — so imported settings that lean on wildlife arrive intact. Retrieval no longer hides local color: the GM's per-turn world knowledge includes marginal entities (interiors, residents, minor artifacts) instead of only recognized names, and it walks outward from wherever the scene currently is whenever that place matches canon, so stepping inside a named interior keeps its contents in reach. The chronicle wizard also accepts neighboring locations as anchors, so places whose only local support is another place are no longer anchorless.",
+    "type": "improvement"
   }
 ]

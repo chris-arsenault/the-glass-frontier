@@ -19,16 +19,25 @@ const topEntities = (focus: EntityFocusState | null | undefined, count: number):
 /**
  * Chooses what the GM should know about the world this turn.
  *
- * The anchor and the entities recent turns leaned on are the focus set; the
- * store walks outward from them along strength-weighted relationships and
+ * The anchor, the entities recent turns leaned on, and — when the scene's
+ * current name matches a canon place — the location itself form the focus set;
+ * the store walks outward from them along strength-weighted relationships and
  * returns the ranked result with lore attached, in one query. Selection policy
  * lives here; traversal and scoring live in the store.
+ *
+ * The prominence floor sits at `marginal`: local color (interiors, residents,
+ * creatures) is exactly what a scene needs, and scoring already lets renown
+ * break ties. Only `forgotten` entities stay out of reach.
  */
 export const buildEntityContext = async (context: GraphContext): Promise<EntityContextSlice> => {
   const { anchorEntityId, entityFocus } = context.chronicleState.chronicle;
+  const currentLocation = await context.worldSchemaStore.findLocationByName({
+    name: context.chronicleState.locationName,
+  });
   const focusEntities = [
     ...new Set([
       ...(anchorEntityId === undefined ? [] : [anchorEntityId]),
+      ...(currentLocation === null ? [] : [currentLocation.id]),
       ...topEntities(entityFocus, FOCUS_ENTITY_COUNT),
     ]),
   ];
@@ -45,7 +54,7 @@ export const buildEntityContext = async (context: GraphContext): Promise<EntityC
     limit: OFFERED_COUNT,
     loreLimit: 2,
     maxHops: 2,
-    minProminence: 'recognized',
+    minProminence: 'marginal',
   });
 
   return {

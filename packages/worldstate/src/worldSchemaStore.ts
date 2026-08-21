@@ -60,6 +60,10 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return this.#entities.getEntityBySlug(input);
   }
 
+  async findLocationByName(input: { name: string }): Promise<HardState | null> {
+    return this.#entities.findLocationByName(input);
+  }
+
   async listEntities(input?: EntityListInput): Promise<HardState[]> {
     return this.#entities.listEntities(input);
   }

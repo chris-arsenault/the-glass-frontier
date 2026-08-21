@@ -184,6 +184,26 @@ export class EntityReader {
     return toEntity(row, await this.#listLinks(row.id));
   }
 
+  /**
+   * Resolves a location by its display name, case-insensitively. Play tracks
+   * where a chronicle is as a name; when that name matches canon, retrieval
+   * can seed from the place itself. The most prominent match wins.
+   */
+  async findLocationByName(input: { name: string }): Promise<HardState | null> {
+    const result = await this.#pool.query<EntityRow>(
+      `${ENTITY_SELECT}
+       WHERE e.kind = 'location' AND lower(e.name) = lower($1)
+       ORDER BY wp.rank DESC, e.created_at ASC
+       LIMIT 1`,
+      [input.name.trim()]
+    );
+    const row = result.rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    return toEntity(row, await this.#listLinks(row.id));
+  }
+
   async listEntities(input?: EntityListInput): Promise<HardState[]> {
     const { clauses, params } = this.#buildEntityFilters(input);
     const filter = clauses.length === 0 ? '' : `WHERE ${clauses.join(' AND ')}`;

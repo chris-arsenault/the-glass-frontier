@@ -129,6 +129,71 @@ describe('Context slice', () => {
     expect(cartelTagged?.lore[0]?.title).toBe('The Ledgers');
   });
 
+  it('surfaces marginal local color when the floor allows it', async () => {
+    const ids = await seedWorld();
+    const local = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            kind: 'location',
+            name: 'The Under-Docks',
+            prominence: 'marginal',
+            ref: 'interior',
+            status: 'hidden',
+            subkind: 'site',
+          },
+          {
+            kind: 'creature',
+            name: 'Sump Eel',
+            prominence: 'marginal',
+            ref: 'eel',
+            status: 'alive',
+            subkind: 'predator',
+          },
+        ],
+        relationships: [
+          { dst: { id: ids.row }, relationship: 'contained_within', src: { ref: 'interior' } },
+          { dst: { ref: 'interior' }, relationship: 'resides_in', src: { ref: 'eel' } },
+        ],
+      })
+    );
+
+    const gated = await worldState.world.getContextSlice({
+      anchorId: ids.row,
+      focusIds: [ids.row],
+      focusTags: [],
+      limit: 10,
+      loreLimit: 0,
+      maxHops: 2,
+      minProminence: 'recognized',
+    });
+    const open = await worldState.world.getContextSlice({
+      anchorId: ids.row,
+      focusIds: [ids.row],
+      focusTags: [],
+      limit: 10,
+      loreLimit: 0,
+      maxHops: 2,
+      minProminence: 'marginal',
+    });
+
+    const gatedIds = gated.map((entry) => entry.id);
+    expect(gatedIds).not.toContain(local.entityIdsByRef.interior);
+    const openIds = open.map((entry) => entry.id);
+    expect(openIds).toContain(local.entityIdsByRef.interior);
+    expect(openIds).toContain(local.entityIdsByRef.eel);
+  });
+
+  it('resolves a location by display name, case-insensitively', async () => {
+    const ids = await seedWorld();
+
+    const found = await worldState.world.findLocationByName({ name: 'cinder row' });
+    expect(found?.id).toBe(ids.row);
+
+    const missing = await worldState.world.findLocationByName({ name: 'Nowhere At All' });
+    expect(missing).toBeNull();
+  });
+
   it('returns nothing when there is no focus to walk from', async () => {
     await seedWorld();
     const slice = await worldState.world.getContextSlice({
