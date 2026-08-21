@@ -276,7 +276,7 @@
     "id": "2026-08-21-local-lore-surfacing",
     "releasedAt": "2026-08-21",
     "summary": "Let local lore reach the table",
-    "details": "The world now knows about creatures — a new entity kind with its own subkinds, statuses, and relationships, including a preys_on verb — so imported settings that lean on wildlife arrive intact. Retrieval no longer hides local color: the GM's per-turn world knowledge includes marginal entities (interiors, residents, minor artifacts) instead of only recognized names, and it walks outward from wherever the scene currently is whenever that place matches canon, so stepping inside a named interior keeps its contents in reach. The chronicle wizard also accepts neighboring locations as anchors, so places whose only local support is another place are no longer anchorless.",
+    "details": "The world now knows about creatures — animals and anomalies with their own statuses and relationships, including attunement and dependency verbs drawn from the incoming setting's own facts — so imported lore that leans on wildlife arrives intact. Retrieval no longer hides local color: the GM's per-turn world knowledge includes marginal entities (interiors, residents, minor artifacts), keeps their descriptions alongside their lore excerpts, and walks outward from wherever the scene currently is whenever that place matches canon. Stepping inside a named interior therefore keeps its contents in reach. The chronicle wizard also accepts neighboring locations as anchors, so places whose only local support is another place are no longer anchorless.",
     "type": "improvement"
   }
 ]

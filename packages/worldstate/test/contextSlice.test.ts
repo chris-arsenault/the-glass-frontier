@@ -148,7 +148,7 @@ describe('Context slice', () => {
             prominence: 'marginal',
             ref: 'eel',
             status: 'alive',
-            subkind: 'predator',
+            subkind: 'animal',
           },
         ],
         relationships: [

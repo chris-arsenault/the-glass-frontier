@@ -21,7 +21,7 @@ export type ChronicleState = {
   turnSequence: number;
   chronicle: Chronicle;
   character: Character;
-  /** Where the scene is. A name; the GM never resolves it against the graph. */
+  /** Where the scene is. Canon retrieval resolves matching names against the graph. */
   locationName: string;
   turns: Turn[];
 }

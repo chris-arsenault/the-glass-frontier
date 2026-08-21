@@ -131,6 +131,7 @@ function entitiesFragment(context: GraphContext): Array<{
   slug: string;
   name: string;
   kind: string;
+  description: string | undefined;
   status: string | undefined;
   tags: string[];
   loreFragments: Array<{
@@ -141,6 +142,7 @@ function entitiesFragment(context: GraphContext): Array<{
   }>;
 }> {
   return (context.entityContext?.offered ?? []).map((entry) => ({
+    description: entry.description,
     kind: entry.kind,
     loreFragments: entry.loreFragments,
     name: entry.name,

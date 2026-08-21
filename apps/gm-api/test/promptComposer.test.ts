@@ -77,6 +77,7 @@ describe('PromptComposer', () => {
         focusTags: [],
         offered: [
           {
+            description: 'A smuggling ring that controls the ash docks.',
             id: 'entity-1',
             kind: 'faction',
             loreFragments: [],
@@ -103,6 +104,7 @@ describe('PromptComposer', () => {
     const developer = textOf(prompt.input.at(-1)!);
     expect(developer).toContain('### ENTITIES');
     expect(developer).toContain('ash-cartel');
+    expect(developer).toContain('A smuggling ring that controls the ash docks.');
   });
 
   it('throws for a template with no registered message order', async () => {
