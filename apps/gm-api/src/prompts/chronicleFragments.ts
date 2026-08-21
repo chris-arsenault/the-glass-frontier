@@ -132,6 +132,7 @@ function entitiesFragment(context: GraphContext): Array<{
   name: string;
   kind: string;
   description: string | undefined;
+  facts: Record<string, string | number>;
   status: string | undefined;
   tags: string[];
   loreFragments: Array<{
@@ -143,6 +144,7 @@ function entitiesFragment(context: GraphContext): Array<{
 }> {
   return (context.entityContext?.offered ?? []).map((entry) => ({
     description: entry.description,
+    facts: entry.facts,
     kind: entry.kind,
     loreFragments: entry.loreFragments,
     name: entry.name,

@@ -62,6 +62,7 @@ export const buildEntityContext = async (context: GraphContext): Promise<EntityC
     focusTags,
     offered: slice.map((entry) => ({
       description: entry.description,
+      facts: entry.facts,
       id: entry.id,
       kind: entry.kind,
       loreFragments: entry.lore,

@@ -1,4 +1,4 @@
-import { HardStateKind, HardStateProminence } from '@glass-frontier/dto';
+import { HardStateKind, HardStateProminence, isLocationKind } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -52,14 +52,14 @@ export const appRouter = t.router({
       let location = null;
       if (input.locationSlug !== undefined && input.locationSlug.length > 0) {
         location = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.locationSlug });
-        if (location === null || location.kind !== 'location') {
+        if (location === null || !isLocationKind(location.kind)) {
           throw new Error('Location not found or invalid kind');
         }
       } else {
         const linked = await ctx.worldSchemaStore.listEntitiesByIds(
           anchor.links.map((link) => link.targetId)
         );
-        location = linked.find((entity) => entity.kind === 'location') ?? null;
+        location = linked.find((entity) => isLocationKind(entity.kind)) ?? null;
         if (location === null) {
           throw new Error('No location neighbors found for anchor entity');
         }

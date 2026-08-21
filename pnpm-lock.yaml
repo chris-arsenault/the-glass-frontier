@@ -348,6 +348,9 @@ importers:
       vite:
         specifier: ~7.2.2
         version: 7.2.7(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12)
+      vitest:
+        specifier: ^4.0.8
+        version: 4.1.11(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@7.2.7(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12))
 
   apps/db-provisioner:
     dependencies:

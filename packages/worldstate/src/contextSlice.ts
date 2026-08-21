@@ -19,6 +19,7 @@ type SliceRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
+  props: { facts?: Record<string, string | number> } | null;
   hops: number;
   reach: number;
   tag_overlap: number;
@@ -78,7 +79,7 @@ scored AS (
   FROM best b
 )
 SELECT e.id, e.slug, e.kind, e.subkind, e.name, e.description, e.prominence,
-  e.status, s.hops, s.reach, s.tag_overlap,
+  e.status, e.props, s.hops, s.reach, s.tag_overlap,
   (s.reach
     + CASE WHEN e.id = $1::uuid THEN 2.0 ELSE 0 END
     + CASE WHEN e.id = ANY($2::uuid[]) THEN 1.0 ELSE 0 END
@@ -151,6 +152,7 @@ export class ContextSliceReader {
 
     return result.rows.map((row) => ({
       description: row.description ?? undefined,
+      facts: row.props?.facts ?? {},
       hops: row.hops,
       id: row.id,
       kind: row.kind,

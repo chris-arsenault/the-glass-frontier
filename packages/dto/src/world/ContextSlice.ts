@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import { HardStateKind, HardStateProminence, HardStateStatus, HardStateSubkind } from './HardState';
+import {
+  HardStateFacts,
+  HardStateKind,
+  HardStateProminence,
+  HardStateStatus,
+  HardStateSubkind,
+} from './HardState';
 
 export const ContextSliceLore = z.object({
   slug: z.string().min(1),
@@ -19,6 +25,7 @@ export type ContextSliceLore = z.infer<typeof ContextSliceLore>;
  */
 export const ContextSliceEntity = z.object({
   description: z.string().optional(),
+  facts: HardStateFacts.default({}),
   hops: z.number().int().nonnegative(),
   id: z.string().min(1),
   kind: HardStateKind,

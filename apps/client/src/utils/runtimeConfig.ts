@@ -7,17 +7,7 @@ const runtimeConfig: Record<string, string> =
     ? (window as RuntimeConfigWindow).__GLASS_FRONTIER_CONFIG__!
     : {};
 
-const resolveEnvSource = (meta: unknown): Record<string, unknown> => {
-  if (typeof meta !== 'object' || meta === null || !('env' in meta)) {
-    return {};
-  }
-  const env = (meta as { env?: unknown }).env;
-  return typeof env === 'object' && env !== null
-    ? env as Record<string, unknown>
-    : {};
-};
-
-const envSource = resolveEnvSource(import.meta);
+const envSource: Record<string, unknown> = import.meta.env;
 
 export const getConfigValue = (key: string): string | undefined => runtimeConfig[key];
 

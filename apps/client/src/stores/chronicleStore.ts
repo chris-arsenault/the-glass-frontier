@@ -808,8 +808,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       throw nextError;
     }
     const identity = resolvePlayerIdentity();
-    const currentTurnSequence = Math.max(get().turnSequence, 0);
-    const targetEndTurn = shouldWrap ? currentTurnSequence + 3 : null;
+    const targetEndTurn = shouldWrap ? get().turnSequence + 3 : null;
 
     try {
       const result = await gmClient.setChronicleTargetEnd.mutate({

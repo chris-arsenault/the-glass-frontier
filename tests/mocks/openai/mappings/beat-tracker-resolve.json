@@ -8,16 +8,15 @@
         "matchesJsonPath": "$[?(@.text.format.name == 'beat_tracker_schema')]"
       },
       {
-        "matchesJsonPath": "$[?(@.input[0].content[0].text contains '#beat:new')]"
+        "matchesJsonPath": "$[?(@.input[0].content[0].text contains '#beat:resolve')]"
       }
     ]
   },
   "response": {
     "status": 200,
-    "fixedDelayMilliseconds": 1500,
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "beat-tracker-new.json"
+    "bodyFileName": "beat-tracker-resolve.json"
   }
 }

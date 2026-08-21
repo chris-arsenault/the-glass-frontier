@@ -6,6 +6,7 @@ import type {
   HardStateStatus,
   HardStateSubkind,
 } from '@glass-frontier/dto';
+import { LOCATION_KINDS } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
 import type { WorldNeighbor } from './types';
@@ -32,6 +33,7 @@ type EntityRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
+  props: { facts?: Record<string, string | number> } | null;
   created_at: Date | null;
   updated_at: Date | null;
 };
@@ -40,6 +42,7 @@ type LinkRow = {
   dst_id: string;
   type: HardStateLink['relationship'];
   strength: number | null;
+  props: { since?: number; until?: number } | null;
 };
 type NeighborRow = EntityRow & {
   neighbor_id: string;
@@ -60,7 +63,7 @@ const PROMINENCE_RANK = new Map<HardStateProminence, number>([
 ]);
 
 const ENTITY_SELECT = `SELECT e.id, e.slug, e.kind, e.subkind, e.name,
-  e.description, e.prominence, e.status, e.created_at, e.updated_at
+  e.description, e.prominence, e.status, e.props, e.created_at, e.updated_at
   FROM entity e
   JOIN world_prominence wp ON wp.id = e.prominence`;
 
@@ -121,6 +124,7 @@ LIMIT $6`;
 const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   createdAt: row.created_at?.getTime() ?? now(),
   description: row.description ?? undefined,
+  facts: row.props?.facts ?? {},
   id: row.id,
   kind: row.kind,
   links,
@@ -136,11 +140,13 @@ const toLink = (row: LinkRow, entityId: string): HardStateLink =>
   row.src_id === entityId
     ? {
       direction: 'out', relationship: row.type,
-      strength: row.strength ?? undefined, targetId: row.dst_id,
+      since: row.props?.since, strength: row.strength ?? undefined,
+      targetId: row.dst_id, until: row.props?.until,
     }
     : {
       direction: 'in', relationship: row.type,
-      strength: row.strength ?? undefined, targetId: row.src_id,
+      since: row.props?.since, strength: row.strength ?? undefined,
+      targetId: row.src_id, until: row.props?.until,
     };
 
 const getProminenceRank = (value: HardStateProminence): number => {
@@ -185,17 +191,18 @@ export class EntityReader {
   }
 
   /**
-   * Resolves a location by its display name, case-insensitively. Play tracks
+   * Resolves a place by its display name, case-insensitively, across both
+   * location kinds (natural geography and built installations). Play tracks
    * where a chronicle is as a name; when that name matches canon, retrieval
    * can seed from the place itself. The most prominent match wins.
    */
   async findLocationByName(input: { name: string }): Promise<HardState | null> {
     const result = await this.#pool.query<EntityRow>(
       `${ENTITY_SELECT}
-       WHERE e.kind = 'location' AND lower(e.name) = lower($1)
+       WHERE e.kind = ANY($2::text[]) AND lower(e.name) = lower($1)
        ORDER BY wp.rank DESC, e.created_at ASC
        LIMIT 1`,
-      [input.name.trim()]
+      [input.name.trim(), [...LOCATION_KINDS]]
     );
     const row = result.rows[0];
     if (row === undefined) {
@@ -258,7 +265,7 @@ export class EntityReader {
 
   async #listLinks(entityId: string): Promise<HardStateLink[]> {
     const result = await this.#pool.query<LinkRow>(
-      `SELECT e.src_id, e.dst_id, e.type, e.strength FROM edge e
+      `SELECT e.src_id, e.dst_id, e.type, e.strength, e.props FROM edge e
        WHERE e.type IN (SELECT id FROM world_relationship_kind)
        AND (e.src_id = $1::uuid OR e.dst_id = $1::uuid)`, [entityId]
     );
@@ -272,7 +279,7 @@ export class EntityReader {
     }
     const idSet = new Set(entityIds);
     const result = await this.#pool.query<LinkRow>(
-      `SELECT e.src_id, e.dst_id, e.type, e.strength FROM edge e
+      `SELECT e.src_id, e.dst_id, e.type, e.strength, e.props FROM edge e
        WHERE e.type IN (SELECT id FROM world_relationship_kind)
        AND (e.src_id = ANY($1::uuid[]) OR e.dst_id = ANY($1::uuid[]))`, [entityIds]
     );

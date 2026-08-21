@@ -39,6 +39,8 @@ export type EntitySnippet = {
   subkind?: string;
   description?: string;
   status?: string;
+  /** The entry's fact card — the small answers a reader expects up front. */
+  facts: Record<string, string | number>;
   tags: string[];
   loreFragments: Array<{
     slug: string;

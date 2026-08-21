@@ -88,8 +88,14 @@ export function ChronicleStartWizard() {
 
   const fetchLocations = useCallback(async () => {
     try {
-      const list = await worldAtlasClient.listEntities('location');
-      const mapped = list.map(mapLocation);
+      // A scene can start at natural geography or a built installation.
+      const [geographic, installations] = await Promise.all([
+        worldAtlasClient.listEntities('geographic_location'),
+        worldAtlasClient.listEntities('installation'),
+      ]);
+      const mapped = [...geographic, ...installations]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(mapLocation);
       setLocations(mapped);
       setLocationError(null);
       if (useChronicleStartStore.getState().selectedLocation === null && mapped.length > 0) {

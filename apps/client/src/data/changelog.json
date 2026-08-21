@@ -269,7 +269,7 @@
     "id": "2026-08-21-player-flow-fixes",
     "releasedAt": "2026-08-21",
     "summary": "Repaired the play loop from chronicle start through wrap-up",
-    "details": "Story beats now actually advance and resolve: the GM sees each beat's real identifier, resolutions are recorded permanently, and the beat list you see is the one the server saved. A new chronicle now starts at the location you picked instead of a name invented from the title, and the tone you choose in the wizard follows the whole chronicle into every narration. Wrapping up now guarantees an ending within the requested turns. While the GM works you see which step of the turn it is on, the pipeline survives sign-in refreshes, and a failed send no longer breaks live updates for the rest of the session. The seed that opened your chronicle stays at the top of the transcript, the anchor step is optional, choosing a generated seed now wins over leftover custom text as the summary shows, and a finished chronicle says plainly that its story is complete.",
+    "details": "Story beats now actually advance and resolve: the GM sees each beat's real identifier, resolutions are recorded permanently, and the beat list you see is the one the server saved. A new chronicle now starts at the location you picked instead of a name invented from the title, and the tone you choose in the wizard follows the whole chronicle into every narration. Wrapping up now guarantees an ending within the next three turns, including when requested before the first turn. While the GM works you see which step of the turn it is on instead of a generic spinner, the pipeline survives sign-in refreshes, and a failed send no longer breaks live updates for the rest of the session. The seed that opened your chronicle stays at the top of the transcript, the anchor step is optional, choosing a generated seed now wins over leftover custom text as the summary shows, and a finished chronicle says plainly that its story is complete.",
     "type": "bugfix"
   },
   {
@@ -277,6 +277,13 @@
     "releasedAt": "2026-08-21",
     "summary": "Let local lore reach the table",
     "details": "The world now knows about creatures — animals and anomalies with their own statuses and relationships, including attunement and dependency verbs drawn from the incoming setting's own facts — so imported lore that leans on wildlife arrives intact. Retrieval no longer hides local color: the GM's per-turn world knowledge includes marginal entities (interiors, residents, minor artifacts), keeps their descriptions alongside their lore excerpts, and walks outward from wherever the scene currently is whenever that place matches canon. Stepping inside a named interior therefore keeps its contents in reach. The chronicle wizard also accepts neighboring locations as anchors, so places whose only local support is another place are no longer anchorless.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-21-schema-mirror",
+    "releasedAt": "2026-08-21",
+    "summary": "World schema now mirrors the lore source",
+    "details": "The game's world vocabulary is now derived directly from the canon source's schema instead of a hand-invented one: its eighteen atlas kinds (abilities, concepts, cultures, eras, incidents, installations, phenomena, species, and more) with their full subkind lists, its complete relation taxonomy including resonance attunement and the DM-only edges, and its declared tag vocabulary, which lore is now validated against. Entities carry their fact cards (born, population, function) into the GM's context, relations keep the in-world years they held, and statuses are free text since the source declares none. Chronicle locations span both natural geography and built installations.",
     "type": "improvement"
   }
 ]

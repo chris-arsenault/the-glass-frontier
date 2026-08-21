@@ -1,8 +1,9 @@
 import {
   BANNED_RELATIONSHIP_TYPE_IDS,
-  allowedRelationships,
+  WORLD_TAG_IDS,
   getRelationshipType,
   getWorldKind,
+  isRelationshipAllowed,
   type CanonProposal,
   type EntityRef,
   type ProposalViolation,
@@ -62,15 +63,7 @@ export const validateProposal = (
     ...proposal.relationships.flatMap((relationship, index) =>
       checkRelationship(relationship, index, kindByKey)
     ),
-    ...proposal.lore.flatMap((fragment, index) =>
-      kindByKey.has(refKey(fragment.entity))
-        ? []
-        : [{
-          at: `lore[${index}]`,
-          code: 'unresolved_reference' as const,
-          message: `Lore target ${describeRef(fragment.entity)} is not an existing entity or declared in this batch`,
-        }]
-    ),
+    ...proposal.lore.flatMap((fragment, index) => checkLoreFragment(fragment, index, kindByKey)),
   ];
 
   return { kindByKey, violations };
@@ -105,20 +98,41 @@ const checkEntityVocabulary = (
   kind: NonNullable<ReturnType<typeof getWorldKind>>,
   at: string
 ): ProposalViolation[] => {
-  const violations: ProposalViolation[] = [];
+  // Status is deliberately unchecked: the source schema declares no status
+  // vocabulary, so any string the source records is stored verbatim.
   if (entity.subkind !== undefined && !kind.subkinds.includes(entity.subkind)) {
-    violations.push({
+    return [{
       at,
       code: 'unknown_subkind',
       message: `Subkind ${entity.subkind} is not valid for kind ${entity.kind}`,
-    });
+    }];
   }
-  if (entity.status !== undefined && !kind.statuses.includes(entity.status)) {
+  return [];
+};
+
+/** Checks the lore target resolves and its tags are in the tag vocabulary. */
+const checkLoreFragment = (
+  fragment: CanonProposal['lore'][number],
+  index: number,
+  kindByKey: Map<string, string>
+): ProposalViolation[] => {
+  const at = `lore[${index}]`;
+  const violations: ProposalViolation[] = [];
+  if (!kindByKey.has(refKey(fragment.entity))) {
     violations.push({
       at,
-      code: 'unknown_status',
-      message: `Status ${entity.status} is not valid for kind ${entity.kind}`,
+      code: 'unresolved_reference',
+      message: `Lore target ${describeRef(fragment.entity)} is not an existing entity or declared in this batch`,
     });
+  }
+  for (const tag of fragment.tags ?? []) {
+    if (!WORLD_TAG_IDS.has(tag)) {
+      violations.push({
+        at,
+        code: 'unknown_tag',
+        message: `Tag ${tag} is not in the world tag vocabulary`,
+      });
+    }
   }
   return violations;
 };
@@ -204,18 +218,18 @@ const checkRelationship = (
     ];
   }
 
-  const legal = allowedRelationships(srcKind, dstKind);
-  if (legal.includes(relationship.relationship)) {
+  if (isRelationshipAllowed(relationship.relationship, srcKind, dstKind)) {
     return [];
   }
+  const constraint = type.constraint;
   return [{
     at,
     code: 'relationship_not_allowed',
     message:
-      `Relationship ${relationship.relationship} is not allowed from ${srcKind} to ${dstKind}. ` +
-      (legal.length === 0
-        ? 'No relationship is declared between these kinds.'
-        : `Allowed: ${legal.join(', ')}.`),
+      `Relationship ${relationship.relationship} is not allowed from ${srcKind} to ${dstKind}.` +
+      (constraint === undefined
+        ? ''
+        : ` It is declared ${constraint.srcKind} → ${constraint.dstKind}.`),
   }];
 };
 

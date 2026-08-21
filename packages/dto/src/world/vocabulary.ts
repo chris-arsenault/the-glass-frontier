@@ -1,38 +1,41 @@
 /**
  * The world vocabulary: the single canonical source for entity kinds, subkinds,
- * statuses, prominence tiers, relationship types, and the rules constraining
- * which relationship may connect which kinds.
+ * relationship verbs, tags, and prominence tiers.
  *
- * This artifact is the authority. The Zod validators in this package are derived
- * from it, and the database vocabulary tables are seeded from it. Nothing writes
- * the vocabulary at runtime — changing the world's shape means editing this file.
+ * This artifact is **derived from tsonu-canon**, the lore's source of truth:
+ * `craft/schema/base.rb` declares the entity kinds, subkinds, and the shared
+ * relation taxonomy, and `worlds/glass-frontier/world/schema.rb` adds the
+ * setting-specific parts (resonance relations, the DM edges, the tag
+ * vocabulary). Keep the two in sync — changing the world's shape means editing
+ * the source schema first and mirroring it here.
+ *
+ * Deliberate differences from the source:
+ * - The source's structural kinds (`loop`, `theme`, `thread`) and wiki
+ *   bookkeeping relations (`embeds`, `mentions`, `extends`, `at_stage`,
+ *   `fills_beat`, `has_beat`, `has_stage`, `has_archetype`) stay in the
+ *   authoring engine; the game graph carries the world atlas only.
+ * - `defaultStrength` is retrieval policy, not canon: it is the prior used to
+ *   weight graph traversal when an edge carries no explicit strength.
+ * - Entity statuses are free text. The source schema declares none (its
+ *   `status` field is authoring workflow), so the game does not invent an
+ *   enumeration.
  */
-
-export type WorldKindCategory = 'real' | 'idea';
 
 export type WorldKindDefinition = {
   id: WorldKindId;
-  category: WorldKindCategory;
   displayName: string;
-  defaultStatus: WorldStatusId;
   subkinds: readonly WorldSubkindId[];
-  statuses: readonly WorldStatusId[];
 };
 
-/**
- * Relationship categories group verbs by the kind of fact they assert.
- * `banned` marks a verb that is declared so validation can reject it by name
- * rather than by silence — a generic edge carries nothing a later query or a
- * prompt can act on.
- */
+/** Relation categories, as declared by the source schema. */
 export type RelationshipCategory =
-  | 'spatial'
-  | 'social'
-  | 'organizational'
-  | 'custodial'
-  | 'doctrinal'
   | 'causal'
-  | 'informational'
+  | 'spatial'
+  | 'organizational'
+  | 'social'
+  | 'technical'
+  | 'narrative'
+  | 'dm'
   | 'banned';
 
 export type RelationshipTypeDefinition = {
@@ -45,6 +48,12 @@ export type RelationshipTypeDefinition = {
    * Traversal weights paths by COALESCE(edge.strength, defaultStrength).
    */
   defaultStrength: number;
+  /**
+   * Kind constraint, only where the source schema declares one
+   * (`fought_over` is conflict → resource). Unconstrained relations accept
+   * any pair, matching the source's validation.
+   */
+  constraint?: { srcKind: WorldKindId; dstKind: WorldKindId };
 };
 
 export type ProminenceDefinition = {
@@ -52,10 +61,9 @@ export type ProminenceDefinition = {
   rank: number;
 };
 
-export type RelationshipRule = {
-  relationshipId: RelationshipTypeId;
-  srcKind: WorldKindId;
-  dstKind: WorldKindId;
+export type WorldTagDefinition = {
+  id: string;
+  description: string;
 };
 
 const PROMINENCE_DEFS = [
@@ -66,168 +74,208 @@ const PROMINENCE_DEFS = [
   { id: 'mythic', rank: 4 },
 ] as const;
 
+/**
+ * The atlas kinds, verbatim from `entity_type` in the source base schema.
+ * Subkind lists merge the base `extend_kind` blocks with the world's
+ * `extend_subkind` additions.
+ */
 const KIND_DEFS = [
   {
-    category: 'real',
-    defaultStatus: 'known',
-    displayName: 'Location',
-    id: 'location',
-    statuses: ['known', 'hidden', 'lost', 'ruined', 'destroyed'],
+    displayName: 'Ability',
+    id: 'ability',
+    subkinds: ['learned_ability', 'innate_ability'],
+  },
+  {
+    displayName: 'Artifact',
+    id: 'artifact',
+    subkinds: ['instrument', 'record', 'relic', 'machine'],
+  },
+  {
+    displayName: 'Concept',
+    id: 'concept',
     subkinds: [
-      'planet', 'moon', 'region', 'city', 'district', 'shop_or_tavern', 'habitat',
-      'station', 'space_anomaly', 'site', 'dungeon', 'facility',
+      'doctrine', 'practice', 'technology', 'physical_system', 'social_system',
+      'reference_concept',
     ],
   },
   {
-    category: 'real',
-    defaultStatus: 'alive',
-    displayName: 'NPC',
-    id: 'npc',
-    statuses: ['alive', 'dead', 'missing', 'retired', 'ascended'],
-    subkinds: [
-      'civilian', 'leader', 'ally', 'notorious_villain', 'agent', 'merchant',
-      'scholar', 'captain', 'mystic',
-    ],
+    displayName: 'Conflict',
+    id: 'conflict',
+    subkinds: ['war', 'campaign', 'dispute'],
   },
   {
-    category: 'real',
-    defaultStatus: 'alive',
     displayName: 'Creature',
     id: 'creature',
-    statuses: ['alive', 'dead', 'dormant'],
     subkinds: ['animal', 'anomaly'],
   },
   {
-    category: 'real',
-    defaultStatus: 'operational',
-    displayName: 'Ship / Vehicle',
-    id: 'ship_or_vehicle',
-    statuses: ['operational', 'damaged', 'destroyed', 'missing', 'mothballed'],
+    displayName: 'Culture',
+    id: 'culture',
+    subkinds: ['overview', 'regional_culture', 'way_of_life', 'naming_practice'],
+  },
+  {
+    displayName: 'Edict',
+    id: 'edict',
+    subkinds: [],
+  },
+  {
+    displayName: 'Era',
+    id: 'era',
+    subkinds: ['historical_period'],
+  },
+  {
+    displayName: 'Faction',
+    id: 'faction',
     subkinds: [
-      'capital_ship', 'frigate', 'courier', 'shuttle', 'gunship', 'lander',
-      'walker', 'train', 'caravan',
+      'government', 'governing_intelligence', 'company', 'civic_body',
+      'resistance_network', 'community', 'trade_network', 'religious_order',
+      'research_body', 'mutual_aid',
     ],
   },
   {
-    category: 'real',
-    defaultStatus: 'intact',
-    displayName: 'Artifact',
-    id: 'artifact',
-    statuses: ['intact', 'broken', 'lost', 'sealed', 'corrupted'],
-    subkinds: ['relic', 'weapon', 'focus', 'device', 'data_relic', 'key', 'containment_relic'],
+    displayName: 'Geographic Location',
+    id: 'geographic_location',
+    subkinds: [
+      'star_system', 'celestial_body', 'orbit', 'world_region', 'region',
+      'settlement', 'frontier', 'hazardous_zone',
+    ],
   },
   {
-    category: 'real',
-    defaultStatus: 'active',
-    displayName: 'Faction',
-    id: 'faction',
-    statuses: ['active', 'fragmented', 'dormant', 'destroyed', 'outlawed'],
-    subkinds: ['government', 'corporate', 'outlaw', 'guild', 'order', 'cartel', 'militia'],
+    displayName: 'Incident',
+    id: 'incident',
+    subkinds: [
+      'disaster', 'campaign', 'policy_action', 'operational_failure', 'dispute',
+      'discovery', 'founding', 'migration',
+    ],
   },
   {
-    category: 'real',
-    defaultStatus: 'common',
+    displayName: 'Installation',
+    id: 'installation',
+    subkinds: [
+      'settlement', 'station', 'workshop', 'infrastructure', 'archive', 'clinic',
+      'warehouse', 'landmark', 'border_post',
+    ],
+  },
+  {
+    displayName: 'NPC',
+    id: 'npc',
+    subkinds: ['official', 'specialist', 'worker', 'leader', 'courier', 'dissident'],
+  },
+  {
+    displayName: 'Phenomenon',
+    id: 'phenomenon',
+    subkinds: [
+      'physical_phenomenon', 'ecological_phenomenon', 'social_condition',
+      'catastrophe',
+    ],
+  },
+  {
     displayName: 'Resource',
     id: 'resource',
-    statuses: ['abundant', 'common', 'scarce', 'depleted', 'mythical'],
-    subkinds: ['strategic', 'mundane', 'hyperdrive_fuel', 'spirit_dust', 'ore', 'data', 'biomass'],
+    subkinds: [
+      'material', 'biological_material', 'device', 'medicine', 'food', 'data',
+      'infrastructure',
+    ],
   },
   {
-    category: 'idea',
-    defaultStatus: 'sanctioned',
-    displayName: 'Magic',
-    id: 'magic',
-    statuses: ['sanctioned', 'forbidden', 'forgotten', 'experimental'],
-    subkinds: ['school', 'spell', 'ritual', 'tradition', 'forbidden_technique'],
-  },
-  {
-    category: 'idea',
-    defaultStatus: 'minority',
-    displayName: 'Faith',
-    id: 'faith',
-    statuses: ['dominant', 'major', 'minority', 'heresy', 'suppressed', 'extinct'],
-    subkinds: ['religion', 'cult', 'philosophy', 'mystery_cult', 'state_church'],
-  },
-  {
-    category: 'idea',
-    defaultStatus: 'brewing',
-    displayName: 'Conflict',
-    id: 'conflict',
-    statuses: ['brewing', 'active', 'stalemated', 'won', 'lost', 'frozen'],
-    subkinds: ['war', 'rebellion', 'insurgency', 'cold_war', 'proxy_war', 'shadow_conflict'],
-  },
-  {
-    category: 'idea',
-    defaultStatus: 'fresh',
     displayName: 'Rumor',
     id: 'rumor',
-    statuses: ['fresh', 'spreading', 'confirmed', 'debunked', 'forgotten'],
-    subkinds: ['local', 'regional', 'cosmic', 'personal', 'prophecy'],
+    subkinds: [],
   },
   {
-    category: 'idea',
-    defaultStatus: 'enacted',
-    displayName: 'Law or Edict',
-    id: 'law_or_edict',
-    statuses: ['drafted', 'enacted', 'contested', 'ignored', 'repealed'],
-    subkinds: ['civil_law', 'religious_law', 'martial_law', 'corporate_policy', 'treaty'],
+    displayName: 'Species',
+    id: 'species',
+    subkinds: ['sapient_species', 'overview'],
+  },
+  {
+    displayName: 'Transport',
+    id: 'transport',
+    subkinds: ['vessel'],
   },
 ] as const;
 
+/**
+ * The kinds that hold a place a scene can be set in. The source schema splits
+ * "somewhere" into natural geography and built installations.
+ */
+export const LOCATION_KINDS = ['geographic_location', 'installation'] as const;
+
+/**
+ * The relation taxonomy, verbatim from the source base schema plus the
+ * glass-frontier world's additions (`attuned_to`, `resonates_with`, and the
+ * DM-only edges). Categories are the source's; strengths are retrieval priors.
+ */
 const RELATIONSHIP_TYPE_DEFS = [
-  { category: 'spatial', defaultStrength: 0.2, description: 'Two locations are physically or spatially adjacent.', id: 'adjacent_to' },
-  { category: 'spatial', defaultStrength: 0.4, description: 'Subject location or container holds the target within it.', id: 'contains' },
-  { category: 'spatial', defaultStrength: 0.4, description: 'Subject is contained within the target.', id: 'contained_within' },
-  { category: 'spatial', defaultStrength: 0.3, description: 'Locations are linked by an explicit route or gate.', id: 'connected_by' },
-  { category: 'spatial', defaultStrength: 0.6, description: 'Subject NPC or creature normally lives in the target location.', id: 'resides_in' },
-  { category: 'spatial', defaultStrength: 0.4, description: 'Subject NPC or creature regularly visits the target location.', id: 'frequents' },
-  { category: 'spatial', defaultStrength: 0.5, description: 'Subject NPC works at the target location.', id: 'works_at' },
-  { category: 'spatial', defaultStrength: 0.4, description: 'Subject location is inhabited by the target NPC, creature, or group.', id: 'inhabited_by' },
-  { category: 'spatial', defaultStrength: 0.3, description: 'Subject ship is currently docked at or stationed at the target location.', id: 'docked_at' },
-  { category: 'spatial', defaultStrength: 0.4, description: 'Subject ship or faction regularly patrols the target location or region.', id: 'patrols' },
-  { category: 'spatial', defaultStrength: 0.2, description: 'Subject ship or habitat orbits the target celestial body.', id: 'orbits' },
+  // Causal — what brought what about.
+  { category: 'causal', defaultStrength: 0.3, description: 'Subject was active during the target era or conflict.', id: 'active_during' },
+  { category: 'causal', defaultStrength: 0.7, description: 'Subject brought the target about.', id: 'caused' },
+  { category: 'causal', defaultStrength: 0.7, description: 'Subject was brought about by the target.', id: 'caused_by' },
+  { category: 'causal', defaultStrength: 0.7, description: 'Subject actively produces the target condition.', id: 'causes' },
+  { category: 'causal', defaultStrength: 0.7, description: 'Subject made the target.', id: 'created' },
+  { category: 'causal', defaultStrength: 0.3, description: 'Subject came into being during the target era or event.', id: 'created_during' },
+  { category: 'causal', defaultStrength: 0.7, description: 'Subject destroyed the target.', id: 'destroyed' },
+  { category: 'causal', defaultStrength: 0.3, description: 'Subject vanished during the target era or event.', id: 'disappeared_during' },
+  { category: 'causal', defaultStrength: 0.3, description: 'Subject emerged during the target era or event.', id: 'emerged_during' },
+  { category: 'causal', constraint: { dstKind: 'resource', srcKind: 'conflict' }, defaultStrength: 0.7, description: 'The conflict was fought over the target resource.', id: 'fought_over' },
+  { category: 'causal', defaultStrength: 0.5, description: 'Subject originated in the target place or era.', id: 'originated_in' },
+  { category: 'causal', defaultStrength: 0.6, description: 'Subject took part in the target incident or conflict.', id: 'participated_in' },
 
-  { category: 'organizational', defaultStrength: 0.7, description: 'Subject faction or NPC exercises authority over the target.', id: 'controls' },
-  { category: 'organizational', defaultStrength: 0.7, description: 'Subject NPC or ship belongs to the target faction or faith.', id: 'member_of' },
-  { category: 'organizational', defaultStrength: 0.9, description: 'Subject NPC leads the target faction or faith.', id: 'leader_of' },
-  { category: 'organizational', defaultStrength: 0.8, description: 'Subject NPC acts covertly on behalf of the target faction or faith.', id: 'agent_of' },
-  { category: 'organizational', defaultStrength: 0.7, description: 'Subject faction, NPC, or ship enforces the target law or edict.', id: 'enforces' },
-  { category: 'organizational', defaultStrength: 0.5, description: 'Subject law or edict applies within the target location or jurisdiction.', id: 'in_effect_in' },
-  { category: 'organizational', defaultStrength: 0.6, description: 'Subject faction or faith claims authority over the target location, resource, or group.', id: 'claims' },
-  { category: 'organizational', defaultStrength: 0.5, description: 'Subject faction, faith, or magic strongly shapes the target location or group.', id: 'influences' },
+  // Spatial — where things sit relative to one another.
+  { category: 'spatial', defaultStrength: 0.4, description: 'Subject was founded in the target place.', id: 'founded_in' },
+  { category: 'spatial', defaultStrength: 0.6, description: 'Subject is headquartered in the target place.', id: 'headquartered_in' },
+  { category: 'spatial', defaultStrength: 0.4, description: 'Subject place hosts the target.', id: 'hosts' },
+  { category: 'spatial', defaultStrength: 0.3, description: 'Subject lies inward of the target.', id: 'inner_of' },
+  { category: 'spatial', defaultStrength: 0.3, description: 'Subject sits in orbit of the target body.', id: 'in_orbit_of' },
+  { category: 'spatial', defaultStrength: 0.5, description: 'Subject is located in the target place.', id: 'located_in' },
+  { category: 'spatial', defaultStrength: 0.4, description: 'Subject manifests or is present at the target place.', id: 'manifests_at' },
+  { category: 'spatial', defaultStrength: 0.3, description: 'Subject sits on the surface of the target body.', id: 'on_surface_of' },
+  { category: 'spatial', defaultStrength: 0.5, description: 'Subject operates in the target place or region.', id: 'operates_in' },
+  { category: 'spatial', defaultStrength: 0.3, description: 'Subject orbits the target body.', id: 'orbits' },
+  { category: 'spatial', defaultStrength: 0.5, description: 'Subject is a part of the target.', id: 'part_of' },
+  { category: 'spatial', defaultStrength: 0.4, description: 'Subject place is an endpoint of the target route.', id: 'terminus_of' },
 
-  { category: 'social', defaultStrength: 0.7, description: 'Subject NPC, faction, or ship is an ally of the target.', id: 'ally_of' },
-  { category: 'social', defaultStrength: 0.8, description: 'Subject NPC, faction, or ship is an enemy of the target.', id: 'enemy_of' },
-  { category: 'social', defaultStrength: 0.8, description: 'Subject NPC is family or blood-related to the target NPC.', id: 'kin_of' },
-  { category: 'social', defaultStrength: 0.7, description: 'Subject NPC is a teacher or mentor to the target NPC.', id: 'mentor_of' },
-  { category: 'social', defaultStrength: 0.6, description: 'Subject NPC or faction owes a significant favor to the target.', id: 'owes_favor_to' },
-  { category: 'social', defaultStrength: 0.9, description: 'Subject has betrayed the target.', id: 'betrayed' },
+  // Organizational — authority, membership, ownership.
+  { category: 'organizational', defaultStrength: 0.8, description: 'Subject chairs the target body.', id: 'chairs' },
+  { category: 'organizational', defaultStrength: 0.6, description: 'Subject is employed by the target.', id: 'employed_by' },
+  { category: 'organizational', defaultStrength: 0.7, description: 'Subject is governed by the target.', id: 'governed_by' },
+  { category: 'organizational', defaultStrength: 0.7, description: 'Subject governs the target.', id: 'governs' },
+  { category: 'organizational', defaultStrength: 0.9, description: 'Subject leads the target.', id: 'leads' },
+  { category: 'organizational', defaultStrength: 0.7, description: 'Subject is a member of the target.', id: 'member_of' },
+  { category: 'organizational', defaultStrength: 0.6, description: 'Subject is owned by the target.', id: 'owned_by' },
+  { category: 'organizational', defaultStrength: 0.5, description: 'Subject regulates the target.', id: 'regulates' },
+  { category: 'organizational', defaultStrength: 0.5, description: 'Subject succeeded the target.', id: 'succeeded' },
+  { category: 'organizational', defaultStrength: 0.5, description: 'Subject supplies the target.', id: 'supplies' },
+  { category: 'organizational', defaultStrength: 0.5, description: 'Subject trains the target.', id: 'trains' },
 
-  { category: 'custodial', defaultStrength: 0.4, description: 'Subject artifact or resource is stored at the target location.', id: 'stored_at' },
-  { category: 'custodial', defaultStrength: 0.5, description: 'Subject artifact or resource was discovered at the target location.', id: 'discovered_at' },
-  { category: 'custodial', defaultStrength: 0.6, description: 'Subject artifact or remains are sealed within the target.', id: 'entombed_within' },
-  { category: 'custodial', defaultStrength: 0.8, description: 'Subject NPC or faction actively uses the target artifact.', id: 'wields' },
+  // Social — people and what they do with each other.
+  { category: 'social', defaultStrength: 0.4, description: 'Subject was born in the target place.', id: 'born_in' },
+  { category: 'social', defaultStrength: 0.4, description: 'Subject carries the target.', id: 'carries' },
+  { category: 'social', defaultStrength: 0.4, description: 'Subject commemorates the target.', id: 'commemorates' },
+  { category: 'social', defaultStrength: 0.6, description: 'Subject cooperates with the target.', id: 'cooperates_with' },
+  { category: 'social', defaultStrength: 0.6, description: 'Subject inhabits the target place.', id: 'inhabits' },
+  { category: 'social', defaultStrength: 0.5, description: 'Subject maintains the target.', id: 'maintains' },
+  { category: 'social', defaultStrength: 0.6, description: 'Subject possesses the target.', id: 'possesses' },
+  { category: 'social', defaultStrength: 0.6, description: 'Subject practice is practiced by the target.', id: 'practiced_by' },
+  { category: 'social', defaultStrength: 0.5, description: 'Subject studies the target.', id: 'studies' },
+  { category: 'social', defaultStrength: 0.5, description: 'Subject taught the target.', id: 'taught' },
 
-  { category: 'doctrinal', defaultStrength: 0.6, description: 'Subject NPC, faction, or faith studies the target magic, resource, artifact, creature, or phenomenon.', id: 'studies' },
-  { category: 'doctrinal', defaultStrength: 0.8, description: 'Subject faith or law forbids the target magic, artifact, practice, or behavior.', id: 'prohibits' },
-  { category: 'doctrinal', defaultStrength: 0.6, description: 'Subject faith, faction, or law formally permits or regulates the target.', id: 'sanctions' },
-  { category: 'doctrinal', defaultStrength: 0.8, description: 'Subject NPC or faction venerates the target faith, artifact, or entity.', id: 'worships' },
-  { category: 'doctrinal', defaultStrength: 0.8, description: 'Subject faith, faction, or law opposes the target faith, law, or practice.', id: 'opposes' },
-  { category: 'doctrinal', defaultStrength: 0.7, description: 'Subject is attuned to or resonates with the target magic, phenomenon, or entity.', id: 'attuned_to' },
+  // Technical — how made things depend on each other.
+  { category: 'technical', defaultStrength: 0.7, description: 'Subject is attuned to the target; resonance is a physical force here, so attunement is a real edge.', id: 'attuned_to' },
+  { category: 'technical', defaultStrength: 0.5, description: 'Subject built the target.', id: 'built' },
+  { category: 'technical', defaultStrength: 0.5, description: 'Subject process is conducted by the target.', id: 'conducted_by' },
+  { category: 'technical', defaultStrength: 0.6, description: 'Subject depends on the target to survive or function.', id: 'depends_on' },
+  { category: 'technical', defaultStrength: 0.5, description: 'Subject is derived from the target.', id: 'derived_from' },
+  { category: 'technical', defaultStrength: 0.5, description: 'Subject designed the target.', id: 'designed' },
+  { category: 'technical', defaultStrength: 0.6, description: 'Subject powers the target.', id: 'powers' },
+  { category: 'technical', defaultStrength: 0.5, description: 'Subject is sourced from the target.', id: 'sourced_from' },
 
-  { category: 'causal', defaultStrength: 0.8, description: 'Subject NPC, faction, or faith actively seeks the target artifact, resource, or magic.', id: 'seeks' },
-  { category: 'causal', defaultStrength: 0.6, description: 'Subject location or resource is the origin or source of the target resource or magic.', id: 'source_of' },
-  { category: 'causal', defaultStrength: 0.5, description: 'Subject location or resource has lost or spent the target resource.', id: 'depleted_of' },
-  { category: 'causal', defaultStrength: 0.7, description: 'Subject NPC, faction, or location is in violation of the target law or edict.', id: 'violates' },
-  { category: 'causal', defaultStrength: 0.9, description: 'Subject law, resource, or event is a significant cause of the target conflict.', id: 'cause_of' },
-  { category: 'causal', defaultStrength: 0.9, description: 'Subject NPC, faction, or ship actively participates in the target conflict.', id: 'fights_in' },
-  { category: 'causal', defaultStrength: 0.7, description: 'Subject conflict is actively fought in or around the target location.', id: 'battleground_in' },
-  { category: 'causal', defaultStrength: 0.6, description: 'Subject rumor or conflict originated from the target entity or event.', id: 'spawned_by' },
-  { category: 'causal', defaultStrength: 0.6, description: 'Subject creature depends on the target resource, artifact, or magic to survive or function.', id: 'depends_on' },
-  { category: 'causal', defaultStrength: 0.8, description: 'Subject is a direct outcome of the target conflict or event.', id: 'outcome_of' },
+  // Narrative — meaning and sympathy.
+  { category: 'narrative', defaultStrength: 0.6, description: 'Subject embodies the target concept.', id: 'embodies' },
+  { category: 'narrative', defaultStrength: 0.6, description: 'Subject resonates with the target in the sympathetic, narrative sense.', id: 'resonates_with' },
 
-  { category: 'informational', defaultStrength: 0.5, description: 'Subject rumor concerns the target entity.', id: 'rumors_about' },
-  { category: 'informational', defaultStrength: 0.4, description: 'Subject law, rumor, or artifact records or encodes information about the target.', id: 'documents' },
+  // DM-only — the GM sees these; players never do directly.
+  { category: 'dm', defaultStrength: 0.8, description: 'DM-only: subject is hiding from or avoiding the target.', id: 'hiding_from' },
+  { category: 'dm', defaultStrength: 0.8, description: 'DM-only: the False Form reaches through the target here.', id: 'seeping_through' },
 
   {
     category: 'banned',
@@ -237,175 +285,64 @@ const RELATIONSHIP_TYPE_DEFS = [
   },
 ] as const;
 
+/**
+ * The tag vocabulary, verbatim from the world schema. Lore fragment tags are
+ * validated against this list, mirroring the source's linter.
+ */
+const WORLD_TAG_DEFS = [
+  { description: 'Artificial intelligence, custodian systems', id: 'AI' },
+  { description: 'Political resistance, reform movements', id: 'activism' },
+  { description: 'Record-keeping, history preservation, memory', id: 'archives' },
+  { description: 'Destructive events', id: 'catastrophe' },
+  { description: 'The fundamental order of reality; metaphysics of resonance, the Three Forms, the wider cosmic order', id: 'cosmology' },
+  { description: 'High-risk environment or situation', id: 'danger' },
+  { description: 'Inter-faction or inter-settlement negotiation', id: 'diplomacy' },
+  { description: 'Cultural drift between isolated communities', id: 'divergence' },
+  { description: 'Environmental stewardship, conservation', id: 'ecology' },
+  { description: 'Physics/reality is loosened or mutable at this location', id: 'fluid-reality' },
+  { description: 'Origin events, establishment', id: 'founding' },
+  { description: 'Political systems, authority structures, law', id: 'governance' },
+  { description: 'Everyday items, domestic technology', id: 'household' },
+  { description: 'Signal Famine era disconnection', id: 'isolation' },
+  { description: 'Mid-band resonance; motion, heat, force', id: 'kinetic-freq' },
+  { description: 'Passed into myth; historicity debated by general population', id: 'legend' },
+  { description: 'Physical resources, raw or processed', id: 'materials' },
+  { description: 'Armed forces, warships, defense', id: 'military' },
+  { description: 'Music as cultural or structural force', id: 'music' },
+  { description: 'Unexplained gaps, unsolved questions, active investigation', id: 'mystery' },
+  { description: 'Wayfinding, piloting, route knowledge', id: 'navigation' },
+  { description: 'In orbit, the ring, or the Shear', id: 'orbital' },
+  { description: 'Origin story or inciting incident for current state', id: 'origin' },
+  { description: 'Beyond Kaleidos orbit', id: 'outer-system' },
+  { description: 'Reclamation-era reconnection and reconstruction', id: 'rebuilding' },
+  { description: 'Belief systems, spiritual practice', id: 'religion' },
+  { description: 'Involves the resonance energy system', id: 'resonance' },
+  { description: 'Predates the Glassfall; original builder technology', id: 'ring-era' },
+  { description: 'A habitat on the Glass Frontier ring fragments', id: 'ring-hab' },
+  { description: 'Involves ringglass as a material or commodity', id: 'ringglass' },
+  { description: 'Shear salvage operations, scavenging', id: 'salvage' },
+  { description: 'High-band resonance; communication, data, memory', id: 'signal-freq' },
+  { description: 'Class, caste, citizenship, social hierarchy', id: 'social-structure' },
+  { description: 'Intelligent species, biology, racial characteristics', id: 'species' },
+  { description: 'Low-band resonance; reinforcement, building', id: 'structural-freq' },
+  { description: 'Located on the Kaleidos planetary surface', id: 'surface' },
+  { description: 'Commerce, supply chains, economics', id: 'trade' },
+  { description: 'Education, apprenticeship, attunement learning', id: 'training' },
+  { description: 'Ships, trade routes, logistics infrastructure', id: 'transport' },
+] as const;
+
 /** Every kind identifier the world accepts. */
 export type WorldKindId = (typeof KIND_DEFS)[number]['id'];
 /** Every subkind identifier, across all kinds. */
 export type WorldSubkindId = (typeof KIND_DEFS)[number]['subkinds'][number];
-/** Every status identifier, across all kinds. */
-export type WorldStatusId = (typeof KIND_DEFS)[number]['statuses'][number];
 export type ProminenceId = (typeof PROMINENCE_DEFS)[number]['id'];
 export type RelationshipTypeId = (typeof RELATIONSHIP_TYPE_DEFS)[number]['id'];
+export type WorldTagId = (typeof WORLD_TAG_DEFS)[number]['id'];
 
 export const WORLD_PROMINENCE: readonly ProminenceDefinition[] = PROMINENCE_DEFS;
 export const WORLD_KINDS: readonly WorldKindDefinition[] = KIND_DEFS;
 export const RELATIONSHIP_TYPES: readonly RelationshipTypeDefinition[] = RELATIONSHIP_TYPE_DEFS;
-
-/**
- * Allowed relationships per source kind, keyed by destination kind.
- * Edges are stored in the declared direction; traversal reads both ways.
- */
-const RELATIONSHIP_RULE_MAP: Record<
-  WorldKindId,
-  Partial<Record<WorldKindId, readonly RelationshipTypeId[]>>
-> = {
-  artifact: {
-    conflict: ['cause_of'],
-    faction: ['wields', 'seeks'],
-    faith: ['worships', 'documents'],
-    law_or_edict: ['documents', 'prohibits', 'sanctions'],
-    location: ['stored_at', 'discovered_at', 'entombed_within'],
-    magic: ['source_of', 'studies', 'attuned_to'],
-    npc: ['wields', 'seeks'],
-    resource: ['source_of'],
-    rumor: ['rumors_about', 'spawned_by'],
-  },
-  conflict: {
-    faction: ['fights_in', 'cause_of'],
-    faith: ['cause_of'],
-    law_or_edict: ['cause_of', 'outcome_of'],
-    location: ['battleground_in'],
-    magic: ['cause_of'],
-    npc: ['fights_in'],
-    resource: ['cause_of'],
-    rumor: ['rumors_about', 'spawned_by'],
-    ship_or_vehicle: ['fights_in'],
-  },
-  creature: {
-    artifact: ['depends_on'],
-    conflict: ['outcome_of'],
-    creature: ['attuned_to'],
-    faction: ['attuned_to'],
-    location: ['resides_in', 'frequents', 'attuned_to'],
-    magic: ['attuned_to', 'depends_on'],
-    npc: ['attuned_to'],
-    resource: ['depends_on'],
-    ship_or_vehicle: ['attuned_to'],
-  },
-  faction: {
-    artifact: ['wields', 'seeks'],
-    conflict: ['fights_in', 'cause_of'],
-    creature: ['studies'],
-    faction: ['ally_of', 'enemy_of', 'member_of', 'opposes'],
-    faith: ['ally_of', 'opposes', 'member_of'],
-    law_or_edict: ['enforces', 'violates', 'documents'],
-    location: ['controls', 'influences', 'claims'],
-    magic: ['studies', 'sanctions', 'prohibits'],
-    npc: ['member_of', 'leader_of', 'agent_of', 'ally_of', 'enemy_of'],
-    resource: ['controls', 'seeks', 'source_of'],
-    rumor: ['rumors_about'],
-    ship_or_vehicle: ['member_of', 'controls', 'agent_of'],
-  },
-  faith: {
-    conflict: ['cause_of'],
-    faction: ['member_of', 'ally_of', 'opposes'],
-    faith: ['ally_of', 'opposes'],
-    law_or_edict: ['documents', 'cause_of'],
-    location: ['influences', 'controls'],
-    magic: ['sanctions', 'prohibits'],
-    npc: ['worships', 'member_of', 'opposes'],
-    rumor: ['rumors_about', 'spawned_by'],
-  },
-  law_or_edict: {
-    artifact: ['documents'],
-    conflict: ['cause_of'],
-    faction: ['enforces', 'violates'],
-    faith: ['documents', 'opposes'],
-    location: ['in_effect_in'],
-    magic: ['prohibits', 'sanctions'],
-    npc: ['enforces', 'violates'],
-    rumor: ['rumors_about', 'spawned_by'],
-  },
-  location: {
-    artifact: ['stored_at', 'discovered_at', 'entombed_within'],
-    conflict: ['battleground_in'],
-    creature: ['inhabited_by'],
-    faction: ['controls', 'influences', 'claims'],
-    law_or_edict: ['in_effect_in'],
-    location: ['adjacent_to', 'contains', 'contained_within', 'connected_by'],
-    magic: ['attuned_to'],
-    npc: ['inhabited_by'],
-    resource: ['source_of', 'depleted_of'],
-    rumor: ['rumors_about'],
-    ship_or_vehicle: ['docked_at', 'patrols', 'orbits'],
-  },
-  magic: {
-    artifact: ['source_of', 'documents'],
-    conflict: ['cause_of'],
-    faction: ['studies', 'sanctions', 'prohibits'],
-    faith: ['worships', 'opposes'],
-    law_or_edict: ['prohibits', 'sanctions'],
-    location: ['influences'],
-    npc: ['wields', 'studies'],
-    rumor: ['rumors_about', 'spawned_by'],
-  },
-  npc: {
-    artifact: ['wields', 'seeks'],
-    conflict: ['fights_in', 'cause_of'],
-    creature: ['studies'],
-    faction: ['member_of', 'leader_of', 'agent_of', 'ally_of', 'enemy_of'],
-    faith: ['worships', 'member_of', 'opposes'],
-    law_or_edict: ['violates', 'enforces'],
-    location: ['resides_in', 'frequents', 'works_at'],
-    magic: ['studies', 'wields', 'attuned_to'],
-    npc: ['ally_of', 'enemy_of', 'kin_of', 'mentor_of', 'owes_favor_to', 'betrayed'],
-    resource: ['seeks'],
-    rumor: ['rumors_about'],
-    ship_or_vehicle: ['controls', 'member_of'],
-  },
-  resource: {
-    artifact: ['contained_within', 'source_of'],
-    conflict: ['cause_of'],
-    faction: ['controls', 'seeks', 'cause_of'],
-    location: ['source_of', 'depleted_of'],
-    magic: ['source_of', 'studies'],
-    rumor: ['rumors_about', 'spawned_by'],
-    ship_or_vehicle: ['source_of', 'stored_at'],
-  },
-  rumor: {
-    artifact: ['rumors_about'],
-    conflict: ['rumors_about'],
-    creature: ['rumors_about'],
-    faction: ['rumors_about'],
-    faith: ['rumors_about'],
-    law_or_edict: ['rumors_about'],
-    location: ['rumors_about'],
-    magic: ['rumors_about'],
-    npc: ['rumors_about'],
-    resource: ['rumors_about'],
-    ship_or_vehicle: ['rumors_about'],
-  },
-  ship_or_vehicle: {
-    artifact: ['stored_at', 'wields'],
-    conflict: ['fights_in'],
-    faction: ['member_of', 'agent_of', 'ally_of', 'enemy_of'],
-    location: ['docked_at', 'patrols', 'orbits'],
-    magic: ['attuned_to'],
-    npc: ['member_of', 'controls'],
-    resource: ['stored_at', 'source_of'],
-  },
-};
-
-export const RELATIONSHIP_RULES: readonly RelationshipRule[] = Object.entries(
-  RELATIONSHIP_RULE_MAP
-).flatMap(([srcKind, destinations]) =>
-  Object.entries(destinations).flatMap(([dstKind, relationships]) =>
-    (relationships ?? []).map((relationshipId) => ({
-      dstKind: dstKind as WorldKindId,
-      relationshipId,
-      srcKind: srcKind as WorldKindId,
-    }))
-  )
-);
+export const WORLD_TAGS: readonly WorldTagDefinition[] = WORLD_TAG_DEFS;
 
 const asEnumValues = <T extends string>(values: readonly T[]): [T, ...T[]] => {
   const [first, ...rest] = values;
@@ -419,12 +356,12 @@ export const WORLD_KIND_IDS = asEnumValues(KIND_DEFS.map((kind) => kind.id));
 export const WORLD_SUBKIND_IDS = asEnumValues([
   ...new Set(KIND_DEFS.flatMap((kind) => kind.subkinds)),
 ]);
-export const WORLD_STATUS_IDS = asEnumValues([
-  ...new Set(KIND_DEFS.flatMap((kind) => kind.statuses)),
-]);
 export const WORLD_PROMINENCE_IDS = asEnumValues(PROMINENCE_DEFS.map((tier) => tier.id));
 export const RELATIONSHIP_TYPE_IDS = asEnumValues(
   RELATIONSHIP_TYPE_DEFS.map((type) => type.id)
+);
+export const WORLD_TAG_IDS: ReadonlySet<string> = new Set(
+  WORLD_TAG_DEFS.map((tag) => tag.id)
 );
 
 /** Relationship verbs a writer may use. Excludes the banned category. */
@@ -452,23 +389,25 @@ const kindsById = new Map<string, WorldKindDefinition>(
 
 export const getWorldKind = (id: string): WorldKindDefinition | undefined => kindsById.get(id);
 
-const ruleKeys = new Set(
-  RELATIONSHIP_RULES.map((rule) => `${rule.relationshipId}:${rule.srcKind}:${rule.dstKind}`)
-);
+export const isLocationKind = (kind: string): boolean =>
+  (LOCATION_KINDS as readonly string[]).includes(kind);
 
+/**
+ * Whether the relationship may connect these kinds. Mirrors the source schema:
+ * any pair is legal unless the relation declares a constraint (only
+ * `fought_over` does).
+ */
 export const isRelationshipAllowed = (
   relationshipId: string,
   srcKind: string,
   dstKind: string
-): boolean => ruleKeys.has(`${relationshipId}:${srcKind}:${dstKind}`);
-
-/** Verbs legal from `srcKind` to `dstKind`, for constraining a proposal writer. */
-export const allowedRelationships = (srcKind: string, dstKind: string): string[] => {
-  const destinations = Object.hasOwn(RELATIONSHIP_RULE_MAP, srcKind)
-    ? RELATIONSHIP_RULE_MAP[srcKind as WorldKindId]
-    : undefined;
-  if (destinations === undefined || !Object.hasOwn(destinations, dstKind)) {
-    return [];
+): boolean => {
+  const type = relationshipTypesById.get(relationshipId);
+  if (type === undefined || type.category === 'banned') {
+    return false;
   }
-  return [...(destinations[dstKind as WorldKindId] ?? [])];
+  if (type.constraint === undefined) {
+    return true;
+  }
+  return type.constraint.srcKind === srcKind && type.constraint.dstKind === dstKind;
 };

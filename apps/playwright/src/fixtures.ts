@@ -2,7 +2,6 @@ import { createAppStore } from '@glass-frontier/app';
 import type { Character, Chronicle, HardState, Player } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
-import { randomUUID } from 'node:crypto';
 
 export const PLAYWRIGHT_PLAYER_ID = 'playwright-e2e';
 export const PLAYWRIGHT_CHARACTER_ID = '11111111-2222-4333-8444-555555555555';
@@ -68,26 +67,29 @@ const BASE_CHRONICLE: Chronicle = {
 };
 
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {
+  facts: { population: 'a few hundred keepers and dockhands' },
   id: LOCATION_ROOT_ID,
-  kind: 'location',
+  kind: 'installation',
   name: 'Luminous Quay',
   prominence: 'recognized',
   slug: 'luminous_quay',
-  status: 'known',
-  subkind: 'region',
+  status: 'active',
+  subkind: 'settlement',
 };
 
 const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | 'links'>> = [
   {
+    facts: { founded: 2101 },
     id: GLASS_WARDENS_ID,
     kind: 'faction',
     name: 'Glass Wardens',
     prominence: 'renowned',
     slug: 'glass_wardens',
     status: 'active',
-    subkind: 'order',
+    subkind: 'religious_order',
   },
   {
+    facts: { function: 'whispers coordinates to hidden gates when attuned' },
     id: ORACLE_VESSEL_ID,
     kind: 'artifact',
     name: 'Oracle Vessel',
@@ -125,20 +127,20 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
         entity: { ref: 'warden' },
         id: FOUNDING_OATH_FRAGMENT_ID,
         prose: 'The Glass Wardens swear to shield all archives from oblivion.',
-        tags: ['faction', 'oath', 'founding'],
+        tags: ['founding', 'archives', 'religion'],
         title: 'Founding Oath',
       },
       {
         entity: { ref: 'relic' },
         id: ORACLE_SIGNAL_FRAGMENT_ID,
         prose: 'When attuned, the vessel whispers coordinates to hidden gates.',
-        tags: ['artifact', 'oracle'],
+        tags: ['resonance', 'navigation', 'mystery'],
         title: 'Oracle Signal',
       },
     ],
     relationships: [
-      { dst: { ref: 'location' }, relationship: 'controls', src: { ref: 'warden' } },
-      { dst: { ref: 'location' }, relationship: 'stored_at', src: { ref: 'relic' } },
+      { dst: { ref: 'location' }, relationship: 'governs', src: { ref: 'warden' } },
+      { dst: { ref: 'location' }, relationship: 'located_in', since: 2140, src: { ref: 'relic' } },
     ],
     source: 'seed',
     sourceId: 'playwright-fixtures',
@@ -153,10 +155,12 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
 
 export async function resetPlaywrightFixtures(connectionString: string): Promise<void> {
   const appStore = createAppStore({ connectionString });
-  const worldSchemaStore = createWorldSchemaStore({ connectionString });
   const chronicleStore = createChronicleStore({ connectionString });
 
-  await chronicleStore.deleteChronicle(PLAYWRIGHT_CHRONICLE_ID);
+  const existingChronicles = await chronicleStore.listChroniclesByPlayer(PLAYWRIGHT_PLAYER_ID);
+  await Promise.all(
+    existingChronicles.map((chronicle) => chronicleStore.deleteChronicle(chronicle.id))
+  );
   await appStore.playerStore.upsert(buildPlaywrightPlayerRecord());
   await chronicleStore.upsertCharacter(buildPlaywrightCharacterRecord());
   await seedPlaywrightFixtures(connectionString);

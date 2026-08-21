@@ -27,32 +27,32 @@ const seedWorld = async (): Promise<Record<string, string>> => {
   const result = await worldState.world.commitBatch(
     proposal({
       entities: [
-        { kind: 'faction', name: 'Ash Cartel', ref: 'cartel', status: 'active', subkind: 'cartel' },
+        { kind: 'faction', name: 'Ash Cartel', ref: 'cartel', status: 'active', subkind: 'company' },
         { kind: 'npc', name: 'Vell', ref: 'npc', status: 'alive', subkind: 'leader' },
-        { kind: 'location', name: 'Cinder Row', ref: 'row', status: 'known', subkind: 'district' },
-        { kind: 'location', name: 'Far Quay', ref: 'quay', status: 'known', subkind: 'district' },
+        { kind: 'geographic_location', name: 'Cinder Row', ref: 'row', status: 'inhabited', subkind: 'region' },
+        { kind: 'geographic_location', name: 'Far Quay', ref: 'quay', status: 'inhabited', subkind: 'region' },
         { kind: 'artifact', name: 'Ash Seal', ref: 'relic', status: 'intact', subkind: 'relic' },
       ],
       lore: [
         {
           entity: { ref: 'cartel' },
           prose: 'The cartel keeps the ledgers of every debt on the Row.',
-          tags: ['debt', 'ledger'],
+          tags: ['trade', 'archives'],
           title: 'The Ledgers',
         },
         {
           entity: { ref: 'npc' },
           prose: 'Vell took the seal from a dead broker and never explained how.',
-          tags: ['debt'],
+          tags: ['trade'],
           title: 'How Vell Rose',
         },
       ],
       relationships: [
-        // leader_of is defining (0.9); adjacent_to is incidental (0.2).
-        { dst: { ref: 'cartel' }, relationship: 'leader_of', src: { ref: 'npc' } },
-        { dst: { ref: 'quay' }, relationship: 'adjacent_to', src: { ref: 'row' } },
-        { dst: { ref: 'row' }, relationship: 'controls', src: { ref: 'cartel' } },
-        { dst: { ref: 'relic' }, relationship: 'wields', src: { ref: 'npc' } },
+        // leads is defining (0.9); located_in is incidental (0.5).
+        { dst: { ref: 'cartel' }, relationship: 'leads', src: { ref: 'npc' } },
+        { dst: { ref: 'quay' }, relationship: 'located_in', src: { ref: 'row' } },
+        { dst: { ref: 'row' }, relationship: 'governs', src: { ref: 'cartel' } },
+        { dst: { ref: 'relic' }, relationship: 'possesses', src: { ref: 'npc' } },
       ],
     })
   );
@@ -91,8 +91,8 @@ describe('Context slice', () => {
     });
     const byId = new Map(slice.map((entry) => [entry.id, entry]));
 
-    // Vell is one hop through leader_of (0.9); Far Quay is two hops and the
-    // second is adjacent_to (0.2), so it must rank lower.
+    // Vell is one hop through leads (0.9); Far Quay is two hops and the
+    // second is located_in (0.5), so it must rank lower.
     const vell = byId.get(ids.npc);
     const quay = byId.get(ids.quay);
     expect(vell).toBeDefined();
@@ -115,7 +115,7 @@ describe('Context slice', () => {
     const withTags = await worldState.world.getContextSlice({
       anchorId: ids.row,
       focusIds: [ids.row],
-      focusTags: ['debt'],
+      focusTags: ['trade'],
       limit: 7,
       loreLimit: 2,
       maxHops: 2,
@@ -135,12 +135,12 @@ describe('Context slice', () => {
       proposal({
         entities: [
           {
-            kind: 'location',
+            kind: 'installation',
             name: 'The Under-Docks',
             prominence: 'marginal',
             ref: 'interior',
             status: 'hidden',
-            subkind: 'site',
+            subkind: 'station',
           },
           {
             kind: 'creature',
@@ -152,8 +152,8 @@ describe('Context slice', () => {
           },
         ],
         relationships: [
-          { dst: { id: ids.row }, relationship: 'contained_within', src: { ref: 'interior' } },
-          { dst: { ref: 'interior' }, relationship: 'resides_in', src: { ref: 'eel' } },
+          { dst: { id: ids.row }, relationship: 'located_in', src: { ref: 'interior' } },
+          { dst: { ref: 'interior' }, relationship: 'inhabits', src: { ref: 'eel' } },
         ],
       })
     );
@@ -236,7 +236,7 @@ describe('Weighted traversal', () => {
       minProminence: 'recognized',
     });
 
-    // leader_of (0.9) outranks controls (0.7) from the same origin.
+    // leads (0.9) outranks governs (0.7) from the same origin.
     expect(neighbors[0]?.neighbor.id).toBe(ids.npc);
   });
 });

@@ -78,13 +78,14 @@ describe('PromptComposer', () => {
         offered: [
           {
             description: 'A smuggling ring that controls the ash docks.',
+            facts: { founded: 2402 },
             id: 'entity-1',
             kind: 'faction',
             loreFragments: [],
             name: 'Ash Cartel',
             score: 1,
             slug: 'ash-cartel',
-            tags: ['smuggling'],
+            tags: ['trade'],
           },
         ],
       },

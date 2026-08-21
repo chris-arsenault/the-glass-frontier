@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  HardStateFacts,
   HardStateKind,
   HardStateProminence,
   HardStateStatus,
@@ -32,6 +33,8 @@ export const ProposedEntity = z.object({
   description: z.string().max(2000).optional(),
   /** Stable identity from the source world; makes re-ingest an update. */
   externalKey: z.string().min(1).optional(),
+  /** The source entry's fact card, stored verbatim. */
+  facts: HardStateFacts.optional(),
   /** Explicit id, for a seed that pins its own identifiers. */
   id: z.string().uuid().optional(),
   kind: HardStateKind,
@@ -47,8 +50,12 @@ export type ProposedEntity = z.infer<typeof ProposedEntity>;
 export const ProposedRelationship = z.object({
   dst: EntityRef,
   relationship: RelationshipType,
+  /** In-world year the relation began, when the source records one. */
+  since: z.number().int().optional(),
   src: EntityRef,
   strength: z.number().min(0).max(1).optional(),
+  /** In-world year the relation ended, when the source records one. */
+  until: z.number().int().optional(),
 });
 export type ProposedRelationship = z.infer<typeof ProposedRelationship>;
 
@@ -83,9 +90,9 @@ export const ProposalViolation = z.object({
   code: z.enum([
     'unknown_kind',
     'unknown_subkind',
-    'unknown_status',
     'unknown_prominence',
     'unknown_relationship',
+    'unknown_tag',
     'banned_relationship',
     'relationship_not_allowed',
     'unresolved_reference',

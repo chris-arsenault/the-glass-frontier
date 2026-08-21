@@ -44,10 +44,10 @@ describe('Chronicle location', () => {
 
   it('remembers the canon place it started from', async () => {
     const location = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Atlas Landing',
       status: 'known',
-      subkind: 'site',
+      subkind: 'settlement',
     });
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,
@@ -64,10 +64,10 @@ describe('Chronicle location', () => {
 
   it('moves by name without touching canon', async () => {
     const location = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Departure Point',
       status: 'known',
-      subkind: 'site',
+      subkind: 'settlement',
     });
     const chronicle = await worldState.chronicles.ensureChronicle({
       locationId: location.id,
@@ -86,7 +86,7 @@ describe('Chronicle location', () => {
     expect(state?.locationName).toBe('The Sunken Stair');
     // The place the player walked to is a name; the world never learned it.
     const canon = await worldState.world.listEntities({
-      kind: 'location',
+      kind: 'geographic_location',
       minProminence: 'forgotten',
     });
     expect(canon.map((entity) => entity.name)).toEqual(['Departure Point']);
@@ -145,7 +145,7 @@ describe('Chronicle tone', () => {
 describe('Chronicle turn history', () => {
   it('creates characters and chronicles with turn history', async () => {
     const startingLocation = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Chronicle Root',
       status: 'known',
       subkind: 'region',
@@ -171,7 +171,7 @@ describe('Chronicle turn history', () => {
 
   it('persists the entities the GM was offered and how it used them', async () => {
     const location = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Offer Root',
       status: 'known',
       subkind: 'region',
@@ -185,7 +185,7 @@ describe('Chronicle turn history', () => {
           {
             description: undefined,
             id: location.id,
-            kind: 'location',
+            kind: 'geographic_location',
             loreFragments: [],
             name: 'Offer Root',
             score: 5,
@@ -217,7 +217,7 @@ describe('Chronicle turn history', () => {
 describe('Chronicle retrieval', () => {
   it('ensures chronicle retrieval respects the most recent turn ordering', async () => {
     const location = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Order',
       status: 'known',
       subkind: 'region',
@@ -250,13 +250,13 @@ describe('Chronicle retrieval', () => {
 describe('Chronicle anchors', () => {
   it('persists chronicle anchor entities', async () => {
     const anchor = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Anchor Site',
       status: 'known',
-      subkind: 'site',
+      subkind: 'settlement',
     });
     const location = await seedEntity(worldState, {
-      kind: 'location',
+      kind: 'geographic_location',
       name: 'Anchor Location',
       status: 'known',
       subkind: 'region',

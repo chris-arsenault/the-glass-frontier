@@ -1,4 +1,3 @@
-import type { HardStateStatus } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -26,11 +25,11 @@ describe('Canon batch commit', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'faction', name: 'Glass Wardens', ref: 'faction', status: 'active', subkind: 'order' },
-          { kind: 'npc', name: 'Mirin', ref: 'npc', status: 'alive', subkind: 'ally' },
+          { kind: 'faction', name: 'Glass Wardens', ref: 'faction', status: 'active', subkind: 'religious_order' },
+          { kind: 'npc', name: 'Mirin', ref: 'npc', status: 'alive', subkind: 'specialist' },
         ],
         relationships: [
-          { dst: { ref: 'npc' }, relationship: 'ally_of', src: { ref: 'faction' } },
+          { dst: { ref: 'faction' }, relationship: 'member_of', src: { ref: 'npc' } },
         ],
       })
     );
@@ -39,17 +38,17 @@ describe('Canon batch commit', () => {
     const npc = await worldState.world.getEntity({ id: result.entityIdsByRef.npc });
 
     expect(result.entityCount).toBe(2);
-    expect(faction?.links).toContainEqual({
-      direction: 'out',
-      relationship: 'ally_of',
-      strength: 0.7,
-      targetId: npc?.id,
-    });
     expect(npc?.links).toContainEqual({
-      direction: 'in',
-      relationship: 'ally_of',
+      direction: 'out',
+      relationship: 'member_of',
       strength: 0.7,
       targetId: faction?.id,
+    });
+    expect(faction?.links).toContainEqual({
+      direction: 'in',
+      relationship: 'member_of',
+      strength: 0.7,
+      targetId: npc?.id,
     });
   });
 
@@ -57,20 +56,59 @@ describe('Canon batch commit', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'location', name: 'Quay', ref: 'a', status: 'known', subkind: 'region' },
-          { kind: 'location', name: 'Wharf', ref: 'b', status: 'known', subkind: 'district' },
+          { kind: 'geographic_location', name: 'Quay', ref: 'a', status: 'charted', subkind: 'region' },
+          { kind: 'geographic_location', name: 'Wharf', ref: 'b', status: 'charted', subkind: 'region' },
         ],
         relationships: [
-          { dst: { ref: 'b' }, relationship: 'adjacent_to', src: { ref: 'a' } },
-          { dst: { ref: 'b' }, relationship: 'contains', src: { ref: 'a' }, strength: 0.95 },
+          { dst: { ref: 'b' }, relationship: 'located_in', src: { ref: 'a' } },
+          { dst: { ref: 'b' }, relationship: 'part_of', src: { ref: 'a' }, strength: 0.95 },
         ],
       })
     );
     const a = await worldState.world.getEntity({ id: result.entityIdsByRef.a });
 
-    // adjacent_to is spatial and incidental; an explicit value still wins.
-    expect(a?.links.find((link) => link.relationship === 'adjacent_to')?.strength).toBe(0.2);
-    expect(a?.links.find((link) => link.relationship === 'contains')?.strength).toBe(0.95);
+    // located_in carries its spatial prior; an explicit value still wins.
+    expect(a?.links.find((link) => link.relationship === 'located_in')?.strength).toBe(0.5);
+    expect(a?.links.find((link) => link.relationship === 'part_of')?.strength).toBe(0.95);
+  });
+
+  it('records the in-world years a relation held, when the source gives them', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'creature', name: 'Marrower', ref: 'creature', status: 'alive', subkind: 'animal' },
+          { kind: 'installation', name: 'Orra', ref: 'hab', status: 'inhabited', subkind: 'settlement' },
+        ],
+        relationships: [
+          { dst: { ref: 'hab' }, relationship: 'inhabits', since: 2435, src: { ref: 'creature' } },
+        ],
+      })
+    );
+    const creature = await worldState.world.getEntity({ id: result.entityIdsByRef.creature });
+
+    const link = creature?.links.find((entry) => entry.relationship === 'inhabits');
+    expect(link?.since).toBe(2435);
+    expect(link?.until).toBeUndefined();
+  });
+
+  it('stores the fact card verbatim', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            facts: { born: 2410, occupation: 'Deep reader' },
+            kind: 'npc',
+            name: 'Sella',
+            ref: 'npc',
+            status: 'alive',
+            subkind: 'specialist',
+          },
+        ],
+      })
+    );
+    const npc = await worldState.world.getEntity({ id: result.entityIdsByRef.npc });
+
+    expect(npc?.facts).toEqual({ born: 2410, occupation: 'Deep reader' });
   });
 
   it('re-ingests by external key rather than duplicating', async () => {
@@ -79,11 +117,11 @@ describe('Canon batch commit', () => {
         entities: [
           {
             externalKey: 'tsonu:ashfall',
-            kind: 'location',
+            kind: 'geographic_location',
             name: 'Ashfall',
             ref: 'x',
-            status: 'known',
-            subkind: 'site',
+            status: 'charted',
+            subkind: 'settlement',
           },
         ],
       })
@@ -94,28 +132,28 @@ describe('Canon batch commit', () => {
           {
             description: 'Now with a description.',
             externalKey: 'tsonu:ashfall',
-            kind: 'location',
+            kind: 'geographic_location',
             name: 'Ashfall',
             ref: 'x',
             status: 'ruined',
-            subkind: 'site',
+            subkind: 'settlement',
           },
         ],
       })
     );
 
     expect(second.entityIdsByRef.x).toBe(first.entityIdsByRef.x);
-    const all = await worldState.world.listEntities({ kind: 'location', minProminence: 'forgotten' });
+    const all = await worldState.world.listEntities({ kind: 'geographic_location', minProminence: 'forgotten' });
     expect(all).toHaveLength(1);
     expect(all[0]?.status).toBe('ruined');
     expect(all[0]?.description).toBe('Now with a description.');
   });
 
   it('gives colliding names a counted suffix, not a random one', async () => {
-    await seedEntity(worldState, { kind: 'location', name: 'Grey Harbor', status: 'known', subkind: 'site' });
-    await seedEntity(worldState, { kind: 'location', name: 'Grey Harbor', status: 'known', subkind: 'site' });
+    await seedEntity(worldState, { kind: 'geographic_location', name: 'Grey Harbor', subkind: 'settlement' });
+    await seedEntity(worldState, { kind: 'geographic_location', name: 'Grey Harbor', subkind: 'settlement' });
     const listed = await worldState.world.listEntities({
-      kind: 'location',
+      kind: 'geographic_location',
       minProminence: 'forgotten',
     });
 
@@ -126,12 +164,12 @@ describe('Canon batch commit', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'faction', name: 'Ash Cartel', ref: 'faction', status: 'active', subkind: 'cartel' },
-          { kind: 'location', name: 'Cinder Row', ref: 'place', status: 'known', subkind: 'district' },
+          { kind: 'faction', name: 'Ash Cartel', ref: 'faction', status: 'active', subkind: 'company' },
+          { kind: 'geographic_location', name: 'Cinder Row', ref: 'place', status: 'inhabited', subkind: 'region' },
         ],
         lore: [{ entity: { ref: 'faction' }, prose: 'They keep the ledgers.', title: 'Ledgers' }],
         relationships: [
-          { dst: { ref: 'place' }, relationship: 'controls', src: { ref: 'faction' } },
+          { dst: { ref: 'place' }, relationship: 'governs', src: { ref: 'faction' } },
         ],
       })
     );
@@ -146,35 +184,50 @@ describe('Canon batch commit', () => {
 });
 
 describe('Canon proposal validation', () => {
-  it('rejects an unsupported status and writes nothing', async () => {
+  it('accepts any status string; the source declares no status vocabulary', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'npc', name: 'Weathered', status: 'gone to the rind', subkind: 'worker' },
+        ],
+      })
+    );
+
+    expect(result.entityCount).toBe(1);
+  });
+
+  it('rejects a lore tag outside the world tag vocabulary and writes nothing', async () => {
     await expect(
       worldState.world.commitBatch(
         proposal({
           entities: [
-            { kind: 'npc', name: 'Unknown', status: 'ghost' as unknown as HardStateStatus },
+            { kind: 'npc', name: 'Tagged', ref: 'npc', status: 'alive', subkind: 'specialist' },
+          ],
+          lore: [
+            { entity: { ref: 'npc' }, prose: 'A story.', tags: ['not-a-real-tag'], title: 'Story' },
           ],
         })
       )
-    ).rejects.toThrowError(/Status ghost is not valid for kind npc/);
+    ).rejects.toThrowError(/Tag not-a-real-tag is not in the world tag vocabulary/);
 
     const listed = await worldState.world.listEntities({ minProminence: 'forgotten' });
     expect(listed).toHaveLength(0);
   });
 
-  it('rejects a relationship the vocabulary does not allow between those kinds', async () => {
+  it('rejects a constrained relationship outside its declared kinds', async () => {
     await expect(
       worldState.world.commitBatch(
         proposal({
           entities: [
-            { kind: 'location', name: 'Forbidden Site', ref: 'loc', status: 'known', subkind: 'site' },
-            { kind: 'artifact', name: 'Lost Relic', ref: 'relic', status: 'intact', subkind: 'relic' },
+            { kind: 'npc', name: 'Fighter', ref: 'npc', status: 'alive', subkind: 'specialist' },
+            { kind: 'geographic_location', name: 'The Shear', ref: 'place', status: 'hazardous', subkind: 'hazardous_zone' },
           ],
           relationships: [
-            { dst: { ref: 'relic' }, relationship: 'controls', src: { ref: 'loc' } },
+            { dst: { ref: 'place' }, relationship: 'fought_over', src: { ref: 'npc' } },
           ],
         })
       )
-    ).rejects.toThrowError(/not allowed from location to artifact/);
+    ).rejects.toThrowError(/fought_over is not allowed from npc to geographic_location/);
   });
 
   it('rejects the banned generic verb by name', async () => {
@@ -182,8 +235,8 @@ describe('Canon proposal validation', () => {
       worldState.world.commitBatch(
         proposal({
           entities: [
-            { kind: 'location', name: 'Somewhere', ref: 'a', status: 'known', subkind: 'site' },
-            { kind: 'location', name: 'Elsewhere', ref: 'b', status: 'known', subkind: 'site' },
+            { kind: 'geographic_location', name: 'Somewhere', ref: 'a', subkind: 'settlement' },
+            { kind: 'geographic_location', name: 'Elsewhere', ref: 'b', subkind: 'settlement' },
           ],
           relationships: [{ dst: { ref: 'b' }, relationship: 'related_to', src: { ref: 'a' } }],
         })
@@ -195,9 +248,9 @@ describe('Canon proposal validation', () => {
     await expect(
       worldState.world.commitBatch(
         proposal({
-          entities: [{ kind: 'npc', name: 'Solitary', ref: 'npc', status: 'alive', subkind: 'ally' }],
+          entities: [{ kind: 'npc', name: 'Solitary', ref: 'npc', status: 'alive', subkind: 'specialist' }],
           relationships: [
-            { dst: { ref: 'nobody' }, relationship: 'ally_of', src: { ref: 'npc' } },
+            { dst: { ref: 'nobody' }, relationship: 'cooperates_with', src: { ref: 'npc' } },
           ],
         })
       )
@@ -209,9 +262,11 @@ describe('Canon proposal validation', () => {
       .commitBatch(
         proposal({
           entities: [
-            { kind: 'npc', name: 'One', status: 'ghost' as unknown as HardStateStatus },
-            // 'planet' is a real subkind, just not one an npc may take.
-            { kind: 'npc', name: 'Two', subkind: 'planet' },
+            // 'star_system' is a real subkind, just not one an npc may take.
+            { kind: 'npc', name: 'One', ref: 'one', subkind: 'star_system' },
+          ],
+          lore: [
+            { entity: { ref: 'one' }, prose: 'A story.', tags: ['not-a-real-tag'], title: 'Story' },
           ],
         })
       )
@@ -227,13 +282,13 @@ describe('World lore', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'location', name: 'Lore Root', ref: 'root', status: 'known', subkind: 'site' },
+          { kind: 'geographic_location', name: 'Lore Root', ref: 'root', subkind: 'settlement' },
         ],
         lore: [
           {
             entity: { ref: 'root' },
             prose: 'An old story about the root.',
-            tags: ['Myth', 'origin'],
+            tags: ['legend', 'origin'],
             title: 'Origin Story',
           },
         ],
@@ -245,15 +300,15 @@ describe('World lore', () => {
 
     expect(listed).toHaveLength(1);
     expect(listed[0]?.title).toBe('Origin Story');
-    expect(listed[0]?.tags).toEqual(['myth', 'origin']);
+    expect(listed[0]?.tags).toEqual(['legend', 'origin']);
   });
 
   it('returns fragments for several entities in one query', async () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'location', name: 'First', ref: 'a', status: 'known', subkind: 'site' },
-          { kind: 'location', name: 'Second', ref: 'b', status: 'known', subkind: 'site' },
+          { kind: 'geographic_location', name: 'First', ref: 'a', subkind: 'settlement' },
+          { kind: 'geographic_location', name: 'Second', ref: 'b', subkind: 'settlement' },
         ],
         lore: [
           { entity: { ref: 'a' }, prose: 'About the first.', title: 'First Tale' },
