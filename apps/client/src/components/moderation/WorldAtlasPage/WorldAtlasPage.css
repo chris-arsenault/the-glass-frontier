@@ -101,9 +101,7 @@
 .atlas-fields input,
 .atlas-fields select,
 .atlas-fragment-form input,
-.atlas-fragment-form textarea,
-.atlas-add-link input,
-.atlas-add-link select {
+.atlas-fragment-form textarea {
   width: 100%;
   padding: 0.5rem;
   color: #eef3ff;
@@ -156,13 +154,6 @@
   background: none;
   border: none;
   cursor: pointer;
-}
-
-.atlas-add-link {
-  display: grid;
-  gap: 0.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  margin-top: 0.5rem;
 }
 
 .atlas-fragments {

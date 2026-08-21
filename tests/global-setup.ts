@@ -81,6 +81,13 @@ export default async function globalSetup(): Promise<void> {
     });
   }
 
+  // Entity kinds are validated against the vocabulary table, so it must be
+  // seeded before the fixtures — mirrors the root db:migrate flow.
+  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'seed:vocabulary'], {
+    env: withEnv(),
+    stdio: 'inherit',
+  });
+
   await execa('pnpm', ['exec', 'tsx', 'tests/bin/seed-local-fixtures.ts'], {
     env: withEnv(),
     stdio: 'inherit',

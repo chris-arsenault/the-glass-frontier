@@ -35,6 +35,10 @@ test.describe('Chat system', () => {
   test('executes the action intent path and propagates feedback across moderation surfaces', async ({
     page,
   }) => {
+    // Full journey: mocked turn, feedback submission, then two moderation
+    // surfaces. Needs more than the global 10s budget (its own queue expect
+    // already allows 15s).
+    test.setTimeout(30_000);
     const feedbackComment = `Integration feedback ${Date.now()}`;
     const bugSummary = `Playwright bug ${Date.now()}`;
     const bugDetails =
