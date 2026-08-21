@@ -7,12 +7,7 @@ import {
   useIamAuth,
   createPool,
 } from '@glass-frontier/app';
-import {
-  createDefaultRegistry,
-  createLLMClient,
-  loadLlmApiKeysFromSecrets,
-  syncRegistryToDatabase,
-} from '@glass-frontier/llm-client';
+import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
 import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import {
   createChronicleStore,
@@ -66,12 +61,6 @@ export async function initializeForLambda(): Promise<void> {
   // Pass pool to LLM client for audit/usage tracking with IAM auth
   const llmClient = createLLMClient({ pool });
 
-  // Sync model registry to database
-  const registry = createDefaultRegistry();
-  await syncRegistryToDatabase(registry, appStore.modelConfigStore).catch((error) => {
-    console.error('[GM-API] Failed to sync model registry to database:', error);
-  });
-
   engine = new GmEngine({
     chronicleStore,
     llmClient,
@@ -103,12 +92,6 @@ function initializeLocal(): void {
   locationHelpers = new LocationHelpers(worldSchemaStore);
 
   const llmClient = createLLMClient();
-
-  // Sync model registry to database on startup
-  const registry = createDefaultRegistry();
-  void syncRegistryToDatabase(registry, appStore.modelConfigStore).catch((error) => {
-    console.error('[GM-API] Failed to sync model registry to database:', error);
-  });
 
   engine = new GmEngine({
     chronicleStore,

@@ -192,15 +192,14 @@ class ChronicleClosureProcessor {
         },
       ],
       instructions: 'Produce only the requested narrative text.',
-      max_output_tokens: input.maxOutputTokens,
+      maxOutputTokens: input.maxOutputTokens,
       metadata: {
         chronicleId: input.context.chronicle.id,
         operation: input.operation,
         playerId: input.context.chronicle.playerId,
       },
       model,
-      reasoning: { effort: 'minimal' },
-      text: { verbosity: 'low' },
+      reasoningEffort: 'low',
     };
     const response = await this.#llm.generate(request, 'string');
     if (typeof response.message !== 'string') {

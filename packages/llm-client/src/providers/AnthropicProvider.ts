@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import * as z from 'zod';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 
 import { ProviderError } from '../ProviderError';
 import type { LLMRequest } from '../types';
@@ -17,10 +17,51 @@ type AnthropicMessages = {
   system: Anthropic.Messages.TextBlockParam[];
 };
 
+export const mapAnthropicMessages = (request: LLMRequest): AnthropicMessages => {
+  const system: Anthropic.Messages.TextBlockParam[] = [
+    { text: request.instructions, type: 'text' },
+  ];
+  const messages: Anthropic.Messages.MessageParam[] = [];
+  for (const entry of request.input) {
+    const text = entry.content.map((content) => content.text).join('\n');
+    if (entry.role === 'developer') {
+      system.push({ text, type: 'text' });
+    } else {
+      messages.push({ content: [{ text, type: 'text' }], role: 'user' });
+    }
+  }
+  return { messages, system };
+};
+
+export const mapAnthropicRequest = (
+  request: LLMRequest
+): Anthropic.Messages.MessageCreateParamsNonStreaming => {
+  const { messages, system } = mapAnthropicMessages(request);
+  return {
+    max_tokens: request.maxOutputTokens,
+    messages,
+    model: request.model,
+    output_config: { effort: request.reasoningEffort },
+    system,
+    thinking: { type: 'adaptive' },
+  };
+};
+
+export const mapAnthropicStructuredRequest = <T>(
+  request: StructuredOutputRequest<T>
+): Anthropic.Messages.MessageCreateParamsNonStreaming => {
+  return {
+    ...mapAnthropicRequest(request),
+    output_config: {
+      effort: request.reasoningEffort,
+      format: zodOutputFormat(request.schema),
+    },
+  };
+};
+
 export class AnthropicProvider implements IProvider, IStructuredOutputProvider {
   readonly id = 'anthropic';
   readonly supportsStreaming = true;
-  readonly supportsNativeStructuredOutput = false;
   readonly valid: boolean;
   readonly #client: Anthropic | null = null;
 
@@ -37,14 +78,15 @@ export class AnthropicProvider implements IProvider, IStructuredOutputProvider {
   async execute(request: LLMRequest, signal?: AbortSignal): Promise<ProviderResponse> {
     const client = this.#requireClient();
     try {
-      const response = await client.messages.create(this.#mapRequest(request), { signal });
-      const text = response.content.find((content) => content.type === 'text');
+      const response = await client.messages.create(mapAnthropicRequest(request), { signal });
+      const text = this.#extractText(response);
       return {
-        output_text: text?.text ?? '',
+        output_text: text,
         rawResponse: response as unknown as Record<string, unknown>,
         usage: {
-          input_tokens: response.usage.input_tokens,
-          output_tokens: response.usage.output_tokens,
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+          totalTokens: response.usage.input_tokens + response.usage.output_tokens,
         },
       };
     } catch (error: unknown) {
@@ -59,21 +101,17 @@ export class AnthropicProvider implements IProvider, IStructuredOutputProvider {
     const client = this.#requireClient();
     try {
       const response = await client.messages.create(
-        this.#mapStructuredRequest(request, z.toJSONSchema(request.schema)),
+        mapAnthropicStructuredRequest(request),
         { signal }
       );
-      const toolUse = response.content.find(
-        (block): block is Anthropic.Messages.ToolUseBlock => block.type === 'tool_use'
-      );
-      if (toolUse === undefined) {
-        throw new Error('No tool_use block in Anthropic response.');
-      }
+      const text = this.#extractText(response);
       return {
-        data: request.schema.parse(toolUse.input),
+        data: request.schema.parse(JSON.parse(text) as unknown),
         rawResponse: response as unknown as Record<string, unknown>,
         usage: {
-          input_tokens: response.usage.input_tokens,
-          output_tokens: response.usage.output_tokens,
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+          totalTokens: response.usage.input_tokens + response.usage.output_tokens,
         },
       };
     } catch (error: unknown) {
@@ -93,60 +131,33 @@ export class AnthropicProvider implements IProvider, IStructuredOutputProvider {
     return this.#client;
   }
 
-  #mapRequest(request: LLMRequest): Anthropic.Messages.MessageCreateParamsNonStreaming {
-    const { messages, system } = this.#mapMessages(request);
-    return {
-      max_tokens: request.max_output_tokens,
-      messages,
-      model: request.model,
-      system,
-    };
-  }
-
-  #mapStructuredRequest<T>(
-    request: StructuredOutputRequest<T>,
-    jsonSchema: Record<string, unknown>
-  ): Anthropic.Messages.MessageCreateParamsNonStreaming {
-    const { messages, system } = this.#mapMessages(request);
-    const inputSchema = { ...jsonSchema, type: jsonSchema.type ?? 'object' };
-    const tool: Anthropic.Messages.Tool = {
-      description: `Extract structured data matching the ${request.schemaName} schema`,
-      input_schema: inputSchema as Anthropic.Messages.Tool.InputSchema,
-      name: request.schemaName,
-    };
-    return {
-      max_tokens: request.max_output_tokens,
-      messages,
-      model: request.model,
-      system,
-      tool_choice: { name: request.schemaName, type: 'tool' },
-      tools: [tool],
-    };
-  }
-
-  #mapMessages(request: LLMRequest): AnthropicMessages {
-    const system: Anthropic.Messages.TextBlockParam[] = [
-      { text: request.instructions, type: 'text' },
-    ];
-    const messages: Anthropic.Messages.MessageParam[] = [];
-    for (const entry of request.input) {
-      const text = entry.content.map((content) => content.text).join('\n');
-      if (entry.role === 'developer') {
-        system.push({ cache_control: { type: 'ephemeral' }, text, type: 'text' });
-      } else {
-        messages.push({ content: [{ text, type: 'text' }], role: 'user' });
-      }
+  #extractText(response: Anthropic.Messages.Message): string {
+    const text = response.content
+      .filter((block): block is Anthropic.Messages.TextBlock => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n')
+      .trim();
+    if (text.length === 0) {
+      throw new ProviderError({
+        code: 'anthropic_empty_response',
+        message: 'Anthropic returned no text content',
+        retryable: true,
+        status: 502,
+      });
     }
-    return { messages, system };
+    return text;
   }
 
   #normalizeError(error: unknown): ProviderError {
+    if (error instanceof ProviderError) {
+      return error;
+    }
     if (error instanceof Anthropic.APIError) {
       const status = typeof error.status === 'number' ? error.status : 500;
       return new ProviderError({
         code: this.#resolveApiErrorCode(error),
         details: { message: error.message },
-        retryable: status >= 500,
+        retryable: status === 408 || status === 409 || status === 429 || status >= 500,
         status,
       });
     }
@@ -154,7 +165,7 @@ export class AnthropicProvider implements IProvider, IStructuredOutputProvider {
     return new ProviderError({
       code: 'anthropic_sdk_failure',
       details: { message },
-      retryable: true,
+      retryable: false,
       status: 502,
     });
   }

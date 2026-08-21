@@ -13,8 +13,7 @@ type HandlerOptions = {
 };
 
 const NARRATIVE_MAX_OUTPUT_TOKENS = 2000;
-const NARRATIVE_REASONING = { effort: 'minimal' as const };
-const NARRATIVE_VERBOSITY = 'low';
+const NARRATIVE_REASONING_EFFORT = 'low';
 
 class GmResponseNode implements GraphNode {
   readonly id: string;
@@ -99,7 +98,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       const composer = new PromptComposer(context.templates);
       const prompt = await composer.buildPrompt(this.options.id, context);
       const narration = await context.llm.generate({
-        max_output_tokens: NARRATIVE_MAX_OUTPUT_TOKENS,
+        maxOutputTokens: NARRATIVE_MAX_OUTPUT_TOKENS,
         model,
         ...prompt,
         metadata: {
@@ -109,10 +108,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
           turnId: context.turnId,
           turnSequence: String(context.turnSequence)
         },
-        reasoning: NARRATIVE_REASONING,
-        text: {
-          verbosity: NARRATIVE_VERBOSITY,
-        }
+        reasoningEffort: NARRATIVE_REASONING_EFFORT,
       }, 'string');
       const cleanedContent = this.#cleanNarration(narration.message);
       return {

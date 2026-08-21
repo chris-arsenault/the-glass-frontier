@@ -1,12 +1,8 @@
-import type { LLMRequest } from '../types';
+import type { LLMRequest, TokenUsage } from '../types';
 
 export type ProviderResponse = {
   output_text: string;
-  usage: {
-    [key: string]: number;
-    input_tokens: number;
-    output_tokens: number;
-  };
+  usage: TokenUsage;
   rawResponse: Record<string, unknown>;
 };
 

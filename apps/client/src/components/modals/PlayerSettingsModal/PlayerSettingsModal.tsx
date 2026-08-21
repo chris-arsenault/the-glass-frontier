@@ -12,11 +12,11 @@ type ModelConfig = {
   displayName: string;
   providerId: string;
   isEnabled: boolean;
-  maxTokens: number;
+  contextWindow: number;
+  maxOutputTokens: number;
   costPer1kInput: number;
   costPer1kOutput: number;
-  supportsReasoning: boolean;
-  metadata: Record<string, unknown>;
+  reasoningEfforts: Array<'high' | 'low' | 'medium'>;
   updatedAt: string;
 };
 

@@ -1,5 +1,5 @@
+import type { ReasoningEffort } from '@glass-frontier/app';
 import type { LoggableMetadata } from '@glass-frontier/utils';
-import type { ResponseFormatTextConfig } from 'openai/resources/responses/responses';
 
 export type PromptContentSegment = {
   type: 'input_text';
@@ -19,16 +19,16 @@ export type Prompt = {
 export type LLMRequest = {
   instructions: string;
   input: PromptInput[];
-  max_output_tokens: number;
+  maxOutputTokens: number;
   metadata: LoggableMetadata;
   model: string;
-  reasoning: {
-    effort: 'minimal' | 'high';
-  };
-  text: {
-    format?: ResponseFormatTextConfig;
-    verbosity: 'low' | 'high';
-  };
+  reasoningEffort: ReasoningEffort;
+};
+
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
 };
 
 export type LLMResponse = {
@@ -40,7 +40,7 @@ export type LLMResponse = {
   requestBody: LLMRequest;
   requestId: string;
   responseBody: Record<string, unknown>;
-  usage: Record<string, unknown>;
+  usage: TokenUsage;
 };
 
 export type ModelCategory = 'prose' | 'classification';

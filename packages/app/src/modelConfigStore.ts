@@ -1,16 +1,18 @@
 import type { Pool } from 'pg';
 
+import type { ReasoningEffort } from './modelCatalog';
+
 export type ModelConfig = {
   modelId: string;
-  apiModelId: string | null;
+  apiModelId: string;
   displayName: string;
   providerId: string;
   isEnabled: boolean;
-  maxTokens: number;
+  contextWindow: number;
+  maxOutputTokens: number;
   costPer1kInput: number;
   costPer1kOutput: number;
-  supportsReasoning: boolean;
-  metadata: Record<string, unknown>;
+  reasoningEfforts: ReasoningEffort[];
   updatedAt: Date;
 };
 
@@ -114,29 +116,29 @@ export class ModelConfigStore {
   async listModels(): Promise<ModelConfig[]> {
     const result = await this.#pool.query<{
       model_id: string;
-      api_model_id: string | null;
+      api_model_id: string;
       display_name: string;
       provider_id: string;
       is_enabled: boolean;
-      max_tokens: number;
+      context_window: number;
+      max_output_tokens: number;
       cost_per_1k_input: string;
       cost_per_1k_output: string;
-      supports_reasoning: boolean;
-      metadata: Record<string, unknown>;
+      reasoning_efforts: ReasoningEffort[];
       updated_at: Date;
     }>('SELECT * FROM app.model_config WHERE is_enabled = true ORDER BY display_name');
 
     return result.rows.map((row) => ({
       apiModelId: row.api_model_id,
+      contextWindow: row.context_window,
       costPer1kInput: parseFloat(row.cost_per_1k_input),
       costPer1kOutput: parseFloat(row.cost_per_1k_output),
       displayName: row.display_name,
       isEnabled: row.is_enabled,
-      maxTokens: row.max_tokens,
-      metadata: row.metadata,
+      maxOutputTokens: row.max_output_tokens,
       modelId: row.model_id,
       providerId: row.provider_id,
-      supportsReasoning: row.supports_reasoning,
+      reasoningEfforts: row.reasoning_efforts,
       updatedAt: row.updated_at,
     }));
   }
@@ -232,35 +234,6 @@ export class ModelConfigStore {
     }));
   }
 
-  async upsertModel(config: Omit<ModelConfig, 'metadata' | 'updatedAt'>): Promise<void> {
-    await this.#pool.query(
-      `INSERT INTO app.model_config
-       (model_id, api_model_id, display_name, provider_id, is_enabled, max_tokens, cost_per_1k_input, cost_per_1k_output, supports_reasoning)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       ON CONFLICT (model_id) DO UPDATE
-       SET api_model_id = EXCLUDED.api_model_id,
-           display_name = EXCLUDED.display_name,
-           provider_id = EXCLUDED.provider_id,
-           is_enabled = EXCLUDED.is_enabled,
-           max_tokens = EXCLUDED.max_tokens,
-           cost_per_1k_input = EXCLUDED.cost_per_1k_input,
-           cost_per_1k_output = EXCLUDED.cost_per_1k_output,
-           supports_reasoning = EXCLUDED.supports_reasoning,
-           updated_at = now()`,
-      [
-        config.modelId,
-        config.apiModelId,
-        config.displayName,
-        config.providerId,
-        config.isEnabled,
-        config.maxTokens,
-        config.costPer1kInput,
-        config.costPer1kOutput,
-        config.supportsReasoning,
-      ]
-    );
-  }
-
   async getUsageCostSummary(
     playerId: string,
     startDate?: Date,
@@ -277,7 +250,7 @@ export class ModelConfigStore {
          COALESCE(mc.cost_per_1k_input, '0')::text as cost_per_1k_input,
          COALESCE(mc.cost_per_1k_output, '0')::text as cost_per_1k_output
        FROM ops.model_usage mu
-       LEFT JOIN app.model_config mc ON (mu.model_id = mc.model_id OR mu.model_id = mc.api_model_id)
+       LEFT JOIN app.model_config mc ON mu.model_id = mc.model_id
        WHERE mu.player_id = $1
          AND ($2::date IS NULL OR mu.date >= $2)
          AND ($3::date IS NULL OR mu.date <= $3)

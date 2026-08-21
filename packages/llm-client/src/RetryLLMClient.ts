@@ -6,6 +6,7 @@ import type { Pool } from 'pg';
 import type { ZodSchema } from 'zod';
 
 import { createDefaultRegistry } from './modelRegistry';
+import { ProviderError } from './ProviderError';
 import type { IProvider } from './providers/IProvider';
 import type {
   IStructuredOutputProvider,
@@ -55,13 +56,6 @@ const isStructuredProvider = (
   provider: IProvider
 ): provider is IProvider & IStructuredOutputProvider =>
   'executeStructured' in provider && typeof provider.executeStructured === 'function';
-
-const errorStatus = (error: unknown): number | undefined => {
-  if (typeof error !== 'object' || error === null || !('status' in error)) {
-    return undefined;
-  }
-  return typeof error.status === 'number' ? error.status : undefined;
-};
 
 export function createLLMClient(options?: CreateLLMClientOptions): RetryLLMClient {
   const registry = createDefaultRegistry();
@@ -135,11 +129,7 @@ export class RetryLLMClient {
   ): Promise<LLMResponse> {
     try {
       return await withTimeout(async (signal) => {
-        const provider = this.#registry.getProvider(request.model);
-        const resolvedRequest = {
-          ...request,
-          model: this.#registry.getApiModelId(request.model),
-        };
+        const { provider, request: resolvedRequest } = this.#registry.resolve(request);
         const startTime = Date.now();
         const response = await provider.execute(resolvedRequest, signal);
         return {
@@ -166,8 +156,11 @@ export class RetryLLMClient {
     attempt: number
   ): Promise<LLMResponse> {
     this.#logError(error, attempt, request.metadata);
-    if (errorStatus(error) === 400) {
+    if (error instanceof ProviderError && error.status === 400) {
       throw this.#createBadRequestError(error, request.model);
+    }
+    if (error instanceof ProviderError && !error.retryable) {
+      throw error;
     }
     if (attempt >= DEFAULT_MAX_RETRIES) {
       throw this.#toError(error);
@@ -204,13 +197,12 @@ export class RetryLLMClient {
     result: StructuredOutputResponse<T>;
   }> {
     return withTimeout(async (signal) => {
-      const provider = this.#registry.getProvider(input.request.model);
+      const { provider, request: resolvedRequest } = this.#registry.resolve(input.request);
       if (!isStructuredProvider(provider)) {
         throw new Error(`Provider ${provider.id} does not support structured output`);
       }
       const request: StructuredOutputRequest<T> = {
-        ...input.request,
-        model: this.#registry.getApiModelId(input.request.model),
+        ...resolvedRequest,
         schema: input.schema,
         schemaName: input.schemaName,
       };
@@ -225,8 +217,11 @@ export class RetryLLMClient {
     input: StructuredAttempt<T>
   ): Promise<StructuredOutputResponse<T>> {
     this.#logError(error, input.attempt, input.request.metadata);
-    if (errorStatus(error) === 400) {
+    if (error instanceof ProviderError && error.status === 400) {
       throw this.#createBadRequestError(error, input.request.model);
+    }
+    if (error instanceof ProviderError && !error.retryable) {
+      throw error;
     }
     if (input.attempt >= DEFAULT_MAX_RETRIES) {
       throw this.#toError(error);

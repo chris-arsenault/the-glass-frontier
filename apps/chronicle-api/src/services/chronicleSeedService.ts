@@ -127,7 +127,7 @@ export class ChronicleSeedService {
           },
         ],
         instructions: options.instructions,
-        max_output_tokens: 2000,
+        maxOutputTokens: 2000,
         metadata: {
           anchorId: options.anchor.id,
           locationId: options.location.id,
@@ -135,10 +135,7 @@ export class ChronicleSeedService {
           playerId: options.playerId,
         },
         model: options.model,
-        reasoning: { effort: 'minimal' as const },
-        text: {
-          verbosity: 'low',
-        },
+        reasoningEffort: 'low',
       },
       SeedArraySchema,
       'SeedArray'

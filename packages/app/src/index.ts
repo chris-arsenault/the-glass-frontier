@@ -11,6 +11,13 @@ export {
   type UsageCostSummary,
 } from './modelConfigStore';
 export {
+  MODEL_CATALOG,
+  type CatalogModel,
+  type ModelCatalog,
+  type ModelProviderId,
+  type ReasoningEffort,
+} from './modelCatalog';
+export {
   useIamAuth,
   createPool,
   createPoolWithIamAuth,

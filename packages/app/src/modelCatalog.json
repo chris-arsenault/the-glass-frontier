@@ -1,0 +1,63 @@
+{
+  "defaults": {
+    "classification": "amazon-nova-2-lite",
+    "prose": "claude-sonnet-5"
+  },
+  "models": [
+    {
+      "apiModelId": "gpt-5.6-luna",
+      "contextWindow": 1050000,
+      "costPer1kInput": 0.0002,
+      "costPer1kOutput": 0.0012,
+      "displayName": "GPT-5.6 Luna",
+      "maxOutputTokens": 128000,
+      "modelId": "gpt-5.6-luna",
+      "providerId": "openai",
+      "reasoningEfforts": ["low", "medium", "high"]
+    },
+    {
+      "apiModelId": "gpt-5.6-terra",
+      "contextWindow": 1050000,
+      "costPer1kInput": 0.002,
+      "costPer1kOutput": 0.012,
+      "displayName": "GPT-5.6 Terra",
+      "maxOutputTokens": 128000,
+      "modelId": "gpt-5.6-terra",
+      "providerId": "openai",
+      "reasoningEfforts": ["low", "medium", "high"]
+    },
+    {
+      "apiModelId": "gpt-5.6-sol",
+      "contextWindow": 1050000,
+      "costPer1kInput": 0.005,
+      "costPer1kOutput": 0.03,
+      "displayName": "GPT-5.6 Sol",
+      "maxOutputTokens": 128000,
+      "modelId": "gpt-5.6-sol",
+      "providerId": "openai",
+      "reasoningEfforts": ["low", "medium", "high"]
+    },
+    {
+      "apiModelId": "claude-sonnet-5",
+      "contextWindow": 1000000,
+      "costPer1kInput": 0.002,
+      "costPer1kOutput": 0.01,
+      "displayName": "Claude Sonnet 5",
+      "maxOutputTokens": 128000,
+      "modelId": "claude-sonnet-5",
+      "providerId": "anthropic",
+      "reasoningEfforts": ["low", "medium", "high"]
+    },
+    {
+      "apiModelId": "us.amazon.nova-2-lite-v1:0",
+      "contextWindow": 1000000,
+      "costPer1kInput": 0.0003,
+      "costPer1kOutput": 0.0025,
+      "displayName": "Amazon Nova 2 Lite",
+      "maxOutputTokens": 65536,
+      "modelId": "amazon-nova-2-lite",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low", "medium"]
+    }
+  ]
+}

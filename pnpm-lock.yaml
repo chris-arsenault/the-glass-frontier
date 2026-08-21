@@ -357,6 +357,9 @@ importers:
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../../packages/node-utils
+      '@glass-frontier/worldstate':
+        specifier: workspace:*
+        version: link:../../packages/worldstate
       node-pg-migrate:
         specifier: ^9.0.0
         version: 9.0.0(@types/pg@8.23.1)(pg@8.23.0)
@@ -599,14 +602,14 @@ importers:
   packages/llm-client:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.70.1
-        version: 0.70.1(zod@4.4.3)
+        specifier: ^0.120.0
+        version: 0.120.0(zod@4.4.3)
       '@aws-sdk/client-bedrock-runtime':
-        specifier: ^3.1114.0
-        version: 3.1114.0
+        specifier: ^3.1115.0
+        version: 3.1115.0
       '@aws-sdk/client-secrets-manager':
-        specifier: ^3.1114.0
-        version: 3.1114.0
+        specifier: ^3.1115.0
+        version: 3.1115.0
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../node-utils
@@ -617,11 +620,15 @@ importers:
         specifier: workspace:*
         version: link:../utils
       openai:
-        specifier: ^6.8.1
-        version: 6.49.0(@aws-sdk/credential-provider-node@3.972.80)(@smithy/signature-v4@5.7.2)(ws@8.21.3)(zod@4.4.3)
+        specifier: ^7.5.0
+        version: 7.5.0(@aws-sdk/credential-provider-node@3.972.80)(@smithy/signature-v4@5.7.2)(ws@8.21.3)(zod@4.4.3)
       zod:
         specifier: ^4.1.12
         version: 4.4.3
+    devDependencies:
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@7.2.7(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12))
 
   packages/node-utils:
     dependencies:
@@ -678,15 +685,15 @@ importers:
 
   packages/worldstate:
     dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.70.1
-        version: 0.70.1(zod@4.4.3)
       '@glass-frontier/dto':
         specifier: workspace:*
         version: link:../dto
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../node-utils
+      '@glass-frontier/utils':
+        specifier: workspace:*
+        version: link:../utils
       pg:
         specifier: ^8.13.1
         version: 8.23.0
@@ -697,14 +704,17 @@ importers:
       node-pg-migrate:
         specifier: ^7.9.1
         version: 7.9.1(@types/pg@8.23.1)(pg@8.23.0)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.12
       vitest:
         specifier: ^4.0.8
         version: 4.1.11(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@7.2.7(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12))
 
 packages:
 
-  '@anthropic-ai/sdk@0.70.1':
-    resolution: {integrity: sha512-AGEhifuvE22VxfQ5ROxViTgM8NuVQzEvqcN8bttR4AP24ythmNE/cL/SrOz79xiv7/osrsmCyErjsistJi7Z8A==}
+  '@anthropic-ai/sdk@0.120.0':
+    resolution: {integrity: sha512-ZlvmNFT/iIF6JD13rxbbMWD8nvGR0RaUp6yMQnoc+4Af0YjVVe/bIdW1XSQQsoxXAtg1NaT6Vak0LKFlJ4d37Q==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -722,8 +732,8 @@ packages:
     resolution: {integrity: sha512-GoHcLPT4UuOGhRCtNI35rA6gai375cqqar/aAwuI7r/maZ9fpPU/z1/YikHHJSsTgBayuEMlHcTFv2y21R1Elw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-bedrock-runtime@3.1114.0':
-    resolution: {integrity: sha512-1j2QIHpWcNYyjzAlCe+o1YF1vjHMF1lR4EYMhQnCvXiKxW+vuUHeqGOCeuU3MK5HiRbrqpUy/8tX5Ylz/62eTA==}
+  '@aws-sdk/client-bedrock-runtime@3.1115.0':
+    resolution: {integrity: sha512-nenJKAe6OB0R13xaHpogadyqJ6rogFZk++ahWNdlJDf5sM4a6KFsXU5Zh3l3ox2Y+8YZp4l4msz+IYWFiQ7Bzg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-dynamodb@3.1114.0':
@@ -732,6 +742,10 @@ packages:
 
   '@aws-sdk/client-secrets-manager@3.1114.0':
     resolution: {integrity: sha512-p07CDGFO7v8wi4ugD8VO+qX+wShPrXjEMYsiX7yhIK0nm9dbVhPKcJ9naBK02cqI/kN2mshT+9AV0VJw206UPg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-secrets-manager@3.1115.0':
+    resolution: {integrity: sha512-FF2qDvWklCAlWyWmblBW7R0IqZXZhrgHfGijvo1ydrQB6gahteKl4TbPWQeayGcAfMFp4homcN7Tl92wfNCJKA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-sqs@3.1114.0':
@@ -832,8 +846,8 @@ packages:
     resolution: {integrity: sha512-JfljgoVtl+s3Qy21n9a7Z48uCQaOXcN74KJ3TEQfPoB293GrXFSt6HSQJF1sTZ8c/5QedEvd3NjJQMO4u9qa5A==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/token-providers@3.1114.0':
-    resolution: {integrity: sha512-uTN0+iJF+2etuuclVCUoK93G77AANpRsjpWC3fppEKfCqYOpB2A2Q7BIWKHbyZ1eXo013D8p5qnbmTCHllueIA==}
+  '@aws-sdk/token-providers@3.1115.0':
+    resolution: {integrity: sha512-ZQ9LMRuMbaZTTX6SJE8c7uP0PHSxerzs2wHBF0URQLB8hLQbPqi8RUoD3/ZaBqwIUue3RIPnCTvZKaE2MInX5Q==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/types@3.974.4':
@@ -1677,6 +1691,9 @@ packages:
   '@smithy/types@4.17.2':
     resolution: {integrity: sha512-FOKpVZob9MPTn2znRzGrnsMHv7BOsKVw3XiP/cOyYLDVZ9qKp4nifIiSCuUU/fIj5Vu0UOAxCFr+qRAtG0NUkA==}
     engines: {node: '>=18.0.0'}
+
+  '@stablelib/base64@1.0.1':
+    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -2633,6 +2650,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -2700,6 +2718,9 @@ packages:
 
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
+
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
 
   fast-uri@3.1.5:
     resolution: {integrity: sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw==}
@@ -3680,8 +3701,9 @@ packages:
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
-  openai@6.49.0:
-    resolution: {integrity: sha512-aYCc0C6L864eR6WSYIwQGyXriw/nIyZx0ObvhzOEVuk0zoBDpynjSbrionWI7q65B5H8jJX0DXR9snEzM6bfPg==}
+  openai@7.5.0:
+    resolution: {integrity: sha512-ZbDBz8FSB8Mv8fFYIUvzTFMdV5vl93/octp1MdtK2lfYepSpfv/ewmeugpKz/cwGtFSx+YuUM4NwpZ2P55YiPA==}
+    engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
@@ -4231,6 +4253,9 @@ packages:
 
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
+
+  standardwebhooks@1.0.0:
+    resolution: {integrity: sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==}
 
   statuses@2.0.2:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
@@ -4840,9 +4865,10 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.70.1(zod@4.4.3)':
+  '@anthropic-ai/sdk@0.120.0(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
+      standardwebhooks: 1.0.0
     optionalDependencies:
       zod: 4.4.3
 
@@ -4869,14 +4895,14 @@ snapshots:
       '@smithy/types': 4.17.2
       tslib: 2.8.1
 
-  '@aws-sdk/client-bedrock-runtime@3.1114.0':
+  '@aws-sdk/client-bedrock-runtime@3.1115.0':
     dependencies:
       '@aws-sdk/core': 3.977.8
       '@aws-sdk/credential-provider-node': 3.972.80
       '@aws-sdk/eventstream-handler-node': 3.972.33
       '@aws-sdk/middleware-eventstream': 3.972.28
       '@aws-sdk/middleware-websocket': 3.972.51
-      '@aws-sdk/token-providers': 3.1114.0
+      '@aws-sdk/token-providers': 3.1115.0
       '@aws-sdk/types': 3.974.4
       '@smithy/core': 3.33.2
       '@smithy/fetch-http-handler': 5.7.2
@@ -4898,6 +4924,17 @@ snapshots:
       tslib: 2.8.1
 
   '@aws-sdk/client-secrets-manager@3.1114.0':
+    dependencies:
+      '@aws-sdk/core': 3.977.8
+      '@aws-sdk/credential-provider-node': 3.972.80
+      '@aws-sdk/types': 3.974.4
+      '@smithy/core': 3.33.2
+      '@smithy/fetch-http-handler': 5.7.2
+      '@smithy/node-http-handler': 4.11.2
+      '@smithy/types': 4.17.2
+      tslib: 2.8.1
+
+  '@aws-sdk/client-secrets-manager@3.1115.0':
     dependencies:
       '@aws-sdk/core': 3.977.8
       '@aws-sdk/credential-provider-node': 3.972.80
@@ -5138,7 +5175,7 @@ snapshots:
       '@smithy/types': 4.17.2
       tslib: 2.8.1
 
-  '@aws-sdk/token-providers@3.1114.0':
+  '@aws-sdk/token-providers@3.1115.0':
     dependencies:
       '@aws-sdk/core': 3.977.8
       '@aws-sdk/nested-clients': 3.997.43
@@ -5911,6 +5948,8 @@ snapshots:
   '@smithy/types@4.17.2':
     dependencies:
       tslib: 2.8.1
+
+  '@stablelib/base64@1.0.1': {}
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -7232,6 +7271,8 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
+  fast-sha256@1.3.0: {}
+
   fast-uri@3.1.5: {}
 
   fastest-levenshtein@1.0.16: {}
@@ -8408,7 +8449,7 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  openai@6.49.0(@aws-sdk/credential-provider-node@3.972.80)(@smithy/signature-v4@5.7.2)(ws@8.21.3)(zod@4.4.3):
+  openai@7.5.0(@aws-sdk/credential-provider-node@3.972.80)(@smithy/signature-v4@5.7.2)(ws@8.21.3)(zod@4.4.3):
     optionalDependencies:
       '@aws-sdk/credential-provider-node': 3.972.80
       '@smithy/signature-v4': 5.7.2
@@ -9000,6 +9041,11 @@ snapshots:
   split2@4.2.0: {}
 
   stackback@0.0.2: {}
+
+  standardwebhooks@1.0.0:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
 
   statuses@2.0.2: {}
 

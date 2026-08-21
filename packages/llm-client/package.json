@@ -16,16 +16,20 @@
     "build": "tsc -b",
     "build:clean": "tsc -b --clean",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "tsc -p test/tsconfig.json --pretty false && vitest run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.70.1",
-    "@aws-sdk/client-bedrock-runtime": "^3.1114.0",
-    "@aws-sdk/client-secrets-manager": "^3.1114.0",
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1115.0",
+    "@aws-sdk/client-secrets-manager": "^3.1115.0",
     "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/ops": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
-    "openai": "^6.8.1",
+    "openai": "^7.5.0",
     "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
   }
 }

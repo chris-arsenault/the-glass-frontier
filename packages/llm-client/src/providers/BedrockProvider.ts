@@ -1,7 +1,6 @@
 import {
   BedrockRuntimeClient,
   ConverseCommand,
-  InvokeModelCommand,
   type ConverseCommandInput,
   type ConverseCommandOutput,
 } from '@aws-sdk/client-bedrock-runtime';
@@ -15,11 +14,6 @@ import type {
   StructuredOutputRequest,
   StructuredOutputResponse,
 } from './IStructuredOutputProvider';
-
-type NovaResponse = {
-  output: { message: { content: Array<{ text: string }> } };
-  usage: { inputTokens: number; outputTokens: number };
-};
 
 type JsonDocument = null | boolean | number | string | JsonDocument[] | {
   [key: string]: JsonDocument;
@@ -45,19 +39,69 @@ const toJsonDocument = (value: unknown): JsonDocument => {
   throw new Error('Structured-output schema contains a non-JSON value.');
 };
 
-const isNovaResponse = (value: unknown): value is NovaResponse => {
-  if (typeof value !== 'object' || value === null) {
-    return false;
+export const mapBedrockMessages = (
+  request: LLMRequest
+): Pick<ConverseCommandInput, 'messages' | 'system'> => {
+  const system: NonNullable<ConverseCommandInput['system']> = [
+    { text: request.instructions },
+  ];
+  const messages: NonNullable<ConverseCommandInput['messages']> = [];
+  for (const entry of request.input) {
+    const text = entry.content.map((content) => content.text).join('\n');
+    if (entry.role === 'developer') {
+      system.push({ text });
+    } else {
+      messages.push({ content: [{ text }], role: 'user' });
+    }
   }
-  const response = value as Record<string, unknown>;
-  return typeof response.output === 'object' && response.output !== null
-    && typeof response.usage === 'object' && response.usage !== null;
+  return { messages, system };
+};
+
+export const mapBedrockRequest = (request: LLMRequest): ConverseCommandInput => {
+  if (!request.model.startsWith('us.amazon.nova-2-lite')) {
+    throw new Error(`Unsupported Bedrock model: ${request.model}`);
+  }
+  const { messages, system } = mapBedrockMessages(request);
+  return {
+    additionalModelRequestFields: {
+      reasoningConfig: {
+        maxReasoningEffort: request.reasoningEffort,
+        type: 'enabled',
+      },
+    },
+    inferenceConfig: { maxTokens: request.maxOutputTokens },
+    messages,
+    modelId: request.model,
+    system,
+  };
+};
+
+export const mapBedrockStructuredRequest = <T>(
+  request: StructuredOutputRequest<T>
+): ConverseCommandInput => {
+  const jsonSchema = z.toJSONSchema(request.schema);
+  const normalizedSchema = {
+    ...jsonSchema,
+    type: typeof jsonSchema.type === 'string' ? jsonSchema.type : 'object',
+  };
+  return {
+    ...mapBedrockRequest(request),
+    toolConfig: {
+      toolChoice: { tool: { name: request.schemaName } },
+      tools: [{
+        toolSpec: {
+          description: `Extract structured data matching the ${request.schemaName} schema`,
+          inputSchema: { json: toJsonDocument(normalizedSchema) },
+          name: request.schemaName,
+        },
+      }],
+    },
+  };
 };
 
 export class BedrockProvider implements IProvider, IStructuredOutputProvider {
   readonly id = 'bedrock';
   readonly supportsStreaming = false;
-  readonly supportsNativeStructuredOutput = false;
   readonly valid = true;
   readonly #client: BedrockRuntimeClient;
 
@@ -68,21 +112,9 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
 
   async execute(request: LLMRequest, signal?: AbortSignal): Promise<ProviderResponse> {
     try {
-      const command = new InvokeModelCommand({
-        accept: 'application/json',
-        body: JSON.stringify(this.#mapNovaRequest(request)),
-        contentType: 'application/json',
-        modelId: request.model,
-      });
+      const command = new ConverseCommand(mapBedrockRequest(request));
       const response = await this.#client.send(command, { abortSignal: signal });
-      if (response.body === undefined) {
-        throw new Error('Empty response body from Bedrock.');
-      }
-      const parsed: unknown = JSON.parse(new TextDecoder().decode(response.body));
-      if (!isNovaResponse(parsed)) {
-        throw new Error('Bedrock response does not match the Nova response contract.');
-      }
-      return this.#mapResponse(parsed, request.model);
+      return this.#mapResponse(response);
     } catch (error: unknown) {
       throw this.#normalizeError(error);
     }
@@ -93,16 +125,15 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
     signal?: AbortSignal
   ): Promise<StructuredOutputResponse<T>> {
     try {
-      const command = new ConverseCommand(
-        this.#mapStructuredRequest(request, z.toJSONSchema(request.schema))
-      );
+      const command = new ConverseCommand(mapBedrockStructuredRequest(request));
       const response = await this.#client.send(command, { abortSignal: signal });
       return {
         data: request.schema.parse(this.#extractToolInput(response)),
         rawResponse: { ...response },
         usage: {
-          input_tokens: response.usage?.inputTokens ?? 0,
-          output_tokens: response.usage?.outputTokens ?? 0,
+          inputTokens: response.usage?.inputTokens ?? 0,
+          outputTokens: response.usage?.outputTokens ?? 0,
+          totalTokens: response.usage?.totalTokens ?? 0,
         },
       };
     } catch (error: unknown) {
@@ -110,78 +141,28 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
     }
   }
 
-  #mapNovaRequest(request: LLMRequest): Record<string, unknown> {
-    if (!request.model.startsWith('us.amazon.nova')) {
-      throw new Error(`Unsupported Bedrock model: ${request.model}`);
-    }
-    const system = [{ text: request.instructions }];
-    const messages: Array<{ role: 'user'; content: Array<{ text: string }> }> = [];
-    for (const entry of request.input) {
-      const text = entry.content.map((content) => content.text).join('\n');
-      if (entry.role === 'developer') {
-        system.push({ text });
-      } else {
-        messages.push({ content: [{ text }], role: 'user' });
-      }
-    }
+  #mapResponse(response: ConverseCommandOutput): ProviderResponse {
     return {
-      inferenceConfig: { max_new_tokens: request.max_output_tokens },
-      messages,
-      schemaVersion: 'messages-v1',
-      system,
-    };
-  }
-
-  #mapResponse(response: NovaResponse, modelId: string): ProviderResponse {
-    if (!modelId.startsWith('us.amazon.nova')) {
-      throw new Error(`Unsupported Bedrock model response format: ${modelId}`);
-    }
-    return {
-      output_text: response.output.message.content.at(0)?.text ?? '',
+      output_text: this.#extractText(response),
       rawResponse: { ...response },
       usage: {
-        input_tokens: response.usage.inputTokens,
-        output_tokens: response.usage.outputTokens,
+        inputTokens: response.usage?.inputTokens ?? 0,
+        outputTokens: response.usage?.outputTokens ?? 0,
+        totalTokens: response.usage?.totalTokens ?? 0,
       },
     };
   }
 
-  #mapStructuredRequest<T>(
-    request: StructuredOutputRequest<T>,
-    jsonSchema: Record<string, unknown>
-  ): ConverseCommandInput {
-    const normalizedSchema = {
-      ...jsonSchema,
-      type: typeof jsonSchema.type === 'string' ? jsonSchema.type : 'object',
-    };
-    const system: NonNullable<ConverseCommandInput['system']> = [
-      { text: request.instructions },
-    ];
-    const messages: NonNullable<ConverseCommandInput['messages']> = [];
-    for (const entry of request.input) {
-      const text = entry.content.map((content) => content.text).join('\n');
-      if (entry.role === 'developer') {
-        system.push({ text });
-      } else {
-        messages.push({ content: [{ text }], role: 'user' });
-      }
+  #extractText(response: ConverseCommandOutput): string {
+    const text = response.output?.message?.content?.flatMap(
+      (block) => block.text === undefined ? [] : [block.text]
+    )
+      .join('\n')
+      .trim();
+    if (text === undefined || text.length === 0) {
+      throw new Error('Bedrock returned no text content.');
     }
-    return {
-      inferenceConfig: { maxTokens: request.max_output_tokens },
-      messages,
-      modelId: request.model,
-      system,
-      toolConfig: {
-        toolChoice: { tool: { name: request.schemaName } },
-        tools: [{
-          toolSpec: {
-            description: `Extract structured data matching the ${request.schemaName} schema`,
-            inputSchema: { json: toJsonDocument(normalizedSchema) },
-            name: request.schemaName,
-          },
-        }],
-      },
-    };
+    return text;
   }
 
   #extractToolInput(response: ConverseCommandOutput): unknown {
@@ -197,16 +178,29 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
   }
 
   #normalizeError(error: unknown): ProviderError {
+    if (error instanceof ProviderError) {
+      return error;
+    }
     const message = error instanceof Error ? error.message : 'unknown';
-    const retryable = error instanceof Error && (
-      error.message.includes('ThrottlingException')
-      || error.message.includes('ServiceUnavailable')
-    );
+    const status = this.#extractStatus(error);
+    const code = error instanceof Error ? error.name : 'bedrock_error';
+    const retryable = status === 408 || status === 409 || status === 429 || status >= 500;
     return new ProviderError({
-      code: 'bedrock_error',
+      code,
       details: { message },
       retryable,
-      status: 502,
+      status,
     });
+  }
+
+  #extractStatus(error: unknown): number {
+    if (typeof error !== 'object' || error === null || !('$metadata' in error)) {
+      return 502;
+    }
+    const metadata = error.$metadata;
+    if (typeof metadata !== 'object' || metadata === null || !('httpStatusCode' in metadata)) {
+      return 502;
+    }
+    return typeof metadata.httpStatusCode === 'number' ? metadata.httpStatusCode : 502;
   }
 }

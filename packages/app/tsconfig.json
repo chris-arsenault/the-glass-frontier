@@ -8,7 +8,7 @@
     "declarationDir": "dist",
     "declarationMap": false
   },
-  "include": ["src"],
+  "include": ["src/**/*.json", "src/**/*.ts"],
   "references": [
     { "path": "../dto" },
     { "path": "../node-utils" }

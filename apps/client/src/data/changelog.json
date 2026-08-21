@@ -236,5 +236,12 @@
     "summary": "Restored the paused development baseline",
     "details": "Repaired the workspace checks, local build, and full browser harness; enforced access-token identity and ownership across APIs; made live character and location changes chronicle-scoped; committed each narrative turn atomically; completed closure-summary persistence; aligned moderator audit, World Atlas, and world-schema controls with their canonical contracts; and replaced the obsolete bulk world seed with a deterministic local fixture containing three entities, two lore fragments, and one playable chronicle.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-20-llm-provider-contracts",
+    "releasedAt": "2026-08-20",
+    "summary": "Updated models and provider contracts",
+    "details": "Replaced the stale model list with GPT-5.6, Claude Sonnet 5, and Amazon Nova 2 Lite; centralized model IDs, limits, capabilities, and pricing in one catalog; and updated OpenAI, Anthropic, and Bedrock requests to their current reasoning and structured-output contracts.",
+    "type": "improvement"
   }
 ]

@@ -15,8 +15,7 @@ type LlmClassifierOptions<TParsed> = {
 };
 
 const CLASSIFIER_MAX_TOKEN = 1500;
-const CLASSIFIER_REASONING = { effort: 'minimal' as const };
-const CLASSIFIER_VERBOSITY = 'low';
+const CLASSIFIER_REASONING_EFFORT = 'low';
 
 export class LlmClassifierNode<TParsed> implements GraphNode {
   id = 'general-classifier';
@@ -47,7 +46,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
       const prompt = await composer.buildPrompt(this.options.id, context);
       const response = await context.llm.generateStructured(
         {
-          max_output_tokens: CLASSIFIER_MAX_TOKEN,
+          maxOutputTokens: CLASSIFIER_MAX_TOKEN,
           model,
           ...prompt,
           metadata: {
@@ -57,10 +56,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
             turnId: context.turnId,
             turnSequence: String(context.turnSequence)
           },
-          reasoning: CLASSIFIER_REASONING,
-          text: {
-            verbosity: CLASSIFIER_VERBOSITY,
-          },
+          reasoningEffort: CLASSIFIER_REASONING_EFFORT,
         },
         this.options.schema,
         this.options.schemaName

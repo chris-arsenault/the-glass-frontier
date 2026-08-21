@@ -27,28 +27,57 @@ const describeError = (error: unknown): Record<string, unknown> => {
   return { error: String(error) };
 };
 
+export const mapOpenAIRequest = (
+  request: LLMRequest
+): OpenAI.Responses.ResponseCreateParamsNonStreaming => {
+  const metadata = Object.fromEntries(
+    Object.entries(request.metadata).map(([key, value]) => [key, String(value)])
+  );
+  return {
+    input: request.input,
+    instructions: request.instructions,
+    max_output_tokens: request.maxOutputTokens,
+    metadata,
+    model: request.model,
+    reasoning: { effort: request.reasoningEffort },
+    stream: false,
+  };
+};
+
+export const mapOpenAIStructuredRequest = <T>(
+  request: StructuredOutputRequest<T>
+): OpenAI.Responses.ResponseCreateParamsNonStreaming => {
+  const { schema, schemaName, ...baseRequest } = request;
+  return {
+    ...mapOpenAIRequest(baseRequest),
+    text: { format: zodTextFormat(schema, schemaName) },
+  };
+};
+
 export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
   readonly id = 'openai';
   readonly supportsStreaming = true;
-  readonly supportsNativeStructuredOutput = true;
   readonly valid: boolean;
   readonly #client: OpenAI | null = null;
 
   constructor() {
     const baseURL = sanitizeEnv(process.env.OPENAI_API_BASE);
     const apiKey = sanitizeEnv(process.env.OPENAI_API_KEY);
-    if (apiKey.length === 0 || baseURL.length === 0) {
+    if (apiKey.length === 0) {
       this.valid = false;
       return;
     }
-    this.#client = new OpenAI({ apiKey, baseURL });
+    this.#client = new OpenAI({
+      apiKey,
+      ...(baseURL.length > 0 ? { baseURL } : {}),
+    });
     this.valid = true;
   }
 
   async execute(request: LLMRequest, signal?: AbortSignal): Promise<ProviderResponse> {
     const client = this.#requireClient();
     try {
-      const response = await client.responses.create(this.#mapRequest(request), { signal });
+      const response = await client.responses.create(mapOpenAIRequest(request), { signal });
       return this.#mapResponse(response);
     } catch (error: unknown) {
       throw this.#normalizeError(error);
@@ -62,7 +91,7 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
     const client = this.#requireClient();
     try {
       const response = await client.responses.create(
-        this.#mapStructuredRequest(request),
+        mapOpenAIStructuredRequest(request),
         { signal }
       );
       const data = request.schema.parse(JSON.parse(response.output_text) as unknown);
@@ -81,7 +110,7 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
     if (this.#client === null) {
       throw new ProviderError({
         code: 'openai_not_configured',
-        details: { message: 'OpenAI API key or base URL not configured' },
+        details: { message: 'OpenAI API key not configured' },
         retryable: false,
         status: 500,
       });
@@ -94,46 +123,18 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
       output_text: response.output_text,
       rawResponse: response as unknown as Record<string, unknown>,
       usage: {
-        input_tokens: response.usage?.input_tokens ?? 0,
-        output_tokens: response.usage?.output_tokens ?? 0,
+        inputTokens: response.usage?.input_tokens ?? 0,
+        outputTokens: response.usage?.output_tokens ?? 0,
+        totalTokens: response.usage?.total_tokens ?? 0,
       },
     };
   }
 
-  #mapRequest(request: LLMRequest): OpenAI.Responses.ResponseCreateParamsNonStreaming {
-    const metadata = Object.fromEntries(
-      Object.entries(request.metadata).map(([key, value]) => [key, String(value)])
-    );
+  #mapStructuredUsage(response: OpenAI.Responses.Response): StructuredOutputResponse['usage'] {
     return {
-      input: request.input,
-      instructions: request.instructions,
-      max_output_tokens: request.max_output_tokens,
-      metadata,
-      model: request.model,
-      reasoning: request.reasoning,
-      stream: false,
-      text: request.text,
-    };
-  }
-
-  #mapStructuredRequest<T>(
-    request: StructuredOutputRequest<T>
-  ): OpenAI.Responses.ResponseCreateParamsNonStreaming {
-    const { schema, schemaName, ...baseRequest } = request;
-    return this.#mapRequest({
-      ...baseRequest,
-      text: {
-        format: zodTextFormat(schema, schemaName),
-        verbosity: request.text.verbosity,
-      },
-    });
-  }
-
-  #mapStructuredUsage(response: OpenAI.Responses.Response): Record<string, number> {
-    return {
-      input_tokens: response.usage?.input_tokens ?? 0,
-      output_tokens: response.usage?.output_tokens ?? 0,
-      total_tokens: response.usage?.total_tokens ?? 0,
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+      totalTokens: response.usage?.total_tokens ?? 0,
     };
   }
 
@@ -147,7 +148,7 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
         code: type,
         details,
         message,
-        retryable: status >= 500,
+        retryable: status === 408 || status === 409 || status === 429 || status >= 500,
         status,
       });
     }
@@ -155,7 +156,7 @@ export class OpenAIProvider implements IProvider, IStructuredOutputProvider {
     return new ProviderError({
       code: 'openai_sdk_failure',
       details: { message },
-      retryable: true,
+      retryable: false,
       status: 502,
     });
   }

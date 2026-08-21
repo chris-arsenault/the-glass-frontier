@@ -81,10 +81,6 @@ export class LLMSuccessHandler {
     }
 
     const usage = this.#extractUsage(payload);
-    if (usage === undefined) {
-      return null;
-    }
-
     const playerId = this.#extractPlayerId(payload.metadata);
     if (playerId === undefined) {
       log('warn', 'llm-proxy.usage.missing_player', {
@@ -112,12 +108,8 @@ export class LLMSuccessHandler {
     }
 
     const usage = this.#extractUsage(payload);
-    if (usage === undefined) {
-      return null;
-    }
-
-    const inputTokens = this.#extractTokenCount(usage, 'input_tokens');
-    const outputTokens = this.#extractTokenCount(usage, 'output_tokens');
+    const inputTokens = usage.inputTokens;
+    const outputTokens = usage.outputTokens;
 
     if (inputTokens === 0 && outputTokens === 0) {
       return null;
@@ -189,23 +181,8 @@ export class LLMSuccessHandler {
     }
   }
 
-  #extractUsage(payload: LLMResponse): Record<string, unknown> | undefined {
-    if (Object.keys(payload.usage).length > 0) {
-      return payload.usage;
-    }
-    const bodyUsage = (payload.responseBody as { usage?: Record<string, unknown> }).usage;
-    if (bodyUsage !== undefined && Object.keys(bodyUsage).length > 0) {
-      return bodyUsage;
-    }
-    return undefined;
-  }
-
-  #extractTokenCount(usage: Record<string, unknown>, key: string): number {
-    const value = new Map(Object.entries(usage)).get(key);
-    if (typeof value === 'number' && value >= 0) {
-      return Math.floor(value);
-    }
-    return 0;
+  #extractUsage(payload: LLMResponse): LLMResponse['usage'] {
+    return payload.usage;
   }
 
   #extractNodeId(metadata: LoggableMetadata): string | undefined {
