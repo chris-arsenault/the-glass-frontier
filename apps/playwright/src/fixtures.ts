@@ -63,6 +63,8 @@ const BASE_CHRONICLE: Chronicle = {
   status: 'open',
   summaries: [],
   title: 'Playwright Chronicle',
+  toneChips: [],
+  toneNotes: '',
 };
 
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {

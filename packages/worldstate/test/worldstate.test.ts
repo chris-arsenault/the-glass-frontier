@@ -93,6 +93,55 @@ describe('Chronicle location', () => {
   });
 });
 
+describe('Chronicle wrap target', () => {
+  it('sets and clears targetEndTurn without touching other fields', async () => {
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      characterId: undefined,
+      locationName: 'Wrap Test Locale',
+      playerId: TEST_PLAYER_ID,
+      seedText: 'A short run.',
+      title: 'Wrap Test',
+    });
+
+    const withTarget = await worldState.chronicles.setChronicleTargetEnd(chronicle.id, 7);
+    expect(withTarget.targetEndTurn).toBe(7);
+    expect(withTarget.seedText).toBe('A short run.');
+
+    const cleared = await worldState.chronicles.setChronicleTargetEnd(chronicle.id, null);
+    expect(cleared.targetEndTurn).toBeUndefined();
+
+    const reloaded = await worldState.chronicles.getChronicle(chronicle.id);
+    expect(reloaded?.targetEndTurn).toBeUndefined();
+    expect(reloaded?.seedText).toBe('A short run.');
+  });
+
+  it('rejects an unknown chronicle', async () => {
+    await expect(
+      worldState.chronicles.setChronicleTargetEnd(
+        '00000000-0000-4000-8000-000000000000',
+        3
+      )
+    ).rejects.toThrow('not found');
+  });
+});
+
+describe('Chronicle tone', () => {
+  it('persists the tone chosen at creation', async () => {
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      characterId: undefined,
+      locationName: 'Tone Test Locale',
+      playerId: TEST_PLAYER_ID,
+      title: 'Tone Test',
+      toneChips: ['gritty', 'somber'],
+      toneNotes: 'slow-burn dread',
+    });
+
+    const reloaded = await worldState.chronicles.getChronicle(chronicle.id);
+    expect(reloaded?.toneChips).toEqual(['gritty', 'somber']);
+    expect(reloaded?.toneNotes).toBe('slow-burn dread');
+  });
+});
+
 describe('Chronicle turn history', () => {
   it('creates characters and chronicles with turn history', async () => {
     const startingLocation = await seedEntity(worldState, {

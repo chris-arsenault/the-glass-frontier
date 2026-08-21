@@ -3,6 +3,7 @@ import { LlmClassifierNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifi
 import { z } from 'zod';
 
 import type { GraphContext } from '../../../types';
+import type { GraphNodeDelta } from '../graphNode';
 
 export const BeatDirectiveSchema = z.object({
   kind: z
@@ -12,11 +13,11 @@ export const BeatDirectiveSchema = z.object({
     .string()
     .min(1)
     .describe('Brief rationale for the classification.'),
-  targetBeatSlug: z
+  targetBeatId: z
     .string()
     .min(1)
     .nullable()
-    .describe('Beat slug when kind="existing"; otherwise null.'),
+    .describe('The `id` of the targeted beat when kind="existing"; otherwise null.'),
 });
 
 export type BeatDirective = z.infer<typeof BeatDirectiveSchema>;
@@ -28,7 +29,9 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
       id: 'intent-beat-detector',
       schema: BeatDirectiveSchema,
       schemaName: 'intent_beat_detector',
-      shouldRun: (context) => context.playerIntent !== undefined,
+      shouldRun: (context) =>
+        context.playerIntent !== undefined
+        && context.chronicleState.chronicle.beatsEnabled !== false,
       telemetryTag: 'llm.intent-beat-detector'
     });
   }
@@ -37,8 +40,8 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
     directive: BeatDirective,
     beats: ChronicleBeat[]
   ): IntentBeatDirective {
-    if (directive.kind === 'existing' && directive.targetBeatSlug !== null) {
-      const targetBeat = beats.find((beat) => beat.slug === directive.targetBeatSlug);
+    if (directive.kind === 'existing' && directive.targetBeatId !== null) {
+      const targetBeat = beats.find((beat) => beat.id === directive.targetBeatId);
       return {
         kind: directive.kind,
         summary: directive.summary,
@@ -52,7 +55,7 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
     };
   }
 
-  #applyBeatDirective(context: GraphContext, result: BeatDirective): GraphContext {
+  #applyBeatDirective(context: GraphContext, result: BeatDirective): GraphNodeDelta {
     const playerIntent = context.playerIntent;
     if (playerIntent === undefined) {
       throw new Error('Beat detector requires a classified player intent.');
@@ -62,7 +65,6 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
       context.chronicleState.chronicle.beats
     );
     return {
-      ...context,
       playerIntent: {
         ...playerIntent,
         beatDirective,

@@ -3,19 +3,19 @@ import { SkillCheckResolver } from '@glass-frontier/skill-check-resolver';
 import { randomUUID } from 'node:crypto';
 
 import type { GraphContext } from '../../types';
-import type { GraphNode } from './graphNode';
+import type { GraphNode, GraphNodeDelta } from './graphNode';
 
 export class CheckRunnerNode implements GraphNode {
   id = 'check-runner';
 
-  execute(context: GraphContext): GraphContext {
+  execute(context: GraphContext): GraphNodeDelta {
     const plan = context.skillCheckPlan;
     if (context.failure || plan === undefined || plan.requiresCheck !== true) {
       context.telemetry.recordToolNotRun({
         chronicleId: context.chronicleId,
         operation: this.id,
       });
-      return context;
+      return {};
     }
 
     const input: SkillCheckRequest = {
@@ -37,9 +37,6 @@ export class CheckRunnerNode implements GraphNode {
 
     const checkResult = new SkillCheckResolver(input).resolveRequest();
 
-    return {
-      ...context,
-      skillCheckResult: checkResult,
-    };
+    return { skillCheckResult: checkResult };
   }
 }

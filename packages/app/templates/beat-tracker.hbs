@@ -14,6 +14,6 @@ When objective achieved or impossible, resolve it.
 
 **newBeat**: `{title, description}` when spawning. Title ≤6 words, description ≤240 chars.
 
-**updates**: Changed beats only. `changeKind`: "advance"/"resolve". `status`: "in_progress"/"succeeded"/"failed"/null. Empty array if none.
+**updates**: Changed beats only. `beatId` MUST be the `id` field of a beat exactly as shown in the BEATS section. `changeKind`: "advance"/"resolve". `status`: "in_progress"/"succeeded"/"failed"/null. Empty array if none.
 
-**focusBeatId**: Most affected beat; `null` if none exist.
+**focusBeatId**: The `id` of the most affected beat; `null` if none exist.

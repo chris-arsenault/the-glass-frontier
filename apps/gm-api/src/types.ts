@@ -1,4 +1,4 @@
-import type { ModelConfigStore } from '@glass-frontier/app';
+import type { ModelConfigStore, PromptTemplateRuntime } from '@glass-frontier/app';
 import type {
   BeatTracker,
   Character,
@@ -15,7 +15,6 @@ import type { WorldSchemaStore, ChronicleStore } from '@glass-frontier/worldstat
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
 import type { LocationDeltaDecision } from './gmGraph/nodes/classifiers/LocationDeltaNode';
-import type { PromptTemplateRuntime } from './prompts/templateRuntime';
 
 export type ChronicleState = {
   chronicleId: string;
@@ -30,7 +29,6 @@ export type ChronicleState = {
 export type EntityFocusState = {
   entityScores: Record<string, number>;
   tagScores: Record<string, number>;
-  lastUpdated?: number;
 };
 
 export type EntitySnippet = {
@@ -73,8 +71,6 @@ export type GraphContext = {
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;
   failure: boolean;
-  systemMessage?: TranscriptEntry;
-  shouldUpdate: boolean;
 
   //stage results
   playerIntent?: Intent;
@@ -90,7 +86,6 @@ export type GraphContext = {
   inventoryDelta?: InventoryDelta;
   beatTracker?: BeatTracker;
   executedNodes?: string[];
-  handlerId?: string;
   entityContext?: EntityContextSlice;
   entityUsage?: Array<{
     entityId: string;
@@ -99,7 +94,6 @@ export type GraphContext = {
     usage: 'unused' | 'mentioned' | 'central';
     emergentTags: string[] | null;
   }>;
-  worldDeltaTags?: string[];
 }
 
 export type TelemetryLike = {

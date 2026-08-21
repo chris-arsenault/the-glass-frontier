@@ -8,9 +8,6 @@ import './ChatComposer.css';
 export function ChatComposer() {
   const sendPlayerMessage = useChronicleStore((state) => state.sendPlayerMessage);
   const isSending = useChronicleStore((state) => state.isSending);
-  const isOffline = useChronicleStore((state) => state.isOffline);
-  const queuedIntents = useChronicleStore((state) => state.queuedIntents);
-  const connectionState = useChronicleStore((state) => state.connectionState);
   const chronicleStatus = useChronicleStore((state) => state.chronicleStatus);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
   const wrapTargetTurn = useChronicleStore(
@@ -21,8 +18,7 @@ export function ChatComposer() {
   const [draft, setDraft] = useState('');
   const [isWrapPending, setIsWrapPending] = useState(false);
 
-  const chronicleUnavailable =
-    !hasChronicle || chronicleStatus === 'closed' || connectionState === 'closed';
+  const chronicleUnavailable = !hasChronicle || chronicleStatus === 'closed';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -39,16 +35,12 @@ export function ChatComposer() {
     }
   };
 
-  const queuedCount = Math.max(queuedIntents, 0);
   const buttonLabel = (() => {
     if (!hasChronicle) {
       return 'Select a chronicle';
     }
-    if (chronicleStatus === 'closed' || connectionState === 'closed') {
+    if (chronicleStatus === 'closed') {
       return 'Chronicle closed';
-    }
-    if (isOffline) {
-      return queuedCount > 0 ? 'Queue Intent' : 'Queue Intent';
     }
     return isSending ? 'Sending...' : 'Send to GM';
   })();
@@ -85,16 +77,6 @@ export function ChatComposer() {
         >
           Select or create a chronicle to send new intents.
         </p>
-      ) : isOffline ? (
-        <p
-          className="chat-offline-banner"
-          role="status"
-          aria-live="assertive"
-          data-testid="chat-offline-banner"
-        >
-          Connection degraded — intents will queue and send once online.
-          {queuedCount > 0 ? ` ${queuedCount} pending.` : ''}
-        </p>
       ) : chronicleUnavailable ? (
         <p
           className="chat-closed-banner"
@@ -102,7 +84,7 @@ export function ChatComposer() {
           aria-live="assertive"
           data-testid="chat-closed-banner"
         >
-          Chronicle closed. Offline reconciliation in progress. Messaging disabled.
+          This chronicle has ended. Its story is complete.
         </p>
       ) : null}
       <label htmlFor="chat-input" className="visually-hidden">

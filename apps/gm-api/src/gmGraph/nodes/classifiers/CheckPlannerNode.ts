@@ -3,6 +3,7 @@ import type { SkillCheckPlan } from '@glass-frontier/dto';
 import { z } from 'zod';
 
 import type { GraphContext } from '../../../types.js';
+import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const PlannerPlanSchema = z.object({
@@ -56,7 +57,7 @@ class CheckPlannerNode extends LlmClassifierNode<PlannerPlan> {
     return type === 'action' || type === 'planning' || type === 'wrap';
   }
 
-  #savePlan(context: GraphContext, result: PlannerPlan): GraphContext {
+  #savePlan(context: GraphContext, result: PlannerPlan): GraphNodeDelta {
     const skillCheckPlan: SkillCheckPlan = {
       advantage: result.advantage,
       attribute: result.attribute,
@@ -70,10 +71,7 @@ class CheckPlannerNode extends LlmClassifierNode<PlannerPlan> {
       riskLevel: result.riskLevel,
       skill: result.skill,
     };
-    return {
-      ...context,
-      skillCheckPlan: skillCheckPlan,
-    };
+    return { skillCheckPlan };
   }
 }
 

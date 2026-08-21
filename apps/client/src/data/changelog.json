@@ -257,5 +257,19 @@
     "summary": "Simplified where a chronicle is to a place name",
     "details": "A chronicle now tracks where it is as a name, plus the canon place it started from when it started from one. After each turn the game master answers one question about location — did the scene move, and what is it called — instead of matching the answer against the world map, inventing places on it, or working out how places connect. What the world knows about the surroundings still reaches the storyteller, through the same ranked selection that supplies everything else. The location display shows the current place and links to the Atlas only while the chronicle is still where it began.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-21-gm-graph-merge-fixes",
+    "releasedAt": "2026-08-21",
+    "summary": "Fixed GM turn results being silently discarded",
+    "details": "Turn pipeline steps that run in parallel could overwrite each other's results: the beat a player was advancing, the decision to close a chronicle, and updates to which entities are in focus were all being lost. Pipeline steps now report only what they changed, so parallel results always survive. Several GM prompts were also realigned with the data the game actually expects — the intent classifier and beat detector now describe the real output fields, the inventory arbiter no longer contradicts itself about inventing items, narration prompts can address the character by name, and the risk arbiter sees recent events and the current location when judging a check.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2026-08-21-player-flow-fixes",
+    "releasedAt": "2026-08-21",
+    "summary": "Repaired the play loop from chronicle start through wrap-up",
+    "details": "Story beats now actually advance and resolve: the GM sees each beat's real identifier, resolutions are recorded permanently, and the beat list you see is the one the server saved. A new chronicle now starts at the location you picked instead of a name invented from the title, and the tone you choose in the wizard follows the whole chronicle into every narration. Wrapping up now guarantees an ending within the requested turns. While the GM works you see which step of the turn it is on, the pipeline survives sign-in refreshes, and a failed send no longer breaks live updates for the rest of the session. The seed that opened your chronicle stays at the top of the transcript, the anchor step is optional, choosing a generated seed now wins over leftover custom text as the summary shows, and a finished chronicle says plainly that its story is complete.",
+    "type": "bugfix"
   }
 ]

@@ -12,16 +12,14 @@ export function createUpdatedBeats(context: GraphContext): ChronicleBeat[] {
   const working = structuredClone(context.chronicleState.chronicle.beats);
   if (beatTracker.newBeat !== null && beatTracker.newBeat !== undefined) {
     const newId = toSnakeCase(beatTracker.newBeat.title);
-    const slug = `beat_${newId}_${context.turnId.slice(0, 8)}`;
-    const existingBeat = working.find((beat) => beat.id === newId);
+    const existingBeat = working.find((beat) => toSnakeCase(beat.title) === newId);
     if (existingBeat !== undefined) {
       log('warn', `Found existing beat for new beat ${existingBeat.id}`);
     } else {
       working.push({
         createdAt: now,
         description: beatTracker.newBeat.description,
-        id: toSnakeCase(beatTracker.newBeat.title),
-        slug,
+        id: newId,
         status: 'in_progress',
         title: beatTracker.newBeat.title,
         updatedAt: now,
@@ -36,13 +34,17 @@ export function createUpdatedBeats(context: GraphContext): ChronicleBeat[] {
     .forEach((update) => log('warn', `Got update for non-existent beat ${update.beatId}`));
   return working.map((beat) => {
     const update = updates.get(beat.id);
-    return update === undefined
-      ? beat
-      : {
-        ...beat,
-        description: update.description ?? beat.description,
-        status: update.status ?? beat.status,
-        updatedAt: now,
-      };
+    if (update === undefined) {
+      return beat;
+    }
+    const status = update.status ?? beat.status;
+    const resolved = status === 'succeeded' || status === 'failed';
+    return {
+      ...beat,
+      description: update.description ?? beat.description,
+      resolvedAt: resolved ? beat.resolvedAt ?? now : beat.resolvedAt,
+      status,
+      updatedAt: now,
+    };
   });
 }

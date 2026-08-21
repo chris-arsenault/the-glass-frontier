@@ -6,7 +6,6 @@ import { ChronicleSummaryEntry } from './ChronicleSummary';
 
 const EntityFocusState = z.object({
   entityScores: z.record(z.string(), z.number()).default({}),
-  lastUpdated: z.number().int().nonnegative().optional(),
   tagScores: z.record(z.string(), z.number()).default({}),
 });
 
@@ -32,6 +31,9 @@ export const Chronicle = z.object({
   summaries: z.array(ChronicleSummaryEntry).default([]),
   targetEndTurn: z.number().int().nonnegative().nullable().optional(),
   title: z.string().min(1),
+  /** Tone the player asked for at creation; steers narration all game. */
+  toneChips: z.array(z.string()).default([]),
+  toneNotes: z.string().default(''),
 });
 
 export type Chronicle = z.infer<typeof Chronicle>;

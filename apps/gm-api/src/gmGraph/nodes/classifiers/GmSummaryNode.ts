@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { GraphContext } from '../../../types.js';
+import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const SummaryResponseSchema = z.object({
@@ -29,9 +30,8 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
     return hasMessage && hasIntent;
   }
 
-  #applySummary(context: GraphContext,response: SummaryResponse): GraphContext {
+  #applySummary(_context: GraphContext, response: SummaryResponse): GraphNodeDelta {
     return {
-      ...context,
       gmSummary: response.summary,
       shouldCloseChronicle: response.shouldCloseChronicle,
     };

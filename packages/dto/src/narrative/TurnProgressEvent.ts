@@ -4,7 +4,6 @@ import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDeltaSchema } from '../Inventory';
 import { BeatTrackerSchema } from './ChronicleBeat';
 import { Intent } from './Intent';
-import { IntentType as IntentTypeSchema } from './IntentType';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 
@@ -17,15 +16,10 @@ export const TurnProgressPayloadSchema = z.object({
   gmMessage: TranscriptEntry.optional(),
   gmSummary: z.string().optional(),
   gmTrace: LlmTraceSchema.optional(),
-  handlerId: z.string().optional(),
   inventoryDelta: InventoryDeltaSchema.optional(),
   playerIntent: Intent.optional(),
-  resolvedIntentConfidence: z.number().min(0).max(1).optional(),
-  resolvedIntentType: IntentTypeSchema.optional(),
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),
-  systemMessage: TranscriptEntry.optional(),
-  worldDeltaTags: z.array(z.string().min(1)).max(16).optional(),
 });
 
 export const TurnProgressEventSchema = z.object({

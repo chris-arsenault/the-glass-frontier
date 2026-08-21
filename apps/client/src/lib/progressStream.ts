@@ -34,13 +34,21 @@ class ProgressStream {
       console.warn('VITE_PROGRESS_WS_URL is not configured; skipping progress stream connection.');
       return;
     }
+    const tokenChanged = this.token !== token;
     this.token = token;
     this.manualClose = false;
     if (
       this.socket !== null &&
       (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)
     ) {
-      return;
+      if (!tokenChanged) {
+        return;
+      }
+      // Cycle the socket onto the new token; subscriptions survive and are
+      // re-sent by flushSubscriptions when the replacement opens.
+      const stale = this.socket;
+      this.socket = null;
+      stale.close();
     }
     this.openSocket();
   }
@@ -88,7 +96,7 @@ class ProgressStream {
   }
 
   private ensureConnected(): void {
-    if (!hasNonEmptyString(this.token) || this.socket !== null) {
+    if (!hasNonEmptyString(this.token) || this.socket !== null || this.reconnectTimer !== null) {
       return;
     }
     this.openSocket();
@@ -116,6 +124,9 @@ class ProgressStream {
     };
 
     socket.onclose = () => {
+      if (this.socket !== socket) {
+        return;
+      }
       this.socket = null;
       if (this.manualClose || !hasNonEmptyString(this.token)) {
         return;

@@ -1,4 +1,5 @@
 import type { PromptTemplateManager, ModelConfigStore } from '@glass-frontier/app';
+import { PromptTemplateRuntime } from '@glass-frontier/app';
 import type {
   Character,
   TranscriptEntry,
@@ -33,7 +34,6 @@ import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
 import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { GmGraphOrchestrator } from './gmGraph/orchestrator';
-import { PromptTemplateRuntime } from './prompts/templateRuntime';
 import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
 
@@ -80,6 +80,8 @@ class GmEngine {
     updatedCharacter: Character | null;
     locationName: string;
     chronicleStatus: Chronicle['status'];
+    beats: Chronicle['beats'];
+    entityFocus: Chronicle['entityFocus'];
   }> {
     this.#assertChronicleId(chronicleId);
     const chronicleState = await this.#loadChronicleState(chronicleId);
@@ -102,8 +104,14 @@ class GmEngine {
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     const worldUpdater = new WorldUpdater();
     const updatedContext = await worldUpdater.update(graphResult);
+    const targetEndTurn = updatedContext.chronicleState.chronicle.targetEndTurn;
+    const wrapTargetReached =
+      typeof targetEndTurn === 'number' &&
+      turnSequence >= targetEndTurn &&
+      !updatedContext.failure;
     const shouldClose =
-      updatedContext.shouldCloseChronicle && updatedContext.chronicleState.chronicle.status !== 'closed';
+      (updatedContext.shouldCloseChronicle || wrapTargetReached) &&
+      updatedContext.chronicleState.chronicle.status !== 'closed';
     const finalContext: GraphContext = shouldClose
       ? {
         ...updatedContext,
@@ -147,8 +155,10 @@ class GmEngine {
     const updatedCharacter = finalContext.chronicleState.character ?? null;
     const locationName = finalContext.chronicleState.locationName;
     const chronicleStatus = finalContext.chronicleState.chronicle.status;
+    const beats = finalContext.chronicleState.chronicle.beats;
+    const entityFocus = finalContext.chronicleState.chronicle.entityFocus;
 
-    return { chronicleStatus, locationName, turn, updatedCharacter };
+    return { beats, chronicleStatus, entityFocus, locationName, turn, updatedCharacter };
   }
 
   #createGraph(): GmGraphOrchestrator {
@@ -267,8 +277,6 @@ class GmEngine {
       playerIntent: undefined,
       playerMessage,
       shouldCloseChronicle: false,
-      shouldUpdate: false,
-      systemMessage: undefined,
       telemetry: this.telemetry,
       templates: templateRuntime,
       turnId,
@@ -324,8 +332,7 @@ class GmEngine {
     systemMessage?: TranscriptEntry;
     turnSequence: number;
   }): Turn {
-    const combinedSystemMessage = systemMessage ?? graphResult.systemMessage;
-    const failure = graphResult.failure || combinedSystemMessage !== undefined;
+    const failure = graphResult.failure || systemMessage !== undefined;
     return {
       advancesTimeline: graphResult.advancesTimeline,
       beatTracker: graphResult.beatTracker,
@@ -344,7 +351,7 @@ class GmEngine {
       playerMessage,
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
-      systemMessage: combinedSystemMessage,
+      systemMessage,
       turnSequence
     };
   }

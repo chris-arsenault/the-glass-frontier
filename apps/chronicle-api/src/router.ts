@@ -46,20 +46,14 @@ const createChronicleInputSchema = z
     beatsEnabled: z.boolean().optional(),
     characterId: z.string().min(1),
     chronicleId: z.string().uuid().optional(),
-    location: locationDetailsSchema.optional(),
+    location: locationDetailsSchema,
     locationId: z.string().uuid().optional(),
     playerId: z.string().min(1),
     seedText: z.string().max(800).optional(),
     status: z.enum(['open', 'closed']).optional(),
     title: z.string().min(1),
   })
-  .refine(
-    (payload) => Boolean(payload.locationId) || Boolean(payload.location),
-    {
-      message: 'Provide locationId or location details.',
-      path: ['locationId'],
-    }
-  );
+  .merge(toneSchema);
 
 type CreateChronicleInput = z.infer<typeof createChronicleInputSchema>;
 
@@ -126,7 +120,7 @@ export const appRouter = t.router({
   // GET /chronicles/:chronicleId
   getChronicle: t.procedure
     .input(z.object({ chronicleId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => augmentChronicleSnapshot(ctx, input.chronicleId)),
+    .query(async ({ ctx, input }) => getOwnedChronicleSnapshot(ctx, input.chronicleId)),
 
   getModelUsageCostSummary: t.procedure
     .input(
@@ -278,74 +272,47 @@ async function createChronicleHandler(
   ctx: Context,
   input: CreateChronicleInput
 ): Promise<{ chronicle: EnsureChronicleResult }> {
-  const startTime = Date.now();
-  const logTiming = (step: string): void => {
-    log('info', `createChronicle timing: ${step}`, { elapsedMs: Date.now() - startTime });
-  };
-
   const playerId = requireCurrentPlayer(ctx, input.playerId);
-  log('info', 'createChronicle: starting', {
-    characterId: input.characterId,
-    playerId,
-    seedPreview: input.seedText?.slice(0, 50) ?? '',
-    title: input.title,
-  });
-
-  logTiming('start - ensuring player');
   await ctx.playerStore.ensure(playerId);
-  logTiming('player ensured');
-
-  logTiming('fetching character');
   const character = await requireCharacter(ctx, input.characterId);
-  logTiming('character fetched');
   ensureCharacterOwnership(character, playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
-
-  logTiming('calling ensureChronicle');
   const chronicle = await ctx.chronicleStore.ensureChronicle({
     anchorEntityId: input.anchorEntityId,
     beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,
     locationId: input.locationId,
-    locationName: resolveLocationName(input),
+    locationName: input.location.locale.trim(),
     playerId,
     seedText: input.seedText,
     status: input.status,
     title: input.title,
+    toneChips: input.toneChips,
+    toneNotes: input.toneNotes,
   });
-  logTiming('ensureChronicle completed');
 
-  log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`, { elapsedMs: Date.now() - startTime });
+  log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`);
   return { chronicle };
 }
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {
   const character = await ctx.chronicleStore.getCharacter(characterId);
   if (character === null || character === undefined) {
-    throw new Error('Character not found for chronicle creation.');
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Character not found for chronicle creation.' });
   }
   return character;
 }
 
 function ensureCharacterOwnership(character: Character, playerId: string): void {
   if (character.playerId !== playerId) {
-    throw new Error('Character does not belong to the requesting player.');
+    throw new TRPCError({ code: 'FORBIDDEN' });
   }
 }
 
-function resolveLocationName(input: CreateChronicleInput): string {
-  if (isNonEmptyString(input.location?.locale)) {
-    return input.location.locale.trim();
-  }
-  if (isNonEmptyString(input.title)) {
-    return `${input.title} Locale`.slice(0, 80);
-  }
-  return 'Uncatalogued Locale';
-}
 
-async function augmentChronicleSnapshot(
+async function getOwnedChronicleSnapshot(
   ctx: Context,
   chronicleId: string
 ): Promise<ChronicleSnapshot> {
@@ -362,8 +329,5 @@ function requireCurrentPlayer(ctx: Context, claimedPlayerId: string): string {
   }
   return ctx.identity.sub;
 }
-
-const isNonEmptyString = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim().length > 0;
 
 export type AppRouter = typeof appRouter;

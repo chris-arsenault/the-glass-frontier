@@ -31,11 +31,7 @@ const buildPayload = (context: GraphContext): TurnProgressPayload => {
     ['gmMessage', context.gmResponse],
     ['gmSummary', context.gmSummary],
     ['gmTrace', context.gmTrace],
-    ['handlerId', context.handlerId],
     ['inventoryDelta', context.inventoryDelta],
-    ['resolvedIntentType', context.playerIntent?.intentType],
-    ['systemMessage', context.systemMessage],
-    ['worldDeltaTags', context.worldDeltaTags],
   ];
   const optionalPayload = Object.fromEntries(
     optionalEntries.filter(([, value]) => value !== undefined && value !== null)
@@ -116,16 +112,8 @@ class TurnProgressEmitter implements TurnProgressPublisher {
 }
 
 export function createProgressEmitterFromEnv(): TurnProgressPublisher {
-  const queueUrl = process.env.TURN_PROGRESS_QUEUE_URL;
-  const trimmed = queueUrl?.trim() ?? '';
-  try {
-    return new TurnProgressEmitter(trimmed);
-  } catch (error) {
-    log('warn', 'Failed to initialize progress emitter', {
-      reason: error instanceof Error ? error.message : 'unknown',
-    });
-    throw error;
-  }
+  const queueUrl = process.env.TURN_PROGRESS_QUEUE_URL?.trim() ?? '';
+  return new TurnProgressEmitter(queueUrl);
 }
 
 export { TurnProgressEmitter };

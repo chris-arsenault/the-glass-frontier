@@ -3,13 +3,12 @@ import { PromptComposer } from '@glass-frontier/gm-api/prompts/prompts';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types';
-import type { GraphNode } from './graphNode';
+import type { GraphNode, GraphNodeDelta } from './graphNode';
 
 type HandlerOptions = {
   advancesTimeline: boolean;
   id: PromptTemplateId;
   intentType: IntentType;
-  worldDeltaTag?: string;
 };
 
 const NARRATIVE_MAX_OUTPUT_TOKENS = 2000;
@@ -34,13 +33,13 @@ class GmResponseNode implements GraphNode {
       possibilityAdvisorNode, planningNarratorNode, reflectionWeaverNode, wrapResolverNode
     ];
   }
-  async execute(context: GraphContext): Promise<GraphContext> {
+  async execute(context: GraphContext): Promise<GraphNodeDelta> {
     if (!this.#isEligible(context)) {
       context.telemetry.recordToolNotRun({
         chronicleId: context.chronicleId,
         operation: this.id,
       });
-      return context;
+      return {};
     }
 
     try {
@@ -50,12 +49,12 @@ class GmResponseNode implements GraphNode {
       );
       if (handler === undefined) {
         log('error', `Handler not found for ${context.playerIntent?.intentType}`);
-        return { ...context, failure: true };
+        return { failure: true };
       }
       log('info', `Using response type ${handler.id} for ${context.playerIntent?.intentType}`);
       return handler.execute(context);
     } catch {
-      return { ...context, failure: true };
+      return { failure: true };
     }
   }
 
@@ -80,18 +79,8 @@ abstract class BaseIntentHandlerNode implements GraphNode {
     this.id = options.id;
   }
 
-  async execute(context: GraphContext): Promise<GraphContext> {
-    if (!this.#isEligible(context)) {
-      context.telemetry.recordToolNotRun({
-        chronicleId: context.chronicleId,
-        operation: this.options.id,
-      });
-      return context;
-    }
-    return this.#generateNarration(context);
-  }
-
-  async #generateNarration(context: GraphContext): Promise<GraphContext> {
+  // Eligibility is enforced by GmResponseNode before dispatch.
+  async execute(context: GraphContext): Promise<GraphNodeDelta> {
     try {
       const playerId = context.chronicleState.chronicle.playerId;
       const model = await context.modelConfigStore.getModelForCategory('prose', playerId);
@@ -112,7 +101,6 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       }, 'string');
       const cleanedContent = this.#cleanNarration(narration.message);
       return {
-        ...context,
         advancesTimeline: this.options.advancesTimeline,
         gmResponse: this.#buildTranscript(context, cleanedContent),
         gmTrace: {
@@ -128,7 +116,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         nodeId: this.options.id,
         stack: error instanceof Error ? error.stack : undefined,
       });
-      return { ...context, failure: true };
+      return { failure: true };
     }
   }
 
@@ -152,19 +140,6 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       .replace(/^#+\s*Response\s*\n/i, '')
       .replace(/^RESPONSE:?\s*/i, '')
       .trim();
-  }
-
-  #isEligible(context: GraphContext): boolean {
-    if (context.failure) {
-      return false;
-    }
-    if (context.playerIntent === undefined) {
-      return false;
-    }
-    if (!isNonEmptyString(context.playerMessage.content)) {
-      return false;
-    }
-    return context.playerIntent.intentType === this.options.intentType;
   }
 }
 

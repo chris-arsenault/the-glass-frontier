@@ -3,13 +3,13 @@ import type { ZodType } from 'zod';
 
 import { PromptComposer } from '../../../prompts/prompts';
 import type { GraphContext } from '../../../types';
-import type { GraphNode } from '../graphNode';
+import type { GraphNode, GraphNodeDelta } from '../graphNode';
 
 type LlmClassifierOptions<TParsed> = {
   id: PromptTemplateId;
   schema: ZodType<TParsed>;
   schemaName: string,
-  applyResult: (context: GraphContext, result: TParsed) => GraphContext;
+  applyResult: (context: GraphContext, result: TParsed) => GraphNodeDelta;
   shouldRun: (context: GraphContext) => boolean;
   telemetryTag?: string;
 };
@@ -24,18 +24,18 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
     private readonly options: LlmClassifierOptions<TParsed>,
   ) {}
 
-  async execute(context: GraphContext): Promise<GraphContext> {
+  async execute(context: GraphContext): Promise<GraphNodeDelta> {
     if (context.failure || !this.options.shouldRun(context)) {
       context.telemetry.recordToolNotRun({
         chronicleId: context.chronicleId,
         operation: this.options.id,
       });
-      return context;
+      return {};
     }
     return this.#classify(context);
   }
 
-  async #classify(context: GraphContext): Promise<GraphContext> {
+  async #classify(context: GraphContext): Promise<GraphNodeDelta> {
     try {
       const playerId = context.chronicleState.chronicle.playerId;
       const model = await context.modelConfigStore.getModelForCategory(
@@ -70,7 +70,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
         message: error instanceof Error ? error.message : 'unknown',
         operation: this.options.telemetryTag ?? this.options.id,
       });
-      return { ...context, failure: true };
+      return { failure: true };
     }
   }
 }

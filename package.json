@@ -17,7 +17,7 @@
     "lint:fix": "turbo run lint:fix",
     "lint:css": "pnpm -F ./apps/client run lint:css",
     "lint:css:fix": "pnpm -F ./apps/client run lint:css:fix",
-    "typecheck": "tsc -b --pretty false && tsc -p packages/node-utils/test/tsconfig.json --pretty false && tsc -p packages/worldstate/test/tsconfig.json --pretty false",
+    "typecheck": "tsc -b --pretty false && tsc -p packages/node-utils/test/tsconfig.json --pretty false && tsc -p packages/worldstate/test/tsconfig.json --pretty false && tsc -p apps/gm-api/test/tsconfig.json --pretty false",
     "test": "turbo run test",
     "clear:data": "pnpm -F @glass-frontier/worldstate migrate:reset",
     "db:drop": "tsx scripts/drop-database.ts",

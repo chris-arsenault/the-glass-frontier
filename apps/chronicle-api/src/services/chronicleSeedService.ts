@@ -1,11 +1,10 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
+import { PromptTemplateRuntime } from '@glass-frontier/app';
 import type { ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
 import type { RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-
-import { PromptTemplateRuntime } from './templateRuntime';
 
 type GenerateSeedRequest = {
   playerId: string;

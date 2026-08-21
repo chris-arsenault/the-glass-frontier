@@ -31,6 +31,7 @@
   "dependencies": {
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
+    "handlebars": "^4.7.9",
     "pg": "^8.13.1"
   },
   "devDependencies": {

@@ -24,10 +24,12 @@ Tie-breaks:
 - If both inquiry and clarification apply, choose clarification.
 - If both possibility and planning apply, choose planning.
 
-Mechanical flags:
-- requires_check: true if outcome is uncertain and fictionally contested (typical for action; rare otherwise)
-- advances_time: none | minor | standard
-- target_beats: zero or more beat IDs/names that this utterance most directly touches
-- rationale: one sentence, in-fiction (<160 chars), no meta
+Output fields:
+- intentType: the single best intent type from the list above
+- intentSummary: concise paraphrase of the player's request (<=140 chars)
+- routerRationale: one sentence explaining why this classification was chosen (<160 chars), no meta
+- tone: one narrative tone adjective grounded in the current scene (e.g., tense, wry, mournful)
+- creativeSpark: true only when the intent shows genuine improvisation or imaginative flair beyond the obvious move
+- handlerHints: 0-8 lowercase hints that nudge downstream narration (e.g., "whispered", "hurried"); emit [] when none apply
 
 Never emit prose beyond the fields. Always satisfy the JSON schema.

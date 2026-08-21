@@ -2,7 +2,7 @@ import type { ChronicleBeat, Chronicle } from '@glass-frontier/dto';
 import React, { useMemo, useState, useEffect } from 'react';
 
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
-import type { ChatMessage } from '../../../state/chronicleState';
+import type { TurnView } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleOverview.css';
 
@@ -45,26 +45,21 @@ type RemoteAnchor = {
   entity: AnchorEntityData;
 };
 
-type EntityUsage = NonNullable<ChatMessage['entityUsage']>[number];
+/** Turn views ordered newest-first, for scanning recent turns. */
+const sortTurnViews = (turnViews: Record<string, TurnView>): TurnView[] =>
+  [...Object.values(turnViews)].sort(
+    (a, b) => (b.turnSequence ?? 0) - (a.turnSequence ?? 0)
+  );
 
-const countUsageTags = (counts: Map<string, number>, usage: EntityUsage): void => {
-  for (const tag of usage.tags) {
-    counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  }
-  for (const tag of usage.emergentTags ?? []) {
-    counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  }
-};
-
-const findAnchorInMessages = (
-  messages: ChatMessage[],
+const findAnchorInViews = (
+  views: TurnView[],
   anchorId: string | undefined
 ): AnchorEntityData | null => {
   if (anchorId === undefined) {
     return null;
   }
-  for (const message of messages.slice().reverse()) {
-    const found = message.entityOffered?.find((entity) => entity.id === anchorId);
+  for (const view of views) {
+    const found = view.entityOffered?.find((entity) => entity.id === anchorId);
     if (found !== undefined) {
       return { id: found.id, kind: found.kind, name: found.name, slug: found.slug };
     }
@@ -333,11 +328,13 @@ export function ChronicleOverview({
   const beatsEnabled = useChronicleStore((state) => state.beatsEnabled);
   const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
   const turnSequence = useChronicleStore((state) => state.turnSequence);
-  const messages = useChronicleStore((state) => state.messages);
+  const turnViews = useChronicleStore((state) => state.turnViews);
+
+  const recentViews = useMemo(() => sortTurnViews(turnViews), [turnViews]);
 
   const [remoteAnchor, setRemoteAnchor] = useState<RemoteAnchor | null>(null);
-  const anchorEntityFromMessages = findAnchorInMessages(
-    messages,
+  const anchorEntityFromMessages = findAnchorInViews(
+    recentViews,
     chronicle?.anchorEntityId
   );
 
@@ -378,129 +375,94 @@ export function ChronicleOverview({
     : null;
   const anchorEntity = anchorEntityFromMessages ?? remoteAnchorEntity;
 
-  // Extract entity focus with names from recent turns
+  // The canonical focus scores live on the chronicle (the same numbers the GM
+  // uses for retrieval); recent turns only supply display names for the ids.
+  const entityScores = chronicle?.entityFocus.entityScores;
+  const tagScores = chronicle?.entityFocus.tagScores;
+
   const focusedEntities = useMemo((): EntityWithScore[] => {
-    // Build a map of entity ID to entity data from recent messages
     const entityMap = new Map<string, { name: string; slug: string; kind: string }>();
-    const entityScores = new Map<string, number>();
-
-    for (let i = messages.length - 1; i >= Math.max(0, messages.length - 20); i--) {
-      const message = messages[i];
-
-      // Build entity name/slug/kind map from entityOffered
-      if (message.entityOffered) {
-        for (const entity of message.entityOffered) {
-          if (!entityMap.has(entity.id)) {
-            entityMap.set(entity.id, {
-              kind: entity.kind,
-              name: entity.name,
-              slug: entity.slug,
-            });
-          }
-        }
-      }
-
-      // Compute scores from entityUsage (central=3, mentioned=1, unused=0)
-      if (message.entry.role === 'gm' && message.entityUsage) {
-        for (const usage of message.entityUsage) {
-          if (!usage.entityId) {continue;}
-
-          const currentScore = entityScores.get(usage.entityId) ?? 0;
-          const points = usage.usage === 'central' ? 3 : usage.usage === 'mentioned' ? 1 : 0;
-          entityScores.set(usage.entityId, currentScore + points);
+    for (const view of recentViews.slice(0, 20)) {
+      for (const entity of view.entityOffered ?? []) {
+        if (!entityMap.has(entity.id)) {
+          entityMap.set(entity.id, {
+            kind: entity.kind,
+            name: entity.name,
+            slug: entity.slug,
+          });
         }
       }
     }
 
-    // Sort by score and take top 10
-    const sortedEntityIds = Array.from(entityScores.entries())
+    return Object.entries(entityScores ?? {})
+      .filter(([, score]) => score > 0)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
+      .slice(0, 10)
+      .map(([entityId, score]) => {
+        const entityData = entityMap.get(entityId);
+        return {
+          id: entityId,
+          kind: entityData?.kind ?? 'unknown',
+          name: entityData?.name ?? entityId.substring(0, 8),
+          score: Math.round(score),
+          slug: entityData?.slug ?? entityId.substring(0, 8),
+        };
+      });
+  }, [entityScores, recentViews]);
 
-    // Return entities with resolved names
-    return sortedEntityIds.map(([entityId, score]) => {
-      const entityData = entityMap.get(entityId);
-      return {
-        id: entityId,
-        kind: entityData?.kind ?? 'unknown',
-        name: entityData?.name ?? entityId.substring(0, 8),
-        score,
-        slug: entityData?.slug ?? entityId.substring(0, 8),
-      };
-    });
-  }, [messages]);
-
-  // Extract tag focus
   const focusedTags = useMemo(() => {
-    const tagCounts = new Map<string, number>();
-
-    for (let i = messages.length - 1; i >= Math.max(0, messages.length - 20); i--) {
-      const message = messages[i];
-
-      // Aggregate tags from entityUsage
-      if (message.entry.role === 'gm' && message.entityUsage) {
-        for (const usage of message.entityUsage) {
-          countUsageTags(tagCounts, usage);
-        }
-      }
-    }
-
-    return Array.from(tagCounts.entries())
+    return Object.entries(tagScores ?? {})
+      .filter(([, score]) => score > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15)
-      .map(([tag, score]) => ({ score, tag }));
-  }, [messages]);
+      .map(([tag, score]) => ({ score: Math.round(score), tag }));
+  }, [tagScores]);
 
   // Extract recent entity usage from recent turns
   const recentEntityUsage = useMemo((): RecentEntityUsage[] => {
     const usage: RecentEntityUsage[] = [];
 
-    // Build entity map from recent messages
     const entityMap = new Map<string, { name: string; kind: string }>();
-    for (let i = messages.length - 1; i >= Math.max(0, messages.length - 20); i--) {
-      const message = messages[i];
-      if (message.entityOffered) {
-        for (const entity of message.entityOffered) {
-          if (!entityMap.has(entity.id)) {
-            entityMap.set(entity.id, { kind: entity.kind, name: entity.name });
-          }
+    for (const view of recentViews.slice(0, 20)) {
+      for (const entity of view.entityOffered ?? []) {
+        if (!entityMap.has(entity.id)) {
+          entityMap.set(entity.id, { kind: entity.kind, name: entity.name });
         }
       }
     }
 
-    // Collect entity usage from recent turns (GM responses only)
     const seenEntities = new Set<string>();
-    for (let i = messages.length - 1; i >= Math.max(0, messages.length - 10); i--) {
-      const message = messages[i];
-      if (message.entry.role === 'gm' && message.entityUsage && message.turnSequence) {
-        for (const entityUsageEntry of message.entityUsage) {
-          // Skip if we've already seen this entity in a more recent turn
-          if (!entityUsageEntry.entityId || seenEntities.has(entityUsageEntry.entityId)) {
-            continue;
-          }
-          seenEntities.add(entityUsageEntry.entityId);
+    for (const view of recentViews.slice(0, 10)) {
+      if (!view.entityUsage || !view.turnSequence) {
+        continue;
+      }
+      for (const entityUsageEntry of view.entityUsage) {
+        // Skip if we've already seen this entity in a more recent turn
+        if (!entityUsageEntry.entityId || seenEntities.has(entityUsageEntry.entityId)) {
+          continue;
+        }
+        seenEntities.add(entityUsageEntry.entityId);
 
-          const entityData = entityMap.get(entityUsageEntry.entityId);
-          usage.push({
-            emergentTags: entityUsageEntry.emergentTags,
-            entityKind: entityData?.kind ?? 'unknown',
-            entityName: entityData?.name ?? entityUsageEntry.entitySlug,
-            entitySlug: entityUsageEntry.entitySlug,
-            tags: entityUsageEntry.tags,
-            turnSequence: message.turnSequence,
-            usage: entityUsageEntry.usage,
-          });
+        const entityData = entityMap.get(entityUsageEntry.entityId);
+        usage.push({
+          emergentTags: entityUsageEntry.emergentTags,
+          entityKind: entityData?.kind ?? 'unknown',
+          entityName: entityData?.name ?? entityUsageEntry.entitySlug,
+          entitySlug: entityUsageEntry.entitySlug,
+          tags: entityUsageEntry.tags,
+          turnSequence: view.turnSequence,
+          usage: entityUsageEntry.usage,
+        });
 
-          // Limit to 15 entities total
-          if (usage.length >= 15) {
-            return usage;
-          }
+        // Limit to 15 entities total
+        if (usage.length >= 15) {
+          return usage;
         }
       }
     }
 
     return usage;
-  }, [messages]);
+  }, [recentViews]);
 
   if (!chronicle) {
     return showEmptyState ? <ChronicleEmptyState /> : null;

@@ -6,4 +6,4 @@ Output **JSON only** matching the schema exactly.
 - Use `"new"` when the intent introduces a multi-turn goal, mystery, or problem—not a one-off action.
 - Use `"independent"` when no beat is meaningfully touched.
 - `summary`: ≤140 chars explaining the decision.
-- `targetBeatId`: required only for `"existing"`; otherwise null.
+- `targetBeatId`: the `id` field of the targeted beat exactly as shown in the BEATS section, required only for `"existing"`; otherwise null.

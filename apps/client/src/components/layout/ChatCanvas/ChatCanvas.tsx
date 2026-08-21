@@ -3,12 +3,13 @@ import type {
   Intent,
   BeatTracker,
 } from '@glass-frontier/dto';
+import { IntentType } from '@glass-frontier/dto';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { promptClient } from '../../../lib/promptClient';
-import type { ChatMessage } from '../../../state/chronicleState';
+import type { ChatMessage, TurnView } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { BeatTrackerBadge } from '../../badges/BeatTrackerBadge/BeatTrackerBadge';
@@ -40,18 +41,9 @@ const FEEDBACK_LABELS: Record<PlayerFeedbackSentiment, string> = {
 type FeedbackIntentChoice = 'none' | NonNullable<Intent['intentType']>;
 type FeedbackBooleanChoice = 'none' | 'true' | 'false';
 
-const INTENT_TYPE_VALUES: Array<NonNullable<Intent['intentType']>> = [
-  'action',
-  'inquiry',
-  'clarification',
-  'possibility',
-  'planning',
-  'reflection',
-];
-
 const FEEDBACK_INTENT_OPTIONS: Array<{ label: string; value: FeedbackIntentChoice }> = [
   { label: 'No Feedback', value: 'none' },
-  ...INTENT_TYPE_VALUES.map((value) => ({
+  ...IntentType.options.map((value) => ({
     label: value.replace(/^[a-z]/, (char) => char.toUpperCase()),
     value,
   })),
@@ -100,25 +92,35 @@ const describePlayerBeatLabel = (directive: PlayerBeatDirective | null): string 
   return null;
 };
 
-const formatIntentBadgeLabel = (intentType: ChatMessage['intentType']): string | null => {
+const PROGRESS_NODE_LABELS: Record<string, string> = {
+  'beat-tracker': 'tracking story beats',
+  'check-planner': 'weighing the risk',
+  'check-runner': 'rolling the dice',
+  'entity-judge': 'noting who mattered',
+  'entity-selector': 'gathering the scene',
+  'gm-response-node': 'writing the narration',
+  'gm-summary': 'logging the turn',
+  'intent-beat-detector': 'placing your move in the story',
+  'intent-classifier': 'reading your intent',
+  'inventory-delta': 'checking your gear',
+  'location-delta': 'tracking the location',
+};
+
+const formatProgressNode = (nodeId: string): string =>
+  PROGRESS_NODE_LABELS[nodeId] ?? nodeId.replace(/-/g, ' ');
+
+const formatIntentBadgeLabel = (intentType: TurnView['intentType']): string | null => {
   if (!intentType) {
     return null;
   }
   return intentType.replace(/^\w/, (char) => char.toUpperCase());
 };
 
-const describeTimelineBadge = (advancesTimeline: ChatMessage['advancesTimeline']): string | null => {
+const describeTimelineBadge = (advancesTimeline: TurnView['advancesTimeline']): string | null => {
   if (typeof advancesTimeline !== 'boolean') {
     return null;
   }
   return advancesTimeline ? 'Advances timeline' : 'Holds moment';
-};
-
-const describeWorldDeltaTags = (tags: ChatMessage['worldDeltaTags']): string | null => {
-  if (!Array.isArray(tags) || tags.length === 0) {
-    return null;
-  }
-  return tags.join(', ');
 };
 
 const readFeedbackCache = (): Record<string, true> => {
@@ -157,6 +159,8 @@ export function ChatCanvas() {
   const chronicleId = useChronicleStore((state) => state.chronicleId);
   const playerId = useChronicleStore((state) => state.playerId);
   const isWaitingForGm = useChronicleStore((state) => state.isSending);
+  const turnProgress = useChronicleStore((state) => state.turnProgress);
+  const turnViews = useChronicleStore((state) => state.turnViews);
   const beats = useChronicleStore((state) => state.beats);
   const expandedMessages = useUiStore((state) => state.expandedMessages);
   const setExpandedMessages = useUiStore((state) => state.setExpandedMessages);
@@ -219,17 +223,17 @@ export function ChatCanvas() {
     setFeedbackInventoryNotes('');
   };
 
-  const openFeedbackModal = (message: ChatMessage) => {
-    const auditId = message.gmTrace?.auditId ?? null;
-    const turnSequence = typeof message.turnSequence === 'number' ? message.turnSequence : null;
-    if (!auditId || !message.turnId || turnSequence === null) {
+  const openFeedbackModal = (message: ChatMessage, view: TurnView | null) => {
+    const auditId = view?.gmTrace?.auditId ?? null;
+    const turnSequence = typeof view?.turnSequence === 'number' ? view.turnSequence : null;
+    if (!auditId || !view?.turnId || turnSequence === null) {
       return;
     }
     setFeedbackTarget({
       auditId,
       excerpt: (message.entry.content ?? '').slice(0, 280),
       gmEntryId: message.entry.id,
-      turnId: message.turnId,
+      turnId: view.turnId,
       turnSequence,
     });
     setFeedbackSentiment('positive');
@@ -363,21 +367,24 @@ export function ChatCanvas() {
           </p>
         ) : (
           messages.map((chatMessage, index) => {
+            const { entry } = chatMessage;
+            const view = chatMessage.turnKey !== null
+              ? turnViews[chatMessage.turnKey] ?? null
+              : null;
             const {
-              attributeKey,
-              entry,
-              playerIntent,
-              skillCheckPlan,
-              skillCheckResult,
-              skillKey,
-              skillProgress,
-            } = chatMessage;
-            const auditId = chatMessage.gmTrace?.auditId ?? null;
+              attributeKey = null,
+              playerIntent = null,
+              skillCheckPlan = null,
+              skillCheckResult = null,
+              skillKey = null,
+              skillProgress = null,
+            } = view ?? {};
+            const auditId = view?.gmTrace?.auditId ?? null;
             const hasSubmitted = auditId ? feedbackCache[auditId] === true : false;
-            const hasTurnSequence = typeof chatMessage.turnSequence === 'number';
+            const hasTurnSequence = typeof view?.turnSequence === 'number';
             const canSubmitFeedback =
               auditId !== null &&
-              Boolean(chatMessage.turnId) &&
+              Boolean(view?.turnId) &&
               hasTurnSequence &&
               Boolean(chronicleId) &&
               Boolean(playerId) &&
@@ -388,7 +395,7 @@ export function ChatCanvas() {
                 : new Date();
             const displayRole =
               entry.role === 'player' ? 'Player' : entry.role === 'gm' ? 'GM' : 'System';
-            const beatTracker = chatMessage.beatTracker ?? null;
+            const beatTracker = view?.beatTracker ?? null;
             const beatTrackerEffectLabel =
               entry.role === 'gm' && showNarrative && hasBeatTrackerDetails(beatTracker)
                 ? describeBeatTurnEffect(beatTracker)
@@ -398,8 +405,7 @@ export function ChatCanvas() {
                 ? describePlayerBeatLabel(readPlayerBeatDirective(playerIntent))
                 : null;
             const playerIntentLabel = formatIntentBadgeLabel(playerIntent?.intentType ?? null);
-            const timelineLabel = describeTimelineBadge(chatMessage.advancesTimeline ?? null);
-            const deltaLabel = describeWorldDeltaTags(chatMessage.worldDeltaTags ?? null);
+            const timelineLabel = describeTimelineBadge(view?.advancesTimeline ?? null);
 
             return (
               <article
@@ -456,7 +462,7 @@ export function ChatCanvas() {
                             {beatTracker === null ? null : (
                               <BeatTrackerBadge beatLookup={beatLookup} tracker={beatTracker} />
                             )}
-                            <InventoryDeltaBadge delta={chatMessage.inventoryDelta} />
+                            <InventoryDeltaBadge delta={view?.inventoryDelta ?? null} />
                           </>
                         ) : null}
                         {hasSubmitted ? (
@@ -468,7 +474,7 @@ export function ChatCanvas() {
                             onClick={(event) => {
                               event.stopPropagation();
                               event.preventDefault();
-                              openFeedbackModal(chatMessage);
+                              openFeedbackModal(chatMessage, view);
                             }}
                             disabled={!canSubmitFeedback}
                           >
@@ -510,7 +516,7 @@ export function ChatCanvas() {
                         </div>
                       ) : (
                         <p className="chat-entry-summary">
-                          {chatMessage.gmSummary ??
+                          {view?.gmSummary ??
                             playerIntent?.intentSummary ??
                             'GM summary unavailable.'}
                         </p>
@@ -532,12 +538,9 @@ export function ChatCanvas() {
                         </div>
                       ) : null}
 
-                      {showAll && deltaLabel ? (
-                        <p className="chat-entry-delta-note">World shifts: {deltaLabel}</p>
-                      ) : null}
-                      {showAll && chatMessage.executedNodes?.length ? (
+                      {showAll && view?.executedNodes?.length ? (
                         <p className="chat-entry-node-trace">
-                          GM pipeline: {chatMessage.executedNodes.join(' → ')}
+                          GM pipeline: {view.executedNodes.join(' → ')}
                         </p>
                       ) : null}
                     </>
@@ -566,7 +569,11 @@ export function ChatCanvas() {
       {isWaitingForGm ? (
         <div className="chat-loading" role="status" aria-live="polite">
           <span className="chat-loading-spinner" aria-hidden="true" />
-          <span className="chat-loading-text">GM is composing the next beat…</span>
+          <span className="chat-loading-text">
+            {turnProgress
+              ? `GM is working — ${formatProgressNode(turnProgress.nodeId)} (${turnProgress.step}/${turnProgress.total})`
+              : 'GM is composing the next beat…'}
+          </span>
         </div>
       ) : null}
       {feedbackTarget ? (

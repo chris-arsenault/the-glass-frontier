@@ -72,7 +72,7 @@ export function ChronicleStartWizard() {
 
   const [locations, setLocations] = useState<SelectedLocationEntity[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [isLoadingLocationDetails, setIsLoadingLocationDetails] = useState(false);
   const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
   const setBeatsEnabled = useChronicleStartStore((state) => state.setBeatsEnabled);
@@ -86,14 +86,13 @@ export function ChronicleStartWizard() {
   // Prefetch state
   const [isPrefetchingAnchors, setIsPrefetchingAnchors] = useState(false);
 
-  const refreshLocations = useCallback(async () => {
-    setIsLoadingLocations(true);
-    setLocationError(null);
+  const fetchLocations = useCallback(async () => {
     try {
       const list = await worldAtlasClient.listEntities('location');
       const mapped = list.map(mapLocation);
       setLocations(mapped);
-      if (!selectedLocation && mapped.length > 0) {
+      setLocationError(null);
+      if (useChronicleStartStore.getState().selectedLocation === null && mapped.length > 0) {
         setSelectedLocation(mapped[0]);
       }
     } catch (err: unknown) {
@@ -101,36 +100,16 @@ export function ChronicleStartWizard() {
     } finally {
       setIsLoadingLocations(false);
     }
-  }, [selectedLocation, setSelectedLocation]);
+  }, [setSelectedLocation]);
+
+  const refreshLocations = useCallback(async () => {
+    setIsLoadingLocations(true);
+    await fetchLocations();
+  }, [fetchLocations]);
 
   useEffect(() => {
-    let cancelled = false;
-    void worldAtlasClient.listEntities('location').then(
-      (list) => {
-        if (!cancelled) {
-          const mapped = list.map(mapLocation);
-          setLocations(mapped);
-          setIsLoadingLocations(false);
-          if (selectedLocation === null && mapped.length > 0) {
-            setSelectedLocation(mapped[0]);
-          }
-        }
-        return undefined;
-      },
-      (reason: unknown) => {
-        if (!cancelled) {
-          setLocationError(
-            reason instanceof Error ? reason.message : 'Failed to load locations'
-          );
-          setIsLoadingLocations(false);
-        }
-        return undefined;
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedLocation, setSelectedLocation]);
+    void Promise.resolve().then(fetchLocations);
+  }, [fetchLocations]);
 
   const handleSelectLocation = useCallback(
     async (location: SelectedLocationEntity) => {
@@ -170,7 +149,7 @@ export function ChronicleStartWizard() {
   const canGoNext =
     (step === 'location' && Boolean(selectedLocation)) ||
     step === 'tone' ||
-    (step === 'anchor' && Boolean(selectedAnchorEntity)) ||
+    step === 'anchor' ||
     (step === 'seeds' && hasSeedPayload) ||
     step === 'create';
 
@@ -357,9 +336,8 @@ export function ChronicleStartWizard() {
       setCreationError('Select a character before creating a chronicle.');
       return;
     }
-    const seedPayload = customSeedText.trim().length
-      ? customSeedText.trim()
-      : selectedSeed?.teaser ?? '';
+    // A chosen seed card wins, matching what the Create summary shows.
+    const seedPayload = selectedSeed?.teaser ?? customSeedText.trim();
     if (!seedPayload) {
       setCreationError('Select or write a seed prompt before continuing.');
       return;
@@ -371,8 +349,11 @@ export function ChronicleStartWizard() {
       beatsEnabled,
       characterId: preferredCharacterId,
       locationId: selectedLocation.id,
+      locationName: selectedLocation.name,
       seedText: seedPayload,
       title: customTitle || selectedSeed?.title || selectedLocation.name,
+      toneChips,
+      toneNotes,
     };
     try {
       const chronicleId = await createChronicleFromSeed(payload);
@@ -632,7 +613,6 @@ function SeedStep({
   tone,
 }: SeedStepProps) {
   const [error, setError] = useState<string | null>(null);
-  const [generationProgress, setGenerationProgress] = useState(0);
   const hasSelection = Boolean(selectedSeedId);
   const handleCustomSeedTitleChange = (value: string) => {
     onCustomSeedChange({ text: customSeedText, title: value });
@@ -647,17 +627,11 @@ function SeedStep({
       return;
     }
     if (!anchorId) {
-      setError('Select an anchor entity before generating seeds.');
+      setError('Seed generation needs an anchor entity. Pick one on the Anchor step, or write your own seed below.');
       return;
     }
     setSeedStatus('loading');
     setError(null);
-    setGenerationProgress(0);
-
-    // Simulate progress updates for user feedback
-    const progressInterval = setInterval(() => {
-      setGenerationProgress((prev) => Math.min(prev + 1, 3));
-    }, 3000);
 
     try {
       const result = await trpcClient.generateChronicleSeeds.mutate({
@@ -668,17 +642,14 @@ function SeedStep({
         toneChips: tone.toneChips,
         toneNotes: tone.toneNotes,
       });
-      clearInterval(progressInterval);
       onSeedsLoaded(result ?? []);
     } catch (err: unknown) {
-      clearInterval(progressInterval);
       setSeedStatus('error');
       const message = err instanceof Error ? err.message : 'Failed to generate seeds.';
       setError(message);
       return;
     }
     setSeedStatus('idle');
-    setGenerationProgress(0);
   };
 
   return (
@@ -691,9 +662,7 @@ function SeedStep({
           disabled={seedStatus === 'loading'}
         >
           {seedStatus === 'loading'
-            ? generationProgress > 0
-              ? `Generating seeds (${generationProgress}/3)…`
-              : 'Generating seeds…'
+            ? 'Generating seeds…'
             : hasSelection
               ? 'Regenerate 3'
               : 'Generate 3'}
@@ -722,8 +691,8 @@ function SeedStep({
           </article>
         ))}
       </div>
-      {selectedSeedId === null ? (
-        <p className="seed-empty">Generate seeds to continue.</p>
+      {selectedSeedId === null && customSeedText.trim().length === 0 ? (
+        <p className="seed-empty">Generate seeds or write your own to continue.</p>
       ) : null}
       <div className="custom-seed-editor">
         <h4>Or write your own seed</h4>
@@ -775,7 +744,7 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
         if (!cancelled) {
           const anchors = result.neighbors
             .filter((neighbor) => neighbor.kind !== 'location')
-            .slice(0, 3)
+            .slice(0, 9)
             .map(mapAnchor);
           setLoadState({ anchors, error: null, locationId });
           if (selectedAnchorId === null && anchors.length > 0) {
@@ -833,7 +802,10 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
   if (anchors.length === 0) {
     return (
       <div className="anchor-step">
-        <p>No non-location neighbors found for this location. Please go back and select a different location.</p>
+        <p>
+          This location has no anchor candidates. Continue without an anchor —
+          you can still write your own seed on the next step.
+        </p>
       </div>
     );
   }
@@ -1030,14 +1002,16 @@ type StepperProps = {
 const stepOrder: ChronicleWizardStep[] = ['location', 'tone', 'anchor', 'seeds', 'create'];
 
 function Stepper({ currentStep, onNavigate }: StepperProps) {
+  const currentIndex = stepOrder.indexOf(currentStep);
   return (
     <ol className="wizard-stepper">
-      {stepOrder.map((step) => (
+      {stepOrder.map((step, index) => (
         <li key={step}>
           <button
             type="button"
             className={`wizard-step${currentStep === step ? ' active' : ''}`}
             onClick={() => onNavigate(step)}
+            disabled={index > currentIndex}
           >
             {step === 'location'
               ? 'Choose location'

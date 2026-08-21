@@ -138,7 +138,8 @@ export function CreateCharacterModal() {
         </header>
         <form className="modal-body" onSubmit={handleSubmit}>
           <p className="form-hint">
-            Characters begin at the <strong>at-home</strong> staging location with neutral momentum.
+            New characters start with neutral momentum and an empty pack. Where they
+            begin is chosen when you start a chronicle.
           </p>
           <div className="character-form-grid">
             <label className="form-field">

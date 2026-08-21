@@ -44,8 +44,7 @@ const usageBumps = (
  */
 export const applyEntityUsage = (
   current: EntityFocusState | null | undefined,
-  usage: EntityUsageClassification[],
-  nowTs = Date.now()
+  usage: EntityUsageClassification[]
 ): EntityFocusState => {
   const entityScores = decayScores(current?.entityScores);
   const tagScores = decayScores(current?.tagScores);
@@ -62,7 +61,6 @@ export const applyEntityUsage = (
 
   return {
     entityScores: Object.fromEntries(entityScores),
-    lastUpdated: nowTs,
     tagScores: Object.fromEntries(tagScores),
   };
 };

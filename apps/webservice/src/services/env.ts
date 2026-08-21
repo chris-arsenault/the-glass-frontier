@@ -25,26 +25,3 @@ export const websocketConfig = {
   subscriptionTtlSeconds: parsePositiveInt(process.env.SUBSCRIPTION_TTL_SECONDS, 900),
   tableName: progressTableName,
 };
-
-export const cognitoConfig = (() => {
-  const userPoolIdRaw = process.env.COGNITO_USER_POOL_ID;
-  if (!isNonEmptyString(userPoolIdRaw)) {
-    return null;
-  }
-  const userPoolId = userPoolIdRaw.trim();
-
-  const awsRegion = process.env.AWS_REGION;
-  const awsDefaultRegion = process.env.AWS_DEFAULT_REGION;
-  const preferredRegion = isNonEmptyString(awsRegion) ? awsRegion.trim() : null;
-  const fallbackRegion = isNonEmptyString(awsDefaultRegion) ? awsDefaultRegion.trim() : null;
-  const region = preferredRegion ?? fallbackRegion ?? 'us-east-1';
-
-  const appClientIdRaw = process.env.COGNITO_APP_CLIENT_ID;
-  const appClientId = isNonEmptyString(appClientIdRaw) ? appClientIdRaw.trim() : '';
-
-  return {
-    appClientId,
-    region,
-    userPoolId,
-  };
-})();

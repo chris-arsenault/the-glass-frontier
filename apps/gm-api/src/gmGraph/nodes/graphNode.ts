@@ -10,14 +10,14 @@ export type GraphTelemetry = {
   recordToolNotRun?: (entry: { chronicleId: string; operation: string }) => void;
 };
 
-export type GraphNodeResult =
-  | GraphContext
-  | {
-      context: GraphContext;
-      next?: string | string[] | null;
-    };
+/**
+ * Nodes return only the fields they changed. The orchestrator spreads the
+ * delta onto the running context, so a parallel sibling that carries an
+ * unchanged copy of a field can never clobber another sibling's write.
+ */
+export type GraphNodeDelta = Partial<GraphContext>;
 
 export type GraphNode = {
   readonly id: string;
-  execute: (context: GraphContext) => Promise<GraphNodeResult> | GraphNodeResult;
+  execute: (context: GraphContext) => Promise<GraphNodeDelta> | GraphNodeDelta;
 };

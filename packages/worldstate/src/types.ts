@@ -44,6 +44,8 @@ export type ChronicleStore = {
     seedText?: string | null;
     beatsEnabled?: boolean;
     anchorEntityId?: string | null;
+    toneChips?: string[];
+    toneNotes?: string;
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;
@@ -53,6 +55,10 @@ export type ChronicleStore = {
   listCharactersByPlayer: (playerId: string) => Promise<Character[]>;
 
   upsertChronicle: (chronicle: Chronicle) => Promise<Chronicle>;
+  setChronicleTargetEnd: (
+    chronicleId: string,
+    targetEndTurn: number | null
+  ) => Promise<Chronicle>;
   commitClosureSummary: (input: {
     character?: Character;
     chronicleId: string;

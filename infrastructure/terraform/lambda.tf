@@ -43,11 +43,9 @@ module "chronicle_lambda" {
   tags                 = local.tags
 
   environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.llm_secret_env_vars, {
-    NODE_ENV                    = var.environment
-    DOMAIN_NAME                 = local.cloudfront_domain
-    TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
-    CHRONICLE_CLOSURE_QUEUE_URL = aws_sqs_queue.chronicle_closure.url
-    OPENAI_API_BASE             = "https://api.openai.com/v1"
+    NODE_ENV        = var.environment
+    DOMAIN_NAME     = local.cloudfront_domain
+    OPENAI_API_BASE = "https://api.openai.com/v1"
   })
 
   vpc_config = local.db_lambda_vpc_config
@@ -282,9 +280,10 @@ module "webservice_push_lambda" {
 }
 
 resource "aws_lambda_event_source_mapping" "webservice_progress" {
-  event_source_arn = aws_sqs_queue.turn_progress.arn
-  function_name    = module.webservice_push_lambda.arn
-  batch_size       = 10
+  event_source_arn        = aws_sqs_queue.turn_progress.arn
+  function_name           = module.webservice_push_lambda.arn
+  batch_size              = 10
+  function_response_types = ["ReportBatchItemFailures"]
 }
 
 # DB Provisioner Lambda - for migrations, reset, and seeding

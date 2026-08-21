@@ -3,7 +3,7 @@ import { log } from '@glass-frontier/utils';
 import type { TurnProgressPublisher, TurnProgressStatus } from '../eventEmitters/progressEmitter';
 import type { ChronicleTelemetry } from '../telemetry';
 import type { GraphContext } from '../types.js';
-import type { GraphNode, GraphNodeResult } from './nodes/graphNode';
+import type { GraphNode, GraphNodeDelta } from './nodes/graphNode';
 
 // Pipeline stage: either a single node or a parallel group
 export type PipelineStage =
@@ -18,9 +18,6 @@ type NodeDescriptor = {
 };
 
 type RunState = { context: GraphContext; executed: string[] };
-
-const preferUpdate = <T>(update: T | undefined, base: T | undefined): T | undefined =>
-  update ?? base;
 
 class GmGraphOrchestrator {
   readonly #descriptors: Map<string, NodeDescriptor> = new Map();
@@ -127,7 +124,7 @@ class GmGraphOrchestrator {
     descriptor: NodeDescriptor,
     context: GraphContext,
     jobId: string | undefined
-  ): Promise<{ context: GraphContext }> {
+  ): Promise<GraphNodeDelta> {
     const { node, nodeId, step, total } = descriptor;
     await this.#notifyStatus({
       context,
@@ -139,18 +136,18 @@ class GmGraphOrchestrator {
     });
 
     try {
-      const execution = await node.execute(context);
-      const normalized = this.#unwrapResult(execution);
-      const status: TurnProgressStatus = normalized.context.failure ? 'error' : 'success';
+      const delta = await node.execute(context);
+      const applied = { ...context, ...delta };
+      const status: TurnProgressStatus = applied.failure ? 'error' : 'success';
       await this.#notifyStatus({
-        context: normalized.context,
+        context: applied,
         jobId,
         nodeId,
         status,
         step,
         total,
       });
-      return normalized;
+      return delta;
     } catch (error) {
       await this.#notifyStatus({
         context,
@@ -173,13 +170,6 @@ class GmGraphOrchestrator {
       step: index + 1,
       total,
     }));
-  }
-
-  #unwrapResult(result: GraphNodeResult): { context: GraphContext } {
-    if ('context' in result) {
-      return { context: result.context };
-    }
-    return { context: result };
   }
 
   async #runPipeline(
@@ -214,11 +204,12 @@ class GmGraphOrchestrator {
     if (descriptor === undefined) {
       throw new Error(`Unknown node: ${stage.nodeId}`);
     }
-    const result = await this.#executeNode(descriptor, state.context, jobId);
+    const delta = await this.#executeNode(descriptor, state.context, jobId);
+    const context = { ...state.context, ...delta };
     const label = descriptor.nodeId === 'gm-response-node'
-      ? `${descriptor.nodeId} (${result.context.playerIntent?.intentType ?? 'unclassified'})`
+      ? `${descriptor.nodeId} (${context.playerIntent?.intentType ?? 'unclassified'})`
       : descriptor.nodeId;
-    return { context: result.context, executed: [...state.executed, label] };
+    return { context, executed: [...state.executed, label] };
   }
 
   async #runParallelGroup(
@@ -226,50 +217,22 @@ class GmGraphOrchestrator {
     context: GraphContext,
     jobId?: string
   ): Promise<{ context: GraphContext; executedNodes: string[] }> {
-    const executions = await Promise.all(
-      nodeIds.map(async (nodeId) => {
+    const deltas = await Promise.all(
+      nodeIds.map((nodeId) => {
         const descriptor = this.#descriptors.get(nodeId);
         if (descriptor === undefined) {
           throw new Error(`Unknown graph node ${nodeId}`);
         }
-        const result = await this.#executeNode(descriptor, context, jobId);
-        return { descriptor, result };
+        return this.#executeNode(descriptor, context, jobId);
       })
     );
-    const ordered = nodeIds.map((nodeId) => {
-      const entry = executions.find((candidate) => candidate.descriptor.nodeId === nodeId);
-      if (entry === undefined) {
-        throw new Error(`Missing execution result for ${nodeId}`);
-      }
-      return entry;
-    });
-    let mergedContext = context;
-    ordered.forEach((entry) => {
-      mergedContext = this.#mergeContexts(mergedContext, entry.result.context);
-    });
+    let merged = context;
+    for (const delta of deltas) {
+      merged = { ...merged, ...delta };
+    }
     return {
-      context: mergedContext,
-      executedNodes: ordered.map((entry) => entry.descriptor.nodeId),
-    };
-  }
-
-  #mergeContexts(base: GraphContext, update: GraphContext): GraphContext {
-    return {
-      ...base,
-      ...update,
-      beatTracker: preferUpdate(update.beatTracker, base.beatTracker),
-      entityContext: preferUpdate(update.entityContext, base.entityContext),
-      entityUsage: preferUpdate(update.entityUsage, base.entityUsage),
-      gmResponse: preferUpdate(update.gmResponse, base.gmResponse),
-      gmSummary: preferUpdate(update.gmSummary, base.gmSummary),
-      handlerId: preferUpdate(update.handlerId, base.handlerId),
-      inventoryDelta: preferUpdate(update.inventoryDelta, base.inventoryDelta),
-      locationDelta: preferUpdate(update.locationDelta, base.locationDelta),
-      playerIntent: preferUpdate(update.playerIntent, base.playerIntent),
-      skillCheckPlan: preferUpdate(update.skillCheckPlan, base.skillCheckPlan),
-      skillCheckResult: preferUpdate(update.skillCheckResult, base.skillCheckResult),
-      systemMessage: preferUpdate(update.systemMessage, base.systemMessage),
-      worldDeltaTags: preferUpdate(update.worldDeltaTags, base.worldDeltaTags),
+      context: merged,
+      executedNodes: [...nodeIds],
     };
   }
 }

@@ -150,11 +150,6 @@ resource "aws_iam_policy" "chronicle_closure_queue" {
   policy      = data.aws_iam_policy_document.chronicle_closure_queue.json
 }
 
-resource "aws_iam_role_policy_attachment" "chronicle_closure_queue" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_closure_queue.arn
-}
-
 resource "aws_iam_role_policy_attachment" "gm_closure_queue" {
   role       = aws_iam_role.lambda["gm_lambda"].name
   policy_arn = aws_iam_policy.chronicle_closure_queue.arn
@@ -225,11 +220,6 @@ resource "aws_iam_policy" "chronicle_progress_queue" {
   name        = "${local.name_prefix}-chronicle-progress-queue"
   description = "Allow the chronicle engine to emit turn progress events."
   policy      = data.aws_iam_policy_document.chronicle_progress_queue.json
-}
-
-resource "aws_iam_role_policy_attachment" "chronicle_progress_queue" {
-  role       = aws_iam_role.lambda["chronicle_lambda"].name
-  policy_arn = aws_iam_policy.chronicle_progress_queue.arn
 }
 
 resource "aws_iam_role_policy_attachment" "gm_progress_queue" {

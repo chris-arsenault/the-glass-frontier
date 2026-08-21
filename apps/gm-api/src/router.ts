@@ -33,8 +33,10 @@ export const appRouter = t.router({
         authorizationHeader: ctx.authorizationHeader
       });
       return {
+        beats: result.beats,
         character: result.updatedCharacter,
         chronicleStatus: result.chronicleStatus,
+        entityFocus: result.entityFocus,
         locationName: result.locationName,
         turn: result.turn,
       };
@@ -56,12 +58,13 @@ export const appRouter = t.router({
       if (input.playerId !== ctx.identity.sub || chronicle.playerId !== ctx.identity.sub) {
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
-      const normalizedTarget =
-        typeof input.targetEndTurn === 'number' ? input.targetEndTurn : undefined;
-      const updated = await ctx.chronicleStore.upsertChronicle({
-        ...chronicle,
-        targetEndTurn: normalizedTarget,
-      });
+      if (chronicle.status === 'closed') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Chronicle is closed.' });
+      }
+      const updated = await ctx.chronicleStore.setChronicleTargetEnd(
+        input.chronicleId,
+        typeof input.targetEndTurn === 'number' ? input.targetEndTurn : null
+      );
       return { chronicle: updated };
     }),
 });

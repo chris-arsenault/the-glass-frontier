@@ -30,16 +30,23 @@
 ## Subproject Overview
 
 ### Apps
-- `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the narrative services through tRPC and shared DTOs.
-- `apps/llm-proxy`: Node-based proxy (deployment targets: local or AWS Lambda) that standardizes OpenAI/LLM calls and exposes them to the rest of the stack.
-- `apps/chronicle-api`: Chronicle engine service that runs storytelling logic, handles skill checks, and ships as an AWS Lambda with supporting build scripts.
-- `apps/webservice`: WebSocket-facing webservice that brokers progress updates (Step Functions → SQS → API Gateway) and manages connection/job subscriptions.
+- `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the services through tRPC and shared DTOs.
+- `apps/gm-api`: The GM engine. Runs the turn graph (intent classification, skill checks, narration, deltas), emits turn-progress and chronicle-closure events, and ships as an AWS Lambda.
+- `apps/chronicle-api`: Player-facing CRUD for characters, chronicles, seeds, settings, and bug reports.
+- `apps/chronicle-closer`: SQS consumer that generates end-of-chronicle summaries (closure design still in progress).
+- `apps/prompt-api`: Prompt-template editing, LLM audit review, and player feedback endpoints.
+- `apps/atlas-api` / `apps/world-schema-api`: Read surfaces over world canon for the Atlas UI and schema pages.
+- `apps/webservice`: WebSocket broker that forwards turn-progress events (SQS → API Gateway) and manages connection/job subscriptions.
+- `apps/db-provisioner`: Lambda for migrations, resets, and seeding.
+- `apps/playwright`: E2E fixtures and helpers.
 
 ### Packages
-- `packages/dto`: Shared Zod DTO/type definitions consumed by the client, narrative engine, and proxy for consistent contracts.
+- `packages/dto`: Shared Zod DTO/type definitions consumed by every workspace for consistent contracts.
+- `packages/app`: Application-layer stores (players, prompt templates + runtime, model config) backed by Postgres.
+- `packages/worldstate`: Session and canon persistence (chronicles, turns, characters, world graph) plus its migrations.
 - `packages/skill-check-resolver`: Domain module that encapsulates skill-check math/rules used during narrative resolution.
-- `packages/utils`: Common utility helpers that the other workspaces depend on.
-- `packages/persistence`: Shared world-state persistence layer (in-memory + S3 implementations plus factory) consumed by narrative services, now including the location graph store/index for cross-chronicle navigation state.
+- `packages/llm-client`: Provider-agnostic LLM client with retries and structured output.
+- `packages/utils` / `packages/node-utils`: Common helpers shared across workspaces.
 
 ### Infrastructure
 - `infrastructure/terraform`: Terraform project that provisions the AWS footprint (API Gateway, Cognito, Lambda builds, S3/CloudFront, etc.) and wires in workspace build artifacts.

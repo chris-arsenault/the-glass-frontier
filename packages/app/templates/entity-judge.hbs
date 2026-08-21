@@ -10,17 +10,7 @@ You are the Entity Judge for The Glass Frontier. Your task is to classify how th
 
 3. Base your classification strictly on the GM's actual narrative text. Do not infer usage from the player's intent alone.
 
-## Context
-
-### Offered Entities
-{{#each entities.offered}}
-- **{{this.name}}** (slug: `{{this.slug}}`)
-  {{#if this.description}}Description: {{this.description}}{{/if}}
-  {{#if this.tags}}Tags: {{#each this.tags}}{{this}}, {{/each}}{{/if}}
-{{/each}}
-
-### GM Response
-{{gmResponse}}
+The offered entities and the GM response are provided alongside this prompt.
 
 ## Output Instructions
 Return your answer using the structured format provided. For each entity, provide:

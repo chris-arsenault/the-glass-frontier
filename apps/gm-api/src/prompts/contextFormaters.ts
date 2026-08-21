@@ -24,7 +24,7 @@ export function trimSkillsList(skills: Skill[]): Array<{
 
 export function trimBeatsList(beats: ChronicleBeat[]): Array<{
   description: string;
-  slug: string;
+  id: string;
   status: string;
   title: string;
 }> {
@@ -35,7 +35,7 @@ export function trimBeatsList(beats: ChronicleBeat[]): Array<{
     .map((b) => {
       return {
         description: b.description,
-        slug: b.slug,
+        id: b.id,
         status: b.status,
         title: b.title,
       };
@@ -57,18 +57,16 @@ export function formatIntent(
   intent: Intent | null | undefined,
   beats?: ChronicleBeat[]
 ): Record<string, unknown> {
-  // Look up beat slug from ID if targetBeatId is set
-  let targetBeatSlug = null;
   const targetBeatId = intent?.beatDirective.targetBeatId;
-  if (targetBeatId !== null && targetBeatId !== undefined && beats !== undefined) {
-    const targetBeat = beats.find((beat) => beat.id === targetBeatId);
-    targetBeatSlug = targetBeat?.slug ?? null;
-  }
+  const targetBeat =
+    targetBeatId !== null && targetBeatId !== undefined && beats !== undefined
+      ? beats.find((beat) => beat.id === targetBeatId)
+      : undefined;
 
   return {
     beatDirective: intent?.beatDirective.summary,
     summary: intent?.intentSummary,
-    targetBeat: targetBeatSlug,
+    targetBeat: targetBeat?.id ?? null,
     type: intent?.intentType,
   };
 }

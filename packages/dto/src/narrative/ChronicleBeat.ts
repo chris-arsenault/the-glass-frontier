@@ -7,7 +7,6 @@ export const ChronicleBeat = z.object({
   description: z.string().min(1),
   id: z.string().min(1),
   resolvedAt: z.number().int().nonnegative().optional(),
-  slug: z.string().min(1),
   status: ChronicleBeatStatus,
   title: z.string().min(1),
   updatedAt: z.number().int().nonnegative(),

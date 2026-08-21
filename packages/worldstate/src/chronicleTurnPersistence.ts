@@ -15,15 +15,12 @@ type TurnRow = {
   id: string;
   chronicle_id: string;
   turn_sequence: number;
-  handler_id: Turn['handlerId'] | null;
   executed_nodes: Turn['executedNodes'] | null;
   failure: Turn['failure'];
   advances_timeline: Turn['advancesTimeline'] | null;
-  world_delta_tags: Turn['worldDeltaTags'] | null;
   player_message_id: string;
   player_message_content: string;
   player_message_metadata: Turn['playerMessage']['metadata'] | null;
-  resolved_intent_type: Turn['resolvedIntentType'] | null;
   player_intent: Turn['playerIntent'] | null;
   gm_response_id: string | null;
   gm_response_content: string | null;
@@ -43,9 +40,9 @@ type TurnRow = {
 };
 
 const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
-  handler_id, executed_nodes, failure, advances_timeline, world_delta_tags,
+  executed_nodes, failure, advances_timeline,
   player_message_id, player_message_content, player_message_metadata,
-  resolved_intent_type, player_intent,
+  player_intent,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
@@ -54,18 +51,18 @@ const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
   id, chronicle_id, turn_sequence, created_at,
-  handler_id, executed_nodes, failure, advances_timeline, world_delta_tags,
+  executed_nodes, failure, advances_timeline,
   player_message_id, player_message_content, player_message_metadata,
-  resolved_intent_type, player_intent,
+  player_intent,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
   beat_tracker, gm_trace, entity_offered, entity_usage
 ) VALUES (
-  $1::uuid, $2::uuid, $3, now(), $4, $5, $6, $7, $8,
-  $9, $10, $11::jsonb, $12, $13::jsonb, $14, $15, $16::jsonb, $17,
-  $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23::jsonb,
-  $24::jsonb, $25::jsonb, $26::jsonb, $27::jsonb, $28::jsonb
+  $1::uuid, $2::uuid, $3, now(), $4, $5, $6,
+  $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13::jsonb, $14,
+  $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb,
+  $21::jsonb, $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -118,7 +115,6 @@ const toTurn = (row: TurnRow): Turn => ({
   gmResponse: toGmResponse(row),
   gmSummary: optional(row.gm_summary),
   gmTrace: optional(row.gm_trace),
-  handlerId: optional(row.handler_id),
   id: row.id,
   inventoryDelta: optional(row.inventory_delta),
   locationDelta: optional(row.location_delta),
@@ -129,27 +125,22 @@ const toTurn = (row: TurnRow): Turn => ({
     metadata: row.player_message_metadata ?? defaultMetadata(),
     role: 'player',
   },
-  resolvedIntentType: optional(row.resolved_intent_type),
   skillCheckPlan: optional(row.skill_check_plan),
   skillCheckResult: optional(row.skill_check_result),
   systemMessage: toSystemMessage(row),
   turnSequence: row.turn_sequence,
-  worldDeltaTags: optional(row.world_delta_tags),
 });
 
 const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unknown[] => [
   turn.id,
   chronicleId,
   sequence,
-  valueOr(turn.handlerId, null),
   valueOr(turn.executedNodes, []),
   turn.failure,
   valueOr(turn.advancesTimeline, false),
-  valueOr(turn.worldDeltaTags, []),
   turn.playerMessage.id,
   turn.playerMessage.content,
   serializeJson(turn.playerMessage.metadata),
-  valueOr(turn.resolvedIntentType, null),
   optionalJson(turn.playerIntent),
   valueOr(turn.gmResponse?.id, null),
   valueOr(turn.gmResponse?.content, null),

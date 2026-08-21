@@ -4,6 +4,7 @@ import { isNonEmptyString } from '@glass-frontier/utils';
 import type { z } from 'zod';
 
 import type { GraphContext } from '../../../types.js';
+import type { GraphNodeDelta } from '../graphNode';
 
 
 export type InventoryDelta = z.infer<typeof InventoryDeltaSchema>;
@@ -33,11 +34,8 @@ class InventoryDeltaNode extends LlmClassifierNode<InventoryDelta> {
     );
   }
 
-  #saveInventoryDelta(context: GraphContext, result: InventoryDelta): GraphContext {
-    return {
-      ...context,
-      inventoryDelta: result,
-    };
+  #saveInventoryDelta(_context: GraphContext, result: InventoryDelta): GraphNodeDelta {
+    return { inventoryDelta: result };
   }
 }
 

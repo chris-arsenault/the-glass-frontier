@@ -13,7 +13,7 @@ import { useChronicleStore } from '../../../stores/chronicleStore';
 export function LocationOverview() {
   const locationName = useChronicleStore((state) => state.locationName);
   const locationSlug = useChronicleStore((state) => state.locationSlug);
-  const startedAt = useChronicleStore((state) => state.chronicleRecord?.locationName ?? null);
+  const startedAt = useChronicleStore((state) => state.startLocationName);
 
   if (!locationName) {
     return (

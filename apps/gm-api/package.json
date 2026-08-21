@@ -9,7 +9,8 @@
     "dev": "NODE_ENV=development nodemon --watch src --watch tsconfig.json --ext ts,tsx,hbs --ignore dist --signal SIGTERM --exec \"tsx src/server_local.ts\"",
     "build": "TARGET=lambda tsup",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
   },
   "keywords": [
     "glass-frontier",
@@ -36,6 +37,7 @@
     "@types/aws-lambda": "^8.10.158",
     "@types/express": "^5.0.5",
     "eslint": "^9.39.1",
-    "tsup": "^8.5.1"
+    "tsup": "^8.5.1",
+    "vitest": "^4.0.8"
   }
 }

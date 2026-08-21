@@ -179,6 +179,8 @@ export const defaultChronicle = (
   summaries: [],
   targetEndTurn: null,
   title: 'Journey',
+  toneChips: [],
+  toneNotes: '',
   ...overrides,
 });
 
@@ -191,7 +193,6 @@ export const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Tur
   gmResponse: undefined,
   gmSummary: undefined,
   gmTrace: undefined,
-  handlerId: 'handler',
   id: randomUUID(),
   inventoryDelta: undefined,
   playerIntent: undefined,
@@ -201,13 +202,10 @@ export const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Tur
     metadata: { tags: [], timestamp: Date.now() },
     role: 'player',
   },
-  resolvedIntentConfidence: undefined,
-  resolvedIntentType: undefined,
   skillCheckPlan: undefined,
   skillCheckResult: undefined,
   systemMessage: undefined,
   turnSequence: 0,
-  worldDeltaTags: [],
   ...overrides,
 });
 

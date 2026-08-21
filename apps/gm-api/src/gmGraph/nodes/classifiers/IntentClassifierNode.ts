@@ -2,6 +2,7 @@ import { type Intent, IntentType } from '@glass-frontier/dto';
 import type { GraphContext } from '@glass-frontier/gm-api/types';
 import { z } from 'zod';
 
+import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const IntentResponseSchema = z.object({
@@ -45,11 +46,11 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
     });
   }
 
-  #applyIntent(context: GraphContext, result: IntentResponse): GraphContext {
+  #applyIntent(context: GraphContext, result: IntentResponse): GraphNodeDelta {
     const intent: Intent = {
       beatDirective: {
         kind: 'independent',
-        summary: 'Placeholder - will be replaced by beat detector',
+        summary: 'No beat directive assigned.',
         targetBeatId: null
       },
       creativeSpark: result.creativeSpark,
@@ -63,10 +64,7 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       routerRationale: result.routerRationale,
       tone: result.tone,
     };
-    return {
-      ...context,
-      playerIntent: intent,
-    };
+    return { playerIntent: intent };
   }
 }
 

@@ -11,8 +11,6 @@ const formatStatus = (state: string): string => {
     return 'Connected to the narrative engine.';
   case 'error':
     return 'Connection interrupted. Please retry.';
-  case 'closed':
-    return 'Chronicle has been closed.';
   default:
     return 'Idle.';
   }

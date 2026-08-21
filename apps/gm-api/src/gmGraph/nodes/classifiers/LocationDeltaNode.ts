@@ -7,6 +7,7 @@ import { LlmClassifierNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifi
 import { isNonEmptyString } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../../types';
+import type { GraphNodeDelta } from '../graphNode';
 
 const NODE_ID = 'location-delta';
 const RUNNABLE_INTENTS = new Set<IntentType>(['action', 'planning', 'wrap']);
@@ -34,11 +35,8 @@ class LocationDeltaNode extends LlmClassifierNode<LocationDeltaDecision> {
     );
   }
 
-  #saveLocationDelta(context: GraphContext, result: LocationDeltaDecision): GraphContext {
-    return {
-      ...context,
-      locationDelta: result,
-    };
+  #saveLocationDelta(_context: GraphContext, result: LocationDeltaDecision): GraphNodeDelta {
+    return { locationDelta: result };
   }
 }
 

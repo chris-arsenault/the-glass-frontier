@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { applyEntityUsage, type EntityUsageClassification } from '../../../entity/entityFocus';
 import { buildEntityContext } from '../../../entity/entitySelector';
 import type { GraphContext } from '../../../types';
-import type { GraphNode } from '../graphNode';
+import type { GraphNode, GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const ENTITY_JUDGE_SCHEMA = z.object({
@@ -21,15 +21,12 @@ type EntityJudgeResponse = z.infer<typeof ENTITY_JUDGE_SCHEMA>;
 export class EntitySelectorNode implements GraphNode {
   readonly id = 'entity-selector';
 
-  async execute(context: GraphContext): Promise<GraphContext> {
+  async execute(context: GraphContext): Promise<GraphNodeDelta> {
     if (context.failure) {
-      return context;
+      return {};
     }
     const entityContext = await buildEntityContext(context);
-    return {
-      ...context,
-      entityContext,
-    };
+    return { entityContext };
   }
 }
 
@@ -49,7 +46,7 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
     });
   }
 
-  #applyEntityUsage(context: GraphContext, result: EntityJudgeResponse): GraphContext {
+  #applyEntityUsage(context: GraphContext, result: EntityJudgeResponse): GraphNodeDelta {
     const usage: EntityUsageClassification[] = result.results.flatMap((entry) => {
       const source = context.entityContext?.offered.find((candidate) => candidate.slug === entry.slug);
       if (source === undefined) {
@@ -72,7 +69,6 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
     };
 
     return {
-      ...context,
       chronicleState: {
         ...context.chronicleState,
         chronicle: updatedChronicle,

@@ -1,6 +1,7 @@
 import { type BeatTracker, BeatTrackerSchema } from '@glass-frontier/dto';
 
 import type { GraphContext } from '../../../types';
+import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 class BeatTrackerNode extends LlmClassifierNode<BeatTracker> {
@@ -27,7 +28,7 @@ class BeatTrackerNode extends LlmClassifierNode<BeatTracker> {
     );
   }
 
-  #applyDecision(context: GraphContext, result: BeatTracker): GraphContext {
+  #applyDecision(context: GraphContext, result: BeatTracker): GraphNodeDelta {
     const loreTags = new Set<string>();
     const anchorId = context.chronicleState.chronicle.anchorEntityId;
     if (anchorId !== undefined) {
@@ -41,7 +42,6 @@ class BeatTrackerNode extends LlmClassifierNode<BeatTracker> {
     }
 
     return {
-      ...context,
       beatTracker: {
         ...result,
         tags: Array.from(loreTags),

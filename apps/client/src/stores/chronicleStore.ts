@@ -5,7 +5,6 @@ import type {
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
-  BeatTracker,
   PlayerPreferences,
 } from '@glass-frontier/dto';
 import { formatTurnJobId } from '@glass-frontier/utils';
@@ -14,16 +13,18 @@ import { create } from 'zustand';
 import { gmClient } from '../lib/gmClient';
 import { progressStream } from '../lib/progressStream';
 import { trpcClient } from '../lib/trpcClient';
+import { worldAtlasClient } from '../lib/worldAtlasClient';
 import type {
   ChronicleState,
   ChatMessage,
   CharacterCreationDraft,
-  ChronicleCreationDetails,
   ChronicleSeedCreationDetails,
   ChronicleStore,
   MomentumTrend,
   PlayerSettings,
   SkillProgressBadge,
+  TurnProgress,
+  TurnView,
 } from '../state/chronicleState';
 import { decodeJwtPayload } from '../utils/jwt';
 import { useAuthStore } from './authStore';
@@ -65,110 +66,80 @@ const generateId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const slugifyBeatId = (title: string): string => {
-  const normalized = title
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return normalized.length > 0 ? normalized : `beat-${Date.now()}`;
-};
+const emptyTurnView = (): TurnView => ({
+  advancesTimeline: null,
+  attributeKey: null,
+  beatTracker: null,
+  entityOffered: null,
+  entityUsage: null,
+  executedNodes: null,
+  gmSummary: null,
+  gmTrace: null,
+  intentType: null,
+  inventoryDelta: null,
+  playerIntent: null,
+  skillCheckPlan: null,
+  skillCheckResult: null,
+  skillKey: null,
+  skillProgress: null,
+  turnId: null,
+  turnSequence: null,
+});
 
-const toChatMessage = (entry: TranscriptEntry, extras?: Partial<ChatMessage>): ChatMessage => ({
-  advancesTimeline: extras?.advancesTimeline ?? null,
-  attributeKey: extras?.attributeKey ?? null,
-  beatTracker: extras?.beatTracker ?? null,
-  entityOffered: extras?.entityOffered ?? null,
-  entityUsage: extras?.entityUsage ?? null,
-  entry,
-  executedNodes: extras?.executedNodes ?? null,
-  gmSummary: extras?.gmSummary ?? null,
-  gmTrace: extras?.gmTrace ?? null,
-  handlerId: extras?.handlerId ?? null,
-  intentType: extras?.intentType ?? null,
-  inventoryDelta: extras?.inventoryDelta ?? null,
-  playerIntent: extras?.playerIntent ?? null,
-  skillCheckPlan: extras?.skillCheckPlan ?? null,
-  skillCheckResult: extras?.skillCheckResult ?? null,
-  skillKey: extras?.skillKey ?? null,
-  skillProgress: extras?.skillProgress ?? null,
-  turnId: extras?.turnId ?? null,
-  turnSequence: extras?.turnSequence ?? null,
-  worldDeltaTags: extras?.worldDeltaTags ?? null,
+const turnViewFromTurn = (turn: Turn): TurnView => ({
+  advancesTimeline: typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
+  attributeKey: turn.skillCheckPlan?.attribute ?? null,
+  beatTracker: turn.beatTracker ?? null,
+  entityOffered: turn.entityOffered ?? null,
+  entityUsage: turn.entityUsage ?? null,
+  executedNodes: turn.executedNodes ?? null,
+  gmSummary: turn.gmSummary ?? null,
+  gmTrace: turn.gmTrace ?? null,
+  intentType: turn.playerIntent?.intentType ?? null,
+  inventoryDelta: turn.inventoryDelta ?? null,
+  playerIntent: turn.playerIntent ?? null,
+  skillCheckPlan: turn.skillCheckPlan ?? null,
+  skillCheckResult: turn.skillCheckResult ?? null,
+  skillKey: turn.skillCheckPlan?.skill ?? null,
+  skillProgress: null,
+  turnId: turn.id ?? null,
+  turnSequence: turn.turnSequence ?? null,
 });
 
 const upsertChatEntry = (
   messages: ChatMessage[],
   entry: TranscriptEntry,
-  extras?: Partial<ChatMessage>
+  turnKey: string | null
 ): ChatMessage[] => {
   const index = messages.findIndex((message) => message.entry.id === entry.id);
   if (index >= 0) {
     const updated = [...messages];
-    updated[index] = {
-      ...updated[index],
-      advancesTimeline: extras?.advancesTimeline ?? updated[index].advancesTimeline,
-      attributeKey: extras?.attributeKey ?? updated[index].attributeKey,
-      entityOffered: extras?.entityOffered ?? updated[index].entityOffered,
-      entityUsage: extras?.entityUsage ?? updated[index].entityUsage,
-      entry,
-      executedNodes: extras?.executedNodes ?? updated[index].executedNodes,
-      gmSummary: extras?.gmSummary ?? updated[index].gmSummary,
-      gmTrace: extras?.gmTrace ?? updated[index].gmTrace,
-      handlerId: extras?.handlerId ?? updated[index].handlerId,
-      intentType: extras?.intentType ?? updated[index].intentType,
-      inventoryDelta: extras?.inventoryDelta ?? updated[index].inventoryDelta,
-      playerIntent: extras?.playerIntent ?? updated[index].playerIntent,
-      skillCheckPlan: extras?.skillCheckPlan ?? updated[index].skillCheckPlan,
-      skillCheckResult: extras?.skillCheckResult ?? updated[index].skillCheckResult,
-      skillKey: extras?.skillKey ?? updated[index].skillKey,
-      turnId: extras?.turnId ?? updated[index].turnId,
-      turnSequence: extras?.turnSequence ?? updated[index].turnSequence,
-      worldDeltaTags: extras?.worldDeltaTags ?? updated[index].worldDeltaTags,
-    };
+    updated[index] = { entry, turnKey };
     return updated;
   }
-  return messages.concat([toChatMessage(entry, extras)]);
+  return messages.concat([{ entry, turnKey }]);
 };
 
-const flattenTurns = (turns: Turn[]): ChatMessage[] =>
-  turns.flatMap((turn) => {
-    const attributeKey = turn.skillCheckPlan?.attribute ?? null;
-    const skillKey = turn.skillCheckPlan?.skill ?? null;
-    const extras = {
-      advancesTimeline:
-        typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
-      attributeKey,
-      beatTracker: turn.beatTracker ?? null,
-      entityOffered: turn.entityOffered ?? null,
-      entityUsage: turn.entityUsage ?? null,
-      executedNodes: turn.executedNodes ?? null,
-      gmSummary: turn.gmSummary ?? null,
-      gmTrace: turn.gmTrace ?? null,
-      handlerId: turn.handlerId ?? null,
-      intentType: turn.resolvedIntentType ?? turn.playerIntent?.intentType ?? null,
-      inventoryDelta: turn.inventoryDelta ?? null,
-      playerIntent: turn.playerIntent ?? null,
-      skillCheckPlan: turn.skillCheckPlan ?? null,
-      skillCheckResult: turn.skillCheckResult ?? null,
-      skillKey,
-      skillProgress: null,
-      turnId: turn.id ?? null,
-      turnSequence: turn.turnSequence ?? null,
-      worldDeltaTags: turn.worldDeltaTags ?? null,
-    };
-    const turnEntries: ChatMessage[] = [];
+const flattenTurns = (
+  turns: Turn[]
+): { messages: ChatMessage[]; turnViews: Record<string, TurnView> } => {
+  const messages: ChatMessage[] = [];
+  const turnViews: Record<string, TurnView> = {};
+  for (const turn of turns) {
+    const turnKey = turn.id;
+    turnViews[turnKey] = turnViewFromTurn(turn);
     if (turn.playerMessage) {
-      turnEntries.push(toChatMessage(turn.playerMessage, extras));
+      messages.push({ entry: turn.playerMessage, turnKey });
     }
     if (turn.gmResponse) {
-      turnEntries.push(toChatMessage(turn.gmResponse, extras));
+      messages.push({ entry: turn.gmResponse, turnKey });
     }
     if (turn.systemMessage) {
-      turnEntries.push(toChatMessage(turn.systemMessage, extras));
+      messages.push({ entry: turn.systemMessage, turnKey });
     }
-    return turnEntries;
-  });
+  }
+  return { messages, turnViews };
+};
 
 const createMessageId = (): string => generateId();
 
@@ -183,7 +154,6 @@ const buildPlayerEntry = (content: string): TranscriptEntry => ({
 });
 
 const createSeedChatMessage = (seedText: string): ChatMessage => ({
-  attributeKey: null,
   entry: {
     content: seedText,
     id: createMessageId(),
@@ -193,16 +163,7 @@ const createSeedChatMessage = (seedText: string): ChatMessage => ({
     },
     role: 'gm',
   },
-  gmSummary: 'Chronicle seed',
-  gmTrace: null,
-  inventoryDelta: null,
-  playerIntent: null,
-  skillCheckPlan: null,
-  skillCheckResult: null,
-  skillKey: null,
-  skillProgress: null,
-  turnId: null,
-  turnSequence: null,
+  turnKey: null,
 });
 
 const deriveTitleFromSeed = (seedText: string): string => {
@@ -225,63 +186,6 @@ const mergeChronicleRecord = (list: Chronicle[], chronicle: Chronicle) => {
 const mergeCharacterRecord = (list: Character[], character: Character) => {
   const filtered = list.filter((existing) => existing.id !== character.id);
   return [character, ...filtered];
-};
-
-const applyBeatTrackerUpdate = (
-  beats: ChronicleBeat[],
-  tracker?: BeatTracker | null
-): { beats: ChronicleBeat[]; focusBeatId: string | null } => {
-  if (!tracker) {
-    return { beats, focusBeatId: null };
-  }
-  const working = beats.map((beat) => ({ ...beat }));
-  let changed = false;
-  const now = Date.now();
-
-  if (tracker.newBeat) {
-    const fallbackId = slugifyBeatId(tracker.newBeat.title);
-    const newId = tracker.focusBeatId ?? fallbackId;
-    const existing = working.find((beat) => beat.id === newId);
-    if (!existing) {
-      working.push({
-        createdAt: now,
-        description: tracker.newBeat.description,
-        id: newId,
-        slug: fallbackId,
-        status: 'in_progress',
-        title: tracker.newBeat.title,
-        updatedAt: now,
-      });
-      changed = true;
-    }
-  }
-
-  for (const update of tracker.updates ?? []) {
-    const index = working.findIndex((beat) => beat.id === update.beatId);
-    if (index < 0) {
-      continue;
-    }
-    const target = working[index];
-    const nextBeat: ChronicleBeat = {
-      ...target,
-      description: update.description ?? target.description,
-      status: update.status ?? target.status,
-      updatedAt: now,
-    };
-    if (
-      (update.status === 'succeeded' || update.status === 'failed') &&
-      typeof nextBeat.resolvedAt !== 'number'
-    ) {
-      nextBeat.resolvedAt = now;
-    }
-    working[index] = nextBeat;
-    changed = true;
-  }
-
-  return {
-    beats: changed ? working : beats,
-    focusBeatId: tracker.focusBeatId ?? null,
-  };
 };
 
 const DEFAULT_MOMENTUM = { ceiling: 3, current: 0, floor: -2 };
@@ -332,7 +236,7 @@ const applyTurnProgressEvent = (
   state: ChronicleState,
   event: TurnProgressEvent
 ): ChronicleState => {
-  if (!event.payload || !state.chronicleId || event.chronicleId !== state.chronicleId) {
+  if (!state.chronicleId || event.chronicleId !== state.chronicleId) {
     return state;
   }
 
@@ -344,85 +248,60 @@ const applyTurnProgressEvent = (
     return state;
   }
 
-  const payload = event.payload;
-  let nextMessages = state.messages;
+  const withProgress: ChronicleState = {
+    ...state,
+    turnProgress: {
+      nodeId: event.nodeId,
+      status: event.status,
+      step: event.step,
+      total: event.total,
+    },
+  };
+  // Only successful node payloads carry state worth applying; error payloads
+  // reflect an aborted node and the authoritative result arrives via tRPC.
+  if (!event.payload || event.status !== 'success') {
+    return withProgress;
+  }
 
-  const extras: Partial<ChatMessage> = {
+  const payload = event.payload;
+  const turnKey = event.jobId;
+  const existing = withProgress.turnViews[turnKey] ?? emptyTurnView();
+  const view: TurnView = {
+    ...existing,
     advancesTimeline:
-      typeof payload.advancesTimeline === 'boolean' ? payload.advancesTimeline : null,
-    attributeKey: payload.skillCheckPlan?.attribute ?? null,
-    beatTracker: payload.beatTracker ?? null,
-    executedNodes: payload.executedNodes ?? null,
-    gmSummary: payload.gmSummary ?? null,
-    gmTrace: payload.gmTrace ?? null,
-    handlerId: payload.handlerId ?? null,
-    intentType: payload.resolvedIntentType ?? payload.playerIntent?.intentType ?? null,
-    inventoryDelta: payload.inventoryDelta ?? null,
-    playerIntent: payload.playerIntent ?? null,
-    skillCheckPlan: payload.skillCheckPlan ?? null,
-    skillCheckResult: payload.skillCheckResult ?? null,
-    skillKey: payload.skillCheckPlan?.skill ?? null,
-    skillProgress: null,
-    turnId: null,
-    turnSequence: event.turnSequence ?? null,
-    worldDeltaTags: payload.worldDeltaTags ?? null,
+      typeof payload.advancesTimeline === 'boolean'
+        ? payload.advancesTimeline
+        : existing.advancesTimeline,
+    attributeKey: payload.skillCheckPlan?.attribute ?? existing.attributeKey,
+    beatTracker: payload.beatTracker ?? existing.beatTracker,
+    executedNodes: payload.executedNodes ?? existing.executedNodes,
+    gmSummary: payload.gmSummary ?? existing.gmSummary,
+    gmTrace: payload.gmTrace ?? existing.gmTrace,
+    intentType: payload.playerIntent?.intentType ?? existing.intentType,
+    inventoryDelta: payload.inventoryDelta ?? existing.inventoryDelta,
+    playerIntent: payload.playerIntent ?? existing.playerIntent,
+    skillCheckPlan: payload.skillCheckPlan ?? existing.skillCheckPlan,
+    skillCheckResult: payload.skillCheckResult ?? existing.skillCheckResult,
+    skillKey: payload.skillCheckPlan?.skill ?? existing.skillKey,
+    turnSequence: event.turnSequence ?? existing.turnSequence,
   };
 
-  if (
-    state.pendingPlayerMessageId &&
-    (payload.playerIntent || payload.skillCheckPlan || payload.skillCheckResult)
-  ) {
-    nextMessages = nextMessages.map((message) => {
-      if (message.entry.id !== state.pendingPlayerMessageId) {
-        return message;
-      }
-      return {
-        ...message,
-        advancesTimeline:
-          typeof payload.advancesTimeline === 'boolean'
-            ? payload.advancesTimeline
-            : message.advancesTimeline ?? null,
-        attributeKey: payload.skillCheckPlan?.attribute ?? message.attributeKey,
-        beatTracker: payload.beatTracker ?? message.beatTracker ?? null,
-        executedNodes: payload.executedNodes ?? message.executedNodes ?? null,
-        handlerId: payload.handlerId ?? message.handlerId ?? null,
-        intentType:
-          payload.resolvedIntentType ??
-          payload.playerIntent?.intentType ??
-          message.intentType ??
-          null,
-        inventoryDelta: payload.inventoryDelta ?? message.inventoryDelta,
-        playerIntent: payload.playerIntent ?? message.playerIntent,
-        skillCheckPlan: payload.skillCheckPlan ?? message.skillCheckPlan,
-        skillCheckResult: payload.skillCheckResult ?? message.skillCheckResult,
-        skillKey: payload.skillCheckPlan?.skill ?? message.skillKey,
-        worldDeltaTags: payload.worldDeltaTags ?? message.worldDeltaTags ?? null,
-      };
-    });
-  }
-
+  let nextMessages = withProgress.messages;
   if (payload.gmMessage) {
-    nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, extras);
-  }
-
-  if (payload.systemMessage) {
-    nextMessages = upsertChatEntry(nextMessages, payload.systemMessage, extras);
+    nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, turnKey);
   }
 
   const shouldClose = payload.chronicleShouldClose === true;
-  const beatResult = applyBeatTrackerUpdate(state.beats, payload.beatTracker);
   return {
-    ...state,
-    beats: beatResult.beats,
+    ...withProgress,
     chronicleRecord:
-      shouldClose && state.chronicleRecord
-        ? { ...state.chronicleRecord, status: 'closed' }
-        : state.chronicleRecord
-          ? { ...state.chronicleRecord, beats: beatResult.beats }
-          : state.chronicleRecord,
-    chronicleStatus: shouldClose ? 'closed' : state.chronicleStatus,
-    focusedBeatId: beatResult.focusBeatId ?? state.focusedBeatId,
+      shouldClose && withProgress.chronicleRecord
+        ? { ...withProgress.chronicleRecord, status: 'closed' }
+        : withProgress.chronicleRecord,
+    chronicleStatus: shouldClose ? 'closed' : withProgress.chronicleStatus,
+    focusedBeatId: payload.beatTracker?.focusBeatId ?? withProgress.focusedBeatId,
     messages: nextMessages,
+    turnViews: { ...withProgress.turnViews, [turnKey]: view },
   };
 };
 
@@ -439,7 +318,6 @@ const createBaseState = () => ({
   directoryError: null as Error | null,
   directoryStatus: 'idle' as const,
   focusedBeatId: null as string | null,
-  isOffline: false,
   isSending: false,
   isUpdatingPlayerSettings: false,
   locationId: null as string | null,
@@ -455,10 +333,11 @@ const createBaseState = () => ({
   playerSettingsError: null as Error | null,
   playerSettingsStatus: 'idle' as const,
   preferredCharacterId: null as string | null,
-  queuedIntents: 0,
-  recentChronicles: [],
+  startLocationName: null as string | null,
   transportError: null as Error | null,
+  turnProgress: null as TurnProgress | null,
   turnSequence: 0,
+  turnViews: {} as Record<string, TurnView>,
 });
 
 export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
@@ -483,9 +362,11 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       momentumTrend: null,
       pendingPlayerMessageId: null,
       pendingTurnJobId: null,
-      queuedIntents: 0,
+      startLocationName: null,
       transportError: null,
+      turnProgress: null,
       turnSequence: 0,
+      turnViews: {},
     }));
   },
 
@@ -527,53 +408,16 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }
   },
 
-  async createChronicleForCharacter(details: ChronicleCreationDetails) {
-    const identity = resolvePlayerIdentity();
-    const targetCharacterId = details.characterId ?? get().preferredCharacterId;
-    const title = details.title?.trim() ?? '';
-    const locationName = details.locationName?.trim() ?? '';
-    const beatsEnabled = details.beatsEnabled ?? true;
-
-    if (!targetCharacterId) {
-      throw new Error('Select a character before starting a chronicle.');
-    }
-    if (!title || !locationName) {
-      throw new Error('Chronicle title and location name are required.');
-    }
-
-    try {
-      const result = await trpcClient.createChronicle.mutate({
-        beatsEnabled,
-        characterId: targetCharacterId,
-        location: { locale: locationName },
-        playerId: identity.playerId,
-        title,
-      });
-      set((prev) => ({
-        ...prev,
-        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
-        preferredCharacterId: targetCharacterId,
-      }));
-      return get().hydrateChronicle(result.chronicle.id);
-    } catch (error: unknown) {
-      const nextError = error instanceof Error ? error : new Error('Failed to create chronicle.');
-      set((prev) => ({
-        ...prev,
-        transportError: nextError,
-      }));
-      throw nextError;
-    }
-  },
-
   async createChronicleFromSeed(details: ChronicleSeedCreationDetails) {
     const identity = resolvePlayerIdentity();
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const trimmedSeed = details.seedText?.trim() ?? '';
+    const locationName = details.locationName?.trim() ?? '';
     const beatsEnabled = details.beatsEnabled ?? true;
     if (!targetCharacterId) {
       throw new Error('Select a character before starting a chronicle.');
     }
-    if (!details.locationId) {
+    if (!details.locationId || !locationName) {
       throw new Error('Select a location before creating a chronicle.');
     }
     if (!trimmedSeed) {
@@ -588,11 +432,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         anchorEntityId: details.anchorEntityId ?? undefined,
         beatsEnabled,
         characterId: targetCharacterId,
+        location: { locale: locationName },
         locationId: details.locationId,
         playerId: identity.playerId,
         seedText: trimmedSeed,
         status: 'open',
         title,
+        toneChips: details.toneChips,
+        toneNotes: details.toneNotes,
       });
       set((prev) => ({
         ...prev,
@@ -624,7 +471,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       set((prev) => ({
         ...prev,
         availableChronicles: prev.availableChronicles.filter((entry) => entry.id !== chronicleId),
-        recentChronicles: prev.recentChronicles.filter((id) => id !== chronicleId),
       }));
       if (isActive) {
         get().clearActiveChronicle();
@@ -660,18 +506,20 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       }
       const chronicleState = chronicleSnapshot;
 
-      const messageHistory = flattenTurns(chronicleState.turns ?? []);
+      const { messages: messageHistory, turnViews } = flattenTurns(chronicleState.turns ?? []);
       const chronicleBeats = chronicleState.chronicle?.beats ?? [];
       const beatsEnabled = chronicleState.chronicle?.beatsEnabled !== false;
       const initialFocusBeatId =
         chronicleBeats.find((beat) => beat.status === 'in_progress')?.id ?? null;
+      // The seed always opens the transcript, so the chronicle's framing
+      // survives reloads instead of vanishing after the first turn.
       if (
-        messageHistory.length === 0 &&
         chronicleState.chronicle?.seedText &&
         chronicleState.chronicle.seedText.trim().length > 0
       ) {
-        messageHistory.push(createSeedChatMessage(chronicleState.chronicle.seedText));
+        messageHistory.unshift(createSeedChatMessage(chronicleState.chronicle.seedText));
       }
+      const locationId = chronicleState.chronicle?.locationId ?? null;
       set((prev) => ({
         ...prev,
         availableChronicles:
@@ -686,14 +534,37 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         chronicleStatus: chronicleState.chronicle?.status ?? 'open',
         connectionState: 'connected',
         focusedBeatId: initialFocusBeatId,
-        locationId: chronicleState.chronicle?.locationId ?? null,
+        locationId,
         locationName: chronicleState.chronicle?.locationName ?? null,
+        locationSlug: null,
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
+        startLocationName: null,
         transportError: null,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
+        turnViews,
       }));
+
+      if (locationId !== null) {
+        // Resolve the canon start location so the location pill can link to
+        // the Atlas while the chronicle is still there.
+        void worldAtlasClient.getEntity(locationId).then(
+          (result) => {
+            set((prev) =>
+              prev.chronicleId === chronicleState.chronicleId
+                ? {
+                  ...prev,
+                  locationSlug: result.entity.slug,
+                  startLocationName: result.entity.name,
+                }
+                : prev
+            );
+            return undefined;
+          },
+          () => undefined
+        );
+      }
 
       return chronicleState.chronicleId;
     } catch (error: unknown) {
@@ -808,27 +679,28 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }
 
     const playerEntry = buildPlayerEntry(trimmed);
-    const playerMessage = toChatMessage(playerEntry, { playerIntent: null });
     const nextTurnSequence = get().turnSequence + 1;
     const jobId = formatTurnJobId(chronicleId, nextTurnSequence);
 
     set((prev) => ({
       ...prev,
       isSending: true,
-      messages: prev.messages.concat(playerMessage),
+      messages: prev.messages.concat({ entry: playerEntry, turnKey: jobId }),
       pendingPlayerMessageId: playerEntry.id,
       pendingTurnJobId: jobId,
       transportError: null,
       turnSequence: nextTurnSequence,
+      turnViews: { ...prev.turnViews, [jobId]: emptyTurnView() },
     }));
 
     progressStream.subscribe(jobId);
 
     try {
-      const { character, chronicleStatus, locationName, turn } = await gmClient.postMessage.mutate({
-        chronicleId,
-        content: playerEntry,
-      });
+      const { beats, character, chronicleStatus, entityFocus, locationName, turn } =
+        await gmClient.postMessage.mutate({
+          chronicleId,
+          content: playerEntry,
+        });
       progressStream.markComplete(jobId);
 
       set((prev) => {
@@ -837,50 +709,24 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         const nextMomentumTrend = character
           ? (deriveMomentumTrend(prev.character, character) ?? prev.momentumTrend)
           : prev.momentumTrend;
-        const beatResult = applyBeatTrackerUpdate(prev.beats, turn.beatTracker);
 
-        const attributeKey = turn.skillCheckPlan?.attribute ?? null;
-        const skillKey = turn.skillCheckPlan?.skill ?? null;
-        const extras = {
-          attributeKey,
-          beatTracker: turn.beatTracker ?? null,
-          entityOffered: turn.entityOffered ?? null,
-          entityUsage: turn.entityUsage ?? null,
-          executedNodes: turn.executedNodes ?? null,
-          gmSummary: turn.gmSummary ?? null,
-          gmTrace: turn.gmTrace ?? null,
-          inventoryDelta: turn.inventoryDelta ?? null,
-          playerIntent: turn.playerIntent ?? null,
-          skillCheckPlan: turn.skillCheckPlan ?? null,
-          skillCheckResult: turn.skillCheckResult ?? null,
-          skillKey,
+        // The committed turn replaces the provisional jobId-keyed view.
+        const finalView: TurnView = {
+          ...turnViewFromTurn(turn),
           skillProgress: skillBadges.length > 0 ? skillBadges : null,
-          turnId: turn.id ?? null,
-          turnSequence: turn.turnSequence ?? null,
         };
+        const nextTurnViews = { ...prev.turnViews };
+        delete nextTurnViews[jobId];
+        nextTurnViews[turn.id] = finalView;
 
-        const updatedMessages = prev.messages.map((message) =>
-          message.entry.id === turn.playerMessage.id
-            ? {
-              ...message,
-              attributeKey: extras.attributeKey,
-              beatTracker: extras.beatTracker ?? message.beatTracker ?? null,
-              executedNodes: extras.executedNodes,
-              inventoryDelta: extras.inventoryDelta,
-              playerIntent: extras.playerIntent,
-              skillCheckPlan: extras.skillCheckPlan,
-              skillCheckResult: extras.skillCheckResult,
-              skillKey: extras.skillKey,
-            }
-            : message
+        let nextMessages = prev.messages.map((message) =>
+          message.turnKey === jobId ? { ...message, turnKey: turn.id } : message
         );
-
-        let nextMessages = updatedMessages;
         if (turn.gmResponse) {
-          nextMessages = upsertChatEntry(nextMessages, turn.gmResponse, extras);
+          nextMessages = upsertChatEntry(nextMessages, turn.gmResponse, turn.id);
         }
         if (turn.systemMessage) {
-          nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, extras);
+          nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, turn.id);
         }
 
         const shouldCloseChronicle = chronicleStatus === 'closed';
@@ -889,18 +735,18 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           availableCharacters: character
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
-          beats: beatResult.beats,
+          beats,
           beatsEnabled: prev.beatsEnabled,
           character: nextCharacter,
           chronicleRecord:
             shouldCloseChronicle && prev.chronicleRecord
-              ? { ...prev.chronicleRecord, beats: beatResult.beats, status: 'closed' }
+              ? { ...prev.chronicleRecord, beats, entityFocus, status: 'closed' }
               : prev.chronicleRecord
-                ? { ...prev.chronicleRecord, beats: beatResult.beats }
+                ? { ...prev.chronicleRecord, beats, entityFocus }
                 : prev.chronicleRecord,
           chronicleStatus: chronicleStatus ?? prev.chronicleStatus,
           connectionState: 'connected',
-          focusedBeatId: beatResult.focusBeatId ?? prev.focusedBeatId,
+          focusedBeatId: turn.beatTracker?.focusBeatId ?? prev.focusedBeatId,
           isSending: false,
           locationName: locationName ?? prev.locationName,
           messages: nextMessages,
@@ -908,23 +754,37 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           pendingPlayerMessageId:
             prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
           pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
-          queuedIntents: 0,
           transportError: null,
+          turnProgress: null,
           turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
+          turnViews: nextTurnViews,
         };
       });
     } catch (error: unknown) {
       progressStream.markComplete(jobId);
       const nextError = error instanceof Error ? error : new Error('Failed to send player intent.');
-      set((prev) => ({
-        ...prev,
-        connectionState: 'error',
-        isSending: false,
-        pendingPlayerMessageId:
-          prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
-        pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
-        transportError: nextError,
-      }));
+      set((prev) => {
+        const nextTurnViews = { ...prev.turnViews };
+        delete nextTurnViews[jobId];
+        return {
+          ...prev,
+          connectionState: 'error',
+          isSending: false,
+          // The composer restores the draft on failure; drop the optimistic entry.
+          messages: prev.messages.filter((message) => message.turnKey !== jobId),
+          pendingPlayerMessageId:
+            prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
+          pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+          transportError: nextError,
+          turnProgress: null,
+          // The turn never committed; keep the local sequence aligned with the
+          // server so the next turn's jobId still matches its progress events.
+          turnSequence: prev.turnSequence === nextTurnSequence
+            ? nextTurnSequence - 1
+            : prev.turnSequence,
+          turnViews: nextTurnViews,
+        };
+      });
       throw nextError;
     }
   },

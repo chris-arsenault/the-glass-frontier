@@ -44,27 +44,35 @@ type EntityUsageEntry = {
   emergentTags: string[] | null;
 };
 
+/**
+ * One transcript entry. Turn-level data lives in the TurnView keyed by
+ * `turnKey`, so the several sources that deliver a turn (history, websocket
+ * preview, tRPC response) update one record instead of every message.
+ */
 export type ChatMessage = {
-  advancesTimeline?: boolean | null;
   entry: TranscriptEntry;
-  entityOffered?: EntitySnippet[] | null;
-  entityUsage?: EntityUsageEntry[] | null;
-  executedNodes?: string[] | null;
-  skillCheckPlan?: SkillCheckPlan | null;
-  skillCheckResult?: SkillCheckResult | null;
-  skillKey?: string | null;
-  attributeKey?: Attribute | null;
-  playerIntent?: Intent | null;
-  gmSummary?: string | null;
-  gmTrace?: LlmTrace | null;
-  turnId?: string | null;
-  turnSequence?: number | null;
-  skillProgress?: SkillProgressBadge[] | null;
-  inventoryDelta?: InventoryDelta | null;
-  beatTracker?: BeatTracker | null;
-  intentType?: Intent['intentType'] | null;
-  handlerId?: string | null;
-  worldDeltaTags?: string[] | null;
+  /** Key into ChronicleState.turnViews; null for entries outside any turn. */
+  turnKey: string | null;
+}
+
+export type TurnView = {
+  advancesTimeline: boolean | null;
+  attributeKey: Attribute | null;
+  beatTracker: BeatTracker | null;
+  entityOffered: EntitySnippet[] | null;
+  entityUsage: EntityUsageEntry[] | null;
+  executedNodes: string[] | null;
+  gmSummary: string | null;
+  gmTrace: LlmTrace | null;
+  intentType: Intent['intentType'] | null;
+  inventoryDelta: InventoryDelta | null;
+  playerIntent: Intent | null;
+  skillCheckPlan: SkillCheckPlan | null;
+  skillCheckResult: SkillCheckResult | null;
+  skillKey: string | null;
+  skillProgress: SkillProgressBadge[] | null;
+  turnId: string | null;
+  turnSequence: number | null;
 }
 
 export type SkillProgressBadge =
@@ -95,6 +103,13 @@ export type PlayerSettings = {
   feedbackVisibility: PlayerFeedbackVisibilityLevel;
 }
 
+export type TurnProgress = {
+  nodeId: string;
+  status: 'start' | 'success' | 'error';
+  step: number;
+  total: number;
+};
+
 export type ChronicleState = {
   beats: ChronicleBeat[];
   beatsEnabled: boolean;
@@ -105,12 +120,14 @@ export type ChronicleState = {
   playerName: string | null;
   preferredCharacterId: string | null;
   messages: ChatMessage[];
+  /** Turn-level data shared by that turn's messages, keyed by turn id or jobId. */
+  turnViews: Record<string, TurnView>;
   turnSequence: number;
   connectionState: ConnectionState;
   transportError: Error | null;
   isSending: boolean;
-  isOffline: boolean;
-  queuedIntents: number;
+  /** Live pipeline position for the in-flight turn, from progress events. */
+  turnProgress: TurnProgress | null;
   chronicleStatus: ChronicleLifecycle;
   character?: Character | null;
   /** Where the scene is, as the GM last named it. */
@@ -119,6 +136,8 @@ export type ChronicleState = {
   locationId: string | null;
   /** Slug of that canon place, for the Atlas link while still there. */
   locationSlug: string | null;
+  /** Name of that canon place, to detect that play is still there. */
+  startLocationName: string | null;
   availableCharacters: Character[];
   availableChronicles: Chronicle[];
   directoryStatus: DirectoryStatus;
@@ -126,7 +145,6 @@ export type ChronicleState = {
   momentumTrend: MomentumTrend | null;
   pendingTurnJobId: string | null;
   pendingPlayerMessageId: string | null;
-  recentChronicles: string[];
   playerSettings: PlayerSettings;
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
   playerSettingsError: Error | null;
@@ -138,7 +156,6 @@ export type ChronicleStore = {
   sendPlayerMessage: (input: { content: string }) => Promise<void>;
   setPreferredCharacterId: (characterId: string | null) => void;
   refreshPlayerResources: () => Promise<void>;
-  createChronicleForCharacter: (details: ChronicleCreationDetails) => Promise<string>;
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
   createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
@@ -157,18 +174,14 @@ export type CharacterCreationDraft = {
   skills: Character['skills'];
 }
 
-export type ChronicleCreationDetails = {
-  characterId?: string | null;
-  title: string;
-  locationName: string;
-  beatsEnabled?: boolean;
-}
-
 export type ChronicleSeedCreationDetails = {
   anchorEntityId?: string | null;
   characterId?: string | null;
   locationId: string;
+  locationName: string;
   title?: string | null;
   seedText: string;
   beatsEnabled?: boolean;
+  toneChips?: string[];
+  toneNotes?: string;
 }

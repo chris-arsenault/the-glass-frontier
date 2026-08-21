@@ -1,9 +1,9 @@
+import type { PromptTemplateRuntime } from '@glass-frontier/app';
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import type { Prompt } from '@glass-frontier/llm-client';
 
 import type { GraphContext } from '../types';
 import { extractFragment, templateFragmentMapping } from './chronicleFragments';
-import type { PromptTemplateRuntime } from './templateRuntime';
 
 type MessageOrder = 'player' | 'gm' | 'both';
 const messageOrder = new Map<PromptTemplateId, MessageOrder>([
@@ -18,7 +18,6 @@ const messageOrder = new Map<PromptTemplateId, MessageOrder>([
   ['intent-classifier', 'player'],
   ['inventory-delta', 'gm'],
   ['location-delta', 'gm'],
-  ['lore-judge', 'gm'],
   ['planning-narrator', 'player'],
   ['possibility-advisor', 'player'],
   ['reflection-weaver', 'player'],
@@ -66,12 +65,14 @@ class PromptComposer {
 
     return {
       input,
-      instructions: await this.#instructions(templateId),
+      instructions: await this.#instructions(templateId, context),
     };
   }
 
-  async #instructions(templateId: PromptTemplateId): Promise<string> {
-    return this.#templateRuntime.render(templateId, {});
+  async #instructions(templateId: PromptTemplateId, context: GraphContext): Promise<string> {
+    return this.#templateRuntime.render(templateId, {
+      character: { name: context.chronicleState.character.name },
+    });
   }
 
   async #developerMessage(

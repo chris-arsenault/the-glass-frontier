@@ -79,6 +79,8 @@ class PostgresChronicleStore implements ChronicleStore {
     seedText?: string | null;
     beatsEnabled?: boolean;
     anchorEntityId?: string | null;
+    toneChips?: string[];
+    toneNotes?: string;
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
@@ -175,6 +177,31 @@ class PostgresChronicleStore implements ChronicleStore {
       await this.#persistChronicle(client, normalized);
     });
     return normalized;
+  }
+
+  async setChronicleTargetEnd(
+    chronicleId: string,
+    targetEndTurn: number | null
+  ): Promise<Chronicle> {
+    return withTransaction(this.#pool, async (client) => {
+      const result = await client.query<{ props: Chronicle }>(
+        `SELECT c.props
+         FROM chronicle c
+         WHERE c.id = $1::uuid
+         FOR UPDATE OF c`,
+        [chronicleId]
+      );
+      const stored = result.rows[0]?.props;
+      if (stored === undefined) {
+        throw new Error(`Chronicle ${chronicleId} not found while setting target end turn.`);
+      }
+      const chronicle = normalizeChronicle({
+        ...normalizeChronicle(stored),
+        targetEndTurn: targetEndTurn ?? undefined,
+      });
+      await this.#persistChronicle(client, chronicle);
+      return chronicle;
+    });
   }
 
   async commitClosureSummary(input: {
@@ -290,6 +317,8 @@ class PostgresChronicleStore implements ChronicleStore {
       seedText?: string | null;
       beatsEnabled?: boolean;
       anchorEntityId?: string | null;
+      toneChips?: string[];
+      toneNotes?: string;
     },
     chronicleId: string
   ): Chronicle {
@@ -307,6 +336,8 @@ class PostgresChronicleStore implements ChronicleStore {
       status: params.status ?? 'open',
       summaries: [],
       title: params.title ?? 'Untitled Chronicle',
+      toneChips: params.toneChips ?? [],
+      toneNotes: params.toneNotes ?? '',
     });
   }
 
