@@ -98,6 +98,7 @@ export type WorldSchemaStore = {
   findLocationByName: (input: { name: string }) => Promise<HardState | null>;
   listEntities: (input?: {
     kind?: HardStateKind;
+    isLocation?: boolean;
     limit?: number;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;

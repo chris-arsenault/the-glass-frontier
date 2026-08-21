@@ -6,7 +6,6 @@ import type {
   HardStateStatus,
   HardStateSubkind,
 } from '@glass-frontier/dto';
-import { LOCATION_KINDS } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
 import type { WorldNeighbor } from './types';
@@ -14,6 +13,8 @@ import { now } from './utils';
 
 export type EntityListInput = {
   kind?: HardStateKind;
+  /** Only entities that are (or are not) location-shaped. */
+  isLocation?: boolean;
   limit?: number;
   minProminence?: HardStateProminence;
   maxProminence?: HardStateProminence;
@@ -34,6 +35,7 @@ type EntityRow = {
   prominence: HardStateProminence;
   status: HardStateStatus | null;
   props: { facts?: Record<string, string | number> } | null;
+  is_location: boolean;
   created_at: Date | null;
   updated_at: Date | null;
 };
@@ -63,7 +65,8 @@ const PROMINENCE_RANK = new Map<HardStateProminence, number>([
 ]);
 
 const ENTITY_SELECT = `SELECT e.id, e.slug, e.kind, e.subkind, e.name,
-  e.description, e.prominence, e.status, e.props, e.created_at, e.updated_at
+  e.description, e.prominence, e.status, e.props, e.is_location,
+  e.created_at, e.updated_at
   FROM entity e
   JOIN world_prominence wp ON wp.id = e.prominence`;
 
@@ -126,6 +129,7 @@ const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   description: row.description ?? undefined,
   facts: row.props?.facts ?? {},
   id: row.id,
+  isLocation: row.is_location,
   kind: row.kind,
   links,
   name: row.name,
@@ -191,18 +195,18 @@ export class EntityReader {
   }
 
   /**
-   * Resolves a place by its display name, case-insensitively, across both
-   * location kinds (natural geography and built installations). Play tracks
-   * where a chronicle is as a name; when that name matches canon, retrieval
-   * can seed from the place itself. The most prominent match wins.
+   * Resolves a place by its display name, case-insensitively, across every
+   * location-shaped entity regardless of kind. Play tracks where a chronicle
+   * is as a name; when that name matches canon, retrieval can seed from the
+   * place itself. The most prominent match wins.
    */
   async findLocationByName(input: { name: string }): Promise<HardState | null> {
     const result = await this.#pool.query<EntityRow>(
       `${ENTITY_SELECT}
-       WHERE e.kind = ANY($2::text[]) AND lower(e.name) = lower($1)
+       WHERE e.is_location AND lower(e.name) = lower($1)
        ORDER BY wp.rank DESC, e.created_at ASC
        LIMIT 1`,
-      [input.name.trim(), [...LOCATION_KINDS]]
+      [input.name.trim()]
     );
     const row = result.rows[0];
     if (row === undefined) {
@@ -243,22 +247,25 @@ export class EntityReader {
     return result.rows.map((row) => this.#toNeighbor(row));
   }
 
-  #buildEntityFilters(input?: EntityListInput): {
-    clauses: string[]; params: Array<string | number>;
+  #buildEntityFilters(input: EntityListInput = {}): {
+    clauses: string[]; params: Array<string | number | boolean>;
   } {
-    const params: Array<string | number> = [Math.max(1, Math.min(200, input?.limit ?? 100))];
+    const { isLocation, kind, limit, maxProminence, minProminence } = input;
+    const params: Array<string | number | boolean> = [
+      Math.max(1, Math.min(200, limit ?? 100)),
+    ];
     const clauses: string[] = [];
-    if (input?.kind !== undefined) {
-      params.push(input.kind);
-      clauses.push(`e.kind = $${params.length}`);
-    }
-    if (input?.minProminence !== undefined) {
-      params.push(getProminenceRank(input.minProminence));
-      clauses.push(`wp.rank >= $${params.length}`);
-    }
-    if (input?.maxProminence !== undefined) {
-      params.push(getProminenceRank(input.maxProminence));
-      clauses.push(`wp.rank <= $${params.length}`);
+    const filters: Array<[string, string | number | boolean | undefined]> = [
+      ['e.kind =', kind],
+      ['e.is_location =', isLocation],
+      ['wp.rank >=', minProminence === undefined ? undefined : getProminenceRank(minProminence)],
+      ['wp.rank <=', maxProminence === undefined ? undefined : getProminenceRank(maxProminence)],
+    ];
+    for (const [comparison, value] of filters) {
+      if (value !== undefined) {
+        params.push(value);
+        clauses.push(`${comparison} $${params.length}`);
+      }
     }
     return { clauses, params };
   }

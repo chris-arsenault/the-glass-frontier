@@ -69,6 +69,7 @@ const BASE_CHRONICLE: Chronicle = {
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {
   facts: { population: 'a few hundred keepers and dockhands' },
   id: LOCATION_ROOT_ID,
+  isLocation: true,
   kind: 'installation',
   name: 'Luminous Quay',
   prominence: 'recognized',
@@ -81,6 +82,7 @@ const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | '
   {
     facts: { founded: 2101 },
     id: GLASS_WARDENS_ID,
+    isLocation: false,
     kind: 'faction',
     name: 'Glass Wardens',
     prominence: 'renowned',
@@ -91,6 +93,7 @@ const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | '
   {
     facts: { function: 'whispers coordinates to hidden gates when attuned' },
     id: ORACLE_VESSEL_ID,
+    isLocation: false,
     kind: 'artifact',
     name: 'Oracle Vessel',
     prominence: 'mythic',

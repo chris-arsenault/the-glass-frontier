@@ -19,7 +19,7 @@ export const worldAtlasClient = {
     return atlasClient.getEntityNeighbors.query({ identifier: idOrSlug, kind });
   },
 
-  async listEntities(kind?: HardStateKind): Promise<HardState[]> {
-    return atlasClient.listEntities.query({ kind });
+  async listEntities(filter?: { kind?: HardStateKind; isLocation?: boolean }): Promise<HardState[]> {
+    return atlasClient.listEntities.query({ isLocation: filter?.isLocation, kind: filter?.kind });
   },
 };

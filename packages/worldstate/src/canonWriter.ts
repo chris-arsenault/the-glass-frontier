@@ -1,4 +1,5 @@
 import {
+  getWorldKind,
   relationshipDefaultStrength,
   type CanonProposal,
   type CommitBatchResult,
@@ -211,17 +212,18 @@ const insertEntities = async (
   await insertNodeIdentities(client, writes.map((write) => write.id), 'entity');
   await client.query(
     `INSERT INTO entity
-     (id, slug, kind, subkind, name, description, prominence, status, props,
+     (id, slug, kind, subkind, name, description, prominence, status, props, is_location,
       source, source_id, external_key, batch_id, created_at, updated_at)
-     SELECT id, slug, kind, subkind, name, description, prominence, status, props::jsonb,
+     SELECT id, slug, kind, subkind, name, description, prominence, status, props::jsonb, is_location,
        $9, $10, external_key, $11::uuid, now(), now()
      FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[],
-       $6::text[], $7::text[], $8::text[], $12::text[], $13::text[])
-       AS t(id, slug, kind, subkind, name, description, prominence, status, external_key, props)
+       $6::text[], $7::text[], $8::text[], $12::text[], $13::text[], $14::boolean[])
+       AS t(id, slug, kind, subkind, name, description, prominence, status, external_key, props, is_location)
      ON CONFLICT (id) DO UPDATE SET slug = EXCLUDED.slug, kind = EXCLUDED.kind,
        subkind = EXCLUDED.subkind, name = EXCLUDED.name,
        description = EXCLUDED.description, prominence = EXCLUDED.prominence,
-       status = EXCLUDED.status, props = EXCLUDED.props, source = EXCLUDED.source,
+       status = EXCLUDED.status, props = EXCLUDED.props,
+       is_location = EXCLUDED.is_location, source = EXCLUDED.source,
        source_id = EXCLUDED.source_id, external_key = EXCLUDED.external_key,
        batch_id = EXCLUDED.batch_id, updated_at = now()`,
     [
@@ -238,6 +240,10 @@ const insertEntities = async (
       batchId,
       writes.map((write) => write.proposed.externalKey ?? null),
       writes.map((write) => JSON.stringify({ facts: write.proposed.facts ?? {} })),
+      writes.map(
+        (write) =>
+          write.proposed.isLocation ?? getWorldKind(write.proposed.kind)?.isLocation ?? false
+      ),
     ]
   );
 };

@@ -1,4 +1,4 @@
-import { HardStateKind, HardStateProminence, isLocationKind } from '@glass-frontier/dto';
+import { HardStateKind, HardStateProminence } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -52,14 +52,14 @@ export const appRouter = t.router({
       let location = null;
       if (input.locationSlug !== undefined && input.locationSlug.length > 0) {
         location = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.locationSlug });
-        if (location === null || !isLocationKind(location.kind)) {
-          throw new Error('Location not found or invalid kind');
+        if (location === null || !location.isLocation) {
+          throw new Error('Location not found, or the entity is not a place');
         }
       } else {
         const linked = await ctx.worldSchemaStore.listEntitiesByIds(
           anchor.links.map((link) => link.targetId)
         );
-        location = linked.find((entity) => isLocationKind(entity.kind)) ?? null;
+        location = linked.find((entity) => entity.isLocation) ?? null;
         if (location === null) {
           throw new Error('No location neighbors found for anchor entity');
         }
@@ -135,6 +135,7 @@ export const appRouter = t.router({
   listEntities: t.procedure
     .input(
       z.object({
+        isLocation: z.boolean().optional(),
         kind: HardStateKind.optional(),
         limit: z.number().int().min(1).max(200).optional(),
         maxProminence: HardStateProminence.optional(),
@@ -144,6 +145,7 @@ export const appRouter = t.router({
     .query(async ({ ctx, input }) => {
       log('info', 'atlas-api: listEntities', { kind: input?.kind ?? '' });
       return ctx.worldSchemaStore.listEntities({
+        isLocation: input?.isLocation,
         kind: input?.kind,
         limit: input?.limit ?? 200,
         maxProminence: input?.maxProminence,

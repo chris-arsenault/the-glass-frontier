@@ -1,7 +1,6 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
 import { PromptTemplateRuntime } from '@glass-frontier/app';
 import type { ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
-import { isLocationKind } from '@glass-frontier/dto';
 import type { RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
@@ -200,7 +199,7 @@ export class ChronicleSeedService {
 
   async #ensurePlace(locationId: string): Promise<HardState> {
     const place = await this.#world.getEntity({ id: locationId });
-    if (place === null || !isLocationKind(place.kind)) {
+    if (place === null || !place.isLocation) {
       throw new Error(`Location ${locationId} not found.`);
     }
     return place;

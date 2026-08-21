@@ -37,6 +37,8 @@ export const ProposedEntity = z.object({
   facts: HardStateFacts.optional(),
   /** Explicit id, for a seed that pins its own identifiers. */
   id: z.string().uuid().optional(),
+  /** Overrides the kind's default when this particular entity is (or is not) a place. */
+  isLocation: z.boolean().optional(),
   kind: HardStateKind,
   name: z.string().min(1),
   prominence: HardStateProminence.optional(),

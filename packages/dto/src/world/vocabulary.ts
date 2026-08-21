@@ -25,6 +25,14 @@ export type WorldKindDefinition = {
   id: WorldKindId;
   displayName: string;
   subkinds: readonly WorldSubkindId[];
+  /**
+   * Whether entities of this kind are location-shaped by default — a place a
+   * scene can be set. This is only the default: an ingest batch may mark any
+   * individual entity as a location (a named ship that serves as a hub, a
+   * creature large enough to stand on). The game layer never reads kinds to
+   * answer "is this a place"; it reads the entity's own `isLocation`.
+   */
+  isLocation: boolean;
 };
 
 /** Relation categories, as declared by the source schema. */
@@ -83,16 +91,19 @@ const KIND_DEFS = [
   {
     displayName: 'Ability',
     id: 'ability',
+    isLocation: false,
     subkinds: ['learned_ability', 'innate_ability'],
   },
   {
     displayName: 'Artifact',
     id: 'artifact',
+    isLocation: false,
     subkinds: ['instrument', 'record', 'relic', 'machine'],
   },
   {
     displayName: 'Concept',
     id: 'concept',
+    isLocation: false,
     subkinds: [
       'doctrine', 'practice', 'technology', 'physical_system', 'social_system',
       'reference_concept',
@@ -101,31 +112,37 @@ const KIND_DEFS = [
   {
     displayName: 'Conflict',
     id: 'conflict',
+    isLocation: false,
     subkinds: ['war', 'campaign', 'dispute'],
   },
   {
     displayName: 'Creature',
     id: 'creature',
+    isLocation: false,
     subkinds: ['animal', 'anomaly'],
   },
   {
     displayName: 'Culture',
     id: 'culture',
+    isLocation: false,
     subkinds: ['overview', 'regional_culture', 'way_of_life', 'naming_practice'],
   },
   {
     displayName: 'Edict',
     id: 'edict',
+    isLocation: false,
     subkinds: [],
   },
   {
     displayName: 'Era',
     id: 'era',
+    isLocation: false,
     subkinds: ['historical_period'],
   },
   {
     displayName: 'Faction',
     id: 'faction',
+    isLocation: false,
     subkinds: [
       'government', 'governing_intelligence', 'company', 'civic_body',
       'resistance_network', 'community', 'trade_network', 'religious_order',
@@ -135,6 +152,7 @@ const KIND_DEFS = [
   {
     displayName: 'Geographic Location',
     id: 'geographic_location',
+    isLocation: true,
     subkinds: [
       'star_system', 'celestial_body', 'orbit', 'world_region', 'region',
       'settlement', 'frontier', 'hazardous_zone',
@@ -143,6 +161,7 @@ const KIND_DEFS = [
   {
     displayName: 'Incident',
     id: 'incident',
+    isLocation: false,
     subkinds: [
       'disaster', 'campaign', 'policy_action', 'operational_failure', 'dispute',
       'discovery', 'founding', 'migration',
@@ -151,6 +170,7 @@ const KIND_DEFS = [
   {
     displayName: 'Installation',
     id: 'installation',
+    isLocation: true,
     subkinds: [
       'settlement', 'station', 'workshop', 'infrastructure', 'archive', 'clinic',
       'warehouse', 'landmark', 'border_post',
@@ -159,11 +179,13 @@ const KIND_DEFS = [
   {
     displayName: 'NPC',
     id: 'npc',
+    isLocation: false,
     subkinds: ['official', 'specialist', 'worker', 'leader', 'courier', 'dissident'],
   },
   {
     displayName: 'Phenomenon',
     id: 'phenomenon',
+    isLocation: false,
     subkinds: [
       'physical_phenomenon', 'ecological_phenomenon', 'social_condition',
       'catastrophe',
@@ -172,6 +194,7 @@ const KIND_DEFS = [
   {
     displayName: 'Resource',
     id: 'resource',
+    isLocation: false,
     subkinds: [
       'material', 'biological_material', 'device', 'medicine', 'food', 'data',
       'infrastructure',
@@ -180,25 +203,22 @@ const KIND_DEFS = [
   {
     displayName: 'Rumor',
     id: 'rumor',
+    isLocation: false,
     subkinds: [],
   },
   {
     displayName: 'Species',
     id: 'species',
+    isLocation: false,
     subkinds: ['sapient_species', 'overview'],
   },
   {
     displayName: 'Transport',
     id: 'transport',
+    isLocation: false,
     subkinds: ['vessel'],
   },
 ] as const;
-
-/**
- * The kinds that hold a place a scene can be set in. The source schema splits
- * "somewhere" into natural geography and built installations.
- */
-export const LOCATION_KINDS = ['geographic_location', 'installation'] as const;
 
 /**
  * The relation taxonomy, verbatim from the source base schema plus the
@@ -388,9 +408,6 @@ const kindsById = new Map<string, WorldKindDefinition>(
 );
 
 export const getWorldKind = (id: string): WorldKindDefinition | undefined => kindsById.get(id);
-
-export const isLocationKind = (kind: string): boolean =>
-  (LOCATION_KINDS as readonly string[]).includes(kind);
 
 /**
  * Whether the relationship may connect these kinds. Mirrors the source schema:

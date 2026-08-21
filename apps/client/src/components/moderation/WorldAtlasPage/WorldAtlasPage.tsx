@@ -1,5 +1,4 @@
 import type { HardState, LoreFragment } from '@glass-frontier/dto';
-import { isLocationKind } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -120,13 +119,12 @@ export function WorldAtlasPage(): React.JSX.Element {
     setIsStarting(true);
     setError(null);
     try {
-      const isLocation = isLocationKind(entity.kind);
       const [location, anchor] = await Promise.all([
-        isLocation
+        entity.isLocation
           ? Promise.resolve(entity)
-          : findLinkedEntity(entity, (candidate) => isLocationKind(candidate.kind)),
-        isLocation
-          ? findLinkedEntity(entity, (candidate) => !isLocationKind(candidate.kind))
+          : findLinkedEntity(entity, (candidate) => candidate.isLocation),
+        entity.isLocation
+          ? findLinkedEntity(entity, (candidate) => !candidate.isLocation)
           : Promise.resolve(entity),
       ]);
       if (location === null) {

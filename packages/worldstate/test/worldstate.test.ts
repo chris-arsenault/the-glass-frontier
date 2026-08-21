@@ -95,24 +95,25 @@ describe('Chronicle location', () => {
 
 describe('Chronicle wrap target', () => {
   it('sets and clears targetEndTurn without touching other fields', async () => {
+    const seedText = 'A short run.';
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,
       locationName: 'Wrap Test Locale',
       playerId: TEST_PLAYER_ID,
-      seedText: 'A short run.',
+      seedText,
       title: 'Wrap Test',
     });
 
     const withTarget = await worldState.chronicles.setChronicleTargetEnd(chronicle.id, 7);
     expect(withTarget.targetEndTurn).toBe(7);
-    expect(withTarget.seedText).toBe('A short run.');
+    expect(withTarget.seedText).toBe(seedText);
 
     const cleared = await worldState.chronicles.setChronicleTargetEnd(chronicle.id, null);
     expect(cleared.targetEndTurn).toBeUndefined();
 
     const reloaded = await worldState.chronicles.getChronicle(chronicle.id);
     expect(reloaded?.targetEndTurn).toBeUndefined();
-    expect(reloaded?.seedText).toBe('A short run.');
+    expect(reloaded?.seedText).toBe(seedText);
   });
 
   it('rejects an unknown chronicle', async () => {

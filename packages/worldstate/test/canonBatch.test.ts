@@ -91,6 +91,37 @@ describe('Canon batch commit', () => {
     expect(link?.until).toBeUndefined();
   });
 
+  it('lets any entity be a place: kind supplies the default, the entity may override', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'installation', name: 'Five Landing', ref: 'hab', subkind: 'settlement' },
+          // A named ship serving as a hub is somewhere a scene can be set.
+          { isLocation: true, kind: 'transport', name: 'The Long Answer', ref: 'ship', subkind: 'vessel' },
+          { kind: 'npc', name: 'Passenger', ref: 'npc', status: 'alive', subkind: 'worker' },
+        ],
+      })
+    );
+
+    const hab = await worldState.world.getEntity({ id: result.entityIdsByRef.hab });
+    const ship = await worldState.world.getEntity({ id: result.entityIdsByRef.ship });
+    const npc = await worldState.world.getEntity({ id: result.entityIdsByRef.npc });
+    expect(hab?.isLocation).toBe(true);
+    expect(ship?.isLocation).toBe(true);
+    expect(npc?.isLocation).toBe(false);
+
+    const foundShip = await worldState.world.findLocationByName({ name: 'the long answer' });
+    expect(foundShip?.id).toBe(result.entityIdsByRef.ship);
+    const places = await worldState.world.listEntities({
+      isLocation: true,
+      minProminence: 'forgotten',
+    });
+    expect(places.map((entity) => entity.name).sort()).toEqual([
+      'Five Landing',
+      'The Long Answer',
+    ]);
+  });
+
   it('stores the fact card verbatim', async () => {
     const result = await worldState.world.commitBatch(
       proposal({

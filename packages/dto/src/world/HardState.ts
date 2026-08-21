@@ -59,6 +59,12 @@ export const HardState = z.object({
   description: z.string().max(2000).optional(),
   facts: HardStateFacts.default({}),
   id: z.string().min(1),
+  /**
+   * Whether this entity is a place a scene can be set — the game-layer
+   * "location" concept. Defaulted from the kind at ingest and overridable per
+   * entity, so a named ship or a vast creature can be somewhere to be.
+   */
+  isLocation: z.boolean().default(false),
   kind: HardStateKind,
   links: z.array(HardStateLink).default([]),
   name: z.string().min(1),
