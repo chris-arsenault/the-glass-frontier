@@ -7,6 +7,7 @@ import { buildContext } from './harness';
 
 const LOCATION_ID = '11111111-2222-4333-8444-555555555555';
 const ANCHOR_ID = '99999999-8888-4777-8666-555555555555';
+const SUBJECT_ID = '77777777-6666-4555-8444-333333333333';
 
 const stubWorldStore = (options: {
   locationId: string | null;
@@ -50,6 +51,26 @@ describe('buildEntityContext', () => {
 
     expect(result.focusEntities).toEqual([ANCHOR_ID]);
     expect(sliceInputs).toHaveLength(1);
+  });
+
+  it('seeds retrieval from a resolved scene subject', async () => {
+    const { sliceInputs, store } = stubWorldStore({ locationId: null });
+    const context = buildContext({
+      effectiveScene: {
+        id: 'scene:turn-1',
+        startedAtTurn: 1,
+        subject: 'Amaya Venn',
+        subjectEntityId: SUBJECT_ID,
+        subjectKind: 'npc',
+        type: 'dialog',
+      },
+      worldSchemaStore: store,
+    });
+
+    const result = await buildEntityContext(context);
+
+    expect(result.focusEntities).toEqual([SUBJECT_ID]);
+    expect(sliceInputs[0]?.focusIds).toContain(SUBJECT_ID);
   });
 
   it('offers nothing when there is no anchor, focus, or known location', async () => {

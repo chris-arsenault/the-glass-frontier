@@ -10,11 +10,16 @@ import type {
   HardState,
   HardStateProminence,
   HardStateKind,
+  RecentClosure,
   Turn,
   LoreFragment,
   WorldSchema,
 } from '@glass-frontier/dto';
 
+import type {
+  EntityEmbeddingSource,
+  SubjectEntityCandidate,
+} from './entityEmbeddings';
 import type { EntityStats } from './entityReader';
 
 export type WorldNeighbor = {
@@ -70,6 +75,7 @@ export type ChronicleStore = {
   }) => Promise<boolean>;
   getChronicle: (chronicleId: string) => Promise<Chronicle | null>;
   listChroniclesByPlayer: (playerId: string) => Promise<Chronicle[]>;
+  listRecentClosures: (limit?: number) => Promise<RecentClosure[]>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
 
   commitTurn: (input: {
@@ -99,6 +105,15 @@ export type WorldSchemaStore = {
 
   // === The per-turn read surface ===
   getContextSlice: (input: ContextSliceInput) => Promise<ContextSliceEntity[]>;
+  hasEntityEmbeddings: (kind: HardStateKind) => Promise<boolean>;
+  listMissingEntityEmbeddings: (limit?: number) => Promise<EntityEmbeddingSource[]>;
+  saveEntityEmbedding: (id: string, embedding: number[]) => Promise<void>;
+  findSubjectCandidates: (input: {
+    embedding: number[];
+    focusIds: string[];
+    kind: HardStateKind;
+    limit?: number;
+  }) => Promise<SubjectEntityCandidate[]>;
 
   // === Entity reads ===
   getEntity: (input: { id: string }) => Promise<HardState | null>;

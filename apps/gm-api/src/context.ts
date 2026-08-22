@@ -7,7 +7,11 @@ import {
   useLambdaRuntime,
   createPool,
 } from '@glass-frontier/app';
-import { createLLMClient, loadOpenAiApiKeyFromSecrets } from '@glass-frontier/llm-client';
+import {
+  createLLMClient,
+  loadOpenAiApiKeyFromSecrets,
+  TitanTextEmbeddingClient,
+} from '@glass-frontier/llm-client';
 import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import {
   createChronicleStore,
@@ -37,6 +41,7 @@ let appStore: AppStore | undefined;
 let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
 let engine: GmEngine | undefined;
+const embeddings = new TitanTextEmbeddingClient();
 
 /**
  * Initialize context for the Lambda runtime.
@@ -59,6 +64,7 @@ export async function initializeForLambda(): Promise<void> {
 
   engine = new GmEngine({
     chronicleStore,
+    embeddings,
     llmClient,
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
@@ -89,6 +95,7 @@ function initializeLocal(): void {
 
   engine = new GmEngine({
     chronicleStore,
+    embeddings,
     llmClient,
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,

@@ -154,6 +154,7 @@ data "aws_iam_policy_document" "bedrock_invoke" {
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-2-lite-v1:0",
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-pro-v1:0",
       "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5",
+      "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0",
       "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
       "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0"
     ]
@@ -178,5 +179,10 @@ resource "aws_iam_role_policy_attachment" "gm_bedrock" {
 
 resource "aws_iam_role_policy_attachment" "chronicle_closer_bedrock" {
   role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
+  policy_arn = aws_iam_policy.bedrock_invoke.arn
+}
+
+resource "aws_iam_role_policy_attachment" "canon_seed_bedrock" {
+  role       = aws_iam_role.lambda["canon_seed_lambda"].name
   policy_arn = aws_iam_policy.bedrock_invoke.arn
 }

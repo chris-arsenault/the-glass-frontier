@@ -38,6 +38,9 @@ export const buildEntityContext = async (context: GraphContext): Promise<EntityC
     ...new Set([
       ...(anchorEntityId === undefined ? [] : [anchorEntityId]),
       ...(currentLocation === null ? [] : [currentLocation.id]),
+      ...(context.effectiveScene?.subjectEntityId === undefined
+        ? []
+        : [context.effectiveScene.subjectEntityId]),
       ...topEntities(entityFocus, FOCUS_ENTITY_COUNT),
     ]),
   ];

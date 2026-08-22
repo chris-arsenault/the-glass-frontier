@@ -17,3 +17,7 @@ export { buildTsonuProposal } from './tsonuBundle';
 // === Types ===
 export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor } from './types';
 export type { EntityStats } from './entityReader';
+export type {
+  EntityEmbeddingSource,
+  SubjectEntityCandidate,
+} from './entityEmbeddings';

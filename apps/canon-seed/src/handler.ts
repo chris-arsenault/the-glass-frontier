@@ -1,7 +1,11 @@
+import { TitanTextEmbeddingClient } from '@glass-frontier/llm-client/embeddings';
 import { log } from '@glass-frontier/utils';
+import { createWorldSchemaStore } from '@glass-frontier/worldstate';
 import { createLambdaPool } from '@glass-frontier/worldstate/pg';
 import { seedCanon, type CanonSeedResult } from '@glass-frontier/worldstate/seedCanon';
 import type { Handler } from 'aws-lambda';
+
+import { embedMissingEntities } from './embedEntities';
 
 type CanonSeedEvent = {
   operation: 'seed-canon';
@@ -14,6 +18,7 @@ const isCanonSeedEvent = (event: unknown): event is CanonSeedEvent =>
   event.operation === 'seed-canon';
 
 let pool: ReturnType<typeof createLambdaPool> | undefined;
+const embeddings = new TitanTextEmbeddingClient();
 
 const getPool = (): ReturnType<typeof createLambdaPool> => {
   pool ??= createLambdaPool();
@@ -26,8 +31,13 @@ export const handler: Handler<unknown, CanonSeedResult> = async (event) => {
   }
 
   const result = await seedCanon(getPool());
+  const embeddedEntityCount = await embedMissingEntities(
+    createWorldSchemaStore({ pool: getPool() }),
+    embeddings
+  );
   log('info', 'canon-seed.completed', {
     batchId: result.batchId,
+    embeddedEntityCount,
     entityCount: result.entityCount,
     loreCount: result.loreCount,
     relationshipCount: result.relationshipCount,

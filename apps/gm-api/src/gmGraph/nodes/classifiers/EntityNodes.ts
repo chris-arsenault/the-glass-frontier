@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z, type ZodType } from 'zod';
 
 import { applyEntityUsage, type EntityUsageClassification } from '../../../entity/entityFocus';
 import { buildEntityContext } from '../../../entity/entitySelector';
@@ -6,17 +6,28 @@ import type { GraphContext } from '../../../types';
 import type { GraphNode, GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
-const ENTITY_JUDGE_SCHEMA = z.object({
-  results: z.array(
-    z.object({
-      emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity. Recorded on the turn for later canon review; they do not steer this chronicle\'s retrieval.'),
-      slug: z.string().describe('The slug of the entity'),
-      usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
-    })
-  ),
-});
+type EntityJudgeResponse = {
+  results: Array<{
+    emergentTags?: string[] | null;
+    slug: string;
+    usage: 'unused' | 'mentioned' | 'central';
+  }>;
+};
 
-type EntityJudgeResponse = z.infer<typeof ENTITY_JUDGE_SCHEMA>;
+const entityJudgeSchema = (slugs: string[]): ZodType<EntityJudgeResponse> => {
+  if (slugs.length === 0) {
+    throw new Error('Entity judge requires at least one offered entity.');
+  }
+  return z.object({
+    results: z.array(
+      z.object({
+        emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity. Recorded on the turn for later canon review; they do not steer this chronicle\'s retrieval.'),
+        slug: z.enum(slugs as [string, ...string[]]).describe('The slug of the entity'),
+        usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
+      })
+    ),
+  });
+};
 
 export class EntitySelectorNode implements GraphNode {
   readonly id = 'entity-selector';
@@ -37,7 +48,9 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
     super({
       applyResult: (context, result) => this.#applyEntityUsage(context, result),
       id: 'entity-judge',
-      schema: ENTITY_JUDGE_SCHEMA,
+      schema: (context) => entityJudgeSchema(
+        (context.entityContext?.offered ?? []).map((entity) => entity.slug)
+      ),
       schemaName: 'entity_judge_schema',
       shouldRun: (context) => !context.failure
         && context.gmResponse !== undefined

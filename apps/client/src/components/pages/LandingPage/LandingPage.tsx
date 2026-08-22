@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import type { RecentClosure } from '@glass-frontier/dto';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import changelogEntries from '../../../data/changelog.json';
-import {
-  recentChronicleFeed,
-} from '../../../data/landingFeed';
+import { trpcClient } from '../../../lib/trpcClient';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import type { ChangelogEntry } from '../../../types/changelog';
@@ -31,6 +30,25 @@ export function LandingPage(): React.JSX.Element {
   const openChangelogModal = useUiStore((state) => state.openChangelogModal);
   const [loadingChronicleId, setLoadingChronicleId] = useState<string | null>(null);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
+  const [recentClosures, setRecentClosures] = useState<RecentClosure[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const closures = await trpcClient.listRecentClosures.query();
+        if (!cancelled) {
+          setRecentClosures(closures);
+        }
+      } catch {
+        // The panel simply stays empty when the feed is unavailable.
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const characterNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -248,26 +266,36 @@ export function LandingPage(): React.JSX.Element {
         <section className="landing-panel">
           <header className="landing-panel-header">
             <h2>Around the frontier</h2>
-            <p className="landing-coming-soon">In development</p>
           </header>
-          <ul className="landing-chronicle-list">
-            {recentChronicleFeed.map((item) => (
-              <li key={item.id} className="landing-feed-row">
-                <div className="landing-row-copy">
-                  <p className="landing-chronicle-title-row">
-                    <span className="landing-chronicle-name">{item.title}</span>
-                    <span className="landing-chronicle-date">
-                      {formatDate(item.completedAt, { day: 'numeric', month: 'short' })}
-                    </span>
-                  </p>
-                  <p className="landing-chronicle-meta">
-                    {item.character} · {item.location}
-                  </p>
-                  <p className="landing-chronicle-hook">{item.hook}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {recentClosures.length === 0 ? (
+            <p className="landing-empty-copy">
+              No chronicles have closed yet. Finished stories will appear here.
+            </p>
+          ) : (
+            <ul className="landing-chronicle-list">
+              {recentClosures.map((item) => (
+                <li key={item.id} className="landing-feed-row">
+                  <div className="landing-row-copy">
+                    <p className="landing-chronicle-title-row">
+                      <span className="landing-chronicle-name">{item.title}</span>
+                      <span className="landing-chronicle-date">
+                        {formatDate(new Date(item.closedAt).toISOString(), {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </span>
+                    </p>
+                    <p className="landing-chronicle-meta">
+                      {item.characterName ?? 'Unknown wanderer'} · {item.locationName}
+                    </p>
+                    {item.hook !== null ? (
+                      <p className="landing-chronicle-hook">{item.hook}</p>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="landing-presence-note">
             Live player presence is on the way — coordinate in Discord until the roster ships.
           </p>

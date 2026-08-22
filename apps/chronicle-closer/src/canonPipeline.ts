@@ -10,15 +10,17 @@ import type { LLMPlayer, LLMRequest, RetryLLMClient } from '@glass-frontier/llm-
 import { log } from '@glass-frontier/utils';
 import type { ChronicleSnapshot, WorldSchemaStore } from '@glass-frontier/worldstate';
 
-import type { RosterEntry, SanitizedNewEntity } from './canonHelpers';
+import type { RosterEntry, SanitizedNewEntity, SceneSummary } from './canonHelpers';
 import {
   CanonExtractionSchema,
   CanonResolutionSchema,
   buildRoster,
+  collectScenes,
   derivedProminence,
   isEligibleForLore,
   newEntityCap,
   sanitizeExtraction,
+  sceneSubjectNames,
 } from './canonHelpers';
 import type { DeriveTarget, ProposalPlan, Resolution } from './canonProposalBuilder';
 import {
@@ -56,6 +58,21 @@ const userMessage = (text: string): LLMRequest['input'][number] => ({
   content: [{ text, type: 'input_text' }],
   role: 'user',
 });
+
+const rosterPayload = (
+  roster: RosterEntry[],
+  sceneSubjects: ReadonlySet<string>
+): LLMRequest['input'][number] =>
+  developerMessage({
+    knownEntities: roster.map((entry) => ({
+      centralTurns: entry.centralCount,
+      eligibleForLore: isEligibleForLore(entry, sceneSubjects),
+      kind: entry.kind,
+      mentionedTurns: entry.mentionedCount,
+      name: entry.name,
+      slug: entry.slug,
+    })),
+  });
 
 const resolverPayload = (
   ambiguous: Array<{ candidate: SanitizedNewEntity; matches: HardState[] }>
@@ -159,13 +176,19 @@ class CanonPipeline {
       return;
     }
     const roster = buildRoster(snapshot.turns);
+    const scenes = collectScenes(snapshot.turns, chronicle.activeScene);
     const runtime = new PromptTemplateRuntime({
       manager: this.#templateManager,
       playerId: chronicle.playerId,
     });
-    const extraction = await this.#extract(snapshot, roster, runtime, player);
+    const extraction = await this.#extract({ player, roster, runtime, scenes, snapshot });
     const cap = newEntityCap(snapshot.turns.length);
-    const { candidates, knownLore } = sanitizeExtraction(extraction, roster, cap);
+    const { candidates, knownLore } = sanitizeExtraction(
+      extraction,
+      roster,
+      cap,
+      sceneSubjectNames(scenes)
+    );
     const resolutions = await this.#resolve(candidates, runtime, snapshot, player);
     const plan = buildProposalPlan({
       candidates,
@@ -186,12 +209,14 @@ class CanonPipeline {
     });
   }
 
-  async #extract(
-    snapshot: ChronicleSnapshot,
-    roster: RosterEntry[],
-    runtime: PromptTemplateRuntime,
-    player: LLMPlayer
-  ): Promise<ReturnType<typeof CanonExtractionSchema.parse>> {
+  async #extract(input: {
+    player: LLMPlayer;
+    roster: RosterEntry[];
+    runtime: PromptTemplateRuntime;
+    scenes: SceneSummary[];
+    snapshot: ChronicleSnapshot;
+  }): Promise<ReturnType<typeof CanonExtractionSchema.parse>> {
+    const { player, roster, runtime, scenes, snapshot } = input;
     const chronicle = snapshot.chronicle;
     const [instructions, model] = await Promise.all([
       runtime.render('canon-extractor', {
@@ -205,16 +230,8 @@ class CanonPipeline {
     const response = await this.#llm.generateStructured(
       {
         input: [
-          developerMessage({
-            knownEntities: roster.map((entry) => ({
-              centralTurns: entry.centralCount,
-              eligibleForLore: isEligibleForLore(entry),
-              kind: entry.kind,
-              mentionedTurns: entry.mentionedCount,
-              name: entry.name,
-              slug: entry.slug,
-            })),
-          }),
+          rosterPayload(roster, sceneSubjectNames(scenes)),
+          developerMessage({ scenes }),
           developerMessage({ transcript: buildTurnArtifacts(snapshot.turns).transcript }),
           userMessage(`Archive the chronicle '${chronicle.title}' now.`),
         ],

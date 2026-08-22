@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CanonExtraction } from '../src/canonHelpers';
 import {
   buildRoster,
+  collectScenes,
   derivedProminence,
   newEntityCap,
   sanitizeExtraction,
@@ -16,6 +17,7 @@ import { CanonPipeline } from '../src/canonPipeline';
 const CHRONICLE_ID = 'chronicle-1';
 const BRAKE_ID = 'entity-brake';
 const KEL_ID = 'entity-kel';
+const KEL_NAME = 'Warden Kel';
 const KEL_SLUG = 'warden_kel';
 const TAVERN_NAME = 'The Rusted Anchor';
 
@@ -82,7 +84,7 @@ describe('buildRoster', () => {
       usageTurn(0, 'mentioned'),
       turn({
         entityOffered: [
-          { ...brakeSnippet, id: KEL_ID, name: 'Warden Kel', slug: KEL_SLUG },
+          { ...brakeSnippet, id: KEL_ID, name: KEL_NAME, slug: KEL_SLUG },
         ],
         entityUsage: [
           {
@@ -113,6 +115,60 @@ describe('buildRoster', () => {
   });
 });
 
+describe('collectScenes', () => {
+  it('dedupes by sceneId, tracks the final outcome, and includes the open scene', () => {
+    const turns = [
+      turn({
+        sceneContext: {
+          outcome: 'continue',
+          sceneId: 'scene-1',
+          subject: KEL_NAME,
+          subjectKind: 'npc',
+          type: 'dialog',
+        },
+        turnSequence: 0,
+      }),
+      turn({
+        sceneContext: {
+          outcome: 'complete',
+          sceneId: 'scene-1',
+          subject: KEL_NAME,
+          subjectKind: 'npc',
+          type: 'dialog',
+        },
+        turnSequence: 1,
+      }),
+    ];
+
+    const scenes = collectScenes(turns, {
+      id: 'scene-2',
+      startedAtTurn: 2,
+      subject: TAVERN_NAME,
+      subjectKind: 'installation',
+      type: 'search',
+    });
+
+    expect(scenes).toEqual([
+      {
+        firstTurn: 0,
+        lastTurn: 1,
+        outcome: 'complete',
+        subject: KEL_NAME,
+        subjectKind: 'npc',
+        type: 'dialog',
+      },
+      {
+        firstTurn: 2,
+        lastTurn: 2,
+        outcome: 'continue',
+        subject: TAVERN_NAME,
+        subjectKind: 'installation',
+        type: 'search',
+      },
+    ]);
+  });
+});
+
 describe('sanitizeExtraction', () => {
   const roster = [
     {
@@ -128,7 +184,7 @@ describe('sanitizeExtraction', () => {
       id: KEL_ID,
       kind: 'npc',
       mentionedCount: 2,
-      name: 'Warden Kel',
+      name: KEL_NAME,
       slug: KEL_SLUG,
     },
   ];
@@ -195,6 +251,26 @@ describe('sanitizeExtraction', () => {
     expect(candidates[0]?.name).toBe('Glasstooth');
     expect(candidates[0]?.subkind).toBeUndefined();
   });
+
+  it('makes a scene subject eligible for lore without a central turn', () => {
+    const extraction: CanonExtraction = {
+      knownEntities: [
+        {
+          loreProse: 'Kel bargained through the standoff.',
+          loreTags: [],
+          loreTitle: 'The Bargain',
+          slug: KEL_SLUG,
+        },
+      ],
+      newEntities: [],
+    };
+
+    const withoutScene = sanitizeExtraction(extraction, roster, 5);
+    const withScene = sanitizeExtraction(extraction, roster, 5, new Set(['warden kel']));
+
+    expect(withoutScene.knownLore).toHaveLength(0);
+    expect(withScene.knownLore.map((entry) => entry.roster.slug)).toEqual([KEL_SLUG]);
+  });
 });
 
 describe('CanonPipeline', () => {
@@ -218,7 +294,18 @@ describe('CanonPipeline', () => {
     },
     chronicleId: CHRONICLE_ID,
     locationName: 'Brake',
-    turns: [usageTurn(0, 'central')],
+    turns: [
+      {
+        ...usageTurn(0, 'central'),
+        sceneContext: {
+          outcome: 'complete',
+          sceneId: 'scene-1',
+          subject: TAVERN_NAME,
+          subjectKind: 'installation',
+          type: 'search',
+        },
+      },
+    ],
     turnSequence: 0,
   } as unknown as ChronicleSnapshot;
 
@@ -248,6 +335,7 @@ describe('CanonPipeline', () => {
   const createMocks = (): {
     commitBatch: ReturnType<typeof vi.fn>;
     findBatch: ReturnType<typeof vi.fn>;
+    generateStructured: ReturnType<typeof vi.fn>;
     pipeline: CanonPipeline;
   } => {
     const commitBatch = vi.fn().mockResolvedValue({
@@ -270,9 +358,10 @@ describe('CanonPipeline', () => {
         ]),
       listLoreFragmentsByEntities: vi.fn().mockResolvedValue(new Map()),
     } as unknown as WorldSchemaStore;
+    const generateStructured = vi.fn().mockResolvedValue({ data: extraction });
     const llmClient = {
       generate: vi.fn().mockResolvedValue({ message: 'A weathered dockside tavern on Brake.' }),
-      generateStructured: vi.fn().mockResolvedValue({ data: extraction }),
+      generateStructured,
     } as unknown as RetryLLMClient;
     const pipeline = new CanonPipeline({
       llmClient,
@@ -286,13 +375,20 @@ describe('CanonPipeline', () => {
       } as unknown as PromptTemplateManager,
       worldStore,
     });
-    return { commitBatch, findBatch, pipeline };
+    return { commitBatch, findBatch, generateStructured, pipeline };
   };
 
   it('commits one play batch with the shell entity, lore, and edges', async () => {
-    const { commitBatch, pipeline } = createMocks();
+    const { commitBatch, generateStructured, pipeline } = createMocks();
 
     await pipeline.run(snapshot, player);
+
+    const extractRequest = generateStructured.mock.calls[0]?.[0] as {
+      input: Array<{ content: Array<{ text: string }> }>;
+    };
+    expect(extractRequest.input[1]?.content[0]?.text).toContain('"scenes"');
+    expect(extractRequest.input[1]?.content[0]?.text).toContain(TAVERN_NAME);
+    expect(extractRequest.input[2]?.content[0]?.text).toContain('Scene: search');
 
     expect(commitBatch).toHaveBeenCalledOnce();
     const proposal = commitBatch.mock.calls[0]?.[0] as CanonProposal;

@@ -103,12 +103,14 @@ describe('scene lifecycle', () => {
       id: 'scene:9',
       startedAtTurn: 9,
       subject: RED_COURIER_KITE,
+      subjectEntityId: '11111111-2222-4333-8444-555555555555',
       subjectKind: 'transport',
       type: 'chase',
     }, 'complete')).toEqual({
       outcome: 'complete',
       sceneId: 'scene:9',
       subject: RED_COURIER_KITE,
+      subjectEntityId: '11111111-2222-4333-8444-555555555555',
       subjectKind: 'transport',
       type: 'chase',
     });

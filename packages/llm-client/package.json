@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./embeddings": {
+      "types": "./dist/embeddings.d.ts",
+      "import": "./dist/embeddings.js",
+      "require": "./dist/embeddings.cjs"
     }
   },
   "scripts": {

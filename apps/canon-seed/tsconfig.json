@@ -10,5 +10,9 @@
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
   },
   "include": ["src"],
-  "references": [{ "path": "../../packages/worldstate" }, { "path": "../../packages/utils" }]
+  "references": [
+    { "path": "../../packages/llm-client" },
+    { "path": "../../packages/worldstate" },
+    { "path": "../../packages/utils" }
+  ]
 }

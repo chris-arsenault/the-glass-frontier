@@ -9,6 +9,7 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@glass-frontier/llm-client": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*"
   },

@@ -16,7 +16,11 @@ import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classif
 import { LocationDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
 import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
-import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
+import type {
+  LLMPlayer,
+  RetryLLMClient,
+  TextEmbeddingClient,
+} from '@glass-frontier/llm-client';
 import { formatTurnJobId, isDefined, isNonEmptyString, log } from '@glass-frontier/utils';
 import {
   type ChronicleStore,
@@ -33,6 +37,7 @@ import { createProgressEmitterFromEnv } from './eventEmitters/progressEmitter';
 import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
 import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
+import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
 import { GmGraphOrchestrator } from './gmGraph/orchestrator';
 import { buildSceneContext } from './scenes/sceneLifecycle';
 import { ChronicleTelemetry } from './telemetry';
@@ -43,6 +48,7 @@ type GmEngineOptions = {
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
+  embeddings: TextEmbeddingClient;
   modelConfigStore: ModelConfigStore;
 };
 
@@ -54,6 +60,7 @@ class GmEngine {
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
   readonly llm: RetryLLMClient;
+  readonly embeddings: TextEmbeddingClient;
   readonly progressEmitter: TurnProgressPublisher;
   readonly closureEmitter: ChronicleClosurePublisher;
   readonly templateManager: PromptTemplateManager;
@@ -65,6 +72,7 @@ class GmEngine {
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
+    this.embeddings = options.embeddings;
     this.modelConfigStore = options.modelConfigStore;
     this.progressEmitter = createProgressEmitterFromEnv();
     this.closureEmitter = createClosureEmitterFromEnv();
@@ -182,6 +190,7 @@ class GmEngine {
 
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
+    const sceneSubjectResolver = new SceneSubjectResolverNode();
     const entitySelector = new EntitySelectorNode();
     const beatDetector = new BeatDetectorNode();
     const beatTracker = new BeatTrackerNode();
@@ -196,6 +205,7 @@ class GmEngine {
     // All nodes that can be executed
     const nodes = [
       intentClassifier,
+      sceneSubjectResolver,
       beatDetector,
       checkPlanner,
       entitySelector,
@@ -211,6 +221,7 @@ class GmEngine {
     // Canonical execution pipeline - defines the exact order and parallelism
     const pipeline = [
       { nodeId: 'intent-classifier', type: 'sequential' as const },
+      { nodeId: 'scene-subject-resolver', type: 'sequential' as const },
       { nodeIds: ['intent-beat-detector', 'check-planner'], type: 'parallel' as const },
       { nodeId: 'entity-selector', type: 'sequential' as const },
       { nodeId: 'check-runner', type: 'sequential' as const },
@@ -293,6 +304,7 @@ class GmEngine {
       chronicleState,
       chronicleStore,
       effectiveScene: chronicleState.chronicle.activeScene,
+      embeddings: this.embeddings,
       failure: false,
       llm: this.llm,
       llmPlayer,

@@ -332,7 +332,7 @@
     "id": "2026-08-22-closure-world-canon",
     "releasedAt": "2026-08-22",
     "summary": "Closed chronicles now write their stories into world canon",
-    "details": "When a chronicle closes, the archivist reviews its transcript and records the outcome in the world graph. Canon entities that were central to the story receive a lore fragment recording what happened to them, named people, places, and things the story invented become new world entities with their own founding lore, and relationships the story established become edges in the graph. Play-born entities carry a living description recomputed from everything recorded about them, and grow in prominence as lore and connections accumulate. Generic props never qualify: a named sword can enter canon, a plain knife cannot.",
+    "details": "When a chronicle closes, the archivist reviews its transcript and records the outcome in the world graph. Canon entities that were central to the story receive a lore fragment recording what happened to them, named people, places, and things the story invented become new world entities with their own founding lore, and relationships the story established become edges in the graph. Scenes guide the archive: whatever a dialog, battle, hunt, chase, or search revolved around is treated as significant, earning lore if it is already canon and priority consideration as a new entity if it is not. Play-born entities carry a living description recomputed from everything recorded about them, and grow in prominence as lore and connections accumulate. Generic props never qualify: a named sword can enter canon, a plain knife cannot.",
     "type": "feature"
   },
   {
@@ -348,5 +348,19 @@
     "summary": "Conversations, battles, hunts, chases, and searches now play by their own rules",
     "details": "The GM now recognizes sustained scene types from ordinary typed play without commands or keyword triggers. Dialog scenes focus the interface on the person speaking and keep their name on every response; battles tighten checks and physical consequences; hunts track progress toward a quarry; chases keep distance and route changing; and searches distinguish active investigation from simple observation. Each type supplies its own narration, check, and completion rules while the existing intent system still handles whatever the player chooses to type. Scene context is saved on every turn so transcript history remains consistent after play moves on.",
     "type": "feature"
+  },
+  {
+    "id": "2026-08-22-landing-recent-closures",
+    "releasedAt": "2026-08-22",
+    "summary": "The landing page now shows chronicles that recently ended",
+    "details": "The Around the Frontier panel is live: it lists the most recently completed chronicles across all players, with the character who lived them, where the story ended, and the archivist's closing summary as the hook once it has been written.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-22-scene-subject-resolution",
+    "releasedAt": "2026-08-22",
+    "summary": "Scene subjects now connect to the world graph",
+    "details": "When typed play starts a conversation, battle, hunt, chase, or search, the GM now links its free-text subject to an existing person, creature, faction, place, vessel, or object when the match is clear. Exact names resolve directly; less literal references use Titan text embeddings stored in PostgreSQL and are ranked through the existing relationship graph. Local marginal entities resolve only nearby while renowned and mythic subjects remain recognizable farther across the graph. Uncertain and newly invented subjects remain valid free text instead of forcing a wrong match. Structured model responses now expose scene types, entity kinds, known beat IDs, and offered entity slugs as provider-checked values rather than unrestricted strings.",
+    "type": "improvement"
   }
 ]

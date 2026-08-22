@@ -4,7 +4,8 @@ const toNullableString = (value) => typeof value === 'string' ? value.trim() : n
 const defaultPreferences = () => ({ feedbackVisibility: 'all' });
 const defaultMetadata = () => ({ tags: [], timestamp: Date.now() });
 const normalizePreferences = (preferences) => {
-    if (preferences &&
+    if (preferences !== null &&
+        preferences !== undefined &&
         typeof preferences === 'object' &&
         'feedbackVisibility' in preferences &&
         typeof preferences.feedbackVisibility === 'string') {
@@ -13,7 +14,8 @@ const normalizePreferences = (preferences) => {
     return defaultPreferences();
 };
 const normalizeMetadata = (metadata) => {
-    if (metadata &&
+    if (metadata !== null &&
+        metadata !== undefined &&
         typeof metadata === 'object' &&
         'tags' in metadata &&
         Array.isArray(metadata.tags) &&

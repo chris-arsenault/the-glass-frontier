@@ -8,7 +8,7 @@ import type { GraphNode, GraphNodeDelta } from '../graphNode';
 
 type LlmClassifierOptions<TParsed> = {
   id: PromptTemplateId;
-  schema: ZodType<TParsed>;
+  schema: ZodType<TParsed> | ((context: GraphContext) => ZodType<TParsed>);
   schemaName: string,
   applyResult: (context: GraphContext, result: TParsed) => GraphNodeDelta;
   shouldRun: (context: GraphContext) => boolean;
@@ -45,6 +45,9 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
       );
       const composer = new PromptComposer(context.templates);
       const prompt = await composer.buildPrompt(this.options.id, context);
+      const schema = typeof this.options.schema === 'function'
+        ? this.options.schema(context)
+        : this.options.schema;
       const response = await context.llm.generateStructured(
         {
           maxOutputTokens: CLASSIFIER_MAX_TOKEN,
@@ -60,7 +63,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
           player: context.llmPlayer,
           reasoningEffort: CLASSIFIER_REASONING_EFFORT,
         },
-        this.options.schema,
+        schema,
         this.options.schemaName
       );
 

@@ -68,6 +68,9 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
   } as unknown as GraphContext['chronicleState'],
   chronicleStore: {} as GraphContext['chronicleStore'],
   effectiveScene: null,
+  embeddings: {
+    embed: () => Promise.resolve([]),
+  },
   failure: false,
   llm: {} as GraphContext['llm'],
   llmPlayer: { id: 'player-1', isAdmin: false, name: 'tsonu' },

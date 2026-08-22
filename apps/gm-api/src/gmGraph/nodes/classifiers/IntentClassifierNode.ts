@@ -1,16 +1,14 @@
-import { type Intent, IntentType } from '@glass-frontier/dto';
+import {
+  type Intent,
+  IntentType,
+  SceneChangeCandidate,
+} from '@glass-frontier/dto';
 import type { GraphContext } from '@glass-frontier/gm-api/types';
 import { z } from 'zod';
 
 import { resolveEffectiveScene } from '../../../scenes/sceneLifecycle';
 import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
-
-const SceneChangeCandidate = z.object({
-  subject: z.string().nullable(),
-  subjectKind: z.string().nullable(),
-  type: z.string().nullable(),
-});
 
 const IntentResponseSchema = z.object({
   creativeSpark: z

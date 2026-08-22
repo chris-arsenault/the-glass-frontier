@@ -88,7 +88,19 @@ const formatTurn = (turn: Turn): string => {
   if (skill !== null) {
     lines.push(`Skill Check: ${skill}`);
   }
+  const scene = describeScene(turn);
+  if (scene !== null) {
+    lines.push(scene);
+  }
   return lines.join('\n');
+};
+
+const describeScene = (turn: Turn): string | null => {
+  const scene = turn.sceneContext;
+  if (scene === undefined || scene === null) {
+    return null;
+  }
+  return `Scene: ${scene.type} — subject "${scene.subject}" (${scene.subjectKind}), ${scene.outcome}`;
 };
 
 const appendIf = (lines: string[], label: string, value: string): void => {

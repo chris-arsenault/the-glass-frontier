@@ -1,3 +1,4 @@
+import { SceneOutcome } from '@glass-frontier/dto';
 import { z } from 'zod';
 
 import type { GraphContext } from '../../../types.js';
@@ -5,7 +6,7 @@ import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const SummaryResponseSchema = z.object({
-  sceneOutcome: z.enum(['continue', 'complete']).default('continue'),
+  sceneOutcome: SceneOutcome.default('continue'),
   sceneOutcomeReason: z.string().min(1).nullable().default(null),
   shouldCloseChronicle: z.boolean(),
   summary: z.string().min(1),

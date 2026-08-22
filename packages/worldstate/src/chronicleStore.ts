@@ -1,4 +1,10 @@
-import type { Character, Chronicle, ChronicleSummaryEntry, Turn } from '@glass-frontier/dto';
+import type {
+  Character,
+  Chronicle,
+  ChronicleSummaryEntry,
+  RecentClosure,
+  Turn,
+} from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -259,6 +265,45 @@ class PostgresChronicleStore implements ChronicleStore {
       ...normalizedProps,
       anchorEntityId: row.anchor_entity_id ?? normalizedProps.anchorEntityId,
       entityFocus: row.entity_focus ?? normalizedProps.entityFocus ?? { entityScores: {}, tagScores: {} },
+    });
+  }
+
+  /**
+   * The landing feed: the most recently closed chronicles across every
+   * player, hooked with the closer's chronicle_story summary once it exists.
+   * `updated_at` stands in for a closure timestamp — closing is the last
+   * write a chronicle receives apart from its closure summaries.
+   */
+  async listRecentClosures(limit = 5): Promise<RecentClosure[]> {
+    const capped = Math.max(1, Math.min(limit, 20));
+    const result = await this.#pool.query<{
+      character_name: string | null;
+      id: string;
+      location_name: string;
+      props: Chronicle;
+      title: string;
+      updated_at: Date;
+    }>(
+      `SELECT c.id, c.title, c.location_name, c.updated_at, c.props,
+              ch.name AS character_name
+       FROM chronicle c
+       LEFT JOIN character ch ON ch.id = c.primary_char_id
+       WHERE c.status = 'closed'
+       ORDER BY c.updated_at DESC
+       LIMIT $1`,
+      [capped]
+    );
+    return result.rows.map((row) => {
+      const chronicle = normalizeChronicle(row.props);
+      const story = chronicle.summaries.find((summary) => summary.kind === 'chronicle_story');
+      return {
+        characterName: row.character_name,
+        closedAt: row.updated_at.getTime(),
+        hook: story?.summary ?? null,
+        id: row.id,
+        locationName: row.location_name,
+        title: row.title,
+      };
     });
   }
 

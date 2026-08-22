@@ -11,6 +11,11 @@ import type { Pool } from 'pg';
 
 import { CanonWriter } from './canonWriter';
 import { ContextSliceReader } from './contextSlice';
+import {
+  type EntityEmbeddingSource,
+  EntityEmbeddingReader,
+  type SubjectEntityCandidate,
+} from './entityEmbeddings';
 import type { EntityListInput, EntityStats, NeighborListInput } from './entityReader';
 import { EntityReader } from './entityReader';
 import { LoreReader } from './loreReader';
@@ -26,18 +31,20 @@ import { WorldSchemaConfiguration } from './worldSchemaConfiguration';
  * missing fields have to be guessed at.
  */
 class PostgresWorldSchemaStore implements WorldSchemaStore {
+  readonly #context: ContextSliceReader;
+  readonly #embeddings: EntityEmbeddingReader;
   readonly #entities: EntityReader;
   readonly #lore: LoreReader;
   readonly #schema: WorldSchemaConfiguration;
   readonly #writer: CanonWriter;
-  readonly #context: ContextSliceReader;
 
   constructor(options: { pool: Pool }) {
+    this.#context = new ContextSliceReader(options.pool);
+    this.#embeddings = new EntityEmbeddingReader(options.pool);
     this.#entities = new EntityReader(options.pool);
     this.#lore = new LoreReader(options.pool);
     this.#schema = new WorldSchemaConfiguration(options.pool);
     this.#writer = new CanonWriter(options.pool);
-    this.#context = new ContextSliceReader(options.pool);
   }
 
   async commitBatch(proposal: CanonProposal): Promise<CommitBatchResult> {
@@ -46,6 +53,27 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async getContextSlice(input: ContextSliceInput): Promise<ContextSliceEntity[]> {
     return this.#context.getContextSlice(input);
+  }
+
+  async hasEntityEmbeddings(kind: HardState['kind']): Promise<boolean> {
+    return this.#embeddings.hasEmbeddings(kind);
+  }
+
+  async listMissingEntityEmbeddings(limit?: number): Promise<EntityEmbeddingSource[]> {
+    return this.#embeddings.listMissing(limit);
+  }
+
+  async saveEntityEmbedding(id: string, embedding: number[]): Promise<void> {
+    return this.#embeddings.save(id, embedding);
+  }
+
+  async findSubjectCandidates(input: {
+    embedding: number[];
+    focusIds: string[];
+    kind: HardState['kind'];
+    limit?: number;
+  }): Promise<SubjectEntityCandidate[]> {
+    return this.#embeddings.findSubjectCandidates(input);
   }
 
   async revertBatch(batchId: string): Promise<void> {

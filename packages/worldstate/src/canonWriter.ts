@@ -51,7 +51,26 @@ const ENTITY_UPSERT_SQL = `INSERT INTO entity
     status = EXCLUDED.status, props = EXCLUDED.props,
     is_location = EXCLUDED.is_location, source = EXCLUDED.source,
     source_id = EXCLUDED.source_id, external_key = EXCLUDED.external_key,
-    batch_id = EXCLUDED.batch_id, updated_at = now()
+    batch_id = EXCLUDED.batch_id,
+    embedding = CASE
+      WHEN (entity.name, entity.kind, entity.description)
+        IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.kind, EXCLUDED.description)
+      THEN NULL
+      ELSE entity.embedding
+    END,
+    embedding_model = CASE
+      WHEN (entity.name, entity.kind, entity.description)
+        IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.kind, EXCLUDED.description)
+      THEN NULL
+      ELSE entity.embedding_model
+    END,
+    embedding_updated_at = CASE
+      WHEN (entity.name, entity.kind, entity.description)
+        IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.kind, EXCLUDED.description)
+      THEN NULL
+      ELSE entity.embedding_updated_at
+    END,
+    updated_at = now()
   WHERE entity.source = EXCLUDED.source
     AND (entity.slug, entity.kind, entity.subkind, entity.name, entity.description,
       entity.prominence, entity.status, entity.props, entity.is_location,

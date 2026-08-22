@@ -332,3 +332,38 @@ describe('Chronicle anchors', () => {
     expect(retrieved?.anchorEntityId).toBe(anchor.id);
   });
 });
+
+describe('Recent closures', () => {
+  it('lists closed chronicles with character name and story hook, newest first', async () => {
+    const character = await worldState.chronicles.upsertCharacter(defaultCharacter());
+    await worldState.chronicles.upsertChronicle(
+      defaultChronicle('Open Reach', { title: 'Still Running' })
+    );
+    const closed = await worldState.chronicles.upsertChronicle(
+      defaultChronicle('Closed Reach', {
+        characterId: character.id,
+        status: 'closed',
+        summaries: [
+          {
+            createdAt: 1,
+            id: 'summary-1',
+            kind: 'chronicle_story',
+            summary: 'The reach fell quiet.',
+          },
+        ],
+        title: 'Finished Run',
+      })
+    );
+
+    const closures = await worldState.chronicles.listRecentClosures();
+
+    expect(closures).toHaveLength(1);
+    expect(closures[0]).toMatchObject({
+      characterName: character.name,
+      hook: 'The reach fell quiet.',
+      id: closed.id,
+      locationName: 'Closed Reach',
+      title: 'Finished Run',
+    });
+  });
+});

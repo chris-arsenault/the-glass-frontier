@@ -309,15 +309,6 @@
   font-size: var(--text-sm);
 }
 
-.landing-coming-soon {
-  margin: 0;
-  color: #e8a06b;
-  font-size: var(--text-2xs);
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
 @media (width <= 900px) {
   .landing-grid {
     grid-template-columns: 1fr;

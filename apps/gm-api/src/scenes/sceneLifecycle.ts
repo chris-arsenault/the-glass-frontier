@@ -58,6 +58,9 @@ export function buildSceneContext(
     outcome,
     sceneId: scene.id,
     subject: scene.subject,
+    ...(scene.subjectEntityId === undefined
+      ? {}
+      : { subjectEntityId: scene.subjectEntityId }),
     subjectKind: scene.subjectKind,
     type: scene.type,
   };

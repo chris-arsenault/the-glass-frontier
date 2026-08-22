@@ -207,6 +207,11 @@ export const appRouter = t.router({
       return { models };
     }),
 
+  // Cross-player by design: the landing page's recently-closed feed.
+  listRecentClosures: t.procedure.query(async ({ ctx }) =>
+    ctx.chronicleStore.listRecentClosures()
+  ),
+
   setPlayerModelCategory: t.procedure
     .input(
       z.object({

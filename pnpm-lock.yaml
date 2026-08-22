@@ -159,6 +159,9 @@ importers:
 
   apps/canon-seed:
     dependencies:
+      '@glass-frontier/llm-client':
+        specifier: workspace:*
+        version: link:../../packages/llm-client
       '@glass-frontier/utils':
         specifier: workspace:*
         version: link:../../packages/utils

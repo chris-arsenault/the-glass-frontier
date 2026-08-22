@@ -14,10 +14,15 @@ export type SceneType = z.infer<typeof SceneType>;
 export const SceneOutcome = z.enum(['continue', 'complete']);
 export type SceneOutcome = z.infer<typeof SceneOutcome>;
 
-export const SceneChange = z.object({
+export const SceneChangeCandidate = z.object({
   subject: z.string().min(1),
   subjectKind: HardStateKind,
   type: SceneType,
+});
+export type SceneChangeCandidate = z.infer<typeof SceneChangeCandidate>;
+
+export const SceneChange = SceneChangeCandidate.extend({
+  subjectEntityId: z.string().uuid().optional(),
 });
 export type SceneChange = z.infer<typeof SceneChange>;
 
