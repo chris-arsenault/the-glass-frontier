@@ -11,7 +11,7 @@ import type { Pool } from 'pg';
 
 import { CanonWriter } from './canonWriter';
 import { ContextSliceReader } from './contextSlice';
-import type { EntityListInput, NeighborListInput } from './entityReader';
+import type { EntityListInput, EntityStats, NeighborListInput } from './entityReader';
 import { EntityReader } from './entityReader';
 import { LoreReader } from './loreReader';
 import { createPool } from './pg';
@@ -52,6 +52,13 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return this.#writer.revertBatch(batchId);
   }
 
+  async findBatch(input: {
+    source: CanonProposal['source'];
+    sourceId: string;
+  }): Promise<{ batchId: string } | null> {
+    return this.#writer.findBatch(input);
+  }
+
   async getEntity(input: { id: string }): Promise<HardState | null> {
     return this.#entities.getEntity(input);
   }
@@ -62,6 +69,14 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async findLocationByName(input: { name: string }): Promise<HardState | null> {
     return this.#entities.findLocationByName(input);
+  }
+
+  async findEntitiesByName(input: { name: string }): Promise<HardState[]> {
+    return this.#entities.findEntitiesByName(input);
+  }
+
+  async listEntityStats(ids: string[]): Promise<EntityStats[]> {
+    return this.#entities.listEntityStats(ids);
   }
 
   async listEntities(input?: EntityListInput): Promise<HardState[]> {

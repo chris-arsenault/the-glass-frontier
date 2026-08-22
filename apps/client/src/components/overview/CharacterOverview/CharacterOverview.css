@@ -2,12 +2,8 @@
   display: flex;
   padding: var(--space-4);
   background: var(--surface-secondary);
-  backdrop-filter: blur(12px);
-  border: none;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  box-shadow:
-    var(--shadow-md),
-    var(--panel-glow-inset);
   flex-direction: column;
   gap: var(--space-4);
 }
@@ -23,6 +19,8 @@
 
 .session-panel-header h2 {
   margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
 }
 
 .session-panel-subtitle {
@@ -35,35 +33,35 @@
   margin: 0;
   color: var(--text-muted);
   font-size: var(--text-sm);
-  font-style: italic;
 }
 
 .session-chip {
   display: inline-flex;
-  padding: var(--space-1) var(--space-2);
-  color: #f8fafc;
-  background: rgb(59 130 246 / 20%);
+  padding: 0.05rem var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-tertiary);
   align-items: center;
-  border: none;
-  border-radius: var(--radius-full);
-  box-shadow: 0 0 0 1px rgb(59 130 246 / 30%);
-  font-size: var(--text-xs);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-2xs);
+  font-weight: 500;
   gap: var(--space-2);
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .chip-muted {
-  color: var(--text-secondary);
-  background: rgb(148 163 184 / 15%);
-  box-shadow: 0 0 0 1px var(--border-muted);
+  color: var(--text-muted);
 }
 
 .panel-label {
   margin: 0 0 var(--space-2);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding-bottom: var(--space-1);
   text-transform: uppercase;
 }
 
@@ -78,27 +76,33 @@
   margin: 0;
   padding: 0;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
 .panel-list-row {
   display: flex;
+  padding: var(--space-1) 0;
   align-items: center;
   font-size: var(--text-sm);
   justify-content: space-between;
+}
+
+.panel-list-row + .panel-list-row {
+  border-top: 1px solid var(--border-subtle);
 }
 
 .panel-list-row dt {
   margin: 0;
   color: var(--text-muted);
   letter-spacing: 0.03em;
-  text-transform: uppercase;
+  text-transform: capitalize;
 }
 
 .panel-list-row dd {
   margin: 0;
   color: var(--text-primary);
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  text-align: right;
 }
 
 .panel-skill-list {
@@ -106,37 +110,69 @@
   margin: 0;
   padding: 0;
   flex-direction: column;
-  gap: var(--space-2);
   list-style: none;
 }
 
 .panel-skill-list li {
   display: flex;
-  padding: var(--space-2);
-  background: var(--surface-primary);
+  padding: var(--space-1) 0;
   align-items: center;
-  border: none;
-  border-radius: var(--radius-sm);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
+  font-size: var(--text-sm);
   justify-content: space-between;
 }
 
+.panel-skill-list li + li {
+  border-top: 1px solid var(--border-subtle);
+}
+
 .panel-skill-tier {
-  color: var(--color-accent-yellow);
-  font-weight: 600;
+  color: var(--text-accent);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .panel-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+
+/* Nature values are sentences, so the label sits above the value rather than
+   opposite it. */
+.panel-nature .panel-list-row {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.panel-nature .panel-list-row dd {
+  font-weight: 400;
+  text-align: left;
+}
+
+.panel-bio {
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.panel-calling-list {
+  display: flex;
+  margin: 0;
+  padding: 0 0 0 var(--space-3);
+  flex-direction: column;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
+  line-height: 1.4;
 }
 
 .inventory-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-2);
+  gap: var(--space-1);
 }
 
 .inventory-list {
@@ -144,26 +180,26 @@
   margin: 0;
   padding: 0;
   flex-direction: column;
-  gap: var(--space-2);
   list-style: none;
 }
 
 .inventory-list-item {
   display: flex;
-  padding: var(--space-3);
-  background: var(--surface-primary);
+  padding: var(--space-2) 0;
   align-items: center;
-  border: none;
-  border-radius: var(--radius-sm);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
   gap: var(--space-3);
   justify-content: space-between;
 }
 
+.inventory-list-item + .inventory-list-item {
+  border-top: 1px solid var(--border-subtle);
+}
+
 .inventory-item-name {
   margin: 0;
+  color: var(--text-primary);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .inventory-item-meta {
@@ -176,18 +212,18 @@
   margin: var(--space-1) 0 0;
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  font-style: italic;
 }
 
 .inventory-quantity {
   display: inline-flex;
-  padding: var(--space-1) var(--space-2);
-  color: var(--text-primary);
-  background: rgb(59 130 246 / 20%);
-  border: none;
-  border-radius: var(--radius-full);
-  box-shadow: 0 0 0 1px rgb(96 165 250 / 30%);
-  font-size: var(--text-xs);
-  letter-spacing: 0.03em;
+  padding: 0.05rem var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }

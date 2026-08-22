@@ -262,12 +262,17 @@ const useLoginViewModel = () => {
       return;
     }
     const header = encodeSegment({ alg: 'none', typ: 'JWT' });
-    const idToken = `${header}.${encodeSegment({ 'cognito:groups': ['moderator'], sub: LOCAL_PLAYER_ID })}.`;
+    const idToken = `${header}.${encodeSegment({
+      'cognito:groups': ['moderator'],
+      sub: LOCAL_PLAYER_ID,
+      username: LOCAL_PLAYER_ID,
+    })}.`;
     const accessToken = `${header}.${encodeSegment({
       client_id: 'local-e2e',
       'cognito:groups': ['moderator'],
       sub: LOCAL_PLAYER_ID,
       token_use: 'access',
+      username: LOCAL_PLAYER_ID,
     })}.`;
     useAuthStore.setState({
       challengeUser: null,

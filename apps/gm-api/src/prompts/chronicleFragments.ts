@@ -40,14 +40,14 @@ PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
   ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['beat-tracker', ['intent', 'beats']],
+  ['beat-tracker', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'character', 'location']],
   ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities']],
   ['gm-summary', ['intent', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
   ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'character', 'entities', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['intent-beat-detector', ['intent', 'beats']],
-  ['intent-classifier', ['character', 'beats', 'wrap']],
+  ['intent-beat-detector', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
+  ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'character', 'beats', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
   ['location-delta', ['intent', USER_MESSAGE_FRAGMENT, 'location']],
   ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
@@ -91,8 +91,22 @@ function userMessageFragment(context: GraphContext): string {
   return context.playerMessage.content;
 }
 
-function characterFragment(context: GraphContext): Record<string, unknown> {
-  return formatCharacter(context.chronicleState.character);
+async function characterFragment(context: GraphContext): Promise<Record<string, unknown>> {
+  const character = context.chronicleState.character;
+  const { allegianceId, cultureId, homelandId, speciesId } = character.origin;
+  const entities = await context.worldSchemaStore.listEntitiesByIds([
+    speciesId,
+    cultureId,
+    homelandId,
+    allegianceId,
+  ]);
+  const names = new Map(entities.map((entity) => [entity.id, entity.name]));
+  return formatCharacter(character, {
+    allegiance: names.get(allegianceId),
+    culture: names.get(cultureId),
+    homeland: names.get(homelandId),
+    species: names.get(speciesId),
+  });
 }
 
 async function anchorFragment(context: GraphContext): Promise<Record<string, unknown>> {

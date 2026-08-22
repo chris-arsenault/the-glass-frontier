@@ -8,6 +8,7 @@ import { App } from './App';
 import { glassFrontierTheme } from './theme';
 import './styles/app.css';
 import './styles/chipButton.css';
+import './styles/kindDot.css';
 
 const container = document.getElementById('root');
 

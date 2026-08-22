@@ -21,6 +21,7 @@ export type AuthorizedIdentity = {
   claims: JWTPayload;
   groups: string[];
   sub: string;
+  username: string;
 };
 
 let cachedIssuer: string | null = null;
@@ -65,8 +66,12 @@ const parseGroups = (payload: JWTPayload): string[] => {
 const toIdentity = (payload: JWTPayload, appClientId: string): AuthorizedIdentity => {
   const subject = payload.sub;
   const clientId = payload.client_id;
+  const username = payload.username;
   if (!isNonEmptyString(subject)) {
     throw new Error('Token missing subject');
+  }
+  if (!isNonEmptyString(username)) {
+    throw new Error('Token missing username');
   }
   if (payload.token_use !== 'access') {
     throw new Error('Expected Cognito access token');
@@ -79,6 +84,7 @@ const toIdentity = (payload: JWTPayload, appClientId: string): AuthorizedIdentit
     claims: payload,
     groups: parseGroups(payload),
     sub: subject.trim(),
+    username: username.trim(),
   };
 };
 

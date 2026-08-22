@@ -1,5 +1,6 @@
 import type {
   Character,
+  CharacterDraft,
   Chronicle,
   ChronicleBeat,
   TranscriptEntry,
@@ -17,7 +18,6 @@ import { worldAtlasClient } from '../lib/worldAtlasClient';
 import type {
   ChronicleState,
   ChatMessage,
-  CharacterCreationDraft,
   ChronicleSeedCreationDetails,
   ChronicleStore,
   MomentumTrend,
@@ -50,7 +50,7 @@ const normalizePlayerSettings = (preferences?: PlayerPreferences | null): Player
 
 type ChronicleSnapshot = {
   character: Character | null;
-  chronicle: (Chronicle & { beats?: ChronicleBeat[]; seedText?: string | null }) | null;
+  chronicle: (Chronicle & { beats?: ChronicleBeat[] }) | null;
   chronicleId: string;
   locationName: string | null;
   locationId: string | null;
@@ -153,12 +153,12 @@ const buildPlayerEntry = (content: string): TranscriptEntry => ({
   role: 'player',
 });
 
-const createSeedChatMessage = (seedText: string): ChatMessage => ({
+const createOpeningChatMessage = (openingText: string): ChatMessage => ({
   entry: {
-    content: seedText,
+    content: openingText,
     id: createMessageId(),
     metadata: {
-      tags: ['chronicle-seed'],
+      tags: ['chronicle-opening'],
       timestamp: Date.now(),
     },
     role: 'gm',
@@ -187,8 +187,6 @@ const mergeCharacterRecord = (list: Character[], character: Character) => {
   const filtered = list.filter((existing) => existing.id !== character.id);
   return [character, ...filtered];
 };
-
-const DEFAULT_MOMENTUM = { ceiling: 3, current: 0, floor: -2 };
 
 const deriveSkillProgressBadges = (
   previous: Character | null | undefined,
@@ -370,26 +368,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }));
   },
 
-  async createCharacterProfile(draft: CharacterCreationDraft) {
+  async createCharacterProfile(draft: CharacterDraft) {
     const identity = resolvePlayerIdentity();
-    const character: Character = {
-      archetype: draft.archetype,
-      attributes: draft.attributes,
-      id: generateId(),
-      inventory: [],
-      momentum: DEFAULT_MOMENTUM,
-      name: draft.name,
-      playerId: identity.playerId,
-      pronouns: draft.pronouns,
-      skills: Object.entries(draft.skills).reduce<Character['skills']>((acc, [name, skill]) => {
-        acc[name] = { ...skill, xp: 0 };
-        return acc;
-      }, {}),
-      tags: [],
-    };
 
     try {
-      const { character: stored } = await trpcClient.createCharacter.mutate(character);
+      const { character: stored } = await trpcClient.createCharacter.mutate({
+        draft,
+        playerId: identity.playerId,
+      });
       set((prev) => ({
         ...prev,
         availableCharacters: mergeCharacterRecord(prev.availableCharacters, stored),
@@ -511,13 +497,13 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       const beatsEnabled = chronicleState.chronicle?.beatsEnabled !== false;
       const initialFocusBeatId =
         chronicleBeats.find((beat) => beat.status === 'in_progress')?.id ?? null;
-      // The seed always opens the transcript, so the chronicle's framing
-      // survives reloads instead of vanishing after the first turn.
+      // The generated scene opener always starts the transcript. The seed
+      // remains visible in the overview as the player's chosen premise.
       if (
-        chronicleState.chronicle?.seedText &&
-        chronicleState.chronicle.seedText.trim().length > 0
+        chronicleState.chronicle?.openingText &&
+        chronicleState.chronicle.openingText.trim().length > 0
       ) {
-        messageHistory.unshift(createSeedChatMessage(chronicleState.chronicle.seedText));
+        messageHistory.unshift(createOpeningChatMessage(chronicleState.chronicle.openingText));
       }
       const locationId = chronicleState.chronicle?.locationId ?? null;
       set((prev) => ({

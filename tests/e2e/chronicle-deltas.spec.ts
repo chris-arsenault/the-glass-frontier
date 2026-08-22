@@ -81,7 +81,7 @@ test.describe('Chronicle deltas', () => {
     const menu = await openPlayerMenu(page);
     await menu.getByRole('button', { name: 'World Atlas' }).click();
     await expect(page.getByRole('heading', { name: 'World Atlas' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Luminous Quay/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Luminous Quay/i }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Maintenance Bay/i })).toHaveCount(0);
   });
 });

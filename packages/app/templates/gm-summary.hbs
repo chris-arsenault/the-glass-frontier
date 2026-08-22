@@ -9,3 +9,5 @@ Treat the summary as the canonical record for the turn.
 - No markdown, numbers, or quotes; keep it pure text.
 - `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
   wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
+- If the GM narration asks the player a question or offers a next choice, `shouldCloseChronicle` must
+  be `false`; the response has left the scene open.

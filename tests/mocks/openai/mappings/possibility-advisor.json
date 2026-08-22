@@ -1,0 +1,37 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'possibility-advisor')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "MOCK POSSIBILITY: Retuning the beacon is possible if you isolate its eastern relay."
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "MOCK POSSIBILITY: Retuning the beacon is possible if you isolate its eastern relay.",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      }
+    }
+  }
+}

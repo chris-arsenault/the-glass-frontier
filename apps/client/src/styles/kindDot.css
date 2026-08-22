@@ -1,0 +1,28 @@
+/* One hue per world kind, shared by the Atlas registry and the wizard anchor picker. */
+
+.atlas-kind-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--text-muted);
+  border-radius: var(--radius-full);
+}
+
+.atlas-kind-dot[data-kind='geographic_location'] { background: #60a5fa; }
+.atlas-kind-dot[data-kind='installation'] { background: #2dd4bf; }
+.atlas-kind-dot[data-kind='faction'] { background: #a78bfa; }
+.atlas-kind-dot[data-kind='npc'] { background: #f472b6; }
+.atlas-kind-dot[data-kind='artifact'] { background: #fbbf24; }
+.atlas-kind-dot[data-kind='creature'] { background: #a3e635; }
+.atlas-kind-dot[data-kind='resource'] { background: #34d399; }
+.atlas-kind-dot[data-kind='transport'] { background: #22d3ee; }
+.atlas-kind-dot[data-kind='incident'] { background: #f87171; }
+.atlas-kind-dot[data-kind='conflict'] { background: #fb7185; }
+.atlas-kind-dot[data-kind='era'] { background: #94a3b8; }
+.atlas-kind-dot[data-kind='concept'] { background: #818cf8; }
+.atlas-kind-dot[data-kind='culture'] { background: #fb923c; }
+.atlas-kind-dot[data-kind='species'] { background: #4ade80; }
+.atlas-kind-dot[data-kind='phenomenon'] { background: #e879f9; }
+.atlas-kind-dot[data-kind='ability'] { background: #38bdf8; }
+.atlas-kind-dot[data-kind='edict'] { background: #a8a29e; }
+.atlas-kind-dot[data-kind='rumor'] { background: #fde047; }

@@ -1,7 +1,8 @@
 import { type Character, type InventoryEntry, type InventoryEntryKind } from '@glass-frontier/dto';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { useSelectedCharacter } from '../../../hooks/useSelectedCharacter';
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import type { MomentumTrend } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { MomentumIndicator } from '../../widgets/MomentumIndicator/MomentumIndicator';
@@ -161,6 +162,66 @@ const SignatureSkillsPanel = ({ skills }: SignatureSkillsPanelProps): React.JSX.
   </div>
 );
 
+type OriginPanelProps = {
+  origin: Character['origin'];
+  names: Map<string, string>;
+};
+
+const OriginPanel = ({ names, origin }: OriginPanelProps): React.JSX.Element => (
+  <div>
+    <h3 className="panel-label">Origin</h3>
+    <dl className="panel-list">
+      <div className="panel-list-row">
+        <dt>species</dt>
+        <dd>{names.get(origin.speciesId)}</dd>
+      </div>
+      <div className="panel-list-row">
+        <dt>culture</dt>
+        <dd>{names.get(origin.cultureId)}</dd>
+      </div>
+      <div className="panel-list-row">
+        <dt>homeland</dt>
+        <dd>{names.get(origin.homelandId)}</dd>
+      </div>
+      <div className="panel-list-row">
+        <dt>{origin.allegianceStance}</dt>
+        <dd>{names.get(origin.allegianceId)}</dd>
+      </div>
+    </dl>
+  </div>
+);
+
+const NaturePanel = ({ character }: { character: Character }): React.JSX.Element => (
+  <div className="panel-nature">
+    <h3 className="panel-label">Nature</h3>
+    <p className="panel-bio">{character.bio}</p>
+    <dl className="panel-list">
+      <div className="panel-list-row">
+        <dt>drive</dt>
+        <dd>{character.nature.drive}</dd>
+      </div>
+      <div className="panel-list-row">
+        <dt>flaw</dt>
+        <dd>{character.nature.flaw}</dd>
+      </div>
+      <div className="panel-list-row">
+        <dt>instinct</dt>
+        <dd>{character.nature.instinct}</dd>
+      </div>
+      <div className="panel-list-row">
+        <dt>unique</dt>
+        <dd>{character.nature.uniqueThing}</dd>
+      </div>
+    </dl>
+    <h3 className="panel-label">Callings</h3>
+    <ul className="panel-calling-list">
+      {character.nature.callings.map((calling) => (
+        <li key={calling}>{calling}</li>
+      ))}
+    </ul>
+  </div>
+);
+
 type TagsPanelProps = { tags?: string[] | null };
 
 const TagsPanel = ({ tags }: TagsPanelProps): React.JSX.Element | null => {
@@ -229,13 +290,45 @@ type OverviewData = {
   character: Character | null;
   inventory: InventoryState;
   momentumTrend: MomentumTrend | null;
+  originNames: Map<string, string>;
   topSkills: NormalizedSkill[];
+};
+
+/** Resolves the character's four canon origin ids to their entity names. */
+const useOriginNames = (origin: Character['origin'] | undefined): Map<string, string> => {
+  const [names, setNames] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (origin === undefined) {
+      return;
+    }
+    let active = true;
+    void worldAtlasClient
+      .batchGetEntities([
+        origin.speciesId,
+        origin.cultureId,
+        origin.homelandId,
+        origin.allegianceId,
+      ])
+      .then((entities) => {
+        if (active) {
+          setNames(new Map(entities.map((entity) => [entity.id, entity.name])));
+        }
+        return entities;
+      });
+    return () => {
+      active = false;
+    };
+  }, [origin]);
+
+  return names;
 };
 
 const useCharacterOverviewState = (): OverviewData => {
   const character = useSelectedCharacter();
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
   const inventory = useMemo(() => character?.inventory ?? [], [character]);
+  const originNames = useOriginNames(character?.origin);
 
   const topSkills = useMemo<NormalizedSkill[]>(() => computeTopSkills(character), [character]);
 
@@ -243,6 +336,7 @@ const useCharacterOverviewState = (): OverviewData => {
     character: character ?? null,
     inventory,
     momentumTrend,
+    originNames,
     topSkills,
   };
 };
@@ -263,6 +357,11 @@ export function CharacterOverview({
       <div className="panel-grid">
         <AttributesPanel attributes={overview.character.attributes} />
         <SignatureSkillsPanel skills={overview.topSkills} />
+      </div>
+
+      <div className="panel-grid">
+        <OriginPanel origin={overview.character.origin} names={overview.originNames} />
+        <NaturePanel character={overview.character} />
       </div>
 
       <TagsPanel tags={overview.character.tags} />

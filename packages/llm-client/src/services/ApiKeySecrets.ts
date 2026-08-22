@@ -3,14 +3,14 @@ import {
   SecretsManagerClient,
 } from '@aws-sdk/client-secrets-manager';
 
-export const loadLlmApiKeysFromSecrets = async (
+export const loadOpenAiApiKeyFromSecrets = async (
   client = new SecretsManagerClient({})
 ): Promise<void> => {
-  const [anthropicApiKey, openAiApiKey] = await Promise.all([
-    loadSecret(client, process.env.ANTHROPIC_API_KEY_SECRET_ARN, 'ANTHROPIC_API_KEY_SECRET_ARN'),
-    loadSecret(client, process.env.OPENAI_API_KEY_SECRET_ARN, 'OPENAI_API_KEY_SECRET_ARN'),
-  ]);
-  process.env.ANTHROPIC_API_KEY = anthropicApiKey;
+  const openAiApiKey = await loadSecret(
+    client,
+    process.env.OPENAI_API_KEY_SECRET_ARN,
+    'OPENAI_API_KEY_SECRET_ARN'
+  );
   process.env.OPENAI_API_KEY = openAiApiKey;
 };
 

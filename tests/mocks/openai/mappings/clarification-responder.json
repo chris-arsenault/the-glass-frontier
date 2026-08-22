@@ -1,0 +1,37 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'clarification-responder')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "MOCK CLARIFICATION: The Oracle Vessel remains in the Luminous Quay archive."
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "MOCK CLARIFICATION: The Oracle Vessel remains in the Luminous Quay archive.",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      }
+    }
+  }
+}

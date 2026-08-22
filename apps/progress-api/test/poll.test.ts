@@ -8,6 +8,7 @@ const identity: AuthorizedIdentity = {
   claims: {},
   groups: [],
   sub: 'player-1',
+  username: 'tsonu',
 };
 
 const event = (path: string, authorization = 'Bearer token'): ALBEvent =>

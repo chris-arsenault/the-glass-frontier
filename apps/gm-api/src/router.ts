@@ -1,6 +1,7 @@
 import {
   TranscriptEntry,
 } from '@glass-frontier/dto';
+import { toLLMPlayer } from '@glass-frontier/llm-client';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -33,7 +34,8 @@ export const appRouter = t.router({
       const result = await ctx.engine.handlePlayerMessage(
         input.chronicleId,
         playerEntry,
-        input.requestId
+        input.requestId,
+        toLLMPlayer(ctx.identity)
       );
       return {
         beats: result.beats,

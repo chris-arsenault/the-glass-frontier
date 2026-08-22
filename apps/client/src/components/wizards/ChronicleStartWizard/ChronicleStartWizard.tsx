@@ -1,4 +1,5 @@
 import type { ChronicleSeed, HardState } from '@glass-frontier/dto';
+import { WORLD_KINDS, WORLD_PROMINENCE, getWorldKind } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -44,6 +45,23 @@ const mapAnchor = (entity: HardState): SelectedAnchorEntity => ({
   slug: entity.slug,
   subkind: entity.subkind ?? undefined,
 });
+
+const KIND_ORDER = new Map(WORLD_KINDS.map((kind, index) => [kind.id, index]));
+const PROMINENCE_RANK = new Map(WORLD_PROMINENCE.map((tier) => [tier.id, tier.rank]));
+
+/** Kind sections first, the most storied entities first within each. */
+const compareAnchors = (a: HardState, b: HardState): number => {
+  const kindDelta = (KIND_ORDER.get(a.kind) ?? 99) - (KIND_ORDER.get(b.kind) ?? 99);
+  if (kindDelta !== 0) {
+    return kindDelta;
+  }
+  const prominenceDelta =
+    (PROMINENCE_RANK.get(b.prominence) ?? 0) - (PROMINENCE_RANK.get(a.prominence) ?? 0);
+  if (prominenceDelta !== 0) {
+    return prominenceDelta;
+  }
+  return a.name.localeCompare(b.name);
+};
 
 export function ChronicleStartWizard() {
   const navigate = useNavigate();
@@ -729,7 +747,7 @@ type AnchorStepProps = {
 }
 
 type AnchorLoadState = {
-  anchors: SelectedAnchorEntity[];
+  anchors: HardState[];
   error: string | null;
   locationId: string;
 };
@@ -747,12 +765,10 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
         if (!cancelled) {
           // Every neighbor is anchor-eligible: some locations' only local
           // support is another location (a landing, an interior).
-          const anchors = result.neighbors
-            .slice(0, 9)
-            .map(mapAnchor);
+          const anchors = [...result.neighbors].sort(compareAnchors);
           setLoadState({ anchors, error: null, locationId });
           if (selectedAnchorId === null && anchors.length > 0) {
-            onSelectAnchor(anchors[0]);
+            onSelectAnchor(mapAnchor(anchors[0]));
           }
         }
         return undefined;
@@ -776,8 +792,23 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
   }, [locationId, onSelectAnchor, selectedAnchorId]);
 
   const isLoading = locationId !== null && loadState?.locationId !== locationId;
-  const anchors = loadState?.locationId === locationId ? loadState.anchors : [];
+  const anchors = useMemo(
+    () => (loadState?.locationId === locationId ? loadState.anchors : []),
+    [loadState, locationId]
+  );
   const error = loadState?.locationId === locationId ? loadState.error : null;
+
+  const anchorGroups = useMemo(() => {
+    const groups = new Map<string, HardState[]>();
+    for (const anchor of anchors) {
+      groups.set(anchor.kind, [...(groups.get(anchor.kind) ?? []), anchor]);
+    }
+    return [...groups.entries()].map(([kind, entities]) => ({
+      entities,
+      kind,
+      label: getWorldKind(kind)?.displayName ?? kind,
+    }));
+  }, [anchors]);
 
   if (locationId === null) {
     return (
@@ -819,25 +850,43 @@ function AnchorStep({ locationId, onSelectAnchor, selectedAnchorId }: AnchorStep
       <header className="anchor-step-header">
         <div>
           <h2>Choose an anchor entity</h2>
-          <p>Select an entity to anchor this chronicle. These are neighbors of your selected location.</p>
+          <p>
+            The anchor is who or what the opening scenes bend around — everything below is tied to
+            your chosen location.
+          </p>
         </div>
       </header>
-      <div className="anchor-step-list">
-        {anchors.map((anchor) => (
-          <button
-            key={anchor.id}
-            type="button"
-            className={`anchor-card${anchor.id === selectedAnchorId ? ' active' : ''}`}
-            onClick={() => onSelectAnchor(anchor)}
-          >
-            <p className="anchor-card-name">{anchor.name}</p>
-            <p className="anchor-card-meta">
-              {anchor.kind} {anchor.subkind ? ` · ${anchor.subkind}` : ''} · {anchor.slug}
-            </p>
-            {anchor.description ? <p className="anchor-card-desc">{anchor.description}</p> : null}
-          </button>
-        ))}
-      </div>
+      {anchorGroups.map((group) => (
+        <section key={group.kind} className="anchor-group">
+          <h3 className="anchor-group-title">
+            <span className="atlas-kind-dot" data-kind={group.kind} aria-hidden="true" />
+            {group.label}
+            <span className="anchor-group-count">{group.entities.length}</span>
+          </h3>
+          <div className="anchor-step-list">
+            {group.entities.map((anchor) => (
+              <button
+                key={anchor.id}
+                type="button"
+                className={`anchor-card${anchor.id === selectedAnchorId ? ' active' : ''}`}
+                onClick={() => onSelectAnchor(mapAnchor(anchor))}
+              >
+                <p className="anchor-card-name">{anchor.name}</p>
+                <p className="anchor-card-meta">
+                  {anchor.subkind ? anchor.subkind.replace(/_/g, ' ') : anchor.kind}
+                  {anchor.status ? ` · ${anchor.status}` : ''}
+                  <span
+                    className={`anchor-card-prominence anchor-card-prominence-${anchor.prominence}`}
+                  >
+                    {anchor.prominence}
+                  </span>
+                </p>
+                {anchor.description ? <p className="anchor-card-desc">{anchor.description}</p> : null}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

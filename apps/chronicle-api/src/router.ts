@@ -1,11 +1,15 @@
-import type { Player, PlayerPreferences } from '@glass-frontier/dto';
+import type { CharacterOrigin, HardState, Player, PlayerPreferences } from '@glass-frontier/dto';
 import {
-  Character as CharacterSchema,
+  CharacterDraft,
+  createStartingMomentum,
+  skillKey,
+  validateCharacterBuild,
   type Character,
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
 } from '@glass-frontier/dto';
+import { toLLMPlayer } from '@glass-frontier/llm-client';
 import { hasAnyGroup } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
 import { initTRPC, TRPCError } from '@trpc/server';
@@ -47,9 +51,9 @@ const createChronicleInputSchema = z
     characterId: z.string().min(1),
     chronicleId: z.string().uuid().optional(),
     location: locationDetailsSchema,
-    locationId: z.string().uuid().optional(),
+    locationId: z.string().uuid(),
     playerId: z.string().min(1),
-    seedText: z.string().max(800).optional(),
+    seedText: z.string().trim().min(1).max(800),
     status: z.enum(['open', 'closed']).optional(),
     title: z.string().min(1),
   })
@@ -62,13 +66,15 @@ const ensurePlayerRecord = async (ctx: Context, playerId: string): Promise<Playe
 };
 
 export const appRouter = t.router({
-  createCharacter: t.procedure.input(CharacterSchema).mutation(async ({ ctx, input }) => {
-    const playerId = requireCurrentPlayer(ctx, input.playerId);
-    log('info', `Creating Character ${input.name}`);
-    await ctx.playerStore.ensure(playerId);
-    const character = await ctx.chronicleStore.upsertCharacter({ ...input, playerId });
-    return { character };
-  }),
+  createCharacter: t.procedure
+    .input(z.object({ draft: CharacterDraft, playerId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      log('info', `Creating Character ${input.draft.name}`);
+      await ctx.playerStore.ensure(playerId);
+      const character = await buildCharacter(ctx, input.draft, playerId);
+      return { character: await ctx.chronicleStore.upsertCharacter(character) };
+    }),
   // POST /chronicles
   createChronicle: t.procedure
     .input(createChronicleInputSchema)
@@ -111,6 +117,7 @@ export const appRouter = t.router({
         anchorId: input.anchorId,
         count: input.count,
         locationId: input.locationId,
+        player: toLLMPlayer(ctx.identity),
         playerId,
         toneChips: input.toneChips,
         toneNotes: input.toneNotes,
@@ -278,6 +285,18 @@ async function createChronicleHandler(
   ensureCharacterOwnership(character, playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
+  const openingText = await ctx.seedService.generateOpening({
+    anchorId: input.anchorEntityId,
+    character,
+    chronicleId,
+    locationId: input.locationId,
+    player: toLLMPlayer(ctx.identity),
+    playerId,
+    seedText: input.seedText,
+    title: input.title,
+    toneChips: input.toneChips,
+    toneNotes: input.toneNotes,
+  });
   const chronicle = await ctx.chronicleStore.ensureChronicle({
     anchorEntityId: input.anchorEntityId,
     beatsEnabled: input.beatsEnabled,
@@ -285,6 +304,7 @@ async function createChronicleHandler(
     chronicleId,
     locationId: input.locationId,
     locationName: input.location.locale.trim(),
+    openingText,
     playerId,
     seedText: input.seedText,
     status: input.status,
@@ -295,6 +315,84 @@ async function createChronicleHandler(
 
   log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`);
   return { chronicle };
+}
+
+/**
+ * What each canon origin id has to be. The wizard filters its pickers this way
+ * and the server re-checks it, because a draft is player input. A homeland is
+ * any entity the world marks as a place rather than one fixed kind, so it is
+ * checked by `isLocation` instead of by kind.
+ */
+const originChecks = (
+  origin: CharacterOrigin
+): Array<{ id: string; kind: string | null; label: string }> => [
+  { id: origin.speciesId, kind: 'species', label: 'species' },
+  { id: origin.cultureId, kind: 'culture', label: 'culture' },
+  { id: origin.homelandId, kind: null, label: 'homeland' },
+  { id: origin.allegianceId, kind: 'faction', label: 'allegiance' },
+];
+
+async function resolveOrigin(ctx: Context, origin: CharacterOrigin): Promise<HardState[]> {
+  const checks = originChecks(origin);
+  const entities = await ctx.worldSchemaStore.listEntitiesByIds(checks.map((check) => check.id));
+  const byId = new Map(entities.map((entity) => [entity.id, entity]));
+
+  return checks.map((check) => {
+    const entity = byId.get(check.id);
+    if (entity === undefined) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: `Unknown ${check.label} in canon.` });
+    }
+    const matches = check.kind === null ? entity.isLocation : entity.kind === check.kind;
+    if (!matches) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `${entity.name} cannot be a character's ${check.label}.`,
+      });
+    }
+    return entity;
+  });
+}
+
+/**
+ * Turns a player-authored draft into a character. The server owns the id,
+ * starting momentum, the empty pack and the derived tags, so the only thing a
+ * client can decide is what the draft schema and the creation budget allow.
+ */
+async function buildCharacter(
+  ctx: Context,
+  draft: CharacterDraft,
+  playerId: string
+): Promise<Character> {
+  const issues = validateCharacterBuild({ attributes: draft.attributes, skills: draft.skills });
+  if (issues.length > 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: issues.map((issue) => issue.message).join(' '),
+    });
+  }
+
+  const [species, culture, homeland] = await resolveOrigin(ctx, draft.origin);
+
+  return {
+    archetype: draft.archetype.trim(),
+    attributes: draft.attributes,
+    bio: draft.bio.trim(),
+    id: randomUUID(),
+    inventory: [],
+    momentum: createStartingMomentum(),
+    name: draft.name.trim(),
+    nature: draft.nature,
+    origin: draft.origin,
+    playerId,
+    pronouns: draft.pronouns.trim(),
+    skills: Object.fromEntries(
+      draft.skills.map((skill) => [
+        skillKey(skill.name),
+        { attribute: skill.attribute, name: skill.name.trim(), tier: skill.tier, xp: 0 },
+      ])
+    ),
+    tags: [species.name, culture.name, homeland.name, draft.archetype.trim()],
+  };
 }
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {

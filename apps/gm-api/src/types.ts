@@ -10,7 +10,7 @@ import type {
   TranscriptEntry,
   Turn,
 } from '@glass-frontier/dto';
-import type { RetryLLMClient } from '@glass-frontier/llm-client';
+import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore, ChronicleStore } from '@glass-frontier/worldstate';
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
@@ -69,6 +69,7 @@ export type GraphContext = {
 
   //operations
   llm: RetryLLMClient;
+  llmPlayer: LLMPlayer;
   modelConfigStore: ModelConfigStore;
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;

@@ -89,7 +89,7 @@ export function WorldSchemaPage(): React.JSX.Element {
           </p>
         </div>
         <div className="ws-actions">
-          <button type="button" onClick={() => void loadSchema()} disabled={isLoading}>
+          <button type="button" className="ws-refresh" onClick={() => void loadSchema()} disabled={isLoading}>
             {isLoading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>

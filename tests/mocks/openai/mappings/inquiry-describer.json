@@ -1,0 +1,37 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'inquiry-describer')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "MOCK INQUIRY: A low harmonic pulse answers from beyond the vault door."
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "MOCK INQUIRY: A low harmonic pulse answers from beyond the vault door.",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      }
+    }
+  }
+}

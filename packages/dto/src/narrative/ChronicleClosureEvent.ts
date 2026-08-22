@@ -7,6 +7,8 @@ export const ChronicleClosureEventSchema = z.object({
   chronicleId: z.string().min(1),
   locationName: z.string().min(1),
   playerId: z.string().min(1),
+  playerIsAdmin: z.boolean(),
+  playerName: z.string().min(1),
   requestedAt: z.number().int().nonnegative(),
   summaryKinds: z.array(ChronicleSummaryKind).nonempty(),
   turnSequence: z.number().int().nonnegative(),

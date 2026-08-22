@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 
+import { WorldAtlasPage } from './components/atlas/WorldAtlasPage';
 import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
 import { ChronicleDrawer } from './components/drawers/ChronicleDrawer/ChronicleDrawer';
@@ -10,16 +11,15 @@ import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
 import { ChronicleHeader } from './components/layout/ChronicleHeader/ChronicleHeader';
 import { BugReportModal } from './components/modals/BugReportModal/BugReportModal';
 import { ChangelogModal } from './components/modals/ChangelogModal/ChangelogModal';
-import { CreateCharacterModal } from './components/modals/CreateCharacterModal/CreateCharacterModal';
 import { PlayerSettingsModal } from './components/modals/PlayerSettingsModal/PlayerSettingsModal';
 import { UserGuideModal } from './components/modals/UserGuideModal/UserGuideModal';
 import { AuditReviewPage } from './components/moderation/AuditReviewPage/AuditReviewPage';
 import { BugModerationPage } from './components/moderation/BugModerationPage/BugModerationPage';
-import { WorldAtlasPage } from './components/moderation/WorldAtlasPage/WorldAtlasPage';
 import { WorldSchemaPage } from './components/moderation/WorldSchemaPage/WorldSchemaPage';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
 import { LandingPage } from './components/pages/LandingPage/LandingPage';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
+import { CharacterCreationWizard } from './components/wizards/CharacterCreationWizard/CharacterCreationWizard';
 import { ChronicleStartWizard } from './components/wizards/ChronicleStartWizard/ChronicleStartWizard';
 import { usePlayerResources } from './hooks/usePlayerResources';
 import { useProgressStreamConnection } from './hooks/useProgressStreamConnection';
@@ -43,7 +43,7 @@ const SiteHeader = (): React.JSX.Element => {
           void navigate('/');
         }}
       >
-        Home
+        The Glass Frontier
       </button>
       <div className="session-meta">
         <div className="session-meta-actions">
@@ -234,6 +234,7 @@ export function App(): React.JSX.Element {
         <div className="app-route-surface">
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/character/new" element={<CharacterCreationWizard />} />
             <Route path="/chron/start" element={<ChronicleStartWizard />} />
             <Route path="/chron/:chronicleId" element={<ChronicleRoute />} />
             <Route path="/chron" element={<Navigate to="/" replace />} />
@@ -250,7 +251,6 @@ export function App(): React.JSX.Element {
       <CharacterDrawer />
       <ChronicleDrawer />
       <TemplateDrawer />
-      <CreateCharacterModal />
       <BugReportModal />
       <ChangelogModal />
       <PlayerSettingsModal />

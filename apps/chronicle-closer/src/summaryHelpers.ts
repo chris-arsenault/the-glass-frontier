@@ -10,6 +10,8 @@ export type SummaryContext = {
   transcript: string;
 };
 
+export const NO_LASTING_CHARACTER_CHANGE = 'NO_LASTING_CHANGE';
+
 export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
   const chronicle = context.chronicle;
   const beatsBlock = formatListBlock('Chronicle beats', context.beatLines);
@@ -19,7 +21,9 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
     `You are an archivist finalizing the Glass Frontier chronicle '${chronicle.title}'.`,
     'Write a concise short story (<= 250 words) in third-person past tense.',
     buildCharacterDescription(context.character),
-    `The chronicle ends at ${context.locationName}. Honor every listed beat, skill check, and inventory change.`,
+    `The chronicle ends at ${context.locationName}. This is the final scene location, not a destination. Do not add travel to or from it unless the transcript records that travel.`,
+    'Treat the transcript timeline and recorded deltas as the complete history. Preserve the player\'s explicit decisions and chronology. Do not invent actions, motives, equipment, injuries, weakened abilities, destinations, consequences, or facts.',
+    'Honor every listed beat, skill check, and inventory change. A planned check without a recorded result is not an outcome.',
     beatsBlock,
     skillBlock,
     inventoryBlock,
@@ -40,10 +44,13 @@ export const buildCharacterImpactPrompt = (context: SummaryContext): string => {
   const inventoryBlock = formatListBlock('Inventory changes', context.inventoryHighlights);
   return [
     `Describe the lasting impact on ${characterName} in at most ONE sentence.`,
-    'Write in third-person past tense and only mention major abilities, items, powers, allies, or enemies gained or lost.',
+    'Write in third-person past tense. Mention only a major ability, item, power, ally, or enemy explicitly and durably gained or lost in the transcript or recorded deltas.',
+    `If no qualifying change was explicitly recorded, return exactly ${NO_LASTING_CHARACTER_CHANGE}. Do not infer damage, growth, weakness, trauma, relationships, or consequences.`,
     skillBlock,
     inventoryBlock,
     `Beat recap: ${beats}`,
+    'Transcript timeline:',
+    context.transcript,
   ].join('\n');
 };
 

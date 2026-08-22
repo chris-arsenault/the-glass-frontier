@@ -1,6 +1,11 @@
 export { createOpsStore, type OpsStore } from './opsStore';
 export { useLambdaRuntime } from './pg';
 export { BugReportStore } from './support/BugReportStore';
+export {
+  LlmBudgetStore,
+  type LlmBudgetReservation,
+  type LlmBudgetReservationResult,
+} from './support/LlmBudgetStore';
 export { TokenUsageStore } from './support/TokenUsageStore';
 export { ModelUsageStore, type ModelUsageRecord } from './support/ModelUsageStore';
 export { AuditGroupStore } from './support/audit/AuditGroupStore';

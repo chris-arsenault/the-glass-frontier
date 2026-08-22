@@ -28,6 +28,28 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     character: {
       inventory: [],
       name: 'Vex',
+      nature: {
+        callings: ['Find the tuner who taught them', 'Pay off the Wardens'],
+        drive: 'Be heard by someone who matters',
+        flaw: 'Plays for the room instead of the job',
+        instinct: 'When a crowd turns, they start playing',
+        uniqueThing: 'The last person to hear the drowned choir and walk away',
+      },
+      origin: {
+        allegianceId: '11111111-1111-4111-8111-111111111111',
+        allegianceStance: 'indebted',
+        cultureId: '22222222-2222-4222-8222-222222222222',
+        homelandId: '33333333-3333-4333-8333-333333333333',
+        speciesId: '44444444-4444-4444-8444-444444444444',
+      },
+      skills: {
+        hold_a_hostile_room: {
+          attribute: 'presence',
+          name: 'hold a hostile room',
+          tier: 'artisan',
+          xp: 0,
+        },
+      },
     },
     chronicle: {
       beats: [],
@@ -45,6 +67,7 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
   chronicleStore: {} as GraphContext['chronicleStore'],
   failure: false,
   llm: {} as GraphContext['llm'],
+  llmPlayer: { id: 'player-1', isAdmin: false, name: 'tsonu' },
   modelConfigStore: {} as GraphContext['modelConfigStore'],
   playerIntent: undefined,
   playerMessage: {
@@ -58,6 +81,9 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
   templates: {} as GraphContext['templates'],
   turnId: 'turn-1',
   turnSequence: 1,
-  worldSchemaStore: {} as GraphContext['worldSchemaStore'],
+  worldSchemaStore: {
+    listEntitiesByIds: (ids: string[]) =>
+      Promise.resolve(ids.map((id) => ({ id, name: `entity-${id.slice(0, 4)}` }))),
+  } as unknown as GraphContext['worldSchemaStore'],
   ...overrides,
 });

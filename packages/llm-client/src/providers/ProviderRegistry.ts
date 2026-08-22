@@ -5,6 +5,7 @@ import type { LLMRequest } from '../types';
 import type { IProvider } from './IProvider';
 
 export type ResolvedProviderRequest = {
+  model: CatalogModel;
   provider: IProvider;
   request: LLMRequest;
 };
@@ -64,6 +65,7 @@ export class ProviderRegistry {
       });
     }
     return {
+      model: config,
       provider: this.#getProvider(config),
       request: { ...request, model: config.apiModelId },
     };

@@ -14,6 +14,7 @@ function unsubscribe() {
   return undefined;
 }
 const mocks = vi.hoisted(() => ({
+  chronicleGet: vi.fn(),
   gmPostMessage: vi.fn(),
   gmSetChronicleTargetEnd: vi.fn(),
   progressListener: null as ((event: TurnProgressEvent) => void) | null,
@@ -39,7 +40,11 @@ vi.mock('../src/lib/progressStream', () => ({
   },
 }));
 
-vi.mock('../src/lib/trpcClient', () => ({ trpcClient: {} }));
+vi.mock('../src/lib/trpcClient', () => ({
+  trpcClient: {
+    getChronicle: { query: mocks.chronicleGet },
+  },
+}));
 vi.mock('../src/lib/worldAtlasClient', () => ({
   worldAtlasClient: { getEntity: vi.fn() },
 }));
@@ -65,6 +70,7 @@ const chronicle: Chronicle = {
   entityFocus: { entityScores: {}, tagScores: {} },
   id: CHRONICLE_ID,
   locationName: 'Luminous Quay',
+  openingText: 'You wait beneath the quay lights.',
   playerId: PLAYER_ID,
   status: 'open',
   summaries: [],
@@ -292,5 +298,28 @@ describe('chronicleStore turn handling', () => {
       targetEndTurn: 2,
     });
     expect(useChronicleStore.getState().chronicleRecord?.targetEndTurn).toBe(2);
+  });
+
+  it('hydrates the generated opening instead of presenting the seed as GM dialogue', async () => {
+    const seededChronicle = {
+      ...chronicle,
+      seedText: 'A selection teaser that was never spoken.',
+    };
+    mocks.chronicleGet.mockResolvedValue({
+      character: null,
+      chronicle: seededChronicle,
+      chronicleId: CHRONICLE_ID,
+      locationName: chronicle.locationName,
+      turns: [],
+      turnSequence: -1,
+    });
+
+    await useChronicleStore.getState().hydrateChronicle(CHRONICLE_ID);
+
+    const messages = useChronicleStore.getState().messages;
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.entry.content).toBe(chronicle.openingText);
+    expect(messages[0]?.entry.metadata.tags).toContain('chronicle-opening');
+    expect(messages[0]?.entry.content).not.toBe(seededChronicle.seedText);
   });
 });

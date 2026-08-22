@@ -1,17 +1,19 @@
-import type { ModelConfigStore } from '@glass-frontier/app';
+import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
 import type {
   ChronicleClosureEvent,
   ChronicleSummaryEntry,
 } from '@glass-frontier/dto';
 import type { LLMRequest, LLMResponse, RetryLLMClient } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
-import type { ChronicleStore } from '@glass-frontier/worldstate';
+import type { ChronicleStore, WorldSchemaStore } from '@glass-frontier/worldstate';
 
+import { CanonPipeline } from './canonPipeline';
 import {
   buildBeatLines,
   buildCharacterImpactPrompt,
   buildChronicleStoryPrompt,
   buildTurnArtifacts,
+  NO_LASTING_CHARACTER_CHANGE,
   sanitizeSentence,
   type SummaryContext,
 } from './summaryHelpers';
@@ -21,6 +23,7 @@ type ChronicleSnapshot = NonNullable<Awaited<ReturnType<ChronicleStore['getChron
 type ImplementedSummaryKind = 'chronicle_story' | 'character_bio';
 
 class ChronicleClosureProcessor {
+  readonly #canonPipeline: CanonPipeline;
   readonly #chronicleStore: ChronicleStore;
   readonly #llm: RetryLLMClient;
   readonly #modelConfigStore: ModelConfigStore;
@@ -29,10 +32,18 @@ class ChronicleClosureProcessor {
     chronicleStore: ChronicleStore;
     llmClient: RetryLLMClient;
     modelConfigStore: ModelConfigStore;
+    templateManager: PromptTemplateManager;
+    worldStore: WorldSchemaStore;
   }) {
     this.#chronicleStore = options.chronicleStore;
     this.#llm = options.llmClient;
     this.#modelConfigStore = options.modelConfigStore;
+    this.#canonPipeline = new CanonPipeline({
+      llmClient: options.llmClient,
+      modelConfigStore: options.modelConfigStore,
+      templateManager: options.templateManager,
+      worldStore: options.worldStore,
+    });
   }
 
   async process(event: ChronicleClosureEvent): Promise<void> {
@@ -48,6 +59,11 @@ class ChronicleClosureProcessor {
     if (event.summaryKinds.includes('character_bio')) {
       await this.#runSummary('character_bio', context, event);
     }
+    await this.#canonPipeline.run(snapshot, {
+      id: event.playerId,
+      isAdmin: event.playerIsAdmin,
+      name: event.playerName,
+    });
   }
 
   #assertEventMatchesSnapshot(
@@ -111,6 +127,7 @@ class ChronicleClosureProcessor {
   ): Promise<void> {
     const result = await this.#generateText({
       context,
+      event,
       maxOutputTokens: 550,
       operation: 'chronicle-closer.story',
       prompt: buildChronicleStoryPrompt(context),
@@ -145,6 +162,7 @@ class ChronicleClosureProcessor {
     }
     const result = await this.#generateText({
       context,
+      event,
       maxOutputTokens: 150,
       operation: 'chronicle-closer.character-impact',
       prompt: buildCharacterImpactPrompt(context),
@@ -153,16 +171,22 @@ class ChronicleClosureProcessor {
     if (summary.length === 0) {
       throw new Error('Character impact generation returned an empty response.');
     }
-    const bio = [context.character.bio?.trim(), summary].filter(Boolean).join('\n\n');
+    const hasLastingChange = summary !== NO_LASTING_CHARACTER_CHANGE;
+    const recordedSummary = hasLastingChange
+      ? summary
+      : 'No lasting character change was recorded.';
+    const bio = hasLastingChange
+      ? [context.character.bio?.trim(), summary].filter(Boolean).join('\n\n')
+      : context.character.bio;
     const recorded = await this.#chronicleStore.commitClosureSummary({
-      character: { ...context.character, bio },
+      character: hasLastingChange ? { ...context.character, bio } : undefined,
       chronicleId: context.chronicle.id,
       entry: this.#buildEntry({
         event,
         kind: 'character_bio',
         providerId: result.response.providerId,
         requestId: result.response.requestId,
-        summary,
+        summary: recordedSummary,
       }),
     });
     if (recorded) {
@@ -175,6 +199,7 @@ class ChronicleClosureProcessor {
 
   async #generateText(input: {
     context: SummaryContext;
+    event: ChronicleClosureEvent;
     maxOutputTokens: number;
     operation: string;
     prompt: string;
@@ -198,6 +223,11 @@ class ChronicleClosureProcessor {
         playerId: input.context.chronicle.playerId,
       },
       model,
+      player: {
+        id: input.event.playerId,
+        isAdmin: input.event.playerIsAdmin,
+        name: input.event.playerName,
+      },
       reasoningEffort: 'low',
     };
     const response = await this.#llm.generate(request, 'string');

@@ -16,7 +16,7 @@ import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classif
 import { LocationDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
 import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
-import type { RetryLLMClient } from '@glass-frontier/llm-client';
+import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
 import { formatTurnJobId, isDefined, isNonEmptyString, log } from '@glass-frontier/utils';
 import {
   type ChronicleStore,
@@ -75,6 +75,7 @@ class GmEngine {
     chronicleId: string,
     playerMessage: TranscriptEntry,
     requestId: string,
+    llmPlayer: LLMPlayer,
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
@@ -89,12 +90,16 @@ class GmEngine {
     const turnSequence = chronicleState.turnSequence + 1;
     const turnId = randomUUID();
     const playerId = this.#requirePlayerId(chronicleState);
+    if (llmPlayer.id !== playerId) {
+      throw new Error('Authenticated player does not own this chronicle.');
+    }
     const jobId = formatTurnJobId(chronicleId, turnSequence, requestId);
     const templateRuntime = this.#createTemplateRuntime(playerId);
     const graphInput = this.#buildGraphInput({
       chronicleId,
       chronicleState,
       chronicleStore: this.chronicleStore,
+      llmPlayer,
       playerMessage,
       templateRuntime,
       turnId,
@@ -138,6 +143,7 @@ class GmEngine {
       await this.#emitClosureEvent({
         chronicle: finalContext.chronicleState.chronicle,
         closingTurnSequence: turn.turnSequence,
+        llmPlayer,
       });
     }
 
@@ -250,6 +256,7 @@ class GmEngine {
     chronicleId,
     chronicleState,
     chronicleStore,
+    llmPlayer,
     playerMessage,
     templateRuntime,
     turnId,
@@ -263,7 +270,8 @@ class GmEngine {
     playerMessage: TranscriptEntry;
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
-      chronicleStore: ChronicleStore;
+    chronicleStore: ChronicleStore;
+    llmPlayer: LLMPlayer;
     worldSchemaStore: WorldSchemaStore;
   }): GraphContext {
     return {
@@ -273,6 +281,7 @@ class GmEngine {
       chronicleStore,
       failure: false,
       llm: this.llm,
+      llmPlayer,
       modelConfigStore: this.modelConfigStore,
       playerIntent: undefined,
       playerMessage,
@@ -359,6 +368,7 @@ class GmEngine {
   async #emitClosureEvent(input: {
     chronicle: Chronicle;
     closingTurnSequence: number;
+    llmPlayer: LLMPlayer;
   }): Promise<void> {
     if (this.closureEmitter === undefined) {
       return;
@@ -368,6 +378,8 @@ class GmEngine {
       chronicleId: input.chronicle.id,
       locationName: input.chronicle.locationName,
       playerId: input.chronicle.playerId,
+      playerIsAdmin: input.llmPlayer.isAdmin,
+      playerName: input.llmPlayer.name,
       requestedAt: Date.now(),
       summaryKinds: CLOSURE_SUMMARY_KINDS,
       turnSequence: input.closingTurnSequence,

@@ -16,12 +16,19 @@ export type Prompt = {
   input: PromptInput[];
 };
 
+export type LLMPlayer = {
+  id: string;
+  isAdmin: boolean;
+  name: string;
+};
+
 export type LLMRequest = {
   instructions: string;
   input: PromptInput[];
   maxOutputTokens: number;
   metadata: LoggableMetadata;
   model: string;
+  player: LLMPlayer;
   reasoningEffort: ReasoningEffort;
 };
 

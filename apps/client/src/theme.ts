@@ -4,18 +4,18 @@ import type {} from '@mui/x-data-grid/themeAugmentation';
 // Design tokens aligned with design-tokens.css
 const primaryAccent = '#6c8bff';
 const secondaryAccent = '#4bd4aa';
-const surfaceColor = 'rgb(15, 23, 42)';
-const backgroundColor = '#0f1729';
+const surfaceColor = '#0c1322';
+const backgroundColor = '#070b14';
 
 export const glassFrontierTheme = createTheme({
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: '999px', // --radius-full
-          fontSize: '0.875rem', // --text-sm
+          borderRadius: '0.375rem', // --radius-md
+          fontSize: '0.8125rem', // --text-sm
           fontWeight: 600,
-          padding: '0.5rem 1rem', // --space-2 --space-4
+          padding: '0.35rem 0.85rem',
           textTransform: 'none',
         },
       },
@@ -25,7 +25,7 @@ export const glassFrontierTheme = createTheme({
         root: {
           backgroundColor: 'transparent',
           border: 'none',
-          fontSize: '0.875rem', // --text-sm
+          fontSize: '0.8125rem', // --text-sm
         },
       },
     },
@@ -34,7 +34,7 @@ export const glassFrontierTheme = createTheme({
         root: {
           backgroundColor: surfaceColor,
           backgroundImage: 'none',
-          borderRadius: '0.75rem', // --radius-md
+          borderRadius: '0.5rem', // --radius-lg
         },
       },
     },
@@ -52,32 +52,32 @@ export const glassFrontierTheme = createTheme({
       main: secondaryAccent,
     },
     text: {
-      primary: '#f5f7ff',
-      secondary: '#cbd5f5',
+      primary: '#eef2fa',
+      secondary: '#c4cfe4',
     },
   },
   shape: {
-    borderRadius: 12, // --radius-md in pixels
+    borderRadius: 6, // --radius-md in pixels
   },
   typography: {
     body1: {
-      fontSize: '1rem', // --text-base
+      fontSize: '0.9375rem', // --text-base
     },
     body2: {
-      fontSize: '0.875rem', // --text-sm
+      fontSize: '0.8125rem', // --text-sm
     },
     caption: {
       fontSize: '0.75rem', // --text-xs
     },
-    fontFamily: '"Inter", "Segoe UI", sans-serif',
-    fontSize: 16, // --text-base
+    fontFamily: '"Inter", system-ui, "Segoe UI", sans-serif',
+    fontSize: 15,
     h1: {
-      fontSize: '1.5rem', // --text-xl
+      fontSize: '1.375rem', // --text-xl
       fontWeight: 600,
-      letterSpacing: '0.02em',
+      letterSpacing: '0.01em',
     },
     h2: {
-      fontSize: '1.25rem', // --text-lg
+      fontSize: '1.125rem', // --text-lg
       fontWeight: 600,
     },
   },

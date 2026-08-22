@@ -1,4 +1,5 @@
 import type {
+  CanonSource,
   HardState,
   HardStateKind,
   HardStateLink,
@@ -23,6 +24,13 @@ export type EntityListInput = {
 export type NeighborListInput = EntityListInput & {
   id: string;
   maxHops?: number;
+};
+
+export type EntityStats = {
+  id: string;
+  source: CanonSource;
+  loreCount: number;
+  edgeCount: number;
 };
 
 type EntityRow = {
@@ -213,6 +221,48 @@ export class EntityReader {
       return null;
     }
     return toEntity(row, await this.#listLinks(row.id));
+  }
+
+  /**
+   * Every entity whose display name matches, case-insensitively, most
+   * prominent first. Closure-time dedup: a candidate new entity that matches
+   * an existing name becomes an append to that entity, not a second node.
+   */
+  async findEntitiesByName(input: { name: string }): Promise<HardState[]> {
+    const result = await this.#pool.query<EntityRow>(
+      `${ENTITY_SELECT}
+       WHERE lower(e.name) = lower($1)
+       ORDER BY wp.rank DESC, e.created_at ASC`,
+      [input.name.trim()]
+    );
+    const links = await this.#listLinksForMany(result.rows.map((row) => row.id));
+    return result.rows.map((row) => toEntity(row, links.get(row.id) ?? []));
+  }
+
+  /** Provenance plus accumulation counts, for derived description and prominence. */
+  async listEntityStats(ids: string[]): Promise<EntityStats[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const result = await this.#pool.query<{
+      id: string;
+      source: CanonSource;
+      lore_count: string;
+      edge_count: string;
+    }>(
+      `SELECT e.id, e.source,
+         (SELECT count(*) FROM lore_fragment lf WHERE lf.entity_id = e.id) AS lore_count,
+         (SELECT count(*) FROM edge ed WHERE ed.src_id = e.id OR ed.dst_id = e.id) AS edge_count
+       FROM entity e
+       WHERE e.id = ANY($1::uuid[])`,
+      [ids]
+    );
+    return result.rows.map((row) => ({
+      edgeCount: Number(row.edge_count),
+      id: row.id,
+      loreCount: Number(row.lore_count),
+      source: row.source,
+    }));
   }
 
   async listEntities(input?: EntityListInput): Promise<HardState[]> {

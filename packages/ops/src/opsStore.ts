@@ -14,6 +14,7 @@ import { AuditGroupStore } from './support/audit/AuditGroupStore';
 import { AuditLogStore } from './support/audit/AuditLogStore';
 import { AuditReviewStore } from './support/audit/AuditReviewStore';
 import { BugReportStore } from './support/BugReportStore';
+import { LlmBudgetStore } from './support/LlmBudgetStore';
 import { ModelUsageStore } from './support/ModelUsageStore';
 import { TokenUsageStore } from './support/TokenUsageStore';
 
@@ -43,6 +44,7 @@ export class OpsStore {
   readonly auditLogStore: AuditLogStore;
   readonly auditReviewStore: AuditReviewStore;
   readonly bugReportStore: BugReportStore;
+  readonly llmBudgetStore: LlmBudgetStore;
   readonly tokenUsageStore: TokenUsageStore;
   readonly modelUsageStore: ModelUsageStore;
 
@@ -57,6 +59,7 @@ export class OpsStore {
     this.auditLogStore = new AuditLogStore({ pool });
     this.auditReviewStore = new AuditReviewStore({ pool });
     this.bugReportStore = new BugReportStore({ pool });
+    this.llmBudgetStore = new LlmBudgetStore(pool);
     this.tokenUsageStore = new TokenUsageStore({ pool });
     this.modelUsageStore = new ModelUsageStore(pool);
   }

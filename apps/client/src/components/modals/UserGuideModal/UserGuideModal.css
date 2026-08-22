@@ -5,71 +5,78 @@
 .user-guide-body {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-3);
   max-height: min(70vh, 640px);
   overflow-y: auto;
 }
 
 .user-guide-intro {
   margin: 0;
-  color: #cbd5f5;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .user-guide-accordion {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
 }
 
 .user-guide-section {
-  background: rgb(15 23 42 / 80%);
-  border: 1px solid rgb(99 102 241 / 25%);
-  border-radius: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .user-guide-summary {
   display: flex;
   width: 100%;
-  padding: 1rem;
+  padding: var(--space-3) var(--space-1);
   color: inherit;
   background: none;
   align-items: flex-start;
   border: none;
   cursor: pointer;
-  gap: 1rem;
+  gap: var(--space-3);
   justify-content: space-between;
   text-align: left;
 }
 
 .user-guide-summary h3 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--space-1);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: color 120ms ease;
+}
+
+.user-guide-summary:hover h3 {
+  color: var(--text-accent);
 }
 
 .user-guide-summary p {
   margin: 0;
-  color: #cbd5f5;
-  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
 }
 
 .user-guide-summary span {
-  font-size: 1.5rem;
+  color: var(--text-muted);
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
 .user-guide-content {
-  padding: 0 1rem 1rem;
-  border-top: 1px solid rgb(99 102 241 / 20%);
+  padding: 0 var(--space-1) var(--space-3);
 }
 
 .user-guide-content ol {
   display: flex;
   margin: 0;
-  color: #e2e8f0;
+  color: var(--text-secondary);
   flex-direction: column;
-  gap: 0.35rem;
-  padding-left: 1.2rem;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  padding-left: var(--space-4);
 }
 
 .user-guide-content li {
-  line-height: 1.4;
+  line-height: 1.5;
 }

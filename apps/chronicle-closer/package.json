@@ -6,18 +6,21 @@
   "scripts": {
     "build": "tsup",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "tsc -p test/tsconfig.json --pretty false && vitest run"
   },
   "dependencies": {
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
     "@glass-frontier/worldstate": "workspace:*",
-    "@glass-frontier/utils": "workspace:*"
+    "@glass-frontier/utils": "workspace:*",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
   }
 }

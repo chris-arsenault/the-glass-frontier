@@ -1,5 +1,6 @@
 import type { IntentType, PromptTemplateId, TranscriptEntry } from '@glass-frontier/dto';
 import { PromptComposer } from '@glass-frontier/gm-api/prompts/prompts';
+import { isLlmBudgetExceededError } from '@glass-frontier/llm-client';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types';
@@ -97,6 +98,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
           turnId: context.turnId,
           turnSequence: String(context.turnSequence)
         },
+        player: context.llmPlayer,
         reasoningEffort: NARRATIVE_REASONING_EFFORT,
       }, 'string');
       const cleanedContent = this.#cleanNarration(narration.message);
@@ -111,6 +113,9 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       };
 
     } catch (error) {
+      if (isLlmBudgetExceededError(error)) {
+        throw error;
+      }
       console.error('[IntentHandlerNode] Narrative generation failed:', {
         error: error instanceof Error ? error.message : String(error),
         nodeId: this.options.id,

@@ -29,6 +29,21 @@ afterAll(async () => {
 });
 
 describe('Chronicle location', () => {
+  it('persists the generated opening separately from the selected seed', async () => {
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      locationName: 'Opening Test Locale',
+      openingText: 'You hear the gantry alarm begin above you.',
+      playerId: TEST_PLAYER_ID,
+      seedText: 'A gantry alarm interrupts the shift.',
+      title: 'Opening Test',
+    });
+
+    const reloaded = await worldState.chronicles.getChronicle(chronicle.id);
+
+    expect(reloaded?.openingText).toBe('You hear the gantry alarm begin above you.');
+    expect(reloaded?.seedText).toBe('A gantry alarm interrupts the shift.');
+  });
+
   it('starts somewhere the world has never heard of', async () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
       characterId: undefined,

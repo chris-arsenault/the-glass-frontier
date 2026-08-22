@@ -9,7 +9,7 @@ test.describe('Landing page', () => {
 
     await expect(
       page.getByRole('heading', {
-        name: 'Stay briefed before you dive into your next chronicle.',
+        name: 'Welcome back',
       })
     ).toBeVisible();
 

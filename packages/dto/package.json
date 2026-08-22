@@ -25,6 +25,7 @@
   "author": "Tsonu",
   "license": "Polyform-Noncommercial-1.0.0",
   "dependencies": {
+    "@glass-frontier/utils": "workspace:*",
     "zod": "^4.1.12"
   }
 }

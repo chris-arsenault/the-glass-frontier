@@ -38,15 +38,26 @@
       "reasoningEfforts": ["low", "medium", "high"]
     },
     {
-      "apiModelId": "claude-sonnet-5",
+      "apiModelId": "us.anthropic.claude-sonnet-5",
       "contextWindow": 1000000,
-      "costPer1kInput": 0.002,
-      "costPer1kOutput": 0.01,
+      "costPer1kInput": 0.003,
+      "costPer1kOutput": 0.015,
       "displayName": "Claude Sonnet 5",
       "maxOutputTokens": 128000,
       "modelId": "claude-sonnet-5",
-      "providerId": "anthropic",
+      "providerId": "bedrock",
       "reasoningEfforts": ["low", "medium", "high"]
+    },
+    {
+      "apiModelId": "us.amazon.nova-pro-v1:0",
+      "contextWindow": 300000,
+      "costPer1kInput": 0.0008,
+      "costPer1kOutput": 0.0032,
+      "displayName": "Amazon Nova Pro",
+      "maxOutputTokens": 5000,
+      "modelId": "amazon-nova-pro",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
     },
     {
       "apiModelId": "us.amazon.nova-2-lite-v1:0",

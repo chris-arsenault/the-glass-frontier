@@ -1,0 +1,37 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'reflection-weaver')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "MOCK REFLECTION: The Wardens’ old warning settles over the signal like frost."
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "MOCK REFLECTION: The Wardens’ old warning settles over the signal like frost.",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      }
+    }
+  }
+}

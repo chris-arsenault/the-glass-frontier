@@ -241,7 +241,7 @@
     "id": "2026-08-20-llm-provider-contracts",
     "releasedAt": "2026-08-20",
     "summary": "Updated models and provider contracts",
-    "details": "Replaced the stale model list with GPT-5.6, Claude Sonnet 5, and Amazon Nova 2 Lite; centralized model IDs, limits, capabilities, and pricing in one catalog; and updated OpenAI, Anthropic, and Bedrock requests to their current reasoning and structured-output contracts.",
+    "details": "Replaced the stale model list with GPT-5.6, Claude Sonnet 5, Amazon Nova Pro, and Amazon Nova 2 Lite; centralized model IDs, limits, capabilities, and pricing in one catalog; routed Claude through Amazon Bedrock instead of a separate Anthropic API connection; and retained model-specific reasoning and structured-output contracts.",
     "type": "improvement"
   },
   {
@@ -298,6 +298,48 @@
     "releasedAt": "2026-08-22",
     "summary": "The Kaleidos system's full canon is now imported",
     "details": "The world graph now carries the complete Glass Frontier canon from its authored source: 303 entities with their fact cards, 693 dated relationships, and over seventeen hundred lore passages spanning settlements, stations, factions, creatures, incidents, and the people of the shattered ring. The Atlas, chronicle wizard, and the GM's per-turn context all draw from this material. Deployment loads this production dataset separately from test fixtures and applies later source revisions as partial updates, preserving omitted records and relationships changed through play.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-22-application-shell-redesign",
+    "releasedAt": "2026-08-22",
+    "summary": "A crisper, denser application shell",
+    "details": "The portal now fills the whole window like an application instead of floating as a rounded card: a slim top bar carries the wordmark, bug reports, the guide, and the player menu, while each page scrolls inside its own panel. The landing page traded its hero banner for a compact dashboard of characters, chronicles, recent releases, and completed runs. The chat canvas stretches to use the full height of the screen, the chronicle wizard gained a numbered stepper, and panels, chips, and buttons across the app were tightened onto hairline borders and smaller corners to match the turn view's density. Also fixed the composer's screen-reader label rendering as visible text and the unstyled refresh button on the World Atlas.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-22-chronicle-prompt-coherence",
+    "releasedAt": "2026-08-22",
+    "summary": "Chronicle responses now follow player intent and established events",
+    "details": "New chronicles begin with a generated scene instead of presenting the selected seed as GM dialogue. Intent and beat decisions now use the recent turn record, narration stays in second person without adding actions or possessions for the player, check outcomes carry the planned advantage state, and closing summaries no longer invent travel or lasting character changes.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2026-08-22-atlas-drilldown",
+    "releasedAt": "2026-08-22",
+    "summary": "The World Atlas is now an actual atlas",
+    "details": "The Atlas opens on an orbital chart of the Kaleidos system drawn from canon itself: the sun, the eight planets ordered by their inner-of relations, moons, rings, and how many charted places each body carries. Clicking a body drills into what orbits it, what sits on its surface, and what has been charted within, all the way down to a single settlement — every entity page carries breadcrumbs back up the chain, fact cards, who and what is present there grouped by kind, relationships organized by category, and lore as an expandable reading list. A gazetteer tree and a kind-colored registry cover everything the map cannot place. The chronicle wizard's anchor step now groups candidates by kind with prominence badges instead of an unordered card pile.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-22-player-llm-budgets",
+    "releasedAt": "2026-08-22",
+    "summary": "Added monthly player limits for model usage",
+    "details": "Every model request now carries the player's Cognito username into Amazon Bedrock's request metadata and is checked against a calendar-month spending limit before invocation. Players receive a $10 monthly allowance, while members of the existing admin role receive $50. Concurrent requests reserve their estimated maximum cost transactionally, then replace that reservation with the provider's metered token cost so parallel turns cannot race past the limit.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-22-closure-world-canon",
+    "releasedAt": "2026-08-22",
+    "summary": "Closed chronicles now write their stories into world canon",
+    "details": "When a chronicle closes, the archivist reviews its transcript and records the outcome in the world graph. Canon entities that were central to the story receive a lore fragment recording what happened to them, named people, places, and things the story invented become new world entities with their own founding lore, and relationships the story established become edges in the graph. Play-born entities carry a living description recomputed from everything recorded about them, and grow in prominence as lore and connections accumulate. Generic props never qualify: a named sword can enter canon, a plain knife cannot.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-22-guided-character-creation",
+    "releasedAt": "2026-08-22",
+    "summary": "Character creation is a guided six-step build with real limits",
+    "details": "The one-page character form is now a wizard. You pick a species, culture, homeland and faction allegiance from world canon rather than typing them, choose an archetype preset that fills in a coherent starting spread, and write the parts only you can: two callings, a drive, a flaw, a standing instinct, and one thing true of your character and nobody else alive. Attributes and skills now have a budget — two attributes at advanced, an optional superior paid for with one rudimentary flaw, and exactly three declared skills at one artisan and two apprentice — enforced both in the form and on the server, which now builds the character record itself instead of trusting the browser. Skills are named as things your character does rather than disciplines. All of it reaches the GM: narration presses on your flaw, options are framed against your callings, and closing turns say where those callings ended up. Starting skill ratings also now apply correctly on the first roll, where a naming mismatch used to silently drop them to untrained.",
     "type": "feature"
   }
 ]

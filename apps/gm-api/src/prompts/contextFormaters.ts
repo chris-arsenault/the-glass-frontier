@@ -42,14 +42,38 @@ export function trimBeatsList(beats: ChronicleBeat[]): Array<{
     });
 }
 
+/** The canon entities behind a character's origin ids, resolved to names. */
+export type OriginNames = {
+  allegiance: string | undefined;
+  culture: string | undefined;
+  homeland: string | undefined;
+  species: string | undefined;
+};
+
 // Formatters
-export function formatCharacter(character: Character | null | undefined): Record<string, unknown> {
+export function formatCharacter(
+  character: Character,
+  originNames: OriginNames
+): Record<string, unknown> {
   return {
-    archetype: character?.archetype,
-    attributes: character?.attributes,
-    name: character?.name,
-    pronouns: character?.pronouns,
-    skills: trimSkillsList(Object.values(character?.skills ?? {})),
+    archetype: character.archetype,
+    attributes: character.attributes,
+    bio: character.bio,
+    callings: character.nature.callings,
+    drive: character.nature.drive,
+    flaw: character.nature.flaw,
+    instinct: character.nature.instinct,
+    name: character.name,
+    origin: {
+      allegiance: originNames.allegiance,
+      allegianceStance: character.origin.allegianceStance,
+      culture: originNames.culture,
+      homeland: originNames.homeland,
+      species: originNames.species,
+    },
+    pronouns: character.pronouns,
+    skills: trimSkillsList(Object.values(character.skills)),
+    uniqueThing: character.nature.uniqueThing,
   };
 }
 
@@ -75,11 +99,18 @@ export function formatSkillCheck(
   plan: SkillCheckPlan | null | undefined,
   result: SkillCheckResult | null | undefined
 ): Record<string, unknown> {
+  const planDetails: Partial<SkillCheckPlan> = plan ?? {};
+  const resultDetails: Partial<SkillCheckResult> = result ?? {};
   return {
-    advantage: result?.advantage,
-    outcome: result?.outcomeTier,
-    riskLevel: plan?.riskLevel,
-    skill: plan?.skill,
+    attribute: planDetails.attribute,
+    complicationSeeds: planDetails.complicationSeeds ?? [],
+    outcome: resultDetails.outcomeTier,
+    plannedAdvantage: planDetails.advantage,
+    requiresCheck: planDetails.requiresCheck,
+    resultAdvantage: resultDetails.advantage,
+    resultDisadvantage: resultDetails.disadvantage,
+    riskLevel: planDetails.riskLevel,
+    skill: planDetails.skill,
   };
 }
 
@@ -100,4 +131,3 @@ export function formatInventoryItemDetail(item: InventoryEntry): Record<string, 
     quantity: item.quantity,
   };
 }
-

@@ -25,6 +25,8 @@ export const Chronicle = z.object({
   /** Where the chronicle is now. A name, nothing more. */
   locationName: z.string().min(1),
   metadata: Metadata.optional(),
+  /** The GM-authored scene opener. The seed remains selection copy only. */
+  openingText: z.string(),
   playerId: z.string().min(1),
   seedText: z.string().optional(),
   status: z.enum(['open', 'closed']).default('open'),

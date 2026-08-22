@@ -6,9 +6,9 @@ import {
 } from '@glass-frontier/app';
 import type { ChronicleClosureEvent } from '@glass-frontier/dto';
 import { ChronicleClosureEventSchema } from '@glass-frontier/dto';
-import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
+import { createLLMClient, loadOpenAiApiKeyFromSecrets } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
-import { createChronicleStore } from '@glass-frontier/worldstate';
+import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
 import type { SQSBatchResponse, SQSHandler, SQSRecord } from 'aws-lambda';
 
 import { ChronicleClosureProcessor } from './processor';
@@ -21,13 +21,15 @@ const initializeProcessor = async (): Promise<ChronicleClosureProcessor> => {
     ? createLambdaPool()
     : createPool({ connectionString: requireDatabaseUrl() });
   if (lambdaRuntime) {
-    await loadLlmApiKeysFromSecrets();
+    await loadOpenAiApiKeyFromSecrets();
   }
   const appStore = createAppStore({ pool });
   return new ChronicleClosureProcessor({
     chronicleStore: createChronicleStore({ pool }),
     llmClient: createLLMClient({ pool }),
     modelConfigStore: appStore.modelConfigStore,
+    templateManager: appStore.promptTemplateManager,
+    worldStore: createWorldSchemaStore({ pool }),
   });
 };
 

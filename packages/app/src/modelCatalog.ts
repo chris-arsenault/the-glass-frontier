@@ -1,7 +1,7 @@
 import catalog from './modelCatalog.json';
 
 export type ReasoningEffort = 'low' | 'medium' | 'high';
-export type ModelProviderId = 'anthropic' | 'bedrock' | 'openai';
+export type ModelProviderId = 'bedrock' | 'openai';
 
 export type CatalogModel = {
   apiModelId: string;

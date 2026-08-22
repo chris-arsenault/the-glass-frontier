@@ -2,11 +2,12 @@ import type { Character, Chronicle, ChronicleSummaryEntry, Turn } from '@glass-f
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
+import { persistCharacter } from './characterPersistence';
 import { ChronicleTurnPersistence } from './chronicleTurnPersistence';
 import { upsertNodeIdentity } from './nodeIdentity';
 import { createPool, withTransaction } from './pg';
 import type { ChronicleSnapshot, ChronicleStore } from './types';
-import { isNonEmptyString } from './utils';
+import { isNonEmptyString, serializeJson } from './utils';
 
 const ensureInventory = (character: Character): Character => {
   if (character.inventory !== undefined) {
@@ -32,8 +33,6 @@ const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
     summaries,
   };
 };
-
-const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
 
 type SessionStateRow = {
   character_state: Character | null;
@@ -74,6 +73,7 @@ class PostgresChronicleStore implements ChronicleStore {
     locationName: string;
     locationId?: string | null;
     characterId?: string;
+    openingText?: string;
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
@@ -312,6 +312,7 @@ class PostgresChronicleStore implements ChronicleStore {
       locationName: string;
       locationId?: string | null;
       characterId?: string;
+      openingText?: string;
       title?: string;
       status?: Chronicle['status'];
       seedText?: string | null;
@@ -331,6 +332,7 @@ class PostgresChronicleStore implements ChronicleStore {
       id: chronicleId,
       locationId: params.locationId ?? undefined,
       locationName: params.locationName,
+      openingText: params.openingText ?? '',
       playerId: params.playerId,
       seedText: params.seedText ?? undefined,
       status: params.status ?? 'open',
@@ -358,36 +360,7 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async #persistCharacter(client: PoolClient, character: Character): Promise<void> {
     await this.#assertPlayerExists(character.playerId, client);
-    await upsertNodeIdentity(client, character.id, 'character');
-    await client.query(
-      `INSERT INTO character (
-         id, player_id, name, tags, archetype, pronouns, bio,
-         attributes, skills, inventory, momentum, props, created_at, updated_at
-       ) VALUES (
-         $1::uuid, $2, $3, $4::text[], $5, $6, $7,
-         $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, now(), now()
-       ) ON CONFLICT (id) DO UPDATE SET
-         player_id = EXCLUDED.player_id, name = EXCLUDED.name,
-         tags = EXCLUDED.tags, archetype = EXCLUDED.archetype,
-         pronouns = EXCLUDED.pronouns, bio = EXCLUDED.bio,
-         attributes = EXCLUDED.attributes, skills = EXCLUDED.skills,
-         inventory = EXCLUDED.inventory, momentum = EXCLUDED.momentum,
-         props = EXCLUDED.props, updated_at = now()`,
-      [
-        character.id,
-        character.playerId,
-        character.name,
-        character.tags ?? [],
-        character.archetype,
-        character.pronouns,
-        character.bio ?? null,
-        serializeJson(character.attributes),
-        serializeJson(character.skills),
-        serializeJson(character.inventory),
-        serializeJson(character.momentum),
-        serializeJson(character),
-      ]
-    );
+    await persistCharacter(client, character);
   }
 
   async #persistChronicle(client: PoolClient, chronicle: Chronicle): Promise<void> {

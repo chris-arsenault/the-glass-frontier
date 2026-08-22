@@ -27,6 +27,7 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
       const body = base64Url({
         'cognito:groups': normalizedGroups,
         sub: 'playwright-e2e',
+        username: 'playwright-e2e',
       });
       const idToken = `${header}.${body}.signature`;
       const accessToken = `${header}.${base64Url({
@@ -34,6 +35,7 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
         'cognito:groups': normalizedGroups,
         sub: 'playwright-e2e',
         token_use: 'access',
+        username: 'playwright-e2e',
       })}.`;
       module.useAuthStore.setState({
         challengeUser: null,

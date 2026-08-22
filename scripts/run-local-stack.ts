@@ -33,7 +33,6 @@ const MOCK_ENV: Record<string, string> = {
 
 const LIVE_OPENAI_ENV: Record<string, string> = {
   ...MOCK_ENV,
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '',
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? 'test',
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? 'test',
   OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? 'https://api.openai.com/v1',

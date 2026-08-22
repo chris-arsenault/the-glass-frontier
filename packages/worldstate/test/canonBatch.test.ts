@@ -549,3 +549,82 @@ describe('World lore', () => {
     expect(grouped.get(result.entityIdsByRef.b)?.[0]?.title).toBe('Second Tale');
   });
 });
+
+describe('Closure support queries', () => {
+  it('finds entities by name across kinds, most prominent first', async () => {
+    await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'npc', name: 'The Warden', prominence: 'marginal', subkind: 'official' },
+          { kind: 'faction', name: 'the warden', prominence: 'renowned' },
+          { kind: 'npc', name: 'Someone Else', subkind: 'worker' },
+        ],
+      })
+    );
+
+    const matches = await worldState.world.findEntitiesByName({ name: ' The Warden ' });
+
+    expect(matches.map((entity) => entity.kind)).toEqual(['faction', 'npc']);
+  });
+
+  it('reports source, lore, and edge counts per entity', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'npc', name: 'Counted', ref: 'subject', subkind: 'specialist' },
+          { kind: 'faction', name: 'Counters', ref: 'others' },
+        ],
+        lore: [
+          { entity: { ref: 'subject' }, prose: 'First tale.', title: 'One' },
+          { entity: { ref: 'subject' }, prose: 'Second tale.', title: 'Two' },
+        ],
+        relationships: [
+          { dst: { ref: 'others' }, relationship: 'member_of', src: { ref: 'subject' } },
+        ],
+        source: 'play',
+      })
+    );
+
+    const stats = await worldState.world.listEntityStats([
+      result.entityIdsByRef.subject,
+      result.entityIdsByRef.others,
+    ]);
+    const subject = stats.find((entry) => entry.id === result.entityIdsByRef.subject);
+    const others = stats.find((entry) => entry.id === result.entityIdsByRef.others);
+
+    expect(subject).toEqual({
+      edgeCount: 1,
+      id: result.entityIdsByRef.subject,
+      loreCount: 2,
+      source: 'play',
+    });
+    expect(others).toEqual({
+      edgeCount: 1,
+      id: result.entityIdsByRef.others,
+      loreCount: 0,
+      source: 'play',
+    });
+  });
+
+  it('finds the most recent batch for a source and sourceId', async () => {
+    await worldState.world.commitBatch(
+      proposal({
+        entities: [{ kind: 'npc', name: 'Batched', subkind: 'courier' }],
+        source: 'play',
+        sourceId: 'chronicle-1',
+      })
+    );
+
+    const found = await worldState.world.findBatch({
+      source: 'play',
+      sourceId: 'chronicle-1',
+    });
+    const missing = await worldState.world.findBatch({
+      source: 'play',
+      sourceId: 'chronicle-2',
+    });
+
+    expect(found).not.toBeNull();
+    expect(missing).toBeNull();
+  });
+});

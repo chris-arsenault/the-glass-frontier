@@ -45,7 +45,6 @@ export function SessionManager() {
   const chronicleCharacterId = useChronicleStore((state) => state.character?.id ?? null);
   const selectedCharacterId = useSelectedCharacter()?.id ?? null;
   const momentumTrend = useChronicleStore((state) => state.momentumTrend);
-  const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
   const clearActiveChronicle = useChronicleStore((state) => state.clearActiveChronicle);
   const deleteChronicleRecord = useChronicleStore((state) => state.deleteChronicle);
   const [isWorking, setIsWorking] = useState(false);
@@ -188,7 +187,11 @@ export function SessionManager() {
             ) : null}
           </div>
           <div className="session-manager-section-controls">
-            <button type="button" className="chip-button" onClick={openCreateCharacterModal}>
+            <button
+              type="button"
+              className="chip-button"
+              onClick={() => void navigate('/character/new')}
+            >
               New Character
             </button>
           </div>

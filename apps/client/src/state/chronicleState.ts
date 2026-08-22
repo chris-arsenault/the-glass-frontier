@@ -1,6 +1,7 @@
 import type {
   Attribute,
   Character,
+  CharacterDraft,
   Chronicle,
   ChronicleBeat,
   Intent,
@@ -157,7 +158,7 @@ export type ChronicleStore = {
   setPreferredCharacterId: (characterId: string | null) => void;
   refreshPlayerResources: () => Promise<void>;
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
-  createCharacterProfile: (draft: CharacterCreationDraft) => Promise<void>;
+  createCharacterProfile: (draft: CharacterDraft) => Promise<void>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
   clearActiveChronicle: () => void;
   setChronicleWrapTarget: (shouldWrap: boolean) => Promise<void>;
@@ -165,14 +166,6 @@ export type ChronicleStore = {
   loadPlayerSettings: () => Promise<void>;
   updatePlayerSettings: (settings: PlayerSettings) => Promise<void>;
 } & ChronicleState
-
-export type CharacterCreationDraft = {
-  name: string;
-  archetype: string;
-  pronouns: string;
-  attributes: Character['attributes'];
-  skills: Character['skills'];
-}
 
 export type ChronicleSeedCreationDetails = {
   anchorEntityId?: string | null;

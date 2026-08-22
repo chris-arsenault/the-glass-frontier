@@ -5,28 +5,26 @@
 
 .skill-check-icon {
   display: inline-flex;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
   padding: 0;
   color: var(--text-accent);
-  background: rgb(15 23 42 / 80%);
+  background: var(--surface-tertiary);
   align-items: center;
-  border: none;
-  border-radius: var(--radius-full);
-  box-shadow: 0 0 0 1px rgb(148 163 184 / 20%);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   justify-content: center;
-  transition: box-shadow 120ms ease, transform 120ms ease;
+  transition: border-color 120ms ease, color 120ms ease;
 }
 
 .skill-check-icon:hover {
-  box-shadow: 0 0 0 1px var(--border-accent), var(--shadow-sm);
-  transform: translateY(-1px);
+  border-color: var(--border-accent);
 }
 
 .skill-check-icon svg {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .skill-check-tooltip {
@@ -35,20 +33,19 @@
   right: 0;
   padding: var(--space-3);
   color: var(--text-primary);
-  background: var(--surface-primary);
-  backdrop-filter: blur(12px);
-  border: none;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  box-shadow:
-    0 0 0 1px var(--border-accent),
-    var(--shadow-lg);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-xs);
   min-width: 220px;
   opacity: 0;
   pointer-events: none;
+  text-transform: none;
   transform: translateY(-4px);
   transition:
-    opacity 140ms ease,
-    transform 140ms ease;
+    opacity 120ms ease,
+    transform 120ms ease;
   z-index: 20;
 }
 
@@ -61,8 +58,9 @@
 
 .skill-check-title {
   margin: 0 0 var(--space-2);
-  color: var(--text-accent);
-  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -72,8 +70,8 @@
   margin: 0;
   padding: 0;
   flex-direction: column;
-  font-size: var(--text-sm);
-  gap: var(--space-2);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
 }
 
 .skill-check-list div {
@@ -92,4 +90,5 @@
 .skill-check-list dd {
   margin: 0;
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }

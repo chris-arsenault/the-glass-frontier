@@ -31,6 +31,9 @@ export class CheckRunnerNode implements GraphNode {
       riskLevel: plan.riskLevel,
       skill: plan.skill,
     };
+    if (plan.advantage === 'advantage' || plan.advantage === 'disadvantage') {
+      input.flags.push(plan.advantage);
+    }
     if (plan.creativeSpark === true) {
       input.flags.push('creative-spark');
     }

@@ -1,3 +1,4 @@
+import { toSnakeCase } from '@glass-frontier/utils';
 import { z } from 'zod';
 
 /** constants + validators */
@@ -102,6 +103,10 @@ export const ATTRIBUTE_TIER_MODIFIER = {
 
 AttributeTierModifier.parse(ATTRIBUTE_TIER_MODIFIER);
 
+export const ATTRIBUTE_MODIFIER_LOOKUP = new Map<AttributeTier, number>(
+  Object.entries(ATTRIBUTE_TIER_MODIFIER) as Array<[AttributeTier, number]>,
+);
+
 /** Character attributes object: every attribute must have a tier */
 export const CharacterAttributes = z.object({
   attunement: AttributeTier,
@@ -145,6 +150,10 @@ export const SKILL_TIER_MODIFIER = {
 
 SkillTierModifier.parse(SKILL_TIER_MODIFIER);
 
+export const SKILL_MODIFIER_LOOKUP = new Map<SkillTier, number>(
+  Object.entries(SKILL_TIER_MODIFIER) as Array<[SkillTier, number]>,
+);
+
 /** MomentumState */
 export const MomentumState = z
   .object({
@@ -165,6 +174,13 @@ export const MomentumState = z
     }
   });
 export type MomentumState = z.infer<typeof MomentumState>;
+
+/**
+ * The key a skill is stored and looked up under. Skill names are free text, so
+ * `Read Fault Bands` declared at creation and `read fault bands` chosen by the
+ * check planner have to resolve to the same skill.
+ */
+export const skillKey = (name: string): string => toSnakeCase(name);
 
 /** Skill */
 export const Skill = z.object({

@@ -33,17 +33,14 @@ resource "aws_iam_role_policy_attachment" "database_lambda_vpc_access" {
 
 data "aws_iam_policy_document" "llm_api_secrets" {
   statement {
-    actions = ["secretsmanager:GetSecretValue"]
-    resources = [
-      data.aws_secretsmanager_secret.anthropic_api_key.arn,
-      data.aws_secretsmanager_secret.openai_api_key.arn,
-    ]
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = [data.aws_secretsmanager_secret.openai_api_key.arn]
   }
 }
 
 resource "aws_iam_policy" "llm_api_secrets" {
   name        = "${local.name_prefix}-llm-api-secrets"
-  description = "Allow narrative Lambdas to read the configured LLM API keys."
+  description = "Allow narrative Lambdas to read the configured OpenAI API key."
   policy      = data.aws_iam_policy_document.llm_api_secrets.json
 }
 
@@ -144,7 +141,7 @@ resource "aws_iam_role_policy_attachment" "gm_progress_queue" {
   policy_arn = aws_iam_policy.chronicle_progress_queue.arn
 }
 
-# Bedrock model invocation permissions for Nova 2 Lite
+# Bedrock model invocation permissions for the configured Claude and Nova models
 # Cross-region inference profiles can route to any region, so we use * for region
 data "aws_iam_policy_document" "bedrock_invoke" {
   statement {
@@ -153,15 +150,19 @@ data "aws_iam_policy_document" "bedrock_invoke" {
       "bedrock:InvokeModelWithResponseStream"
     ]
     resources = [
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.anthropic.claude-sonnet-5",
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-2-lite-v1:0",
-      "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0"
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-pro-v1:0",
+      "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5",
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0"
     ]
   }
 }
 
 resource "aws_iam_policy" "bedrock_invoke" {
   name        = "${local.name_prefix}-bedrock-invoke"
-  description = "Allow lambdas to invoke Bedrock Nova models."
+  description = "Allow narrative Lambdas to invoke configured Bedrock models."
   policy      = data.aws_iam_policy_document.bedrock_invoke.json
 }
 
@@ -172,5 +173,10 @@ resource "aws_iam_role_policy_attachment" "chronicle_bedrock" {
 
 resource "aws_iam_role_policy_attachment" "gm_bedrock" {
   role       = aws_iam_role.lambda["gm_lambda"].name
+  policy_arn = aws_iam_policy.bedrock_invoke.arn
+}
+
+resource "aws_iam_role_policy_attachment" "chronicle_closer_bedrock" {
+  role       = aws_iam_role.lambda["chronicle_closer_lambda"].name
   policy_arn = aws_iam_policy.bedrock_invoke.arn
 }

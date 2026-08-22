@@ -2,10 +2,6 @@ data "aws_secretsmanager_secret" "openai_api_key" {
   name = "openai-api-key"
 }
 
-data "aws_secretsmanager_secret" "anthropic_api_key" {
-  name = "anthropic-api-key"
-}
-
 locals {
   auth_env_vars = {
     COGNITO_APP_CLIENT_ID = aws_cognito_user_pool_client.this.id
@@ -22,9 +18,8 @@ locals {
     security_group_ids = [module.ctx.vpc.lambda_sg_id]
     subnet_ids         = module.ctx.vpc.private_subnet_ids
   }
-  llm_secret_env_vars = {
-    ANTHROPIC_API_KEY_SECRET_ARN = data.aws_secretsmanager_secret.anthropic_api_key.arn
-    OPENAI_API_KEY_SECRET_ARN    = data.aws_secretsmanager_secret.openai_api_key.arn
+  openai_secret_env_vars = {
+    OPENAI_API_KEY_SECRET_ARN = data.aws_secretsmanager_secret.openai_api_key.arn
   }
 }
 
@@ -43,7 +38,7 @@ module "chronicle_lambda" {
   log_retention_days             = 14
   tags                           = local.tags
 
-  environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.llm_secret_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.openai_secret_env_vars, {
     NODE_ENV        = "production"
     DOMAIN_NAME     = local.cloudfront_domain
     OPENAI_API_BASE = "https://api.openai.com/v1"
@@ -140,7 +135,7 @@ module "gm_api_lambda" {
   log_retention_days             = 14
   tags                           = local.tags
 
-  environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.llm_secret_env_vars, {
+  environment_variables = merge(local.auth_env_vars, local.db_env_vars, local.openai_secret_env_vars, {
     NODE_ENV                    = "production"
     DOMAIN_NAME                 = local.cloudfront_domain
     TURN_PROGRESS_QUEUE_URL     = aws_sqs_queue.turn_progress.url
@@ -162,12 +157,12 @@ module "chronicle_closer_lambda" {
   handler                        = "handler.handler"
   runtime                        = var.lambda_node_version
   memory_size                    = 512
-  timeout                        = 60
+  timeout                        = 300
   reserved_concurrent_executions = 1
   log_retention_days             = 14
   tags                           = local.tags
 
-  environment_variables = merge(local.db_env_vars, local.llm_secret_env_vars, {
+  environment_variables = merge(local.db_env_vars, local.openai_secret_env_vars, {
     NODE_ENV = "production"
   })
 
@@ -221,7 +216,7 @@ module "progress_api_lambda" {
 resource "aws_lambda_event_source_mapping" "chronicle_closer_queue" {
   event_source_arn                   = aws_sqs_queue.chronicle_closure.arn
   function_name                      = module.chronicle_closer_lambda.arn
-  batch_size                         = 5
+  batch_size                         = 1
   maximum_batching_window_in_seconds = 5
   function_response_types            = ["ReportBatchItemFailures"]
 }

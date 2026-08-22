@@ -7,7 +7,7 @@ import {
   useLambdaRuntime,
   createPool,
 } from '@glass-frontier/app';
-import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
+import { createLLMClient, loadOpenAiApiKeyFromSecrets } from '@glass-frontier/llm-client';
 import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import { createOpsStore, type OpsStore } from '@glass-frontier/ops';
 import {
@@ -52,7 +52,7 @@ export async function initializeForLambda(): Promise<void> {
   }
 
   pool = createLambdaPool();
-  await loadLlmApiKeysFromSecrets();
+  await loadOpenAiApiKeyFromSecrets();
 
   appStore = createAppStore({ pool });
   opsStore = createOpsStore({ pool });

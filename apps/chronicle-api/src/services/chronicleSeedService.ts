@@ -1,18 +1,32 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
 import { PromptTemplateRuntime } from '@glass-frontier/app';
-import type { ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
-import type { RetryLLMClient } from '@glass-frontier/llm-client';
+import type { Character, ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
+import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 type GenerateSeedRequest = {
   playerId: string;
+  player: LLMPlayer;
   locationId: string;
   anchorId: string;
   toneChips?: string[];
   toneNotes?: string;
   count?: number;
+};
+
+type GenerateOpeningRequest = {
+  anchorId?: string;
+  character: Character;
+  chronicleId: string;
+  locationId: string;
+  playerId: string;
+  player: LLMPlayer;
+  seedText: string;
+  title: string;
+  toneChips?: string[];
+  toneNotes?: string;
 };
 
 const SingleSeedSchema = z.object({
@@ -50,6 +64,7 @@ type GenerateAllSeedsOptions = {
   locationLore: LoreFragment[];
   model: string;
   playerId: string;
+  player: LLMPlayer;
   toneChips?: string[];
   toneNotes?: string;
 };
@@ -105,10 +120,112 @@ export class ChronicleSeedService {
       location,
       locationLore,
       model: classificationModel,
+      player: request.player,
       playerId: request.playerId,
       toneChips: request.toneChips,
       toneNotes: request.toneNotes,
     });
+  }
+
+  async generateOpening(request: GenerateOpeningRequest): Promise<string> {
+    const [location, anchor] = await Promise.all([
+      this.#ensurePlace(request.locationId),
+      request.anchorId === undefined ? Promise.resolve(null) : this.#ensureAnchor(request.anchorId),
+    ]);
+    const [locationLore, anchorLore, instructions, proseModel] = await Promise.all([
+      this.#world.listLoreFragmentsByEntity({ entityId: location.id, limit: 5 }),
+      anchor === null
+        ? Promise.resolve([])
+        : this.#world.listLoreFragmentsByEntity({ entityId: anchor.id, limit: 5 }),
+      this.#createTemplateRuntime(request.playerId).render('chronicle-opening', {}),
+      this.#modelConfigStore.getModelForCategory('prose', request.playerId),
+    ]);
+    const developerMessages = this.#buildOpeningDeveloperMessages({
+      anchor,
+      anchorLore,
+      location,
+      locationLore,
+      request,
+    });
+    return this.#generateOpeningText({
+      developerMessages,
+      instructions,
+      location,
+      model: proseModel,
+      request,
+    });
+  }
+
+  #buildOpeningDeveloperMessages(options: {
+    anchor: HardState | null;
+    anchorLore: LoreFragment[];
+    location: HardState;
+    locationLore: LoreFragment[];
+    request: GenerateOpeningRequest;
+  }): DeveloperMessage[] {
+    const developerMessages: DeveloperMessage[] = [
+      this.#createDeveloperMessage({
+        location: this.#buildEntityContext(options.location, options.locationLore),
+      }),
+    ];
+    if (options.anchor !== null) {
+      developerMessages.push(this.#createDeveloperMessage({
+        anchor: this.#buildEntityContext(options.anchor, options.anchorLore),
+      }));
+    }
+    const tone = this.#formatTone(options.request.toneChips, options.request.toneNotes);
+    developerMessages.push(
+      this.#createDeveloperMessage({
+        character: options.request.character,
+      }),
+      this.#createDeveloperMessage({
+        chronicle: {
+          seed: options.request.seedText.trim(),
+          title: options.request.title,
+          tone: tone.length > 0 ? tone : 'none specified',
+        },
+      })
+    );
+    return developerMessages;
+  }
+
+  async #generateOpeningText(options: {
+    developerMessages: DeveloperMessage[];
+    instructions: string;
+    location: HardState;
+    model: string;
+    request: GenerateOpeningRequest;
+  }): Promise<string> {
+    const response = await this.#llm.generate(
+      {
+        input: [
+          ...options.developerMessages,
+          {
+            content: [{
+              text: `Open the chronicle for ${options.request.character.name} now.`,
+              type: 'input_text',
+            }],
+            role: 'user',
+          },
+        ],
+        instructions: options.instructions,
+        maxOutputTokens: 600,
+        metadata: {
+          chronicleId: options.request.chronicleId,
+          locationId: options.location.id,
+          operation: 'chronicle-opening',
+          playerId: options.request.playerId,
+        },
+        model: options.model,
+        player: options.request.player,
+        reasoningEffort: 'low',
+      },
+      'string'
+    );
+    if (typeof response.message !== 'string' || response.message.trim().length === 0) {
+      throw new Error('Chronicle opening generation returned an empty response.');
+    }
+    return response.message.trim();
   }
 
   async #generateAllSeeds(options: GenerateAllSeedsOptions): Promise<ChronicleSeed[]> {
@@ -134,6 +251,7 @@ export class ChronicleSeedService {
           playerId: options.playerId,
         },
         model: options.model,
+        player: options.player,
         reasoningEffort: 'low',
       },
       SeedArraySchema,

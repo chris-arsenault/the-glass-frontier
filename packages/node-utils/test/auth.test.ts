@@ -11,6 +11,7 @@ const accessToken = (overrides: Record<string, unknown> = {}): string =>
     'cognito:groups': ['moderator'],
     sub: 'player-1',
     token_use: 'access',
+    username: 'tsonu',
     ...overrides,
   })}.`;
 
@@ -24,12 +25,22 @@ describe('Cognito authorization', () => {
   it('accepts the explicit local E2E access-token format', async () => {
     const identity = await verifyAuthorizationHeader(`Bearer ${accessToken()}`);
 
-    expect(identity).toMatchObject({ groups: ['moderator'], sub: 'player-1' });
+    expect(identity).toMatchObject({
+      groups: ['moderator'],
+      sub: 'player-1',
+      username: 'tsonu',
+    });
   });
 
   it('rejects a token issued to another application client', async () => {
     await expect(verifyJwt(accessToken({ client_id: 'other-client' }))).rejects.toThrow(
       'Token client does not match application client'
+    );
+  });
+
+  it('requires the stable Cognito username', async () => {
+    await expect(verifyJwt(accessToken({ username: '' }))).rejects.toThrow(
+      'Token missing username'
     );
   });
 

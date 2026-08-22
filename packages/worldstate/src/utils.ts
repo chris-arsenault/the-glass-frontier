@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto';
 export const isNonEmptyString = (value?: string | null): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
+/** jsonb column payload; an absent value is stored as an empty object. */
+export const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
+
 export const normalizeTags = (tags?: string[] | null, limit = 16): string[] => {
   if (!Array.isArray(tags)) {
     return [];

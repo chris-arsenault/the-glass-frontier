@@ -7,7 +7,6 @@ type UiState = {
   closeChangelogModal: () => void;
   closeCharacterDrawer: () => void;
   closeChronicleDrawer: () => void;
-  closeCreateCharacterModal: () => void;
   closeGuideModal: () => void;
   closePlayerMenu: () => void;
   closePlayerSettingsModal: () => void;
@@ -17,14 +16,12 @@ type UiState = {
   isChangelogModalOpen: boolean;
   isCharacterDrawerOpen: boolean;
   isChronicleDrawerOpen: boolean;
-  isCreateCharacterModalOpen: boolean;
   isGuideModalOpen: boolean;
   isPlayerMenuOpen: boolean;
   isPlayerSettingsModalOpen: boolean;
   isTemplateDrawerOpen: boolean;
   openBugReportModal: () => void;
   openChangelogModal: () => void;
-  openCreateCharacterModal: () => void;
   openGuideModal: () => void;
   openPlayerSettingsModal: () => void;
   resetExpandedMessages: () => void;
@@ -43,7 +40,6 @@ export const useUiStore = create<UiState>((set) => ({
   closeChangelogModal: () => set({ isChangelogModalOpen: false }),
   closeCharacterDrawer: () => set({ isCharacterDrawerOpen: false }),
   closeChronicleDrawer: () => set({ isChronicleDrawerOpen: false }),
-  closeCreateCharacterModal: () => set({ isCreateCharacterModalOpen: false }),
   closeGuideModal: () => set({ isGuideModalOpen: false }),
   closePlayerMenu: () => set({ isPlayerMenuOpen: false }),
   closePlayerSettingsModal: () => set({ isPlayerSettingsModalOpen: false }),
@@ -53,14 +49,12 @@ export const useUiStore = create<UiState>((set) => ({
   isChangelogModalOpen: false,
   isCharacterDrawerOpen: false,
   isChronicleDrawerOpen: false,
-  isCreateCharacterModalOpen: false,
   isGuideModalOpen: false,
   isPlayerMenuOpen: false,
   isPlayerSettingsModalOpen: false,
   isTemplateDrawerOpen: false,
   openBugReportModal: () => set({ isBugReportModalOpen: true }),
   openChangelogModal: () => set({ isChangelogModalOpen: true }),
-  openCreateCharacterModal: () => set({ isCreateCharacterModalOpen: true }),
   openGuideModal: () => set({ isGuideModalOpen: true }),
   openPlayerSettingsModal: () => set({ isPlayerSettingsModalOpen: true }),
   resetExpandedMessages: () => set({ expandedMessages: {} }),

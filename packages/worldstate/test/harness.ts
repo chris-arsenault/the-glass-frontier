@@ -154,6 +154,20 @@ export const defaultCharacter = (overrides?: Partial<Character>): Character => (
   inventory: [],
   momentum: { ceiling: 3, current: 0, floor: -2 },
   name: 'Test Character',
+  nature: {
+    callings: ['navigator', 'archivist'],
+    drive: 'To chart the frontier',
+    flaw: 'Never lets a map stay finished',
+    instinct: 'Check the stars first',
+    uniqueThing: 'Keeps a hand-drawn atlas',
+  },
+  origin: {
+    allegianceId: '00000000-0000-0000-0000-000000000001',
+    allegianceStance: 'member',
+    cultureId: '00000000-0000-0000-0000-000000000002',
+    homelandId: '00000000-0000-0000-0000-000000000003',
+    speciesId: '00000000-0000-0000-0000-000000000004',
+  },
   playerId: TEST_PLAYER_ID,
   pronouns: 'they/them',
   skills: {
@@ -173,6 +187,7 @@ export const defaultChronicle = (
   id: randomUUID(),
   locationName,
   metadata: undefined,
+  openingText: '',
   playerId: TEST_PLAYER_ID,
   seedText: undefined,
   status: 'open',

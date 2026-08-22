@@ -1,4 +1,5 @@
 import type { PromptTemplateId } from '@glass-frontier/dto';
+import { isLlmBudgetExceededError } from '@glass-frontier/llm-client';
 import type { ZodType } from 'zod';
 
 import { PromptComposer } from '../../../prompts/prompts';
@@ -56,6 +57,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
             turnId: context.turnId,
             turnSequence: String(context.turnSequence)
           },
+          player: context.llmPlayer,
           reasoningEffort: CLASSIFIER_REASONING_EFFORT,
         },
         this.options.schema,
@@ -64,6 +66,9 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
 
       return this.options.applyResult(context, response.data);
     } catch (error) {
+      if (isLlmBudgetExceededError(error)) {
+        throw error;
+      }
       context.telemetry.recordToolError({
         attempt: 0,
         chronicleId: context.chronicleId,

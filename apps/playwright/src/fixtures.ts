@@ -17,6 +17,16 @@ const BASE_PLAYER: Player = {
   username: PLAYWRIGHT_PLAYER_ID,
 };
 
+// Use fixed UUIDs for non-location entities so they can be referenced consistently
+const GLASS_WARDENS_ID = '88888888-7777-4666-8555-444444444444';
+const ORACLE_VESSEL_ID = '77777777-6666-4555-8444-333333333333';
+const SITHARIAN_SPECIES_ID = '44444444-3333-4222-8111-000000000000';
+const QUAY_CULTURE_ID = '33333333-2222-4111-8000-999999999999';
+const FOUNDING_OATH_FRAGMENT_ID = PLAYWRIGHT_FOUNDING_OATH_FRAGMENT_ID;
+const ORACLE_SIGNAL_FRAGMENT_ID = '55555555-4444-4333-8222-111111111111';
+
+const LOCATION_ROOT_ID = '99999999-8888-4777-8666-555555555555';
+
 const BASE_CHARACTER: Character = {
   archetype: 'Recon',
   attributes: {
@@ -33,21 +43,44 @@ const BASE_CHARACTER: Character = {
   inventory: [],
   momentum: { ceiling: 3, current: 0, floor: -2 },
   name: 'E2E Scout',
+  nature: {
+    callings: ['Chart the drowned wing before the Wardens seal it', 'Buy back a sold name'],
+    drive: 'Prove the quay was never as safe as its keepers claim',
+    flaw: 'Cannot leave a sealed door alone',
+    instinct: 'When a room goes quiet, they put their back to the nearest wall',
+    uniqueThing: 'The only living person the Oracle Vessel has spoken a name to',
+  },
+  origin: {
+    allegianceId: GLASS_WARDENS_ID,
+    allegianceStance: 'estranged',
+    cultureId: QUAY_CULTURE_ID,
+    homelandId: LOCATION_ROOT_ID,
+    speciesId: SITHARIAN_SPECIES_ID,
+  },
   playerId: PLAYWRIGHT_PLAYER_ID,
   pronouns: 'they/them',
   skills: {
-    navigation: { attribute: 'focus', name: 'navigation', tier: 'apprentice', xp: 0 },
+    read_fault_bands: {
+      attribute: 'focus',
+      name: 'read fault bands',
+      tier: 'artisan',
+      xp: 0,
+    },
+    cut_fouled_lines: {
+      attribute: 'finesse',
+      name: 'cut fouled lines',
+      tier: 'apprentice',
+      xp: 0,
+    },
+    talk_down_dock_crowds: {
+      attribute: 'presence',
+      name: 'talk down dock crowds',
+      tier: 'apprentice',
+      xp: 0,
+    },
   },
   tags: ['playwright'],
 };
-
-// Use fixed UUIDs for non-location entities so they can be referenced consistently
-const GLASS_WARDENS_ID = '88888888-7777-4666-8555-444444444444';
-const ORACLE_VESSEL_ID = '77777777-6666-4555-8444-333333333333';
-const FOUNDING_OATH_FRAGMENT_ID = PLAYWRIGHT_FOUNDING_OATH_FRAGMENT_ID;
-const ORACLE_SIGNAL_FRAGMENT_ID = '55555555-4444-4333-8222-111111111111';
-
-const LOCATION_ROOT_ID = '99999999-8888-4777-8666-555555555555';
 
 const BASE_CHRONICLE: Chronicle = {
   anchorEntityId: GLASS_WARDENS_ID,
@@ -58,6 +91,7 @@ const BASE_CHRONICLE: Chronicle = {
   id: PLAYWRIGHT_CHRONICLE_ID,
   locationId: LOCATION_ROOT_ID,
   locationName: 'Luminous Quay',
+  openingText: 'You stand beneath the signal gantries of Luminous Quay as the next alarm begins.',
   playerId: PLAYWRIGHT_PLAYER_ID,
   status: 'open',
   summaries: [],
@@ -100,6 +134,26 @@ const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | '
     slug: 'oracle_vessel',
     status: 'intact',
     subkind: 'relic',
+  },
+  {
+    facts: { lifespan: 'roughly two hundred years' },
+    id: SITHARIAN_SPECIES_ID,
+    isLocation: false,
+    kind: 'species',
+    name: 'Sitharian',
+    prominence: 'recognized',
+    slug: 'sitharian',
+    status: 'extant',
+  },
+  {
+    facts: { naming: 'given name, then the quay a family keeps' },
+    id: QUAY_CULTURE_ID,
+    isLocation: false,
+    kind: 'culture',
+    name: 'Quay-Keeper',
+    prominence: 'recognized',
+    slug: 'quay_keeper',
+    status: 'living',
   },
 ];
 

@@ -1,5 +1,6 @@
 import type {
   CanonProposal,
+  CanonSource,
   Character,
   Chronicle,
   ChronicleSummaryEntry,
@@ -13,6 +14,8 @@ import type {
   LoreFragment,
   WorldSchema,
 } from '@glass-frontier/dto';
+
+import type { EntityStats } from './entityReader';
 
 export type WorldNeighbor = {
   relationship: string;
@@ -39,6 +42,7 @@ export type ChronicleStore = {
     locationName: string;
     locationId?: string | null;
     characterId?: string;
+    openingText?: string;
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
@@ -88,6 +92,10 @@ export type WorldSchemaStore = {
   // === The write surface ===
   commitBatch: (proposal: CanonProposal) => Promise<CommitBatchResult>;
   revertBatch: (batchId: string) => Promise<void>;
+  findBatch: (input: {
+    source: CanonSource;
+    sourceId: string;
+  }) => Promise<{ batchId: string } | null>;
 
   // === The per-turn read surface ===
   getContextSlice: (input: ContextSliceInput) => Promise<ContextSliceEntity[]>;
@@ -96,6 +104,8 @@ export type WorldSchemaStore = {
   getEntity: (input: { id: string }) => Promise<HardState | null>;
   getEntityBySlug: (input: { slug: string }) => Promise<HardState | null>;
   findLocationByName: (input: { name: string }) => Promise<HardState | null>;
+  findEntitiesByName: (input: { name: string }) => Promise<HardState[]>;
+  listEntityStats: (ids: string[]) => Promise<EntityStats[]>;
   listEntities: (input?: {
     kind?: HardStateKind;
     isLocation?: boolean;

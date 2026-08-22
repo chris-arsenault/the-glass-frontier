@@ -1,19 +1,24 @@
 .chip-button {
   display: inline-flex;
-  padding: 0.2rem 0.7rem;
-  color: #bfdbfe;
-  background: rgb(59 130 246 / 15%);
+  height: 1.5rem;
+  padding: 0 var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-tertiary);
   align-items: center;
-  border: 1px solid rgb(59 130 246 / 40%);
-  border-radius: 999px;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
+  font-weight: 500;
   gap: 0.3rem;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  white-space: nowrap;
 }
 
 .chip-button:focus-visible,
 .chip-button:hover {
-  border-color: rgb(94 234 212 / 45%);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
   outline: none;
 }
 
@@ -23,13 +28,19 @@
 }
 
 .chip-button-active {
-  color: #dcfce7;
-  background: rgb(74 222 128 / 18%);
-  border-color: rgb(74 222 128 / 45%);
+  color: #b7f0d4;
+  background: rgb(52 211 153 / 12%);
+  border-color: rgb(52 211 153 / 40%);
 }
 
 .chip-button-danger {
-  color: #fecaca;
-  background: rgb(248 113 113 / 18%);
-  border-color: rgb(248 113 113 / 45%);
+  color: #fda4af;
+  background: rgb(248 113 113 / 10%);
+  border-color: rgb(248 113 113 / 35%);
+}
+
+.chip-button-danger:hover,
+.chip-button-danger:focus-visible {
+  color: #fecdd3;
+  border-color: rgb(248 113 113 / 60%);
 }

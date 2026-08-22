@@ -19,6 +19,10 @@ type JsonDocument = null | boolean | number | string | JsonDocument[] | {
   [key: string]: JsonDocument;
 };
 
+const CLAUDE_SONNET_5_MODEL_ID = 'us.anthropic.claude-sonnet-5';
+const NOVA_2_LITE_MODEL_ID = 'us.amazon.nova-2-lite-v1:0';
+const NOVA_PRO_MODEL_ID = 'us.amazon.nova-pro-v1:0';
+
 const toJsonDocument = (value: unknown): JsonDocument => {
   if (
     value === null
@@ -58,22 +62,39 @@ export const mapBedrockMessages = (
 };
 
 export const mapBedrockRequest = (request: LLMRequest): ConverseCommandInput => {
-  if (!request.model.startsWith('us.amazon.nova-2-lite')) {
-    throw new Error(`Unsupported Bedrock model: ${request.model}`);
-  }
   const { messages, system } = mapBedrockMessages(request);
-  return {
-    additionalModelRequestFields: {
-      reasoningConfig: {
-        maxReasoningEffort: request.reasoningEffort,
-        type: 'enabled',
-      },
-    },
+  const baseRequest: ConverseCommandInput = {
     inferenceConfig: { maxTokens: request.maxOutputTokens },
     messages,
     modelId: request.model,
+    requestMetadata: { player: request.player.name },
     system,
   };
+
+  if (request.model === CLAUDE_SONNET_5_MODEL_ID) {
+    return {
+      ...baseRequest,
+      additionalModelRequestFields: {
+        output_config: { effort: request.reasoningEffort },
+        thinking: { type: 'adaptive' },
+      },
+    };
+  }
+  if (request.model === NOVA_2_LITE_MODEL_ID) {
+    return {
+      ...baseRequest,
+      additionalModelRequestFields: {
+        reasoningConfig: {
+          maxReasoningEffort: request.reasoningEffort,
+          type: 'enabled',
+        },
+      },
+    };
+  }
+  if (request.model === NOVA_PRO_MODEL_ID) {
+    return baseRequest;
+  }
+  throw new Error(`Unsupported Bedrock model: ${request.model}`);
 };
 
 export const mapBedrockStructuredRequest = <T>(

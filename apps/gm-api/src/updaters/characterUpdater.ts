@@ -1,6 +1,6 @@
 import type { Character, Skill, SkillCheckResult } from '@glass-frontier/dto';
-import { SKILL_TIER_SEQUENCE } from '@glass-frontier/dto';
-import { log, toSnakeCase } from '@glass-frontier/utils';
+import { skillKey, SKILL_TIER_SEQUENCE } from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
 
@@ -27,9 +27,11 @@ export function createUpdatedCharacter(context: GraphContext): Character {
   const working = structuredClone(context.chronicleState.character);
 
   working.momentum.current = result.newMomentum ?? working.momentum.current;
-  const normalizedSkill = toSnakeCase(plan.skill);
+  const normalizedSkill = skillKey(plan.skill);
   log('info', `Updating for skill ${normalizedSkill}`);
-  const skills = new Map(Object.entries(working.skills));
+  const skills = new Map(
+    Object.entries(working.skills).map(([name, entry]) => [skillKey(name), entry])
+  );
   let skill = skills.get(normalizedSkill);
   if (skill === undefined) {
     log('info', `Adding skill ${normalizedSkill}`);

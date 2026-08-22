@@ -12,17 +12,19 @@ Intent types:
 
 Classification rubric (apply in order):
 1) if there is a wrap FRAGMENT, aim to end in turnsLeft and select wrap intent type unless the input is clearly a question about the game world
-2) If the utterance contains an explicit, immediate verb directed at the world, prefer action.
+2) If the utterance contains an explicit, immediate verb directed at the world, prefer action. Deliberately performing badly, refusing, stopping, surrendering, waiting, or abandoning an effort are actions when they change what the character does.
 3) If it requests information without proposing change, prefer inquiry.
 4) If it asserts/requests a specific fact check about prior fiction, prefer clarification.
 5) If it explores options using hypotheticals (could/what if/can I), prefer possibility.
 6) If it describes setup, regrouping, or transit with intent to act later, prefer planning.
-7) If it’s internal monologue or mood with no ask and no change, prefer reflection.
+7) Use reflection only for internal thoughts or emotions with no physical behavior, decision, or change in approach. An action does not become reflection because the player explains an emotion or motive.
 
 Tie-breaks:
 - If both action and planning apply, choose action.
 - If both inquiry and clarification apply, choose clarification.
 - If both possibility and planning apply, choose planning.
+
+Use RECENT-EVENTS to resolve pronouns, short follow-ups, and references such as "it" or "that." Classify the current message itself; do not replace its concrete verb with an earlier topic.
 
 Output fields:
 - intentType: the single best intent type from the list above

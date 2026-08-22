@@ -21,6 +21,7 @@ const recordingRuntime = (): {
 };
 
 const ACTION_RESOLVER: PromptTemplateId = 'action-resolver';
+const RECENT_EVENTS_HEADER = '### RECENT-EVENTS';
 
 const textOf = (message: { content: Array<{ text: string }> }): string =>
   message.content.map((part) => part.text).join('');
@@ -63,7 +64,7 @@ describe('PromptComposer', () => {
     const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
     const developer = textOf(prompt.input.at(-1)!);
 
-    expect(developer).not.toContain('### RECENT-EVENTS');
+    expect(developer).not.toContain(RECENT_EVENTS_HEADER);
     expect(developer).not.toContain('### ENTITIES');
     expect(developer).not.toContain('### WRAP');
   });
@@ -126,7 +127,7 @@ describe('chronicle tone and wrap fragments', () => {
     context.chronicleState.chronicle.toneChips = ['gritty', 'wry'];
     context.chronicleState.chronicle.toneNotes = 'slow-burn dread';
 
-    const prompt = await composer.buildPrompt('action-resolver', context);
+    const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain('### CHRONICLE-TONE');
@@ -169,6 +170,29 @@ describe('beat fragments', () => {
     expect(developer).toContain('### BEATS');
     expect(developer).toContain('"id":"trace_the_sabotage"');
   });
+
+  it('gives intent and beat classifiers the recent turn record', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const context = buildContext({ playerIntent: buildIntent() });
+    context.chronicleState.turns = [
+      {
+        gmSummary: 'Vex begins the relay performance under observation.',
+        playerIntent: buildIntent({ intentSummary: 'Begin the relay performance.' }),
+      },
+    ] as unknown as GraphContext['chronicleState']['turns'];
+
+    const prompts = await Promise.all([
+      'intent-classifier',
+      'intent-beat-detector',
+      'beat-tracker',
+    ].map((templateId) => composer.buildPrompt(templateId as PromptTemplateId, context)));
+    for (const prompt of prompts) {
+      const developer = textOf(prompt.input.at(-1)!);
+      expect(developer).toContain(RECENT_EVENTS_HEADER);
+      expect(developer).toContain('Vex begins the relay performance under observation.');
+    }
+  });
 });
 
 describe('check-planner fragments', () => {
@@ -187,9 +211,47 @@ describe('check-planner fragments', () => {
     const prompt = await composer.buildPrompt('check-planner', context);
     const developer = textOf(prompt.input.at(-1)!);
 
-    expect(developer).toContain('### RECENT-EVENTS');
+    expect(developer).toContain(RECENT_EVENTS_HEADER);
     expect(developer).toContain('Vex slipped past the checkpoint.');
     expect(developer).toContain('### LOCATION');
     expect(developer).toContain('### CHARACTER');
+  });
+
+  it('exposes the full planned and resolved check contract to narration', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const context = buildContext({
+      playerIntent: buildIntent(),
+      skillCheckPlan: {
+        advantage: 'disadvantage',
+        attribute: 'presence',
+        complicationSeeds: ['The audience turns openly hostile.'],
+        creativeSpark: false,
+        metadata: { tags: [], timestamp: 0 },
+        requiresCheck: true,
+        riskLevel: 'risky',
+        skill: 'performance',
+      },
+      skillCheckResult: {
+        advantage: false,
+        checkId: 'check-1',
+        chronicleId: 'chronicle-1',
+        dieSum: 3,
+        disadvantage: true,
+        margin: -4,
+        metadata: { tags: [], timestamp: 0 },
+        newMomentum: -1,
+        outcomeTier: 'collapse',
+        totalModifier: 0,
+      },
+    });
+
+    const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
+    const developer = textOf(prompt.input.at(-1)!);
+
+    expect(developer).toContain('"requiresCheck":true');
+    expect(developer).toContain('"plannedAdvantage":"disadvantage"');
+    expect(developer).toContain('"resultDisadvantage":true');
+    expect(developer).toContain('The audience turns openly hostile.');
   });
 });

@@ -1,9 +1,10 @@
+import { createOpsStore, type LlmBudgetReservation } from '@glass-frontier/ops';
 import type { LoggableMetadata } from '@glass-frontier/utils';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Pool } from 'pg';
-import type { ZodSchema } from 'zod';
+import { z, type ZodSchema } from 'zod';
 
 import { createDefaultRegistry } from './modelRegistry';
 import { ProviderError } from './ProviderError';
@@ -15,6 +16,7 @@ import type {
 } from './providers/IStructuredOutputProvider';
 import type { ProviderRegistry } from './providers/ProviderRegistry';
 import { AuditArchive } from './services/AuditArchive';
+import { LlmBudgetManager } from './services/LlmBudgetManager';
 import { ModelUsageTracker } from './services/ModelUsageTracker';
 import { LLMSuccessHandler } from './services/successHandler';
 import { TokenUsageTracker } from './services/TokenUsageTracker';
@@ -67,7 +69,9 @@ export function createLLMClient(options?: CreateLLMClientOptions): RetryLLMClien
   const modelUsageTracker = pool === undefined
     ? ModelUsageTracker.fromEnv()
     : new ModelUsageTracker({ pool });
+  const budgetStore = createOpsStore(pool === undefined ? undefined : { pool }).llmBudgetStore;
   return new RetryLLMClient({
+    budgetManager: new LlmBudgetManager({ store: budgetStore }),
     registry,
     successHandler: new LLMSuccessHandler({
       auditArchive,
@@ -78,10 +82,16 @@ export function createLLMClient(options?: CreateLLMClientOptions): RetryLLMClien
 }
 
 export class RetryLLMClient {
+  readonly #budgetManager: LlmBudgetManager;
   readonly #registry: ProviderRegistry;
   readonly #successHandler: LLMSuccessHandler;
 
-  constructor(options: { registry: ProviderRegistry; successHandler: LLMSuccessHandler }) {
+  constructor(options: {
+    budgetManager: LlmBudgetManager;
+    registry: ProviderRegistry;
+    successHandler: LLMSuccessHandler;
+  }) {
+    this.#budgetManager = options.budgetManager;
     this.#registry = options.registry;
     this.#successHandler = options.successHandler;
   }
@@ -129,9 +139,14 @@ export class RetryLLMClient {
   ): Promise<LLMResponse> {
     try {
       return await withTimeout(async (signal) => {
-        const { provider, request: resolvedRequest } = this.#registry.resolve(request);
+        const { model, provider, request: resolvedRequest } = this.#registry.resolve(request);
+        const reservation = await this.#budgetManager.reserve(request, model);
         const startTime = Date.now();
-        const response = await provider.execute(resolvedRequest, signal);
+        const response = await this.#executeReserved(
+          reservation,
+          () => provider.execute(resolvedRequest, signal)
+        );
+        await this.#settleBudget(reservation, model, response.usage);
         return {
           attempts: attempt + 1,
           durationMs: Date.now() - startTime,
@@ -197,7 +212,7 @@ export class RetryLLMClient {
     result: StructuredOutputResponse<T>;
   }> {
     return withTimeout(async (signal) => {
-      const { provider, request: resolvedRequest } = this.#registry.resolve(input.request);
+      const { model, provider, request: resolvedRequest } = this.#registry.resolve(input.request);
       if (!isStructuredProvider(provider)) {
         throw new Error(`Provider ${provider.id} does not support structured output`);
       }
@@ -206,10 +221,59 @@ export class RetryLLMClient {
         schema: input.schema,
         schemaName: input.schemaName,
       };
+      const reservation = await this.#budgetManager.reserve(
+        input.request,
+        model,
+        JSON.stringify({
+          schema: z.toJSONSchema(input.schema),
+          schemaName: input.schemaName,
+        })
+      );
       const startTime = Date.now();
-      const result = await provider.executeStructured<T>(request, signal);
+      const result = await this.#executeReserved(
+        reservation,
+        () => provider.executeStructured<T>(request, signal)
+      );
+      await this.#settleBudget(reservation, model, result.usage);
       return { durationMs: Date.now() - startTime, providerId: provider.id, result };
     });
+  }
+
+  async #executeReserved<T>(
+    reservation: LlmBudgetReservation,
+    execute: () => Promise<T>
+  ): Promise<T> {
+    try {
+      return await execute();
+    } catch (error: unknown) {
+      try {
+        await this.#budgetManager.release(reservation);
+      } catch (releaseError: unknown) {
+        log('error', 'narrative.llm.budget_release_failed', {
+          message: this.#toError(releaseError).message,
+          reservationId: reservation.id,
+        });
+      }
+      throw error;
+    }
+  }
+
+  async #settleBudget(
+    reservation: LlmBudgetReservation,
+    model: ReturnType<ProviderRegistry['getModelConfig']>,
+    usage: LLMResponse['usage']
+  ): Promise<void> {
+    try {
+      await this.#budgetManager.settle(reservation, model, usage);
+    } catch (error: unknown) {
+      throw new ProviderError({
+        code: 'llm_budget_accounting_failed',
+        details: { message: this.#toError(error).message, reservationId: reservation.id },
+        message: 'The model responded, but its budget charge could not be recorded.',
+        retryable: false,
+        status: 500,
+      });
+    }
   }
 
   async #retryStructured<T>(

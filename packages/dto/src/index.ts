@@ -1,4 +1,5 @@
 export * from './Character';
+export * from './characterCreation';
 export * from './mechanics';
 export * from './narrative/Chronicle';
 export * from './narrative/ChronicleBeat';

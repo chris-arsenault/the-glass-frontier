@@ -3,10 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import {
-  mapAnthropicRequest,
-  mapAnthropicStructuredRequest,
-} from '../src/providers/AnthropicProvider';
-import {
   mapBedrockRequest,
   mapBedrockStructuredRequest,
 } from '../src/providers/BedrockProvider';
@@ -16,12 +12,13 @@ import { mapOpenAIRequest, mapOpenAIStructuredRequest } from '../src/providers/O
 import { ProviderRegistry } from '../src/providers/ProviderRegistry';
 import type { LLMRequest } from '../src/types';
 
-const ANTHROPIC_MODEL_ID = 'claude-sonnet-5';
+const CLAUDE_API_MODEL_ID = 'us.anthropic.claude-sonnet-5';
 const DEVELOPER_TEXT = 'Keep the answer grounded.';
 const INSTRUCTIONS = 'Continue the chronicle.';
 const LOW_EFFORT = 'low';
-const NOVA_API_MODEL_ID = 'us.amazon.nova-2-lite-v1:0';
+const NOVA_2_API_MODEL_ID = 'us.amazon.nova-2-lite-v1:0';
 const NOVA_MODEL_ID = 'amazon-nova-2-lite';
+const NOVA_PRO_API_MODEL_ID = 'us.amazon.nova-pro-v1:0';
 const OPENAI_MODEL_ID = 'gpt-5.6-luna';
 const SCHEMA_NAME = 'Answer';
 const USER_TEXT = 'What happens next?';
@@ -42,6 +39,7 @@ const request = (model: string): LLMRequest => ({
   maxOutputTokens: 1200,
   metadata: { nodeId: 'test-node', turnSequence: 4 },
   model,
+  player: { id: 'player-1', isAdmin: false, name: 'tsonu' },
   reasoningEffort: LOW_EFFORT,
 });
 
@@ -70,32 +68,34 @@ describe('OpenAI request contract', () => {
   });
 });
 
-describe('Anthropic request contract', () => {
-  it('maps reasoning and native structured output to Anthropic', () => {
-    const mapped = mapAnthropicRequest(request(ANTHROPIC_MODEL_ID));
+describe('Bedrock request contract', () => {
+  it('maps Claude to Converse with adaptive thinking and forced tool output', () => {
+    const mapped = mapBedrockRequest(request(CLAUDE_API_MODEL_ID));
 
     expect(mapped).toMatchObject({
-      max_tokens: 1200,
-      messages: [{ content: [{ text: USER_TEXT, type: 'text' }], role: 'user' }],
-      model: ANTHROPIC_MODEL_ID,
-      output_config: { effort: LOW_EFFORT },
+      additionalModelRequestFields: {
+        output_config: { effort: LOW_EFFORT },
+        thinking: { type: 'adaptive' },
+      },
+      inferenceConfig: { maxTokens: 1200 },
+      messages: [{ content: [{ text: USER_TEXT }], role: 'user' }],
+      modelId: CLAUDE_API_MODEL_ID,
+      requestMetadata: { player: 'tsonu' },
       system: [
-        { text: INSTRUCTIONS, type: 'text' },
-        { text: DEVELOPER_TEXT, type: 'text' },
+        { text: INSTRUCTIONS },
+        { text: DEVELOPER_TEXT },
       ],
-      thinking: { type: 'adaptive' },
     });
-    expect(mapped).not.toHaveProperty('tools');
 
-    const structured = mapAnthropicStructuredRequest(structuredRequest(ANTHROPIC_MODEL_ID));
-    expect(structured.output_config?.format).toMatchObject({ type: 'json_schema' });
-    expect(structured).not.toHaveProperty('tools');
+    const structured = mapBedrockStructuredRequest(structuredRequest(CLAUDE_API_MODEL_ID));
+    expect(structured.toolConfig).toMatchObject({
+      toolChoice: { tool: { name: SCHEMA_NAME } },
+      tools: [{ toolSpec: { name: SCHEMA_NAME } }],
+    });
   });
-});
 
-describe('Bedrock request contract', () => {
   it('maps Nova 2 to Converse with explicit reasoning and forced tool output', () => {
-    const mapped = mapBedrockRequest(request(NOVA_API_MODEL_ID));
+    const mapped = mapBedrockRequest(request(NOVA_2_API_MODEL_ID));
 
     expect(mapped).toMatchObject({
       additionalModelRequestFields: {
@@ -103,14 +103,37 @@ describe('Bedrock request contract', () => {
       },
       inferenceConfig: { maxTokens: 1200 },
       messages: [{ content: [{ text: USER_TEXT }], role: 'user' }],
-      modelId: NOVA_API_MODEL_ID,
+      modelId: NOVA_2_API_MODEL_ID,
+      requestMetadata: { player: 'tsonu' },
       system: [
         { text: INSTRUCTIONS },
         { text: DEVELOPER_TEXT },
       ],
     });
 
-    const structured = mapBedrockStructuredRequest(structuredRequest(NOVA_API_MODEL_ID));
+    const structured = mapBedrockStructuredRequest(structuredRequest(NOVA_2_API_MODEL_ID));
+    expect(structured.toolConfig).toMatchObject({
+      toolChoice: { tool: { name: SCHEMA_NAME } },
+      tools: [{ toolSpec: { name: SCHEMA_NAME } }],
+    });
+  });
+
+  it('maps Nova Pro to standard Converse without unsupported reasoning fields', () => {
+    const mapped = mapBedrockRequest(request(NOVA_PRO_API_MODEL_ID));
+
+    expect(mapped).toMatchObject({
+      inferenceConfig: { maxTokens: 1200 },
+      messages: [{ content: [{ text: USER_TEXT }], role: 'user' }],
+      modelId: NOVA_PRO_API_MODEL_ID,
+      requestMetadata: { player: 'tsonu' },
+      system: [
+        { text: INSTRUCTIONS },
+        { text: DEVELOPER_TEXT },
+      ],
+    });
+    expect(mapped).not.toHaveProperty('additionalModelRequestFields');
+
+    const structured = mapBedrockStructuredRequest(structuredRequest(NOVA_PRO_API_MODEL_ID));
     expect(structured.toolConfig).toMatchObject({
       toolChoice: { tool: { name: SCHEMA_NAME } },
       tools: [{ toolSpec: { name: SCHEMA_NAME } }],
@@ -126,7 +149,7 @@ describe('model resolution', () => {
     valid: true,
   };
   const model: CatalogModel = {
-    apiModelId: NOVA_API_MODEL_ID,
+    apiModelId: NOVA_2_API_MODEL_ID,
     contextWindow: 1_000_000,
     costPer1kInput: 0.0003,
     costPer1kOutput: 0.0025,
@@ -147,8 +170,8 @@ describe('model resolution', () => {
   it('resolves only the canonical logical model ID', () => {
     const resolved = registry().resolve(request(NOVA_MODEL_ID));
 
-    expect(resolved.request.model).toBe(NOVA_API_MODEL_ID);
-    expect(() => registry().resolve(request(NOVA_API_MODEL_ID)))
+    expect(resolved.request.model).toBe(NOVA_2_API_MODEL_ID);
+    expect(() => registry().resolve(request(NOVA_2_API_MODEL_ID)))
       .toThrow('is not registered');
   });
 

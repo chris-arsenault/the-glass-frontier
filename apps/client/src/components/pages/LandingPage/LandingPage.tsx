@@ -28,7 +28,7 @@ export function LandingPage(): React.JSX.Element {
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
   const currentChronicleId = useChronicleStore((state) => state.chronicleId);
   const chronicleCharacterId = useChronicleStore((state) => state.character?.id ?? null);
-  const openCreateCharacterModal = useUiStore((state) => state.openCreateCharacterModal);
+  const openChangelogModal = useUiStore((state) => state.openChangelogModal);
   const [loadingChronicleId, setLoadingChronicleId] = useState<string | null>(null);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
 
@@ -43,12 +43,12 @@ export function LandingPage(): React.JSX.Element {
   const featureHighlights = useMemo(() => {
     return (changelogEntries as ChangelogEntry[])
       .filter((entry) => entry.type === 'feature')
-      .slice(-4)
+      .slice(-5)
       .reverse();
   }, []);
 
-  const quickCharacters = useMemo(() => availableCharacters.slice(0, 3), [availableCharacters]);
-  const quickChronicles = useMemo(() => availableChronicles.slice(0, 3), [availableChronicles]);
+  const quickCharacters = useMemo(() => availableCharacters.slice(0, 5), [availableCharacters]);
+  const quickChronicles = useMemo(() => availableChronicles.slice(0, 5), [availableChronicles]);
   const hasActiveChronicle = Boolean(currentChronicleId);
 
   const handleQuickLoad = async (chronicleId: string) => {
@@ -80,48 +80,20 @@ export function LandingPage(): React.JSX.Element {
 
   return (
     <div className="landing-page">
-      <section className="landing-hero">
-        <div className="landing-hero-copy">
-          <p className="landing-eyebrow">Welcome back</p>
-          <h1>Stay briefed before you dive into your next chronicle.</h1>
+      <header className="landing-header">
+        <div className="landing-header-copy">
+          <h1>Welcome back</h1>
           <p className="landing-tagline">
-            Here&apos;s what shipped lately, who wrapped their runs, and the signals coming from the
-            broader Glass Frontier network.
+            Pick up a chronicle, ready a character, and see what shipped lately.
           </p>
         </div>
-        <div className="landing-feature-grid">
-          {featureHighlights.map((entry) => (
-            <article key={entry.id} className="landing-feature-card">
-              <p className="landing-feature-date">{formatDate(entry.releasedAt)}</p>
-              <h3>{entry.summary}</h3>
-              <div
-                className="landing-feature-details-wrapper"
-                tabIndex={0}
-                aria-describedby={`feature-tooltip-${entry.id}`}
-              >
-                <p className="landing-feature-details">{entry.details}</p>
-                <div
-                  className="landing-feature-tooltip"
-                  role="tooltip"
-                  id={`feature-tooltip-${entry.id}`}
-                >
-                  {entry.details}
-                </div>
-              </div>
-              <span className="landing-feature-pill">Feature</span>
-            </article>
-          ))}
-        </div>
-      </section>
+        <span className={`landing-status-chip status-${directoryStatus}`}>{directoryLabel}</span>
+      </header>
 
-      <section className="landing-panel landing-chronicle-panel">
-        <header className="landing-panel-header">
-          <div>
-            <p className="landing-eyebrow">Roster</p>
+      <div className="landing-grid">
+        <section className="landing-panel landing-chronicle-panel">
+          <header className="landing-panel-header">
             <h2>Your characters</h2>
-          </div>
-          <div className="landing-chronicle-header-meta">
-            <span className={`landing-status-chip status-${directoryStatus}`}>{directoryLabel}</span>
             <div className="landing-chronicle-actions">
               <button
                 type="button"
@@ -135,62 +107,56 @@ export function LandingPage(): React.JSX.Element {
               </button>
               <button
                 type="button"
-                className="landing-link-button"
-                onClick={openCreateCharacterModal}
+                className="landing-link-button landing-link-button-primary"
+                onClick={() => void navigate('/character/new')}
               >
                 Create new
               </button>
             </div>
-          </div>
-        </header>
-        {quickCharacters.length === 0 ? (
-          <p className="landing-empty-copy">
-            No characters yet. Use <strong>Create new</strong> to draft your first profile.
-          </p>
-        ) : (
-          <ul className="landing-my-characters">
-            {quickCharacters.map((character) => {
-              const isChronicleCharacter = chronicleCharacterId === character.id;
-              const isPreferred = preferredCharacterId === character.id;
-              const isLocked = hasActiveChronicle && !isChronicleCharacter;
-              const buttonLabel = isLocked
-                ? 'Locked'
-                : isChronicleCharacter
-                  ? 'Active'
-                  : isPreferred
-                    ? 'Selected'
-                    : 'Select';
-              return (
-                <li key={character.id}>
-                  <div>
-                    <p className="landing-my-character-title">{character.name}</p>
-                    <p className="landing-my-character-meta">
-                      {character.archetype} · {character.pronouns}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="landing-link-button"
-                    onClick={() => setPreferredCharacterId(character.id)}
-                    disabled={isLocked || isPreferred || directoryStatus === 'loading'}
-                  >
-                    {buttonLabel}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+          </header>
+          {quickCharacters.length === 0 ? (
+            <p className="landing-empty-copy">
+              No characters yet. Use <strong>Create new</strong> to draft your first profile.
+            </p>
+          ) : (
+            <ul className="landing-my-characters">
+              {quickCharacters.map((character) => {
+                const isChronicleCharacter = chronicleCharacterId === character.id;
+                const isPreferred = preferredCharacterId === character.id;
+                const isLocked = hasActiveChronicle && !isChronicleCharacter;
+                const buttonLabel = isLocked
+                  ? 'Locked'
+                  : isChronicleCharacter
+                    ? 'Active'
+                    : isPreferred
+                      ? 'Selected'
+                      : 'Select';
+                return (
+                  <li key={character.id}>
+                    <div className="landing-row-copy">
+                      <p className="landing-my-character-title">{character.name}</p>
+                      <p className="landing-my-character-meta">
+                        {character.archetype} · {character.pronouns}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="landing-link-button"
+                      onClick={() => setPreferredCharacterId(character.id)}
+                      disabled={isLocked || isPreferred || directoryStatus === 'loading'}
+                    >
+                      {buttonLabel}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
-      <section className="landing-panel landing-chronicle-panel">
-        <header className="landing-panel-header">
-          <div>
-            <p className="landing-eyebrow">Continue</p>
+        <section className="landing-panel landing-chronicle-panel">
+          <header className="landing-panel-header">
             <h2>Your chronicles</h2>
-          </div>
-          <div className="landing-chronicle-header-meta">
-            <span className={`landing-status-chip status-${directoryStatus}`}>{directoryLabel}</span>
             <div className="landing-chronicle-actions">
               <button
                 type="button"
@@ -204,7 +170,7 @@ export function LandingPage(): React.JSX.Element {
               </button>
               <button
                 type="button"
-                className="landing-link-button"
+                className="landing-link-button landing-link-button-primary"
                 onClick={() => {
                   void navigate('/chron/start');
                 }}
@@ -212,63 +178,67 @@ export function LandingPage(): React.JSX.Element {
                 Start new
               </button>
             </div>
-          </div>
-        </header>
-        {chronicleError ? <p className="landing-error">{chronicleError}</p> : null}
-        {quickChronicles.length === 0 ? (
-          <p className="landing-empty-copy">
-            No chronicles yet. Use <strong>Start new</strong> to launch a fresh run.
-          </p>
-        ) : (
-          <ul className="landing-my-chronicles">
-            {quickChronicles.map((chronicle) => (
-              <li key={chronicle.id}>
-                <div>
-                  <p className="landing-my-chronicle-title">{chronicle.title}</p>
-                  <p className="landing-my-chronicle-meta">
-                    {chronicle.status === 'closed' ? 'Completed' : 'In progress'} ·{' '}
-                    {chronicle.characterId
-                      ? characterNameById.get(chronicle.characterId) ?? 'Unassigned'
-                      : 'Unassigned'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="landing-link-button"
-                  onClick={() => handleQuickLoad(chronicle.id)}
-                  disabled={Boolean(loadingChronicleId)}
-                >
-                  {loadingChronicleId === chronicle.id ? 'Loading…' : 'Resume'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          </header>
+          {chronicleError ? <p className="landing-error">{chronicleError}</p> : null}
+          {quickChronicles.length === 0 ? (
+            <p className="landing-empty-copy">
+              No chronicles yet. Use <strong>Start new</strong> to launch a fresh run.
+            </p>
+          ) : (
+            <ul className="landing-my-chronicles">
+              {quickChronicles.map((chronicle) => (
+                <li key={chronicle.id}>
+                  <div className="landing-row-copy">
+                    <p className="landing-my-chronicle-title">{chronicle.title}</p>
+                    <p className="landing-my-chronicle-meta">
+                      {chronicle.status === 'closed' ? 'Completed' : 'In progress'} ·{' '}
+                      {chronicle.characterId
+                        ? characterNameById.get(chronicle.characterId) ?? 'Unassigned'
+                        : 'Unassigned'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="landing-link-button"
+                    onClick={() => handleQuickLoad(chronicle.id)}
+                    disabled={Boolean(loadingChronicleId)}
+                  >
+                    {loadingChronicleId === chronicle.id ? 'Loading…' : 'Resume'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <div className="landing-split-grid">
         <section className="landing-panel">
           <header className="landing-panel-header">
-            <div>
-              <p className="landing-eyebrow">Chronicles</p>
-              <h2>Recently completed</h2>
-            </div>
-            <div className="landing-panel-header-note">
-              <p className="landing-coming-soon">In development</p>
-              <p>Signals gathered from global runs.</p>
-            </div>
+            <h2>What&apos;s new</h2>
+            <button
+              type="button"
+              className="landing-link-button"
+              onClick={openChangelogModal}
+            >
+              Full changelog
+            </button>
           </header>
-          <ul className="landing-chronicle-list">
-            {recentChronicleFeed.map((item) => (
-              <li key={item.id}>
-                <div>
-                  <p className="landing-chronicle-date">
-                    Completed · {formatDate(item.completedAt, { day: 'numeric', month: 'short' })}
-                  </p>
-                  <h3>{item.title}</h3>
-                  <p className="landing-chronicle-meta">{item.location}</p>
-                  <p className="landing-chronicle-character">Character: {item.character}</p>
-                  <p className="landing-chronicle-hook">{item.hook}</p>
+          <ul className="landing-feature-list">
+            {featureHighlights.map((entry) => (
+              <li key={entry.id} className="landing-feature-row">
+                <span className="landing-feature-date">{formatDate(entry.releasedAt)}</span>
+                <div
+                  className="landing-feature-details-wrapper"
+                  tabIndex={0}
+                  aria-describedby={`feature-tooltip-${entry.id}`}
+                >
+                  <p className="landing-feature-summary">{entry.summary}</p>
+                  <div
+                    className="landing-feature-tooltip"
+                    role="tooltip"
+                    id={`feature-tooltip-${entry.id}`}
+                  >
+                    {entry.details}
+                  </div>
                 </div>
               </li>
             ))}
@@ -277,21 +247,30 @@ export function LandingPage(): React.JSX.Element {
 
         <section className="landing-panel">
           <header className="landing-panel-header">
-            <div>
-              <p className="landing-eyebrow">Presence</p>
-              <h2>Online players</h2>
-            </div>
+            <h2>Around the frontier</h2>
             <p className="landing-coming-soon">In development</p>
           </header>
-          <div className="landing-placeholder">
-            <p>
-              A live roster of ready players will appear here once the presence service ships. For
-              now, coordinate with your GM in Discord or ping a moderator to sync up.
-            </p>
-            <button type="button" disabled className="landing-disabled-button">
-              Realtime roster coming soon
-            </button>
-          </div>
+          <ul className="landing-chronicle-list">
+            {recentChronicleFeed.map((item) => (
+              <li key={item.id} className="landing-feed-row">
+                <div className="landing-row-copy">
+                  <p className="landing-chronicle-title-row">
+                    <span className="landing-chronicle-name">{item.title}</span>
+                    <span className="landing-chronicle-date">
+                      {formatDate(item.completedAt, { day: 'numeric', month: 'short' })}
+                    </span>
+                  </p>
+                  <p className="landing-chronicle-meta">
+                    {item.character} · {item.location}
+                  </p>
+                  <p className="landing-chronicle-hook">{item.hook}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="landing-presence-note">
+            Live player presence is on the way — coordinate in Discord until the roster ships.
+          </p>
         </section>
       </div>
     </div>

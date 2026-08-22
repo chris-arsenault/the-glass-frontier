@@ -2,6 +2,7 @@ import {
   getWorldKind,
   relationshipDefaultStrength,
   type CanonProposal,
+  type CanonSource,
   type CommitBatchResult,
   type EntityRef,
   type ProposedEntity,
@@ -129,6 +130,26 @@ export class CanonWriter {
         relationshipCount: proposal.relationships.length,
       };
     });
+  }
+
+  /**
+   * The most recent batch committed for a source and sourceId, if any. This is
+   * how a writer that runs once per unit of work (a canon seed revision, a
+   * chronicle closure) discovers it has already run.
+   */
+  async findBatch(input: {
+    source: CanonSource;
+    sourceId: string;
+  }): Promise<{ batchId: string } | null> {
+    const result = await this.#pool.query<{ id: string }>(
+      `SELECT id FROM ingest_batch
+       WHERE source = $1 AND source_id = $2
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [input.source, input.sourceId]
+    );
+    const row = result.rows[0];
+    return row === undefined ? null : { batchId: row.id };
   }
 
   /**
