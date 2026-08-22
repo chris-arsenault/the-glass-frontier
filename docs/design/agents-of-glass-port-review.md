@@ -245,3 +245,11 @@ Before revisiting skills, collect examples from real chronicles:
 
 Design the smallest correction that addresses the measured failure. Until then,
 the current skill behavior remains canonical.
+
+## Curated scene-types follow-up
+
+The concrete flat, heavily biased scene-type design is specified in
+`docs/implementation/IMP-GM-07-flat-curated-scene-types.md`. It keeps the
+existing intent graph, adds a single active typed scene with generalized
+`subject`/`subjectKind` metadata, and begins with dialog and battle vertical
+slices before adding hunt, chase, and search.
