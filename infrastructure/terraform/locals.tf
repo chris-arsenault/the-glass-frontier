@@ -10,8 +10,8 @@ locals {
   atlas_api_dist_dir        = "${path.module}/../../apps/atlas-api/dist"
   world_schema_api_dist_dir = "${path.module}/../../apps/world-schema-api/dist"
   artifacts_dir             = "${path.module}/artifacts"
-  cloudfront_domain         = "glass-frontier.ahara.io"
-  api_domain                = "api.glass-frontier.ahara.io"
+  cloudfront_domain         = "glass-frontier.com"
+  api_domain                = "api.glass-frontier.com"
   client_build_files        = tolist(fileset(local.client_build_dir, "**"))
   client_build_hash         = sha1(join("", [for file in local.client_build_files : filesha1("${local.client_build_dir}/${file}")]))
 

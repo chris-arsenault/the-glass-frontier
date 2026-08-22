@@ -1,5 +1,10 @@
+data "aws_route53_zone" "glass_frontier" {
+  name         = "glass-frontier.com."
+  private_zone = false
+}
+
 resource "aws_route53_record" "api" {
-  zone_id = module.ctx.route53_zone_id
+  zone_id = data.aws_route53_zone.glass_frontier.zone_id
   name    = local.api_domain
   type    = "A"
 

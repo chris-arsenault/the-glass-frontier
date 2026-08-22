@@ -7,10 +7,10 @@ describe('runtimeConfig', () => {
   });
 
   it('reads Vite environment values', async () => {
-    vi.stubEnv('VITE_API_TARGET', 'https://api.glass-frontier.ahara.io');
+    vi.stubEnv('VITE_API_TARGET', 'https://api.glass-frontier.com');
 
     const { getEnvValue } = await import('../src/utils/runtimeConfig');
 
-    expect(getEnvValue('VITE_API_TARGET')).toBe('https://api.glass-frontier.ahara.io');
+    expect(getEnvValue('VITE_API_TARGET')).toBe('https://api.glass-frontier.com');
   });
 });

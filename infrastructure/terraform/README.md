@@ -2,8 +2,8 @@
 
 This Terraform project attaches Glass Frontier to the shared Ahara VPC, private-subnet NAT path, Lambda security group, Application Load Balancer, PostgreSQL instance, Route 53 zone, and Terraform state bucket. It provisions the resources Glass Frontier owns:
 
-- six authenticated HTTP Lambda routes on `api.glass-frontier.ahara.io`;
-- a private CloudFront/S3 client at `glass-frontier.ahara.io`;
+- six authenticated HTTP Lambda routes on `api.glass-frontier.com`;
+- a private CloudFront/S3 client at `glass-frontier.com`;
 - a dedicated Cognito user pool;
 - database-backed, canon-seed, and progress Lambda functions;
 - SQS queues and a short-lived DynamoDB progress-event table.

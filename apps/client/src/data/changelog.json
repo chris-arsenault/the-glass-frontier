@@ -290,7 +290,7 @@
     "id": "2026-08-22-ahara-deployment",
     "releasedAt": "2026-08-22",
     "summary": "Prepared Glass Frontier for Ahara deployment",
-    "details": "Glass Frontier now deploys at glass-frontier.ahara.io through the shared Ahara network and application load balancer, with no API Gateway or project-owned network infrastructure. Turn progress is retained briefly and polled through an authenticated shared-ALB route. Game data lives in a dedicated logical database on the shared PostgreSQL service, with bounded application connections so play cannot exhaust the platform database.",
+    "details": "Glass Frontier now deploys at glass-frontier.com through the shared Ahara network and application load balancer, with no API Gateway or project-owned network infrastructure. Turn progress is retained briefly and polled through an authenticated shared-ALB route. Game data lives in a dedicated logical database on the shared PostgreSQL service, with bounded application connections so play cannot exhaust the platform database.",
     "type": "improvement"
   },
   {

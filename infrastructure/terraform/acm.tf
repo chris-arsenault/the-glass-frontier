@@ -19,7 +19,7 @@ resource "aws_route53_record" "cloudfront_validation" {
     }
   }
 
-  zone_id = module.ctx.route53_zone_id
+  zone_id = data.aws_route53_zone.glass_frontier.zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60
@@ -52,7 +52,7 @@ resource "aws_route53_record" "api_validation" {
     }
   }
 
-  zone_id = module.ctx.route53_zone_id
+  zone_id = data.aws_route53_zone.glass_frontier.zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60

@@ -73,7 +73,7 @@ resource "aws_cloudfront_distribution" "client" {
 }
 
 resource "aws_route53_record" "client" {
-  zone_id = module.ctx.route53_zone_id
+  zone_id = data.aws_route53_zone.glass_frontier.zone_id
   name    = local.cloudfront_domain
   type    = "A"
 
