@@ -1,3 +1,5 @@
+-- Production bootstrap prerequisite: install pgvector's "vector" extension in
+-- this database as the RDS administrator before running project migrations.
 CREATE EXTENSION IF NOT EXISTS vector;
 
 ALTER TABLE entity
