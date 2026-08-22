@@ -54,6 +54,7 @@
     "@types/node": "^24.10.1",
     "@types/pg": "^8.11.10",
     "@types/wait-on": "^5.3.4",
+    "@types/ws": "8.5.12",
     "@vitest/coverage-v8": "^4.0.8",
     "baseline-browser-mapping": "^2.11.15",
     "dotenv": "^17.2.3",
