@@ -38,6 +38,7 @@ export const appRouter = t.router({
         toLLMPlayer(ctx.identity)
       );
       return {
+        activeScene: result.activeScene,
         beats: result.beats,
         character: result.updatedCharacter,
         chronicleStatus: result.chronicleStatus,

@@ -2,7 +2,7 @@ import type { HardStateProminence } from '@glass-frontier/dto';
 import React from 'react';
 
 import type { AtlasGraph } from './atlasGraph';
-import { descendantCount } from './atlasGraph';
+import { descendantCount, planetAncestorId, routeIds, terminusPartnerIds } from './atlasGraph';
 
 /**
  * The orbital chart on the atlas index: the sun at the left edge, one arc per
@@ -96,6 +96,42 @@ export function AtlasSystemMap({ graph, onSelect }: AtlasSystemMapProps): React.
     );
   }
 
+  const planetPositions = new Map<string, { x: number; y: number }>();
+  for (const [index, planetId] of graph.planetIds.entries()) {
+    const orbitRadius = FIRST_ORBIT + index * ORBIT_GAP;
+    const angle = bodyAngle(index, orbitRadius);
+    planetPositions.set(planetId, {
+      x: SUN_X + orbitRadius * Math.cos(angle),
+      y: SUN_Y + orbitRadius * Math.sin(angle),
+    });
+  }
+
+  // Lanes that link places under two different planets draw between them.
+  const lanes = routeIds(graph)
+    .map((routeId) => {
+      const node = graph.nodes.get(routeId);
+      if (!node) {
+        return null;
+      }
+      const planets = [
+        ...new Set(
+          terminusPartnerIds(node)
+            .map((endpointId) => planetAncestorId(graph, endpointId))
+            .filter((id): id is string => id !== null)
+        ),
+      ];
+      if (planets.length < 2) {
+        return null;
+      }
+      const from = planetPositions.get(planets[0]);
+      const to = planetPositions.get(planets[1]);
+      if (!from || !to) {
+        return null;
+      }
+      return { from, node, to };
+    })
+    .filter((lane): lane is NonNullable<typeof lane> => lane !== null);
+
   return (
     <svg
       className="atlas-map"
@@ -135,6 +171,31 @@ export function AtlasSystemMap({ graph, onSelect }: AtlasSystemMapProps): React.
           {sun.entity.name}
         </text>
       </g>
+
+      {lanes.map(({ from, node, to }) => {
+        const midX = (from.x + to.x) / 2;
+        const midY = (from.y + to.y) / 2 - 46;
+        return (
+          <g
+            key={node.entity.id}
+            className="atlas-map-body atlas-map-lane-group"
+            tabIndex={0}
+            role="link"
+            aria-label={node.entity.name}
+            onClick={activate(node.entity.slug)}
+            onKeyDown={keyActivate(node.entity.slug)}
+          >
+            <title>{`${node.entity.name} — trade lane`}</title>
+            <path
+              className="atlas-map-lane"
+              d={`M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`}
+            />
+            <text className="atlas-map-count atlas-map-lane-name" x={midX} y={midY + 18} textAnchor="middle">
+              {node.entity.name}
+            </text>
+          </g>
+        );
+      })}
 
       {graph.planetIds.map((planetId, index) => {
         const node = graph.nodes.get(planetId);

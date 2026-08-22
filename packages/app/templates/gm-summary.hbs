@@ -11,3 +11,10 @@ Treat the summary as the canonical record for the turn.
   wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
 - If the GM narration asks the player a question or offers a next choice, `shouldCloseChronicle` must
   be `false`; the response has left the scene open.
+- `sceneOutcome` is `continue` unless the active SCENE's own completion rules
+  are satisfied by the narration. Use `complete` when the typed scene ends even
+  if the chronicle continues.
+- `sceneOutcomeReason` is one short sentence when `sceneOutcome=complete`;
+  otherwise null.
+- If no SCENE section is present, emit `sceneOutcome: "continue"` and
+  `sceneOutcomeReason: null`.

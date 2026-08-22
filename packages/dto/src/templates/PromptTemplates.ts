@@ -21,6 +21,11 @@ export const PromptTemplateIds = [
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
+  'scene-battle',
+  'scene-chase',
+  'scene-dialog',
+  'scene-hunt',
+  'scene-search',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -167,6 +172,41 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'reflection-weaver',
     label: 'Reflection Weaver',
     officialObjectKey: 'official/reflection-weaver.hbs',
+    supportsVariants: true,
+  },
+  'scene-battle': {
+    description: 'Applies battle-specific intent, check, narration, and completion rules.',
+    id: 'scene-battle',
+    label: 'Scene: Battle',
+    officialObjectKey: 'official/scene-battle.hbs',
+    supportsVariants: true,
+  },
+  'scene-chase': {
+    description: 'Applies chase-specific intent, check, narration, and completion rules.',
+    id: 'scene-chase',
+    label: 'Scene: Chase',
+    officialObjectKey: 'official/scene-chase.hbs',
+    supportsVariants: true,
+  },
+  'scene-dialog': {
+    description: 'Applies dialog-specific intent, check, narration, and completion rules.',
+    id: 'scene-dialog',
+    label: 'Scene: Dialog',
+    officialObjectKey: 'official/scene-dialog.hbs',
+    supportsVariants: true,
+  },
+  'scene-hunt': {
+    description: 'Applies hunt-specific intent, check, narration, and completion rules.',
+    id: 'scene-hunt',
+    label: 'Scene: Hunt',
+    officialObjectKey: 'official/scene-hunt.hbs',
+    supportsVariants: true,
+  },
+  'scene-search': {
+    description: 'Applies search-specific intent, check, narration, and completion rules.',
+    id: 'scene-search',
+    label: 'Scene: Search',
+    officialObjectKey: 'official/scene-search.hbs',
     supportsVariants: true,
   },
   'wrap-resolver': {

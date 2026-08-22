@@ -60,16 +60,16 @@ const BASE_CHARACTER: Character = {
   playerId: PLAYWRIGHT_PLAYER_ID,
   pronouns: 'they/them',
   skills: {
-    read_fault_bands: {
-      attribute: 'focus',
-      name: 'read fault bands',
-      tier: 'artisan',
-      xp: 0,
-    },
     cut_fouled_lines: {
       attribute: 'finesse',
       name: 'cut fouled lines',
       tier: 'apprentice',
+      xp: 0,
+    },
+    read_fault_bands: {
+      attribute: 'focus',
+      name: 'read fault bands',
+      tier: 'artisan',
       xp: 0,
     },
     talk_down_dock_crowds: {
@@ -83,6 +83,7 @@ const BASE_CHARACTER: Character = {
 };
 
 const BASE_CHRONICLE: Chronicle = {
+  activeScene: null,
   anchorEntityId: GLASS_WARDENS_ID,
   beats: [],
   beatsEnabled: true,

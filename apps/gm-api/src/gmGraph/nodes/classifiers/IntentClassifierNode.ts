@@ -2,8 +2,15 @@ import { type Intent, IntentType } from '@glass-frontier/dto';
 import type { GraphContext } from '@glass-frontier/gm-api/types';
 import { z } from 'zod';
 
+import { resolveEffectiveScene } from '../../../scenes/sceneLifecycle';
 import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
+
+const SceneChangeCandidate = z.object({
+  subject: z.string().nullable(),
+  subjectKind: z.string().nullable(),
+  type: z.string().nullable(),
+});
 
 const IntentResponseSchema = z.object({
   creativeSpark: z
@@ -27,6 +34,9 @@ const IntentResponseSchema = z.object({
     .string()
     .min(1)
     .describe('Single sentence explaining why the classification was chosen.'),
+  sceneChange: SceneChangeCandidate.nullable()
+    .default(null)
+    .describe('New typed scene when play enters or switches scene; null to continue current context.'),
   tone: z.string().min(1).describe('Narrative tone adjective grounded in the current scene.'),
 });
 
@@ -47,6 +57,12 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
   }
 
   #applyIntent(context: GraphContext, result: IntentResponse): GraphNodeDelta {
+    const { effectiveScene, sceneChange } = resolveEffectiveScene({
+      activeScene: context.chronicleState.chronicle.activeScene,
+      candidate: result.sceneChange,
+      turnId: context.turnId,
+      turnSequence: context.turnSequence,
+    });
     const intent: Intent = {
       beatDirective: {
         kind: 'independent',
@@ -62,9 +78,10 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
         timestamp: Date.now(),
       },
       routerRationale: result.routerRationale,
+      sceneChange,
       tone: result.tone,
     };
-    return { playerIntent: intent };
+    return { effectiveScene, playerIntent: intent };
   }
 }
 

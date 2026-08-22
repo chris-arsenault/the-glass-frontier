@@ -243,55 +243,28 @@
   font-size: var(--text-xs);
 }
 
-.location-step-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.location-step-filters input[type='search'] {
-  flex: 1;
-  height: var(--control-h-lg);
-  padding: 0 var(--space-3);
+.location-step-selection-name {
+  margin: 0;
   color: var(--text-primary);
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-muted);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
-  font-size: var(--text-sm);
-  min-width: 200px;
+  font-size: var(--text-base);
+  font-weight: 600;
 }
 
-.location-step-filters input[type='search']:focus-visible {
-  border-color: var(--border-accent);
-  outline: none;
+.location-step-selection-meta {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.location-step-filters select {
-  height: var(--control-h-lg);
-  padding: 0 var(--space-2);
+.location-step-selection-desc {
+  margin: 0;
   color: var(--text-secondary);
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-muted);
-  border-radius: var(--radius-md);
   font-size: var(--text-sm);
+  line-height: 1.5;
 }
 
-.location-step-filters select:focus-visible {
-  border-color: var(--border-accent);
-  outline: none;
-}
-
-.location-step-grid {
-  display: grid;
-  flex: 1;
-  align-content: start;
-  gap: var(--space-2);
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  overflow-y: auto;
-}
-
-.location-card,
 .anchor-card {
   display: flex;
   padding: var(--space-2) var(--space-3);
@@ -307,19 +280,16 @@
   transition: border-color 120ms ease, background 120ms ease;
 }
 
-.location-card:hover,
 .anchor-card:hover {
   background: var(--surface-tertiary);
   border-color: var(--border-muted);
 }
 
-.location-card.active,
 .anchor-card.active {
   background: rgb(59 130 246 / 8%);
   border-color: var(--border-accent);
 }
 
-.location-card-name,
 .anchor-card-name {
   margin: 0;
   color: var(--text-primary);
@@ -327,7 +297,6 @@
   font-weight: 600;
 }
 
-.location-card-meta,
 .anchor-card-meta {
   margin: 0;
   color: var(--text-muted);
@@ -336,7 +305,6 @@
   text-transform: uppercase;
 }
 
-.location-card-desc,
 .anchor-card-desc {
   display: -webkit-box;
   margin: 0.2rem 0 0;
@@ -346,11 +314,6 @@
   -webkit-line-clamp: 3;
   line-height: 1.45;
   overflow: hidden;
-}
-
-.location-step-empty {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
 }
 
 .location-step-loading-details {

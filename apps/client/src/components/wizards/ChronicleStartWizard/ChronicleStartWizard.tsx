@@ -13,6 +13,8 @@ import {
   type SelectedAnchorEntity,
 } from '../../../stores/chronicleStartWizardStore';
 import { useChronicleStore } from '../../../stores/chronicleStore';
+import { buildAtlasGraph } from '../../atlas/atlasGraph';
+import { AtlasLocationBrowser } from '../../atlas/AtlasLocationBrowser';
 import './ChronicleStartWizard.css';
 
 const toneOptions = [
@@ -88,7 +90,7 @@ export function ChronicleStartWizard() {
   const activeChronicleId = useChronicleStore((state) => state.chronicleId);
   const setSelectedLocation = useChronicleStartStore((state) => state.setSelectedLocation);
 
-  const [locations, setLocations] = useState<SelectedLocationEntity[]>([]);
+  const [locations, setLocations] = useState<HardState[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [isLoadingLocationDetails, setIsLoadingLocationDetails] = useState(false);
@@ -108,13 +110,11 @@ export function ChronicleStartWizard() {
     try {
       // Anything location-shaped can host a scene, whatever its kind.
       const list = await worldAtlasClient.listEntities({ isLocation: true });
-      const mapped = list
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map(mapLocation);
-      setLocations(mapped);
+      const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
+      setLocations(sorted);
       setLocationError(null);
-      if (useChronicleStartStore.getState().selectedLocation === null && mapped.length > 0) {
-        setSelectedLocation(mapped[0]);
+      if (useChronicleStartStore.getState().selectedLocation === null && sorted.length > 0) {
+        setSelectedLocation(mapLocation(sorted[0]));
       }
     } catch (err: unknown) {
       setLocationError(err instanceof Error ? err.message : 'Failed to load locations');
@@ -193,7 +193,7 @@ export function ChronicleStartWizard() {
           isLoadingDetails={isLoadingLocationDetails}
           locations={locations}
           onRefresh={refreshLocations}
-          onSelect={handleSelectLocation}
+          onSelect={(entity) => void handleSelectLocation(mapLocation(entity))}
         />
       );
     case 'tone':
@@ -437,15 +437,20 @@ export function ChronicleStartWizard() {
 }
 
 type LocationStepProps = {
-  locations: SelectedLocationEntity[];
+  locations: HardState[];
   activeLocationId: string | null;
   isLoading: boolean;
   isLoadingDetails: boolean;
   error: string | null;
-  onSelect: (location: SelectedLocationEntity) => void;
+  onSelect: (location: HardState) => void;
   onRefresh: () => void;
 }
 
+/**
+ * The location picker is the Atlas browser, not a parallel UI: the same
+ * system chart and gazetteer, with a click meaning "set the scene here"
+ * instead of "navigate".
+ */
 function LocationStep({
   activeLocationId,
   error,
@@ -455,56 +460,21 @@ function LocationStep({
   onRefresh,
   onSelect,
 }: LocationStepProps) {
-  const [search, setSearch] = useState('');
-  const [filterSubkind, setFilterSubkind] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-
-  // Get unique subkinds and statuses for filters
-  const { statuses, subkinds } = useMemo(() => {
-    const subkindSet = new Set<string>();
-    const statusSet = new Set<string>();
-    locations.forEach((loc) => {
-      if (loc.subkind) {subkindSet.add(loc.subkind);}
-      if (loc.status) {statusSet.add(loc.status);}
-    });
-    return {
-      statuses: Array.from(statusSet).sort(),
-      subkinds: Array.from(subkindSet).sort(),
-    };
-  }, [locations]);
-
-  const filtered = useMemo(() => {
-    let result = locations;
-
-    // Filter by search
-    if (search.trim()) {
-      const value = search.trim().toLowerCase();
-      result = result.filter((loc) =>
-        loc.name.toLowerCase().includes(value) ||
-        loc.description?.toLowerCase().includes(value) ||
-        loc.slug.toLowerCase().includes(value)
-      );
-    }
-
-    // Filter by subkind
-    if (filterSubkind) {
-      result = result.filter((loc) => loc.subkind === filterSubkind);
-    }
-
-    // Filter by status
-    if (filterStatus) {
-      result = result.filter((loc) => loc.status === filterStatus);
-    }
-
-    return result;
-  }, [locations, search, filterSubkind, filterStatus]);
+  const { byId, graph } = useMemo(
+    () => ({
+      byId: new Map(locations.map((entity) => [entity.id, entity])),
+      graph: buildAtlasGraph(locations),
+    }),
+    [locations]
+  );
+  const selected = activeLocationId === null ? undefined : byId.get(activeLocationId);
 
   return (
     <div className="location-step">
       <header className="location-step-header">
         <div>
           <h2>Choose a location</h2>
-          <p>Locations are hard state entities from the World Atlas.</p>
+          <p>Anywhere charted in the World Atlas can host the opening scene.</p>
         </div>
         <div className="location-step-actions">
           <button type="button" onClick={onRefresh} disabled={isLoading}>
@@ -513,55 +483,37 @@ function LocationStep({
         </div>
       </header>
       {error ? <p className="wizard-error">{error}</p> : null}
-      <div className="location-step-filters">
-        <input
-          type="search"
-          placeholder="Search by name, description, or slug"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <select
-          value={filterSubkind}
-          onChange={(event) => setFilterSubkind(event.target.value)}
-        >
-          <option value="">All subkinds</option>
-          {subkinds.map((subkind) => (
-            <option key={subkind} value={subkind}>
-              {subkind}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(event) => setFilterStatus(event.target.value)}
-        >
-          <option value="">All statuses</option>
-          {statuses.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-      </div>
-      {isLoading ? <p>Loading locations…</p> : null}
-      {isLoadingDetails ? <p className="location-step-loading-details">Loading location details…</p> : null}
-      <div className="location-step-grid">
-        {filtered.map((loc) => (
-          <button
-            key={loc.id}
-            type="button"
-            className={`location-card${loc.id === activeLocationId ? ' active' : ''}`}
-            onClick={() => onSelect(loc)}
-          >
-            <p className="location-card-name">{loc.name}</p>
-            <p className="location-card-meta">
-              {loc.subkind ?? 'location'} · {loc.status ?? '—'}
-            </p>
-            {loc.description ? <p className="location-card-desc">{loc.description}</p> : null}
-          </button>
-        ))}
-        {!filtered.length && !isLoading ? <p className="location-step-empty">No locations found.</p> : null}
-      </div>
+      {isLoading ? <p className="location-step-loading-details">Loading locations…</p> : null}
+      <AtlasLocationBrowser
+        graph={graph}
+        byId={byId}
+        onOpen={onSelect}
+        selectedId={activeLocationId}
+        sidePanel={
+          <section className="atlas-panel location-step-selection" aria-label="Selected location">
+            <h2 className="atlas-panel-heading">Scene opens at</h2>
+            {selected ? (
+              <>
+                <p className="location-step-selection-name">{selected.name}</p>
+                <p className="location-step-selection-meta">
+                  {selected.subkind?.replace(/_/g, ' ') ?? selected.kind}
+                  {selected.status ? ` · ${selected.status}` : ''}
+                </p>
+                {selected.description ? (
+                  <p className="location-step-selection-desc">{selected.description}</p>
+                ) : null}
+                {isLoadingDetails ? (
+                  <p className="location-step-loading-details">Loading location details…</p>
+                ) : null}
+              </>
+            ) : (
+              <p className="atlas-empty-copy">
+                Pick a place on the chart or in the gazetteer.
+              </p>
+            )}
+          </section>
+        }
+      />
     </div>
   );
 }

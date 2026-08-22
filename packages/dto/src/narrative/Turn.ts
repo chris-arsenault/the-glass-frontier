@@ -5,6 +5,7 @@ import { InventoryDeltaSchema } from '../Inventory';
 import { BeatTrackerSchema } from './ChronicleBeat';
 import { Intent } from './Intent';
 import { LocationDeltaDecision } from './LocationDelta';
+import { SceneContext } from './Scene';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 
@@ -50,6 +51,7 @@ export const TurnSchema = z.object({
   locationDelta: LocationDeltaDecision.optional(),
   playerIntent: Intent.optional(),
   playerMessage: TranscriptEntry,
+  sceneContext: SceneContext.nullable().optional(),
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),
   systemMessage: TranscriptEntry.optional(),

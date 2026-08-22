@@ -1,0 +1,42 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'intent_response_schema')]"
+      },
+      {
+        "contains": "#scene:dialog:start"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": [
+        "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
+      ],
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 12,
+        "total_tokens": 24
+      }
+    }
+  }
+}

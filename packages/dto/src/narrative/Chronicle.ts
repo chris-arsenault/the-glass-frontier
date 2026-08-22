@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Metadata } from '../Metadata';
 import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
+import { ChronicleScene } from './Scene';
 
 const EntityFocusState = z.object({
   entityScores: z.record(z.string(), z.number()).default({}),
@@ -10,6 +11,7 @@ const EntityFocusState = z.object({
 });
 
 export const Chronicle = z.object({
+  activeScene: ChronicleScene.nullable().default(null),
   anchorEntityId: z.string().min(1).optional(),
   beats: z.array(ChronicleBeat).default([]),
   beatsEnabled: z.boolean().default(true),

@@ -15,6 +15,8 @@ import {
 
 let pool: Pool;
 let worldState: WorldState;
+const DIALOG_SCENE_ID = 'scene:turn-0';
+const DIALOG_SUBJECT = 'Amaya Venn';
 
 beforeAll(async () => {
   ({ pool, worldState } = await startHarness());
@@ -181,6 +183,7 @@ describe('Chronicle turn history', () => {
     expect(chronicle.playerId).toBe(TEST_PLAYER_ID);
     expect(turn.turnSequence).toBe(0);
     expect(snapshot?.turns).toHaveLength(1);
+    expect(snapshot?.turns[0]?.sceneContext).toBeUndefined();
     expect(snapshot?.character?.id).toBe(character.id);
     expect(snapshot?.locationName).toBe(startingLocation.name);
   });
@@ -227,6 +230,46 @@ describe('Chronicle turn history', () => {
     const turns = await worldState.chronicles.listChronicleTurns(chronicle.id);
     expect(turns[0]?.entityOffered?.[0]?.slug).toBe(location.slug);
     expect(turns[0]?.entityUsage?.[0]?.usage).toBe('central');
+  });
+
+  it('persists the minimal scene context that governed a turn', async () => {
+    const chronicle = await worldState.chronicles.upsertChronicle(
+      defaultChronicle('Dialog Test', {
+        activeScene: {
+          id: DIALOG_SCENE_ID,
+          startedAtTurn: 0,
+          subject: DIALOG_SUBJECT,
+          subjectKind: 'npc',
+          type: 'dialog',
+        },
+      })
+    );
+    await commitChronicleTurn(
+      worldState,
+      chronicle,
+      defaultTurn(chronicle.id, {
+        sceneContext: {
+          outcome: 'continue',
+          sceneId: DIALOG_SCENE_ID,
+          subject: DIALOG_SUBJECT,
+          subjectKind: 'npc',
+          type: 'dialog',
+        },
+        turnSequence: 0,
+      })
+    );
+
+    const turns = await worldState.chronicles.listChronicleTurns(chronicle.id);
+    const reloaded = await worldState.chronicles.getChronicle(chronicle.id);
+
+    expect(turns[0]?.sceneContext).toEqual({
+      outcome: 'continue',
+      sceneId: DIALOG_SCENE_ID,
+      subject: DIALOG_SUBJECT,
+      subjectKind: 'npc',
+      type: 'dialog',
+    });
+    expect(reloaded?.activeScene?.subject).toBe(DIALOG_SUBJECT);
   });
 });
 

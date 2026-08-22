@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Metadata } from '../Metadata';
 import { IntentBeatDirective } from './ChronicleBeat';
 import { IntentType as IntentTypeSchema } from './IntentType';
+import { SceneChange } from './Scene';
 
 export const Intent = z.object({
   beatDirective: IntentBeatDirective,
@@ -12,6 +13,7 @@ export const Intent = z.object({
   intentType: IntentTypeSchema,
   metadata: Metadata,
   routerRationale: z.string(),
+  sceneChange: SceneChange.nullable().default(null),
   tone: z.string(),
 });
 export type Intent = z.infer<typeof Intent>;

@@ -18,6 +18,7 @@ import { BugModerationPage } from './components/moderation/BugModerationPage/Bug
 import { WorldSchemaPage } from './components/moderation/WorldSchemaPage/WorldSchemaPage';
 import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
 import { LandingPage } from './components/pages/LandingPage/LandingPage';
+import { SceneStage } from './components/scene/SceneStage/SceneStage';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
 import { CharacterCreationWizard } from './components/wizards/CharacterCreationWizard/CharacterCreationWizard';
 import { ChronicleStartWizard } from './components/wizards/ChronicleStartWizard/ChronicleStartWizard';
@@ -94,6 +95,7 @@ const ChatExperience = (): React.JSX.Element => {
             <div className="session-bar">
               <ChronicleHeader />
             </div>
+            <SceneStage />
             <ChatCanvas />
             <ChatComposer />
           </main>

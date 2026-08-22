@@ -393,8 +393,15 @@ export function ChatCanvas() {
               typeof entry.metadata?.timestamp === 'number'
                 ? new Date(entry.metadata.timestamp)
                 : new Date();
+            const sceneContext = view?.sceneContext ?? null;
             const displayRole =
-              entry.role === 'player' ? 'Player' : entry.role === 'gm' ? 'GM' : 'System';
+              entry.role === 'player'
+                ? 'Player'
+                : entry.role === 'gm'
+                  ? sceneContext?.type === 'dialog'
+                    ? sceneContext.subject
+                    : 'GM'
+                  : 'System';
             const beatTracker = view?.beatTracker ?? null;
             const beatTrackerEffectLabel =
               entry.role === 'gm' && showNarrative && hasBeatTrackerDetails(beatTracker)
@@ -406,6 +413,8 @@ export function ChatCanvas() {
                 : null;
             const playerIntentLabel = formatIntentBadgeLabel(playerIntent?.intentType ?? null);
             const timelineLabel = describeTimelineBadge(view?.advancesTimeline ?? null);
+            const sceneLabel =
+              sceneContext === null ? null : `${sceneContext.type} · ${sceneContext.subject}`;
 
             return (
               <article
@@ -448,6 +457,9 @@ export function ChatCanvas() {
                     ) : null}
                     {entry.role === 'gm' ? (
                       <>
+                        {showNarrative && sceneLabel ? (
+                          <span className="chat-entry-scene-tag">{sceneLabel}</span>
+                        ) : null}
                         {showAll && timelineLabel ? (
                           <span className="chat-entry-timeline-tag">{timelineLabel}</span>
                         ) : null}

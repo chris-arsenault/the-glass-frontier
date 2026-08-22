@@ -1,0 +1,40 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'action-resolver')]"
+      },
+      {
+        "contains": "#scene:dialog:end"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "Amaya gives one curt nod and turns back to the ledger as you leave."
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "Amaya gives one curt nod and turns back to the ledger as you leave.",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      }
+    }
+  }
+}

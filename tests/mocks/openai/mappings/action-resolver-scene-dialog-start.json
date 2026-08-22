@@ -1,0 +1,40 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'action-resolver')]"
+      },
+      {
+        "contains": "#scene:dialog:start"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "Amaya Venn folds her hands over the quay ledger. \"Ask what you came to ask.\""
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "Amaya Venn folds her hands over the quay ledger. \"Ask what you came to ask.\"",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      }
+    }
+  }
+}

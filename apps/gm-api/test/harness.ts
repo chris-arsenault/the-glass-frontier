@@ -17,6 +17,7 @@ export const buildIntent = (overrides?: Partial<Intent>): Intent => ({
   intentType: 'action',
   metadata: { tags: [], timestamp: 0 },
   routerRationale: 'Concrete verb aimed at the world.',
+  sceneChange: null,
   tone: 'tense',
   ...overrides,
 });
@@ -52,6 +53,7 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
       },
     },
     chronicle: {
+      activeScene: null,
       beats: [],
       beatsEnabled: true,
       entityFocus: { entityScores: {}, tagScores: {} },
@@ -65,6 +67,7 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     turnSequence: 0,
   } as unknown as GraphContext['chronicleState'],
   chronicleStore: {} as GraphContext['chronicleStore'],
+  effectiveScene: null,
   failure: false,
   llm: {} as GraphContext['llm'],
   llmPlayer: { id: 'player-1', isAdmin: false, name: 'tsonu' },
@@ -76,6 +79,8 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     metadata: { tags: [], timestamp: 0 },
     role: 'player',
   },
+  sceneOutcome: 'continue',
+  sceneOutcomeReason: null,
   shouldCloseChronicle: false,
   telemetry,
   templates: {} as GraphContext['templates'],

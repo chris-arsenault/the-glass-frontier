@@ -60,11 +60,14 @@ vi.mock('../src/stores/authStore', () => ({
 }));
 
 const CHRONICLE_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+const DIALOG_SCENE_ID = 'scene:turn-3';
+const DIALOG_SUBJECT = 'Amaya Venn';
 const GM_RESPONSE_NODE = 'gm-response-node';
 const NETWORK_FAILURE = 'Network unavailable.';
 const PLAYER_ID = 'player-test';
 
 const chronicle: Chronicle = {
+  activeScene: null,
   beats: [],
   beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
@@ -100,6 +103,7 @@ const entry = (
 });
 
 type TurnResult = {
+  activeScene: Chronicle['activeScene'];
   beats: ChronicleBeat[];
   character: null;
   chronicleStatus: Chronicle['status'];
@@ -111,11 +115,14 @@ type TurnResult = {
 const turnResult = (
   playerMessage: TranscriptEntry,
   options?: {
+    activeScene?: Chronicle['activeScene'];
     failure?: boolean;
     gmResponse?: TranscriptEntry;
+    sceneContext?: Turn['sceneContext'];
     systemMessage?: TranscriptEntry;
   }
 ): TurnResult => ({
+  activeScene: options?.activeScene ?? null,
   beats: options?.failure ? [] : [beat],
   character: null,
   chronicleStatus: 'open',
@@ -127,6 +134,7 @@ const turnResult = (
     gmResponse: options?.gmResponse,
     id: 'turn-3',
     playerMessage,
+    sceneContext: options?.sceneContext,
     systemMessage: options?.systemMessage,
     turnSequence: 3,
   },
@@ -218,7 +226,23 @@ describe('chronicleStore turn handling', () => {
     if (!posted || !resolveTurn) {
       throw new Error('Expected a pending GM request.');
     }
-    resolveTurn(turnResult(posted.content, { gmResponse: finalResponse }));
+    resolveTurn(turnResult(posted.content, {
+      activeScene: {
+        id: DIALOG_SCENE_ID,
+        startedAtTurn: 3,
+        subject: DIALOG_SUBJECT,
+        subjectKind: 'npc',
+        type: 'dialog',
+      },
+      gmResponse: finalResponse,
+      sceneContext: {
+        outcome: 'continue',
+        sceneId: DIALOG_SCENE_ID,
+        subject: DIALOG_SUBJECT,
+        subjectKind: 'npc',
+        type: 'dialog',
+      },
+    }));
     await send;
 
     const committed = useChronicleStore.getState();
@@ -231,7 +255,9 @@ describe('chronicleStore turn handling', () => {
     expect(committed.messages.find((message) => message.entry.id === preview.id)?.entry.content)
       .toBe('The signal opens a path east.');
     expect(committed.beats).toEqual([beat]);
+    expect(committed.chronicleRecord?.activeScene?.subject).toBe(DIALOG_SUBJECT);
     expect(committed.locationName).toBe('Auric Causeway');
+    expect(committed.turnViews['turn-3']?.sceneContext?.type).toBe('dialog');
   });
 
   it('keeps a committed failed turn and its system message', async () => {

@@ -3,8 +3,10 @@ import type {
   BeatTracker,
   Character,
   Chronicle,
+  ChronicleScene,
   Intent,
   LlmTrace,
+  SceneOutcome,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
@@ -82,6 +84,9 @@ export type GraphContext = {
   skillCheckResult?: SkillCheckResult;
   gmSummary?: string,
   gmTrace?: LlmTrace | null;
+  effectiveScene: ChronicleScene | null;
+  sceneOutcome: SceneOutcome;
+  sceneOutcomeReason: string | null;
   shouldCloseChronicle: boolean;
   advancesTimeline: boolean;
 

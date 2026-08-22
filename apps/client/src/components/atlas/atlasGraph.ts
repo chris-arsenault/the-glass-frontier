@@ -253,6 +253,55 @@ export const childIds = (node: AtlasNode): string[] => [
   ...node.children.within,
 ];
 
+/**
+ * Every entity this one shares a `terminus_of` edge with, either direction.
+ * Canon writes the verb both ways (a station is a terminus of its span, and a
+ * span lists its own endpoints), so partners are collected from both.
+ */
+export const terminusPartnerIds = (node: AtlasNode): string[] => [
+  ...new Set(
+    node.entity.links
+      .filter(
+        (link) =>
+          link.relationship === 'terminus_of' && link.targetId !== node.entity.id
+      )
+      .map((link) => link.targetId)
+  ),
+];
+
+/**
+ * Routes are the places that exist between places — trade lanes, spans, and
+ * elevators. Anything with two or more terminus connections qualifies; a
+ * single connection marks an endpoint station, not the route itself.
+ */
+export const routeIds = (graph: AtlasGraph): string[] =>
+  [...graph.nodes.values()]
+    .filter((node) => terminusPartnerIds(node).length >= 2)
+    .map((node) => node.entity.id)
+    .sort(byName(graph.nodes));
+
+/** Whether this location is span-linked: an endpoint of exactly one route. */
+export const isTetheredEndpoint = (node: AtlasNode): boolean =>
+  terminusPartnerIds(node).length === 1;
+
+/**
+ * The planet (direct orbiter of the sun) whose branch contains this entity,
+ * or null for the sun, deep space, and worlds without a celestial layer.
+ */
+export const planetAncestorId = (graph: AtlasGraph, id: string): string | null => {
+  const planets = new Set(graph.planetIds);
+  let current = graph.nodes.get(id);
+  const guard = new Set<string>();
+  while (current && !guard.has(current.entity.id)) {
+    guard.add(current.entity.id);
+    if (planets.has(current.entity.id)) {
+      return current.entity.id;
+    }
+    current = current.parentId === null ? undefined : graph.nodes.get(current.parentId);
+  }
+  return null;
+};
+
 /** Parent chain from the outermost container down to the entity itself. */
 export const breadcrumbIds = (graph: AtlasGraph, id: string): string[] => {
   const chain: string[] = [];

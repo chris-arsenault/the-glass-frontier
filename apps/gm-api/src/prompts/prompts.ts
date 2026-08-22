@@ -2,6 +2,7 @@ import type { PromptTemplateRuntime } from '@glass-frontier/app';
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import type { Prompt } from '@glass-frontier/llm-client';
 
+import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
 import { extractFragment, templateFragmentMapping } from './chronicleFragments';
 
@@ -22,6 +23,19 @@ const messageOrder = new Map<PromptTemplateId, MessageOrder>([
   ['possibility-advisor', 'player'],
   ['reflection-weaver', 'player'],
   ['wrap-resolver', 'player'],
+]);
+
+const SCENE_AWARE_TEMPLATES = new Set<PromptTemplateId>([
+  'action-resolver',
+  'check-planner',
+  'clarification-responder',
+  'gm-summary',
+  'inquiry-describer',
+  'intent-classifier',
+  'planning-narrator',
+  'possibility-advisor',
+  'reflection-weaver',
+  'wrap-resolver',
 ]);
 class PromptComposer {
   readonly #templateRuntime: PromptTemplateRuntime;
@@ -70,9 +84,17 @@ class PromptComposer {
   }
 
   async #instructions(templateId: PromptTemplateId, context: GraphContext): Promise<string> {
-    return this.#templateRuntime.render(templateId, {
+    const data = {
       character: { name: context.chronicleState.character.name },
-    });
+      scene: context.effectiveScene,
+    };
+    const base = await this.#templateRuntime.render(templateId, data);
+    if (context.effectiveScene === null || !SCENE_AWARE_TEMPLATES.has(templateId)) {
+      return base;
+    }
+    const sceneTemplateId = getSceneTypeDefinition(context.effectiveScene.type).promptTemplateId;
+    const scenePolicy = await this.#templateRuntime.render(sceneTemplateId, data);
+    return `${base}\n\n## Active scene policy\n\n${scenePolicy}`;
   }
 
   async #developerMessage(

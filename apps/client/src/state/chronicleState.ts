@@ -5,6 +5,7 @@ import type {
   Chronicle,
   ChronicleBeat,
   Intent,
+  SceneContext,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
@@ -68,6 +69,7 @@ export type TurnView = {
   intentType: Intent['intentType'] | null;
   inventoryDelta: InventoryDelta | null;
   playerIntent: Intent | null;
+  sceneContext: SceneContext | null;
   skillCheckPlan: SkillCheckPlan | null;
   skillCheckResult: SkillCheckResult | null;
   skillKey: string | null;

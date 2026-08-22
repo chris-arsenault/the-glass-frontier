@@ -26,6 +26,19 @@ Tie-breaks:
 
 Use RECENT-EVENTS to resolve pronouns, short follow-ups, and references such as "it" or "that." Classify the current message itself; do not replace its concrete verb with an earlier topic.
 
+Scene handling:
+- `sceneChange` is normally null. If a SCENE section exists, null means the current typed scene continues.
+- Set `sceneChange` only when this message clearly enters or switches to one of these situations:
+  - `dialog`: direct conversation with a named NPC
+  - `battle`: immediate physical conflict with active opposition
+  - `hunt`: sustained tracking or approach toward a quarry
+  - `chase`: active pursuit or escape where distance and route are changing
+  - `search`: sustained inspection of a place, transport, artifact, or other subject
+- Do not emit a change for a passing line of dialogue, one attack inside an existing battle, one observation, or a minor tone change.
+- `subject` is the concise in-world name of what the scene is about.
+- `subjectKind` must use the canonical world kind taxonomy. Common values: npc, creature, faction, geographic_location, installation, transport, artifact, resource, phenomenon, conflict.
+- There is no scene-end signal here. Leaving or resolving a scene remains an action inside it; downstream narration and summary decide completion.
+
 Output fields:
 - intentType: the single best intent type from the list above
 - intentSummary: concise paraphrase of the player's request (<=140 chars)
@@ -33,5 +46,6 @@ Output fields:
 - tone: one narrative tone adjective grounded in the current scene (e.g., tense, wry, mournful)
 - creativeSpark: true only when the intent shows genuine improvisation or imaginative flair beyond the obvious move
 - handlerHints: 0-8 lowercase hints that nudge downstream narration (e.g., "whispered", "hurried"); emit [] when none apply
+- sceneChange: `{type, subject, subjectKind}` only for a clear typed-scene entry/switch; otherwise null
 
 Never emit prose beyond the fields. Always satisfy the JSON schema.

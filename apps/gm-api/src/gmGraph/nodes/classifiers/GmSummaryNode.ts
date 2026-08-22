@@ -5,6 +5,8 @@ import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
 const SummaryResponseSchema = z.object({
+  sceneOutcome: z.enum(['continue', 'complete']).default('continue'),
+  sceneOutcomeReason: z.string().min(1).nullable().default(null),
   shouldCloseChronicle: z.boolean(),
   summary: z.string().min(1),
 });
@@ -30,9 +32,12 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
     return hasMessage && hasIntent;
   }
 
-  #applySummary(_context: GraphContext, response: SummaryResponse): GraphNodeDelta {
+  #applySummary(context: GraphContext, response: SummaryResponse): GraphNodeDelta {
+    const sceneOutcome = context.effectiveScene === null ? 'continue' : response.sceneOutcome;
     return {
       gmSummary: response.summary,
+      sceneOutcome,
+      sceneOutcomeReason: sceneOutcome === 'complete' ? response.sceneOutcomeReason : null,
       shouldCloseChronicle: response.shouldCloseChronicle,
     };
   }

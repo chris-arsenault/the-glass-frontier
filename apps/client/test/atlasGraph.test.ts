@@ -5,6 +5,9 @@ import {
   breadcrumbIds,
   buildAtlasGraph,
   descendantCount,
+  isTetheredEndpoint,
+  planetAncestorId,
+  routeIds,
 } from '../src/components/atlas/atlasGraph';
 
 const entity = (
@@ -85,6 +88,41 @@ describe('buildAtlasGraph', () => {
   it('keeps parentless places as roots and walks breadcrumbs to them', () => {
     expect(graph.rootIds).toEqual(['stray']);
     expect(breadcrumbIds(graph, 'settlement')).toEqual(['sun', 'outer', 'region', 'settlement']);
+  });
+
+  it('derives routes from terminus edges and finds planet ancestors', () => {
+    const lane = entity('lane', {
+      kind: 'installation',
+      links: [
+        out('in_orbit_of', 'outer'),
+        out('terminus_of', 'settlement'),
+        out('terminus_of', 'moon'),
+      ],
+      subkind: 'infrastructure',
+    });
+    const tethered = entity('tethered', {
+      kind: 'installation',
+      links: [out('in_orbit_of', 'outer'), out('terminus_of', 'lane')],
+      subkind: 'station',
+    });
+    const routed = buildAtlasGraph([
+      sun,
+      inner,
+      outer,
+      moon,
+      station,
+      region,
+      settlement,
+      lane,
+      tethered,
+    ]);
+    const tetheredNode = routed.nodes.get('tethered');
+    const laneNode = routed.nodes.get('lane');
+    expect(routeIds(routed)).toEqual(['lane']);
+    expect(tetheredNode && isTetheredEndpoint(tetheredNode)).toBe(true);
+    expect(laneNode && isTetheredEndpoint(laneNode)).toBe(false);
+    expect(planetAncestorId(routed, 'settlement')).toBe('outer');
+    expect(planetAncestorId(routed, 'sun')).toBe(null);
   });
 
   it('breaks parent cycles instead of losing the subtree', () => {

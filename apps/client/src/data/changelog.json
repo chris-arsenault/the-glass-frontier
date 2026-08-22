@@ -318,7 +318,7 @@
     "id": "2026-08-22-atlas-drilldown",
     "releasedAt": "2026-08-22",
     "summary": "The World Atlas is now an actual atlas",
-    "details": "The Atlas opens on an orbital chart of the Kaleidos system drawn from canon itself: the sun, the eight planets ordered by their inner-of relations, moons, rings, and how many charted places each body carries. Clicking a body drills into what orbits it, what sits on its surface, and what has been charted within, all the way down to a single settlement — every entity page carries breadcrumbs back up the chain, fact cards, who and what is present there grouped by kind, relationships organized by category, and lore as an expandable reading list. A gazetteer tree and a kind-colored registry cover everything the map cannot place. The chronicle wizard's anchor step now groups candidates by kind with prominence badges instead of an unordered card pile.",
+    "details": "The Atlas opens on an orbital chart of the Kaleidos system drawn from canon itself: the sun, the eight planets ordered by their inner-of relations, moons, rings, trade lanes drawn between the worlds they link, and how many charted places each body carries. Clicking a body drills into what orbits it, what sits on its surface, and what has been charted within, all the way down to a single settlement — every entity page carries breadcrumbs back up the chain, fact cards, who and what is present there grouped by kind, relationships organized by category, and lore as an expandable reading list. Heavily settled worlds like Kaleidos get an orbit-and-surface chart: surface regions pinned to the planet's limb, ring regions as arcs with their habs strung along them, trade lanes with their mid-route hubs, and span-linked stations tethered back to the surface. The chronicle wizard now browses this same atlas to pick the opening location, and its anchor step groups candidates by kind with prominence badges.",
     "type": "feature"
   },
   {
@@ -340,6 +340,13 @@
     "releasedAt": "2026-08-22",
     "summary": "Character creation is a guided six-step build with real limits",
     "details": "The one-page character form is now a six-step wizard. You pick a species, culture, homeland and faction allegiance from world canon rather than typing them, and an archetype preset sets two advanced attributes and three skills for you to edit. Attributes and skills now have a budget — two attributes at advanced, an optional superior paid for with one rudimentary, and exactly three skills at one artisan and two apprentice — enforced in the form and again on the server, which now builds the character record itself instead of trusting the browser. Skills are written as actions rather than disciplines. The optional Nature step records callings, a drive, a flaw, a standing instinct and one unique fact; each one you fill in gives the GM something specific to use, and blank fields are fine. All of it reaches the GM: narration charges costs against your flaw, options are framed for and against your callings, and closing turns state where those callings ended up. Starting skill ratings also now apply correctly on the first roll, where a naming mismatch used to drop them to untrained.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-22-curated-scene-types",
+    "releasedAt": "2026-08-22",
+    "summary": "Conversations, battles, hunts, chases, and searches now play by their own rules",
+    "details": "The GM now recognizes sustained scene types from ordinary typed play without commands or keyword triggers. Dialog scenes focus the interface on the person speaking and keep their name on every response; battles tighten checks and physical consequences; hunts track progress toward a quarry; chases keep distance and route changing; and searches distinguish active investigation from simple observation. Each type supplies its own narration, check, and completion rules while the existing intent system still handles whatever the player chooses to type. Scene context is saved on every turn so transcript history remains consistent after play moves on.",
     "type": "feature"
   }
 ]

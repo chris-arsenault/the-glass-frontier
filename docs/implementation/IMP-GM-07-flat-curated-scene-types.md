@@ -94,24 +94,28 @@ export const SceneType = z.enum([
 
 ### Subject kind
 
+Do not invent a scene-specific kind enum. The world already has one:
+`HardStateKind` in `packages/dto/src/world/vocabulary.ts`, derived from
+tsonu-canon (`npc`, `creature`, `faction`, `geographic_location`,
+`installation`, `transport`, `artifact`, `resource`, and so on). Reuse it:
+
 ```ts
-export const SceneSubjectKind = z.enum([
-  'npc',
-  'creature',
-  'location',
-  'vehicle',
-  'faction',
-  'object',
-]);
+subjectKind: HardStateKind;
 ```
 
-`subjectKind` labels what the scene is about so the UI and prompts can render it.
-The classifier picks the best-fit kind. Do not enforce a per-type allow matrix
-that fails a turn on an unusual pairing; that only turns a classifier quirk into
-a broken turn in a free-text product. The registry may list typical kinds per
-type as guidance for the classifier prompt, not as a hard gate. Examples:
-`dialog` -> `Amaya Venn` (`npc`); `battle` -> `Brake Cutters` (`faction`);
-`search` -> `the wrecked tender` (`vehicle`).
+Place-ness is not a kind. An entity's game-layer "a scene can be set here"
+concept is the `isLocation` flag on `HardState`, defaulted from the kind and
+overridable per entity. A `search` subject is therefore a normal kind such as
+`installation`, `geographic_location`, `transport`, or `artifact` that happens to
+be `isLocation`, not a bespoke `location` kind.
+
+`subjectKind` labels what the scene is about so the UI and prompts can render
+it. The classifier picks the best-fit kind from the existing taxonomy. Do not
+enforce a per-type allow matrix that fails a turn on an unusual pairing; that
+turns a classifier quirk into a broken turn in a free-text product. The registry
+may suggest typical kinds per type in the classifier prompt, not gate them.
+Examples: `dialog` -> `Amaya Venn` (`npc`); `battle` -> `Brake Cutters`
+(`faction`); `search` -> `the wrecked tender` (`transport`).
 
 ### Chronicle scene
 
@@ -120,14 +124,17 @@ export const ChronicleScene = z.object({
   id: z.string().min(1),
   startedAtTurn: z.number().int().nonnegative(),
   subject: z.string().min(1),
-  subjectKind: SceneSubjectKind,
+  subjectKind: HardStateKind,
   type: SceneType,
 });
 ```
 
 `subject` and `subjectKind` are required for every typed scene. Do not add
 type-specific nullable columns such as `dialogPartner`, `quarry`, or
-`searchLocation`.
+`searchLocation`. `subject` is a display string (a canon entity name or an
+ad-hoc name like "the red courier kite"); it does not have to resolve to a canon
+entity. If we later want to link it, add an optional `subjectEntityId`, not a
+second subject system.
 
 The scene does not initially store clocks, HP, nested scenes, portraits,
 status, start/completion reasons, or type-specific payloads. Add those only when
@@ -147,32 +154,45 @@ Invariants:
 - a new typed scene overwrites `activeScene`;
 - completing a scene sets `activeScene` back to null.
 
-Do not persist a chronicle-level log of completed scenes. Per-turn snapshots
-(below) already record what governed each turn, which is enough for the UI and
-for the Phase 8 play-data review. Store `activeScene` in the existing chronicle
-`props` JSON; no scene table.
+Do not persist a separate chronicle-level log of completed scenes. Each turn
+stores the minimal scene context that governed it (see below), which is enough
+for consistent historical UI, scene grouping, and the Phase 8 play-data review.
+Store `activeScene` in the existing chronicle `props` JSON; no scene table.
 
-### Turn snapshot
+### Turn-level scene data
 
-Add a compact snapshot to `Turn`:
+Live scene state is `chronicle.activeScene`. Each committed turn also stores a
+minimal snapshot of the scene that governed that turn:
 
 ```ts
 sceneContext: z.object({
+  outcome: z.enum(['continue', 'complete']),
   sceneId: z.string().min(1),
   subject: z.string().min(1),
-  subjectKind: SceneSubjectKind,
+  subjectKind: HardStateKind,
   type: SceneType,
 }).nullable().optional(),
 ```
 
-The snapshot records which scene governed that turn so historical transcript UI
-(the speaking-head attribution) does not read the chronicle's current active
-scene. This is the only piece of scene history the system keeps.
+Freeform turns store null. The final turn of a typed scene stores
+`outcome: complete`.
 
-`chronicle_turn` uses explicit columns, so add one `scene_context jsonb` column
-and wire it through `ChronicleTurnPersistence`. That single column is the whole
-persistence footprint for scene history; do not add a scene table or a
-completed-scene log.
+This is not a second scene-state system. It is immutable turn metadata, like the
+existing check result or beat tracker, used to:
+
+- keep historical transcript presentation consistent after the active scene
+  changes;
+- group and inspect turns by scene without replaying classifier transitions;
+- preserve the subject and taxonomy kind exactly as the player saw them;
+- measure scene duration and completion during the play-data review.
+
+Do not reconstruct this state by scanning transitions. That adds brittle replay
+logic to every client or report that needs scene history.
+
+`chronicle_turn` is not stored as one JSONB document. It uses explicit columns,
+with selected structured fields (`player_intent`, check plan/result, deltas,
+beat tracker, traces) stored as JSONB. Add one `scene_context jsonb` column and
+wire it through `ChronicleTurnPersistence`, matching that existing pattern.
 
 ## Scene directive on intent
 
@@ -181,7 +201,7 @@ Extend `Intent` with one nullable field:
 ```ts
 sceneChange: z.object({
   subject: z.string().min(1),
-  subjectKind: SceneSubjectKind,
+  subjectKind: HardStateKind,
   type: SceneType,
 }).nullable().default(null);
 ```
@@ -233,7 +253,9 @@ Rules:
 
 - If `effectiveScene` is null, output `continue` and a null reason.
 - `complete` means the current turn belongs to the scene and is its final turn.
-- On `complete`, clear `activeScene` and record the reason on the turn snapshot.
+- Build the turn's `sceneContext` from `effectiveScene` plus `sceneOutcome`.
+- On `complete`, persist that final turn with `outcome: complete`, then clear
+  `activeScene`.
 - Chronicle closure also completes the active scene on the closing turn.
 - A narrator asking the player an ordinary next question does not by itself
   keep a scene open; the scene policy's completion conditions decide.
@@ -248,11 +270,13 @@ database configuration.
 
 ```ts
 type SceneTypeDefinition = {
-  allowedSubjectKinds: readonly SceneSubjectKind[];
+  suggestedSubjectKinds: readonly HardStateKind[];
   promptTemplateId: ScenePromptTemplateId;
   presentation: ScenePresentation;
 };
 ```
+
+`suggestedSubjectKinds` is classifier-prompt guidance, not a validation gate.
 
 `presentation` is a string naming the client stage for the type. Define only the
 tokens for types that are actually built (`speaking-head` for dialog first,
@@ -361,7 +385,7 @@ rather than generic `GM`.
 
 ### Battle
 
-**Subject:** `npc`, `creature`, `vehicle`, or `faction`
+**Typical subject kinds:** `npc`, `creature`, `transport`, or `faction`
 
 **Client:** action-pressure stage naming the opposition. Numeric pressure is a
 later phase; the first implementation supplies presentation and prompt rules.
@@ -396,7 +420,7 @@ later phase; the first implementation supplies presentation and prompt rules.
 
 ### Hunt
 
-**Subject:** `npc`, `creature`, or `vehicle`
+**Typical subject kinds:** `npc`, `creature`, or `transport`
 
 **Client:** quarry stage showing the named target and current hunt scene.
 
@@ -420,7 +444,7 @@ later phase; the first implementation supplies presentation and prompt rules.
 
 ### Chase
 
-**Subject:** `npc`, `creature`, or `vehicle`
+**Typical subject kinds:** `npc`, `creature`, or `transport`
 
 **Client:** pursuit stage showing the target.
 
@@ -444,7 +468,8 @@ later phase; the first implementation supplies presentation and prompt rules.
 
 ### Search
 
-**Subject:** `location`, `vehicle`, or `object`
+**Typical subject kinds:** `geographic_location`, `installation`, `transport`,
+`artifact`, or `resource`; location-shaped subjects also carry `isLocation`.
 
 **Client:** inspection stage naming the searched subject.
 
@@ -504,9 +529,9 @@ The dialog stage displays:
 - `Dialog` label;
 - optional current-turn activity/progress indicator.
 
-For historical entries, `TurnView.sceneContext` supplies the label. A dialog
-response remains attributed to its subject after the chronicle moves to another
-scene.
+For historical entries, `TurnView.sceneContext` supplies the subject label and
+presentation. A dialog response remains attributed to its NPC after the
+chronicle moves to another scene.
 
 ### Store and transport
 
@@ -514,9 +539,8 @@ Extend:
 
 - client `ChronicleState` with active scene derivation from `chronicleRecord`;
 - `TurnView` with `sceneContext`;
-- history hydration;
-- progress/final-turn merge paths;
-- GM response rendering label;
+- history hydration and progress/final-turn merge paths;
+- GM response rendering label from the turn's persisted scene context;
 - feedback payload context if scene type is useful to later analysis.
 
 Do not add a scene-start button or typed-scene selector.
@@ -533,7 +557,8 @@ completed-scene array.
 
 ### Turn
 
-Add `scene_context jsonb` to `chronicle_turn`, update:
+Add `scene_context jsonb` to `chronicle_turn` in the next sequential migration
+and matching rollback. Update:
 
 - `TURN_SELECT`
 - `TURN_INSERT`
@@ -542,8 +567,9 @@ Add `scene_context jsonb` to `chronicle_turn`, update:
 - `turnParameters`
 - initial schema/bootstrap SQL
 
-The turn snapshot is audit/history data and must persist independently of the
-current chronicle scene.
+`sceneChange` also persists inside the existing `player_intent` jsonb because it
+is a field on `Intent`, but consumers must not replay it to reconstruct
+historical scene context. The snapshot is authoritative for that turn.
 
 ## Implementation phases
 
@@ -570,7 +596,7 @@ Deliver:
 
 Files:
 
-- next `db/migrations/*.sql` and rollback
+- next sequential `db/migrations/*.sql` and rollback
 - `db/migrations/001_initial.sql`
 - `packages/worldstate/src/chronicleStore.ts`
 - `packages/worldstate/src/chronicleTurnPersistence.ts`
@@ -578,11 +604,12 @@ Files:
 
 Deliver:
 
-- `activeScene` in chronicle props;
-- scene snapshot on turns via one `scene_context` column;
-- normalization for existing chronicles;
-- idempotent turn commit coverage;
-- deletion and history loading remain unchanged.
+- `activeScene` persisted in chronicle props via the existing props write;
+- `normalizeChronicle` defaults missing `activeScene` to null;
+- one `scene_context jsonb` column round-trips the minimal per-turn snapshot;
+- `sceneChange` continues to round-trip inside the existing `player_intent`
+  jsonb;
+- idempotent turn commit and history loading remain unchanged.
 
 ### Phase 3 – Intent-owned scene lifecycle
 
@@ -695,12 +722,14 @@ additional scene types.
 
 ### DTO/unit
 
-- scene and subject-kind enums parse;
+- `SceneType` parses and `subjectKind` reuses `HardStateKind`;
 - `activeScene` is nullable and defaults to null;
 - the reducer maps `sceneChange` (null / new / same / different) to
   stay / start / continue / replace;
 - a malformed `sceneChange` degrades to stay rather than throwing;
-- turn scene snapshot round-trips.
+- `sceneChange` round-trips inside `player_intent`;
+- minimal `sceneContext` parses and carries type, subject, taxonomy kind, scene
+  id, and turn outcome.
 
 ### GM graph
 
@@ -717,9 +746,10 @@ additional scene types.
 
 - old chronicle normalizes to no active scene;
 - the active scene survives reload;
-- each turn's scene snapshot survives reload;
+- a turn's `sceneContext` survives reload from the dedicated jsonb column;
+- a turn's `sceneChange` also survives reload inside `player_intent`;
 - duplicate turn commit remains idempotent;
-- rollback removes only the added turn `scene_context` column.
+- rollback removes only the added `scene_context` column.
 
 ### Client
 

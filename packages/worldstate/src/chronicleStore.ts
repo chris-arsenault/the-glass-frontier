@@ -28,6 +28,7 @@ const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
   const summaries = Array.isArray(chronicle.summaries) ? chronicle.summaries : [];
   return {
     ...chronicle,
+    activeScene: chronicle.activeScene ?? null,
     beats,
     beatsEnabled,
     summaries,
@@ -324,6 +325,7 @@ class PostgresChronicleStore implements ChronicleStore {
     chronicleId: string
   ): Chronicle {
     return normalizeChronicle({
+      activeScene: null,
       anchorEntityId: params.anchorEntityId ?? undefined,
       beats: [],
       beatsEnabled: params.beatsEnabled ?? true,

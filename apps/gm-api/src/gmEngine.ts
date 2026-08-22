@@ -34,6 +34,7 @@ import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
 import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { GmGraphOrchestrator } from './gmGraph/orchestrator';
+import { buildSceneContext } from './scenes/sceneLifecycle';
 import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
 
@@ -83,6 +84,7 @@ class GmEngine {
     chronicleStatus: Chronicle['status'];
     beats: Chronicle['beats'];
     entityFocus: Chronicle['entityFocus'];
+    activeScene: Chronicle['activeScene'];
   }> {
     this.#assertChronicleId(chronicleId);
     const chronicleState = await this.#loadChronicleState(chronicleId);
@@ -124,9 +126,11 @@ class GmEngine {
           ...updatedContext.chronicleState,
           chronicle: {
             ...updatedContext.chronicleState.chronicle,
+            activeScene: null,
             status: 'closed',
           },
         },
+        sceneOutcome: 'complete',
       }
       : updatedContext;
 
@@ -163,8 +167,17 @@ class GmEngine {
     const chronicleStatus = finalContext.chronicleState.chronicle.status;
     const beats = finalContext.chronicleState.chronicle.beats;
     const entityFocus = finalContext.chronicleState.chronicle.entityFocus;
+    const activeScene = finalContext.chronicleState.chronicle.activeScene;
 
-    return { beats, chronicleStatus, entityFocus, locationName, turn, updatedCharacter };
+    return {
+      activeScene,
+      beats,
+      chronicleStatus,
+      entityFocus,
+      locationName,
+      turn,
+      updatedCharacter,
+    };
   }
 
   #createGraph(): GmGraphOrchestrator {
@@ -279,12 +292,15 @@ class GmEngine {
       chronicleId,
       chronicleState,
       chronicleStore,
+      effectiveScene: chronicleState.chronicle.activeScene,
       failure: false,
       llm: this.llm,
       llmPlayer,
       modelConfigStore: this.modelConfigStore,
       playerIntent: undefined,
       playerMessage,
+      sceneOutcome: 'continue',
+      sceneOutcomeReason: null,
       shouldCloseChronicle: false,
       telemetry: this.telemetry,
       templates: templateRuntime,
@@ -342,6 +358,9 @@ class GmEngine {
     turnSequence: number;
   }): Turn {
     const failure = graphResult.failure || systemMessage !== undefined;
+    const governingScene = failure
+      ? graphResult.chronicleState.chronicle.activeScene
+      : graphResult.effectiveScene;
     return {
       advancesTimeline: graphResult.advancesTimeline,
       beatTracker: graphResult.beatTracker,
@@ -358,6 +377,10 @@ class GmEngine {
       locationDelta: graphResult.locationDelta,
       playerIntent: graphResult.playerIntent,
       playerMessage,
+      sceneContext: buildSceneContext(
+        governingScene,
+        failure ? 'continue' : graphResult.sceneOutcome
+      ),
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage,

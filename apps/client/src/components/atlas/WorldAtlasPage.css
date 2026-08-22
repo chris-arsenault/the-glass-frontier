@@ -79,6 +79,36 @@
   gap: var(--space-3);
 }
 
+.atlas-browser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.atlas-browser-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.atlas-browser-search {
+  width: 16rem;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  font-size: var(--text-sm);
+  max-width: 40vw;
+}
+
+.atlas-browser-search:focus-visible {
+  border-color: var(--border-accent);
+  outline: none;
+}
+
 .atlas-panel,
 .atlas-map-panel {
   padding: var(--space-3) var(--space-4);
@@ -249,6 +279,127 @@
   font-size: 15px;
 }
 
+.atlas-map-lane {
+  fill: none;
+  stroke: rgb(232 201 143 / 40%);
+  stroke-dasharray: 7 5;
+  stroke-width: 1.25;
+  transition: stroke 120ms ease;
+}
+
+.atlas-map-lane-group:hover .atlas-map-lane,
+.atlas-map-lane-group:focus-visible .atlas-map-lane {
+  stroke: rgb(232 201 143 / 85%);
+}
+
+.atlas-map-lane-name {
+  fill: rgb(232 201 143 / 75%);
+}
+
+/* Body chart (orbit vs surface) */
+
+.atlas-bodymap-panel {
+  overflow: hidden;
+}
+
+.atlas-bodymap-planet {
+  fill: #14203a;
+  stroke: rgb(126 166 232 / 55%);
+  stroke-width: 1.5;
+}
+
+.atlas-bodymap-planet-name {
+  fill: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.atlas-bodymap-layer-label {
+  fill: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-bodymap-surface-dot {
+  fill: #9ec2f5;
+}
+
+.atlas-bodymap-surface-name {
+  fill: var(--text-secondary);
+}
+
+.atlas-bodymap-track {
+  fill: none;
+  stroke: rgb(148 163 184 / 14%);
+  stroke-width: 1;
+}
+
+.atlas-bodymap-ring {
+  fill: none;
+  stroke: rgb(180 200 235 / 45%);
+  stroke-dasharray: 5 4;
+  stroke-width: 1.25;
+  transition: stroke 120ms ease;
+}
+
+.atlas-map-body:hover .atlas-bodymap-ring,
+.atlas-map-body:focus-visible .atlas-bodymap-ring {
+  stroke: rgb(180 200 235 / 85%);
+}
+
+.atlas-bodymap-ring-name {
+  fill: var(--text-secondary);
+}
+
+.atlas-bodymap-ring-count {
+  fill: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.atlas-bodymap-station {
+  fill: #8ea3c4;
+  transition: fill 120ms ease;
+}
+
+.atlas-map-body:hover .atlas-bodymap-station,
+.atlas-map-body:focus-visible .atlas-bodymap-station {
+  fill: #dbe6f7;
+}
+
+.atlas-bodymap-station-tethered {
+  fill: #e8c98f;
+}
+
+.atlas-bodymap-tether {
+  stroke: rgb(232 201 143 / 45%);
+  stroke-dasharray: 2 3;
+  stroke-width: 1;
+}
+
+.atlas-bodymap-lane {
+  stroke: rgb(232 201 143 / 40%);
+  stroke-dasharray: 7 5;
+  stroke-width: 1.25;
+  transition: stroke 120ms ease;
+}
+
+.atlas-map-body:hover .atlas-bodymap-lane,
+.atlas-map-body:focus-visible .atlas-bodymap-lane {
+  stroke: rgb(232 201 143 / 85%);
+}
+
+.atlas-bodymap-hub {
+  fill: #e8c98f;
+}
+
+.atlas-bodymap-hub-name {
+  fill: var(--text-muted);
+}
+
 /* Gazetteer */
 
 .atlas-gazetteer,
@@ -282,6 +433,12 @@
   color: var(--text-primary);
   background: var(--surface-tertiary);
   outline: none;
+}
+
+.atlas-gazetteer-row-selected,
+.atlas-gazetteer-row-selected:hover {
+  background: rgb(59 130 246 / 12%);
+  box-shadow: inset 2px 0 0 var(--color-accent-blue);
 }
 
 .atlas-row-name {

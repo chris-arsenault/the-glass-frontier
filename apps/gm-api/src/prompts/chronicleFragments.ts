@@ -26,6 +26,7 @@ export type ChronicleFragmentTypes =
   | 'wrap'
   | 'inventory'
   | 'inventory-detail'
+  | 'scene'
   | 'seed';
 
 const CHRONICLE_TONE_FRAGMENT: ChronicleFragmentTypes = 'chronicle-tone';
@@ -39,21 +40,21 @@ export const templateFragmentMapping = new Map<
 PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
-  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['beat-tracker', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
-  ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'character', 'location']],
-  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', 'character', 'location']],
+  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities']],
-  ['gm-summary', ['intent', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
-  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'character', 'entities', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['gm-summary', ['intent', 'scene', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
+  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'character', 'entities', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['intent-beat-detector', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
-  ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'character', 'beats', 'wrap']],
+  ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
   ['location-delta', ['intent', USER_MESSAGE_FRAGMENT, 'location']],
-  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
+  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
@@ -69,6 +70,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   [INVENTORY_DETAIL_FRAGMENT, inventoryDetailFragment],
   ['location', locationFragment],
   [RECENT_EVENTS_FRAGMENT, recentEventsFragment],
+  ['scene', sceneFragment],
   ['seed', seedFragment],
   [SKILL_CHECK_FRAGMENT, skillCheckFragment],
   ['tone', toneFragment],
@@ -191,6 +193,10 @@ function beatsFragment(context: GraphContext): unknown {
 
 function intentFragment(context: GraphContext): Record<string, unknown> {
   return formatIntent(context.playerIntent, context.chronicleState.chronicle.beats);
+}
+
+function sceneFragment(context: GraphContext): unknown {
+  return context.effectiveScene;
 }
 
 function toneFragment(context: GraphContext): string {

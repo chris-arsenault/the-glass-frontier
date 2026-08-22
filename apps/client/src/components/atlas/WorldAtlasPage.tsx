@@ -5,9 +5,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { worldAtlasClient } from '../../lib/worldAtlasClient';
 import { useChronicleStartStore } from '../../stores/chronicleStartWizardStore';
+import { AtlasBodyMap } from './AtlasBodyMap';
 import type { AtlasGraph } from './atlasGraph';
 import { breadcrumbIds, buildAtlasGraph, descendantCount } from './atlasGraph';
-import { AtlasSystemMap } from './AtlasSystemMap';
+import { AtlasLocationBrowser } from './AtlasLocationBrowser';
 import './WorldAtlasPage.css';
 
 type WorldData = {
@@ -169,11 +170,6 @@ type AtlasIndexProps = {
 };
 
 function AtlasIndex({ onSelect, world }: AtlasIndexProps): React.JSX.Element {
-  const { graph } = world;
-  const systemName =
-    (graph.systemId !== null ? world.byId.get(graph.systemId)?.name : undefined) ??
-    'Charted space';
-
   const registry = useMemo(() => {
     const groups = new Map<string, HardState[]>();
     for (const entity of world.all) {
@@ -187,95 +183,41 @@ function AtlasIndex({ onSelect, world }: AtlasIndexProps): React.JSX.Element {
 
   return (
     <div className="atlas-index">
-      <section className="atlas-map-panel" aria-label={systemName}>
-        <div className="atlas-panel-title-row">
-          <h2>{systemName}</h2>
-          {graph.sunId !== null ? (
-            <p className="atlas-panel-note">
-              {graph.planetIds.length} bodies · click a body to open it
-            </p>
-          ) : null}
-        </div>
-        <AtlasSystemMap graph={graph} onSelect={onSelect} />
-      </section>
-
-      <div className="atlas-index-columns">
-        <section className="atlas-panel" aria-label="Charted places">
-          <h2 className="atlas-panel-heading">Gazetteer</h2>
-          <GazetteerTree world={world} onSelect={onSelect} />
-        </section>
-        <section className="atlas-panel" aria-label="Registry of entities">
-          <h2 className="atlas-panel-heading">Registry</h2>
-          <div className="atlas-registry">
-            {registry.map(({ entities, kind }) => (
-              <details key={kind.id} className="atlas-registry-group" open={entities.length <= 12}>
-                <summary>
-                  <span className="atlas-kind-dot" data-kind={kind.id} aria-hidden="true" />
-                  {kind.displayName}
-                  <span className="atlas-registry-count">{entities.length}</span>
-                </summary>
-                <ul>
-                  {entities.map((entity) => (
-                    <li key={entity.id}>
-                      <button type="button" onClick={() => onSelect(entity.slug)}>
-                        <span className="atlas-row-name">{entity.name}</span>
-                        {entity.subkind ? (
-                          <span className="atlas-row-sub">{entity.subkind.replace(/_/g, ' ')}</span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ))}
-          </div>
-        </section>
-      </div>
+      <AtlasLocationBrowser
+        graph={world.graph}
+        byId={world.byId}
+        onOpen={(entity) => onSelect(entity.slug)}
+        sidePanel={
+          <section className="atlas-panel" aria-label="Registry of entities">
+            <h2 className="atlas-panel-heading">Registry</h2>
+            <div className="atlas-registry">
+              {registry.map(({ entities, kind }) => (
+                <details key={kind.id} className="atlas-registry-group" open={entities.length <= 12}>
+                  <summary>
+                    <span className="atlas-kind-dot" data-kind={kind.id} aria-hidden="true" />
+                    {kind.displayName}
+                    <span className="atlas-registry-count">{entities.length}</span>
+                  </summary>
+                  <ul>
+                    {entities.map((entity) => (
+                      <li key={entity.id}>
+                        <button type="button" onClick={() => onSelect(entity.slug)}>
+                          <span className="atlas-row-name">{entity.name}</span>
+                          {entity.subkind ? (
+                            <span className="atlas-row-sub">{entity.subkind.replace(/_/g, ' ')}</span>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ))}
+            </div>
+          </section>
+        }
+      />
     </div>
   );
-}
-
-type GazetteerTreeProps = {
-  world: WorldData;
-  onSelect: (slug: string) => void;
-};
-
-function GazetteerTree({ onSelect, world }: GazetteerTreeProps): React.JSX.Element {
-  const { graph } = world;
-  const topIds =
-    graph.sunId === null ? graph.rootIds : [...graph.planetIds, ...graph.rootIds];
-
-  const renderNode = (id: string, depth: number): React.JSX.Element | null => {
-    const node = graph.nodes.get(id);
-    if (!node) {
-      return null;
-    }
-    const children = [...node.children.orbit, ...node.children.surface, ...node.children.within];
-    return (
-      <li key={id}>
-        <button
-          type="button"
-          className="atlas-gazetteer-row"
-          style={{ paddingLeft: `${depth * 1.1 + 0.5}rem` }}
-          onClick={() => onSelect(node.entity.slug)}
-        >
-          <span className="atlas-row-name">{node.entity.name}</span>
-          {node.entity.subkind ? (
-            <span className="atlas-row-sub">{node.entity.subkind.replace(/_/g, ' ')}</span>
-          ) : null}
-          {children.length > 0 ? (
-            <span className="atlas-row-count">{descendantCount(graph, id)}</span>
-          ) : null}
-        </button>
-        {children.length > 0 ? <ul>{children.map((child) => renderNode(child, depth + 1))}</ul> : null}
-      </li>
-    );
-  };
-
-  if (topIds.length === 0) {
-    return <p className="atlas-empty-copy">No charted places yet.</p>;
-  }
-  return <ul className="atlas-gazetteer">{topIds.map((id) => renderNode(id, 0))}</ul>;
 }
 
 type AtlasEntityProps = {
@@ -539,6 +481,21 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
           ))}
         </dl>
       ) : null}
+
+      {node !== null &&
+      world !== null &&
+      node.children.orbit.length > 0 &&
+      node.children.surface.length > 0 ? (
+          <section className="atlas-section atlas-bodymap-panel">
+            <h3>Orbit &amp; surface</h3>
+            <AtlasBodyMap
+              graph={world.graph}
+              body={node}
+              resolve={resolve}
+              onOpen={(target) => onSelect(target)}
+            />
+          </section>
+        ) : null}
 
       {node !== null && world !== null
         ? CHILD_GROUPS.map(({ key, title }) =>

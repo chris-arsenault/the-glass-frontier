@@ -1,0 +1,123 @@
+.scene-stage {
+  display: flex;
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+  background:
+    linear-gradient(115deg, rgb(16 27 46 / 94%), rgb(13 20 34 / 98%)),
+    var(--surface-secondary);
+  align-items: center;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  box-shadow: var(--panel-highlight);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.scene-stage-dialog {
+  border-color: rgb(125 211 252 / 35%);
+}
+
+.scene-stage-battle {
+  border-color: rgb(251 113 133 / 38%);
+}
+
+.scene-stage-hunt {
+  border-color: rgb(163 230 53 / 34%);
+}
+
+.scene-stage-chase {
+  border-color: rgb(251 191 36 / 38%);
+}
+
+.scene-stage-search {
+  border-color: rgb(196 181 253 / 38%);
+}
+
+.scene-stage-portrait,
+.scene-stage-symbol {
+  display: grid;
+  flex: 0 0 3.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid rgb(125 211 252 / 42%);
+  border-radius: 50%;
+  place-items: center;
+}
+
+.scene-stage-portrait {
+  color: #dff6ff;
+  background:
+    radial-gradient(circle at 50% 34%, rgb(207 224 247 / 36%) 0 18%, transparent 19%),
+    radial-gradient(ellipse at 50% 82%, rgb(207 224 247 / 26%) 0 29%, transparent 30%),
+    rgb(14 30 50);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.scene-stage-symbol {
+  color: var(--text-primary);
+  background: rgb(255 255 255 / 5%);
+  border-color: var(--border-default);
+  font-size: 1.45rem;
+}
+
+.scene-stage-symbol-battle {
+  color: #fda4af;
+}
+
+.scene-stage-symbol-hunt {
+  color: #bef264;
+}
+
+.scene-stage-symbol-chase {
+  color: #fcd34d;
+}
+
+.scene-stage-symbol-search {
+  color: #c4b5fd;
+}
+
+.scene-stage-copy {
+  min-width: 0;
+}
+
+.scene-stage-copy h2 {
+  margin: 0.1rem 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-stage-eyebrow,
+.scene-stage-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scene-stage-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  letter-spacing: 0.04em;
+}
+
+@media (width <= 640px) {
+  .scene-stage {
+    padding: var(--space-3);
+  }
+
+  .scene-stage-portrait,
+  .scene-stage-symbol {
+    width: 3rem;
+    height: 3rem;
+    flex-basis: 3rem;
+  }
+}

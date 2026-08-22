@@ -78,6 +78,7 @@ const emptyTurnView = (): TurnView => ({
   intentType: null,
   inventoryDelta: null,
   playerIntent: null,
+  sceneContext: null,
   skillCheckPlan: null,
   skillCheckResult: null,
   skillKey: null,
@@ -98,6 +99,7 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   intentType: turn.playerIntent?.intentType ?? null,
   inventoryDelta: turn.inventoryDelta ?? null,
   playerIntent: turn.playerIntent ?? null,
+  sceneContext: turn.sceneContext ?? null,
   skillCheckPlan: turn.skillCheckPlan ?? null,
   skillCheckResult: turn.skillCheckResult ?? null,
   skillKey: turn.skillCheckPlan?.skill ?? null,
@@ -682,7 +684,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { beats, character, chronicleStatus, entityFocus, locationName, turn } =
+      const { activeScene, beats, character, chronicleStatus, entityFocus, locationName, turn } =
         await gmClient.postMessage.mutate({
           chronicleId,
           content: playerEntry,
@@ -727,9 +729,15 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           character: nextCharacter,
           chronicleRecord:
             shouldCloseChronicle && prev.chronicleRecord
-              ? { ...prev.chronicleRecord, beats, entityFocus, status: 'closed' }
+              ? {
+                ...prev.chronicleRecord,
+                activeScene,
+                beats,
+                entityFocus,
+                status: 'closed',
+              }
               : prev.chronicleRecord
-                ? { ...prev.chronicleRecord, beats, entityFocus }
+                ? { ...prev.chronicleRecord, activeScene, beats, entityFocus }
                 : prev.chronicleRecord,
           chronicleStatus: chronicleStatus ?? prev.chronicleStatus,
           connectionState: 'connected',

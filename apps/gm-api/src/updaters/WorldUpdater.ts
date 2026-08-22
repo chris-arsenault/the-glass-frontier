@@ -15,7 +15,8 @@ export class WorldUpdater {
     const characterContext = this.#updateCharacter(context);
     const inventoryContext = this.#updateInventory(characterContext);
     const beatContext = this.#updateBeats(inventoryContext);
-    return this.#updateLocation(beatContext);
+    const locationContext = this.#updateLocation(beatContext);
+    return this.#updateScene(locationContext);
   }
 
   #updateCharacter(context: GraphContext): GraphContext {
@@ -72,6 +73,23 @@ export class WorldUpdater {
         ...context.chronicleState,
         chronicle: { ...context.chronicleState.chronicle, locationName },
         locationName,
+      },
+    };
+  }
+
+  #updateScene(context: GraphContext): GraphContext {
+    const activeScene = context.sceneOutcome === 'complete' ? null : context.effectiveScene;
+    if (activeScene === context.chronicleState.chronicle.activeScene) {
+      return context;
+    }
+    return {
+      ...context,
+      chronicleState: {
+        ...context.chronicleState,
+        chronicle: {
+          ...context.chronicleState.chronicle,
+          activeScene,
+        },
       },
     };
   }

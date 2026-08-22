@@ -161,6 +161,7 @@ export const defaultChronicle = (
   locationName: string,
   overrides?: Partial<Chronicle>
 ): Chronicle => ({
+  activeScene: null,
   beats: [],
   beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
@@ -197,6 +198,7 @@ export const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Tur
     metadata: { tags: [], timestamp: Date.now() },
     role: 'player',
   },
+  sceneContext: undefined,
   skillCheckPlan: undefined,
   skillCheckResult: undefined,
   systemMessage: undefined,

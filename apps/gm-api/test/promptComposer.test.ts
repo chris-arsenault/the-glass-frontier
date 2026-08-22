@@ -35,7 +35,7 @@ describe('PromptComposer', () => {
     const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
 
     expect(prompt.instructions).toBe('instructions:action-resolver');
-    expect(rendered[0]?.data).toEqual({ character: { name: 'Vex' } });
+    expect(rendered[0]?.data).toEqual({ character: { name: 'Vex' }, scene: null });
   });
 
   it('assembles the player message plus developer fragments for narration prompts', async () => {
@@ -67,6 +67,34 @@ describe('PromptComposer', () => {
     expect(developer).not.toContain(RECENT_EVENTS_HEADER);
     expect(developer).not.toContain('### ENTITIES');
     expect(developer).not.toContain('### WRAP');
+  });
+
+  it('composes the active scene policy and scene fragment into scene-aware prompts', async () => {
+    const { rendered, runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const scene = {
+      id: 'scene:turn-1',
+      startedAtTurn: 1,
+      subject: 'Amaya Venn',
+      subjectKind: 'npc' as const,
+      type: 'dialog' as const,
+    };
+    const context = buildContext({
+      effectiveScene: scene,
+      playerIntent: buildIntent(),
+    });
+
+    const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
+    const developer = textOf(prompt.input.at(-1)!);
+
+    expect(prompt.instructions).toContain('instructions:action-resolver');
+    expect(prompt.instructions).toContain('instructions:scene-dialog');
+    expect(rendered.map((entry) => entry.templateId)).toEqual([
+      'action-resolver',
+      'scene-dialog',
+    ]);
+    expect(developer).toContain('### SCENE');
+    expect(developer).toContain('Amaya Venn');
   });
 
   it('gives the entity judge the GM response as the user message and entities as a fragment', async () => {
