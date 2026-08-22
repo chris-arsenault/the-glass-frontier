@@ -8,22 +8,16 @@ import type {
   HardStateSubkind,
   Turn,
 } from '@glass-frontier/dto';
-import { runner, type RunnerOption } from 'node-pg-migrate';
 import { randomUUID } from 'node:crypto';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
 
-import { seedVocabulary } from '../src/seedVocabulary';
+import { applyMigrations, applySeed } from '../../../scripts/dbMigrate';
 import { WorldState } from '../src/worldState';
 
 export const TEST_DATABASE_URL =
   process.env.WORLDSTATE_TEST_DATABASE_URL ??
   'postgres://postgres:postgres@localhost:5432/worldstate_test';
 export const TEST_PLAYER_ID = 'player-worldstate-test';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_DIR = path.resolve(__dirname, '../migrations');
 
 const parseDatabaseName = (connectionString: string): { adminUrl: string; dbName: string } => {
   const url = new URL(connectionString);
@@ -57,38 +51,22 @@ const ensureTestDatabase = async (connectionString: string): Promise<void> => {
   }
 };
 
-const bootstrapAppSchema = async (executor: Pool): Promise<void> => {
-  await executor.query('CREATE SCHEMA IF NOT EXISTS app');
-  await executor.query('CREATE TABLE IF NOT EXISTS app.player (id text PRIMARY KEY)');
-};
-
-const runMigrations = async (connectionString: string): Promise<void> => {
-  const options: RunnerOption = {
-    count: Infinity,
-    databaseUrl: connectionString,
-    dir: MIGRATIONS_DIR,
-    direction: 'up',
-    migrationsTable: 'worldstate_migrations',
-  };
-  await runner(options);
-};
-
 export type Harness = {
   pool: Pool;
   worldState: WorldState;
 };
 
 /**
- * Builds the test database from the migrations plus the vocabulary seed — the
- * same two steps a deploy runs, so a schema that only works because of
- * hand-written fixtures fails here.
+ * Builds the test database by applying `db/migrations` and its seed — the same
+ * files, through the same runner, that local development uses and that the
+ * deploy hands to the Ahara migrate Lambda. There is no second schema: if a
+ * column is missing in production it is missing here, and these tests fail.
  */
 export const startHarness = async (): Promise<Harness> => {
   await ensureTestDatabase(TEST_DATABASE_URL);
   const pool = new Pool({ connectionString: TEST_DATABASE_URL });
-  await bootstrapAppSchema(pool);
-  await runMigrations(TEST_DATABASE_URL);
-  await seedVocabulary(pool);
+  await applyMigrations(pool);
+  await applySeed(pool);
   return { pool, worldState: WorldState.create({ pool }) };
 };
 
@@ -107,7 +85,9 @@ export const resetDatabase = async (executor: Pool): Promise<void> => {
     `TRUNCATE ${tables.map((table) => `"${table}"`).join(', ')} RESTART IDENTITY CASCADE`
   );
   await executor.query('DELETE FROM app.player');
-  await executor.query('INSERT INTO app.player (id) VALUES ($1)', [TEST_PLAYER_ID]);
+  await executor.query('INSERT INTO app.player (id, username) VALUES ($1, $1)', [
+    TEST_PLAYER_ID,
+  ]);
 };
 
 export const proposal = (overrides: Partial<CanonProposal>): CanonProposal => ({

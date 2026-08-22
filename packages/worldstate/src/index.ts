@@ -10,7 +10,6 @@ export { CanonWriter } from './canonWriter';
 export { ProposalRejected, validateProposal } from './canonValidation';
 
 // === Vocabulary ===
-export { seedVocabulary } from './seedVocabulary';
 
 // === Canon import tooling ===
 export { buildTsonuProposal } from './tsonuBundle';

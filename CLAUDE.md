@@ -43,10 +43,11 @@
 ### Packages
 - `packages/dto`: Shared Zod DTO/type definitions consumed by every workspace for consistent contracts.
 - `packages/app`: Application-layer stores (players, prompt templates + runtime, model config) backed by Postgres.
-- `packages/worldstate`: Session and canon persistence (chronicles, turns, characters, world graph) plus its migrations.
+- `packages/worldstate`: Session and canon persistence (chronicles, turns, characters, world graph).
 - `packages/skill-check-resolver`: Domain module that encapsulates skill-check math/rules used during narrative resolution.
 - `packages/llm-client`: Provider-agnostic LLM client with retries and structured output.
 - `packages/utils` / `packages/node-utils`: Common helpers shared across workspaces.
 
 ### Infrastructure
 - `infrastructure/terraform`: Terraform project that attaches Glass Frontier to the shared Ahara VPC, ALB, NAT path, and RDS instance while provisioning its project-owned Cognito pool, Lambdas, queues, short-lived progress storage, S3 bucket, and CloudFront distribution.
+- `db/migrations`: the only schema source of truth. The deploy applies it through the shared Ahara migrate Lambda; local development and the tests apply the same files through `scripts/dbMigrate.ts`. A schema change that is not here does not reach production. Never add a second migrations directory.

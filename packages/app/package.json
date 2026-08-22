@@ -15,11 +15,7 @@
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "migrate": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs up",
-    "migrate:up": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs up",
-    "migrate:down": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs down",
-    "migrate:reset": "node-pg-migrate -f ./node-pg-migrate.app.config.cjs down 0"
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "glass-frontier",
@@ -35,7 +31,6 @@
     "pg": "^8.13.1"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.10",
-    "node-pg-migrate": "^7.9.1"
+    "@types/pg": "^8.11.10"
   }
 }

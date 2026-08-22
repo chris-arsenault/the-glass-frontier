@@ -193,15 +193,7 @@ async function main(): Promise<void> {
     await waitForWiremockReady();
   }
 
-  await execa('pnpm', ['-F', '@glass-frontier/app', 'migrate'], {
-    env,
-    stdio: 'inherit',
-  });
-  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'migrate'], {
-    env,
-    stdio: 'inherit',
-  });
-  await execa('pnpm', ['-F', '@glass-frontier/ops', 'migrate'], {
+  await execa('pnpm', ['exec', 'tsx', 'scripts/dbMigrate.ts'], {
     env,
     stdio: 'inherit',
   });

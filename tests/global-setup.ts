@@ -70,20 +70,9 @@ export default async function globalSetup(): Promise<void> {
     timeout: 120_000,
   });
 
-  for (const workspace of [
-    '@glass-frontier/app',
-    '@glass-frontier/worldstate',
-    '@glass-frontier/ops',
-  ]) {
-    await execa('pnpm', ['-F', workspace, 'migrate'], {
-      env: withEnv(),
-      stdio: 'inherit',
-    });
-  }
-
-  // Entity kinds are validated against the vocabulary table, so it must be
-  // seeded before the fixtures — mirrors the root db:migrate flow.
-  await execa('pnpm', ['-F', '@glass-frontier/worldstate', 'seed:vocabulary'], {
+  // Applies db/migrations and its seed: the same files the deploy applies, so
+  // an end-to-end run exercises the production schema and vocabulary.
+  await execa('pnpm', ['exec', 'tsx', 'scripts/dbMigrate.ts'], {
     env: withEnv(),
     stdio: 'inherit',
   });
