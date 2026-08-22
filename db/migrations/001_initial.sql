@@ -249,7 +249,6 @@ CREATE TABLE chronicle_turn (
   player_message_content text NOT NULL,
   player_message_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   player_intent jsonb,
-  scene_context jsonb,
   gm_response_id text,
   gm_response_content text,
   gm_response_metadata jsonb DEFAULT '{}'::jsonb,
