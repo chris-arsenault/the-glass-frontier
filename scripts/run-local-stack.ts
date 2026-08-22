@@ -24,11 +24,11 @@ const MOCK_ENV: Record<string, string> = {
   OPENAI_API_KEY: 'test-openai-key',
   OPENAI_CLIENT_BASE: 'http://localhost:8080/v1',
   PLAYWRIGHT_RESET_ENABLED: '1',
+  PROGRESS_API_PORT: '8787',
   PROMPT_API_PORT: '7400',
   TURN_PROGRESS_QUEUE_URL: 'http://localhost:4566/000000000000/gf-e2e-turn-progress',
   VITE_COGNITO_CLIENT_ID: 'local-e2e',
   VITE_COGNITO_USER_POOL_ID: 'us-east-1_localE2E',
-  VITE_PROGRESS_WS_URL: 'ws://localhost:8787',
 };
 
 const LIVE_OPENAI_ENV: Record<string, string> = {
@@ -49,7 +49,7 @@ const APP_WAIT_RESOURCES = [
   'tcp:7001',
   'tcp:7400',
   'tcp:7800',
-  'tcp:8787',
+  'http-get://localhost:8787/health',
 ];
 
 function resolveMode(): StackMode {

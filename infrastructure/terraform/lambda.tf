@@ -196,60 +196,26 @@ module "canon_seed_lambda" {
   vpc_config = local.db_lambda_vpc_config
 }
 
-# WebSocket lambdas don't need database access - no VPC config needed
-module "webservice_connect_lambda" {
+module "progress_api_lambda" {
   source = "./modules/lambda-function"
 
-  function_name        = "${local.name_prefix}-webservice-connect"
-  source_dir           = local.webservice_dist_dir
-  artifact_output_path = "${local.artifacts_dir}/webservice.zip"
-  role_arn             = aws_iam_role.lambda["webservice_lambda"].arn
-  handler              = "connect.handler"
-  runtime              = var.lambda_node_version
-  memory_size          = 256
-  timeout              = 10
-  log_retention_days   = 14
-  tags                 = local.tags
+  function_name                  = "${local.name_prefix}-progress-api"
+  source_dir                     = local.progress_api_dist_dir
+  artifact_output_path           = "${local.artifacts_dir}/progress-api.zip"
+  role_arn                       = aws_iam_role.lambda["progress_api_lambda"].arn
+  handler                        = "poll.handler"
+  runtime                        = var.lambda_node_version
+  memory_size                    = 256
+  timeout                        = 10
+  reserved_concurrent_executions = 2
+  log_retention_days             = 14
+  tags                           = local.tags
 
-  environment_variables = {
-    NODE_ENV               = "production"
-    PROGRESS_TABLE_NAME    = aws_dynamodb_table.webservice_connections.name
-    CONNECTION_TTL_SECONDS = tostring(86400)
-    COGNITO_USER_POOL_ID   = aws_cognito_user_pool.this.id
-    COGNITO_APP_CLIENT_ID  = aws_cognito_user_pool_client.this.id
-  }
-
-  websocket_api_config = {
-    api_id        = aws_apigatewayv2_api.progress_ws.id
-    execution_arn = aws_apigatewayv2_api.progress_ws.execution_arn
-    route_key     = "$connect"
-  }
-}
-
-module "webservice_disconnect_lambda" {
-  source = "./modules/lambda-function"
-
-  function_name        = "${local.name_prefix}-webservice-disconnect"
-  source_dir           = local.webservice_dist_dir
-  artifact_output_path = "${local.artifacts_dir}/webservice.zip"
-  role_arn             = aws_iam_role.lambda["webservice_lambda"].arn
-  handler              = "disconnect.handler"
-  runtime              = var.lambda_node_version
-  memory_size          = 256
-  timeout              = 10
-  log_retention_days   = 14
-  tags                 = local.tags
-
-  environment_variables = {
+  environment_variables = merge(local.auth_env_vars, {
+    DOMAIN_NAME         = local.cloudfront_domain
     NODE_ENV            = "production"
-    PROGRESS_TABLE_NAME = aws_dynamodb_table.webservice_connections.name
-  }
-
-  websocket_api_config = {
-    api_id        = aws_apigatewayv2_api.progress_ws.id
-    execution_arn = aws_apigatewayv2_api.progress_ws.execution_arn
-    route_key     = "$disconnect"
-  }
+    PROGRESS_TABLE_NAME = aws_dynamodb_table.progress_events.name
+  })
 }
 
 resource "aws_lambda_event_source_mapping" "chronicle_closer_queue" {
@@ -260,56 +226,31 @@ resource "aws_lambda_event_source_mapping" "chronicle_closer_queue" {
   function_response_types            = ["ReportBatchItemFailures"]
 }
 
-module "webservice_subscribe_lambda" {
+module "progress_ingest_lambda" {
   source = "./modules/lambda-function"
 
-  function_name        = "${local.name_prefix}-webservice-subscribe"
-  source_dir           = local.webservice_dist_dir
-  artifact_output_path = "${local.artifacts_dir}/webservice.zip"
-  role_arn             = aws_iam_role.lambda["webservice_lambda"].arn
-  handler              = "subscribe.handler"
-  runtime              = var.lambda_node_version
-  memory_size          = 256
-  timeout              = 10
-  log_retention_days   = 14
-  tags                 = local.tags
+  function_name                  = "${local.name_prefix}-progress-ingest"
+  source_dir                     = local.progress_api_dist_dir
+  artifact_output_path           = "${local.artifacts_dir}/progress-ingest.zip"
+  role_arn                       = aws_iam_role.lambda["progress_ingest_lambda"].arn
+  handler                        = "ingest.handler"
+  runtime                        = var.lambda_node_version
+  memory_size                    = 256
+  timeout                        = 30
+  reserved_concurrent_executions = 1
+  log_retention_days             = 14
+  tags                           = local.tags
 
   environment_variables = {
-    NODE_ENV                 = "production"
-    PROGRESS_TABLE_NAME      = aws_dynamodb_table.webservice_connections.name
-    SUBSCRIPTION_TTL_SECONDS = tostring(900)
-  }
-
-  websocket_api_config = {
-    api_id        = aws_apigatewayv2_api.progress_ws.id
-    execution_arn = aws_apigatewayv2_api.progress_ws.execution_arn
-    route_key     = "subscribe"
+    NODE_ENV                   = "production"
+    PROGRESS_EVENT_TTL_SECONDS = tostring(900)
+    PROGRESS_TABLE_NAME        = aws_dynamodb_table.progress_events.name
   }
 }
 
-module "webservice_push_lambda" {
-  source = "./modules/lambda-function"
-
-  function_name        = "${local.name_prefix}-webservice-push"
-  source_dir           = local.webservice_dist_dir
-  artifact_output_path = "${local.artifacts_dir}/webservice.zip"
-  role_arn             = aws_iam_role.lambda["webservice_lambda"].arn
-  handler              = "dispatcher.handler"
-  runtime              = var.lambda_node_version
-  memory_size          = 256
-  timeout              = 30
-  log_retention_days   = 14
-  tags                 = local.tags
-
-  environment_variables = {
-    NODE_ENV            = "production"
-    PROGRESS_TABLE_NAME = aws_dynamodb_table.webservice_connections.name
-  }
-}
-
-resource "aws_lambda_event_source_mapping" "webservice_progress" {
+resource "aws_lambda_event_source_mapping" "progress_ingest" {
   event_source_arn        = aws_sqs_queue.turn_progress.arn
-  function_name           = module.webservice_push_lambda.arn
+  function_name           = module.progress_ingest_lambda.arn
   batch_size              = 10
   function_response_types = ["ReportBatchItemFailures"]
 }

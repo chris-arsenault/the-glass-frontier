@@ -18,10 +18,12 @@ const resolveRequiredEnv = (value: string | undefined, key: string): string => {
   return value.trim();
 };
 
-const progressTableName = resolveRequiredEnv(process.env.PROGRESS_TABLE_NAME, 'PROGRESS_TABLE_NAME');
-
-export const websocketConfig = {
-  connectionTtlSeconds: parsePositiveInt(process.env.CONNECTION_TTL_SECONDS, 86400),
-  subscriptionTtlSeconds: parsePositiveInt(process.env.SUBSCRIPTION_TTL_SECONDS, 900),
-  tableName: progressTableName,
+export type ProgressConfig = {
+  eventTtlSeconds: number;
+  tableName: string;
 };
+
+export const resolveProgressConfig = (): ProgressConfig => ({
+  eventTtlSeconds: parsePositiveInt(process.env.PROGRESS_EVENT_TTL_SECONDS, 900),
+  tableName: resolveRequiredEnv(process.env.PROGRESS_TABLE_NAME, 'PROGRESS_TABLE_NAME'),
+});

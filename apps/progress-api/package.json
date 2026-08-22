@@ -1,5 +1,5 @@
 {
-  "name": "@glass-frontier/webservice",
+  "name": "@glass-frontier/progress-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,22 +7,21 @@
     "dev": "tsx src/devServer.ts",
     "build": "tsup",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.1114.0",
     "@aws-sdk/client-dynamodb": "^3.1114.0",
     "@aws-sdk/client-sqs": "^3.1114.0",
     "@aws-sdk/lib-dynamodb": "^3.1114.0",
     "@glass-frontier/dto": "workspace:*",
-    "@glass-frontier/utils": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
-    "ws": "^8.21.3"
+    "@glass-frontier/utils": "workspace:*"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
-    "@types/ws": "8.5.12",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
   }
 }

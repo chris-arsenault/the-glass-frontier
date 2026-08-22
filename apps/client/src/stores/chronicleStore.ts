@@ -680,7 +680,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
     const playerEntry = buildPlayerEntry(trimmed);
     const nextTurnSequence = get().turnSequence + 1;
-    const jobId = formatTurnJobId(chronicleId, nextTurnSequence);
+    const jobId = formatTurnJobId(chronicleId, nextTurnSequence, playerEntry.id);
 
     set((prev) => ({
       ...prev,
@@ -700,6 +700,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         await gmClient.postMessage.mutate({
           chronicleId,
           content: playerEntry,
+          requestId: playerEntry.id,
         });
       progressStream.markComplete(jobId);
 

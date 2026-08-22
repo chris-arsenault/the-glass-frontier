@@ -11,8 +11,7 @@ export function useProgressStreamConnection(isAuthenticated: boolean) {
       progressStream.disconnect();
       return;
     }
-    // connect() handles token rotation itself, keeping subscriptions alive;
-    // disconnecting here on every token change would drop in-flight progress.
+    // connect() replaces the token while keeping in-flight progress subscriptions.
     progressStream.connect(token);
   }, [isAuthenticated, token]);
 

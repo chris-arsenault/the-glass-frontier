@@ -37,7 +37,7 @@
 - `apps/canon-seed`: Private deployment Lambda that applies the versioned production canon without exposing a public endpoint.
 - `apps/prompt-api`: Prompt-template editing, LLM audit review, and player feedback endpoints.
 - `apps/atlas-api` / `apps/world-schema-api`: Read surfaces over world canon for the Atlas UI and schema pages.
-- `apps/webservice`: WebSocket broker that forwards turn-progress events (SQS → API Gateway) and manages connection/job subscriptions.
+- `apps/progress-api`: SQS ingester and authenticated HTTP reader for short-lived turn-progress events served through the shared ALB.
 - `apps/playwright`: E2E fixtures and helpers.
 
 ### Packages
@@ -49,4 +49,4 @@
 - `packages/utils` / `packages/node-utils`: Common helpers shared across workspaces.
 
 ### Infrastructure
-- `infrastructure/terraform`: Terraform project that attaches Glass Frontier to the shared Ahara VPC, ALB, NAT path, and RDS instance while provisioning its project-owned Cognito pool, Lambdas, queues, WebSocket API, S3 bucket, and CloudFront distribution.
+- `infrastructure/terraform`: Terraform project that attaches Glass Frontier to the shared Ahara VPC, ALB, NAT path, and RDS instance while provisioning its project-owned Cognito pool, Lambdas, queues, short-lived progress storage, S3 bucket, and CloudFront distribution.

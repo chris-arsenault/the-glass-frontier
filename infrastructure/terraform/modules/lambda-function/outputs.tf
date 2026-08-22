@@ -9,7 +9,7 @@ output "arn" {
 }
 
 output "invoke_arn" {
-  description = "Lambda invoke ARN for API Gateway integrations."
+  description = "Lambda invoke ARN for service integrations."
   value       = aws_lambda_function.this.invoke_arn
 }
 

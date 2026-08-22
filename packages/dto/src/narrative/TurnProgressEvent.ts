@@ -34,5 +34,10 @@ export const TurnProgressEventSchema = z.object({
   turnSequence: z.number().int().nonnegative(),
 });
 
+export const TurnProgressResponseSchema = z.object({
+  events: z.array(TurnProgressEventSchema).max(128),
+});
+
 export type TurnProgressPayload = z.infer<typeof TurnProgressPayloadSchema>;
 export type TurnProgressEvent = z.infer<typeof TurnProgressEventSchema>;
+export type TurnProgressResponse = z.infer<typeof TurnProgressResponseSchema>;

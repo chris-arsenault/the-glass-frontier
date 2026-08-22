@@ -28,7 +28,7 @@ output "database_name" {
   value       = nonsensitive(data.aws_ssm_parameter.db_database.value)
 }
 
-output "progress_websocket_url" {
-  description = "WebSocket endpoint that streams GM turn progress."
-  value       = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
+output "progress_api_endpoint" {
+  description = "Shared-ALB endpoint used to poll GM turn progress."
+  value       = "https://${local.api_domain}/progress"
 }

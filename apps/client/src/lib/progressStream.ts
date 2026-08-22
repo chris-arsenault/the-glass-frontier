@@ -1,71 +1,51 @@
-import type { TurnProgressEvent } from '@glass-frontier/dto';
+import { TurnProgressResponseSchema, type TurnProgressEvent } from '@glass-frontier/dto';
 
 import { getConfigValue, getEnvValue } from '../utils/runtimeConfig';
+import { authenticatedFetch } from './authenticatedFetch';
 
+const POLL_INTERVAL_MS = 750;
 const listeners = new Set<(event: TurnProgressEvent) => void>();
 
-const hasNonEmptyString = (value: string | undefined | null): value is string => {
-  return typeof value === 'string' && value.trim().length > 0;
-};
+const hasNonEmptyString = (value: string | undefined | null): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
 
-const resolveEndpoint = (): string | null => {
-  const envValue = getEnvValue('VITE_PROGRESS_WS_URL') ?? null;
-  const explicit = getConfigValue('VITE_PROGRESS_WS_URL') ?? envValue;
-  if (!hasNonEmptyString(explicit)) {
-    return null;
+const resolveEndpoint = (): string => {
+  const apiTarget = getConfigValue('VITE_API_TARGET') ?? getEnvValue('VITE_API_TARGET');
+  if (!hasNonEmptyString(apiTarget)) {
+    return '/progress';
   }
-  return explicit.trim().replace(/\/$/, '');
+  return `${apiTarget.trim().replace(/\/$/u, '')}/progress`;
 };
 
-class ProgressStream {
-  private socket: WebSocket | null = null;
-  private reconnectTimer: number | null = null;
-  private readonly endpoint: string | null = resolveEndpoint();
-  private token: string | null = null;
-  private manualClose = false;
-  private readonly pendingSubscriptions = new Set<string>();
+const eventIdentity = (event: TurnProgressEvent): string =>
+  `${event.turnSequence}#${event.step}#${event.nodeId}#${event.status}`;
+
+export class ProgressStream {
   private readonly activeSubscriptions = new Set<string>();
+  private readonly endpoint = resolveEndpoint();
+  private readonly failedSubscriptions = new Set<string>();
+  private readonly seenEvents = new Map<string, Set<string>>();
+  private pollInFlight = false;
+  private pollTimer: number | null = null;
+  private token: string | null = null;
 
   connect(token: string): void {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || !hasNonEmptyString(token)) {
       return;
     }
-    if (this.endpoint === null) {
-      console.warn('VITE_PROGRESS_WS_URL is not configured; skipping progress stream connection.');
-      return;
-    }
-    const tokenChanged = this.token !== token;
     this.token = token;
-    this.manualClose = false;
-    if (
-      this.socket !== null &&
-      (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)
-    ) {
-      if (!tokenChanged) {
-        return;
-      }
-      // Cycle the socket onto the new token; subscriptions survive and are
-      // re-sent by flushSubscriptions when the replacement opens.
-      const stale = this.socket;
-      this.socket = null;
-      stale.close();
-    }
-    this.openSocket();
+    this.schedulePoll(0);
   }
 
   disconnect(): void {
-    this.manualClose = true;
     this.token = null;
-    if (typeof window !== 'undefined' && this.reconnectTimer !== null) {
-      window.clearTimeout(this.reconnectTimer);
+    if (typeof window !== 'undefined' && this.pollTimer !== null) {
+      window.clearTimeout(this.pollTimer);
     }
-    this.reconnectTimer = null;
-    if (this.socket !== null) {
-      this.socket.close();
-      this.socket = null;
-    }
-    this.pendingSubscriptions.clear();
+    this.pollTimer = null;
     this.activeSubscriptions.clear();
+    this.failedSubscriptions.clear();
+    this.seenEvents.clear();
   }
 
   subscribe(jobId: string): void {
@@ -73,21 +53,18 @@ class ProgressStream {
     if (trimmedJobId.length === 0) {
       return;
     }
-    if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-      this.sendSubscribe(trimmedJobId);
-      this.activeSubscriptions.add(trimmedJobId);
-      return;
-    }
-    this.pendingSubscriptions.add(trimmedJobId);
-    this.ensureConnected();
+    this.activeSubscriptions.add(trimmedJobId);
+    this.seenEvents.set(trimmedJobId, new Set());
+    this.schedulePoll(0);
   }
 
   markComplete(jobId: string | null): void {
     if (!hasNonEmptyString(jobId)) {
       return;
     }
-    this.pendingSubscriptions.delete(jobId);
     this.activeSubscriptions.delete(jobId);
+    this.failedSubscriptions.delete(jobId);
+    this.seenEvents.delete(jobId);
   }
 
   onEvent(listener: (event: TurnProgressEvent) => void): () => void {
@@ -95,77 +72,76 @@ class ProgressStream {
     return () => listeners.delete(listener);
   }
 
-  private ensureConnected(): void {
-    if (!hasNonEmptyString(this.token) || this.socket !== null || this.reconnectTimer !== null) {
+  private async poll(): Promise<void> {
+    if (this.pollInFlight || !hasNonEmptyString(this.token)) {
       return;
     }
-    this.openSocket();
+    const jobIds = Array.from(this.activeSubscriptions);
+    if (jobIds.length === 0) {
+      return;
+    }
+
+    this.pollInFlight = true;
+    try {
+      await Promise.all(jobIds.map((jobId) => this.pollJob(jobId)));
+    } finally {
+      this.pollInFlight = false;
+      if (this.activeSubscriptions.size > 0 && hasNonEmptyString(this.token)) {
+        this.schedulePoll(POLL_INTERVAL_MS);
+      }
+    }
   }
 
-  private openSocket(): void {
-    if (typeof window === 'undefined' || this.endpoint === null || !hasNonEmptyString(this.token)) {
+  private async pollJob(jobId: string): Promise<void> {
+    const token = this.token;
+    if (!hasNonEmptyString(token)) {
       return;
     }
-    const url = `${this.endpoint}?token=${encodeURIComponent(this.token)}`;
-    const socket = new WebSocket(url);
-    this.socket = socket;
 
-    socket.onopen = () => {
-      this.flushSubscriptions();
-    };
-
-    socket.onmessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data) as TurnProgressEvent;
-        listeners.forEach((listener) => listener(data));
-      } catch (error) {
-        console.warn('Failed to parse WS payload', error);
+    try {
+      const response = await authenticatedFetch(`${this.endpoint}/${encodeURIComponent(jobId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        throw new Error(`Progress request failed with status ${response.status}`);
       }
-    };
-
-    socket.onclose = () => {
-      if (this.socket !== socket) {
+      const payload = TurnProgressResponseSchema.parse(await response.json());
+      if (!this.activeSubscriptions.has(jobId)) {
         return;
       }
-      this.socket = null;
-      if (this.manualClose || !hasNonEmptyString(this.token)) {
-        return;
-      }
-      this.scheduleReconnect();
-    };
 
-    socket.onerror = () => {
-      socket.close();
-    };
+      const seen = this.seenEvents.get(jobId) ?? new Set<string>();
+      for (const event of payload.events) {
+        const identity = eventIdentity(event);
+        if (!seen.has(identity)) {
+          seen.add(identity);
+          listeners.forEach((listener) => listener(event));
+        }
+      }
+      this.seenEvents.set(jobId, seen);
+      this.failedSubscriptions.delete(jobId);
+    } catch (error: unknown) {
+      if (!this.failedSubscriptions.has(jobId)) {
+        console.warn('Failed to poll turn progress', error);
+        this.failedSubscriptions.add(jobId);
+      }
+    }
   }
 
-  private sendSubscribe(jobId: string): void {
-    if (this.socket === null || this.socket.readyState !== WebSocket.OPEN) {
-      this.pendingSubscriptions.add(jobId);
+  private schedulePoll(delay: number): void {
+    if (
+      typeof window === 'undefined' ||
+      this.pollTimer !== null ||
+      this.pollInFlight ||
+      !hasNonEmptyString(this.token) ||
+      this.activeSubscriptions.size === 0
+    ) {
       return;
     }
-    this.socket.send(JSON.stringify({ action: 'subscribe', jobId }));
-  }
-
-  private flushSubscriptions(): void {
-    const jobs = new Set<string>([...this.activeSubscriptions, ...this.pendingSubscriptions]);
-    jobs.forEach((jobId) => {
-      this.sendSubscribe(jobId);
-      this.activeSubscriptions.add(jobId);
-    });
-    this.pendingSubscriptions.clear();
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer !== null || typeof window === 'undefined') {
-      return;
-    }
-    this.reconnectTimer = window.setTimeout(() => {
-      this.reconnectTimer = null;
-      if (hasNonEmptyString(this.token)) {
-        this.openSocket();
-      }
-    }, 2000);
+    this.pollTimer = window.setTimeout(() => {
+      this.pollTimer = null;
+      void this.poll();
+    }, delay);
   }
 }
 

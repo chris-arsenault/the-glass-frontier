@@ -24,6 +24,7 @@ const gmPort = Number(process.env.GM_API_PORT ?? 7001);
 const promptPort = Number(process.env.PROMPT_API_PORT ?? 7400);
 const worldSchemaPort = Number(process.env.WORLD_SCHEMA_API_PORT ?? 4015);
 const atlasPort = Number(process.env.ATLAS_API_PORT ?? 4016);
+const progressPort = Number(process.env.PROGRESS_API_PORT ?? 8787);
 
 const proxy = {
   '/chronicle': {
@@ -40,6 +41,10 @@ const proxy = {
     target: buildTarget(gmPort),
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/gm/, ''),
+  },
+  '/progress': {
+    target: buildTarget(progressPort),
+    changeOrigin: true,
   },
   '/world-schema-api': {
     target: buildTarget(worldSchemaPort),

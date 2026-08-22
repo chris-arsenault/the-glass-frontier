@@ -5,8 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 terraform_dir="${repo_root}/infrastructure/terraform"
 aws_region="us-east-1"
 project="glass-frontier"
-
-: "${STATE_BUCKET:?Set STATE_BUCKET to the Ahara Terraform state bucket.}"
+state_bucket="${STATE_BUCKET:-tfstate-559098897826}"
 
 cd "${repo_root}"
 pnpm install --frozen-lockfile
@@ -59,7 +58,7 @@ invoke_lambda "${migrate_function}" "{\"operation\":\"migrate\",\"project\":\"${
 invoke_lambda "${migrate_function}" "{\"operation\":\"seed\",\"project\":\"${project}\"}"
 
 terraform -chdir="${terraform_dir}" init -reconfigure \
-  -backend-config="bucket=${STATE_BUCKET}" \
+  -backend-config="bucket=${state_bucket}" \
   -backend-config="region=${aws_region}" \
   -backend-config="use_lockfile=true"
 terraform -chdir="${terraform_dir}" apply -auto-approve

@@ -11,6 +11,6 @@
     { "path": "apps/chronicle-closer" },
     { "path": "apps/client" },
     { "path": "apps/playwright" },
-    { "path": "apps/webservice" }
+    { "path": "apps/progress-api" }
   ]
 }

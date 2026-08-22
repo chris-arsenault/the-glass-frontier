@@ -46,7 +46,7 @@ type EntityUsageEntry = {
 
 /**
  * One transcript entry. Turn-level data lives in the TurnView keyed by
- * `turnKey`, so the several sources that deliver a turn (history, websocket
+ * `turnKey`, so the several sources that deliver a turn (history, progress feed
  * preview, tRPC response) update one record instead of every message.
  */
 export type ChatMessage = {

@@ -280,7 +280,7 @@ jobs:
 1. Playwright global setup executes.
 2. Docker Compose brings up LocalStack, WireMock, and Postgres.
 3. `seed-local-fixtures.ts` creates the queues and tiny SQL fixture.
-4. The workspace dev command starts the APIs, WebSocket service, fixture server, and Vite client.
+4. The workspace dev command starts the APIs, progress service, fixture server, and Vite client.
 5. Playwright tests run against `http://localhost:5173`.
 6. On completion, global teardown stops the workspace processes and containers.
 

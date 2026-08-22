@@ -14,7 +14,8 @@ export const appRouter = t.router({
     .input(
       z.object({
         chronicleId: z.uuid(),
-        content: TranscriptEntry
+        content: TranscriptEntry,
+        requestId: z.string().min(1).max(128),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -29,9 +30,11 @@ export const appRouter = t.router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Chronicle is closed.' });
       }
       const playerEntry = { ...input.content, role: 'player' as const };
-      const result = await ctx.engine.handlePlayerMessage(input.chronicleId, playerEntry, {
-        authorizationHeader: ctx.authorizationHeader
-      });
+      const result = await ctx.engine.handlePlayerMessage(
+        input.chronicleId,
+        playerEntry,
+        input.requestId
+      );
       return {
         beats: result.beats,
         character: result.updatedCharacter,

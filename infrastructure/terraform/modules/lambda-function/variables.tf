@@ -94,35 +94,6 @@ variable "log_group_name" {
   default     = null
 }
 
-variable "http_api_config" {
-  description = "Optional configuration for wiring the Lambda to an HTTP API Gateway."
-  type = object({
-    api_id                 = string
-    execution_arn          = string
-    integration_method     = optional(string)
-    payload_format_version = optional(string)
-    authorizer_id          = optional(string)
-    authorization_type     = optional(string)
-    routes = list(object({
-      route_key          = string
-      authorizer_id      = optional(string)
-      authorization_type = optional(string)
-    }))
-  })
-  default = null
-}
-
-variable "websocket_api_config" {
-  description = "Optional configuration for wiring the Lambda to a WebSocket API Gateway."
-  type = object({
-    api_id             = string
-    execution_arn      = string
-    route_key          = string
-    integration_method = optional(string)
-  })
-  default = null
-}
-
 variable "vpc_config" {
   description = "Optional VPC configuration for Lambda access to private services."
   type = object({

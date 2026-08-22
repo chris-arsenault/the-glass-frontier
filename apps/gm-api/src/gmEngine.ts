@@ -74,7 +74,7 @@ class GmEngine {
   async handlePlayerMessage(
     chronicleId: string,
     playerMessage: TranscriptEntry,
-    _options?: { authorizationHeader?: string },
+    requestId: string,
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
@@ -89,7 +89,7 @@ class GmEngine {
     const turnSequence = chronicleState.turnSequence + 1;
     const turnId = randomUUID();
     const playerId = this.#requirePlayerId(chronicleState);
-    const jobId = formatTurnJobId(chronicleId, turnSequence);
+    const jobId = formatTurnJobId(chronicleId, turnSequence, requestId);
     const templateRuntime = this.#createTemplateRuntime(playerId);
     const graphInput = this.#buildGraphInput({
       chronicleId,

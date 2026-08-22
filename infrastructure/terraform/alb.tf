@@ -30,6 +30,12 @@ locals {
       function_name = module.gm_api_lambda.function_name
       function_arn  = module.gm_api_lambda.arn
     }
+    progress = {
+      path          = "/progress"
+      priority      = 405
+      function_name = module.progress_api_lambda.function_name
+      function_arn  = module.progress_api_lambda.arn
+    }
   }
 }
 
@@ -38,7 +44,7 @@ resource "aws_lb_target_group" "api" {
 
   name                               = "${local.name_prefix}-${each.key}"
   target_type                        = "lambda"
-  lambda_multi_value_headers_enabled = true
+  lambda_multi_value_headers_enabled = false
 
   tags = local.tags
 }

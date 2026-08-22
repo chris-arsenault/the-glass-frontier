@@ -6,7 +6,7 @@ resource "aws_sqs_queue" "turn_progress_dlq" {
 
 resource "aws_sqs_queue" "turn_progress" {
   name                       = "${local.name_prefix}-turn-progress"
-  visibility_timeout_seconds = 30
+  visibility_timeout_seconds = 180
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.turn_progress_dlq.arn
     maxReceiveCount     = 5
@@ -23,7 +23,7 @@ resource "aws_sqs_queue" "chronicle_closure_dlq" {
 
 resource "aws_sqs_queue" "chronicle_closure" {
   name                       = "${local.name_prefix}-chronicle-closure"
-  visibility_timeout_seconds = 60
+  visibility_timeout_seconds = 365
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.chronicle_closure_dlq.arn
     maxReceiveCount     = 5

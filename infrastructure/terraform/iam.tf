@@ -54,8 +54,8 @@ resource "aws_iam_role_policy_attachment" "llm_api_secrets" {
   policy_arn = aws_iam_policy.llm_api_secrets.arn
 }
 
-resource "aws_iam_role_policy_attachment" "webservice_sqs" {
-  role       = aws_iam_role.lambda["webservice_lambda"].name
+resource "aws_iam_role_policy_attachment" "progress_ingest_sqs" {
+  role       = aws_iam_role.lambda["progress_ingest_lambda"].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
@@ -90,50 +90,40 @@ resource "aws_iam_role_policy_attachment" "gm_closure_queue" {
 # NOTE: prompt_templates policy removed - prompt templates migrated to PostgreSQL
 # NOTE: llm_audit_storage policy removed - LLM audit logs migrated to PostgreSQL
 
-data "aws_iam_policy_document" "webservice_dynamodb" {
+data "aws_iam_policy_document" "progress_api_dynamodb" {
   statement {
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
-      "dynamodb:BatchWriteItem",
-      "dynamodb:Query",
-      "dynamodb:UpdateItem"
-    ]
-    resources = [
-      aws_dynamodb_table.webservice_connections.arn,
-      "${aws_dynamodb_table.webservice_connections.arn}/index/*"
-    ]
+    actions   = ["dynamodb:Query"]
+    resources = [aws_dynamodb_table.progress_events.arn]
   }
 }
 
-resource "aws_iam_policy" "webservice_dynamodb" {
-  name        = "${local.name_prefix}-webservice-dynamodb"
-  description = "Allow the WebSocket service to manage connection mappings."
-  policy      = data.aws_iam_policy_document.webservice_dynamodb.json
+resource "aws_iam_policy" "progress_api_dynamodb" {
+  name        = "${local.name_prefix}-progress-api-dynamodb"
+  description = "Allow the progress API to read retained events."
+  policy      = data.aws_iam_policy_document.progress_api_dynamodb.json
 }
 
-resource "aws_iam_role_policy_attachment" "webservice_dynamodb" {
-  role       = aws_iam_role.lambda["webservice_lambda"].name
-  policy_arn = aws_iam_policy.webservice_dynamodb.arn
+resource "aws_iam_role_policy_attachment" "progress_api_dynamodb" {
+  role       = aws_iam_role.lambda["progress_api_lambda"].name
+  policy_arn = aws_iam_policy.progress_api_dynamodb.arn
 }
 
-data "aws_iam_policy_document" "webservice_manage_connections" {
+data "aws_iam_policy_document" "progress_ingest_dynamodb" {
   statement {
-    actions   = ["execute-api:ManageConnections"]
-    resources = ["arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${aws_apigatewayv2_api.progress_ws.id}/*"]
+    actions   = ["dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.progress_events.arn]
   }
 }
 
-resource "aws_iam_policy" "webservice_manage_connections" {
-  name        = "${local.name_prefix}-webservice-manage-connections"
-  description = "Allow the WebSocket dispatcher to push updates to clients."
-  policy      = data.aws_iam_policy_document.webservice_manage_connections.json
+resource "aws_iam_policy" "progress_ingest_dynamodb" {
+  name        = "${local.name_prefix}-progress-ingest-dynamodb"
+  description = "Allow the progress ingester to retain events."
+  policy      = data.aws_iam_policy_document.progress_ingest_dynamodb.json
 }
 
-resource "aws_iam_role_policy_attachment" "webservice_manage_connections" {
-  role       = aws_iam_role.lambda["webservice_lambda"].name
-  policy_arn = aws_iam_policy.webservice_manage_connections.arn
+resource "aws_iam_role_policy_attachment" "progress_ingest_dynamodb" {
+  role       = aws_iam_role.lambda["progress_ingest_lambda"].name
+  policy_arn = aws_iam_policy.progress_ingest_dynamodb.arn
 }
 
 data "aws_iam_policy_document" "chronicle_progress_queue" {

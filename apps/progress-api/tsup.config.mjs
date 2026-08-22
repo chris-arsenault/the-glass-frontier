@@ -4,10 +4,8 @@ export const tsupConfig = defineConfig({
   bundle: true,
   clean: true,
   entry: {
-    connect: 'src/lambdas/connect.ts',
-    disconnect: 'src/lambdas/disconnect.ts',
-    dispatcher: 'src/lambdas/dispatcher.ts',
-    subscribe: 'src/lambdas/subscribe.ts',
+    ingest: 'src/lambdas/ingest.ts',
+    poll: 'src/lambdas/poll.ts',
   },
   // AWS SDK is available in Lambda runtime, don't bundle it
   external: [/^@aws-sdk\/.*/],

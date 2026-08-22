@@ -155,12 +155,13 @@ describe('chronicleStore turn handling', () => {
     const send = useChronicleStore.getState().sendPlayerMessage({
       content: 'Follow the vault signal.',
     });
-    const jobId = formatTurnJobId(CHRONICLE_ID, 3);
     const posted = mocks.gmPostMessage.mock.calls[0]?.[0] as
-      | { content: TranscriptEntry }
+      | { content: TranscriptEntry; requestId: string }
       | undefined;
+    const jobId = formatTurnJobId(CHRONICLE_ID, 3, posted?.requestId ?? 'missing-request');
 
     expect(posted?.content.content).toBe('Follow the vault signal.');
+    expect(posted?.requestId).toBe(posted?.content.id);
     expect(mocks.progressSubscribe).toHaveBeenCalledWith(jobId);
     expect(useChronicleStore.getState().pendingTurnJobId).toBe(jobId);
     expect(useChronicleStore.getState().turnViews).toHaveProperty(jobId);
@@ -260,7 +261,10 @@ describe('chronicleStore turn handling', () => {
       useChronicleStore.getState().sendPlayerMessage({ content: 'Try the eastern door.' })
     ).rejects.toThrow(NETWORK_FAILURE);
 
-    const jobId = formatTurnJobId(CHRONICLE_ID, 3);
+    const posted = mocks.gmPostMessage.mock.calls[0]?.[0] as
+      | { requestId: string }
+      | undefined;
+    const jobId = formatTurnJobId(CHRONICLE_ID, 3, posted?.requestId ?? 'missing-request');
     const state = useChronicleStore.getState();
     expect(mocks.progressMarkComplete).toHaveBeenCalledWith(jobId);
     expect(state.connectionState).toBe('error');

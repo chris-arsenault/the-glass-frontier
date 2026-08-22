@@ -2,11 +2,11 @@
 
 This Terraform project attaches Glass Frontier to the shared Ahara VPC, private-subnet NAT path, Lambda security group, Application Load Balancer, PostgreSQL instance, Route 53 zone, and Terraform state bucket. It provisions the resources Glass Frontier owns:
 
-- five authenticated HTTP Lambda routes on `api.glass-frontier.ahara.io`;
+- six authenticated HTTP Lambda routes on `api.glass-frontier.ahara.io`;
 - a private CloudFront/S3 client at `glass-frontier.ahara.io`;
 - a dedicated Cognito user pool;
-- database-backed, canon-seed, and WebSocket Lambda functions;
-- SQS queues, a DynamoDB connection table, and the WebSocket API.
+- database-backed, canon-seed, and progress Lambda functions;
+- SQS queues and a short-lived DynamoDB progress-event table.
 
 The platform migration service owns the `glass_frontier` logical database and publishes its credentials in SSM. Application Lambda concurrency is capped at eight database connections. The private canon-seed Lambda can add one connection during deployment and cannot scale past one concurrent invocation.
 
@@ -34,12 +34,12 @@ make ci
 
 ## Deployment
 
-Pushes to `main` run the repository-owned `.github/workflows/ci.yml`. After verification, the job assumes the project OIDC role, uploads and runs database migrations, applies the idempotent configuration/vocabulary seed, applies Terraform, and invokes the private canon-seed Lambda. The Lambda reports the already-applied source revision as unchanged on deployment retries.
+Pushes to `main` run the repository-owned `.github/workflows/ci.yml`. After verification, the job assumes the project OIDC role, uploads and runs database migrations, applies the idempotent configuration/vocabulary seed, applies Terraform, and invokes the private canon-seed Lambda. The Lambda reports the already-applied source revision as unchanged on deployment retries. Every browser-facing API, including turn-progress polling, uses the shared ALB; this project creates no API Gateway.
 
 For a manual deployment in the managed Sulion environment, run the script through the credential broker:
 
 ```bash
-with-cred -- env STATE_BUCKET=your-terraform-state-bucket make deploy
+with-cred -- make deploy
 ```
 
 The S3 backend stores state at `projects/glass-frontier.tfstate` and uses native S3 lockfiles.

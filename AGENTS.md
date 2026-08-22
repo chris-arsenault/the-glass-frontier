@@ -33,7 +33,7 @@
 - `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the narrative services through tRPC and shared DTOs.
 - `apps/llm-proxy`: Node-based proxy (deployment targets: local or AWS Lambda) that standardizes OpenAI/LLM calls and exposes them to the rest of the stack.
 - `apps/chronicle-api`: Chronicle engine service that runs storytelling logic, handles skill checks, and ships as an AWS Lambda with supporting build scripts.
-- `apps/webservice`: WebSocket-facing webservice that brokers progress updates (Step Functions → SQS → API Gateway) and manages connection/job subscriptions.
+- `apps/progress-api`: SQS ingester and authenticated HTTP reader for short-lived turn-progress events served through the shared ALB.
 
 ### Packages
 - `packages/dto`: Shared Zod DTO/type definitions consumed by the client, narrative engine, and proxy for consistent contracts.
@@ -42,4 +42,4 @@
 - `packages/persistence`: Shared world-state persistence layer (in-memory + S3 implementations plus factory) consumed by narrative services, now including the location graph store/index for cross-chronicle navigation state.
 
 ### Infrastructure
-- `infrastructure/terraform`: Terraform project that provisions the AWS footprint (API Gateway, Cognito, Lambda builds, S3/CloudFront, etc.) and wires in workspace build artifacts.
+- `infrastructure/terraform`: Terraform project that attaches Glass Frontier to Ahara's shared ALB, VPC, private-subnet NAT path, and RDS while provisioning project-owned Cognito, Lambda, queue, DynamoDB, S3, and CloudFront resources.
