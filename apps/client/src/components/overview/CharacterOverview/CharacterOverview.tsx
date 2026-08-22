@@ -191,36 +191,42 @@ const OriginPanel = ({ names, origin }: OriginPanelProps): React.JSX.Element => 
   </div>
 );
 
-const NaturePanel = ({ character }: { character: Character }): React.JSX.Element => (
-  <div className="panel-nature">
-    <h3 className="panel-label">Nature</h3>
-    <p className="panel-bio">{character.bio}</p>
-    <dl className="panel-list">
-      <div className="panel-list-row">
-        <dt>drive</dt>
-        <dd>{character.nature.drive}</dd>
-      </div>
-      <div className="panel-list-row">
-        <dt>flaw</dt>
-        <dd>{character.nature.flaw}</dd>
-      </div>
-      <div className="panel-list-row">
-        <dt>instinct</dt>
-        <dd>{character.nature.instinct}</dd>
-      </div>
-      <div className="panel-list-row">
-        <dt>unique</dt>
-        <dd>{character.nature.uniqueThing}</dd>
-      </div>
-    </dl>
-    <h3 className="panel-label">Callings</h3>
-    <ul className="panel-calling-list">
-      {character.nature.callings.map((calling) => (
-        <li key={calling}>{calling}</li>
-      ))}
-    </ul>
-  </div>
-);
+const NaturePanel = ({ character }: { character: Character }): React.JSX.Element => {
+  const { callings, drive, flaw, instinct, uniqueThing } = character.nature;
+  const traits = [
+    { label: 'drive', value: drive },
+    { label: 'flaw', value: flaw },
+    { label: 'instinct', value: instinct },
+    { label: 'unique', value: uniqueThing },
+  ].filter((trait) => trait.value !== undefined);
+
+  return (
+    <div className="panel-nature">
+      <h3 className="panel-label">Nature</h3>
+      <p className="panel-bio">{character.bio}</p>
+      {traits.length > 0 ? (
+        <dl className="panel-list">
+          {traits.map((trait) => (
+            <div key={trait.label} className="panel-list-row">
+              <dt>{trait.label}</dt>
+              <dd>{trait.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {callings.length > 0 ? (
+        <>
+          <h3 className="panel-label">Callings</h3>
+          <ul className="panel-calling-list">
+            {callings.map((calling) => (
+              <li key={calling}>{calling}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
+  );
+};
 
 type TagsPanelProps = { tags?: string[] | null };
 

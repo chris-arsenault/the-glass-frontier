@@ -42,10 +42,10 @@ const STEP_LABELS = new Map<CharacterWizardStep, string>([
 ]);
 
 const STANCE_HINTS = new Map<AllegianceStanceValue, string>([
-  ['member', 'In good standing, and expected to act like it.'],
-  ['indebted', 'They owe something they have not paid.'],
-  ['estranged', 'They left, or were pushed out, and it is still raw.'],
-  ['hunted', 'The faction wants them found.'],
+  ['member', 'In good standing. Gets orders, support and access.'],
+  ['indebted', 'Owes the faction a debt it can call in.'],
+  ['estranged', 'Left or was removed. Contacts are cold.'],
+  ['hunted', 'The faction is looking for them.'],
 ]);
 
 const NATURE_PLACEHOLDERS = {
@@ -53,10 +53,10 @@ const NATURE_PLACEHOLDERS = {
     'Chart the drowned wing before the Wardens seal it',
     'Buy back a name their family sold',
   ],
-  drive: 'Be believed by the people who wrote them off',
-  flaw: 'Cannot leave a sealed door alone',
+  drive: 'Wants to be believed by the people who wrote them off',
+  flaw: 'Opens sealed doors they were told to walk past',
   instinct: 'When a room goes quiet, they put their back to a wall',
-  uniqueThing: 'The only living person the Oracle Vessel has spoken a name to',
+  uniqueThing: 'The Oracle Vessel has spoken their name',
 };
 
 type OriginPick = {
@@ -71,25 +71,25 @@ const ORIGIN_PICKS: OriginPick[] = [
   {
     field: 'speciesId',
     heading: 'Species',
-    hint: 'Species shape fiction, never dice. There is no strength bonus here.',
+    hint: 'Species affects fiction only. It carries no attribute or skill modifiers.',
     kind: 'species',
   },
   {
     field: 'cultureId',
     heading: 'Culture',
-    hint: 'How they were raised and named. Independent of species.',
+    hint: 'Upbringing, naming and manners. Independent of species.',
     kind: 'culture',
   },
   {
     field: 'homelandId',
     heading: 'Homeland',
-    hint: 'The place they answer with when someone asks where they are from.',
+    hint: 'Where the character is from. The GM uses it for contacts, familiarity and travel.',
     isLocation: true,
   },
   {
     field: 'allegianceId',
     heading: 'Allegiance',
-    hint: 'One faction that has a claim on them — for better or worse.',
+    hint: 'One faction with a claim on the character.',
     kind: 'faction',
   },
 ];
@@ -143,19 +143,13 @@ export function CharacterCreationWizard(): React.JSX.Element {
     state.pronouns.trim().length > 0 &&
     state.archetype.trim().length > 0 &&
     state.bio.trim().length > 0;
-  const natureComplete =
-    state.callings.every((calling) => calling.trim().length > 0) &&
-    state.drive.trim().length > 0 &&
-    state.flaw.trim().length > 0 &&
-    state.instinct.trim().length > 0 &&
-    state.uniqueThing.trim().length > 0;
-
   const stepComplete = new Map<CharacterWizardStep, boolean>([
     ['origin', originComplete],
     ['concept', conceptComplete],
     ['aptitudes', attributeIssues.length === 0],
     ['skills', skillIssues.length === 0],
-    ['nature', natureComplete],
+    // Nature is optional; every field there can be left blank.
+    ['nature', true],
     ['review', true],
   ]);
 
@@ -184,11 +178,11 @@ export function CharacterCreationWizard(): React.JSX.Element {
       bio: state.bio.trim(),
       name: state.name.trim(),
       nature: {
-        callings: state.callings.map((calling) => calling.trim()),
-        drive: state.drive.trim(),
-        flaw: state.flaw.trim(),
-        instinct: state.instinct.trim(),
-        uniqueThing: state.uniqueThing.trim(),
+        callings: state.callings.map((calling) => calling.trim()).filter((c) => c.length > 0),
+        drive: blankToUndefined(state.drive),
+        flaw: blankToUndefined(state.flaw),
+        instinct: blankToUndefined(state.instinct),
+        uniqueThing: blankToUndefined(state.uniqueThing),
       },
       origin: state.origin,
       pronouns: state.pronouns.trim(),
@@ -210,7 +204,7 @@ export function CharacterCreationWizard(): React.JSX.Element {
       <header className="character-wizard-header">
         <div>
           <h1>Create a character</h1>
-          <p>Six steps: where they come from, who they are, and what the world can press on.</p>
+          <p>Six steps: origin, concept, attributes, skills, nature, review.</p>
         </div>
         <button type="button" className="wizard-close" onClick={() => void navigate('/')}>
           Exit
@@ -305,7 +299,7 @@ function OriginStep({
 
       <section className="wizard-section">
         <h2>Standing</h2>
-        <p className="wizard-hint">How the allegiance regards them right now.</p>
+        <p className="wizard-hint">How that faction treats the character now.</p>
         <div className="chip-row">
           {AllegianceStance.options.map((stance) => (
             <button
@@ -350,9 +344,9 @@ function ConceptStep(): React.JSX.Element {
       <section className="wizard-section">
         <h2>Archetype</h2>
         <p className="wizard-hint">
-          The heroic identity that would still fit at the height of their story — Fault-Singer,
-          Ghost Pilot, Glasswright. Not a job title. Picking a preset fills in a starting spread
-          of attributes and skills, which you can change later in the wizard.
+          A short label for what the character does: Fault-Singer, Ghost Pilot, Glasswright. A
+          preset also sets two advanced attributes and three skills, which you can edit in the
+          next two steps.
         </p>
         <div className="chip-row">
           {ARCHETYPE_PRESETS.map((preset) => (
@@ -386,8 +380,8 @@ function ConceptStep(): React.JSX.Element {
       <section className="wizard-section">
         <h2>Bio</h2>
         <p className="wizard-hint">
-          One to three sentences a stranger could learn about them in a bar. Public identity, not
-          secret history.
+          One to three sentences of public identity: what someone who meets the character would
+          learn.
         </p>
         <textarea
           aria-label="Bio"
@@ -414,8 +408,8 @@ function AptitudesStep({
       <section className="wizard-section">
         <h2>Attributes</h2>
         <p className="wizard-hint">
-          Everything starts at standard. Raise exactly {CREATION_ADVANCED_COUNT} to advanced. One
-          attribute may go to superior, paid for by dropping one to rudimentary.
+          All seven start at standard. Raise exactly {CREATION_ADVANCED_COUNT} to advanced. You
+          may raise one more to superior if you drop one to rudimentary.
         </p>
         <div className="attribute-grid">
           {Attribute.options.map((attribute) => (
@@ -454,9 +448,9 @@ function SkillsStep({ issues }: { issues: Array<{ message: string }> }): React.J
       <section className="wizard-section">
         <h2>Skills</h2>
         <p className="wizard-hint">
-          Three declared skills: one artisan, two apprentice. Name what they do, in the present
-          tense — &ldquo;break sealed doors&rdquo;, &ldquo;read fault bands&rdquo;,
-          &ldquo;talk down crowds&rdquo;. Anything else is rolled untrained until it earns a name.
+          Three skills: one artisan, two apprentice. Write each as an action in the present tense
+          — &ldquo;break sealed doors&rdquo;, &ldquo;read fault bands&rdquo;, &ldquo;talk down
+          crowds&rdquo;. Any skill the character has not declared rolls at fool.
         </p>
         <div className="skill-slot-list">
           {skills.map((skill, index) => {
@@ -505,11 +499,16 @@ function NatureStep(): React.JSX.Element {
   return (
     <div className="wizard-step-body">
       <section className="wizard-section">
-        <h2>Callings</h2>
+        <h2>Nature</h2>
         <p className="wizard-hint">
-          Two things they are chasing. A calling says what they want and what makes it hard — the
-          GM will push on both.
+          Every field on this step is optional. Each one you fill in gives the GM a specific thing
+          to use during play. You can add or change them later from the character sheet.
         </p>
+      </section>
+
+      <section className="wizard-section">
+        <h2>Callings</h2>
+        <p className="wizard-hint">Goals the GM can apply pressure to. Up to two.</p>
         {callings.map((calling, index) => (
           <label key={index} className="wizard-field">
             <span>Calling {index + 1}</span>
@@ -523,10 +522,10 @@ function NatureStep(): React.JSX.Element {
       </section>
 
       <section className="wizard-section">
-        <h2>The rest of them</h2>
+        <h2>Traits</h2>
         <label className="wizard-field">
           <span>Drive</span>
-          <small>What they actually want, underneath the callings.</small>
+          <small>What motivates the character.</small>
           <input
             value={drive}
             placeholder={NATURE_PLACEHOLDERS.drive}
@@ -535,7 +534,7 @@ function NatureStep(): React.JSX.Element {
         </label>
         <label className="wizard-field">
           <span>Flaw</span>
-          <small>The thing that costs them. Give the world something to charge for.</small>
+          <small>A weakness the GM can exploit.</small>
           <input
             value={flaw}
             placeholder={NATURE_PLACEHOLDERS.flaw}
@@ -544,7 +543,7 @@ function NatureStep(): React.JSX.Element {
         </label>
         <label className="wizard-field">
           <span>Instinct</span>
-          <small>What they do without deciding to. Write it as &ldquo;when X, they Y&rdquo;.</small>
+          <small>A standing reaction, written as &ldquo;when X, they Y&rdquo;.</small>
           <input
             value={instinct}
             placeholder={NATURE_PLACEHOLDERS.instinct}
@@ -553,7 +552,7 @@ function NatureStep(): React.JSX.Element {
         </label>
         <label className="wizard-field">
           <span>One unique thing</span>
-          <small>True of them and of nobody else alive. Not a power — a fact.</small>
+          <small>A fact true only of this character.</small>
           <input
             value={uniqueThing}
             placeholder={NATURE_PLACEHOLDERS.uniqueThing}
@@ -575,6 +574,17 @@ function ReviewStep({
 
   const nameFor = (field: OriginPick['field']): string | undefined =>
     entitiesByPick.get(field)?.find((entity) => entity.id === state.origin[field])?.name;
+
+  const natureRows = [
+    ...state.callings.map((calling, index) => ({
+      label: `Calling ${index + 1}`,
+      value: calling,
+    })),
+    { label: 'Drive', value: state.drive },
+    { label: 'Flaw', value: state.flaw },
+    { label: 'Instinct', value: state.instinct },
+    { label: 'Unique', value: state.uniqueThing },
+  ].filter((row) => row.value.trim().length > 0);
 
   return (
     <div className="wizard-step-body">
@@ -619,15 +629,15 @@ function ReviewStep({
 
       <section className="wizard-section">
         <h2>Nature</h2>
-        <dl className="review-list">
-          {state.callings.map((calling, index) => (
-            <ReviewRow key={calling} label={`Calling ${index + 1}`} value={calling} />
-          ))}
-          <ReviewRow label="Drive" value={state.drive} />
-          <ReviewRow label="Flaw" value={state.flaw} />
-          <ReviewRow label="Instinct" value={state.instinct} />
-          <ReviewRow label="Unique" value={state.uniqueThing} />
-        </dl>
+        {natureRows.length === 0 ? (
+          <p className="wizard-hint">Left blank. You can fill this in later.</p>
+        ) : (
+          <dl className="review-list">
+            {natureRows.map((row) => (
+              <ReviewRow key={row.label} label={row.label} value={row.value} />
+            ))}
+          </dl>
+        )}
       </section>
     </div>
   );
@@ -662,3 +672,8 @@ function IssueList({ issues }: { issues: Array<{ message: string }> }): React.JS
 }
 
 const formatModifier = (value: number): string => (value >= 0 ? `+${value}` : `${value}`);
+
+const blankToUndefined = (value: string): string | undefined => {
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+};

@@ -51,14 +51,8 @@ test.describe('Chronicle creation', () => {
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await page.getByLabel(/Calling 1/).fill('Chart the drowned wing before it is sealed');
-    await page.getByLabel(/Calling 2/).fill('Buy back a name her family sold');
-    await page.getByLabel(/Drive/).fill('Be believed by the people who wrote her off');
-    await page.getByLabel(/Flaw/).fill('Cannot leave a sealed door alone');
-    await page.getByLabel(/Instinct/).fill('When a room goes quiet, she puts her back to a wall');
-    await page
-      .getByLabel(/One unique thing/)
-      .fill('The only person the Oracle Vessel has spoken a name to');
+    // Nature is optional: fill one field and leave the rest blank.
+    await page.getByLabel(/Flaw/).fill('Opens sealed doors she was told to walk past');
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'Create Character' }).click();

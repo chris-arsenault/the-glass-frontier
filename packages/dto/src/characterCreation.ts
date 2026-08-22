@@ -191,14 +191,14 @@ export function validateSkillName(name: string): string | null {
   }
   const words = cleaned.split(' ');
   if (words.length < SKILL_NAME_MIN_WORDS) {
-    return 'Name what the character does, not a discipline: "read fault bands", not "geology".';
+    return `Use at least ${SKILL_NAME_MIN_WORDS} words describing an action: "read fault bands".`;
   }
   const first = words[0].toLowerCase();
   if (SKILL_NAME_LEADING_ARTICLES.includes(first)) {
-    return 'Start with the verb: "cut fouled lines", not "the line work".';
+    return 'Start with a verb: "cut fouled lines".';
   }
   if (SKILL_NAME_NOUN_SUFFIXES.some((suffix) => first.endsWith(suffix))) {
-    return `"${words[0]}" names a subject. Start with a present-tense verb: "break sealed doors".`;
+    return `Start with a present-tense verb, not "${words[0]}": "break sealed doors".`;
   }
   return null;
 }

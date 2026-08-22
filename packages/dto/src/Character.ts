@@ -33,17 +33,18 @@ export const CharacterOrigin = z.object({
 export type CharacterOrigin = z.infer<typeof CharacterOrigin>;
 
 /**
- * What the character wants, what undoes them, and what makes them singular.
- * Every field here is something the GM can act on unprompted: `callings` are
- * the agenda, `flaw` is the lever, `instinct` fires without being asked, and
- * `uniqueThing` is true of this character and no one else in the world.
+ * Optional detail the GM can use during play: `callings` are goals to apply
+ * pressure to, `flaw` is a weakness to exploit, `instinct` is a standing
+ * reaction, and `uniqueThing` is a fact true only of this character. A
+ * character with none of these plays normally; each one filled in gives the
+ * narrator one more specific thing to work with.
  */
 export const CharacterNature = z.object({
-  callings: z.array(z.string().min(1)).length(2),
-  drive: z.string().min(1),
-  flaw: z.string().min(1),
-  instinct: z.string().min(1),
-  uniqueThing: z.string().min(1),
+  callings: z.array(z.string().min(1)).max(2).default([]),
+  drive: z.string().min(1).optional(),
+  flaw: z.string().min(1).optional(),
+  instinct: z.string().min(1).optional(),
+  uniqueThing: z.string().min(1).optional(),
 });
 export type CharacterNature = z.infer<typeof CharacterNature>;
 

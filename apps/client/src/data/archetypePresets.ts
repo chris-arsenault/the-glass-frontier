@@ -2,10 +2,9 @@ import type { CharacterAttributes, CharacterSkillDraft } from '@glass-frontier/d
 import { createDefaultCreationAttributes } from '@glass-frontier/dto';
 
 /**
- * Starting builds. A preset fills in the mechanical half of the sheet — two
- * `advanced` attributes and the three declared skills — so creation starts from
- * something coherent the player edits, rather than a blank grid. The narrative
- * half is never prefilled: that is the part only the player can write.
+ * Starting builds. A preset sets the two `advanced` attributes and the three
+ * declared skills, giving the player a working sheet to edit in the aptitude
+ * and skill steps. Presets leave every Nature field blank for the player.
  */
 export type ArchetypePreset = {
   id: string;
@@ -25,7 +24,7 @@ export const ARCHETYPE_PRESETS: ArchetypePreset[] = [
       { attribute: 'resolve', name: 'steady a shaking span', tier: 'apprentice' },
       { attribute: 'presence', name: 'call a stand-down', tier: 'apprentice' },
     ],
-    summary: 'Hears where the glass is about to give, and says so before it does.',
+    summary: 'Reads stress and resonance in ringglass. Hazard checks, structural timing, crew warnings.',
   },
   {
     advanced: ['vitality', 'finesse'],
@@ -36,7 +35,7 @@ export const ARCHETYPE_PRESETS: ArchetypePreset[] = [
       { attribute: 'finesse', name: 'cut fouled lines', tier: 'apprentice' },
       { attribute: 'vitality', name: 'take a hit standing', tier: 'apprentice' },
     ],
-    summary: 'Gets through the thing everyone else is still arguing about.',
+    summary: 'Forces entry and clears obstructions. Doors, restraints, fouled rigging, taking a hit.',
   },
   {
     advanced: ['finesse', 'focus'],
@@ -47,7 +46,7 @@ export const ARCHETYPE_PRESETS: ArchetypePreset[] = [
       { attribute: 'attunement', name: 'read weather off glass', tier: 'apprentice' },
       { attribute: 'presence', name: 'talk a tower down', tier: 'apprentice' },
     ],
-    summary: 'Takes the approach nobody logs, and lands it more often than not.',
+    summary: 'Flies and docks in bad conditions. Approaches, weather reads, talking to traffic control.',
   },
   {
     advanced: ['presence', 'ingenuity'],
@@ -58,7 +57,7 @@ export const ARCHETYPE_PRESETS: ArchetypePreset[] = [
       { attribute: 'ingenuity', name: 'trade in old debts', tier: 'apprentice' },
       { attribute: 'focus', name: 'read a room for loyalties', tier: 'apprentice' },
     ],
-    summary: 'Carries names, favours and grudges between people who will not meet.',
+    summary: 'Carries messages, debts and introductions between factions. Crowds, bargaining, reading a room.',
   },
   {
     advanced: ['resolve', 'finesse'],
@@ -69,7 +68,7 @@ export const ARCHETYPE_PRESETS: ArchetypePreset[] = [
       { attribute: 'resolve', name: 'hold someone together', tier: 'apprentice' },
       { attribute: 'ingenuity', name: 'scavenge field supply', tier: 'apprentice' },
     ],
-    summary: 'Works in the doorway between a survivable wound and a fatal one.',
+    summary: 'Treats injuries in the field. Wounds under fire, keeping someone conscious, improvised supply.',
   },
   {
     advanced: ['ingenuity', 'attunement'],
@@ -80,7 +79,7 @@ export const ARCHETYPE_PRESETS: ArchetypePreset[] = [
       { attribute: 'attunement', name: 'tune dead resonators', tier: 'apprentice' },
       { attribute: 'ingenuity', name: 'improvise from wreckage', tier: 'apprentice' },
     ],
-    summary: 'Makes resonance hold a shape long enough to be useful.',
+    summary: 'Shapes and tunes ringglass. Repairs, resonators, building something out of wreckage.',
   },
 ];
 

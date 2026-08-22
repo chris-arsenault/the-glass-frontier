@@ -52,10 +52,10 @@ const characterValues = (character: Character): unknown[] => [
   character.origin.allegianceId,
   character.origin.allegianceStance,
   character.nature.callings,
-  character.nature.drive,
-  character.nature.flaw,
-  character.nature.instinct,
-  character.nature.uniqueThing,
+  character.nature.drive ?? null,
+  character.nature.flaw ?? null,
+  character.nature.instinct ?? null,
+  character.nature.uniqueThing ?? null,
 ];
 
 export async function persistCharacter(

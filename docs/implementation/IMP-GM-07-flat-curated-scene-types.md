@@ -105,29 +105,20 @@ export const SceneSubjectKind = z.enum([
 ]);
 ```
 
-The first registry permits:
-
-| Scene type | Allowed subject kinds | Example |
-|---|---|---|
-| `dialog` | `npc` | `Amaya Venn`, `npc` |
-| `battle` | `npc`, `creature`, `vehicle`, `faction` | `Brake Cutters`, `faction` |
-| `hunt` | `npc`, `creature`, `vehicle` | `the scarred sarn`, `creature` |
-| `chase` | `npc`, `creature`, `vehicle` | `the red courier kite`, `vehicle` |
-| `search` | `location`, `vehicle`, `object` | `the wrecked tender`, `vehicle` |
-
-Do not accept unlisted pairs. If a new kind is needed, extend the canonical
-enum and registry rather than accepting arbitrary strings.
+`subjectKind` labels what the scene is about so the UI and prompts can render it.
+The classifier picks the best-fit kind. Do not enforce a per-type allow matrix
+that fails a turn on an unusual pairing; that only turns a classifier quirk into
+a broken turn in a free-text product. The registry may list typical kinds per
+type as guidance for the classifier prompt, not as a hard gate. Examples:
+`dialog` -> `Amaya Venn` (`npc`); `battle` -> `Brake Cutters` (`faction`);
+`search` -> `the wrecked tender` (`vehicle`).
 
 ### Chronicle scene
 
 ```ts
 export const ChronicleScene = z.object({
-  completedAtTurn: z.number().int().nonnegative().nullable(),
-  completionReason: z.string().min(1).nullable(),
   id: z.string().min(1),
   startedAtTurn: z.number().int().nonnegative(),
-  startReason: z.string().min(1),
-  status: z.enum(['active', 'completed']),
   subject: z.string().min(1),
   subjectKind: SceneSubjectKind,
   type: SceneType,
@@ -138,29 +129,28 @@ export const ChronicleScene = z.object({
 type-specific nullable columns such as `dialogPartner`, `quarry`, or
 `searchLocation`.
 
-The scene does not initially store clocks, HP, nested scenes, portraits, or
-type-specific payloads. Add those only when the corresponding scene mechanics
-are implemented.
+The scene does not initially store clocks, HP, nested scenes, portraits,
+status, start/completion reasons, or type-specific payloads. Add those only when
+the corresponding mechanics are implemented.
 
 ### Chronicle changes
 
-Extend `Chronicle`:
+Extend `Chronicle` with a single nullable active scene:
 
 ```ts
-activeSceneId: z.string().min(1).nullable().default(null),
-scenes: z.array(ChronicleScene).default([]),
+activeScene: ChronicleScene.nullable().default(null),
 ```
 
 Invariants:
 
-- zero or one scene has `status: active`;
-- `activeSceneId` is null exactly when no scene is active;
-- a non-null `activeSceneId` identifies the one active scene;
-- completed scenes are immutable except for explicit repair;
-- replacing a scene completes the previous scene before adding the new one.
+- `activeScene` is null exactly when no typed scene is running;
+- a new typed scene overwrites `activeScene`;
+- completing a scene sets `activeScene` back to null.
 
-Store scene history in the existing chronicle `props` JSON. Do not add a scene
-table for the flat first version.
+Do not persist a chronicle-level log of completed scenes. Per-turn snapshots
+(below) already record what governed each turn, which is enough for the UI and
+for the Phase 8 play-data review. Store `activeScene` in the existing chronicle
+`props` JSON; no scene table.
 
 ### Turn snapshot
 
@@ -175,61 +165,60 @@ sceneContext: z.object({
 }).nullable().optional(),
 ```
 
-The snapshot records which scene governed that turn. Historical transcript UI
-must not infer presentation from the chronicle's current active scene.
+The snapshot records which scene governed that turn so historical transcript UI
+(the speaking-head attribution) does not read the chronicle's current active
+scene. This is the only piece of scene history the system keeps.
 
-Add `scene_context jsonb` to `chronicle_turn` in the next sequential database
-migration and wire it through `ChronicleTurnPersistence`.
+`chronicle_turn` uses explicit columns, so add one `scene_context jsonb` column
+and wire it through `ChronicleTurnPersistence`. That single column is the whole
+persistence footprint for scene history; do not add a scene table or a
+completed-scene log.
 
 ## Scene directive on intent
 
-Extend `Intent` with:
+Extend `Intent` with one nullable field:
 
 ```ts
-sceneDirective: z.object({
-  rationale: z.string().min(1),
-  subject: z.string().min(1).nullable(),
-  subjectKind: SceneSubjectKind.nullable(),
-  transition: z.enum(['stay', 'start', 'replace']),
-  type: SceneType.nullable(),
-});
+sceneChange: z.object({
+  subject: z.string().min(1),
+  subjectKind: SceneSubjectKind,
+  type: SceneType,
+}).nullable().default(null);
 ```
 
-Semantic validation:
+`sceneChange` is null on the vast majority of turns: the player is either in
+freeform play or continuing the active scene. A non-null `sceneChange` means the
+fiction has entered a typed scene *of this type about this subject*.
 
-- `stay`: `type`, `subject`, and `subjectKind` are null.
-- `start`: there is no active scene; all three scene fields are present and
-  form an allowed type/kind pair.
-- `replace`: there is an active scene; all three scene fields are present and
-  form an allowed type/kind pair.
-- An invalid combination fails the turn. Do not guess a repaired directive.
+The classifier does not choose between "start" and "replace", and does not emit
+a "stay" token. The server already knows whether a scene is active, so the
+reducer decides:
 
-`stay` also covers ordinary freeform play when no typed scene is active.
+- `sceneChange` null -> keep the persisted active scene (or stay freeform);
+- `sceneChange` set, no active scene -> start it;
+- `sceneChange` set, active scene of the same type and subject -> treat as a
+  continuation (no change);
+- `sceneChange` set, different type or subject -> replace.
 
-There is no pre-narration `end` directive. Leaving a dialog, escaping a battle,
-or abandoning a search is still an action inside that scene. The scene-aware
-narrator resolves it, then the post-narration scene judgment closes the scene.
-A clearly new typed situation uses `replace`.
+A malformed `sceneChange` (missing field, empty subject) degrades to null. Do
+not fail the player's turn over a classifier quirk in a free-text product.
+
+There is no pre-narration `end` signal. Leaving a dialog, escaping a battle, or
+abandoning a search is an action inside that scene: the scene-aware narrator
+resolves it and the post-narration judgment closes the scene.
 
 ## Effective scene during a turn
 
-The scene transition must affect the same turn that triggers it.
+The scene change must affect the same turn that triggers it. After
+`IntentClassifierNode` returns, the reducer applies the rules above and places
+the result on `GraphContext.effectiveScene` (the active or newly started scene,
+or null). Downstream classifiers and the narrator read `effectiveScene`, not the
+pre-turn chronicle scene. A newly started scene uses
+`id = "scene:" + context.turnId`.
 
-After `IntentClassifierNode` returns:
-
-1. `stay`: use the persisted active scene, or null.
-2. `start`: construct a new active scene with
-   `id = "scene:" + context.turnId`.
-3. `replace`:
-   - mark the old scene completed at `turnSequence - 1`;
-   - use the directive rationale as its completion reason;
-   - construct the new scene with `id = "scene:" + context.turnId`.
-
-Place the result on `GraphContext.effectiveScene`. Downstream classifiers and
-the narrator read `effectiveScene`, not the pre-turn chronicle scene.
-
-The `WorldUpdater` persists the effective scene and its history after the graph
-finishes. This keeps mutation in the existing post-graph update boundary.
+`WorldUpdater` persists `activeScene` after the graph finishes, keeping mutation
+in the existing post-graph update boundary. Replacement simply overwrites
+`activeScene`; there is no completed-scene log to append to.
 
 ## Post-narration completion
 
@@ -244,8 +233,7 @@ Rules:
 
 - If `effectiveScene` is null, output `continue` and a null reason.
 - `complete` means the current turn belongs to the scene and is its final turn.
-- On `complete`, set `completedAtTurn = turnSequence`, persist the reason, and
-  clear `activeSceneId`.
+- On `complete`, clear `activeScene` and record the reason on the turn snapshot.
 - Chronicle closure also completes the active scene on the closing turn.
 - A narrator asking the player an ordinary next question does not by itself
   keep a scene open; the scene policy's completion conditions decide.
@@ -266,14 +254,11 @@ type SceneTypeDefinition = {
 };
 ```
 
-`ScenePresentation` initially supports:
-
-```ts
-'speaking-head' | 'action-pressure' | 'quarry' | 'pursuit' | 'inspection'
-```
-
-Do not add numeric bias knobs such as `riskSkew` or `checkFrequency`. Heavy bias
-belongs in clear scene-specific prompt rules that can be reviewed and tested.
+`presentation` is a string naming the client stage for the type. Define only the
+tokens for types that are actually built (`speaking-head` for dialog first,
+`action-pressure` for battle next); add the rest with their type. Do not add
+numeric bias knobs such as `riskSkew` or `checkFrequency`. Heavy bias belongs in
+clear scene-specific prompt rules that can be reviewed and tested.
 
 ## Prompt composition
 
@@ -319,13 +304,15 @@ Add a `scene` fragment containing:
 Include it in:
 
 - `intent-classifier`
-- `intent-beat-detector`
 - `check-planner`
 - every intent narrator
 - `gm-summary`
-- `entity-judge`
-- `inventory-delta`
-- `location-delta`
+
+Do not inject it into `intent-beat-detector`, `entity-judge`, `inventory-delta`,
+or `location-delta`. Those extract deterministic deltas or long-horizon threads
+where scene type does not change the answer; adding it there is context cost
+without behavior change. Add it to one of them only if play data shows a
+concrete misclassification the scene context would fix.
 
 The active subject must remain prominent in retrieval and narration. The
 initial version uses the canonical subject string. It does not add name-based
@@ -494,20 +481,14 @@ later phase; the first implementation supplies presentation and prompt rules.
 
 Add a `SceneStage` above `ChatCanvas` and below `ChronicleHeader`.
 
-It reads `chronicleRecord.activeSceneId` and the corresponding scene. When no
-typed scene is active, it renders nothing and the current layout remains
-unchanged.
+It reads `chronicleRecord.activeScene`. When it is null, the stage renders
+nothing and the current layout is unchanged.
 
-Presentation components:
-
-- `DialogSceneStage`
-- `BattleSceneStage`
-- `HuntSceneStage`
-- `ChaseSceneStage`
-- `SearchSceneStage`
-
-The components share a common frame but have type-specific labels and
-presentation. Do not make one component switch on dozens of nullable props.
+Add presentation components only for built types (`DialogSceneStage` first, then
+`BattleSceneStage`), each behind the type's `presentation` token. Add the
+remaining stages with their types. The components share a common frame with
+type-specific labels; do not build one component that switches on many nullable
+props.
 
 ### Speaking head
 
@@ -544,20 +525,11 @@ Do not add a scene-start button or typed-scene selector.
 
 ### Chronicle
 
-`Chronicle.scenes` and `activeSceneId` live in `chronicle.props`; update
-`normalizeChronicle` so old records normalize once to `[]` and `null`.
-
-The database migration should populate missing JSON fields:
-
-```sql
-props = jsonb_set(
-  jsonb_set(props, '{scenes}', '[]'::jsonb, true),
-  '{activeSceneId}', 'null'::jsonb, true
-)
-```
-
-Use the next sequential migration and matching rollback. Do not add legacy
-field aliases.
+`Chronicle.activeScene` lives in `chronicle.props`. Update `normalizeChronicle`
+so old records default `activeScene` to null. Because the schema default handles
+the missing field, a data migration is optional; add one only if a runtime path
+reads the raw column before normalization. Do not add legacy field aliases or a
+completed-scene array.
 
 ### Turn
 
@@ -589,10 +561,10 @@ Files:
 Deliver:
 
 - canonical enums and schemas;
-- allowed type/kind validation;
-- chronicle invariants;
-- scene directive semantic validator;
-- unit coverage for every valid/invalid pairing.
+- nullable `activeScene` on the chronicle and `sceneChange` on intent;
+- the reducer that maps `sceneChange` to stay/start/continue/replace;
+- malformed `sceneChange` degrades to stay;
+- unit coverage for the reducer cases.
 
 ### Phase 2 – Persistence and hydration
 
@@ -606,8 +578,8 @@ Files:
 
 Deliver:
 
-- scene history in chronicle props;
-- scene context on turns;
+- `activeScene` in chronicle props;
+- scene snapshot on turns via one `scene_context` column;
 - normalization for existing chronicles;
 - idempotent turn commit coverage;
 - deletion and history loading remain unchanged.
@@ -624,10 +596,10 @@ Files:
 
 Deliver:
 
-- `stay|start|replace` directive;
-- effective scene computed during intent application;
+- `sceneChange` (nullable) on the classifier;
+- effective scene computed by the reducer during intent application;
 - flat replacement behavior;
-- invalid directives fail rather than being guessed;
+- malformed `sceneChange` degrades to stay;
 - no typed scene for ordinary freeform turns.
 
 ### Phase 4 – Scene-aware prompt composition and completion
@@ -723,18 +695,19 @@ additional scene types.
 
 ### DTO/unit
 
-- every scene type accepts only its declared subject kinds;
-- only one active scene survives validation;
-- `activeSceneId` and scene statuses agree;
-- intent directive semantic validation;
+- scene and subject-kind enums parse;
+- `activeScene` is nullable and defaults to null;
+- the reducer maps `sceneChange` (null / new / same / different) to
+  stay / start / continue / replace;
+- a malformed `sceneChange` degrades to stay rather than throwing;
 - turn scene snapshot round-trips.
 
 ### GM graph
 
 - freeform turn with no active scene is unchanged;
 - typed scene starts on the triggering turn;
-- active scene stays canonical when directive is `stay`;
-- replacement completes old scene and starts new scene;
+- active scene persists across turns when `sceneChange` is null;
+- a different-type/subject `sceneChange` replaces the active scene;
 - check planner receives and obeys heavy scene policy;
 - narrator receives intent + scene policy;
 - GM summary completes only the effective scene;
@@ -743,10 +716,10 @@ additional scene types.
 ### Persistence
 
 - old chronicle normalizes to no active scene;
-- scene history survives reload;
-- turn scene context survives reload;
+- the active scene survives reload;
+- each turn's scene snapshot survives reload;
 - duplicate turn commit remains idempotent;
-- rollback removes only the added turn column/props fields.
+- rollback removes only the added turn `scene_context` column.
 
 ### Client
 
@@ -761,7 +734,7 @@ additional scene types.
 ### E2E
 
 - freeform baseline;
-- dialog start/stay/complete;
+- dialog start/continue/complete;
 - dialog -> battle;
 - battle complete;
 - hunt -> chase;
@@ -775,8 +748,9 @@ additional scene types.
 ### Classifier overreach
 
 Heavy bias must not cause the intent classifier to invent scene transitions on
-minor tone changes. Default to `stay`; require concrete fictional evidence for
-`start` or `replace`. Lock this with prompt-contract tests and feedback review.
+minor tone changes. Default to a null `sceneChange`; require concrete fictional
+evidence to enter or switch a typed scene. Lock this with prompt-contract tests
+and feedback review.
 
 ### Prompt contradiction
 
@@ -790,8 +764,8 @@ Do not solve contradictions by adding fallback prompt selection.
 
 ### Subject drift
 
-On `stay`, retain the stored subject verbatim. Do not ask the model to restate
-it. A subject changes only through `replace`.
+When `sceneChange` is null, retain the stored subject verbatim. Do not ask the
+model to restate it. A subject changes only when `sceneChange` names a new one.
 
 ### Portrait scope
 
