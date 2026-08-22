@@ -14,10 +14,13 @@ terraform {
       source  = "hashicorp/null"
       version = "~> 3.2"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
-    }
+  }
+
+  backend "s3" {
+    region       = "us-east-1"
+    key          = "projects/glass-frontier.tfstate"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
@@ -26,9 +29,8 @@ provider "aws" {
 
   default_tags {
     tags = {
-      project     = var.project
-      environment = var.environment
-      managed_by  = "terraform"
+      Project   = "glass-frontier"
+      ManagedBy = "terraform"
     }
   }
 }
@@ -36,4 +38,11 @@ provider "aws" {
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"
+
+  default_tags {
+    tags = {
+      Project   = "glass-frontier"
+      ManagedBy = "terraform"
+    }
+  }
 }

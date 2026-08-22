@@ -1,12 +1,7 @@
 resource "aws_acm_certificate" "cloudfront" {
   provider          = aws.us_east_1
-  domain_name       = local.apex_domain
+  domain_name       = local.cloudfront_domain
   validation_method = "DNS"
-
-  subject_alternative_names = distinct(compact([
-    local.cloudfront_domain == local.apex_domain ? "" : local.cloudfront_domain,
-    local.cognito_domain
-  ]))
 
   lifecycle {
     create_before_destroy = true
@@ -24,7 +19,7 @@ resource "aws_route53_record" "cloudfront_validation" {
     }
   }
 
-  zone_id = data.aws_route53_zone.primary.zone_id
+  zone_id = module.ctx.route53_zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60
@@ -57,7 +52,7 @@ resource "aws_route53_record" "api_validation" {
     }
   }
 
-  zone_id = data.aws_route53_zone.primary.zone_id
+  zone_id = module.ctx.route53_zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60
@@ -67,4 +62,9 @@ resource "aws_route53_record" "api_validation" {
 resource "aws_acm_certificate_validation" "api" {
   certificate_arn         = aws_acm_certificate.api.arn
   validation_record_fqdns = [for record in aws_route53_record.api_validation : record.fqdn]
+}
+
+resource "aws_lb_listener_certificate" "api" {
+  listener_arn    = module.ctx.alb.listener_arn
+  certificate_arn = aws_acm_certificate_validation.api.certificate_arn
 }

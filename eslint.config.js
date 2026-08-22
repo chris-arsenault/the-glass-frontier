@@ -14,7 +14,16 @@ import perfectionistPlugin from 'eslint-plugin-perfectionist';
 
 export default [
   // ignore build artifacts
-  { ignores: ['**/dist/**', '**/build/**', '**/.turbo/**', '**/coverage/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/build/**',
+      '**/.turbo/**',
+      '**/coverage/**',
+      'packages/*/src/**/*.d.ts',
+      'packages/*/src/**/*.js',
+    ],
+  },
 
   // base JS rules
   js.configs.recommended,

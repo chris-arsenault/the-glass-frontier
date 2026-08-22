@@ -40,6 +40,12 @@ variable "timeout" {
   default     = 10
 }
 
+variable "reserved_concurrent_executions" {
+  description = "Maximum concurrent executions reserved for this Lambda."
+  type        = number
+  default     = -1
+}
+
 variable "environment_variables" {
   description = "Environment variables injected into the Lambda."
   type        = map(string)
@@ -118,7 +124,7 @@ variable "websocket_api_config" {
 }
 
 variable "vpc_config" {
-  description = "Optional VPC configuration for Lambda (required for RDS Proxy access)."
+  description = "Optional VPC configuration for Lambda access to private services."
   type = object({
     subnet_ids         = list(string)
     security_group_ids = list(string)

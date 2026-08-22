@@ -8,10 +8,6 @@
     "declarationDir": "dist",
     "declarationMap": false
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../dto" },
-    { "path": "../node-utils" },
-    { "path": "../utils" }
-  ]
+  "include": ["src", "src/**/*.json"],
+  "references": [{ "path": "../dto" }, { "path": "../node-utils" }, { "path": "../utils" }]
 }

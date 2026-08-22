@@ -8,6 +8,9 @@ import { proposal, resetDatabase, seedEntity, startHarness } from './harness';
 let pool: Pool;
 let worldState: WorldState;
 
+const ACCORD_KEY = 'tsonu:accord';
+const CAROM_KEY = 'tsonu:carom';
+
 beforeAll(async () => {
   ({ pool, worldState } = await startHarness());
 });
@@ -21,11 +24,26 @@ afterAll(async () => {
 });
 
 describe('Canon batch commit', () => {
+  it('starts tests without loading the production canon artifact', async () => {
+    const imported = await pool.query<{ count: string }>(
+      'SELECT count(*) FROM entity WHERE source = $1',
+      ['import']
+    );
+
+    expect(imported.rows[0]?.count).toBe('0');
+  });
+
   it('resolves relationships between entities created in the same batch', async () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'faction', name: 'Glass Wardens', ref: 'faction', status: 'active', subkind: 'religious_order' },
+          {
+            kind: 'faction',
+            name: 'Glass Wardens',
+            ref: 'faction',
+            status: 'active',
+            subkind: 'religious_order',
+          },
           { kind: 'npc', name: 'Mirin', ref: 'npc', status: 'alive', subkind: 'specialist' },
         ],
         relationships: [
@@ -56,8 +74,20 @@ describe('Canon batch commit', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'geographic_location', name: 'Quay', ref: 'a', status: 'charted', subkind: 'region' },
-          { kind: 'geographic_location', name: 'Wharf', ref: 'b', status: 'charted', subkind: 'region' },
+          {
+            kind: 'geographic_location',
+            name: 'Quay',
+            ref: 'a',
+            status: 'charted',
+            subkind: 'region',
+          },
+          {
+            kind: 'geographic_location',
+            name: 'Wharf',
+            ref: 'b',
+            status: 'charted',
+            subkind: 'region',
+          },
         ],
         relationships: [
           { dst: { ref: 'b' }, relationship: 'located_in', src: { ref: 'a' } },
@@ -76,8 +106,20 @@ describe('Canon batch commit', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'creature', name: 'Marrower', ref: 'creature', status: 'alive', subkind: 'animal' },
-          { kind: 'installation', name: 'Orra', ref: 'hab', status: 'inhabited', subkind: 'settlement' },
+          {
+            kind: 'creature',
+            name: 'Marrower',
+            ref: 'creature',
+            status: 'alive',
+            subkind: 'animal',
+          },
+          {
+            kind: 'installation',
+            name: 'Orra',
+            ref: 'hab',
+            status: 'inhabited',
+            subkind: 'settlement',
+          },
         ],
         relationships: [
           { dst: { ref: 'hab' }, relationship: 'inhabits', since: 2435, src: { ref: 'creature' } },
@@ -97,7 +139,13 @@ describe('Canon batch commit', () => {
         entities: [
           { kind: 'installation', name: 'Five Landing', ref: 'hab', subkind: 'settlement' },
           // A named ship serving as a hub is somewhere a scene can be set.
-          { isLocation: true, kind: 'transport', name: 'The Long Answer', ref: 'ship', subkind: 'vessel' },
+          {
+            isLocation: true,
+            kind: 'transport',
+            name: 'The Long Answer',
+            ref: 'ship',
+            subkind: 'vessel',
+          },
           { kind: 'npc', name: 'Passenger', ref: 'npc', status: 'alive', subkind: 'worker' },
         ],
       })
@@ -116,10 +164,7 @@ describe('Canon batch commit', () => {
       isLocation: true,
       minProminence: 'forgotten',
     });
-    expect(places.map((entity) => entity.name).sort()).toEqual([
-      'Five Landing',
-      'The Long Answer',
-    ]);
+    expect(places.map((entity) => entity.name).sort()).toEqual(['Five Landing', 'The Long Answer']);
   });
 
   it('stores the fact card verbatim', async () => {
@@ -174,15 +219,142 @@ describe('Canon batch commit', () => {
     );
 
     expect(second.entityIdsByRef.x).toBe(first.entityIdsByRef.x);
-    const all = await worldState.world.listEntities({ kind: 'geographic_location', minProminence: 'forgotten' });
+    const all = await worldState.world.listEntities({
+      kind: 'geographic_location',
+      minProminence: 'forgotten',
+    });
     expect(all).toHaveLength(1);
     expect(all[0]?.status).toBe('ruined');
     expect(all[0]?.description).toBe('Now with a description.');
   });
 
+  it('applies partial imports without deleting omitted rows or overwriting play changes', async () => {
+    const initial = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            externalKey: ACCORD_KEY,
+            kind: 'faction',
+            name: 'Tempered Accord',
+            ref: 'accord',
+            subkind: 'government',
+          },
+          {
+            externalKey: CAROM_KEY,
+            kind: 'geographic_location',
+            name: 'Carom',
+            ref: 'carom',
+            subkind: 'celestial_body',
+          },
+        ],
+        lore: [
+          {
+            entity: { ref: 'carom' },
+            externalKey: 'tsonu:carom:main:0',
+            prose: 'Carom holds the surviving settlements.',
+            title: 'Carom',
+          },
+        ],
+        relationships: [
+          {
+            dst: { ref: 'carom' },
+            relationship: 'governs',
+            src: { ref: 'accord' },
+            strength: 0.6,
+          },
+        ],
+        source: 'import',
+        sourceId: 'tsonu-canon@v1',
+      })
+    );
+
+    await worldState.world.commitBatch(
+      proposal({
+        relationships: [
+          {
+            dst: { id: initial.entityIdsByRef.carom },
+            relationship: 'governs',
+            src: { id: initial.entityIdsByRef.accord },
+            strength: 0.9,
+          },
+        ],
+        source: 'play',
+        sourceId: 'chronicle-closure-1',
+      })
+    );
+
+    await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            description: 'Changed by a later source revision.',
+            externalKey: ACCORD_KEY,
+            kind: 'faction',
+            name: 'Tempered Accord',
+            subkind: 'government',
+          },
+        ],
+        source: 'import',
+        sourceId: 'tsonu-canon@v2',
+      })
+    );
+    await worldState.world.commitBatch(
+      proposal({
+        relationships: [
+          {
+            dst: { externalKey: CAROM_KEY },
+            relationship: 'governs',
+            src: { externalKey: ACCORD_KEY },
+            strength: 0.2,
+          },
+        ],
+        source: 'import',
+        sourceId: 'tsonu-canon@v3',
+      })
+    );
+
+    const importedEntities = await pool.query<{
+      description: string | null;
+      external_key: string;
+    }>(
+      `SELECT external_key, description
+       FROM entity
+       WHERE source = 'import'
+       ORDER BY external_key`
+    );
+    const lore = await pool.query<{ count: string }>(
+      'SELECT count(*) FROM lore_fragment WHERE source = $1',
+      ['import']
+    );
+    const edge = await pool.query<{ source: string; strength: number }>(
+      `SELECT source, strength
+       FROM edge
+       WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = 'governs'`,
+      [initial.entityIdsByRef.accord, initial.entityIdsByRef.carom]
+    );
+
+    expect(importedEntities.rows).toEqual([
+      {
+        description: 'Changed by a later source revision.',
+        external_key: ACCORD_KEY,
+      },
+      { description: null, external_key: CAROM_KEY },
+    ]);
+    expect(lore.rows[0]?.count).toBe('1');
+    expect(edge.rows[0]).toEqual({ source: 'play', strength: 0.9 });
+  });
+
   it('gives colliding names a counted suffix, not a random one', async () => {
-    await seedEntity(worldState, { kind: 'geographic_location', name: 'Grey Harbor', subkind: 'settlement' });
-    await seedEntity(worldState, { kind: 'geographic_location', name: 'Grey Harbor', subkind: 'settlement' });
+    await seedEntity(worldState, {
+      kind: 'geographic_location',
+      name: 'Grey Harbor',
+      subkind: 'settlement',
+    });
+    await seedEntity(worldState, {
+      kind: 'geographic_location',
+      name: 'Grey Harbor',
+      subkind: 'settlement',
+    });
     const listed = await worldState.world.listEntities({
       kind: 'geographic_location',
       minProminence: 'forgotten',
@@ -195,8 +367,20 @@ describe('Canon batch commit', () => {
     const result = await worldState.world.commitBatch(
       proposal({
         entities: [
-          { kind: 'faction', name: 'Ash Cartel', ref: 'faction', status: 'active', subkind: 'company' },
-          { kind: 'geographic_location', name: 'Cinder Row', ref: 'place', status: 'inhabited', subkind: 'region' },
+          {
+            kind: 'faction',
+            name: 'Ash Cartel',
+            ref: 'faction',
+            status: 'active',
+            subkind: 'company',
+          },
+          {
+            kind: 'geographic_location',
+            name: 'Cinder Row',
+            ref: 'place',
+            status: 'inhabited',
+            subkind: 'region',
+          },
         ],
         lore: [{ entity: { ref: 'faction' }, prose: 'They keep the ledgers.', title: 'Ledgers' }],
         relationships: [
@@ -209,7 +393,9 @@ describe('Canon batch commit', () => {
 
     expect(await worldState.world.getEntity({ id: result.entityIdsByRef.faction })).toBeNull();
     expect(await worldState.world.getEntity({ id: result.entityIdsByRef.place })).toBeNull();
-    const edges = await pool.query('SELECT 1 FROM edge WHERE batch_id = $1::uuid', [result.batchId]);
+    const edges = await pool.query('SELECT 1 FROM edge WHERE batch_id = $1::uuid', [
+      result.batchId,
+    ]);
     expect(edges.rowCount).toBe(0);
   });
 });
@@ -251,7 +437,13 @@ describe('Canon proposal validation', () => {
         proposal({
           entities: [
             { kind: 'npc', name: 'Fighter', ref: 'npc', status: 'alive', subkind: 'specialist' },
-            { kind: 'geographic_location', name: 'The Shear', ref: 'place', status: 'hazardous', subkind: 'hazardous_zone' },
+            {
+              kind: 'geographic_location',
+              name: 'The Shear',
+              ref: 'place',
+              status: 'hazardous',
+              subkind: 'hazardous_zone',
+            },
           ],
           relationships: [
             { dst: { ref: 'place' }, relationship: 'fought_over', src: { ref: 'npc' } },
@@ -279,7 +471,9 @@ describe('Canon proposal validation', () => {
     await expect(
       worldState.world.commitBatch(
         proposal({
-          entities: [{ kind: 'npc', name: 'Solitary', ref: 'npc', status: 'alive', subkind: 'specialist' }],
+          entities: [
+            { kind: 'npc', name: 'Solitary', ref: 'npc', status: 'alive', subkind: 'specialist' },
+          ],
           relationships: [
             { dst: { ref: 'nobody' }, relationship: 'cooperates_with', src: { ref: 'npc' } },
           ],

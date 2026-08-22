@@ -1,6 +1,6 @@
 import {
-  createPoolWithIamAuth,
-  useIamAuth,
+  createLambdaPool,
+  useLambdaRuntime,
   createPool,
 } from '@glass-frontier/app';
 import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
@@ -26,17 +26,18 @@ let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
 
 /**
- * Initialize context for Lambda with IAM auth.
+ * Initialize context for the Lambda runtime.
  * Call this once at cold start.
  */
-export async function initializeForLambda(): Promise<void> {
+export function initializeForLambda(): Promise<void> {
   if (pool !== undefined) {
-    return;
+    return Promise.resolve();
   }
 
-  pool = await createPoolWithIamAuth();
+  pool = createLambdaPool();
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  return Promise.resolve();
 }
 
 /**
@@ -62,7 +63,7 @@ function initializeLocal(): void {
  */
 export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   // For local development, initialize synchronously on first call
-  if (pool === undefined && !useIamAuth()) {
+  if (pool === undefined && !useLambdaRuntime()) {
     initializeLocal();
   }
 
@@ -81,4 +82,4 @@ export async function createContext(options?: { authorizationHeader?: string }):
   };
 }
 
-export { useIamAuth };
+export { useLambdaRuntime };

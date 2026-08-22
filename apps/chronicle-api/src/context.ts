@@ -3,8 +3,8 @@ import {
   type AppStore,
   type PlayerStore,
   type ModelConfigStore,
-  createPoolWithIamAuth,
-  useIamAuth,
+  createLambdaPool,
+  useLambdaRuntime,
   createPool,
 } from '@glass-frontier/app';
 import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
@@ -43,7 +43,7 @@ let chronicleStore: ChronicleStore | undefined;
 let seedService: ChronicleSeedService | undefined;
 
 /**
- * Initialize context for Lambda with IAM auth.
+ * Initialize context for the Lambda runtime.
  * Call this once at cold start.
  */
 export async function initializeForLambda(): Promise<void> {
@@ -51,7 +51,7 @@ export async function initializeForLambda(): Promise<void> {
     return;
   }
 
-  pool = await createPoolWithIamAuth();
+  pool = createLambdaPool();
   await loadLlmApiKeysFromSecrets();
 
   appStore = createAppStore({ pool });
@@ -95,7 +95,7 @@ function initializeLocal(): void {
 
 export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   // For local development, initialize synchronously on first call
-  if (pool === undefined && !useIamAuth()) {
+  if (pool === undefined && !useLambdaRuntime()) {
     initializeLocal();
   }
 

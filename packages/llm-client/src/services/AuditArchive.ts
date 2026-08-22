@@ -1,4 +1,4 @@
-import { createOpsStore, useIamAuth, type OpsStore } from '@glass-frontier/ops';
+import { createOpsStore, useLambdaRuntime, type OpsStore } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
@@ -52,10 +52,10 @@ class AuditArchive {
 
   /**
    * Create archive from environment (local dev only).
-   * For Lambda with IAM auth, use constructor with pool parameter.
+   * In Lambda, use the constructor with the shared pool parameter.
    */
   static fromEnv(): AuditArchive | null {
-    if (useIamAuth()) {
+    if (useLambdaRuntime()) {
       // In Lambda, caller must provide pool via constructor
       return null;
     }

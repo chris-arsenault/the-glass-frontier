@@ -12,5 +12,8 @@ export { ProposalRejected, validateProposal } from './canonValidation';
 // === Vocabulary ===
 export { seedVocabulary } from './seedVocabulary';
 
+// === Canon import tooling ===
+export { buildTsonuProposal } from './tsonuBundle';
+
 // === Types ===
 export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor } from './types';

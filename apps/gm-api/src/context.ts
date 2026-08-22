@@ -3,8 +3,8 @@ import {
   type AppStore,
   type PromptTemplateManager,
   type PlayerStore,
-  createPoolWithIamAuth,
-  useIamAuth,
+  createLambdaPool,
+  useLambdaRuntime,
   createPool,
 } from '@glass-frontier/app';
 import { createLLMClient, loadLlmApiKeysFromSecrets } from '@glass-frontier/llm-client';
@@ -39,7 +39,7 @@ let chronicleStore: ChronicleStore | undefined;
 let engine: GmEngine | undefined;
 
 /**
- * Initialize context for Lambda with IAM auth.
+ * Initialize context for the Lambda runtime.
  * Call this once at cold start.
  */
 export async function initializeForLambda(): Promise<void> {
@@ -47,14 +47,14 @@ export async function initializeForLambda(): Promise<void> {
     return;
   }
 
-  pool = await createPoolWithIamAuth();
+  pool = createLambdaPool();
   await loadLlmApiKeysFromSecrets();
 
   appStore = createAppStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
 
-  // Pass pool to LLM client for audit/usage tracking with IAM auth
+  // Pass one shared pool to stores and LLM accounting.
   const llmClient = createLLMClient({ pool });
 
   engine = new GmEngine({
@@ -98,7 +98,7 @@ function initializeLocal(): void {
 
 export async function createContext(options?: { authorizationHeader?: string }): Promise<Context> {
   // For local development, initialize synchronously on first call
-  if (pool === undefined && !useIamAuth()) {
+  if (pool === undefined && !useLambdaRuntime()) {
     initializeLocal();
   }
 

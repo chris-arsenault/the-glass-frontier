@@ -1,0 +1,492 @@
+INSERT INTO app.model_config (
+  model_id, api_model_id, display_name, provider_id, is_enabled,
+  context_window, max_output_tokens, cost_per_1k_input, cost_per_1k_output, reasoning_efforts
+)
+VALUES
+  ('gpt-5.6-luna', 'gpt-5.6-luna', 'GPT-5.6 Luna', 'openai', true, 1050000, 128000, 0.0002, 0.0012, ARRAY['low', 'medium', 'high']),
+  ('gpt-5.6-terra', 'gpt-5.6-terra', 'GPT-5.6 Terra', 'openai', true, 1050000, 128000, 0.002, 0.012, ARRAY['low', 'medium', 'high']),
+  ('gpt-5.6-sol', 'gpt-5.6-sol', 'GPT-5.6 Sol', 'openai', true, 1050000, 128000, 0.005, 0.03, ARRAY['low', 'medium', 'high']),
+  ('claude-sonnet-5', 'claude-sonnet-5', 'Claude Sonnet 5', 'anthropic', true, 1000000, 128000, 0.002, 0.01, ARRAY['low', 'medium', 'high']),
+  ('amazon-nova-2-lite', 'us.amazon.nova-2-lite-v1:0', 'Amazon Nova 2 Lite', 'bedrock', true, 1000000, 65536, 0.0003, 0.0025, ARRAY['low', 'medium'])
+ON CONFLICT (model_id) DO UPDATE SET
+  api_model_id = EXCLUDED.api_model_id,
+  display_name = EXCLUDED.display_name,
+  provider_id = EXCLUDED.provider_id,
+  is_enabled = EXCLUDED.is_enabled,
+  context_window = EXCLUDED.context_window,
+  max_output_tokens = EXCLUDED.max_output_tokens,
+  cost_per_1k_input = EXCLUDED.cost_per_1k_input,
+  cost_per_1k_output = EXCLUDED.cost_per_1k_output,
+  reasoning_efforts = EXCLUDED.reasoning_efforts,
+  updated_at = now();
+
+INSERT INTO app.model_category_config (category, model_id, player_id)
+VALUES
+  ('classification', 'amazon-nova-2-lite', NULL),
+  ('prose', 'claude-sonnet-5', NULL)
+ON CONFLICT (category, player_id) DO UPDATE SET
+  model_id = EXCLUDED.model_id,
+  updated_at = now();
+
+INSERT INTO world_prominence (id, rank)
+VALUES
+  ('forgotten', 0),
+  ('marginal', 1),
+  ('recognized', 2),
+  ('renowned', 3),
+  ('mythic', 4)
+ON CONFLICT (id) DO UPDATE SET rank = EXCLUDED.rank;
+
+INSERT INTO world_kind (id, category, display_name, default_status)
+VALUES
+  ('ability', 'atlas', 'Ability', NULL),
+  ('artifact', 'atlas', 'Artifact', NULL),
+  ('concept', 'atlas', 'Concept', NULL),
+  ('conflict', 'atlas', 'Conflict', NULL),
+  ('creature', 'atlas', 'Creature', NULL),
+  ('culture', 'atlas', 'Culture', NULL),
+  ('edict', 'atlas', 'Edict', NULL),
+  ('era', 'atlas', 'Era', NULL),
+  ('faction', 'atlas', 'Faction', NULL),
+  ('geographic_location', 'atlas', 'Geographic Location', NULL),
+  ('incident', 'atlas', 'Incident', NULL),
+  ('installation', 'atlas', 'Installation', NULL),
+  ('npc', 'atlas', 'NPC', NULL),
+  ('phenomenon', 'atlas', 'Phenomenon', NULL),
+  ('resource', 'atlas', 'Resource', NULL),
+  ('rumor', 'atlas', 'Rumor', NULL),
+  ('species', 'atlas', 'Species', NULL),
+  ('transport', 'atlas', 'Transport', NULL)
+ON CONFLICT (id) DO UPDATE SET
+  category = EXCLUDED.category,
+  display_name = EXCLUDED.display_name,
+  default_status = EXCLUDED.default_status,
+  updated_at = now();
+
+INSERT INTO world_subkind (id, kind_id)
+VALUES
+  ('learned_ability', 'ability'),
+  ('innate_ability', 'ability'),
+  ('instrument', 'artifact'),
+  ('record', 'artifact'),
+  ('relic', 'artifact'),
+  ('machine', 'artifact'),
+  ('doctrine', 'concept'),
+  ('practice', 'concept'),
+  ('technology', 'concept'),
+  ('physical_system', 'concept'),
+  ('social_system', 'concept'),
+  ('reference_concept', 'concept'),
+  ('war', 'conflict'),
+  ('campaign', 'conflict'),
+  ('dispute', 'conflict'),
+  ('animal', 'creature'),
+  ('anomaly', 'creature'),
+  ('overview', 'culture'),
+  ('regional_culture', 'culture'),
+  ('way_of_life', 'culture'),
+  ('naming_practice', 'culture'),
+  ('historical_period', 'era'),
+  ('government', 'faction'),
+  ('governing_intelligence', 'faction'),
+  ('company', 'faction'),
+  ('civic_body', 'faction'),
+  ('resistance_network', 'faction'),
+  ('community', 'faction'),
+  ('trade_network', 'faction'),
+  ('religious_order', 'faction'),
+  ('research_body', 'faction'),
+  ('mutual_aid', 'faction'),
+  ('star_system', 'geographic_location'),
+  ('celestial_body', 'geographic_location'),
+  ('orbit', 'geographic_location'),
+  ('world_region', 'geographic_location'),
+  ('region', 'geographic_location'),
+  ('settlement', 'geographic_location'),
+  ('frontier', 'geographic_location'),
+  ('hazardous_zone', 'geographic_location'),
+  ('disaster', 'incident'),
+  ('campaign', 'incident'),
+  ('policy_action', 'incident'),
+  ('operational_failure', 'incident'),
+  ('dispute', 'incident'),
+  ('discovery', 'incident'),
+  ('founding', 'incident'),
+  ('migration', 'incident'),
+  ('settlement', 'installation'),
+  ('station', 'installation'),
+  ('workshop', 'installation'),
+  ('infrastructure', 'installation'),
+  ('archive', 'installation'),
+  ('clinic', 'installation'),
+  ('warehouse', 'installation'),
+  ('landmark', 'installation'),
+  ('border_post', 'installation'),
+  ('official', 'npc'),
+  ('specialist', 'npc'),
+  ('worker', 'npc'),
+  ('leader', 'npc'),
+  ('courier', 'npc'),
+  ('dissident', 'npc'),
+  ('physical_phenomenon', 'phenomenon'),
+  ('ecological_phenomenon', 'phenomenon'),
+  ('social_condition', 'phenomenon'),
+  ('catastrophe', 'phenomenon'),
+  ('material', 'resource'),
+  ('biological_material', 'resource'),
+  ('device', 'resource'),
+  ('medicine', 'resource'),
+  ('food', 'resource'),
+  ('data', 'resource'),
+  ('infrastructure', 'resource'),
+  ('sapient_species', 'species'),
+  ('overview', 'species'),
+  ('vessel', 'transport')
+ON CONFLICT ON CONSTRAINT world_subkind_pk DO NOTHING;
+
+INSERT INTO world_relationship_kind (id, description, category, default_strength)
+VALUES
+  ('active_during', 'Subject was active during the target era or conflict.', 'causal', 0.3),
+  ('caused', 'Subject brought the target about.', 'causal', 0.7),
+  ('caused_by', 'Subject was brought about by the target.', 'causal', 0.7),
+  ('causes', 'Subject actively produces the target condition.', 'causal', 0.7),
+  ('created', 'Subject made the target.', 'causal', 0.7),
+  ('created_during', 'Subject came into being during the target era or event.', 'causal', 0.3),
+  ('destroyed', 'Subject destroyed the target.', 'causal', 0.7),
+  ('disappeared_during', 'Subject vanished during the target era or event.', 'causal', 0.3),
+  ('emerged_during', 'Subject emerged during the target era or event.', 'causal', 0.3),
+  ('fought_over', 'The conflict was fought over the target resource.', 'causal', 0.7),
+  ('originated_in', 'Subject originated in the target place or era.', 'causal', 0.5),
+  ('participated_in', 'Subject took part in the target incident or conflict.', 'causal', 0.6),
+  ('founded_in', 'Subject was founded in the target place.', 'spatial', 0.4),
+  ('headquartered_in', 'Subject is headquartered in the target place.', 'spatial', 0.6),
+  ('hosts', 'Subject place hosts the target.', 'spatial', 0.4),
+  ('inner_of', 'Subject lies inward of the target.', 'spatial', 0.3),
+  ('in_orbit_of', 'Subject sits in orbit of the target body.', 'spatial', 0.3),
+  ('located_in', 'Subject is located in the target place.', 'spatial', 0.5),
+  ('manifests_at', 'Subject manifests or is present at the target place.', 'spatial', 0.4),
+  ('on_surface_of', 'Subject sits on the surface of the target body.', 'spatial', 0.3),
+  ('operates_in', 'Subject operates in the target place or region.', 'spatial', 0.5),
+  ('orbits', 'Subject orbits the target body.', 'spatial', 0.3),
+  ('part_of', 'Subject is a part of the target.', 'spatial', 0.5),
+  ('terminus_of', 'Subject place is an endpoint of the target route.', 'spatial', 0.4),
+  ('chairs', 'Subject chairs the target body.', 'organizational', 0.8),
+  ('employed_by', 'Subject is employed by the target.', 'organizational', 0.6),
+  ('governed_by', 'Subject is governed by the target.', 'organizational', 0.7),
+  ('governs', 'Subject governs the target.', 'organizational', 0.7),
+  ('leads', 'Subject leads the target.', 'organizational', 0.9),
+  ('member_of', 'Subject is a member of the target.', 'organizational', 0.7),
+  ('owned_by', 'Subject is owned by the target.', 'organizational', 0.6),
+  ('regulates', 'Subject regulates the target.', 'organizational', 0.5),
+  ('succeeded', 'Subject succeeded the target.', 'organizational', 0.5),
+  ('supplies', 'Subject supplies the target.', 'organizational', 0.5),
+  ('trains', 'Subject trains the target.', 'organizational', 0.5),
+  ('born_in', 'Subject was born in the target place.', 'social', 0.4),
+  ('carries', 'Subject carries the target.', 'social', 0.4),
+  ('commemorates', 'Subject commemorates the target.', 'social', 0.4),
+  ('cooperates_with', 'Subject cooperates with the target.', 'social', 0.6),
+  ('inhabits', 'Subject inhabits the target place.', 'social', 0.6),
+  ('maintains', 'Subject maintains the target.', 'social', 0.5),
+  ('possesses', 'Subject possesses the target.', 'social', 0.6),
+  ('practiced_by', 'Subject practice is practiced by the target.', 'social', 0.6),
+  ('studies', 'Subject studies the target.', 'social', 0.5),
+  ('taught', 'Subject taught the target.', 'social', 0.5),
+  ('attuned_to', 'Subject is attuned to the target; resonance is a physical force here, so attunement is a real edge.', 'technical', 0.7),
+  ('built', 'Subject built the target.', 'technical', 0.5),
+  ('conducted_by', 'Subject process is conducted by the target.', 'technical', 0.5),
+  ('depends_on', 'Subject depends on the target to survive or function.', 'technical', 0.6),
+  ('derived_from', 'Subject is derived from the target.', 'technical', 0.5),
+  ('designed', 'Subject designed the target.', 'technical', 0.5),
+  ('powers', 'Subject powers the target.', 'technical', 0.6),
+  ('sourced_from', 'Subject is sourced from the target.', 'technical', 0.5),
+  ('embodies', 'Subject embodies the target concept.', 'narrative', 0.6),
+  ('resonates_with', 'Subject resonates with the target in the sympathetic, narrative sense.', 'narrative', 0.6),
+  ('hiding_from', 'DM-only: subject is hiding from or avoiding the target.', 'dm', 0.8),
+  ('seeping_through', 'DM-only: the False Form reaches through the target here.', 'dm', 0.8),
+  ('related_to', 'Generic association. Use the narrowest verb that states the actual fact.', 'banned', 0.0)
+ON CONFLICT (id) DO UPDATE SET
+  description = EXCLUDED.description,
+  category = EXCLUDED.category,
+  default_strength = EXCLUDED.default_strength;
+
+INSERT INTO world_relationship_rule (relationship_id, src_kind, dst_kind)
+VALUES ('fought_over', 'conflict', 'resource')
+ON CONFLICT ON CONSTRAINT world_relationship_rule_pk DO NOTHING;
+
+DELETE FROM world_relationship_rule
+WHERE (relationship_id, src_kind, dst_kind) <> ('fought_over', 'conflict', 'resource');
+
+INSERT INTO app.prompt_template (id, body, updated_at)
+VALUES
+  ('action-resolver', $prompt$You are the Glass Frontier GM. Write terse space opera prose that shows the immediate outcome of {{character.name}}'s action—success, failure, or complication.
+
+Lead with what happens. Ground consequences in concrete details: sparks, voices, the clang of metal, a door sealing. Weave in recent events naturally—remembered tensions, earned momentum, unresolved threads.
+
+Second-person present tense. Show what changes, what opens up, what closes off. End with a question or choice that pulls the player forward.
+
+**Output**: 1–2 short paragraphs. In-world only.
+$prompt$, now()),
+  ('beat-tracker', $prompt$Track how this turn affects long-term beats. Beats = **multi-turn arcs**, not one-off tasks. Output **JSON only**.
+
+**Advance**: Narration meaningfully progresses the beat's objective.
+
+**Resolve** when:
+1. Objective achieved → `changeKind: "resolve"`, `status: "succeeded"`
+2. Objective failed → `changeKind: "resolve"`, `status: "failed"`
+3. Beat irrelevant → `changeKind: "resolve"`, `status: "failed"`
+
+When `changeKind: "resolve"`, MUST set `status` to `"succeeded"` or `"failed"`.
+
+**Spawn**: Only if narration creates a **persistent, multi-turn** objective. If unsure → don't spawn.
+When objective achieved or impossible, resolve it.
+
+**newBeat**: `{title, description}` when spawning. Title ≤6 words, description ≤240 chars.
+
+**updates**: Changed beats only. `beatId` MUST be the `id` field of a beat exactly as shown in the BEATS section. `changeKind`: "advance"/"resolve". `status`: "in_progress"/"succeeded"/"failed"/null. Empty array if none.
+
+**focusBeatId**: The `id` of the most affected beat; `null` if none exist.
+$prompt$, now()),
+  ('check-planner', $prompt$You are the **Risk Arbiter**. Decide if the move needs a check and select the attribute + skill + risk framing.
+Output **JSON only** matching the schema.
+
+#### When to require a check
+- **true**: Outcome uncertain *and* failure meaningfully matters (harm, cost, exposure, delay).
+- **false**: Trivial, certain, descriptive, or no meaningful stakes.
+
+If `requiresCheck=false`, set `complicationSeeds: []` but still pick `attribute`, `skill`, `riskLevel`, and `advantage`.
+
+#### riskLevel
+- `controlled`: strong position, low fallout
+- `standard`: normal uncertainty
+- `risky`: pressure, opposition, unclear info
+- `desperate`: severe stakes, chaotic footing
+
+#### advantage
+- `advantage`: clear leverage
+- `disadvantage`: harm, pressure, bad footing
+- `none`: neutral
+
+#### attribute
+Pick the **single** attribute that best matches the approach: vitality, finesse, focus, resolve, attunement, ingenuity, presence
+
+#### skill
+Select an existing skill or create a new one (≤2 words) that matches the task.
+
+**Reuse** an existing skill when:
+- Skill name semantically matches the task (e.g., "Stealth" for sneaking)
+- Skill belongs to the chosen attribute
+
+**Create** a new skill when:
+- No existing skill semantically matches the task
+- Chosen attribute has 0 skills
+
+**Target**: 1-3 skills per attribute. If attribute has 3+ skills, strongly prefer reusing one unless the task is distinctly different from all existing skills.
+
+#### complicationSeeds
+- If `requiresCheck=true`: provide **2–3** seeds, each <90 chars.
+- If false: `[]`.
+Seeds describe simple fictional fallout (loss, noise, damage, exposure).
+$prompt$, now()),
+  ('chronicle-seed', $prompt$You are the Chronicle Seed Weaver. Generate evocative starting prompts for cooperative sci-fantasy
+play set in The Glass Frontier.
+
+## Context
+- Location: {{location_name}} ({{location_kind}})
+- Breadcrumb: {{breadcrumb}}
+- Description: {{location_description}}
+- Tags: {{tags}}
+- Tone chips: {{tone_chips}}
+- Tone notes: {{tone_notes}}
+- Requested seeds: {{requested}}
+
+## Guidance
+- Lean on the breadcrumb order to anchor the fiction; reference specific layers or factions when possible.
+- Each teaser is **1-2 sentences**, present tense, and highlights immediate stakes or mysteries.
+- Keep titles under 10 words, no numbering.
+- Tags array uses 2-4 lowercase keywords (no spaces) that capture mood, threats, or factions.
+- Inject tone notes subtly; never repeat the tone text verbatim.
+- If tone note are provided, they should provide the most significant contribution to the seed.
+
+## Output Requirements
+Return strict JSON with this exact shape (no markdown, no commentary):
+{
+  "seeds": [
+    {
+      "title": "string",
+      "teaser": "string",
+      "tags": ["tag"]
+    }
+  ]
+}
+Ensure the `seeds` array has exactly {{requested}} entries.
+$prompt$, now()),
+  ('clarification-responder', $prompt$You are the Glass Frontier GM answering a factual question about the current scene.
+
+Give a direct answer in 1–3 sentences. If the player misunderstood something, correct it gently and restate what's true. Reference specific recent events when clarifying ongoing situations.
+
+No embellishment, no new information, no state changes. Only what's observable or already established.
+
+**Output**: Plain sentences. In-world only.
+$prompt$, now()),
+  ('entity-judge', $prompt$You are the Entity Judge for The Glass Frontier. Your task is to classify how the GM's narrative response utilized the offered world entities.
+
+## Rules
+1. Classify each entity's usage level:
+   - `unused`: The entity was offered but not referenced or used in the GM response
+   - `mentioned`: The entity was referenced but played a minor role in the narrative
+   - `central`: The entity was central to the response, directly shaping the narrative
+
+2. For entities marked as `central` or `mentioned`, optionally surface emergent tags (2-4 words) that capture new narrative themes or elements introduced about this entity.
+
+3. Base your classification strictly on the GM's actual narrative text. Do not infer usage from the player's intent alone.
+
+The offered entities and the GM response are provided alongside this prompt.
+
+## Output Instructions
+Return your answer using the structured format provided. For each entity, provide:
+- `slug`: The exact slug of the entity
+- `usage`: One of `unused`, `mentioned`, or `central`
+- `emergentTags` (optional): Array of 2-4 word tags capturing new themes about this entity (only for mentioned/central entities)
+$prompt$, now()),
+  ('gm-summary', $prompt$Summarize the GM narration into a compact log line and decide whether the chronicle should close.
+Treat the summary as the canonical record for the turn.
+
+## Instructions
+- Produce a single sentence (<= 180 characters) capturing *who* acted, *what* changed, and *where* it
+  happened. Favor declarative prose over bullet-like fragments.
+- If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
+  `(collapse)`.
+- No markdown, numbers, or quotes; keep it pure text.
+- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
+  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
+$prompt$, now()),
+  ('inquiry-describer', $prompt$You are the Glass Frontier GM describing what {{character.name}} perceives.
+
+Answer only what was asked. Write sensory detail: sight, sound, texture, emotional weight. Reveal 1–2 details that suggest possible action—a loose panel, a distant voice, the smell of ozone.
+
+Weave in recent events where relevant. No time advancement, no state changes.
+
+End with a sensory hook that invites further exploration.
+
+**Output**: Single paragraph, under 100 words. In-world only.
+$prompt$, now()),
+  ('intent-beat-detector', $prompt$You classify whether the player’s intent advances an existing beat, creates a new beat, or is independent.
+Output **JSON only** matching the schema exactly.
+
+### Guidance
+- Existing beats = long-horizon threads. Select `"existing"` only when the intent clearly progresses or resolves one.
+- Use `"new"` when the intent introduces a multi-turn goal, mystery, or problem—not a one-off action.
+- Use `"independent"` when no beat is meaningfully touched.
+- `summary`: ≤140 chars explaining the decision.
+- `targetBeatId`: the `id` field of the targeted beat exactly as shown in the BEATS section, required only for `"existing"`; otherwise null.
+$prompt$, now()),
+  ('intent-classifier', $prompt$You are the Intent Router for Glass Frontier.
+Return a single best intent with mechanical metadata. Do not hedge.
+
+Intent types:
+- wrap: use when the player has requested to wrap up the story
+- action: attempts to change fiction via a concrete verb; advances time; may cause deltas
+- inquiry: requests sensory/situational info; no time shift
+- clarification: confirms/corrects a fact; one-line factual response downstream; no time shift
+- possibility: explores hypotheticals/constraints; advisory only; no time shift
+- planning: preparing/regrouping/traveling; may advance time slightly
+- reflection: internal thoughts/emotions; no deltas; no time shift
+
+Classification rubric (apply in order):
+1) if there is a wrap FRAGMENT, aim to end in turnsLeft and select wrap intent type unless the input is clearly a question about the game world
+2) If the utterance contains an explicit, immediate verb directed at the world, prefer action.
+3) If it requests information without proposing change, prefer inquiry.
+4) If it asserts/requests a specific fact check about prior fiction, prefer clarification.
+5) If it explores options using hypotheticals (could/what if/can I), prefer possibility.
+6) If it describes setup, regrouping, or transit with intent to act later, prefer planning.
+7) If it’s internal monologue or mood with no ask and no change, prefer reflection.
+
+Tie-breaks:
+- If both action and planning apply, choose action.
+- If both inquiry and clarification apply, choose clarification.
+- If both possibility and planning apply, choose planning.
+
+Output fields:
+- intentType: the single best intent type from the list above
+- intentSummary: concise paraphrase of the player's request (<=140 chars)
+- routerRationale: one sentence explaining why this classification was chosen (<160 chars), no meta
+- tone: one narrative tone adjective grounded in the current scene (e.g., tense, wry, mournful)
+- creativeSpark: true only when the intent shows genuine improvisation or imaginative flair beyond the obvious move
+- handlerHints: 0-8 lowercase hints that nudge downstream narration (e.g., "whispered", "hurried"); emit [] when none apply
+
+Never emit prose beyond the fields. Always satisfy the JSON schema.
+$prompt$, now()),
+  ('inventory-delta', $prompt$You are the Inventory Arbiter for The Glass Frontier. Apply deterministic changes only. If the GM
+text does not explicitly grant, reveal, or consume something, leave the inventory untouched.
+
+## Rules
+1. Treat the snapshot as canonical. Never guess about hidden state.
+2. Only emit operations when the narration or intent explicitly changes inventory.
+3. Allowed ops: `add`, `remove`, `update`. Use the exact casing.
+4. Refer to items by their narrative names; never emit internal identifiers.
+5. Maintain normalized data: one item per slot, no duplicate names in arrays.
+6. If no operations are needed, return `"ops": []`
+
+## Output Instructions
+Return your answer using the structured format provided alongside this prompt. Always emit `ops` (use an empty array when nothing changes) and honor the revision contract exactly—no commentary or extra fields.
+$prompt$, now()),
+  ('location-delta', $prompt$You control the location anchor for the chronicle map. Decide whether the latest turn keeps the
+party in place, moves to a known node, or leaves the destination ambiguous.
+
+## Guidance
+- Move only if the GM prose clearly places the focus in a different room, zone, or linked locale.
+- Prefer the most specific destination explicitly mentioned. Never escalate scope unless the GM does.
+- `link` meaning:
+  - `same`: no graph change.
+  - `inside`: destination is a child (room, chamber, sub-area).
+  - `adjacent`: destination is a sibling under the same parent (street-to-street, shop-to-shop).
+  - `linked`: destination is reached via portal/vessel/teleport or exists outside the current parent. Use sparingly
+- If the GM invents a new named space, use that literal string as `destination`.
+- If narration only broadens or narrows focus without a named target, emit `{"action":"uncertain","destination":<best known container>,"link":"same"}`.
+
+## Output Instructions
+Reply strictly using the structured format provided with this prompt. Supply literal strings for `action`, `destination`, and `link`; do not include any commentary or extra fields.
+$prompt$, now()),
+  ('planning-narrator', $prompt$You are the Glass Frontier GM narrating preparation, travel, or downtime. Summarize progress,
+compress time, and set the stage for the next decisive moment.
+**Always respond in-world. Never mention template keys like `RECENT-EVENTS` directly.**
+Instead, naturally reference the *events themselves* as part of the fiction.
+
+## Directives
+- Use second-person present tense.
+- Summarize the key steps of preparation or travel, highlighting cost (time, resources, fatigue).
+- Thread relevant RECENT-EVENTS beats or moments through the montage so it feels connected to current stakes.
+- Apply minor world deltas only (time passing, readiness shifts, repositioning).
+- End by clearly stating the new staging ground or readiness state.
+- Seed one compelling prompt or question that invites the next action.
+
+## Output
+Produce one tight paragraph (or two short ones) describing the montage and resulting setup. Keep it transitional, not conclusive.
+$prompt$, now()),
+  ('possibility-advisor', $prompt$Outline **2 options** {{character.name}} could pursue. For each: one-sentence summary, one concrete risk.
+
+Write like you're briefing someone mid-crisis—terse, grounded, no fluff. Reference specific environmental details or time pressure from recent events.
+
+Hypothetical only. No resolution, no advancement. Second-person.
+
+**Output**: 2 short paragraphs, 40-60 words total.
+$prompt$, now()),
+  ('reflection-weaver', $prompt$Channel {{character.name}}'s inner voice. Write intimate prose that reveals what this moment means to them—fear, resolve, doubt, hope.
+
+Anchor reflection in concrete images from recent events. Close second-person, drifting toward stream-of-consciousness. No actions, no dialogue.
+
+End with a thought that lingers—a question, a memory, a half-formed decision.
+
+**Output**: Single paragraph, 60-80 words.
+$prompt$, now()),
+  ('wrap-resolver', $prompt$You are the Glass Frontier GM writing the closing turns of this chronicle. Show {{character.name}}'s action resolving with urgency—every sentence moves toward ending.
+
+Lead with the immediate outcome. Close open threads: stakes, relationships, discoveries. Reference the WRAP section for chronicle-specific closure needs. Resolve any active beat before the scene ends.
+
+Second-person present tense. Concrete details, emotional weight, forward motion. No new plotlines—only resolution and consequence.
+
+**Output**: 1–2 short paragraphs. In-world only.
+$prompt$, now())
+ON CONFLICT (id) DO UPDATE SET
+  body = EXCLUDED.body,
+  updated_at = now();

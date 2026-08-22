@@ -1,16 +1,11 @@
-data "aws_route53_zone" "primary" {
-  name         = "${var.client_domain_name}."
-  private_zone = false
-}
-
-resource "aws_route53_record" "apex_placeholder" {
-  zone_id = data.aws_route53_zone.primary.id
-  name    = var.client_domain_name
+resource "aws_route53_record" "api" {
+  zone_id = module.ctx.route53_zone_id
+  name    = local.api_domain
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.client.domain_name
-    zone_id                = aws_cloudfront_distribution.client.hosted_zone_id
+    name                   = module.ctx.alb.dns_name
+    zone_id                = module.ctx.alb.zone_id
     evaluate_target_health = false
   }
 }

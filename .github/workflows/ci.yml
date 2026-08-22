@@ -1,0 +1,146 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'glass-frontier-deploy' || format('glass-frontier-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/worldstate
+  GLASS_FRONTIER_DATABASE_URL: postgres://postgres:postgres@localhost:5432/worldstate
+  WORLDSTATE_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/worldstate_test
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: worldstate
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d worldstate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@10.23.0 --activate
+
+      - uses: hashicorp/setup-terraform@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: make ci
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@10.23.0 --activate
+
+      - uses: hashicorp/setup-terraform@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build deployment artifacts
+        run: pnpm run build
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          role-session-name: GlassFrontier-${{ github.run_id }}
+          aws-region: us-east-1
+
+      - name: Run database migrations
+        uses: chris-arsenault/ahara/.github/actions/run-migrations@main
+        with:
+          project: glass-frontier
+          migrations-dir: db/migrations
+
+      - name: Seed application data
+        run: |
+          set -euo pipefail
+          migrate_function="$(aws ssm get-parameter \
+            --name /ahara/db/migrate-function \
+            --query Parameter.Value \
+            --output text \
+            --region us-east-1)"
+          result_file="$(mktemp)"
+          trap 'rm -f "${result_file}"' EXIT
+          aws lambda invoke \
+            --function-name "${migrate_function}" \
+            --payload '{"operation":"seed","project":"glass-frontier"}' \
+            --cli-binary-format raw-in-base64-out \
+            --region us-east-1 \
+            "${result_file}" >/dev/null
+          if jq -e 'has("errorMessage")' "${result_file}" >/dev/null; then
+            jq . "${result_file}"
+            exit 1
+          fi
+          jq . "${result_file}"
+
+      - name: Deploy Terraform
+        env:
+          STATE_BUCKET: ${{ secrets.STATE_BUCKET }}
+        run: |
+          terraform -chdir=infrastructure/terraform init -reconfigure \
+            -backend-config="bucket=${STATE_BUCKET}" \
+            -backend-config="region=us-east-1" \
+            -backend-config="use_lockfile=true"
+          terraform -chdir=infrastructure/terraform apply -auto-approve
+
+      - name: Seed production canon
+        run: |
+          set -euo pipefail
+          canon_seed_function="$(terraform -chdir=infrastructure/terraform output \
+            -raw canon_seed_function_name)"
+          result_file="$(mktemp)"
+          trap 'rm -f "${result_file}"' EXIT
+          aws lambda invoke \
+            --function-name "${canon_seed_function}" \
+            --payload '{"operation":"seed-canon"}' \
+            --cli-binary-format raw-in-base64-out \
+            --region us-east-1 \
+            "${result_file}" >/dev/null
+          if jq -e 'has("errorMessage")' "${result_file}" >/dev/null; then
+            jq . "${result_file}"
+            exit 1
+          fi
+          jq . "${result_file}"

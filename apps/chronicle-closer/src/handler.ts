@@ -1,8 +1,8 @@
 import {
   createAppStore,
   createPool,
-  createPoolWithIamAuth,
-  useIamAuth,
+  createLambdaPool,
+  useLambdaRuntime,
 } from '@glass-frontier/app';
 import type { ChronicleClosureEvent } from '@glass-frontier/dto';
 import { ChronicleClosureEventSchema } from '@glass-frontier/dto';
@@ -16,11 +16,11 @@ import { ChronicleClosureProcessor } from './processor';
 let processorPromise: Promise<ChronicleClosureProcessor> | undefined;
 
 const initializeProcessor = async (): Promise<ChronicleClosureProcessor> => {
-  const iamAuth = useIamAuth();
-  const pool = iamAuth
-    ? await createPoolWithIamAuth()
+  const lambdaRuntime = useLambdaRuntime();
+  const pool = lambdaRuntime
+    ? createLambdaPool()
     : createPool({ connectionString: requireDatabaseUrl() });
-  if (iamAuth) {
+  if (lambdaRuntime) {
     await loadLlmApiKeysFromSecrets();
   }
   const appStore = createAppStore({ pool });

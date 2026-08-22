@@ -19,9 +19,9 @@ export {
   type ReasoningEffort,
 } from './modelCatalog';
 export {
-  useIamAuth,
+  useLambdaRuntime,
   createPool,
-  createPoolWithIamAuth,
+  createLambdaPool,
   withTransaction,
   type PgOptions,
 } from './pg';

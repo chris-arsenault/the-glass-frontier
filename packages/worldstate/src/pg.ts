@@ -1,4 +1,7 @@
-import { useRdsIamAuth, generateRdsIamToken } from '@glass-frontier/node-utils';
+import {
+  isLambdaRuntime,
+  resolveLambdaDatabaseEnvironment,
+} from '@glass-frontier/node-utils';
 import { Pool, type PoolClient, type PoolConfig } from 'pg';
 
 const DEFAULT_CONNECTION_STRING = 'postgres://postgres:postgres@localhost:5432/worldstate';
@@ -8,22 +11,7 @@ export type PgOptions = {
   connectionString?: string;
 };
 
-/**
- * Check if we should use IAM authentication (Lambda environment)
- */
-export const useIamAuth = useRdsIamAuth;
-
-const requireEnvironment = (name: 'PGDATABASE' | 'PGHOST' | 'PGUSER'): string => {
-  const value = name === 'PGHOST'
-    ? process.env.PGHOST
-    : name === 'PGUSER'
-      ? process.env.PGUSER
-      : process.env.PGDATABASE;
-  if (value === undefined || value.length === 0) {
-    throw new Error(`${name} is required when RDS IAM authentication is enabled.`);
-  }
-  return value;
-};
+export const useLambdaRuntime = isLambdaRuntime;
 
 /**
  * Resolve connection string for local development
@@ -39,23 +27,19 @@ export const resolveConnectionString = (options?: PgOptions): string => {
 };
 
 /**
- * Create a connection pool for Lambda with IAM authentication.
+ * Create a connection pool for Lambda with Ahara's project database credentials.
  * Call this once at Lambda cold start and pass the pool to stores.
  */
-export const createPoolWithIamAuth = async (): Promise<Pool> => {
-  const host = requireEnvironment('PGHOST');
-  const port = parseInt(process.env.PGPORT ?? '5432', 10);
-  const database = requireEnvironment('PGDATABASE');
-  const user = requireEnvironment('PGUSER');
-  const password = await generateRdsIamToken();
+export const createLambdaPool = (): Pool => {
+  const { database, host, password, port, user } = resolveLambdaDatabaseEnvironment();
 
   const config: PoolConfig = {
     database,
     host,
-    max: 1, // Lambda should use minimal connections since RDS Proxy handles pooling
+    max: 1,
     password,
     port,
-    ssl: { rejectUnauthorized: false }, // RDS uses Amazon CA, IAM auth provides security
+    ssl: { rejectUnauthorized: false },
     user,
   };
 
@@ -66,19 +50,16 @@ export const createPoolWithIamAuth = async (): Promise<Pool> => {
  * Create a connection pool.
  *
  * For local development: Works synchronously with connection string.
- * For Lambda: If RDS_IAM_AUTH=true and no pool is provided, throws an error.
- *             Use createPoolWithIamAuth() at Lambda cold start instead.
+ * For Lambda, use createLambdaPool() at cold start so each execution
+ * environment holds at most one shared-RDS connection.
  */
 export const createPool = (options?: PgOptions): Pool => {
   if (options?.pool !== undefined) {
     return options.pool;
   }
 
-  if (useIamAuth()) {
-    throw new Error(
-      'Cannot create pool synchronously with IAM auth. ' +
-        'Use createPoolWithIamAuth() at Lambda cold start and pass the pool to stores.'
-    );
+  if (useLambdaRuntime()) {
+    throw new Error('Use createLambdaPool() at Lambda cold start and pass the pool to stores.');
   }
 
   // Local development - use connection string

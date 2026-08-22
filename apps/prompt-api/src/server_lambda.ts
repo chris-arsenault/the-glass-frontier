@@ -1,4 +1,4 @@
-import { useIamAuth } from '@glass-frontier/app';
+import { useLambdaRuntime } from '@glass-frontier/app';
 import { normalizeLambdaProxyEventForTrpc } from '@glass-frontier/node-utils';
 import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
@@ -58,8 +58,8 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   const normalizedEvent = normalizeLambdaProxyEventForTrpc(event);
 
-  // Initialize database pool at cold start (IAM auth is async)
-  if (useIamAuth() && initPromise === undefined) {
+  // Initialize the shared database pool once per Lambda execution environment.
+  if (useLambdaRuntime() && initPromise === undefined) {
     initPromise = initializeForLambda();
   }
   if (initPromise !== undefined) {

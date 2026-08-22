@@ -1,0 +1,6 @@
+project: glass-frontier
+prefix: glass-frontier
+migrations: db/migrations
+stack:
+  - typescript
+  - terraform

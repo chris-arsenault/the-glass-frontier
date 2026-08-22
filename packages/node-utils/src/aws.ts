@@ -1,11 +1,25 @@
 import { fromEnv } from '@aws-sdk/credential-providers';
-import { Signer } from '@aws-sdk/rds-signer';
 
 const isNonEmptyString = (value: unknown): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
 };
 
 type AwsService = 'dynamodb' | 'sqs';
+
+export type LambdaDatabaseEnvironment = {
+  database: string;
+  host: string;
+  password: string;
+  port: number;
+  user: string;
+};
+
+const requireEnvironment = (value: string | undefined, name: string): string => {
+  if (!isNonEmptyString(value)) {
+    throw new Error(`${name} is required in the Lambda database environment.`);
+  }
+  return value;
+};
 
 const toTrimmedOrNull = (value?: string): string | null => {
   if (!isNonEmptyString(value)) {
@@ -54,32 +68,13 @@ const hasExplicitAwsCredentials = (): boolean => {
   return accessKey.trim().length > 0 && secretKey.trim().length > 0;
 };
 
-/**
- * Check if we should use IAM authentication (Lambda environment)
- */
-export const useRdsIamAuth = (): boolean => {
-  return process.env.RDS_IAM_AUTH === 'true';
-};
+export const isLambdaRuntime = (): boolean =>
+  isNonEmptyString(process.env.AWS_LAMBDA_FUNCTION_NAME);
 
-/**
- * Generate an IAM authentication token for RDS Proxy
- */
-export const generateRdsIamToken = async (): Promise<string> => {
-  const host = process.env.PGHOST;
-  const port = parseInt(process.env.PGPORT ?? '5432', 10);
-  const user = process.env.PGUSER;
-  const region = resolveAwsRegion();
-
-  if (host === undefined || host.trim().length === 0 || user === undefined || user.trim().length === 0) {
-    throw new Error('PGHOST and PGUSER environment variables are required for IAM auth');
-  }
-
-  const signer = new Signer({
-    hostname: host,
-    port,
-    region,
-    username: user,
-  });
-
-  return signer.getAuthToken();
-};
+export const resolveLambdaDatabaseEnvironment = (): LambdaDatabaseEnvironment => ({
+  database: requireEnvironment(process.env.PGDATABASE, 'PGDATABASE'),
+  host: requireEnvironment(process.env.PGHOST, 'PGHOST'),
+  password: requireEnvironment(process.env.PGPASSWORD, 'PGPASSWORD'),
+  port: parseInt(process.env.PGPORT ?? '5432', 10),
+  user: requireEnvironment(process.env.PGUSER, 'PGUSER'),
+});

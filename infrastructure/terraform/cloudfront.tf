@@ -73,7 +73,7 @@ resource "aws_cloudfront_distribution" "client" {
 }
 
 resource "aws_route53_record" "client" {
-  zone_id = data.aws_route53_zone.primary.zone_id
+  zone_id = module.ctx.route53_zone_id
   name    = local.cloudfront_domain
   type    = "A"
 
@@ -109,7 +109,7 @@ resource "aws_s3_bucket_policy" "client_site" {
 
 
 resource "terraform_data" "client_hash_trigger" {
-  input = local.client_source_hash
+  input = local.client_build_hash
 
   lifecycle {
     action_trigger {

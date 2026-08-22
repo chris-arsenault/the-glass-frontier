@@ -1,4 +1,4 @@
-import { createOpsStore, useIamAuth, type ModelUsageRecord } from '@glass-frontier/ops';
+import { createOpsStore, useLambdaRuntime, type ModelUsageRecord } from '@glass-frontier/ops';
 import { log } from '@glass-frontier/utils';
 import type { Pool } from 'pg';
 
@@ -11,10 +11,10 @@ export class ModelUsageTracker {
 
   /**
    * Create tracker from environment (local dev only).
-   * For Lambda with IAM auth, use constructor with pool parameter.
+   * In Lambda, use the constructor with the shared pool parameter.
    */
   static fromEnv(): ModelUsageTracker | null {
-    if (useIamAuth()) {
+    if (useLambdaRuntime()) {
       // In Lambda, caller must provide pool via constructor
       return null;
     }

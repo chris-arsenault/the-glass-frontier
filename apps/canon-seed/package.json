@@ -1,0 +1,20 @@
+{
+  "name": "@glass-frontier/canon-seed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@glass-frontier/utils": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.158",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

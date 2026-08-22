@@ -7,9 +7,9 @@
   },
   "include": ["scripts/**/*.ts", "tests/**/*.ts"],
   "references": [
+    { "path": "apps/canon-seed" },
     { "path": "apps/chronicle-closer" },
     { "path": "apps/client" },
-    { "path": "apps/db-provisioner" },
     { "path": "apps/playwright" },
     { "path": "apps/webservice" }
   ]

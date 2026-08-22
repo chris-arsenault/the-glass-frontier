@@ -26,7 +26,7 @@ resource "aws_s3_object" "client_assets" {
     map  = "application/json"
   }, split(".", each.value)[length(split(".", each.value)) - 1], "application/octet-stream")
 
-  depends_on = [local.client_source_hash]
+  depends_on = [local.client_build_hash]
 }
 
 locals {
@@ -35,9 +35,7 @@ locals {
     VITE_PROGRESS_WS_URL      = "wss://${aws_apigatewayv2_api.progress_ws.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.progress_ws.name}"
     VITE_COGNITO_USER_POOL_ID = aws_cognito_user_pool.this.id
     VITE_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.this.id
-    VITE_COGNITO_DOMAIN       = local.cognito_domain
     VITE_COGNITO_REGION       = var.aws_region
-    REGEN                     = 2
   })
 }
 

@@ -31,8 +31,7 @@
     "local:e2e": "tsx scripts/run-local-stack.ts",
     "local:fresh": "tsx scripts/run-local-stack.ts --drop-db",
     "local:reset": "tsx scripts/run-local-stack.ts --drop-db",
-    "reset:sessions": "tsx scripts/reset-session-data.ts",
-    "db:init-rds": "./scripts/init-rds.sh"
+    "reset:sessions": "tsx scripts/reset-session-data.ts"
   },
   "keywords": [
     "glass-frontier",

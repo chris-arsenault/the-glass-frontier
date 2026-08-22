@@ -37,19 +37,20 @@ resource "aws_cloudwatch_log_group" "this" {
 }
 
 resource "aws_lambda_function" "this" {
-  function_name    = var.function_name
-  role             = var.role_arn
-  handler          = var.handler
-  runtime          = var.runtime
-  memory_size      = var.memory_size
-  timeout          = var.timeout
-  filename         = data.archive_file.package.output_path
-  source_code_hash = data.archive_file.package.output_base64sha256
-  publish          = var.publish
-  architectures    = var.architectures
-  layers           = var.layers
-  description      = var.description
-  tags             = var.tags
+  function_name                  = var.function_name
+  role                           = var.role_arn
+  handler                        = var.handler
+  runtime                        = var.runtime
+  memory_size                    = var.memory_size
+  timeout                        = var.timeout
+  reserved_concurrent_executions = var.reserved_concurrent_executions
+  filename                       = data.archive_file.package.output_path
+  source_code_hash               = data.archive_file.package.output_base64sha256
+  publish                        = var.publish
+  architectures                  = var.architectures
+  layers                         = var.layers
+  description                    = var.description
+  tags                           = var.tags
 
   dynamic "environment" {
     for_each = length(var.environment_variables) == 0 ? [] : [1]

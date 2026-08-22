@@ -285,5 +285,19 @@
     "summary": "World schema now mirrors the lore source",
     "details": "The game's world vocabulary is now derived directly from the canon source's schema instead of a hand-invented one: its eighteen atlas kinds (abilities, concepts, cultures, eras, incidents, installations, phenomena, species, and more) with their full subkind lists, its complete relation taxonomy including resonance attunement and the DM-only edges, and its declared tag vocabulary, which lore is now validated against. Entities carry their fact cards (born, population, function) into the GM's context, relations keep the in-world years they held, and statuses are free text since the source declares none. Chronicle locations span both natural geography and built installations.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-22-ahara-deployment",
+    "releasedAt": "2026-08-22",
+    "summary": "Prepared Glass Frontier for Ahara deployment",
+    "details": "Glass Frontier now deploys at glass-frontier.ahara.io through the shared Ahara network and API load balancer. Its game data lives in a dedicated logical database on the shared PostgreSQL service, with bounded application connections so play cannot exhaust the platform database.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-22-tsonu-canon-import",
+    "releasedAt": "2026-08-22",
+    "summary": "The Kaleidos system's full canon is now imported",
+    "details": "The world graph now carries the complete Glass Frontier canon from its authored source: 303 entities with their fact cards, 693 dated relationships, and over seventeen hundred lore passages spanning settlements, stations, factions, creatures, incidents, and the people of the shattered ring. The Atlas, chronicle wizard, and the GM's per-turn context all draw from this material. Deployment loads this production dataset separately from test fixtures and applies later source revisions as partial updates, preserving omitted records and relationships changed through play.",
+    "type": "feature"
   }
 ]

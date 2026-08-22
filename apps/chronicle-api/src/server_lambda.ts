@@ -1,4 +1,4 @@
-import { useIamAuth } from '@glass-frontier/app';
+import { useLambdaRuntime } from '@glass-frontier/app';
 import { normalizeLambdaProxyEventForTrpc } from '@glass-frontier/node-utils';
 import { awsLambdaRequestHandler } from '@trpc/server/adapters/aws-lambda';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
@@ -58,15 +58,15 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   const normalizedEvent = normalizeLambdaProxyEventForTrpc(event);
 
-  // Initialize database pool at cold start (IAM auth is async)
-  if (useIamAuth() && initPromise === undefined) {
+  // Initialize the shared database pool once per Lambda execution environment.
+  if (useLambdaRuntime() && initPromise === undefined) {
     initPromise = initializeForLambda();
   }
   if (initPromise !== undefined) {
     await initPromise;
   }
 
-  // Let API Gateway CORS answer preflight. If it still reaches Lambda, return 204.
+  // The shared ALB answers preflight. If one still reaches Lambda, return 204.
   const requestMethod = resolveRequestMethod(normalizedEvent);
   if (requestMethod?.toUpperCase() === 'OPTIONS') {
     const origin = resolveOriginHeader(normalizedEvent);
