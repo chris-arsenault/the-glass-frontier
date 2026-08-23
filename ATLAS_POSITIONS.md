@@ -1,68 +1,73 @@
-# Accurate map positions for non-orbital bodies
+# Accurate placement for the Atlas charts
 
-The Atlas charts today are inferred, not declared. Planets get positions from
-`orbits` edges plus the `inner_of` ordering chain; everything else is hung off
-a spatial parent (`on_surface_of` > `in_orbit_of` > `orbits` > `located_in` >
-`part_of`) and placed presentationally. That works for satellites, but three
-classes of object have no honest position in the data:
+The Atlas charts are inferred, not declared. Planets get positions from
+`orbits` edges plus the `inner_of` ordering chain; everything below that is
+hung off a spatial parent and then laid out by convention: surface regions
+stack top-to-bottom on the planet's limb in alphabetical order, orbital
+objects are spaced evenly on generic tracks, ring habs are distributed
+evenly along their ring's arc, and route hubs sit at even fractions of the
+lane. Every one of those spacings is presentational. This note lists the
+attributes that would make each layer positionally true.
 
-- **Lagrange stations** — Threshold Station is `in_orbit_of Kaleidos`; that it
-  sits at a Lagrange point exists only in description prose. The renderer
-  infers "tethered" from its single `terminus_of` link, which is a proxy, not
-  a position.
-- **Route hubs** — Cold Lantern, Hinge Six, and Latchhouse are `located_in
-  The Keel`. The chart spaces them evenly because nothing says where along
-  the lane they sit, or in what order.
-- **Free-floating objects** — anything not orbiting a body (a deep-field
-  wreck, a drifting hab) has nowhere to go but the parent fallback.
+## Surface placement
 
-## Attributes that would make positions accurate
+Where a region or settlement sits on the body. Position exists today only in
+prose ("coastal hills above Glasswake", "west of the Old Campus"), which the
+renderer cannot read. Two tiers, cheapest first:
 
-The map is schematic, so full ephemerides are overkill. Three declarations
-cover every case; each names a *frame*, a *kind*, and *parameters*.
+- **Relative geography (schematic accuracy).** An `adjacent_to` relation
+  between surface places, with edge props `bearingDeg` (0–360 in the body
+  frame) and optionally `distanceKm`. The chart can then solve a constrained
+  layout: neighbors near each other, bearings respected, instead of an
+  alphabetical stack. This matches how the source already writes geography
+  and degrades gracefully when only some edges carry props.
+- **True coordinates (projective accuracy).** `latDeg` / `lonDeg` props on
+  the `on_surface_of` (or `located_in`) edge, plus one per-body fact naming
+  the reference meridian (e.g. `prime_meridian: "Sithari"`). This is what a
+  real globe or orthographic limb view needs — the current limb chart could
+  project only the visible hemisphere and grey out the far side.
+- **Extent.** Regions additionally need a size to stop rendering as points:
+  a `radiusKm` (or a coarse `sizeClass`) is enough for a schematic map.
+  Actual coastlines/terrain are artwork, not graph attributes, and should
+  stay out of canon.
 
-| Attribute | Values | Meaning |
-| --- | --- | --- |
-| `placementFrame` | entity ref, or ordered pair of refs | What the position is measured against: a body, a body pair (for Lagrange points), or a route |
-| `placementKind` | `orbit` \| `lagrange` \| `route` \| `free` | Which parameter set applies |
-| `placementParams` | see below | The numbers |
+## Orbital placement
 
-Per kind:
+Where an object sits around its body. Two independent axes:
 
-- `orbit` — `phaseDeg` (0–360 along the orbit) and optionally `band`
-  (`low` \| `ring` \| `high`), replacing the current even-spacing and the
-  located-in-ring heuristic.
-- `lagrange` — `point` (`L1`–`L5`) with `placementFrame` naming the pair,
-  e.g. (Kaleidos, The Sun). The renderer can then draw the station at the
-  correct fifth-point of the correct pair instead of on a generic track.
-- `route` — `fraction` (0–1 from the route's first terminus) plus an ordered
-  terminus list on the route itself (today `terminus_of` edges carry no
-  sequence, so even endpoint order is arbitrary).
-- `free` — polar coordinates in the system frame: `radiusAu` and `bearingDeg`
-  (and `inclinationDeg` only if a z-axis ever matters). This is the one case
-  that needs real coordinates.
+- **Radial order (which track).** Cheapest fix reuses existing vocabulary:
+  the `inner_of` verb is already generic ("subject lies inward of target")
+  and today is only authored between planets. Authoring it between
+  co-orbiting stations gives correct track ordering with zero new schema.
+  For numeric truth, an `altitudeBand` (`low` | `ring` | `synchronous` |
+  `high`) or `radiusKm` prop on the `in_orbit_of` edge replaces the band
+  heuristics (today "rides the ring" is inferred from a `located_in` edge to
+  a ring region).
+- **Angular position (where on the track).** A `phaseDeg` prop on the
+  `in_orbit_of` edge — for ring habs this doubles as position along the ring
+  arc, so Fermata, Verathi, and Xyloathax would sit where they actually are
+  on the Glass Frontier rather than at even intervals. Motion would further
+  need `epoch` + `periodHours`, but a static schematic does not.
+- `inclinationDeg` only if polar or shear-crossing orbits ever need to read
+  differently; nothing in current canon calls for it.
 
-## Where they would live
+## Off-body placements (for completeness)
 
-Two homes already exist in the model, so no schema migration is required:
+- **Lagrange stations** — a narrow `at_lagrange_of` relation (or a `point:
+  L1–L5` prop on the orbit edge) naming the body pair, so Threshold Station
+  stops being inferred from its span link.
+- **Route hubs** — a `fraction` (0–1) prop on the hub's `located_in` edge to
+  its route, plus an ordered terminus list on the route (today `terminus_of`
+  edges carry no sequence).
+- **Free-floaters** — system-frame polar facts: `radius_au`, `bearing_deg`.
 
-1. **Edge props** for relational placements. The `edge` table already stores
-   a `props` jsonb (surfaced today for `since`/`until`/`strength`). A
-   placement relative to a parent is a property of that relationship:
-   `in_orbit_of {phaseDeg, band}`, `located_in <route> {fraction}`, and a new
-   narrow verb `at_lagrange_of {point}` whose src is the station and dst the
-   primary body (the pair's secondary can be an explicit second edge or a
-   prop). This keeps position exactly as authoritative as the relation that
-   implies it.
-2. **Fact cards** for free-floaters. `HardState.facts` is verbatim key/value
-   from the source; `radius_au` / `bearing_deg` keys fit its existing shape
-   ("Born", "Population") and need no game-side change beyond the renderer
-   reading them.
+## Where the attributes live
 
-Since tsonu-canon is the source of truth, the declarations belong in the
-source schema first (`craft/schema/base.rb` relation props, world fact-card
-conventions) and mirror into `packages/dto/src/world/vocabulary.ts` the same
-way `attuned_to` and the DM edges did. The ingest path already carries edge
-props and facts verbatim, so the client-side `atlasGraph` and the two chart
-components are the only consumers that change: prefer declared placement when
-present, keep today's inference as the fallback for undeclared entities.
+Both homes already exist, so no schema migration is needed: relational
+placements are jsonb props on the `edge` table (which already carries
+`since`/`until`/`strength`), and per-body constants or free coordinates are
+fact-card keys on the entity. tsonu-canon is the source of truth, so the
+declarations belong in the source schema first and mirror into
+`packages/dto/src/world/vocabulary.ts`, the same path `attuned_to` took. The
+only consumers that change are `atlasGraph` and the two chart components:
+prefer declared placement when present, keep today's inference as fallback.

@@ -369,5 +369,12 @@
     "summary": "Character and chronicle choices now come directly from canon",
     "details": "Species, cultures, homelands, allegiances, and chronicle locations now show only the choices selected by the world canon, with concise origin descriptions written for character creation. Chronicle locations offer direct local focus entities, including new one-sentence people and story hooks shared across related places. Reference articles remain available for background reading but no longer appear as people, places, or graph shortcuts, and hidden GM entries stay out of player-facing Atlas results.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-23-auth-session-refresh",
+    "releasedAt": "2026-08-23",
+    "summary": "Expired sessions now refresh during play",
+    "details": "The client now renews an expiring Cognito access token before its next API request, so a session can continue after the original token times out without a hard browser refresh. A readable unauthorized response still gets one refresh-and-retry attempt, while a session that can no longer be renewed returns to login instead of leaving the interface apparently signed in.",
+    "type": "bugfix"
   }
 ]

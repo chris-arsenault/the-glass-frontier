@@ -1,4 +1,13 @@
 import { useAuthStore } from '../stores/authStore';
+import { decodeJwtPayload } from '../utils/jwt';
+
+const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 60_000;
+const SESSION_EXPIRED_ERROR = 'Session expired. Please sign in again.';
+
+type AccessTokenResolution = {
+  accessToken: string | null;
+  refreshed: boolean;
+};
 
 const baseFetch: typeof fetch = (...args) => {
   const globalFetch = globalThis.fetch;
@@ -32,23 +41,62 @@ const mergeHeaders = (input: RequestInfo | URL, init?: RequestInit): Headers => 
   return new Headers(init?.headers);
 };
 
+const buildAuthenticatedRequest = (
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  accessToken: string | null
+): Request => {
+  if (accessToken === null) {
+    return buildRequest(input, init);
+  }
+
+  const headerBag = mergeHeaders(input, init);
+  headerBag.set('Authorization', `Bearer ${accessToken}`);
+  return buildRequest(input, init, headerBag);
+};
+
+const accessTokenNeedsRefresh = (accessToken: string): boolean => {
+  const expiration = decodeJwtPayload(accessToken)?.exp;
+  return (
+    typeof expiration === 'number' &&
+    expiration * 1000 <= Date.now() + ACCESS_TOKEN_REFRESH_LEEWAY_MS
+  );
+};
+
+const refreshAccessToken = async (): Promise<string> => {
+  const refreshedTokens = await useAuthStore.getState().refreshTokens();
+  if (refreshedTokens !== null) {
+    return refreshedTokens.accessToken;
+  }
+
+  useAuthStore.getState().logout();
+  throw new Error(SESSION_EXPIRED_ERROR);
+};
+
+const resolveAccessToken = async (): Promise<AccessTokenResolution> => {
+  const accessToken = useAuthStore.getState().tokens?.accessToken ?? null;
+  if (accessToken === null || !accessTokenNeedsRefresh(accessToken)) {
+    return { accessToken, refreshed: false };
+  }
+
+  return { accessToken: await refreshAccessToken(), refreshed: true };
+};
+
 export const authenticatedFetch: typeof fetch = async (input, init) => {
-  const request = buildRequest(input, init);
+  const tokenResolution = await resolveAccessToken();
+  const request = buildAuthenticatedRequest(input, init, tokenResolution.accessToken);
   let response = await baseFetch(request);
   if (response.status !== 401) {
     return response;
   }
 
-  const refreshedTokens = await useAuthStore.getState().refreshTokens();
-  if (refreshedTokens === null) {
+  if (tokenResolution.refreshed) {
     useAuthStore.getState().logout();
     return response;
   }
 
-  const headerBag = mergeHeaders(input, init);
-  headerBag.set('Authorization', `Bearer ${refreshedTokens.accessToken}`);
-
-  const retryRequest = buildRequest(input, init, headerBag);
+  const refreshedAccessToken = await refreshAccessToken();
+  const retryRequest = buildAuthenticatedRequest(input, init, refreshedAccessToken);
   response = await baseFetch(retryRequest);
   if (response.status === 401) {
     useAuthStore.getState().logout();
