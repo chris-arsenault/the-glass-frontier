@@ -4,6 +4,11 @@ import type {
   Character,
   Chronicle,
   ChronicleScene,
+  EntityReference,
+  EntityRosterEntry,
+  HardStateKind,
+  HardStateStatus,
+  HardStateSubkind,
   Intent,
   LlmTrace,
   SceneOutcome,
@@ -41,12 +46,14 @@ export type EntitySnippet = {
   id: string;
   slug: string;
   name: string;
-  kind: string;
-  subkind?: string;
+  kind: HardStateKind;
+  subkind?: HardStateSubkind;
   description?: string;
-  status?: string;
+  status?: HardStateStatus;
   /** The entry's fact card — the small answers a reader expects up front. */
   facts: Record<string, string | number>;
+  /** Private guidance for narration only. */
+  gmNotes: string[];
   tags: string[];
   loreFragments: Array<{
     slug: string;
@@ -58,7 +65,9 @@ export type EntitySnippet = {
 };
 
 export type EntityContextSlice = {
+  candidates: EntitySnippet[];
   offered: EntitySnippet[];
+  roster: EntityRosterEntry[];
   focusEntities: string[];
   focusTags: string[];
 };
@@ -70,6 +79,7 @@ export type GraphContext = {
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
+  targetEntityIds: string[];
   chronicleStore: ChronicleStore;
   worldSchemaStore: WorldSchemaStore;
 
@@ -100,6 +110,9 @@ export type GraphContext = {
   beatTracker?: BeatTracker;
   executedNodes?: string[];
   entityContext?: EntityContextSlice;
+  entityReferences?: EntityReference[];
+  /** Public roster snapshot used for this turn, before any narrated transition refreshes it. */
+  turnEntityRoster?: EntityRosterEntry[];
   entityUsage?: Array<{
     entityId: string;
     entitySlug: string;

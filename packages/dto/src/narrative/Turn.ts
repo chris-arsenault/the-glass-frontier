@@ -3,43 +3,19 @@ import { z } from 'zod';
 import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDeltaSchema } from '../Inventory';
 import { BeatTrackerSchema } from './ChronicleBeat';
+import { EntityReference, EntityRosterEntry, EntityUsageEntry } from './EntityReference';
 import { Intent } from './Intent';
 import { LocationDeltaDecision } from './LocationDelta';
 import { SceneContext } from './Scene';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 
-const EntityUsageEntry = z.object({
-  emergentTags: z.array(z.string()).nullable(),
-  entityId: z.string().min(1),
-  entitySlug: z.string().min(1),
-  tags: z.array(z.string()),
-  usage: z.enum(['unused', 'mentioned', 'central']),
-});
-
-const EntitySnippet = z.object({
-  description: z.string().optional(),
-  id: z.string().min(1),
-  kind: z.string().min(1),
-  loreFragments: z.array(z.object({
-    slug: z.string().min(1),
-    summary: z.string().min(1),
-    tags: z.array(z.string()),
-    title: z.string().min(1),
-  })),
-  name: z.string().min(1),
-  score: z.number(),
-  slug: z.string().min(1),
-  status: z.string().optional(),
-  subkind: z.string().optional(),
-  tags: z.array(z.string()),
-});
-
 export const TurnSchema = z.object({
   advancesTimeline: z.boolean().optional(),
   beatTracker: BeatTrackerSchema.optional(),
   chronicleId: z.string().min(1),
-  entityOffered: z.array(EntitySnippet).optional(),
+  entityReferences: z.array(EntityReference).optional(),
+  entityRoster: z.array(EntityRosterEntry).optional(),
   entityUsage: z.array(EntityUsageEntry).optional(),
   executedNodes: z.array(z.string().min(1)).max(48).optional(),
   failure: z.boolean(),

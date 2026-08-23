@@ -20,6 +20,7 @@ import type {
 
 import type {
   EntityEmbeddingSource,
+  ReferenceEntityCandidate,
   SubjectEntityCandidate,
 } from './entityEmbeddings';
 import type { EntityStats } from './entityReader';
@@ -57,6 +58,7 @@ export type ChronicleStore = {
     anchorEntityId?: string | null;
     toneChips?: string[];
     toneNotes?: string;
+    entityRoster?: Chronicle['entityRoster'];
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;
@@ -119,6 +121,11 @@ export type WorldSchemaStore = {
     kind: HardStateKind;
     limit?: number;
   }) => Promise<SubjectEntityCandidate[]>;
+  findReferenceCandidates: (input: {
+    candidateIds: string[];
+    embedding: number[];
+    limit?: number;
+  }) => Promise<ReferenceEntityCandidate[]>;
 
   // === Entity reads ===
   getEntityActivity: (limitPerList?: number) => Promise<EntityActivityFeed>;

@@ -45,6 +45,25 @@
   transition: border-color 120ms ease;
 }
 
+.chat-entity-targets {
+  display: flex;
+  color: var(--text-muted);
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+}
+
+.chat-entity-targets button {
+  padding: 0.125rem var(--space-2);
+  font: inherit;
+  color: var(--text-accent);
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
 .chat-input:focus-visible {
   border-color: var(--border-accent);
   outline: none;

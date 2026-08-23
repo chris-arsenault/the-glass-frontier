@@ -149,6 +149,46 @@ describe('buildTsonuProposal', () => {
     ]);
   });
 
+  it('keeps usage notes on the entity and out of player-facing lore', () => {
+    const proposal = buildTsonuProposal(
+      bundle([
+        entry({
+          id: 'ravel',
+          sections: [
+            {
+              format: 'prose',
+              heading: 'DM Usage Notes',
+              markdown: '- Arrives when a route bell repeats.\n- Refuses unsealed cargo.',
+              owner_id: 'ravel',
+              section: 'usage_notes',
+            },
+            {
+              format: 'prose',
+              heading: 'History',
+              markdown: 'Public history.',
+              owner_id: 'ravel',
+              section: 'history',
+            },
+          ],
+        }),
+      ])
+    );
+
+    expect(proposal.entities[0]?.gmNotes).toEqual([
+      'Arrives when a route bell repeats.',
+      'Refuses unsealed cargo.',
+    ]);
+    expect(proposal.lore).toEqual([
+      {
+        entity: { externalKey: RAVEL_KEY },
+        externalKey: 'tsonu:ravel:history:0',
+        prose: 'Public history.',
+        tags: [],
+        title: 'History',
+      },
+    ]);
+  });
+
   it('skips prose another entry owns and keeps relation-owned prose keyed by owner', () => {
     const proposal = buildTsonuProposal(
       bundle([

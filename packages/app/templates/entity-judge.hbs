@@ -8,12 +8,12 @@ You are the Entity Judge for The Glass Frontier. Your task is to classify how th
 
 2. For entities marked as `central` or `mentioned`, optionally surface emergent tags (2-4 words) that capture new narrative themes or elements introduced about this entity.
 
-3. Base your classification strictly on the GM's actual narrative text. Do not infer usage from the player's intent alone.
+3. Base your classification strictly on the GM's actual narrative text. Do not infer usage from the player's intent alone. A resolved GM entity reference means that entity was at least mentioned.
 
 The offered entities and the GM response are provided alongside this prompt.
 
 ## Output Instructions
-Return your answer using the structured format provided. For each entity, provide:
+Return your answer using the structured format provided. Return every offered entity exactly once. For each entity, provide:
 - `slug`: The exact slug of the entity
 - `usage`: One of `unused`, `mentioned`, or `central`
 - `emergentTags` (optional): Array of 2-4 word tags capturing new themes about this entity (only for mentioned/central entities)

@@ -16,6 +16,7 @@ export const appRouter = t.router({
       z.object({
         chronicleId: z.uuid(),
         content: TranscriptEntry,
+        entityTargetIds: z.array(z.string().uuid()).max(3).default([]),
         requestId: z.string().min(1).max(128),
       })
     )
@@ -35,7 +36,10 @@ export const appRouter = t.router({
         input.chronicleId,
         playerEntry,
         input.requestId,
-        toLLMPlayer(ctx.identity)
+        {
+          llmPlayer: toLLMPlayer(ctx.identity),
+          targetEntityIds: input.entityTargetIds,
+        }
       );
       return {
         activeScene: result.activeScene,
@@ -43,6 +47,7 @@ export const appRouter = t.router({
         character: result.updatedCharacter,
         chronicleStatus: result.chronicleStatus,
         entityFocus: result.entityFocus,
+        entityRoster: result.entityRoster,
         locationName: result.locationName,
         turn: result.turn,
       };

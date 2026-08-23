@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Metadata } from '../Metadata';
 import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
+import { EntityRosterState } from './EntityReference';
 import { ChronicleScene } from './Scene';
 
 const EntityFocusState = z.object({
@@ -17,6 +18,7 @@ export const Chronicle = z.object({
   beatsEnabled: z.boolean().default(true),
   characterId: z.string().min(1).optional(),
   entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
+  entityRoster: EntityRosterState,
   id: z.string().min(1),
   /**
    * The canon place the chronicle started from, when it started from one.

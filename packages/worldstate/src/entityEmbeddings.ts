@@ -24,6 +24,13 @@ export type SubjectEntityCandidate = {
   slug: string;
 };
 
+export type ReferenceEntityCandidate = {
+  id: string;
+  name: string;
+  similarity: number;
+  slug: string;
+};
+
 type SubjectCandidateRow = Omit<SubjectEntityCandidate, 'reach'> & {
   reach: number | null;
 };
@@ -96,6 +103,17 @@ WHERE similarity >= 0.5
 ORDER BY score DESC, similarity DESC
 LIMIT $4`;
 
+const REFERENCE_CANDIDATE_QUERY = `
+SELECT e.id, e.slug, e.name,
+  (1 - (e.embedding <=> $1::vector))::real AS similarity
+FROM entity e
+WHERE e.embedding IS NOT NULL
+  AND e.id = ANY($2::uuid[])
+  AND NOT e.is_article
+  AND NOT e.dm
+ORDER BY e.embedding <=> $1::vector
+LIMIT $3`;
+
 export class EntityEmbeddingReader {
   readonly #pool: Pool;
 
@@ -154,5 +172,24 @@ export class EntityEmbeddingReader {
       ...row,
       reach: row.reach ?? 0,
     }));
+  }
+
+  async findReferenceCandidates(input: {
+    candidateIds: string[];
+    embedding: number[];
+    limit?: number;
+  }): Promise<ReferenceEntityCandidate[]> {
+    if (input.candidateIds.length === 0) {
+      return [];
+    }
+    const result = await this.#pool.query<ReferenceEntityCandidate>(
+      REFERENCE_CANDIDATE_QUERY,
+      [
+        vectorLiteral(input.embedding),
+        [...new Set(input.candidateIds)],
+        Math.max(1, Math.min(input.limit ?? 5, 12)),
+      ]
+    );
+    return result.rows;
   }
 }

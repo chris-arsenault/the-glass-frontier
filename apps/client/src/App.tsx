@@ -6,6 +6,7 @@ import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
 import { ChronicleDrawer } from './components/drawers/ChronicleDrawer/ChronicleDrawer';
 import { TemplateDrawer } from './components/drawers/TemplateDrawer/TemplateDrawer';
+import { AvailableEntitiesPanel } from './components/entities/AvailableEntitiesPanel/AvailableEntitiesPanel';
 import { ChatCanvas } from './components/layout/ChatCanvas/ChatCanvas';
 import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
 import { ChronicleHeader } from './components/layout/ChronicleHeader/ChronicleHeader';
@@ -96,6 +97,7 @@ const ChatExperience = (): React.JSX.Element => {
               <ChronicleHeader />
             </div>
             <SceneStage />
+            <AvailableEntitiesPanel />
             <ChatCanvas />
             <ChatComposer />
           </main>

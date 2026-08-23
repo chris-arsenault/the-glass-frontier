@@ -8,6 +8,11 @@ export type EntityUsageClassification = {
   emergentTags: string[] | null;
 };
 
+export type PlayerEntityReference = {
+  entityId: string;
+  tags: string[];
+};
+
 const DECAY = 0.9;
 
 const clampScore = (value: number): number => Math.max(-50, Math.min(100, value));
@@ -25,10 +30,10 @@ const usageBumps = (
   usage: EntityUsageClassification['usage']
 ): { entity: number; tag: number } => {
   if (usage === 'central') {
-    return { entity: 8, tag: 4 };
+    return { entity: 4, tag: 2 };
   }
   if (usage === 'mentioned') {
-    return { entity: 3, tag: 1 };
+    return { entity: 2, tag: 1 };
   }
   return { entity: 0, tag: 0 };
 };
@@ -44,10 +49,20 @@ const usageBumps = (
  */
 export const applyEntityUsage = (
   current: EntityFocusState | null | undefined,
-  usage: EntityUsageClassification[]
+  usage: EntityUsageClassification[],
+  playerReferences: PlayerEntityReference[] = []
 ): EntityFocusState => {
   const entityScores = decayScores(current?.entityScores);
   const tagScores = decayScores(current?.tagScores);
+
+  const uniquePlayerReferences = playerReferences.filter((entry, index, all) =>
+    all.findIndex((candidate) => candidate.entityId === entry.entityId) === index);
+  for (const entry of uniquePlayerReferences) {
+    addScore(entityScores, entry.entityId, 8);
+    for (const tag of entry.tags) {
+      addScore(tagScores, tag, 3);
+    }
+  }
 
   for (const entry of usage) {
     const bumps = usageBumps(entry.usage);

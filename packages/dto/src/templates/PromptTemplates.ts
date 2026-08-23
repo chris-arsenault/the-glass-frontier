@@ -11,6 +11,7 @@ export const PromptTemplateIds = [
   'chronicle-seed',
   'clarification-responder',
   'entity-judge',
+  'entity-reference-resolver',
   'entity-summarizer',
   'gm-summary',
   'inquiry-describer',
@@ -102,6 +103,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'entity-judge',
     label: 'Entity Judge',
     officialObjectKey: 'official/entity-judge.hbs',
+    supportsVariants: false,
+  },
+  'entity-reference-resolver': {
+    description: 'Maps vague transcript wording to established entities already near the scene.',
+    id: 'entity-reference-resolver',
+    label: 'Entity Reference Resolver',
+    officialObjectKey: 'official/entity-reference-resolver.hbs',
     supportsVariants: false,
   },
   'entity-summarizer': {

@@ -358,15 +358,21 @@ $prompt$, now()),
 
 2. For entities marked as `central` or `mentioned`, optionally surface emergent tags (2-4 words) that capture new narrative themes or elements introduced about this entity.
 
-3. Base your classification strictly on the GM's actual narrative text. Do not infer usage from the player's intent alone.
+3. Base your classification strictly on the GM's actual narrative text. Do not infer usage from the player's intent alone. A resolved GM entity reference means that entity was at least mentioned.
 
 The offered entities and the GM response are provided alongside this prompt.
 
 ## Output Instructions
-Return your answer using the structured format provided. For each entity, provide:
+Return your answer using the structured format provided. Return every offered entity exactly once. For each entity, provide:
 - `slug`: The exact slug of the entity
 - `usage`: One of `unused`, `mentioned`, or `central`
 - `emergentTags` (optional): Array of 2-4 word tags capturing new themes about this entity (only for mentioned/central entities)
+$prompt$, now()),
+  ('entity-reference-resolver', $prompt$You resolve vague references in one transcript message to established entities supplied as candidates.
+
+Return a match only when the message contains a specific phrase that refers to one candidate. Relevance alone is not a reference. A candidate merely fitting the subject of the message is not enough. If the phrase could refer to several candidates, return no match for it.
+
+For each match, copy the exact referring substring from the message into `text` and return the candidate's exact `slug`. Do not rewrite, normalize, or expand the substring. Return an empty `matches` array when nothing is clear.
 $prompt$, now()),
   ('gm-summary', $prompt$Summarize the GM narration into a compact log line and decide whether the chronicle should close.
 Treat the summary as the canonical record for the turn.

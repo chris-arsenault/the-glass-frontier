@@ -16,6 +16,7 @@ import { EntityActivityReader } from './entityActivityReader';
 import {
   type EntityEmbeddingSource,
   EntityEmbeddingReader,
+  type ReferenceEntityCandidate,
   type SubjectEntityCandidate,
 } from './entityEmbeddings';
 import type { EntityListInput, EntityStats, NeighborListInput } from './entityReader';
@@ -78,6 +79,14 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     limit?: number;
   }): Promise<SubjectEntityCandidate[]> {
     return this.#embeddings.findSubjectCandidates(input);
+  }
+
+  async findReferenceCandidates(input: {
+    candidateIds: string[];
+    embedding: number[];
+    limit?: number;
+  }): Promise<ReferenceEntityCandidate[]> {
+    return this.#embeddings.findReferenceCandidates(input);
   }
 
   async revertBatch(batchId: string): Promise<void> {

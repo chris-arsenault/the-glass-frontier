@@ -17,6 +17,7 @@ let pool: Pool;
 let worldState: WorldState;
 const DIALOG_SCENE_ID = 'scene:turn-0';
 const DIALOG_SUBJECT = 'Amaya Venn';
+const OFFER_ROOT_NAME = 'Offer Root';
 
 beforeAll(async () => {
   ({ pool, worldState } = await startHarness());
@@ -188,10 +189,10 @@ describe('Chronicle turn history', () => {
     expect(snapshot?.locationName).toBe(startingLocation.name);
   });
 
-  it('persists the entities the GM was offered and how it used them', async () => {
+  it('persists the turn roster, resolved references, and GM usage', async () => {
     const location = await seedEntity(worldState, {
       kind: 'geographic_location',
-      name: 'Offer Root',
+      name: OFFER_ROOT_NAME,
       status: 'known',
       subkind: 'region',
     });
@@ -200,18 +201,27 @@ describe('Chronicle turn history', () => {
       worldState,
       chronicle,
       defaultTurn(chronicle.id, {
-        entityOffered: [
+        entityReferences: [
           {
+            confidence: 1,
+            entityId: location.id,
+            entitySlug: location.slug,
+            method: 'exact',
+            span: { end: 10, start: 0, text: OFFER_ROOT_NAME },
+            speaker: 'player',
+            transcriptEntryId: 'player-message',
+          },
+        ],
+        entityRoster: [
+          {
+            availability: ['location'],
             description: undefined,
             id: location.id,
             kind: 'geographic_location',
-            loreFragments: [],
-            name: 'Offer Root',
-            score: 5,
+            name: OFFER_ROOT_NAME,
             slug: location.slug,
             status: 'known',
             subkind: 'region',
-            tags: [],
           },
         ],
         entityUsage: [
@@ -228,7 +238,8 @@ describe('Chronicle turn history', () => {
     );
 
     const turns = await worldState.chronicles.listChronicleTurns(chronicle.id);
-    expect(turns[0]?.entityOffered?.[0]?.slug).toBe(location.slug);
+    expect(turns[0]?.entityRoster?.[0]?.slug).toBe(location.slug);
+    expect(turns[0]?.entityReferences?.[0]?.entityId).toBe(location.id);
     expect(turns[0]?.entityUsage?.[0]?.usage).toBe('central');
   });
 

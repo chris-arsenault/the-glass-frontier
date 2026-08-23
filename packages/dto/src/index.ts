@@ -7,6 +7,7 @@ export * from './narrative/ChronicleBeat';
 export * from './narrative/ChronicleSummary';
 export * from './narrative/ChronicleClosureEvent';
 export * from './narrative/ChronicleSeed';
+export * from './narrative/EntityReference';
 export * from './narrative/IntentType';
 export * from './narrative/Intent';
 export * from './narrative/LocationDelta';

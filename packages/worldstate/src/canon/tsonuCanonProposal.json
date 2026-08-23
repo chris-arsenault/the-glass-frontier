@@ -1952,6 +1952,12 @@
       "externalKey": "tsonu:duskgrain",
       "isArticle": false,
       "kind": "resource",
+      "gmNotes": [
+        "Duskgrain is the Adversary's footprint. Its presence in a location means the Adversary's influence has touched that place.",
+        "The honey is a player-accessible hook. Someone using resonance-enhanced honey is being subtly corrupted without knowing it. The effects are pleasant until they aren't.",
+        "An NPC with prolonged duskgrain exposure might exhibit: unusual resonance sensitivity, difficulty distinguishing between dimensions, speaking in patterns that echo the Lattice Proxy Synod's AI custodian outputs, or physical symptoms resembling fae dislocation.",
+        "The elves' hidden presence in Bloom Zones is partly about containing duskgrain spread. Some of Dern Talish's \"unexplained successes\" in containment involve elven operatives destroying duskgrain deposits before they can be harvested."
+      ],
       "name": "Duskgrain",
       "playableAs": [],
       "prominence": "recognized",
@@ -2184,6 +2190,16 @@
       "externalKey": "tsonu:elves",
       "isArticle": false,
       "kind": "species",
+      "gmNotes": [
+        "The public entry stands alone. Players can engage with the elven disappearance as a historical mystery without knowing the truth.",
+        "The Echo River fragments are the primary discovery mechanism. Archivists who dig deep enough will find patterns suggesting intentional, sophisticated erasure.",
+        "Elven operatives in the general population are potential NPCs — not villains, but people bearing an enormous secret and an enormous sacrifice. Some doubt. Some are tired. None are evil.",
+        "The hidden habs are potential locations. What's inside is over a century of preparation by the system's most technically advanced civilization.",
+        "The Bloom Zones are the active front line. Elven operatives in and around the zones are the closest thing to combat troops in the hidden war. Some Displacement Council members may notice patterns in their \"unexplained successes\" — containment that works better than it should, threats that resolve before the Council gets there.",
+        "The Adversary is a campaign-level threat. Don't define it until you need to.",
+        "The key dramatic question for any elf NPC: was the sacrifice worth it? The answer should be genuinely uncertain.",
+        "The Bloom Zone relics are a wild card. They're created by contact between normal reality and the Adversary's influence. Are they weapons? Tools? Side effects? The elves don't fully understand them either, and Coremark is smuggling them into the broader system."
+      ],
       "name": "Elves",
       "playableAs": [],
       "prominence": "recognized",
@@ -14247,19 +14263,6 @@
     },
     {
       "entity": {
-        "externalKey": "tsonu:duskgrain"
-      },
-      "externalKey": "tsonu:duskgrain:usage_notes:0",
-      "prose": "- Duskgrain is the Adversary's footprint. Its presence in a location means the Adversary's influence has touched that place.\n- The honey is a player-accessible hook. Someone using resonance-enhanced honey is being subtly corrupted without knowing it. The effects are pleasant until they aren't.\n- An NPC with prolonged duskgrain exposure might exhibit: unusual resonance sensitivity, difficulty distinguishing between dimensions, speaking in patterns that echo the Lattice Proxy Synod's AI custodian outputs, or physical symptoms resembling fae dislocation.\n- The elves' hidden presence in Bloom Zones is partly about containing duskgrain spread. Some of Dern Talish's \"unexplained successes\" in containment involve elven operatives destroying duskgrain deposits before they can be harvested.",
-      "tags": [
-        "resonance",
-        "danger",
-        "materials"
-      ],
-      "title": "DM Usage Notes"
-    },
-    {
-      "entity": {
         "externalKey": "tsonu:dustline_crossing"
       },
       "externalKey": "tsonu:dustline_crossing:main:0",
@@ -15423,21 +15426,6 @@
         "archives"
       ],
       "title": "The Cultural Sacrifice"
-    },
-    {
-      "entity": {
-        "externalKey": "tsonu:elves"
-      },
-      "externalKey": "tsonu:elves:usage_notes:0",
-      "prose": "- The public entry stands alone. Players can engage with the elven disappearance as a historical mystery without knowing the truth.\n- The Echo River fragments are the primary discovery mechanism. Archivists who dig deep enough will find patterns suggesting intentional, sophisticated erasure.\n- Elven operatives in the general population are potential NPCs — not villains, but people bearing an enormous secret and an enormous sacrifice. Some doubt. Some are tired. None are evil.\n- The hidden habs are potential locations. What's inside is over a century of preparation by the system's most technically advanced civilization.\n- The Bloom Zones are the active front line. Elven operatives in and around the zones are the closest thing to combat troops in the hidden war. Some Displacement Council members may notice patterns in their \"unexplained successes\" — containment that works better than it should, threats that resolve before the Council gets there.\n- The Adversary is a campaign-level threat. Don't define it until you need to.\n- The key dramatic question for any elf NPC: was the sacrifice worth it? The answer should be genuinely uncertain.\n- The Bloom Zone relics are a wild card. They're created by contact between normal reality and the Adversary's influence. Are they weapons? Tools? Side effects? The elves don't fully understand them either, and Coremark is smuggling them into the broader system.",
-      "tags": [
-        "species",
-        "legend",
-        "mystery",
-        "ring-era",
-        "archives"
-      ],
-      "title": "DM Usage Notes"
     },
     {
       "entity": {

@@ -18,6 +18,7 @@ import {
 import { toLLMPlayer } from '@glass-frontier/llm-client';
 import { hasAnyGroup } from '@glass-frontier/node-utils';
 import { log } from '@glass-frontier/utils';
+import { buildInitialEntityRoster } from '@glass-frontier/worldstate';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -297,23 +298,31 @@ async function createChronicleHandler(
   ensureCharacterOwnership(character, playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
-  const openingText = await ctx.seedService.generateOpening({
-    anchorId: input.anchorEntityId,
-    character,
-    chronicleId,
-    locationId: input.locationId,
-    player: toLLMPlayer(ctx.identity),
-    playerId,
-    seedText: input.seedText,
-    title: input.title,
-    toneChips: input.toneChips,
-    toneNotes: input.toneNotes,
-  });
+  const [openingText, entityRoster] = await Promise.all([
+    ctx.seedService.generateOpening({
+      anchorId: input.anchorEntityId,
+      character,
+      chronicleId,
+      locationId: input.locationId,
+      player: toLLMPlayer(ctx.identity),
+      playerId,
+      seedText: input.seedText,
+      title: input.title,
+      toneChips: input.toneChips,
+      toneNotes: input.toneNotes,
+    }),
+    buildInitialEntityRoster(ctx.worldSchemaStore, {
+      anchorId: input.anchorEntityId,
+      locationId: input.locationId,
+      locationName: input.location.locale.trim(),
+    }),
+  ]);
   const chronicle = await ctx.chronicleStore.ensureChronicle({
     anchorEntityId: input.anchorEntityId,
     beatsEnabled: input.beatsEnabled,
     characterId: input.characterId,
     chronicleId,
+    entityRoster,
     locationId: input.locationId,
     locationName: input.location.locale.trim(),
     openingText,

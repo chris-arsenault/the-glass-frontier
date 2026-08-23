@@ -98,7 +98,8 @@ export class SceneSubjectResolverNode implements GraphNode {
     }
 
     const exact = uniqueKindMatch(
-      await context.worldSchemaStore.findEntitiesByName({ name: state.sceneChange.subject }),
+      (await context.worldSchemaStore.findEntitiesByName({ name: state.sceneChange.subject }))
+        .filter((entity) => !entity.dm),
       state.sceneChange.subjectKind
     );
     if (exact !== undefined) {

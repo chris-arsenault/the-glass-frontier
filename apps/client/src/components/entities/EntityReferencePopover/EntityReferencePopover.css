@@ -1,0 +1,47 @@
+.entity-reference {
+  position: relative;
+  display: inline;
+}
+
+.entity-reference-trigger {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--text-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+
+.entity-reference-popover {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 0;
+  display: flex;
+  width: min(20rem, 80vw);
+  padding: var(--space-3);
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  flex-direction: column;
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+  line-height: 1.4;
+  text-align: left;
+  z-index: 20;
+}
+
+.entity-reference-popover strong {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.entity-reference-popover a {
+  color: var(--text-accent);
+  margin-top: var(--space-1);
+}

@@ -165,6 +165,12 @@ export const defaultChronicle = (
   beats: [],
   beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
+  entityRoster: {
+    entries: [],
+    locationName,
+    sceneId: null,
+    updatedAtTurn: 0,
+  },
   id: randomUUID(),
   locationName,
   metadata: undefined,

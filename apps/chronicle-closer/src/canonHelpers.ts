@@ -75,10 +75,12 @@ export type CanonDrop = {
 
 export type RosterEntry = {
   centralCount: number;
+  gmReferenceCount: number;
   id: string;
   kind: string;
   mentionedCount: number;
   name: string;
+  playerReferenceCount: number;
   slug: string;
 };
 
@@ -119,61 +121,96 @@ export const derivedProminence = (
   return PROMINENCE_ORDER.indexOf(earned) > PROMINENCE_ORDER.indexOf(current) ? earned : current;
 };
 
-const collectOfferedSnippets = (
+const collectRosterEntries = (
   turns: Turn[]
 ): Map<string, { kind: string; name: string; slug: string }> => {
-  const offered = new Map<string, { kind: string; name: string; slug: string }>();
+  const roster = new Map<string, { kind: string; name: string; slug: string }>();
   for (const turn of turns) {
-    for (const snippet of turn.entityOffered ?? []) {
-      offered.set(snippet.id, { kind: snippet.kind, name: snippet.name, slug: snippet.slug });
+    for (const entity of turn.entityRoster ?? []) {
+      roster.set(entity.id, { kind: entity.kind, name: entity.name, slug: entity.slug });
     }
   }
-  return offered;
+  return roster;
 };
 
-const recordUsage = (
+const ensureRosterEntry = (
   entries: Map<string, RosterEntry>,
-  offered: Map<string, { kind: string; name: string; slug: string }>,
-  usage: NonNullable<Turn['entityUsage']>[number]
-): void => {
-  const snippet = offered.get(usage.entityId);
-  if (usage.usage === 'unused' || snippet === undefined) {
-    return;
+  identities: Map<string, { kind: string; name: string; slug: string }>,
+  entityId: string
+): RosterEntry | null => {
+  const identity = identities.get(entityId);
+  if (identity === undefined) {
+    return null;
   }
-  const entry = entries.get(usage.entityId) ?? {
+  const entry = entries.get(entityId) ?? {
     centralCount: 0,
-    id: usage.entityId,
-    kind: snippet.kind,
+    gmReferenceCount: 0,
+    id: entityId,
+    kind: identity.kind,
     mentionedCount: 0,
-    name: snippet.name,
-    slug: snippet.slug,
+    name: identity.name,
+    playerReferenceCount: 0,
+    slug: identity.slug,
   };
-  if (usage.usage === 'central') {
-    entry.centralCount += 1;
-  } else {
-    entry.mentionedCount += 1;
+  entries.set(entityId, entry);
+  return entry;
+};
+
+const recordReferences = (
+  entries: Map<string, RosterEntry>,
+  identities: Map<string, { kind: string; name: string; slug: string }>,
+  turn: Turn
+): void => {
+  for (const reference of turn.entityReferences ?? []) {
+    const entry = ensureRosterEntry(entries, identities, reference.entityId);
+    if (entry === null) {
+      continue;
+    }
+    if (reference.speaker === 'player') {
+      entry.playerReferenceCount += 1;
+    } else {
+      entry.gmReferenceCount += 1;
+    }
   }
-  entries.set(usage.entityId, entry);
+};
+
+const recordUsage = (entries: Map<string, RosterEntry>, turn: Turn): void => {
+  for (const usage of turn.entityUsage ?? []) {
+    const entry = entries.get(usage.entityId);
+    if (entry === undefined) {
+      continue;
+    }
+    if (usage.usage === 'central') {
+      entry.centralCount += 1;
+    } else if (usage.usage === 'mentioned') {
+      entry.mentionedCount += 1;
+    }
+  }
+};
+
+const compareRosterEntries = (left: RosterEntry, right: RosterEntry): number => {
+  const comparisons = [
+    right.centralCount - left.centralCount,
+    right.playerReferenceCount - left.playerReferenceCount,
+    right.gmReferenceCount - left.gmReferenceCount,
+    right.mentionedCount - left.mentionedCount,
+  ];
+  return comparisons.find((comparison) => comparison !== 0) ?? 0;
 };
 
 /**
- * The canon entities that appeared during play, ranked by how central they
- * were. Names and kinds come from the offered snippets persisted on each turn,
- * so the roster needs no canon reads.
+ * Established canon entities that player or GM transcript text actually
+ * referenced. The per-turn public roster supplies stable identity without a
+ * canon read; entities that were merely displayed never enter closure review.
  */
 export const buildRoster = (turns: Turn[]): RosterEntry[] => {
-  const offered = collectOfferedSnippets(turns);
+  const identities = collectRosterEntries(turns);
   const entries = new Map<string, RosterEntry>();
   for (const turn of turns) {
-    for (const usage of turn.entityUsage ?? []) {
-      recordUsage(entries, offered, usage);
-    }
+    recordReferences(entries, identities, turn);
+    recordUsage(entries, turn);
   }
-  return [...entries.values()].sort((a, b) =>
-    b.centralCount === a.centralCount
-      ? b.mentionedCount - a.mentionedCount
-      : b.centralCount - a.centralCount
-  );
+  return [...entries.values()].sort(compareRosterEntries);
 };
 
 /**

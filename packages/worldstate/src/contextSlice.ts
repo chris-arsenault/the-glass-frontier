@@ -19,7 +19,7 @@ type SliceRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
-  props: { facts?: Record<string, string | number> } | null;
+  props: { facts?: Record<string, string | number>; gmNotes?: string[] } | null;
   hops: number;
   reach: number;
   tag_overlap: number;
@@ -51,6 +51,7 @@ seeds AS (
   FROM entity e
   WHERE e.id = ANY($2::uuid[])
     AND NOT e.is_article
+    AND NOT e.dm
 ),
 walk AS (
   SELECT s.id, s.hops, s.reach FROM seeds s
@@ -63,7 +64,9 @@ walk AS (
   JOIN LATERAL (
     SELECT CASE WHEN edge.src_id = w.id THEN edge.dst_id ELSE edge.src_id END AS id
   ) nxt ON true
-  JOIN entity next_entity ON next_entity.id = nxt.id AND NOT next_entity.is_article
+  JOIN entity next_entity ON next_entity.id = nxt.id
+    AND NOT next_entity.is_article
+    AND NOT next_entity.dm
   WHERE w.hops < $3
     AND wrk.category <> 'banned'
     AND COALESCE((edge.props ->> 'live')::boolean, true)
@@ -114,6 +117,7 @@ JOIN entity e ON e.id = s.id
 JOIN world_prominence wp ON wp.id = e.prominence
 WHERE wp.rank >= $5
   AND NOT e.is_article
+  AND NOT e.dm
 ORDER BY score DESC, e.created_at ASC
 LIMIT $7`;
 
@@ -157,6 +161,7 @@ export class ContextSliceReader {
     return result.rows.map((row) => ({
       description: row.description ?? undefined,
       facts: row.props?.facts ?? {},
+      gmNotes: row.props?.gmNotes ?? [],
       hops: row.hops,
       id: row.id,
       kind: row.kind,

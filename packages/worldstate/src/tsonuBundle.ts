@@ -125,6 +125,7 @@ const buildEntity = (entry: TsonuEntry): unknown => ({
   dm: entry.dm,
   externalKey: key(entry.id),
   facts: buildFacts(entry),
+  gmNotes: buildGmNotes(entry),
   isArticle: entry.is_article,
   kind: entry.kind,
   name: entry.title,
@@ -139,6 +140,21 @@ const buildEntity = (entry: TsonuEntry): unknown => ({
   veiled: entry.veiled,
   veilTagline: entry.veil_tagline,
 });
+
+const buildGmNotes = (entry: TsonuEntry): string[] | undefined => {
+  const notes = entry.sections
+    .filter((section) => section.format === 'prose' && section.section === 'usage_notes')
+    .flatMap((section) => {
+      const bullets = section.markdown
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('- '))
+        .map((line) => line.slice(2).trim());
+      return bullets.length > 0 ? bullets : [section.markdown.trim()];
+    })
+    .filter((note) => note.length > 0);
+  return notes.length > 0 ? notes : undefined;
+};
 
 /**
  * Authored spatial positions, with entity references rewritten to the same
@@ -201,7 +217,7 @@ const buildLore = (entry: TsonuEntry, entryIds: Set<string>): unknown[] => {
   const positionBySection = new Map<string, number>();
   const fragments: unknown[] = [];
   for (const section of entry.sections) {
-    if (section.format !== 'prose') {
+    if (section.format !== 'prose' || section.section === 'usage_notes') {
       continue;
     }
     const owner = section.owner_id;

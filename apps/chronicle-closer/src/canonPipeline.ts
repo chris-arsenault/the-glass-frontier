@@ -67,9 +67,11 @@ const rosterPayload = (
     knownEntities: roster.map((entry) => ({
       centralTurns: entry.centralCount,
       eligibleForLore: isEligibleForLore(entry, sceneSubjects),
+      gmReferences: entry.gmReferenceCount,
       kind: entry.kind,
       mentionedTurns: entry.mentionedCount,
       name: entry.name,
+      playerReferences: entry.playerReferenceCount,
       slug: entry.slug,
     })),
   });

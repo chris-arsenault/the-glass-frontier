@@ -2,9 +2,10 @@ import type { ProposedEntity, ProposedRelationship } from '@glass-frontier/dto';
 
 /** The entity props envelope: the fact card plus any authored spatial geometry. */
 export const entityPropsJson = (proposed: ProposedEntity): string => {
-  const { facts = {}, positions, routeGeometry } = proposed;
+  const { facts = {}, gmNotes, positions, routeGeometry } = proposed;
   return JSON.stringify({
     facts,
+    ...(gmNotes !== undefined && gmNotes.length > 0 ? { gmNotes } : {}),
     ...(positions !== undefined && positions.length > 0 ? { positions } : {}),
     ...(routeGeometry === undefined ? {} : { routeGeometry }),
   });

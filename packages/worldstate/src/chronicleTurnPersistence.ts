@@ -36,7 +36,8 @@ type TurnRow = {
   location_delta: Turn['locationDelta'] | null;
   beat_tracker: Turn['beatTracker'] | null;
   gm_trace: Turn['gmTrace'] | null;
-  entity_offered: Turn['entityOffered'] | null;
+  entity_references: Turn['entityReferences'] | null;
+  entity_roster: Turn['entityRoster'] | null;
   entity_usage: Turn['entityUsage'] | null;
 };
 
@@ -47,7 +48,7 @@ const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace, entity_offered, entity_usage
+  beat_tracker, gm_trace, entity_roster, entity_references, entity_usage
   FROM chronicle_turn`;
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
@@ -58,12 +59,12 @@ const TURN_INSERT = `INSERT INTO chronicle_turn (
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace, entity_offered, entity_usage
+  beat_tracker, gm_trace, entity_roster, entity_references, entity_usage
 ) VALUES (
   $1::uuid, $2::uuid, $3, now(), $4, $5, $6,
   $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12, $13, $14::jsonb, $15,
   $16, $17, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb,
-  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26::jsonb
+  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26::jsonb, $27::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -111,7 +112,8 @@ const toTurn = (row: TurnRow): Turn => ({
   advancesTimeline: optional(row.advances_timeline),
   beatTracker: optional(row.beat_tracker),
   chronicleId: row.chronicle_id,
-  entityOffered: optional(row.entity_offered),
+  entityReferences: optional(row.entity_references),
+  entityRoster: optional(row.entity_roster),
   entityUsage: optional(row.entity_usage),
   executedNodes: optional(row.executed_nodes),
   failure: row.failure,
@@ -160,7 +162,8 @@ const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unkn
   optionalJson(turn.locationDelta),
   optionalJson(turn.beatTracker),
   optionalJson(turn.gmTrace),
-  optionalJson(turn.entityOffered),
+  optionalJson(turn.entityRoster),
+  optionalJson(turn.entityReferences),
   optionalJson(turn.entityUsage),
 ];
 

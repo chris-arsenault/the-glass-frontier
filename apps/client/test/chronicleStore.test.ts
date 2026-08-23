@@ -71,6 +71,12 @@ const chronicle: Chronicle = {
   beats: [],
   beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
+  entityRoster: {
+    entries: [],
+    locationName: 'Luminous Quay',
+    sceneId: null,
+    updatedAtTurn: 0,
+  },
   id: CHRONICLE_ID,
   locationName: 'Luminous Quay',
   openingText: 'You wait beneath the quay lights.',
@@ -108,6 +114,7 @@ type TurnResult = {
   character: null;
   chronicleStatus: Chronicle['status'];
   entityFocus: Chronicle['entityFocus'];
+  entityRoster: Chronicle['entityRoster'];
   locationName: string;
   turn: Turn;
 };
@@ -127,6 +134,7 @@ const turnResult = (
   character: null,
   chronicleStatus: 'open',
   entityFocus: { entityScores: {}, tagScores: {} },
+  entityRoster: chronicle.entityRoster,
   locationName: 'Auric Causeway',
   turn: {
     chronicleId: CHRONICLE_ID,
@@ -308,6 +316,28 @@ describe('chronicleStore turn handling', () => {
     expect(state.turnProgress).toBeNull();
     expect(state.turnSequence).toBe(2);
     expect(state.turnViews).not.toHaveProperty(jobId);
+  });
+
+  it('attaches selected entity ids and clears them only after a committed turn', async () => {
+    const entityId = '11111111-2222-4333-8444-555555555555';
+    useChronicleStore.getState().toggleEntityTarget(entityId);
+    mocks.gmPostMessage.mockImplementation(
+      ({ content }: { content: TranscriptEntry }) => Promise.resolve(turnResult(content))
+    );
+
+    await useChronicleStore.getState().sendPlayerMessage({ content: 'Ask about passage.' });
+
+    expect(mocks.gmPostMessage).toHaveBeenCalledWith(expect.objectContaining({
+      entityTargetIds: [entityId],
+    }));
+    expect(useChronicleStore.getState().selectedEntityIds).toEqual([]);
+
+    useChronicleStore.getState().toggleEntityTarget(entityId);
+    mocks.gmPostMessage.mockRejectedValueOnce(new Error(NETWORK_FAILURE));
+    await expect(
+      useChronicleStore.getState().sendPlayerMessage({ content: 'Try again.' })
+    ).rejects.toThrow(NETWORK_FAILURE);
+    expect(useChronicleStore.getState().selectedEntityIds).toEqual([entityId]);
   });
 
   it('targets the third upcoming turn when wrap is requested before play begins', async () => {

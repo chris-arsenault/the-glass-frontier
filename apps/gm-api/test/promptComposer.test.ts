@@ -34,7 +34,8 @@ describe('PromptComposer', () => {
 
     const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
 
-    expect(prompt.instructions).toBe('instructions:action-resolver');
+    expect(prompt.instructions).toContain('instructions:action-resolver');
+    expect(prompt.instructions).toContain('no entity must appear');
     expect(rendered[0]?.data).toEqual({ character: { name: 'Vex' }, scene: null });
   });
 
@@ -102,12 +103,14 @@ describe('PromptComposer', () => {
     const composer = new PromptComposer(runtime);
     const context = buildContext({
       entityContext: {
+        candidates: [],
         focusEntities: [],
         focusTags: [],
         offered: [
           {
             description: 'A smuggling ring that controls the ash docks.',
             facts: { founded: 2402 },
+            gmNotes: ['Its dock crews close ranks when challenged.'],
             id: 'entity-1',
             kind: 'faction',
             loreFragments: [],
@@ -117,6 +120,7 @@ describe('PromptComposer', () => {
             tags: ['trade'],
           },
         ],
+        roster: [],
       },
       gmResponse: {
         content: 'The cartel enforcer blocks the doorway.',
@@ -135,6 +139,7 @@ describe('PromptComposer', () => {
     expect(developer).toContain('### ENTITIES');
     expect(developer).toContain('ash-cartel');
     expect(developer).toContain('A smuggling ring that controls the ash docks.');
+    expect(developer).toContain('Its dock crews close ranks when challenged.');
   });
 
   it('throws for a template with no registered message order', async () => {

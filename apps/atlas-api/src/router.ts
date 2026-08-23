@@ -5,6 +5,7 @@ import {
   type HardState,
 } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
+import { buildInitialEntityRoster } from '@glass-frontier/worldstate';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -103,7 +104,14 @@ export const appRouter = t.router({
         locationSlug: input.locationSlug,
       });
 
-      const focusChoices = await ctx.worldSchemaStore.listFocusChoices({ locationId: location.id });
+      const [entityRoster, focusChoices] = await Promise.all([
+        buildInitialEntityRoster(ctx.worldSchemaStore, {
+          anchorId: anchor.id,
+          locationId: location.id,
+          locationName: location.name,
+        }),
+        ctx.worldSchemaStore.listFocusChoices({ locationId: location.id }),
+      ]);
       if (!focusChoices.some((entity) => entity.id === anchor.id)) {
         throw new Error('Anchor is not a focus choice for this location');
       }
@@ -111,6 +119,7 @@ export const appRouter = t.router({
       return ctx.chronicleStore.ensureChronicle({
         anchorEntityId: anchor.id,
         characterId: input.characterId,
+        entityRoster,
         locationId: location.id,
         locationName: location.name,
         playerId: ctx.identity.sub,

@@ -13,11 +13,13 @@ export { ProposalRejected, validateProposal } from './canonValidation';
 
 // === Canon import tooling ===
 export { buildTsonuProposal } from './tsonuBundle';
+export { buildInitialEntityRoster, toEntityRosterEntries } from './entityRoster';
 
 // === Types ===
 export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor } from './types';
 export type { EntityStats } from './entityReader';
 export type {
   EntityEmbeddingSource,
+  ReferenceEntityCandidate,
   SubjectEntityCandidate,
 } from './entityEmbeddings';

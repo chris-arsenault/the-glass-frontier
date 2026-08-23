@@ -1,5 +1,5 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
-import type { CanonProposal, Turn } from '@glass-frontier/dto';
+import type { CanonProposal, EntityRosterEntry, Turn } from '@glass-frontier/dto';
 import type { RetryLLMClient } from '@glass-frontier/llm-client';
 import type { ChronicleSnapshot, WorldSchemaStore } from '@glass-frontier/worldstate';
 import { describe, expect, it, vi } from 'vitest';
@@ -36,19 +36,26 @@ const turn = (overrides: Partial<Turn>): Turn => ({
   ...overrides,
 });
 
-const brakeSnippet = {
+const brakeRosterEntry: EntityRosterEntry = {
+  availability: ['connected'],
   id: BRAKE_ID,
   kind: 'installation',
-  loreFragments: [],
   name: 'Brake',
-  score: 1,
   slug: 'brake',
-  tags: [],
 };
 
 const usageTurn = (sequence: number, usage: 'central' | 'mentioned' | 'unused'): Turn =>
   turn({
-    entityOffered: [brakeSnippet],
+    entityReferences: [{
+      confidence: 1,
+      entityId: BRAKE_ID,
+      entitySlug: 'brake',
+      method: 'exact',
+      span: { end: 5, start: 0, text: 'Brake' },
+      speaker: 'player',
+      transcriptEntryId: `message-${sequence}`,
+    }],
+    entityRoster: [brakeRosterEntry],
     entityUsage: [
       {
         emergentTags: null,
@@ -80,12 +87,32 @@ describe('derivedProminence', () => {
 });
 
 describe('buildRoster', () => {
-  it('ranks central entities first and skips unused or unknown ones', () => {
+  it('ranks referenced entities and excludes display-only or unknown ids', () => {
     const turns = [
       usageTurn(0, 'mentioned'),
       turn({
-        entityOffered: [
-          { ...brakeSnippet, id: KEL_ID, name: KEL_NAME, slug: KEL_SLUG },
+        entityReferences: [
+          {
+            confidence: 1,
+            entityId: KEL_ID,
+            entitySlug: KEL_SLUG,
+            method: 'exact',
+            span: { end: 10, start: 0, text: KEL_NAME },
+            speaker: 'gm',
+            transcriptEntryId: 'gm-1',
+          },
+          {
+            confidence: 0.8,
+            entityId: 'entity-unknown',
+            entitySlug: 'unknown',
+            method: 'semantic',
+            span: { end: 17, start: 11, text: 'warden' },
+            speaker: 'gm',
+            transcriptEntryId: 'gm-1',
+          },
+        ],
+        entityRoster: [
+          { ...brakeRosterEntry, id: KEL_ID, name: KEL_NAME, slug: KEL_SLUG },
         ],
         entityUsage: [
           {
@@ -105,14 +132,31 @@ describe('buildRoster', () => {
         ],
         turnSequence: 1,
       }),
-      usageTurn(2, 'unused'),
+      turn({
+        entityRoster: [{
+          ...brakeRosterEntry,
+          id: 'display-only',
+          name: 'Displayed Only',
+          slug: 'displayed-only',
+        }],
+        entityUsage: [{
+          emergentTags: null,
+          entityId: 'display-only',
+          entitySlug: 'displayed-only',
+          tags: [],
+          usage: 'unused',
+        }],
+        turnSequence: 2,
+      }),
     ];
 
     const roster = buildRoster(turns);
 
     expect(roster.map((entry) => entry.slug)).toEqual([KEL_SLUG, 'brake']);
     expect(roster[0]?.centralCount).toBe(1);
+    expect(roster[0]?.gmReferenceCount).toBe(1);
     expect(roster[1]?.mentionedCount).toBe(1);
+    expect(roster[1]?.playerReferenceCount).toBe(1);
   });
 });
 
@@ -174,18 +218,22 @@ describe('sanitizeExtraction', () => {
   const roster = [
     {
       centralCount: 1,
+      gmReferenceCount: 1,
       id: BRAKE_ID,
       kind: 'installation',
       mentionedCount: 0,
       name: 'Brake',
+      playerReferenceCount: 1,
       slug: 'brake',
     },
     {
       centralCount: 0,
+      gmReferenceCount: 0,
       id: KEL_ID,
       kind: 'npc',
       mentionedCount: 2,
       name: KEL_NAME,
+      playerReferenceCount: 2,
       slug: KEL_SLUG,
     },
   ];

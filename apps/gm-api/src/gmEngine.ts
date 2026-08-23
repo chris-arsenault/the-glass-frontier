@@ -37,8 +37,9 @@ import { createProgressEmitterFromEnv } from './eventEmitters/progressEmitter';
 import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
 import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
+import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceResolverNode';
 import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
-import { GmGraphOrchestrator } from './gmGraph/orchestrator';
+import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
 import { buildSceneContext } from './scenes/sceneLifecycle';
 import { ChronicleTelemetry } from './telemetry';
 import type { GraphContext, ChronicleState } from './types';
@@ -52,7 +53,27 @@ type GmEngineOptions = {
   modelConfigStore: ModelConfigStore;
 };
 
+type HandlePlayerMessageOptions = {
+  llmPlayer: LLMPlayer;
+  targetEntityIds?: string[];
+};
+
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
+const GM_PIPELINE: PipelineStage[] = [
+  { nodeId: 'intent-classifier', type: 'sequential' },
+  { nodeId: 'scene-subject-resolver', type: 'sequential' },
+  { nodeId: 'intent-beat-detector', type: 'sequential' },
+  { nodeId: 'entity-selector', type: 'sequential' },
+  { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
+  { nodeId: 'check-planner', type: 'sequential' },
+  { nodeId: 'check-runner', type: 'sequential' },
+  { nodeId: 'gm-response-node', type: 'sequential' },
+  { nodeId: 'gm-entity-reference-resolver', type: 'sequential' },
+  {
+    nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'],
+    type: 'parallel',
+  },
+];
 
 const logResolvedTurn = (
   graphResult: GraphContext,
@@ -108,7 +129,7 @@ class GmEngine {
     chronicleId: string,
     playerMessage: TranscriptEntry,
     requestId: string,
-    llmPlayer: LLMPlayer,
+    options: HandlePlayerMessageOptions
   ): Promise<{
     turn: Turn;
     updatedCharacter: Character | null;
@@ -117,7 +138,9 @@ class GmEngine {
     beats: Chronicle['beats'];
     entityFocus: Chronicle['entityFocus'];
     activeScene: Chronicle['activeScene'];
+    entityRoster: Chronicle['entityRoster'];
   }> {
+    const { llmPlayer, targetEntityIds = [] } = options;
     this.#assertChronicleId(chronicleId);
     const chronicleState = await this.#loadChronicleState(chronicleId);
     this.#ensureChronicleOpen(chronicleState);
@@ -135,6 +158,7 @@ class GmEngine {
       chronicleStore: this.chronicleStore,
       llmPlayer,
       playerMessage,
+      targetEntityIds,
       templateRuntime,
       turnId,
       turnSequence,
@@ -142,7 +166,8 @@ class GmEngine {
     });
     const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
     const worldUpdater = new WorldUpdater();
-    const updatedContext = await worldUpdater.update(graphResult);
+    const worldUpdatedContext = await worldUpdater.update(graphResult);
+    const updatedContext = await this.#refreshRosterAfterTransition(worldUpdatedContext);
     const targetEndTurn = updatedContext.chronicleState.chronicle.targetEndTurn;
     const wrapTargetReached =
       typeof targetEndTurn === 'number' &&
@@ -197,12 +222,14 @@ class GmEngine {
     const beats = finalContext.chronicleState.chronicle.beats;
     const entityFocus = finalContext.chronicleState.chronicle.entityFocus;
     const activeScene = finalContext.chronicleState.chronicle.activeScene;
+    const entityRoster = finalContext.chronicleState.chronicle.entityRoster;
 
     return {
       activeScene,
       beats,
       chronicleStatus,
       entityFocus,
+      entityRoster,
       locationName,
       turn,
       updatedCharacter,
@@ -213,6 +240,8 @@ class GmEngine {
     const intentClassifier = new IntentClassifierNode();
     const sceneSubjectResolver = new SceneSubjectResolverNode();
     const entitySelector = new EntitySelectorNode();
+    const playerEntityReferenceResolver = new EntityReferenceResolverNode('player');
+    const gmEntityReferenceResolver = new EntityReferenceResolverNode('gm');
     const beatDetector = new BeatDetectorNode();
     const beatTracker = new BeatTrackerNode();
     const checkPlanner = new CheckPlannerNode();
@@ -223,15 +252,16 @@ class GmEngine {
     const locationDeltaNode = new LocationDeltaNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
 
-    // All nodes that can be executed
     const nodes = [
       intentClassifier,
       sceneSubjectResolver,
       beatDetector,
       checkPlanner,
       entitySelector,
+      playerEntityReferenceResolver,
       checkRunner,
       gmResponseNode,
+      gmEntityReferenceResolver,
       entityJudgeNode,
       beatTracker,
       gmSummaryNode,
@@ -239,23 +269,29 @@ class GmEngine {
       inventoryDeltaNode,
     ];
 
-    // Canonical execution pipeline - defines the exact order and parallelism
-    const pipeline = [
-      { nodeId: 'intent-classifier', type: 'sequential' as const },
-      { nodeId: 'scene-subject-resolver', type: 'sequential' as const },
-      { nodeIds: ['intent-beat-detector', 'check-planner'], type: 'parallel' as const },
-      { nodeId: 'entity-selector', type: 'sequential' as const },
-      { nodeId: 'check-runner', type: 'sequential' as const },
-      { nodeId: 'gm-response-node', type: 'sequential' as const },
-      { nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'], type: 'parallel' as const },
-    ];
-
     return new GmGraphOrchestrator(
       nodes,
-      pipeline,
+      GM_PIPELINE,
       this.telemetry,
       { progressEmitter: this.progressEmitter }
     );
+  }
+
+  async #refreshRosterAfterTransition(context: GraphContext): Promise<GraphContext> {
+    const roster = context.chronicleState.chronicle.entityRoster;
+    const sceneId = context.chronicleState.chronicle.activeScene?.id ?? null;
+    if (
+      context.failure
+      || (roster.locationName === context.chronicleState.locationName && roster.sceneId === sceneId)
+    ) {
+      return context;
+    }
+    const turnEntityRoster = context.turnEntityRoster;
+    const delta = await new EntitySelectorNode().execute({
+      ...context,
+      effectiveScene: context.chronicleState.chronicle.activeScene,
+    });
+    return { ...context, ...delta, turnEntityRoster };
   }
 
   #assertChronicleId(chronicleId: string): void {
@@ -303,6 +339,7 @@ class GmEngine {
     chronicleStore,
     llmPlayer,
     playerMessage,
+    targetEntityIds,
     templateRuntime,
     turnId,
     turnSequence,
@@ -313,6 +350,7 @@ class GmEngine {
     turnId: string;
     chronicleState: ChronicleState;
     playerMessage: TranscriptEntry;
+    targetEntityIds: string[];
     templateRuntime: PromptTemplateRuntime;
     turnSequence: number;
     chronicleStore: ChronicleStore;
@@ -335,6 +373,7 @@ class GmEngine {
       sceneOutcome: 'continue',
       sceneOutcomeReason: null,
       shouldCloseChronicle: false,
+      targetEntityIds,
       telemetry: this.telemetry,
       templates: templateRuntime,
       turnId,
@@ -398,7 +437,8 @@ class GmEngine {
       advancesTimeline: graphResult.advancesTimeline,
       beatTracker: graphResult.beatTracker,
       chronicleId,
-      entityOffered: graphResult.entityContext?.offered,
+      entityReferences: graphResult.entityReferences,
+      entityRoster: graphResult.turnEntityRoster,
       entityUsage: graphResult.entityUsage,
       executedNodes: graphResult.executedNodes,
       failure,

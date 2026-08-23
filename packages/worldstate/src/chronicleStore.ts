@@ -25,6 +25,11 @@ const ensureInventory = (character: Character): Character => {
   };
 };
 
+const initialEntityRoster = (locationName: string, roster?: Chronicle['entityRoster']):
+Chronicle['entityRoster'] => roster ?? {
+  entries: [], locationName, sceneId: null, updatedAtTurn: 0,
+};
+
 const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
   const beatsEnabled =
     chronicle.beatsEnabled === undefined || chronicle.beatsEnabled === null
@@ -37,6 +42,7 @@ const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
     activeScene: chronicle.activeScene ?? null,
     beats,
     beatsEnabled,
+    entityRoster: chronicle.entityRoster,
     summaries,
   };
 };
@@ -88,6 +94,7 @@ class PostgresChronicleStore implements ChronicleStore {
     anchorEntityId?: string | null;
     toneChips?: string[];
     toneNotes?: string;
+    entityRoster?: Chronicle['entityRoster'];
   }): Promise<Chronicle> {
     const chronicleId = params.chronicleId ?? randomUUID();
     const existing = await this.getChronicle(chronicleId);
@@ -379,6 +386,7 @@ class PostgresChronicleStore implements ChronicleStore {
       anchorEntityId?: string | null;
       toneChips?: string[];
       toneNotes?: string;
+      entityRoster?: Chronicle['entityRoster'];
     },
     chronicleId: string
   ): Chronicle {
@@ -389,6 +397,7 @@ class PostgresChronicleStore implements ChronicleStore {
       beatsEnabled: params.beatsEnabled ?? true,
       characterId: params.characterId,
       entityFocus: { entityScores: {}, tagScores: {} },
+      entityRoster: initialEntityRoster(params.locationName, params.entityRoster),
       id: chronicleId,
       locationId: params.locationId ?? undefined,
       locationName: params.locationName,

@@ -94,6 +94,12 @@ const BASE_CHRONICLE: Chronicle = {
   beatsEnabled: true,
   characterId: PLAYWRIGHT_CHARACTER_ID,
   entityFocus: { entityScores: {}, tagScores: {} },
+  entityRoster: {
+    entries: [],
+    locationName: 'Luminous Quay',
+    sceneId: null,
+    updatedAtTurn: 0,
+  },
   id: PLAYWRIGHT_CHRONICLE_ID,
   locationId: LOCATION_ROOT_ID,
   locationName: 'Luminous Quay',

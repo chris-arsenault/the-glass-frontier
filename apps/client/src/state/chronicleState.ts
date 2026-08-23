@@ -14,37 +14,13 @@ import type {
   InventoryDelta,
   LlmTrace,
   PlayerFeedbackVisibilityLevel,
+  EntityReference,
+  EntityRosterEntry,
 } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
 export type ChronicleLifecycle = 'open' | 'closed';
 export type DirectoryStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-type EntitySnippet = {
-  id: string;
-  slug: string;
-  name: string;
-  kind: string;
-  subkind?: string;
-  description?: string;
-  status?: string;
-  tags: string[];
-  loreFragments: Array<{
-    slug: string;
-    title: string;
-    summary: string;
-    tags: string[];
-  }>;
-  score: number;
-};
-
-type EntityUsageEntry = {
-  entityId: string;
-  entitySlug: string;
-  tags: string[];
-  usage: 'unused' | 'mentioned' | 'central';
-  emergentTags: string[] | null;
-};
 
 /**
  * One transcript entry. Turn-level data lives in the TurnView keyed by
@@ -61,8 +37,8 @@ export type TurnView = {
   advancesTimeline: boolean | null;
   attributeKey: Attribute | null;
   beatTracker: BeatTracker | null;
-  entityOffered: EntitySnippet[] | null;
-  entityUsage: EntityUsageEntry[] | null;
+  entityReferences: EntityReference[] | null;
+  entityRoster: EntityRosterEntry[] | null;
   executedNodes: string[] | null;
   gmSummary: string | null;
   gmTrace: LlmTrace | null;
@@ -152,6 +128,7 @@ export type ChronicleState = {
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
   playerSettingsError: Error | null;
   isUpdatingPlayerSettings: boolean;
+  selectedEntityIds: string[];
 }
 
 export type ChronicleStore = {
@@ -167,6 +144,7 @@ export type ChronicleStore = {
   resetStore: () => void;
   loadPlayerSettings: () => Promise<void>;
   updatePlayerSettings: (settings: PlayerSettings) => Promise<void>;
+  toggleEntityTarget: (entityId: string) => void;
 } & ChronicleState
 
 export type ChronicleSeedCreationDetails = {

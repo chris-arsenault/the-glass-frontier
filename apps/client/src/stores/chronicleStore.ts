@@ -70,8 +70,8 @@ const emptyTurnView = (): TurnView => ({
   advancesTimeline: null,
   attributeKey: null,
   beatTracker: null,
-  entityOffered: null,
-  entityUsage: null,
+  entityReferences: null,
+  entityRoster: null,
   executedNodes: null,
   gmSummary: null,
   gmTrace: null,
@@ -91,8 +91,8 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   advancesTimeline: typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
   attributeKey: turn.skillCheckPlan?.attribute ?? null,
   beatTracker: turn.beatTracker ?? null,
-  entityOffered: turn.entityOffered ?? null,
-  entityUsage: turn.entityUsage ?? null,
+  entityReferences: turn.entityReferences ?? null,
+  entityRoster: turn.entityRoster ?? null,
   executedNodes: turn.executedNodes ?? null,
   gmSummary: turn.gmSummary ?? null,
   gmTrace: turn.gmTrace ?? null,
@@ -333,6 +333,7 @@ const createBaseState = () => ({
   playerSettingsError: null as Error | null,
   playerSettingsStatus: 'idle' as const,
   preferredCharacterId: null as string | null,
+  selectedEntityIds: [] as string[],
   startLocationName: null as string | null,
   transportError: null as Error | null,
   turnProgress: null as TurnProgress | null,
@@ -362,6 +363,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       momentumTrend: null,
       pendingPlayerMessageId: null,
       pendingTurnJobId: null,
+      selectedEntityIds: [],
       startLocationName: null,
       transportError: null,
       turnProgress: null,
@@ -528,6 +530,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
+        selectedEntityIds: [],
         startLocationName: null,
         transportError: null,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
@@ -684,10 +687,21 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const { activeScene, beats, character, chronicleStatus, entityFocus, locationName, turn } =
+      const targetEntityIds = get().selectedEntityIds;
+      const {
+        activeScene,
+        beats,
+        character,
+        chronicleStatus,
+        entityFocus,
+        entityRoster,
+        locationName,
+        turn,
+      } =
         await gmClient.postMessage.mutate({
           chronicleId,
           content: playerEntry,
+          entityTargetIds: targetEntityIds,
           requestId: playerEntry.id,
         });
       progressStream.markComplete(jobId);
@@ -734,10 +748,11 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
                 activeScene,
                 beats,
                 entityFocus,
+                entityRoster,
                 status: 'closed',
               }
               : prev.chronicleRecord
-                ? { ...prev.chronicleRecord, activeScene, beats, entityFocus }
+                ? { ...prev.chronicleRecord, activeScene, beats, entityFocus, entityRoster }
                 : prev.chronicleRecord,
           chronicleStatus: chronicleStatus ?? prev.chronicleStatus,
           connectionState: 'connected',
@@ -749,6 +764,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           pendingPlayerMessageId:
             prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
           pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
+          selectedEntityIds: [],
           transportError: null,
           turnProgress: null,
           turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
@@ -838,6 +854,21 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       preferredCharacterId:
         characterId && characterId.trim().length > 0 ? characterId.trim() : null,
     }));
+  },
+
+  toggleEntityTarget(entityId) {
+    set((prev) => {
+      if (prev.selectedEntityIds.includes(entityId)) {
+        return {
+          ...prev,
+          selectedEntityIds: prev.selectedEntityIds.filter((id) => id !== entityId),
+        };
+      }
+      if (prev.selectedEntityIds.length >= 3) {
+        return prev;
+      }
+      return { ...prev, selectedEntityIds: [...prev.selectedEntityIds, entityId] };
+    });
   },
 
   async updatePlayerSettings(settings) {

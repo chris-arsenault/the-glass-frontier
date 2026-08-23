@@ -53,6 +53,12 @@ const chronicle: Chronicle = {
   beatsEnabled: true,
   characterId: character.id,
   entityFocus: { entityScores: {}, tagScores: {} },
+  entityRoster: {
+    entries: [],
+    locationName: 'Brake',
+    sceneId: null,
+    updatedAtTurn: 0,
+  },
   id: 'chronicle-1',
   locationName: 'Brake',
   openingText: 'You wait on Brake as the quartet tunes.',

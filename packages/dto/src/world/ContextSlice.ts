@@ -26,6 +26,8 @@ export type ContextSliceLore = z.infer<typeof ContextSliceLore>;
 export const ContextSliceEntity = z.object({
   description: z.string().optional(),
   facts: HardStateFacts.default({}),
+  /** Private usage guidance. Never include this object in a player response. */
+  gmNotes: z.array(z.string()).default([]),
   hops: z.number().int().nonnegative(),
   id: z.string().min(1),
   kind: HardStateKind,

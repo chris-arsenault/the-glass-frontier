@@ -298,7 +298,7 @@ export class EntityReader {
   async findLocationByName(input: { name: string }): Promise<HardState | null> {
     const result = await this.#pool.query<EntityRow>(
       `${ENTITY_SELECT}
-       WHERE e.is_location AND lower(e.name) = lower($1)
+       WHERE e.is_location AND NOT e.dm AND lower(e.name) = lower($1)
        ORDER BY wp.rank DESC, e.created_at ASC
        LIMIT 1`,
       [input.name.trim()]

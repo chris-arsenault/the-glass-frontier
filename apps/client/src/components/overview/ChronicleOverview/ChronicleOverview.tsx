@@ -59,7 +59,7 @@ const findAnchorInViews = (
     return null;
   }
   for (const view of views) {
-    const found = view.entityOffered?.find((entity) => entity.id === anchorId);
+    const found = view.entityRoster?.find((entity) => entity.id === anchorId);
     if (found !== undefined) {
       return { id: found.id, kind: found.kind, name: found.name, slug: found.slug };
     }
@@ -88,69 +88,6 @@ const AnchorEntityPanel = ({ anchorEntity }: AnchorEntityPanelProps): React.JSX.
           <p className="entity-unresolved-hint">Entity details will load after next turn</p>
         )}
       </div>
-    </div>
-  );
-};
-
-type EntityWithScore = {
-  id: string;
-  name: string;
-  slug: string;
-  kind: string;
-  score: number;
-};
-
-type EntityFocusPanelProps = {
-  entities: EntityWithScore[];
-  tags: Array<{ tag: string; score: number }>;
-};
-
-const EntityFocusPanel = ({ entities, tags }: EntityFocusPanelProps): React.JSX.Element => {
-  const hasEntities = entities.length > 0;
-  const hasTags = tags.length > 0;
-
-  if (!hasEntities && !hasTags) {
-    return (
-      <div>
-        <h3 className="panel-label">Entity Focus</h3>
-        <p className="session-panel-empty">
-          Entity tracking starts after your first turn. The system will identify and track entities that are central to your story.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h3 className="panel-label">Entity Focus</h3>
-      {hasEntities && (
-        <div className="entity-focus-section">
-          <h4 className="entity-focus-sublabel">Tracked Entities</h4>
-          <ul className="entity-focus-list">
-            {entities.map((entity) => (
-              <li key={entity.id} className="entity-focus-item">
-                <div className="entity-focus-details">
-                  <span className="entity-focus-name">{entity.name}</span>
-                  <span className="entity-focus-meta">{entity.kind} · {entity.slug}</span>
-                </div>
-                <span className="entity-focus-score">{entity.score.toFixed(1)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {hasTags && (
-        <div className="entity-focus-section">
-          <h4 className="entity-focus-sublabel">Tracked Tags</h4>
-          <div className="panel-tags">
-            {tags.map(({ score, tag }) => (
-              <span key={tag} className="session-chip chip-muted" title={`Score: ${score.toFixed(1)}`}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -243,70 +180,6 @@ const WrapTargetPanel = ({ currentTurn, targetEndTurn }: WrapTargetPanelProps): 
   );
 };
 
-type RecentEntityUsage = {
-  entityName: string;
-  entitySlug: string;
-  entityKind: string;
-  usage: 'unused' | 'mentioned' | 'central';
-  tags: string[];
-  emergentTags: string[] | null;
-  turnSequence: number;
-};
-
-type RecentEntityUsagePanelProps = {
-  recentUsage: RecentEntityUsage[];
-};
-
-const RecentEntityUsagePanel = ({ recentUsage }: RecentEntityUsagePanelProps): React.JSX.Element => {
-  if (recentUsage.length === 0) {
-    return (
-      <div>
-        <h3 className="panel-label">Recent Entity Usage</h3>
-        <p className="session-panel-empty">
-          After taking turns, this section shows which entities were central, mentioned, or unused in recent narrative responses.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h3 className="panel-label">Recent Entity Usage</h3>
-      <p className="entity-usage-hint">Entities from the last 5 turns</p>
-      <ul className="entity-usage-list">
-        {recentUsage.map((usage, index) => (
-          <li key={`${usage.entitySlug}-${usage.turnSequence}-${index}`} className="entity-usage-item" data-usage={usage.usage}>
-            <div className="entity-usage-header">
-              <span className="entity-usage-name">{usage.entityName}</span>
-              <span className={`entity-usage-badge entity-usage-${usage.usage}`}>
-                {usage.usage}
-              </span>
-            </div>
-            <div className="entity-usage-meta">
-              {usage.entityKind} · {usage.entitySlug} · Turn {usage.turnSequence}
-            </div>
-            {usage.tags.length > 0 && (
-              <div className="entity-usage-tags">
-                {usage.tags.map((tag) => (
-                  <span key={tag} className="session-chip chip-muted">{tag}</span>
-                ))}
-              </div>
-            )}
-            {usage.emergentTags && usage.emergentTags.length > 0 && (
-              <div className="entity-usage-tags">
-                <span className="entity-usage-emergent-label">Emergent:</span>
-                {usage.emergentTags.map((tag) => (
-                  <span key={tag} className="session-chip chip-muted">{tag}</span>
-                ))}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
 const ChronicleEmptyState = (): React.JSX.Element => (
   <section className="session-panel" aria-live="polite">
     <header className="session-panel-header">
@@ -375,95 +248,6 @@ export function ChronicleOverview({
     : null;
   const anchorEntity = anchorEntityFromMessages ?? remoteAnchorEntity;
 
-  // The canonical focus scores live on the chronicle (the same numbers the GM
-  // uses for retrieval); recent turns only supply display names for the ids.
-  const entityScores = chronicle?.entityFocus.entityScores;
-  const tagScores = chronicle?.entityFocus.tagScores;
-
-  const focusedEntities = useMemo((): EntityWithScore[] => {
-    const entityMap = new Map<string, { name: string; slug: string; kind: string }>();
-    for (const view of recentViews.slice(0, 20)) {
-      for (const entity of view.entityOffered ?? []) {
-        if (!entityMap.has(entity.id)) {
-          entityMap.set(entity.id, {
-            kind: entity.kind,
-            name: entity.name,
-            slug: entity.slug,
-          });
-        }
-      }
-    }
-
-    return Object.entries(entityScores ?? {})
-      .filter(([, score]) => score > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([entityId, score]) => {
-        const entityData = entityMap.get(entityId);
-        return {
-          id: entityId,
-          kind: entityData?.kind ?? 'unknown',
-          name: entityData?.name ?? entityId.substring(0, 8),
-          score: Math.round(score),
-          slug: entityData?.slug ?? entityId.substring(0, 8),
-        };
-      });
-  }, [entityScores, recentViews]);
-
-  const focusedTags = useMemo(() => {
-    return Object.entries(tagScores ?? {})
-      .filter(([, score]) => score > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15)
-      .map(([tag, score]) => ({ score: Math.round(score), tag }));
-  }, [tagScores]);
-
-  // Extract recent entity usage from recent turns
-  const recentEntityUsage = useMemo((): RecentEntityUsage[] => {
-    const usage: RecentEntityUsage[] = [];
-
-    const entityMap = new Map<string, { name: string; kind: string }>();
-    for (const view of recentViews.slice(0, 20)) {
-      for (const entity of view.entityOffered ?? []) {
-        if (!entityMap.has(entity.id)) {
-          entityMap.set(entity.id, { kind: entity.kind, name: entity.name });
-        }
-      }
-    }
-
-    const seenEntities = new Set<string>();
-    for (const view of recentViews.slice(0, 10)) {
-      if (!view.entityUsage || !view.turnSequence) {
-        continue;
-      }
-      for (const entityUsageEntry of view.entityUsage) {
-        // Skip if we've already seen this entity in a more recent turn
-        if (!entityUsageEntry.entityId || seenEntities.has(entityUsageEntry.entityId)) {
-          continue;
-        }
-        seenEntities.add(entityUsageEntry.entityId);
-
-        const entityData = entityMap.get(entityUsageEntry.entityId);
-        usage.push({
-          emergentTags: entityUsageEntry.emergentTags,
-          entityKind: entityData?.kind ?? 'unknown',
-          entityName: entityData?.name ?? entityUsageEntry.entitySlug,
-          entitySlug: entityUsageEntry.entitySlug,
-          tags: entityUsageEntry.tags,
-          turnSequence: view.turnSequence,
-          usage: entityUsageEntry.usage,
-        });
-
-        // Limit to 15 entities total
-        if (usage.length >= 15) {
-          return usage;
-        }
-      }
-    }
-
-    return usage;
-  }, [recentViews]);
-
   if (!chronicle) {
     return showEmptyState ? <ChronicleEmptyState /> : null;
   }
@@ -475,10 +259,6 @@ export function ChronicleOverview({
       <SeedTextPanel seedText={chronicle.seedText} />
 
       <AnchorEntityPanel anchorEntity={anchorEntity} />
-
-      <EntityFocusPanel entities={focusedEntities} tags={focusedTags} />
-
-      <RecentEntityUsagePanel recentUsage={recentEntityUsage} />
 
       <BeatsPanel beats={beats} focusedBeatId={focusedBeatId} beatsEnabled={beatsEnabled} />
 

@@ -26,7 +26,14 @@ const entityJudgeSchema = (slugs: string[]): ZodType<EntityJudgeResponse> => {
         slug: z.enum(slugs as [string, ...string[]]).describe('The slug of the entity'),
         usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
       })
-    ),
+    ).length(slugs.length).superRefine((results, issueContext) => {
+      if (new Set(results.map((entry) => entry.slug)).size !== slugs.length) {
+        issueContext.addIssue({
+          code: 'custom',
+          message: 'Return each offered entity exactly once.',
+        });
+      }
+    }),
   });
 };
 
@@ -38,7 +45,22 @@ export class EntitySelectorNode implements GraphNode {
       return {};
     }
     const entityContext = await buildEntityContext(context);
-    return { entityContext };
+    return {
+      chronicleState: {
+        ...context.chronicleState,
+        chronicle: {
+          ...context.chronicleState.chronicle,
+          entityRoster: {
+            entries: entityContext.roster,
+            locationName: context.chronicleState.locationName,
+            sceneId: context.effectiveScene?.id ?? null,
+            updatedAtTurn: context.turnSequence,
+          },
+        },
+      },
+      entityContext,
+      turnEntityRoster: entityContext.roster,
+    };
   }
 }
 
@@ -83,7 +105,19 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
       }];
     });
 
-    const nextFocus = applyEntityUsage(context.chronicleState.chronicle.entityFocus, usage);
+    const playerReferences = (context.entityReferences ?? [])
+      .filter((reference) => reference.speaker === 'player')
+      .flatMap((reference) => {
+        const source = context.entityContext?.candidates.find(
+          (candidate) => candidate.id === reference.entityId
+        );
+        return source === undefined ? [] : [{ entityId: source.id, tags: source.tags }];
+      });
+    const nextFocus = applyEntityUsage(
+      context.chronicleState.chronicle.entityFocus,
+      usage,
+      playerReferences
+    );
     const updatedChronicle = {
       ...context.chronicleState.chronicle,
       entityFocus: nextFocus,

@@ -19,6 +19,11 @@ import {
 } from '../../badges/beatTrackerPresentation';
 import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryDeltaBadge';
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
+import {
+  AnnotatedEntityText,
+  EntityReferenceLink,
+  entityReferenceRemarkPlugin,
+} from '../../entities/EntityReferencePopover/EntityReferencePopover';
 import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
 import './ChatCanvas.css';
 
@@ -415,6 +420,11 @@ export function ChatCanvas() {
             const timelineLabel = describeTimelineBadge(view?.advancesTimeline ?? null);
             const sceneLabel =
               sceneContext === null ? null : `${sceneContext.type} · ${sceneContext.subject}`;
+            const entityReferences = (view?.entityReferences ?? []).filter(
+              (reference) => reference.transcriptEntryId === entry.id
+            );
+            const entityRoster = view?.entityRoster ?? [];
+            const entityById = new Map(entityRoster.map((entity) => [entity.id, entity]));
 
             return (
               <article
@@ -522,7 +532,17 @@ export function ChatCanvas() {
                     <>
                       {isExpanded(entry.id) ? (
                         <div className="chat-entry-content">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown
+                            components={{
+                              a: (props) => (
+                                <EntityReferenceLink {...props} entityById={entityById} />
+                              ),
+                            }}
+                            remarkPlugins={[
+                              remarkGfm,
+                              entityReferenceRemarkPlugin(entityReferences),
+                            ]}
+                          >
                             {entry.content ?? ''}
                           </ReactMarkdown>
                         </div>
@@ -562,7 +582,11 @@ export function ChatCanvas() {
                         className="chat-entry-content"
                         title={playerIntent?.intentSummary ?? undefined}
                       >
-                        {entry.content}
+                        <AnnotatedEntityText
+                          content={entry.content}
+                          entities={entityRoster}
+                          references={entityReferences}
+                        />
                       </p>
                     ) : (
                       <p className="chat-entry-summary">
