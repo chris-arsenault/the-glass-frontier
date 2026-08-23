@@ -1,3 +1,4 @@
+import { log } from '@glass-frontier/utils';
 import { z, type ZodType } from 'zod';
 
 import { applyEntityUsage, type EntityUsageClassification } from '../../../entity/entityFocus';
@@ -63,7 +64,14 @@ export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
     const usage: EntityUsageClassification[] = result.results.flatMap((entry) => {
       const source = context.entityContext?.offered.find((candidate) => candidate.slug === entry.slug);
       if (source === undefined) {
-        console.warn(`No matching entity found for slug: ${entry.slug}`);
+        log('warn', 'gm.entity-judge-unmatched-slug', {
+          chronicleId: context.chronicleId,
+          offeredSlugs: (context.entityContext?.offered ?? [])
+            .map((candidate) => candidate.slug)
+            .join(', '),
+          slug: entry.slug,
+          turnSequence: context.turnSequence,
+        });
         return [];
       }
       return [{

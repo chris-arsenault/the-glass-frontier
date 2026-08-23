@@ -1,4 +1,5 @@
 import { SceneOutcome } from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
 
 import type { GraphContext } from '../../../types.js';
@@ -35,6 +36,16 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
 
   #applySummary(context: GraphContext, response: SummaryResponse): GraphNodeDelta {
     const sceneOutcome = context.effectiveScene === null ? 'continue' : response.sceneOutcome;
+    if (sceneOutcome === 'complete' && context.effectiveScene !== null) {
+      log('info', 'gm.scene-completed', {
+        chronicleId: context.chronicleId,
+        reason: response.sceneOutcomeReason ?? 'unspecified',
+        sceneId: context.effectiveScene.id,
+        subject: context.effectiveScene.subject,
+        turnSequence: context.turnSequence,
+        type: context.effectiveScene.type,
+      });
+    }
     return {
       gmSummary: response.summary,
       sceneOutcome,

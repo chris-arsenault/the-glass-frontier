@@ -25,7 +25,12 @@ describe('scene lifecycle', () => {
       candidate: null,
       turnId: 'turn-2',
       turnSequence: 2,
-    })).toEqual({ effectiveScene: activeScene, sceneChange: null });
+    })).toEqual({
+      effectiveScene: activeScene,
+      replacedSceneId: null,
+      sceneChange: null,
+      transition: 'none',
+    });
   });
 
   it('starts a typed scene on the triggering turn', () => {
@@ -42,11 +47,13 @@ describe('scene lifecycle', () => {
         subjectKind: 'npc',
         type: 'dialog',
       },
+      replacedSceneId: null,
       sceneChange: {
         subject: AMAYA,
         subjectKind: 'npc',
         type: 'dialog',
       },
+      transition: 'started',
     });
   });
 
@@ -64,7 +71,12 @@ describe('scene lifecycle', () => {
       candidate: { subject: '  amaya venn ', subjectKind: 'npc', type: 'dialog' },
       turnId: 'turn-3',
       turnSequence: 3,
-    })).toEqual({ effectiveScene: activeScene, sceneChange: null });
+    })).toEqual({
+      effectiveScene: activeScene,
+      replacedSceneId: null,
+      sceneChange: null,
+      transition: 'continuation',
+    });
   });
 
   it('replaces the active scene when type or subject changes', () => {
@@ -88,6 +100,8 @@ describe('scene lifecycle', () => {
       type: 'battle',
     });
     expect(result.sceneChange?.type).toBe('battle');
+    expect(result.transition).toBe('replaced');
+    expect(result.replacedSceneId).toBe('scene:1');
   });
 
   it('degrades a malformed scene candidate to no change', () => {
@@ -96,6 +110,18 @@ describe('scene lifecycle', () => {
       subjectKind: 'vehicle',
       type: 'chase',
     })).toBeNull();
+  });
+
+  it('distinguishes a malformed candidate from no candidate', () => {
+    const malformed = resolveEffectiveScene({
+      activeScene: null,
+      candidate: { subject: RED_COURIER_KITE, subjectKind: 'vehicle', type: 'chase' },
+      turnId: 'turn-6',
+      turnSequence: 6,
+    });
+
+    expect(malformed.transition).toBe('parse_failed');
+    expect(malformed.effectiveScene).toBeNull();
   });
 
   it('builds minimal immutable turn context', () => {
@@ -114,6 +140,21 @@ describe('scene lifecycle', () => {
       subjectKind: 'transport',
       type: 'chase',
     });
+  });
+
+  it('carries the completion reason onto the turn context', () => {
+    const scene = {
+      id: 'scene:9',
+      startedAtTurn: 9,
+      subject: RED_COURIER_KITE,
+      subjectKind: 'transport' as const,
+      type: 'chase' as const,
+    };
+
+    expect(buildSceneContext(scene, 'complete', 'The kite was caught.')?.outcomeReason).toBe(
+      'The kite was caught.'
+    );
+    expect(buildSceneContext(scene, 'continue', 'ignored')?.outcomeReason).toBeUndefined();
   });
 
   it('registers a distinct policy and presentation for every scene type', () => {

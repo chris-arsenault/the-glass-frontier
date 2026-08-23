@@ -54,6 +54,30 @@ type GmEngineOptions = {
 
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 
+const logResolvedTurn = (
+  graphResult: GraphContext,
+  chronicleId: string,
+  shouldClose: boolean,
+  turnSequence: number
+): void => {
+  const usageCounts = { central: 0, mentioned: 0, unused: 0 };
+  for (const entry of graphResult.entityUsage ?? []) {
+    usageCounts[entry.usage] += 1;
+  }
+  log('info', 'Narrative engine resolved turn', {
+    checkIssued: Boolean(graphResult.skillCheckPlan),
+    chronicleId,
+    entitiesCentral: usageCounts.central,
+    entitiesMentioned: usageCounts.mentioned,
+    entitiesOffered: graphResult.entityContext?.offered.length ?? 0,
+    entitiesUnused: usageCounts.unused,
+    intentType: graphResult.playerIntent?.intentType ?? 'unknown',
+    sceneOutcome: graphResult.sceneOutcome,
+    shouldCloseChronicle: shouldClose,
+    turnSequence,
+  });
+};
+
 class GmEngine {
   readonly chronicleStore: ChronicleStore;
   readonly worldSchemaStore: WorldSchemaStore;
@@ -165,10 +189,7 @@ class GmEngine {
       turn,
     });
 
-    log('info', 'Narrative engine resolved turn', {
-      checkIssued: Boolean(graphResult.skillCheckPlan),
-      chronicleId,
-    });
+    logResolvedTurn(graphResult, chronicleId, shouldClose, turnSequence);
 
     const updatedCharacter = finalContext.chronicleState.character ?? null;
     const locationName = finalContext.chronicleState.locationName;
@@ -391,7 +412,8 @@ class GmEngine {
       playerMessage,
       sceneContext: buildSceneContext(
         governingScene,
-        failure ? 'continue' : graphResult.sceneOutcome
+        failure ? 'continue' : graphResult.sceneOutcome,
+        failure ? null : graphResult.sceneOutcomeReason
       ),
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,

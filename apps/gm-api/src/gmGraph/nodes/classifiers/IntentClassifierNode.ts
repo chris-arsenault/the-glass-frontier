@@ -1,12 +1,14 @@
 import {
+  type ChronicleScene,
   type Intent,
   IntentType,
   SceneChangeCandidate,
 } from '@glass-frontier/dto';
 import type { GraphContext } from '@glass-frontier/gm-api/types';
+import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
 
-import { resolveEffectiveScene } from '../../../scenes/sceneLifecycle';
+import { resolveEffectiveScene, type SceneTransition } from '../../../scenes/sceneLifecycle';
 import type { GraphNodeDelta } from '../graphNode';
 import { LlmClassifierNode } from './LlmClassiferNode';
 
@@ -41,6 +43,36 @@ const IntentResponseSchema = z.object({
 type IntentResponse = z.infer<typeof IntentResponseSchema>;
 const NODE_ID = 'intent-classifier';
 
+const logSceneLifecycle = (input: {
+  candidate: unknown;
+  context: GraphContext;
+  effectiveScene: ChronicleScene | null;
+  replacedSceneId: string | null;
+  transition: SceneTransition;
+}): void => {
+  const { candidate, context, effectiveScene, replacedSceneId, transition } = input;
+  if (transition === 'none') {
+    return;
+  }
+  const scene = effectiveScene === null
+    ? { sceneId: '', subject: '', subjectKind: '', type: '' }
+    : {
+      sceneId: effectiveScene.id,
+      subject: effectiveScene.subject,
+      subjectKind: effectiveScene.subjectKind,
+      type: effectiveScene.type,
+    };
+  const level = transition === 'parse_failed' ? 'warn' : 'info';
+  log(level, 'gm.scene-lifecycle', {
+    ...scene,
+    candidate: level === 'warn' ? JSON.stringify(candidate) : '',
+    chronicleId: context.chronicleId,
+    replacedSceneId: replacedSceneId === null ? '' : replacedSceneId,
+    transition,
+    turnSequence: context.turnSequence,
+  });
+};
+
 class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
   readonly id = NODE_ID;
   constructor() {
@@ -55,11 +87,18 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
   }
 
   #applyIntent(context: GraphContext, result: IntentResponse): GraphNodeDelta {
-    const { effectiveScene, sceneChange } = resolveEffectiveScene({
+    const { effectiveScene, replacedSceneId, sceneChange, transition } = resolveEffectiveScene({
       activeScene: context.chronicleState.chronicle.activeScene,
       candidate: result.sceneChange,
       turnId: context.turnId,
       turnSequence: context.turnSequence,
+    });
+    logSceneLifecycle({
+      candidate: result.sceneChange,
+      context,
+      effectiveScene,
+      replacedSceneId,
+      transition,
     });
     const intent: Intent = {
       beatDirective: {

@@ -34,6 +34,8 @@ export type ChronicleScene = z.infer<typeof ChronicleScene>;
 
 export const SceneContext = SceneChange.extend({
   outcome: SceneOutcome,
+  /** The model's stated reason for completing the scene, when it gave one. */
+  outcomeReason: z.string().min(1).nullable().optional(),
   sceneId: z.string().min(1),
 });
 export type SceneContext = z.infer<typeof SceneContext>;

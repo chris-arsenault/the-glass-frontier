@@ -4,6 +4,7 @@ import type {
   Intent,
   SceneChange,
 } from '@glass-frontier/dto';
+import { log } from '@glass-frontier/utils';
 import type { SubjectEntityCandidate } from '@glass-frontier/worldstate';
 
 import type { GraphContext } from '../../types';
@@ -64,19 +65,27 @@ const uniqueKindMatch = (
   return matches.length === 1 ? matches[0] : undefined;
 };
 
+/** The winning candidate, or the reason the gate refused every candidate. */
 const acceptedCandidate = (
   candidates: SubjectEntityCandidate[]
-): SubjectEntityCandidate | undefined => {
+): { candidate?: SubjectEntityCandidate; outcome: string } => {
   const best = candidates[0];
   const runnerUp = candidates[1];
-  if (
-    best === undefined
-    || best.similarity < MIN_SIMILARITY
-    || (runnerUp !== undefined && best.score - runnerUp.score < MIN_SCORE_MARGIN)
-  ) {
-    return undefined;
+  if (best === undefined) {
+    return { outcome: 'no_candidates' };
   }
-  return best;
+  if (best.similarity < MIN_SIMILARITY) {
+    return { outcome: `below_similarity: ${best.name} at ${best.similarity.toFixed(3)}` };
+  }
+  if (runnerUp !== undefined && best.score - runnerUp.score < MIN_SCORE_MARGIN) {
+    return {
+      outcome: `margin_too_small: ${best.name} vs ${runnerUp.name}, delta ${(best.score - runnerUp.score).toFixed(3)}`,
+    };
+  }
+  return {
+    candidate: best,
+    outcome: `vector_match: ${best.name} similarity ${best.similarity.toFixed(3)}`,
+  };
 };
 
 export class SceneSubjectResolverNode implements GraphNode {
@@ -93,14 +102,20 @@ export class SceneSubjectResolverNode implements GraphNode {
       state.sceneChange.subjectKind
     );
     if (exact !== undefined) {
+      this.#logResolution(context, state.sceneChange, `exact_match: ${exact.slug}`);
       return withSubjectEntity(state, exact.id);
     }
     if (!await context.worldSchemaStore.hasEntityEmbeddings(state.sceneChange.subjectKind)) {
+      this.#logResolution(context, state.sceneChange, 'no_embeddings_for_kind');
       return {};
     }
 
     try {
-      const candidate = await this.#resolveVectorCandidate(context, state.sceneChange);
+      const { candidate, outcome } = await this.#resolveVectorCandidate(
+        context,
+        state.sceneChange
+      );
+      this.#logResolution(context, state.sceneChange, outcome);
       return candidate === undefined ? {} : withSubjectEntity(state, candidate.id);
     } catch (error: unknown) {
       this.#recordFailure(context, error);
@@ -108,10 +123,20 @@ export class SceneSubjectResolverNode implements GraphNode {
     }
   }
 
+  #logResolution(context: GraphContext, sceneChange: SceneChange, outcome: string): void {
+    log('info', 'gm.scene-subject-resolution', {
+      chronicleId: context.chronicleId,
+      outcome,
+      subject: sceneChange.subject,
+      subjectKind: sceneChange.subjectKind,
+      turnSequence: context.turnSequence,
+    });
+  }
+
   async #resolveVectorCandidate(
     context: GraphContext,
     sceneChange: SceneChange
-  ): Promise<SubjectEntityCandidate | undefined> {
+  ): Promise<{ candidate?: SubjectEntityCandidate; outcome: string }> {
     const location = await context.worldSchemaStore.findLocationByName({
       name: context.chronicleState.locationName,
     });

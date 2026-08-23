@@ -116,10 +116,12 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       if (isLlmBudgetExceededError(error)) {
         throw error;
       }
-      console.error('[IntentHandlerNode] Narrative generation failed:', {
+      log('error', 'gm.narrative-generation-failed', {
+        chronicleId: context.chronicleId,
         error: error instanceof Error ? error.message : String(error),
         nodeId: this.options.id,
-        stack: error instanceof Error ? error.stack : undefined,
+        stack: error instanceof Error ? (error.stack ?? '') : '',
+        turnSequence: context.turnSequence,
       });
       return { failure: true };
     }
