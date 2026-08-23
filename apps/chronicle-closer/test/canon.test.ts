@@ -13,6 +13,7 @@ import {
   sanitizeExtraction,
 } from '../src/canonHelpers';
 import { CanonPipeline } from '../src/canonPipeline';
+import { buildProposalPlan } from '../src/canonProposalBuilder';
 
 const CHRONICLE_ID = 'chronicle-1';
 const BRAKE_ID = 'entity-brake';
@@ -243,13 +244,25 @@ describe('sanitizeExtraction', () => {
       ],
     };
 
-    const { candidates, knownLore } = sanitizeExtraction(extraction, roster, 1);
+    const { candidates, drops, knownLore } = sanitizeExtraction(extraction, roster, 1);
 
     expect(knownLore.map((entry) => entry.roster.slug)).toEqual(['brake']);
     expect(knownLore[0]?.loreTags).toEqual(['governance']);
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.name).toBe('Glasstooth');
     expect(candidates[0]?.subkind).toBeUndefined();
+    expect(drops).toEqual(
+      expect.arrayContaining([
+        { reason: 'not_eligible_for_lore', stage: 'known_lore', subject: KEL_SLUG },
+        { reason: 'duplicate_name', stage: 'new_entity', subject: 'glasstooth' },
+        { reason: 'over_cap: 1', stage: 'new_entity', subject: 'Overflow' },
+        {
+          reason: 'invalid_subkind_removed: settlement (kind artifact)',
+          stage: 'new_entity',
+          subject: 'Glasstooth',
+        },
+      ])
+    );
   });
 
   it('makes a scene subject eligible for lore without a central turn', () => {
@@ -270,6 +283,37 @@ describe('sanitizeExtraction', () => {
 
     expect(withoutScene.knownLore).toHaveLength(0);
     expect(withScene.knownLore.map((entry) => entry.roster.slug)).toEqual([KEL_SLUG]);
+  });
+});
+
+describe('buildProposalPlan', () => {
+  it('records why each relationship was dropped', () => {
+    const plan = buildProposalPlan({
+      candidates: [
+        {
+          isLocation: false,
+          kind: 'npc',
+          loreProse: 'They arrived.',
+          loreTags: [],
+          loreTitle: 'Arrival',
+          name: 'Named One',
+          relationships: [
+            { relationship: 'member_of', target: 'nowhere' },
+            { relationship: 'member_of', target: 'Named One' },
+          ],
+          subkind: undefined,
+        },
+      ],
+      chronicleId: CHRONICLE_ID,
+      knownLore: [],
+      resolutions: new Map([['named one', { action: 'create' as const }]]),
+      roster: [],
+    });
+
+    expect(plan.relationships).toHaveLength(0);
+    expect(plan.proposedRelationshipCount).toBe(2);
+    expect(plan.drops.map((drop) => drop.reason)).toEqual(['target_not_found', 'self_edge']);
+    expect(plan.drops[0]?.subject).toBe('Named One -[member_of]-> nowhere');
   });
 });
 

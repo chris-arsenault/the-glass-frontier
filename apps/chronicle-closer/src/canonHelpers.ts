@@ -62,6 +62,17 @@ export const CanonResolutionSchema = z.object({
 
 export type CanonResolution = z.infer<typeof CanonResolutionSchema>;
 
+/**
+ * One thing the closure decided not to keep, and why. Collected at every
+ * filtering stage and logged whole, so a missing entity or edge in the world
+ * graph can be traced to "dropped here for this reason" or "never proposed".
+ */
+export type CanonDrop = {
+  reason: string;
+  stage: 'known_lore' | 'new_entity' | 'relationship';
+  subject: string;
+};
+
 export type RosterEntry = {
   centralCount: number;
   id: string;
@@ -263,42 +274,100 @@ export type SanitizedKnownLore = {
   roster: RosterEntry;
 };
 
-const toCandidate = (proposed: NewEntityProposal, name: string): SanitizedNewEntity => ({
-  isLocation: proposed.isLocation,
-  kind: proposed.kind,
-  loreProse: proposed.loreProse.trim(),
-  loreTags: sanitizeTags(proposed.loreTags),
-  loreTitle: proposed.loreTitle.trim(),
-  name,
-  relationships: proposed.relationships ?? [],
-  subkind: sanitizeSubkind(proposed.kind, proposed.subkind),
-});
+const toCandidate = (
+  proposed: NewEntityProposal,
+  name: string,
+  drops: CanonDrop[]
+): SanitizedNewEntity => {
+  const loreTags = sanitizeTags(proposed.loreTags);
+  const removedTags = (proposed.loreTags ?? []).filter((tag) => !loreTags.includes(tag));
+  if (removedTags.length > 0) {
+    drops.push({
+      reason: `invalid_tags_removed: ${removedTags.join(', ')}`,
+      stage: 'new_entity',
+      subject: name,
+    });
+  }
+  const subkind = sanitizeSubkind(proposed.kind, proposed.subkind);
+  if (proposed.subkind !== undefined && proposed.subkind !== null && subkind === undefined) {
+    drops.push({
+      reason: `invalid_subkind_removed: ${proposed.subkind} (kind ${proposed.kind})`,
+      stage: 'new_entity',
+      subject: name,
+    });
+  }
+  return {
+    isLocation: proposed.isLocation,
+    kind: proposed.kind,
+    loreProse: proposed.loreProse.trim(),
+    loreTags,
+    loreTitle: proposed.loreTitle.trim(),
+    name,
+    relationships: proposed.relationships ?? [],
+    subkind,
+  };
+};
 
-const collectCandidates = (
-  proposals: NewEntityProposal[],
-  rosterByName: Map<string, RosterEntry>,
-  cap: number,
-  recordKnown: (roster: RosterEntry, entry: Omit<KnownEntityLore, 'slug'>) => void
-): SanitizedNewEntity[] => {
+const collectCandidates = (input: {
+  cap: number;
+  drops: CanonDrop[];
+  proposals: NewEntityProposal[];
+  recordKnown: (roster: RosterEntry, entry: Omit<KnownEntityLore, 'slug'>) => string | null;
+  rosterByName: Map<string, RosterEntry>;
+}): SanitizedNewEntity[] => {
+  const { cap, drops, proposals, recordKnown, rosterByName } = input;
   const candidates: SanitizedNewEntity[] = [];
   const seenNames = new Set<string>();
   for (const proposed of proposals) {
     const name = proposed.name.trim();
     const lower = name.toLowerCase();
-    if (name.length === 0 || seenNames.has(lower)) {
+    if (name.length === 0) {
+      drops.push({ reason: 'empty_name', stage: 'new_entity', subject: proposed.name });
+      continue;
+    }
+    if (seenNames.has(lower)) {
+      drops.push({ reason: 'duplicate_name', stage: 'new_entity', subject: name });
       continue;
     }
     seenNames.add(lower);
     const rosterEntry = rosterByName.get(lower);
     if (rosterEntry !== undefined) {
-      recordKnown(rosterEntry, proposed);
+      const refusal = recordKnown(rosterEntry, proposed);
+      if (refusal !== null) {
+        drops.push({
+          reason: `roster_name_remap_refused: ${refusal}`,
+          stage: 'new_entity',
+          subject: name,
+        });
+      }
       continue;
     }
-    if (candidates.length < cap) {
-      candidates.push(toCandidate(proposed, name));
+    if (candidates.length >= cap) {
+      drops.push({ reason: `over_cap: ${cap}`, stage: 'new_entity', subject: name });
+      continue;
     }
+    candidates.push(toCandidate(proposed, name, drops));
   }
   return candidates;
+};
+
+const recordKnownEntities = (
+  entries: KnownEntityLore[],
+  rosterBySlug: Map<string, RosterEntry>,
+  recordKnown: (roster: RosterEntry, entry: Omit<KnownEntityLore, 'slug'>) => string | null,
+  drops: CanonDrop[]
+): void => {
+  for (const entry of entries) {
+    const rosterEntry = rosterBySlug.get(entry.slug);
+    if (rosterEntry === undefined) {
+      drops.push({ reason: 'unknown_roster_slug', stage: 'known_lore', subject: entry.slug });
+      continue;
+    }
+    const refusal = recordKnown(rosterEntry, entry);
+    if (refusal !== null) {
+      drops.push({ reason: refusal, stage: 'known_lore', subject: entry.slug });
+    }
+  }
 };
 
 /**
@@ -312,14 +381,21 @@ export const sanitizeExtraction = (
   roster: RosterEntry[],
   cap: number,
   sceneSubjects: ReadonlySet<string> = new Set()
-): { candidates: SanitizedNewEntity[]; knownLore: SanitizedKnownLore[] } => {
+): { candidates: SanitizedNewEntity[]; drops: CanonDrop[]; knownLore: SanitizedKnownLore[] } => {
   const rosterByName = new Map(roster.map((entry) => [entry.name.toLowerCase(), entry]));
   const rosterBySlug = new Map(roster.map((entry) => [entry.slug, entry]));
   const knownBySlug = new Map<string, SanitizedKnownLore>();
+  const drops: CanonDrop[] = [];
 
-  const recordKnown = (rosterEntry: RosterEntry, entry: Omit<KnownEntityLore, 'slug'>): void => {
-    if (!isEligibleForLore(rosterEntry, sceneSubjects) || knownBySlug.has(rosterEntry.slug)) {
-      return;
+  const recordKnown = (
+    rosterEntry: RosterEntry,
+    entry: Omit<KnownEntityLore, 'slug'>
+  ): string | null => {
+    if (!isEligibleForLore(rosterEntry, sceneSubjects)) {
+      return 'not_eligible_for_lore';
+    }
+    if (knownBySlug.has(rosterEntry.slug)) {
+      return 'duplicate_lore_for_slug';
     }
     knownBySlug.set(rosterEntry.slug, {
       loreProse: entry.loreProse.trim(),
@@ -328,15 +404,17 @@ export const sanitizeExtraction = (
       relationships: entry.relationships ?? [],
       roster: rosterEntry,
     });
+    return null;
   };
 
-  for (const entry of extraction.knownEntities) {
-    const rosterEntry = rosterBySlug.get(entry.slug);
-    if (rosterEntry !== undefined) {
-      recordKnown(rosterEntry, entry);
-    }
-  }
-  const candidates = collectCandidates(extraction.newEntities, rosterByName, cap, recordKnown);
+  recordKnownEntities(extraction.knownEntities, rosterBySlug, recordKnown, drops);
+  const candidates = collectCandidates({
+    cap,
+    drops,
+    proposals: extraction.newEntities,
+    recordKnown,
+    rosterByName,
+  });
 
-  return { candidates, knownLore: [...knownBySlug.values()] };
+  return { candidates, drops, knownLore: [...knownBySlug.values()] };
 };

@@ -10,7 +10,7 @@ import type { LLMPlayer, LLMRequest, RetryLLMClient } from '@glass-frontier/llm-
 import { log } from '@glass-frontier/utils';
 import type { ChronicleSnapshot, WorldSchemaStore } from '@glass-frontier/worldstate';
 
-import type { RosterEntry, SanitizedNewEntity, SceneSummary } from './canonHelpers';
+import type { CanonDrop, RosterEntry, SanitizedNewEntity, SceneSummary } from './canonHelpers';
 import {
   CanonExtractionSchema,
   CanonResolutionSchema,
@@ -90,6 +90,44 @@ const resolverPayload = (
       name: entry.candidate.name,
     })),
   });
+
+/**
+ * Everything the extraction decided, in one log record: what the model
+ * proposed, what survived, and one entry per dropped item with its reason.
+ * Structured fields are JSON strings because the logger only takes scalars.
+ */
+const logCanonDiagnostics = (input: {
+  cap: number;
+  chronicleId: string;
+  drops: CanonDrop[];
+  extraction: { knownEntities: unknown[]; newEntities: unknown[] };
+  kept: { candidates: SanitizedNewEntity[]; knownLore: unknown[]; relationships: number };
+  plan: ProposalPlan;
+  resolutions: Map<string, Resolution>;
+  scenes: SceneSummary[];
+}): void => {
+  const resolutionSummary = input.kept.candidates.map((candidate) => {
+    const resolution = input.resolutions.get(candidate.name.toLowerCase());
+    return resolution?.action === 'merge'
+      ? `${candidate.name} -> merge:${resolution.entity.slug}`
+      : `${candidate.name} -> create`;
+  });
+  log('info', 'chronicle-closer.canon-diagnostics', {
+    chronicleId: input.chronicleId,
+    dropped: JSON.stringify(input.drops),
+    keptKnownLore: input.kept.knownLore.length,
+    keptNewEntities: input.kept.candidates.length,
+    keptRelationships: input.kept.relationships,
+    newEntityCap: input.cap,
+    proposedKnownLore: input.extraction.knownEntities.length,
+    proposedNewEntities: input.extraction.newEntities.length,
+    proposedRelationships: input.plan.proposedRelationshipCount,
+    resolutions: resolutionSummary.join('; '),
+    scenes: input.scenes
+      .map((scene) => `${scene.type}:${scene.subject}:${scene.outcome}`)
+      .join('; '),
+  });
+};
 
 const summarizerRequest = (input: {
   chronicle: ChronicleSnapshot['chronicle'];
@@ -171,8 +209,7 @@ class CanonPipeline {
 
   async run(snapshot: ChronicleSnapshot, player: LLMPlayer): Promise<void> {
     const chronicle = snapshot.chronicle;
-    const committed = await this.#world.findBatch({ source: 'play', sourceId: chronicle.id });
-    if (committed !== null) {
+    if (await this.#alreadyArchived(chronicle.id)) {
       return;
     }
     const roster = buildRoster(snapshot.turns);
@@ -183,7 +220,7 @@ class CanonPipeline {
     });
     const extraction = await this.#extract({ player, roster, runtime, scenes, snapshot });
     const cap = newEntityCap(snapshot.turns.length);
-    const { candidates, knownLore } = sanitizeExtraction(
+    const { candidates, drops, knownLore } = sanitizeExtraction(
       extraction,
       roster,
       cap,
@@ -197,6 +234,16 @@ class CanonPipeline {
       resolutions,
       roster,
     });
+    logCanonDiagnostics({
+      cap,
+      chronicleId: chronicle.id,
+      drops: [...drops, ...plan.drops],
+      extraction,
+      kept: { candidates, knownLore, relationships: plan.relationships.length },
+      plan,
+      resolutions,
+      scenes,
+    });
     appendPlayEntityTargets(plan, await this.#loadTouchedPlayEntities(plan));
     await this.#applyDerivedFields(plan.targets, runtime, snapshot, player);
     const result = await this.#world.commitBatch(toCanonProposal(plan, chronicle.id));
@@ -207,6 +254,19 @@ class CanonPipeline {
       loreCount: result.loreCount,
       relationshipCount: result.relationshipCount,
     });
+  }
+
+  async #alreadyArchived(chronicleId: string): Promise<boolean> {
+    const committed = await this.#world.findBatch({ source: 'play', sourceId: chronicleId });
+    if (committed === null) {
+      return false;
+    }
+    log('info', 'chronicle-closer.canon-skipped', {
+      batchId: committed.batchId,
+      chronicleId,
+      reason: 'play batch already exists',
+    });
+    return true;
   }
 
   async #extract(input: {

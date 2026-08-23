@@ -11,6 +11,7 @@ import { isRelationshipAllowed } from '@glass-frontier/dto';
 import { toSnakeCase } from '@glass-frontier/utils';
 
 import type {
+  CanonDrop,
   RelationshipProposal,
   RosterEntry,
   SanitizedKnownLore,
@@ -36,9 +37,11 @@ export type DeriveTarget = {
 };
 
 export type ProposalPlan = {
+  drops: CanonDrop[];
   entities: ProposedEntity[];
   lore: ProposedLoreFragment[];
   loreByEntityId: Map<string, ProposedLoreSummary[]>;
+  proposedRelationshipCount: number;
   relationships: ProposedRelationship[];
   targets: DeriveTarget[];
   targetsByKey: Map<string, DeriveTarget>;
@@ -174,32 +177,46 @@ const addCreatedCandidate = (state: BuilderState, candidate: SanitizedNewEntity)
   }
 };
 
-const relationshipAccepted = (
-  state: BuilderState,
+const relationshipLabel = (owner: ProposalTarget, rel: RelationshipProposal): string =>
+  `${owner.name} -[${rel.relationship}]-> ${rel.target}`;
+
+/** The reason this relationship cannot be written, or null when it can. */
+const relationshipDropReason = (
   owner: ProposalTarget,
-  rel: RelationshipProposal
-): ProposalTarget | null => {
-  const destination = state.targetIndex.get(rel.target.trim().toLowerCase());
-  if (destination === undefined || destination.key === owner.key) {
-    return null;
+  rel: RelationshipProposal,
+  destination: ProposalTarget | undefined,
+  seen: Set<string>
+): string | null => {
+  if (destination === undefined) {
+    return 'target_not_found';
   }
-  return isRelationshipAllowed(rel.relationship, owner.kind, destination.kind)
-    ? destination
-    : null;
+  if (destination.key === owner.key) {
+    return 'self_edge';
+  }
+  if (!isRelationshipAllowed(rel.relationship, owner.kind, destination.kind)) {
+    return `verb_not_allowed_for_kinds: ${owner.kind} -> ${destination.kind}`;
+  }
+  if (seen.has(`${owner.key}|${destination.key}|${rel.relationship}`)) {
+    return 'duplicate_edge';
+  }
+  return null;
 };
 
 const flushRelationships = (state: BuilderState): void => {
   const seen = new Set<string>();
+  state.proposedRelationshipCount = state.pendingRelationships.length;
   for (const { owner, rel } of state.pendingRelationships) {
-    const destination = relationshipAccepted(state, owner, rel);
-    if (destination === null) {
+    const destination = state.targetIndex.get(rel.target.trim().toLowerCase());
+    const dropReason = relationshipDropReason(owner, rel, destination, seen);
+    if (dropReason !== null || destination === undefined) {
+      state.drops.push({
+        reason: dropReason ?? 'target_not_found',
+        stage: 'relationship',
+        subject: relationshipLabel(owner, rel),
+      });
       continue;
     }
-    const dedupeKey = `${owner.key}|${destination.key}|${rel.relationship}`;
-    if (seen.has(dedupeKey)) {
-      continue;
-    }
-    seen.add(dedupeKey);
+    seen.add(`${owner.key}|${destination.key}|${rel.relationship}`);
     state.relationships.push({
       dst: destination.ref,
       relationship: rel.relationship as ProposedRelationship['relationship'],
@@ -233,10 +250,12 @@ export const buildProposalPlan = (input: {
 }): ProposalPlan => {
   const state: BuilderState = {
     chronicleId: input.chronicleId,
+    drops: [],
     entities: [],
     lore: [],
     loreByEntityId: new Map(),
     pendingRelationships: [],
+    proposedRelationshipCount: 0,
     relationships: [],
     targetIndex: new Map(),
     targets: [],
