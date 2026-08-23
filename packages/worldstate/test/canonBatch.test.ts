@@ -11,7 +11,10 @@ let worldState: WorldState;
 const ACCORD_KEY = 'tsonu:accord';
 const CAROM_KEY = 'tsonu:carom';
 const FAE_BIOLOGY_KEY = 'tsonu:fae:biology';
+const FRESH_SIGNAL_TITLE = 'Fresh Signal';
 const GNOMES_BIOLOGY_KEY = 'tsonu:gnomes:biology';
+const OLDER_SIGNAL_NAME = 'Older Signal';
+const RECENT_ACTIVITY_ARTIFACT_KIND = 'artifact' as const;
 
 beforeAll(async () => {
   ({ pool, worldState } = await startHarness());
@@ -654,6 +657,107 @@ describe('World lore', () => {
 
     expect(grouped.get(result.entityIdsByRef.a)?.[0]?.title).toBe('First Tale');
     expect(grouped.get(result.entityIdsByRef.b)?.[0]?.title).toBe('Second Tale');
+  });
+
+  it('separates newly created entities from entities with later lore', async () => {
+    const created = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            description: 'The older public entity.',
+            kind: RECENT_ACTIVITY_ARTIFACT_KIND,
+            name: OLDER_SIGNAL_NAME,
+            ref: 'older',
+            subkind: 'relic',
+          },
+          {
+            description: 'The newer public entity.',
+            kind: 'npc',
+            name: 'New Arrival',
+            ref: 'newer',
+            subkind: 'specialist',
+          },
+          {
+            dm: true,
+            kind: RECENT_ACTIVITY_ARTIFACT_KIND,
+            name: 'Hidden Instrument',
+            ref: 'hidden',
+          },
+          {
+            isArticle: true,
+            kind: RECENT_ACTIVITY_ARTIFACT_KIND,
+            name: 'Reference Entry',
+            ref: 'article',
+          },
+        ],
+        lore: [
+          {
+            entity: { ref: 'older' },
+            prose: 'This lore arrived with the entity.',
+            title: 'Founding Record',
+          },
+        ],
+      })
+    );
+    await worldState.world.commitBatch(
+      proposal({
+        lore: [
+          {
+            entity: { id: created.entityIdsByRef.older },
+            prose: 'A fresh signal crossed the frontier.',
+            title: FRESH_SIGNAL_TITLE,
+          },
+          {
+            entity: { id: created.entityIdsByRef.hidden },
+            prose: 'Players must not see this.',
+            title: 'Hidden Signal',
+          },
+          {
+            entity: { id: created.entityIdsByRef.article },
+            prose: 'Reference pages stay out of entity activity.',
+            title: 'Reference Update',
+          },
+        ],
+      })
+    );
+
+    await Promise.all([
+      pool.query('UPDATE entity SET created_at = $2 WHERE id = $1::uuid', [
+        created.entityIdsByRef.older,
+        '2026-08-20T00:00:00Z',
+      ]),
+      pool.query('UPDATE entity SET created_at = $2 WHERE id = $1::uuid', [
+        created.entityIdsByRef.newer,
+        '2026-08-21T00:00:00Z',
+      ]),
+      pool.query('UPDATE lore_fragment SET created_at = $2 WHERE title = $1', [
+        'Founding Record',
+        '2026-08-20T00:00:00Z',
+      ]),
+      pool.query('UPDATE lore_fragment SET created_at = $2 WHERE title = $1', [
+        FRESH_SIGNAL_TITLE,
+        '2026-08-22T00:00:00Z',
+      ]),
+    ]);
+
+    const activity = await worldState.world.getEntityActivity(2);
+
+    expect(activity.created.map((entity) => entity.name)).toEqual([
+      'New Arrival',
+      OLDER_SIGNAL_NAME,
+    ]);
+    expect(activity.loreUpdated).toEqual([
+      {
+        activityAt: Date.parse('2026-08-22T00:00:00Z'),
+        id: created.entityIdsByRef.older,
+        kind: RECENT_ACTIVITY_ARTIFACT_KIND,
+        loreTitle: FRESH_SIGNAL_TITLE,
+        name: OLDER_SIGNAL_NAME,
+        slug: 'older_signal',
+        subkind: 'relic',
+        summary: 'A fresh signal crossed the frontier.',
+      },
+    ]);
   });
 });
 

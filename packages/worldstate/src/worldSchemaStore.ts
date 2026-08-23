@@ -3,6 +3,7 @@ import type {
   CommitBatchResult,
   ContextSliceEntity,
   ContextSliceInput,
+  EntityActivityFeed,
   HardState,
   LoreFragment,
   WorldSchema,
@@ -11,6 +12,7 @@ import type { Pool } from 'pg';
 
 import { CanonWriter } from './canonWriter';
 import { ContextSliceReader } from './contextSlice';
+import { EntityActivityReader } from './entityActivityReader';
 import {
   type EntityEmbeddingSource,
   EntityEmbeddingReader,
@@ -31,6 +33,7 @@ import { WorldSchemaConfiguration } from './worldSchemaConfiguration';
  * missing fields have to be guessed at.
  */
 class PostgresWorldSchemaStore implements WorldSchemaStore {
+  readonly #activity: EntityActivityReader;
   readonly #context: ContextSliceReader;
   readonly #embeddings: EntityEmbeddingReader;
   readonly #entities: EntityReader;
@@ -39,6 +42,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
   readonly #writer: CanonWriter;
 
   constructor(options: { pool: Pool }) {
+    this.#activity = new EntityActivityReader(options.pool);
     this.#context = new ContextSliceReader(options.pool);
     this.#embeddings = new EntityEmbeddingReader(options.pool);
     this.#entities = new EntityReader(options.pool);
@@ -109,6 +113,10 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
 
   async listEntities(input?: EntityListInput): Promise<HardState[]> {
     return this.#entities.listEntities(input);
+  }
+
+  async getEntityActivity(limitPerList = 5): Promise<EntityActivityFeed> {
+    return this.#activity.getActivity(limitPerList);
   }
 
   async listEntitiesByIds(ids: string[]): Promise<HardState[]> {

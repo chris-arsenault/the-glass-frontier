@@ -376,5 +376,12 @@
     "summary": "Expired sessions now refresh during play",
     "details": "The client now renews an expiring Cognito access token before its next API request, so a session can continue after the original token times out without a hard browser refresh. A readable unauthorized response still gets one refresh-and-retry attempt, while a session that can no longer be renewed returns to login instead of leaving the interface apparently signed in.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-23-landing-world-activity",
+    "releasedAt": "2026-08-23",
+    "summary": "The landing page now follows new entities and lore",
+    "details": "Two new dashboard panels show the world graph changing as chronicles enter canon. New Lore lists entities that recently received a lore fragment after their creation, including the fragment title and an excerpt. New Entities lists the latest people, places, factions, artifacts, and other entries added to the world. Every name opens its complete World Atlas entry, and hidden GM records and reference articles stay out of both feeds.",
+    "type": "feature"
   }
 ]

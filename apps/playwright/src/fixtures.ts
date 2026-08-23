@@ -1,7 +1,11 @@
 import { createAppStore } from '@glass-frontier/app';
 import type { Character, Chronicle, HardState, Player } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
-import { createChronicleStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
+import {
+  createChronicleStore,
+  createWorldSchemaStore,
+  type WorldSchemaStore,
+} from '@glass-frontier/worldstate';
 
 export const PLAYWRIGHT_PLAYER_ID = 'playwright-e2e';
 export const PLAYWRIGHT_CHARACTER_ID = '11111111-2222-4333-8444-555555555555';
@@ -24,6 +28,7 @@ const SITHARIAN_SPECIES_ID = '44444444-3333-4222-8111-000000000000';
 const QUAY_CULTURE_ID = '33333333-2222-4111-8000-999999999999';
 const FOUNDING_OATH_FRAGMENT_ID = PLAYWRIGHT_FOUNDING_OATH_FRAGMENT_ID;
 const ORACLE_SIGNAL_FRAGMENT_ID = '55555555-4444-4333-8222-111111111111';
+const RECENT_SIGNAL_FRAGMENT_ID = '22222222-1111-4000-8fff-888888888888';
 
 const LOCATION_ROOT_ID = '99999999-8888-4777-8666-555555555555';
 
@@ -198,6 +203,24 @@ export const buildPlaywrightChronicleRecord = (options?: {
   locationId: options?.locationId ?? BASE_CHRONICLE.locationId,
 });
 
+const seedRecentPlaywrightLore = async (worldSchemaStore: WorldSchemaStore): Promise<void> => {
+  await worldSchemaStore.commitBatch({
+    entities: [],
+    lore: [
+      {
+        entity: { id: ORACLE_VESSEL_ID },
+        id: RECENT_SIGNAL_FRAGMENT_ID,
+        prose: 'A newly recorded signal points beyond the charted gates.',
+        tags: ['navigation', 'mystery'],
+        title: 'Fresh Signal',
+      },
+    ],
+    relationships: [],
+    source: 'seed',
+    sourceId: 'playwright-recent-lore',
+  });
+};
+
 export async function seedPlaywrightFixtures(connectionString: string): Promise<{ location: HardState }> {
   const worldSchemaStore = createWorldSchemaStore({ connectionString });
 
@@ -232,6 +255,8 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
     source: 'seed',
     sourceId: 'playwright-fixtures',
   });
+
+  await seedRecentPlaywrightLore(worldSchemaStore);
 
   const location = await worldSchemaStore.getEntity({ id: LOCATION_ROOT.id });
   if (location === null) {

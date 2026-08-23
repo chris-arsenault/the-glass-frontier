@@ -7,6 +7,7 @@ import type {
   ChronicleSummaryEntry,
   CommitBatchResult,
   ContextSliceEntity,
+  EntityActivityFeed,
   ContextSliceInput,
   HardState,
   HardStateProminence,
@@ -120,6 +121,7 @@ export type WorldSchemaStore = {
   }) => Promise<SubjectEntityCandidate[]>;
 
   // === Entity reads ===
+  getEntityActivity: (limitPerList?: number) => Promise<EntityActivityFeed>;
   getEntity: (input: { id: string }) => Promise<HardState | null>;
   getEntityBySlug: (input: { slug: string }) => Promise<HardState | null>;
   findLocationByName: (input: { name: string }) => Promise<HardState | null>;

@@ -107,6 +107,11 @@ const toScreen = (point: PolarPoint): { x: number; y: number } => {
   };
 };
 
+type ScreenPoint = { x: number; y: number };
+
+const pointClearance = (point: ScreenPoint, planets: ScreenPoint[]): number =>
+  Math.min(...planets.map((planet) => Math.hypot(planet.x - point.x, planet.y - point.y)));
+
 type DeclaredSystemChartProps = {
   graph: AtlasGraph;
   resolver: AtlasPositionResolver;
@@ -179,7 +184,6 @@ function DeclaredSystemChart({
   });
 
   // Routes: authored geometry when present, a planet-pair curve otherwise.
-  type ScreenPoint = { x: number; y: number };
   type RoutePolyline = {
     id: string;
     points: ScreenPoint[];
@@ -224,6 +228,7 @@ function DeclaredSystemChart({
       return [{ node, polylines: [{ curve: { from, mid, to }, id: 'pair', points: [from, to] }] }];
     }
   );
+  const allPlanetPoints = [...planetPoints.values()];
 
   return (
     <svg
@@ -276,19 +281,19 @@ function DeclaredSystemChart({
 
       {routes.map(({ node, polylines }) => {
         // Label the vertex farthest from every planet, out of the crowds.
-        const clearance = (point: ScreenPoint): number =>
-          Math.min(
-            ...[...planetPoints.values()].map((planet) =>
-              Math.hypot(planet.x - point.x, planet.y - point.y)
-            )
-          );
         const curveMid = polylines[0]?.curve?.mid;
         const bestVertex = [...polylines]
           .flatMap((line) => line.points)
-          .sort((a, b) => clearance(b) - clearance(a))[0];
+          .sort(
+            (a, b) =>
+              pointClearance(b, allPlanetPoints) - pointClearance(a, allPlanetPoints)
+          )[0];
         // A route that hugs its bodies keeps only its hover title.
         const candidate = curveMid ?? bestVertex;
-        const label = candidate !== undefined && clearance(candidate) >= 34 ? candidate : undefined;
+        const label =
+          candidate !== undefined && pointClearance(candidate, allPlanetPoints) >= 34
+            ? candidate
+            : undefined;
         return (
           <g
             key={node.entity.id}

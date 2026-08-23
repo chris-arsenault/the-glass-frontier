@@ -140,6 +140,13 @@ export const appRouter = t.router({
       return { entity, fragments };
     }),
 
+  getEntityActivity: t.procedure
+    .input(z.object({ limitPerList: z.number().int().min(1).max(20).optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      log('info', 'atlas-api: getEntityActivity');
+      return ctx.worldSchemaStore.getEntityActivity(input?.limitPerList);
+    }),
+
   // GET /entities/:identifier/neighbors
   getEntityNeighbors: t.procedure
     .input(

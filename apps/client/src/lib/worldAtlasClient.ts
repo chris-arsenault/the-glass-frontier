@@ -1,4 +1,10 @@
-import type { HardState, HardStateKind, LoreFragment, PlayableRole } from '@glass-frontier/dto';
+import type {
+  EntityActivityFeed,
+  HardState,
+  HardStateKind,
+  LoreFragment,
+  PlayableRole,
+} from '@glass-frontier/dto';
 
 import { atlasClient } from './atlasClient';
 
@@ -13,6 +19,10 @@ export const worldAtlasClient = {
 
   async getEntity(idOrSlug: string): Promise<{ entity: HardState; fragments: LoreFragment[] }> {
     return atlasClient.getEntity.query({ identifier: idOrSlug });
+  },
+
+  async getEntityActivity(limitPerList = 5): Promise<EntityActivityFeed> {
+    return atlasClient.getEntityActivity.query({ limitPerList });
   },
 
   async getNeighbors(idOrSlug: string, kind?: HardStateKind): Promise<{ entity: HardState; neighbors: HardState[] }> {

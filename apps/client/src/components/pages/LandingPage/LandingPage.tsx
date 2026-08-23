@@ -1,9 +1,10 @@
-import type { ChronicleActivity } from '@glass-frontier/dto';
+import { getWorldKind, type ChronicleActivity, type EntityActivityFeed } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import changelogEntries from '../../../data/changelog.json';
 import { trpcClient } from '../../../lib/trpcClient';
+import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
 import type { ChangelogEntry } from '../../../types/changelog';
@@ -15,6 +16,8 @@ const formatDate = (value: string, options?: Intl.DateTimeFormatOptions): string
     parsed
   );
 };
+
+const kindLabel = (kind: string): string => getWorldKind(kind)?.displayName ?? kind;
 
 export function LandingPage(): React.JSX.Element {
   const navigate = useNavigate();
@@ -32,6 +35,8 @@ export function LandingPage(): React.JSX.Element {
   const [chronicleError, setChronicleError] = useState<string | null>(null);
   const [chronicleActivity, setChronicleActivity] = useState<ChronicleActivity[]>([]);
   const [chronicleActivityError, setChronicleActivityError] = useState(false);
+  const [entityActivity, setEntityActivity] = useState<EntityActivityFeed | null>(null);
+  const [entityActivityError, setEntityActivityError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +50,27 @@ export function LandingPage(): React.JSX.Element {
       } catch {
         if (!cancelled) {
           setChronicleActivityError(true);
+        }
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const activity = await worldAtlasClient.getEntityActivity();
+        if (!cancelled) {
+          setEntityActivity(activity);
+          setEntityActivityError(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setEntityActivityError(true);
         }
       }
     };
@@ -310,6 +336,77 @@ export function LandingPage(): React.JSX.Element {
           <p className="landing-presence-note">
             Live player presence is on the way — coordinate in Discord until the roster ships.
           </p>
+        </section>
+
+        <section className="landing-panel">
+          <header className="landing-panel-header">
+            <h2>New lore</h2>
+          </header>
+          {entityActivityError ? (
+            <p className="landing-error">Recent lore is unavailable.</p>
+          ) : entityActivity === null ? (
+            <p className="landing-empty-copy">Reading the latest lore…</p>
+          ) : entityActivity.loreUpdated.length === 0 ? (
+            <p className="landing-empty-copy">No entities have received new lore yet.</p>
+          ) : (
+            <ul className="landing-entity-list">
+              {entityActivity.loreUpdated.map((item) => (
+                <li key={item.id} className="landing-feed-row">
+                  <p className="landing-entity-title-row">
+                    <Link className="landing-entity-name" to={`/atlas/${item.slug}`}>
+                      {item.name}
+                    </Link>
+                    <span className="landing-entity-date">
+                      {formatDate(new Date(item.activityAt).toISOString())}
+                    </span>
+                  </p>
+                  <p className="landing-entity-meta">
+                    {kindLabel(item.kind)}
+                    {item.subkind === null ? '' : ` · ${item.subkind.replace(/_/g, ' ')}`}
+                  </p>
+                  <p className="landing-entity-update-title">{item.loreTitle}</p>
+                  {item.summary === null ? null : (
+                    <p className="landing-entity-summary">{item.summary}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="landing-panel">
+          <header className="landing-panel-header">
+            <h2>New entities</h2>
+          </header>
+          {entityActivityError ? (
+            <p className="landing-error">New entities are unavailable.</p>
+          ) : entityActivity === null ? (
+            <p className="landing-empty-copy">Reading the latest entities…</p>
+          ) : entityActivity.created.length === 0 ? (
+            <p className="landing-empty-copy">No entities have entered the world yet.</p>
+          ) : (
+            <ul className="landing-entity-list">
+              {entityActivity.created.map((item) => (
+                <li key={item.id} className="landing-feed-row">
+                  <p className="landing-entity-title-row">
+                    <Link className="landing-entity-name" to={`/atlas/${item.slug}`}>
+                      {item.name}
+                    </Link>
+                    <span className="landing-entity-date">
+                      {formatDate(new Date(item.activityAt).toISOString())}
+                    </span>
+                  </p>
+                  <p className="landing-entity-meta">
+                    {kindLabel(item.kind)}
+                    {item.subkind === null ? '' : ` · ${item.subkind.replace(/_/g, ' ')}`}
+                  </p>
+                  {item.summary === null ? null : (
+                    <p className="landing-entity-summary">{item.summary}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>
