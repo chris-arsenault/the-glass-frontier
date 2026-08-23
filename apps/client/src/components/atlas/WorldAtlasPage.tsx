@@ -9,6 +9,7 @@ import { AtlasBodyMap } from './AtlasBodyMap';
 import type { AtlasGraph } from './atlasGraph';
 import { breadcrumbIds, buildAtlasGraph, descendantCount } from './atlasGraph';
 import { AtlasLocationBrowser } from './AtlasLocationBrowser';
+import { AtlasSystemMap } from './AtlasSystemMap';
 import './WorldAtlasPage.css';
 
 type WorldData = {
@@ -53,6 +54,11 @@ const CHILD_GROUPS: Array<{ key: 'orbit' | 'surface' | 'within'; title: string }
 ];
 
 const kindLabel = (kind: string): string => getWorldKind(kind)?.displayName ?? kind;
+
+const loreSnippet = (prose: string): string => {
+  const words = prose.replace(/\s+/g, ' ').trim().split(' ');
+  return `${words.slice(0, 7).join(' ')}${words.length > 7 ? '…' : ''}`;
+};
 
 const findLinkedEntity = async (
   entity: HardState,
@@ -353,6 +359,30 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
     if (entity === null) {
       return [];
     }
+    // Everything already surfaced structurally stays out of this list: the
+    // parent chain (breadcrumbs), charted children (tiles and charts), and
+    // presence links (the Present-here section).
+    const node = world?.graph.nodes.get(entity.id);
+    const structuralIds = new Set<string>();
+    if (node) {
+      if (node.parentId !== null) {
+        structuralIds.add(node.parentId);
+      }
+      for (const childId of [
+        ...node.children.orbit,
+        ...node.children.surface,
+        ...node.children.within,
+      ]) {
+        structuralIds.add(childId);
+      }
+    }
+    const CONTAINMENT = new Set([
+      'on_surface_of',
+      'in_orbit_of',
+      'orbits',
+      'located_in',
+      'part_of',
+    ]);
     const groups = new Map<string, HardStateLink[]>();
     for (const link of entity.links) {
       const type = getRelationshipType(link.relationship);
@@ -360,13 +390,23 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
       if (category === 'dm' || category === 'banned') {
         continue;
       }
+      if (CONTAINMENT.has(link.relationship) && structuralIds.has(link.targetId)) {
+        continue;
+      }
+      if (
+        link.direction === 'in' &&
+        PRESENCE_RELATIONSHIPS.has(link.relationship) &&
+        !(world?.graph.nodes.has(link.targetId) ?? false)
+      ) {
+        continue; // rendered in Present here
+      }
       groups.set(category, [...(groups.get(category) ?? []), link]);
     }
     return RELATION_CATEGORY_ORDER.filter((category) => groups.has(category)).map((category) => ({
       category,
       links: groups.get(category) ?? [],
     }));
-  }, [entity]);
+  }, [entity, world]);
 
   const handleStartChronicle = async () => {
     if (!entity) {
@@ -424,6 +464,27 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
 
   const facts = Object.entries(entity.facts);
 
+  // Source summaries are truncated excerpts of the lead lore passage; when
+  // that passage is present below, showing both is pure duplication.
+  const descriptionPrefix = (entity.description ?? '')
+    .replace(/[.…]+\s*$/u, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  const descriptionInLore =
+    descriptionPrefix.length > 20 &&
+    fragments.some((fragment) =>
+      fragment.prose.replace(/\s+/g, ' ').trim().startsWith(descriptionPrefix)
+    );
+
+  // Fragment tags are stamped per entity by the source, so one shared row
+  // says everything; per-fragment repeats are noise.
+  const loreTags = [...new Set(fragments.flatMap((fragment) => fragment.tags ?? []))];
+  const loreTitleCounts = new Map<string, number>();
+  for (const fragment of fragments) {
+    loreTitleCounts.set(fragment.title, (loreTitleCounts.get(fragment.title) ?? 0) + 1);
+  }
+
   return (
     <div className="atlas-entity">
       {error ? (
@@ -469,7 +530,9 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
         </button>
       </header>
 
-      {entity.description ? <p className="atlas-description">{entity.description}</p> : null}
+      {entity.description && !descriptionInLore ? (
+        <p className="atlas-description">{entity.description}</p>
+      ) : null}
 
       {facts.length > 0 ? (
         <dl className="atlas-facts">
@@ -482,10 +545,17 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
         </dl>
       ) : null}
 
-      {node !== null &&
+      {entity.subkind === 'star_system' && world !== null ? (
+        <section className="atlas-section atlas-bodymap-panel">
+          <h3>System chart</h3>
+          <AtlasSystemMap graph={world.graph} onSelect={onSelect} />
+        </section>
+      ) : null}
+
+      {entity.subkind !== 'star_system' &&
+      node !== null &&
       world !== null &&
-      node.children.orbit.length > 0 &&
-      node.children.surface.length > 0 ? (
+      node.children.orbit.length > 0 ? (
           <section className="atlas-section atlas-bodymap-panel">
             <h3>Orbit &amp; surface</h3>
             <AtlasBodyMap
@@ -620,14 +690,17 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
           <h3>
             Lore
             <span className="atlas-section-count">{fragments.length}</span>
+            {loreTags.length > 0 ? (
+              <span className="atlas-fragment-tags">{loreTags.join(' · ')}</span>
+            ) : null}
           </h3>
           <div className="atlas-fragments">
             {fragments.map((fragment, index) => (
               <details key={fragment.id} className="atlas-fragment" open={index === 0}>
                 <summary>
                   <span className="atlas-fragment-title">{fragment.title}</span>
-                  {(fragment.tags ?? []).length > 0 ? (
-                    <span className="atlas-fragment-tags">{(fragment.tags ?? []).join(' · ')}</span>
+                  {(loreTitleCounts.get(fragment.title) ?? 0) > 1 ? (
+                    <span className="atlas-fragment-snippet">{loreSnippet(fragment.prose)}</span>
                   ) : null}
                 </summary>
                 <p className="atlas-fragment-body">{fragment.prose}</p>

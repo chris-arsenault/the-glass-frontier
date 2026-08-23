@@ -108,12 +108,17 @@ export function ChronicleStartWizard() {
 
   const fetchLocations = useCallback(async () => {
     try {
-      const list = await worldAtlasClient.listEntities({ playableAs: 'chronicle_location' });
+      // The whole charted world renders for orientation; only places curated
+      // as chronicle openers (playableAs chronicle_location) are selectable.
+      const list = await worldAtlasClient.listEntities({ isLocation: true });
       const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
       setLocations(sorted);
       setLocationError(null);
-      if (useChronicleStartStore.getState().selectedLocation === null && sorted.length > 0) {
-        setSelectedLocation(mapLocation(sorted[0]));
+      const playable = sorted.filter((entity) =>
+        entity.playableAs.includes('chronicle_location')
+      );
+      if (useChronicleStartStore.getState().selectedLocation === null && playable.length > 0) {
+        setSelectedLocation(mapLocation(playable[0]));
       }
     } catch (err: unknown) {
       setLocationError(err instanceof Error ? err.message : 'Failed to load locations');
@@ -459,10 +464,15 @@ function LocationStep({
   onRefresh,
   onSelect,
 }: LocationStepProps) {
-  const { byId, graph } = useMemo(
+  const { byId, graph, selectableIds } = useMemo(
     () => ({
       byId: new Map(locations.map((entity) => [entity.id, entity])),
       graph: buildAtlasGraph(locations),
+      selectableIds: new Set(
+        locations
+          .filter((entity) => entity.playableAs.includes('chronicle_location'))
+          .map((entity) => entity.id)
+      ),
     }),
     [locations]
   );
@@ -473,7 +483,10 @@ function LocationStep({
       <header className="location-step-header">
         <div>
           <h2>Choose a location</h2>
-          <p>Anywhere charted in the World Atlas can host the opening scene.</p>
+          <p>
+            The whole charted system is shown for bearings; bright entries are the places a
+            chronicle can open.
+          </p>
         </div>
         <div className="location-step-actions">
           <button type="button" onClick={onRefresh} disabled={isLoading}>
@@ -487,6 +500,7 @@ function LocationStep({
         graph={graph}
         byId={byId}
         onOpen={onSelect}
+        selectableIds={selectableIds}
         selectedId={activeLocationId}
         sidePanel={
           <section className="atlas-panel location-step-selection" aria-label="Selected location">

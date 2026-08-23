@@ -18,6 +18,12 @@ type AtlasLocationBrowserProps = {
   onOpen: (entity: HardState) => void;
   /** Highlighted entity, for picker use. */
   selectedId?: string | null;
+  /**
+   * Picker mode: only these entities respond to a click; everything else
+   * stays on the chart as context but renders muted. Omit for navigation,
+   * where every entity opens.
+   */
+  selectableIds?: ReadonlySet<string>;
   /** Optional second column beside the gazetteer (registry, detail card…). */
   sidePanel?: React.ReactNode;
 };
@@ -26,6 +32,7 @@ export function AtlasLocationBrowser({
   byId,
   graph,
   onOpen,
+  selectableIds,
   selectedId = null,
   sidePanel,
 }: AtlasLocationBrowserProps): React.JSX.Element {
@@ -34,11 +41,20 @@ export function AtlasLocationBrowser({
   const systemName =
     (graph.systemId !== null ? byId.get(graph.systemId)?.name : undefined) ?? 'Charted space';
 
+  const isSelectable = (id: string): boolean =>
+    selectableIds === undefined || selectableIds.has(id);
+
+  const open = (entity: HardState) => {
+    if (isSelectable(entity.id)) {
+      onOpen(entity);
+    }
+  };
+
   const openSlug = (slug: string) => {
     const id = graph.idBySlug.get(slug);
     const entity = id === undefined ? undefined : byId.get(id);
     if (entity) {
-      onOpen(entity);
+      open(entity);
     }
   };
 
@@ -90,7 +106,8 @@ export function AtlasLocationBrowser({
             <GazetteerTree
               graph={graph}
               byId={byId}
-              onOpen={onOpen}
+              onOpen={open}
+              isSelectable={isSelectable}
               selectedId={selectedId}
             />
           ) : matches.length === 0 ? (
@@ -103,8 +120,9 @@ export function AtlasLocationBrowser({
                     entity={entity}
                     depth={0}
                     charted={descendantCount(graph, entity.id)}
+                    isSelectable={isSelectable(entity.id)}
                     isSelected={entity.id === selectedId}
-                    onOpen={onOpen}
+                    onOpen={open}
                   />
                 </li>
               ))}
@@ -121,10 +139,17 @@ type GazetteerTreeProps = {
   graph: AtlasGraph;
   byId: Map<string, HardState>;
   onOpen: (entity: HardState) => void;
+  isSelectable: (id: string) => boolean;
   selectedId: string | null;
 };
 
-function GazetteerTree({ byId, graph, onOpen, selectedId }: GazetteerTreeProps): React.JSX.Element {
+function GazetteerTree({
+  byId,
+  graph,
+  isSelectable,
+  onOpen,
+  selectedId,
+}: GazetteerTreeProps): React.JSX.Element {
   const topIds = graph.sunId === null ? graph.rootIds : [...graph.planetIds, ...graph.rootIds];
 
   const renderNode = (id: string, depth: number): React.JSX.Element | null => {
@@ -140,6 +165,7 @@ function GazetteerTree({ byId, graph, onOpen, selectedId }: GazetteerTreeProps):
           entity={entity}
           depth={depth}
           charted={children.length > 0 ? descendantCount(graph, id) : 0}
+          isSelectable={isSelectable(id)}
           isSelected={id === selectedId}
           onOpen={onOpen}
         />
@@ -158,6 +184,7 @@ type GazetteerRowProps = {
   entity: HardState;
   depth: number;
   charted: number;
+  isSelectable: boolean;
   isSelected: boolean;
   onOpen: (entity: HardState) => void;
 };
@@ -166,15 +193,19 @@ function GazetteerRow({
   charted,
   depth,
   entity,
+  isSelectable,
   isSelected,
   onOpen,
 }: GazetteerRowProps): React.JSX.Element {
   return (
     <button
       type="button"
-      className={`atlas-gazetteer-row${isSelected ? ' atlas-gazetteer-row-selected' : ''}`}
+      className={`atlas-gazetteer-row${isSelected ? ' atlas-gazetteer-row-selected' : ''}${
+        isSelectable ? '' : ' atlas-gazetteer-row-context'
+      }`}
       style={{ paddingLeft: `${depth * 1.1 + 0.5}rem` }}
       aria-current={isSelected ? 'true' : undefined}
+      aria-disabled={isSelectable ? undefined : 'true'}
       onClick={() => onOpen(entity)}
     >
       <span className="atlas-row-name">{entity.name}</span>

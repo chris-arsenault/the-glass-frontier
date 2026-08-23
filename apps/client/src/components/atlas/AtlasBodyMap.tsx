@@ -106,11 +106,7 @@ export function AtlasBodyMap({
 }: AtlasBodyMapProps): React.JSX.Element {
   const resolver = useMemo(() => new AtlasPositionResolver(graph), [graph]);
   const bodyPolar = resolver.resolvePolar(body.entity.id);
-  const declaredOrbiters = body.children.orbit.filter((id) => {
-    const child = graph.nodes.get(id);
-    return child !== undefined && hasOwnPolarPosition(child.entity);
-  });
-  if (bodyPolar !== null && declaredOrbiters.length >= 2) {
+  if (bodyPolar !== null && body.children.orbit.length > 0) {
     return (
       <DeclaredBodyMap
         body={body}
@@ -414,7 +410,7 @@ function DeclaredBodyMap({
   onOpen,
   resolver,
 }: DeclaredBodyMapProps): React.JSX.Element {
-  const { activate, clickable } = chartInteraction(onOpen);
+  const { clickable } = chartInteraction(onOpen);
 
   /* Surface panel: equirectangular, north up, equal degree scale. */
   const surfaceEntries = collectSurfaceEntries(graph, body);
@@ -451,37 +447,102 @@ function DeclaredBodyMap({
   }
 
   /* Orbital panel: top-down local view in authored offsets. */
-  const orbitItems = body.children.orbit.flatMap((childId) => {
-    const child = graph.nodes.get(childId);
-    if (!child || !hasOwnPolarPosition(child.entity)) {
+  const hasSurface = surfaceEntries.length > 0;
+  const orbitCx = hasSurface ? ORBIT_CX : DECL_WIDTH / 2;
+  const orbitMaxR = hasSurface ? ORBIT_MAX_R : ORBIT_MAX_R + 44;
+
+  // Every positioned, non-surface object in this body's subtree: direct
+  // satellites, ring regions, zones, and mid-route hubs alike.
+  const subtreeIds: string[] = [];
+  {
+    const stack = [...body.children.orbit, ...body.children.within];
+    const seen = new Set<string>();
+    while (stack.length > 0) {
+      const id = stack.pop() as string;
+      if (seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      subtreeIds.push(id);
+      const node = graph.nodes.get(id);
+      if (node) {
+        stack.push(...node.children.orbit, ...node.children.within);
+      }
+    }
+  }
+  const positioned = subtreeIds.flatMap((id) => {
+    const node = graph.nodes.get(id);
+    if (!node || !hasOwnPolarPosition(node.entity) || surfacePoint(node.entity) !== null) {
       return [];
     }
-    const polar = resolver.resolvePolar(childId);
+    const polar = resolver.resolvePolar(id);
     if (polar === null) {
       return [];
     }
-    return [{ delta: localOffset(bodyPolar, polar), node: child }];
+    return [{ delta: localOffset(bodyPolar, polar), node }];
   });
-  const maxDistance = Math.max(...orbitItems.map((item) => item.delta.distance), 0.2);
+  const rings = positioned.filter(
+    (item) =>
+      item.node.entity.kind === 'geographic_location' &&
+      item.node.entity.subkind === 'world_region'
+  );
+  const zones = positioned.filter(
+    (item) =>
+      item.node.entity.kind === 'geographic_location' &&
+      item.node.entity.subkind !== 'world_region'
+  );
+  const stations = positioned.filter(
+    (item) => item.node.entity.kind !== 'geographic_location'
+  );
+
+  const maxDistance = Math.max(...positioned.map((item) => item.delta.distance), 0.2);
   const orbitRadiusPx = (distance: number): number =>
-    ORBIT_MIN_R + (ORBIT_MAX_R - ORBIT_MIN_R) * Math.sqrt(distance / maxDistance);
+    ORBIT_MIN_R + (orbitMaxR - ORBIT_MIN_R) * Math.sqrt(distance / maxDistance);
   const orbitScreen = (delta: { x: number; y: number; distance: number }): { x: number; y: number } => {
     const r = orbitRadiusPx(delta.distance);
     return {
-      x: ORBIT_CX + (delta.x / delta.distance) * r,
+      x: orbitCx + (delta.x / delta.distance) * r,
       y: ORBIT_CY - (delta.y / delta.distance) * r * ORBIT_FLATTEN,
     };
   };
+  /** A point on the flattened ellipse of a track, at a bearing in degrees. */
+  const onTrack = (radiusPx: number, bearingDeg: number): { x: number; y: number } => {
+    const radians = (bearingDeg * Math.PI) / 180;
+    return {
+      x: orbitCx + Math.cos(radians) * radiusPx,
+      y: ORBIT_CY - Math.sin(radians) * radiusPx * ORBIT_FLATTEN,
+    };
+  };
+  const bearingOf = (delta: { x: number; y: number }): number =>
+    (Math.atan2(delta.y, delta.x) * 180) / Math.PI;
   const trackDistances = [
-    ...new Set(orbitItems.map((item) => Number(item.delta.distance.toFixed(3)))),
+    ...new Set(stations.map((item) => Number(item.delta.distance.toFixed(3)))),
   ].sort((a, b) => a - b);
+
+  // The habs of each ring have no authored positions yet; string them evenly
+  // along the ring's band so all of them are visible and clickable.
+  const ringHabs = rings.flatMap((ring) => {
+    const bandR = orbitRadiusPx(ring.delta.distance);
+    const startBearing = bearingOf(ring.delta);
+    const habs = ring.node.children.within
+      .map((id) => graph.nodes.get(id))
+      .filter(
+        (hab): hab is AtlasNode => Boolean(hab) && !hasOwnPolarPosition((hab as AtlasNode).entity)
+      );
+    return habs.map((hab, index) => ({
+      bandR,
+      bearing: startBearing + ((index + 1) * 360) / (habs.length + 1),
+      hab,
+      index,
+    }));
+  });
 
   // Sunward: from the body toward the frame origin.
   const bodyCartesian = toCartesian(bodyPolar);
   const bodyDistance = Math.hypot(bodyCartesian.x, bodyCartesian.y) || 1;
   const sunward = {
-    x: ORBIT_CX - (bodyCartesian.x / bodyDistance) * (ORBIT_MAX_R + 34),
-    y: ORBIT_CY + (bodyCartesian.y / bodyDistance) * (ORBIT_MAX_R + 34) * ORBIT_FLATTEN,
+    x: orbitCx - (bodyCartesian.x / bodyDistance) * (orbitMaxR + 34),
+    y: ORBIT_CY + (bodyCartesian.y / bodyDistance) * (orbitMaxR + 34) * ORBIT_FLATTEN,
   };
 
   // Route geometry passing near this body, clipped to the panel's reach.
@@ -525,17 +586,35 @@ function DeclaredBodyMap({
     return segments.length > 0 ? [{ node: child, segments }] : [];
   });
 
-  const unplaced = body.children.orbit.flatMap((childId) => {
-    const child = graph.nodes.get(childId);
-    if (
-      !child ||
-      hasOwnPolarPosition(child.entity) ||
-      child.entity.routeGeometry !== undefined
-    ) {
-      return [];
-    }
-    return [child];
-  });
+  // Orbit children with no authored position ride a dashed outer track so
+  // they stay visible on the chart instead of vanishing into a footnote.
+  const unfixedTrackR = orbitMaxR + 30;
+  const unfixed = body.children.orbit
+    .flatMap((childId) => {
+      const child = graph.nodes.get(childId);
+      if (
+        !child ||
+        hasOwnPolarPosition(child.entity) ||
+        child.entity.routeGeometry !== undefined
+      ) {
+        return [];
+      }
+      return [child];
+    })
+    .map((node, index, all) => ({
+      node,
+      point: onTrack(unfixedTrackR, -90 + ((index + 1) * 360) / (all.length + 1)),
+    }));
+
+  /** A band segment along a track: a sampled arc, wide enough to read as area. */
+  const zoneArcPath = (radiusPx: number, centerBearing: number, halfSpanDeg: number): string => {
+    const steps = 16;
+    const points = Array.from({ length: steps + 1 }, (_, step) => {
+      const bearing = centerBearing - halfSpanDeg + (2 * halfSpanDeg * step) / steps;
+      return onTrack(radiusPx, bearing);
+    });
+    return `M ${points.map((point) => `${point.x} ${point.y}`).join(' L ')}`;
+  };
 
   return (
     <svg
@@ -544,98 +623,111 @@ function DeclaredBodyMap({
       role="img"
       aria-label={`Surface and orbit of ${body.entity.name}`}
     >
-      {/* Surface panel */}
-      <text className="atlas-bodymap-planet-name" x={SURFACE_X + 4} y={40}>
-        {body.entity.name}
-      </text>
-      <text className="atlas-bodymap-layer-label" x={SURFACE_X + 4} y={62}>
-        surface · charted coordinates
-      </text>
-      <rect
-        className="atlas-bodymap-surface-frame"
-        x={SURFACE_X}
-        y={SURFACE_Y}
-        width={SURFACE_W}
-        height={SURFACE_H}
-        rx={8}
-      />
-      {graticule.map((lon) => {
-        const x = surfaceOriginX + (lon - lonMin) * degScale;
-        return (
-          <g key={`lon-${lon}`}>
+      {hasSurface ? (
+        <>
+          {/* Surface panel */}
+          <text className="atlas-bodymap-planet-name" x={SURFACE_X + 4} y={40}>
+            {body.entity.name}
+          </text>
+          <text className="atlas-bodymap-layer-label" x={SURFACE_X + 4} y={62}>
+            surface · charted coordinates
+          </text>
+          <rect
+            className="atlas-bodymap-surface-frame"
+            x={SURFACE_X}
+            y={SURFACE_Y}
+            width={SURFACE_W}
+            height={SURFACE_H}
+            rx={8}
+          />
+          {graticule.map((lon) => {
+            const x = surfaceOriginX + (lon - lonMin) * degScale;
+            return (
+              <g key={`lon-${lon}`}>
+                <line
+                  className={`atlas-bodymap-graticule${lon === 0 ? ' atlas-bodymap-meridian' : ''}`}
+                  x1={x}
+                  y1={SURFACE_Y + 6}
+                  x2={x}
+                  y2={SURFACE_Y + SURFACE_H - 6}
+                />
+                <text
+                  className="atlas-bodymap-graticule-label"
+                  x={x}
+                  y={SURFACE_Y + SURFACE_H - 10}
+                  textAnchor="middle"
+                >
+                  {lon}°
+                </text>
+              </g>
+            );
+          })}
+          <line
+            className="atlas-bodymap-graticule atlas-bodymap-equator"
+            x1={SURFACE_X + 6}
+            y1={surfaceOriginY - (0 - latMin) * degScale}
+            x2={SURFACE_X + SURFACE_W - 6}
+            y2={surfaceOriginY - (0 - latMin) * degScale}
+          />
+          {adjacency.map((edge, index) => (
             <line
-              className={`atlas-bodymap-graticule${lon === 0 ? ' atlas-bodymap-meridian' : ''}`}
-              x1={x}
-              y1={SURFACE_Y + 6}
-              x2={x}
-              y2={SURFACE_Y + SURFACE_H - 6}
+              key={`adj-${index}`}
+              className="atlas-bodymap-adjacency"
+              x1={edge.from.x}
+              y1={edge.from.y}
+              x2={edge.to.x}
+              y2={edge.to.y}
             />
-            <text className="atlas-bodymap-graticule-label" x={x} y={SURFACE_Y + SURFACE_H - 10} textAnchor="middle">
-              {lon}°
-            </text>
-          </g>
-        );
-      })}
-      <line
-        className="atlas-bodymap-graticule atlas-bodymap-equator"
-        x1={SURFACE_X + 6}
-        y1={surfaceOriginY - (0 - latMin) * degScale}
-        x2={SURFACE_X + SURFACE_W - 6}
-        y2={surfaceOriginY - (0 - latMin) * degScale}
-      />
-      {adjacency.map((edge, index) => (
-        <line
-          key={`adj-${index}`}
-          className="atlas-bodymap-adjacency"
-          x1={edge.from.x}
-          y1={edge.from.y}
-          x2={edge.to.x}
-          y2={edge.to.y}
-        />
-      ))}
-      {surfaceEntries.map(({ node, point }, index) => {
-        const screen = surfaceScreen(point);
-        const radius = SIZE_CLASS_RADIUS[point.sizeClass ?? 'site'] ?? 4.5;
-        const isRegion = point.sizeClass === 'region' || point.sizeClass === 'continent';
-        const labelAbove = index % 2 === 0;
-        return (
-          <g key={node.entity.id} {...clickable(node)}>
-            <title>{`${node.entity.name}${point.sizeClass ? ` — ${point.sizeClass}` : ''}`}</title>
-            {isRegion ? (
-              <circle
-                className="atlas-bodymap-region-extent"
-                cx={screen.x}
-                cy={screen.y}
-                r={radius + 8}
-              />
-            ) : null}
-            <circle
-              className={isRegion ? 'atlas-bodymap-region-dot' : 'atlas-bodymap-surface-dot'}
-              cx={screen.x}
-              cy={screen.y}
-              r={isRegion ? radius * 0.55 : radius}
-            />
-            <text
-              className="atlas-map-name atlas-bodymap-surface-name"
-              x={screen.x}
-              y={labelAbove ? screen.y - radius - 8 : screen.y + radius + 18}
-              textAnchor="middle"
-            >
-              {node.entity.name}
-            </text>
-          </g>
-        );
-      })}
+          ))}
+          {surfaceEntries.map(({ node, point }, index) => {
+            const screen = surfaceScreen(point);
+            const radius = SIZE_CLASS_RADIUS[point.sizeClass ?? 'site'] ?? 4.5;
+            const isRegion = point.sizeClass === 'region' || point.sizeClass === 'continent';
+            const labelAbove = index % 2 === 0;
+            return (
+              <g key={node.entity.id} {...clickable(node)}>
+                <title>{`${node.entity.name}${point.sizeClass ? ` — ${point.sizeClass}` : ''}`}</title>
+                {isRegion ? (
+                  <circle
+                    className="atlas-bodymap-region-extent"
+                    cx={screen.x}
+                    cy={screen.y}
+                    r={radius + 8}
+                  />
+                ) : null}
+                <circle
+                  className={isRegion ? 'atlas-bodymap-region-dot' : 'atlas-bodymap-surface-dot'}
+                  cx={screen.x}
+                  cy={screen.y}
+                  r={isRegion ? radius * 0.55 : radius}
+                />
+                <text
+                  className="atlas-map-name atlas-bodymap-surface-name"
+                  x={screen.x}
+                  y={labelAbove ? screen.y - radius - 8 : screen.y + radius + 18}
+                  textAnchor="middle"
+                >
+                  {node.entity.name}
+                </text>
+              </g>
+            );
+          })}
+        </>
+      ) : (
+        <text className="atlas-bodymap-planet-name" x={SURFACE_X + 4} y={40}>
+          {body.entity.name}
+        </text>
+      )}
 
       {/* Orbital panel */}
-      <text className="atlas-bodymap-layer-label" x={ORBIT_CX} y={40} textAnchor="middle">
+      <text className="atlas-bodymap-layer-label" x={orbitCx} y={40} textAnchor="middle">
         orbit · authored offsets
       </text>
       {trackDistances.map((distance) => (
         <ellipse
           key={`track-${distance}`}
           className="atlas-bodymap-track"
-          cx={ORBIT_CX}
+          cx={orbitCx}
           cy={ORBIT_CY}
           rx={orbitRadiusPx(distance)}
           ry={orbitRadiusPx(distance) * ORBIT_FLATTEN}
@@ -643,7 +735,7 @@ function DeclaredBodyMap({
       ))}
       <line
         className="atlas-bodymap-sunline"
-        x1={ORBIT_CX}
+        x1={orbitCx}
         y1={ORBIT_CY}
         x2={sunward.x}
         y2={sunward.y}
@@ -651,6 +743,82 @@ function DeclaredBodyMap({
       <text className="atlas-bodymap-sun-glyph" x={sunward.x} y={sunward.y}>
         ☉
       </text>
+
+      {/* Zones: band segments along their track, not point markers. */}
+      {zones.map(({ delta, node }) => {
+        const bearing = bearingOf(delta);
+        const label = onTrack(orbitRadiusPx(delta.distance) + 16, bearing);
+        const charted = descendantCount(graph, node.entity.id);
+        return (
+          <g key={node.entity.id} {...clickable(node)}>
+            <title>{`${node.entity.name}${charted > 0 ? ` — ${charted} charted` : ''}`}</title>
+            <path
+              className="atlas-bodymap-zone-band"
+              d={zoneArcPath(orbitRadiusPx(delta.distance), bearing, 26)}
+            />
+            <text
+              className="atlas-map-name"
+              x={label.x}
+              y={label.y}
+              textAnchor={label.x < orbitCx ? 'end' : 'start'}
+            >
+              {node.entity.name}
+              {charted > 0 ? (
+                <tspan className="atlas-bodymap-ring-count"> · {charted}</tspan>
+              ) : null}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Ring regions: the full band, with their habs strung along it. */}
+      {rings.map(({ delta, node }) => {
+        const bandR = orbitRadiusPx(delta.distance);
+        const anchor = onTrack(bandR, bearingOf(delta));
+        const charted = descendantCount(graph, node.entity.id);
+        return (
+          <g key={node.entity.id}>
+            <g {...clickable(node)}>
+              <title>{`${node.entity.name} — ${charted} charted`}</title>
+              <ellipse
+                className="atlas-bodymap-ring"
+                cx={orbitCx}
+                cy={ORBIT_CY}
+                rx={bandR}
+                ry={bandR * ORBIT_FLATTEN}
+              />
+              <circle className="atlas-bodymap-region-dot" cx={anchor.x} cy={anchor.y} r={3.5} />
+              <text
+                className="atlas-map-name"
+                x={anchor.x + 10}
+                y={anchor.y - 8}
+              >
+                {node.entity.name}
+                <tspan className="atlas-bodymap-ring-count"> · {charted} charted</tspan>
+              </text>
+            </g>
+          </g>
+        );
+      })}
+      {ringHabs.map(({ bandR, bearing, hab, index }) => {
+        const dot = onTrack(bandR, bearing);
+        const label = onTrack(bandR + 12 + (index % 3) * 14, bearing);
+        return (
+          <g key={hab.entity.id} {...clickable(hab)}>
+            <title>{hab.entity.name}</title>
+            <circle className="atlas-bodymap-hab-dot" cx={dot.x} cy={dot.y} r={2.75} />
+            <text
+              className="atlas-bodymap-hab-name"
+              x={label.x}
+              y={label.y}
+              textAnchor={label.x < orbitCx - 20 ? 'end' : label.x > orbitCx + 20 ? 'start' : 'middle'}
+            >
+              {hab.entity.name}
+            </text>
+          </g>
+        );
+      })}
+
       {localRoutes.map(({ node, segments }) => (
         <g key={node.entity.id} {...clickable(node)}>
           <title>{`${node.entity.name} — route`}</title>
@@ -664,27 +832,21 @@ function DeclaredBodyMap({
           ))}
           <text
             className="atlas-map-count atlas-bodymap-lane-name"
-            x={(segments[0]?.points[0]?.x ?? ORBIT_CX) + 8}
+            x={(segments[0]?.points[0]?.x ?? orbitCx) + 8}
             y={(segments[0]?.points[0]?.y ?? ORBIT_CY) - 8}
           >
             {node.entity.name}
           </text>
         </g>
       ))}
-      <circle className="atlas-bodymap-planet-dot" cx={ORBIT_CX} cy={ORBIT_CY} r={22} />
-      <text
-        className="atlas-map-name"
-        x={ORBIT_CX}
-        y={ORBIT_CY + 42}
-        textAnchor="middle"
-      >
+
+      <circle className="atlas-bodymap-planet-dot" cx={orbitCx} cy={ORBIT_CY} r={22} />
+      <text className="atlas-map-name" x={orbitCx} y={ORBIT_CY + 42} textAnchor="middle">
         {body.entity.name}
       </text>
-      {orbitItems.map(({ delta, node }) => {
+
+      {stations.map(({ delta, node }) => {
         const screen = orbitScreen(delta);
-        const isZone = node.entity.kind === 'geographic_location';
-        // A world_region in orbit is the ring itself: a band, not a point.
-        const isRing = node.entity.subkind === 'world_region';
         const tethered = isTetheredEndpoint(node);
         const charted = descendantCount(graph, node.entity.id);
         return (
@@ -692,34 +854,12 @@ function DeclaredBodyMap({
             <title>
               {`${node.entity.name}${charted > 0 ? ` — ${charted} charted` : ''}${tethered ? ' — span-linked' : ''}`}
             </title>
-            {isRing ? (
-              <>
-                <ellipse
-                  className="atlas-bodymap-ring"
-                  cx={ORBIT_CX}
-                  cy={ORBIT_CY}
-                  rx={orbitRadiusPx(delta.distance)}
-                  ry={orbitRadiusPx(delta.distance) * ORBIT_FLATTEN}
-                />
-                <circle className="atlas-bodymap-region-dot" cx={screen.x} cy={screen.y} r={3} />
-              </>
-            ) : isZone ? (
-              <rect
-                className="atlas-bodymap-zone-marker"
-                x={screen.x - 5}
-                y={screen.y - 5}
-                width={10}
-                height={10}
-                transform={`rotate(45 ${screen.x} ${screen.y})`}
-              />
-            ) : (
-              <circle
-                className={`atlas-bodymap-station${tethered ? ' atlas-bodymap-station-tethered' : ''}`}
-                cx={screen.x}
-                cy={screen.y}
-                r={4.5}
-              />
-            )}
+            <circle
+              className={`atlas-bodymap-station${tethered ? ' atlas-bodymap-station-tethered' : ''}`}
+              cx={screen.x}
+              cy={screen.y}
+              r={4.5}
+            />
             <text className="atlas-map-name" x={screen.x + 10} y={screen.y + 4}>
               {node.entity.name}
               {charted > 0 ? (
@@ -729,20 +869,47 @@ function DeclaredBodyMap({
           </g>
         );
       })}
-      {unplaced.length > 0 ? (
-        <text className="atlas-bodymap-unplaced" x={ORBIT_CX} y={DECL_HEIGHT - 16} textAnchor="middle">
-          position unrecorded:{' '}
-          {unplaced.map((node, index) => (
-            <tspan
-              key={node.entity.id}
-              className="atlas-bodymap-unplaced-link"
-              role="link"
-              onClick={activate(node.entity.slug)}
-            >
-              {index > 0 ? ' · ' : ''}
+
+      {/* Unpositioned satellites ride a dashed outer track, still clickable. */}
+      {unfixed.length > 0 ? (
+        <ellipse
+          className="atlas-bodymap-unfixed-track"
+          cx={orbitCx}
+          cy={ORBIT_CY}
+          rx={unfixedTrackR}
+          ry={unfixedTrackR * ORBIT_FLATTEN}
+        />
+      ) : null}
+      {unfixed.map(({ node, point }) => {
+        const charted = descendantCount(graph, node.entity.id);
+        return (
+          <g key={node.entity.id} {...clickable(node)}>
+            <title>{`${node.entity.name} — position unrecorded`}</title>
+            <rect
+              className="atlas-bodymap-zone-marker"
+              x={point.x - 4}
+              y={point.y - 4}
+              width={8}
+              height={8}
+              transform={`rotate(45 ${point.x} ${point.y})`}
+            />
+            <text className="atlas-map-name" x={point.x + 10} y={point.y + 4}>
               {node.entity.name}
-            </tspan>
-          ))}
+              {charted > 0 ? (
+                <tspan className="atlas-bodymap-ring-count"> · {charted}</tspan>
+              ) : null}
+            </text>
+          </g>
+        );
+      })}
+      {unfixed.length > 0 ? (
+        <text
+          className="atlas-bodymap-unplaced"
+          x={orbitCx}
+          y={DECL_HEIGHT - 12}
+          textAnchor="middle"
+        >
+          dashed outer track: position unrecorded in canon
         </text>
       ) : null}
     </svg>

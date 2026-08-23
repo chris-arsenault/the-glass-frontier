@@ -383,5 +383,12 @@
     "summary": "The landing page now follows new entities and lore",
     "details": "Two new dashboard panels show the world graph changing as chronicles enter canon. New Lore lists entities that recently received a lore fragment after their creation, including the fragment title and an excerpt. New Entities lists the latest people, places, factions, artifacts, and other entries added to the world. Every name opens its complete World Atlas entry, and hidden GM records and reference articles stay out of both feeds.",
     "type": "feature"
+  },
+  {
+    "id": "2026-08-23-atlas-defect-round",
+    "releasedAt": "2026-08-23",
+    "summary": "Atlas charts now show everything that is charted",
+    "details": "The Kaleidos System entry opens on the system chart instead of a bare relationship list. Body charts now cover the whole subtree: ring habitats are strung along their ring's band, trade-lane hubs appear at their authored offsets, zones like The Shear render as band segments instead of point markers, and satellites without recorded positions ride a visible dashed outer track rather than hiding in a footnote. Any body with orbiters gets a chart, so Vastine's moon is one click away. Trade routes draw brighter with haloed labels. Entity pages lost their duplication: truncated summaries no longer repeat the lead lore passage, relationships already shown as breadcrumbs, chart children, or Present-here entries stay out of the relationship list, lore tags appear once instead of on every fragment, and same-titled passages get a distinguishing excerpt. The chronicle wizard's location step shows the entire charted system again for orientation, with the curated chronicle-opening places highlighted as the selectable entries.",
+    "type": "bugfix"
   }
 ]
