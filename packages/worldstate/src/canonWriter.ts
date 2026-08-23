@@ -324,7 +324,28 @@ const insertRelationships = async (
     rows.map((row) => row.props),
   ]);
 };
-
+type PriorLoreWrite = { id: string; slug: string };
+const loadPriorLore = async (
+  client: PoolClient,
+  proposal: CanonProposal
+): Promise<Map<string, PriorLoreWrite>> => {
+  const externalKeys = proposal.lore.flatMap((fragment) =>
+    fragment.externalKey === undefined ? [] : [fragment.externalKey]
+  );
+  const priorByExternalKey = new Map<string, PriorLoreWrite>();
+  if (externalKeys.length === 0) {
+    return priorByExternalKey;
+  }
+  const prior = await client.query<{ external_key: string; id: string; slug: string }>(
+    `SELECT external_key, id, slug FROM lore_fragment
+     WHERE source = $1 AND external_key = ANY($2::text[])`,
+    [proposal.source, externalKeys]
+  );
+  for (const row of prior.rows) {
+    priorByExternalKey.set(row.external_key, { id: row.id, slug: row.slug });
+  }
+  return priorByExternalKey;
+};
 const planLoreWrites = async (
   client: PoolClient,
   proposal: CanonProposal,
@@ -333,31 +354,19 @@ const planLoreWrites = async (
   if (proposal.lore.length === 0) {
     return [];
   }
-  const externalKeys = proposal.lore.flatMap((fragment) =>
-    fragment.externalKey === undefined ? [] : [fragment.externalKey]
-  );
-  const priorIds = new Map<string, string>();
-  if (externalKeys.length > 0) {
-    const prior = await client.query<{ id: string; external_key: string }>(
-      'SELECT id, external_key FROM lore_fragment WHERE source = $1 AND external_key = ANY($2::text[])',
-      [proposal.source, externalKeys]
-    );
-    for (const row of prior.rows) {
-      priorIds.set(row.external_key, row.id);
-    }
-  }
-
+  const priorLore = await loadPriorLore(client, proposal);
   const pending = proposal.lore.map((proposed) => {
     const entityId = resolved.get(refKey(proposed.entity));
     if (entityId === undefined) {
       throw new Error('Lore target went unresolved after validation');
     }
-    const priorId =
-      proposed.externalKey === undefined ? undefined : priorIds.get(proposed.externalKey);
+    const prior =
+      proposed.externalKey === undefined ? undefined : priorLore.get(proposed.externalKey);
     return {
       base: slugBase(proposed.title, 'frag'),
       entityId,
-      id: proposed.id ?? priorId ?? randomUUID(),
+      id: proposed.id ?? prior?.id ?? randomUUID(),
+      priorSlug: prior?.slug,
       proposed,
     };
   });
@@ -367,11 +376,16 @@ const planLoreWrites = async (
     pending.map((entry) => entry.base),
     pending.map((entry) => entry.id)
   );
+  for (const entry of pending) {
+    if (entry.priorSlug !== undefined) {
+      taken.add(entry.priorSlug);
+    }
+  }
   return pending.map((entry) => ({
     entityId: entry.entityId,
     id: entry.id,
     proposed: entry.proposed,
-    slug: claimSlug(entry.base, taken),
+    slug: entry.priorSlug ?? claimSlug(entry.base, taken),
   }));
 };
 

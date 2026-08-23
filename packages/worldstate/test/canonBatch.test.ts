@@ -10,6 +10,8 @@ let worldState: WorldState;
 
 const ACCORD_KEY = 'tsonu:accord';
 const CAROM_KEY = 'tsonu:carom';
+const FAE_BIOLOGY_KEY = 'tsonu:fae:biology';
+const GNOMES_BIOLOGY_KEY = 'tsonu:gnomes:biology';
 
 beforeAll(async () => {
   ({ pool, worldState } = await startHarness());
@@ -291,6 +293,46 @@ describe('Canon batch commit', () => {
     expect(all).toHaveLength(1);
     expect(all[0]?.status).toBe('ruined');
     expect(all[0]?.description).toBe('Now with a description.');
+  });
+
+  it('retains lore slugs when a later import inserts another matching title', async () => {
+    const entity = {
+      externalKey: 'tsonu:species-notes',
+      kind: 'concept' as const,
+      name: 'Species Notes',
+      ref: 'notes',
+      subkind: 'reference_concept' as const,
+    };
+    await worldState.world.commitBatch(proposal({
+      entities: [entity],
+      lore: [
+        { entity: { ref: 'notes' }, externalKey: FAE_BIOLOGY_KEY, prose: 'Fae biology.', title: 'Biology' },
+        { entity: { ref: 'notes' }, externalKey: GNOMES_BIOLOGY_KEY, prose: 'Gnomish biology.', title: 'Biology' },
+      ],
+      source: 'import',
+      sourceId: 'tsonu-canon@v1',
+    }));
+
+    await worldState.world.commitBatch(proposal({
+      entities: [entity],
+      lore: [
+        { entity: { ref: 'notes' }, externalKey: 'tsonu:dwarves:biology', prose: 'Dwarven biology.', title: 'Biology' },
+        { entity: { ref: 'notes' }, externalKey: FAE_BIOLOGY_KEY, prose: 'Fae biology revised.', title: 'Biology' },
+        { entity: { ref: 'notes' }, externalKey: GNOMES_BIOLOGY_KEY, prose: 'Gnomish biology revised.', title: 'Biology' },
+      ],
+      source: 'import',
+      sourceId: 'tsonu-canon@v2',
+    }));
+
+    const lore = await pool.query<{ external_key: string; slug: string }>(
+      `SELECT external_key, slug FROM lore_fragment
+       WHERE external_key LIKE 'tsonu:%:biology' ORDER BY external_key`
+    );
+    expect(lore.rows).toEqual([
+      { external_key: 'tsonu:dwarves:biology', slug: 'frag_biology_3' },
+      { external_key: FAE_BIOLOGY_KEY, slug: 'frag_biology' },
+      { external_key: GNOMES_BIOLOGY_KEY, slug: 'frag_biology_2' },
+    ]);
   });
 
   it('applies partial imports without deleting omitted rows or overwriting play changes', async () => {
