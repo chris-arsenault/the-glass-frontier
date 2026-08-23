@@ -51,6 +51,15 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 5,
+            "angle_deg": 278
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "celestial_body",
       "veiled": false
@@ -64,6 +73,16 @@
       "name": "Ashvane",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.08,
+            "angle_offset_deg": 5
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:ashenmaw"
+        }
       ],
       "prominence": "recognized",
       "subkind": "celestial_body",
@@ -93,6 +112,16 @@
       "name": "Avar",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 12,
+            "longitude_deg": -68,
+            "size_class": "region"
+          },
+          "frameId": "kaleidos_surface"
+        }
       ],
       "prominence": "recognized",
       "subkind": "region",
@@ -768,6 +797,16 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.18,
+            "angle_offset_deg": -96
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
+      ],
       "prominence": "marginal",
       "subkind": "station",
       "veiled": false
@@ -968,6 +1007,15 @@
       "name": "Crucible",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 1,
+            "angle_deg": 18
+          },
+          "frameId": "kaleidos_system_chart"
+        }
       ],
       "prominence": "recognized",
       "subkind": "celestial_body",
@@ -2051,6 +2099,16 @@
         "chronicle_location",
         "homeland"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.1,
+            "angle_offset_deg": 26
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "settlement",
       "veiled": false
@@ -2183,6 +2241,16 @@
       "playableAs": [
         "chronicle_location",
         "homeland"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 11,
+            "longitude_deg": -75,
+            "size_class": "site"
+          },
+          "frameId": "kaleidos_surface"
+        }
       ],
       "prominence": "recognized",
       "subkind": "settlement",
@@ -2472,6 +2540,16 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.55,
+            "angle_offset_deg": 18
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
+      ],
       "prominence": "marginal",
       "subkind": "station",
       "veiled": false
@@ -2723,6 +2801,15 @@
       "kind": "geographic_location",
       "name": "Kaleidos",
       "playableAs": [],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 2,
+            "angle_deg": 64
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "mythic",
       "subkind": "celestial_body",
       "veiled": false
@@ -2799,6 +2886,108 @@
         "chronicle_location"
       ],
       "prominence": "recognized",
+      "routeGeometry": {
+        "frameId": "kaleidos_system_chart",
+        "paths": [
+          {
+            "id": "glasswake_feeder",
+            "through": [
+              "glasswake",
+              "kaleidos_exchange"
+            ]
+          },
+          {
+            "id": "main_spine",
+            "through": [
+              "keelward",
+              "kaleidos_exchange",
+              "hinge_six",
+              "outer_transfer",
+              "shadewell"
+            ]
+          },
+          {
+            "id": "korvath_branch",
+            "through": [
+              "hinge_six",
+              "korvath"
+            ]
+          },
+          {
+            "id": "mareth_branch",
+            "through": [
+              "kaleidos_exchange",
+              "mareth"
+            ]
+          },
+          {
+            "id": "pell_branch",
+            "through": [
+              "kaleidos_exchange",
+              "the_shear",
+              "cold_lantern"
+            ]
+          }
+        ],
+        "points": [
+          {
+            "entityId": "tsonu:glasswake",
+            "id": "glasswake",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:keelward",
+            "id": "keelward",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:the_shear",
+            "id": "the_shear",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:hinge_six",
+            "id": "hinge_six",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:korvath",
+            "id": "korvath",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:shadewell",
+            "id": "shadewell",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:mareth",
+            "id": "mareth",
+            "kind": "anchor"
+          },
+          {
+            "entityId": "tsonu:cold_lantern",
+            "id": "cold_lantern",
+            "kind": "anchor"
+          },
+          {
+            "coordinates": {
+              "radius": 2.13,
+              "angle_deg": 70
+            },
+            "id": "kaleidos_exchange",
+            "kind": "point"
+          },
+          {
+            "coordinates": {
+              "radius": 4.1,
+              "angle_deg": 208
+            },
+            "id": "outer_transfer",
+            "kind": "point"
+          }
+        ]
+      },
       "subkind": "infrastructure",
       "veiled": false
     },
@@ -2834,6 +3023,16 @@
       "playableAs": [
         "chronicle_location",
         "homeland"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 0,
+            "longitude_deg": 1,
+            "size_class": "district"
+          },
+          "frameId": "kaleidos_surface"
+        }
       ],
       "prominence": "recognized",
       "subkind": "settlement",
@@ -3232,6 +3431,15 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 3,
+            "angle_deg": 126
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "celestial_body",
       "veiled": false
@@ -3280,6 +3488,16 @@
       "name": "Kyther Range",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 10,
+            "longitude_deg": -58,
+            "size_class": "region"
+          },
+          "frameId": "kaleidos_surface"
+        }
       ],
       "prominence": "recognized",
       "subkind": "region",
@@ -3578,6 +3796,15 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 8,
+            "angle_deg": 158
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "celestial_body",
       "veiled": false
@@ -3787,6 +4014,16 @@
       "name": "Mareth",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.1,
+            "angle_offset_deg": 150
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
       ],
       "prominence": "recognized",
       "subkind": "settlement",
@@ -4052,6 +4289,16 @@
       "name": "Miraeth",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 6,
+            "longitude_deg": -61,
+            "size_class": "region"
+          },
+          "frameId": "kaleidos_surface"
+        }
       ],
       "prominence": "recognized",
       "subkind": "region",
@@ -5398,6 +5645,16 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": -4,
+            "longitude_deg": -55,
+            "size_class": "region"
+          },
+          "frameId": "kaleidos_surface"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "region",
       "veiled": false
@@ -5806,6 +6063,16 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 0,
+            "longitude_deg": 0,
+            "size_class": "site"
+          },
+          "frameId": "ashvane_surface"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "settlement",
       "veiled": false
@@ -6019,6 +6286,16 @@
       "playableAs": [
         "chronicle_location",
         "homeland"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "latitude_deg": 0,
+            "longitude_deg": 0,
+            "size_class": "site"
+          },
+          "frameId": "kaleidos_surface"
+        }
       ],
       "prominence": "mythic",
       "subkind": "settlement",
@@ -6996,6 +7273,15 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 6,
+            "angle_deg": 332
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "renowned",
       "subkind": "celestial_body",
       "veiled": false
@@ -7016,6 +7302,16 @@
       "kind": "geographic_location",
       "name": "The Glass Frontier",
       "playableAs": [],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.1,
+            "angle_offset_deg": 0
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
+      ],
       "prominence": "mythic",
       "subkind": "world_region",
       "veiled": false
@@ -7123,6 +7419,16 @@
       "name": "The Shear",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.12,
+            "angle_offset_deg": 210
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
       ],
       "prominence": "renowned",
       "subkind": "frontier",
@@ -7303,6 +7609,16 @@
       "name": "Threshold Station",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": -0.12,
+            "angle_offset_deg": 0
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
       ],
       "prominence": "recognized",
       "subkind": "settlement",
@@ -7643,6 +7959,15 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 7,
+            "angle_deg": 46
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "celestial_body",
       "veiled": false
@@ -7785,6 +8110,16 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.1,
+            "angle_offset_deg": 104
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "settlement",
       "veiled": false
@@ -7877,6 +8212,15 @@
       "playableAs": [
         "chronicle_location"
       ],
+      "positions": [
+        {
+          "coordinates": {
+            "radius": 4,
+            "angle_deg": 202
+          },
+          "frameId": "kaleidos_system_chart"
+        }
+      ],
       "prominence": "recognized",
       "subkind": "celestial_body",
       "veiled": false
@@ -7957,6 +8301,16 @@
       "name": "Xyloathax",
       "playableAs": [
         "chronicle_location"
+      ],
+      "positions": [
+        {
+          "coordinates": {
+            "radial_offset": 0.1,
+            "angle_offset_deg": -118
+          },
+          "frameId": "kaleidos_system_chart",
+          "relativeToId": "tsonu:kaleidos"
+        }
       ],
       "prominence": "recognized",
       "subkind": "settlement",
@@ -8467,6 +8821,21 @@
       },
       "externalKey": "tsonu:avar:rel_avar_on_kaleidos",
       "prose": "Avar crosses [Kaleidos](/glass-frontier/entry/kaleidos)'s western interior between Glasswake's coast and the Kyther foothills.",
+      "tags": [
+        "surface",
+        "resonance",
+        "navigation",
+        "trade",
+        "ecology"
+      ],
+      "title": "Avar"
+    },
+    {
+      "entity": {
+        "externalKey": "tsonu:avar"
+      },
+      "externalKey": "tsonu:avar:rel_avar_adjacent_kyther",
+      "prose": "Avar's eastern steppe reaches the first ridges of the Kyther Range.",
       "tags": [
         "surface",
         "resonance",
@@ -15746,6 +16115,32 @@
       "entity": {
         "externalKey": "tsonu:glasswake"
       },
+      "externalKey": "tsonu:glasswake:rel_glasswake_adjacent_avar",
+      "prose": "Avar begins inland of Glasswake's coastal hills.",
+      "tags": [
+        "surface",
+        "trade",
+        "ring-era"
+      ],
+      "title": "Glasswake"
+    },
+    {
+      "entity": {
+        "externalKey": "tsonu:glasswake"
+      },
+      "externalKey": "tsonu:glasswake:rel_glasswake_terminus_keel",
+      "prose": "Glasswake's surface-access spur forms one of the Keel's principal termini.",
+      "tags": [
+        "surface",
+        "trade",
+        "ring-era"
+      ],
+      "title": "Glasswake"
+    },
+    {
+      "entity": {
+        "externalKey": "tsonu:glasswake"
+      },
       "externalKey": "tsonu:glasswake:rel_glasswake_cooperates_hab_meridian",
       "prose": "Its oldest tie is to [Hab Meridian](/glass-frontier/entry/hab-meridian) — the hab that answered the First Signal — and the partnership has run continuously ever since.",
       "tags": [
@@ -18281,66 +18676,6 @@
       "entity": {
         "externalKey": "tsonu:keel"
       },
-      "externalKey": "tsonu:keel:rel_keel_terminus_keelward",
-      "prose": "At the surface end the Keel grounds at [Keelward](/glass-frontier/entry/keelward), the transfer district of its largest market.",
-      "tags": [
-        "trade",
-        "orbital",
-        "salvage",
-        "danger",
-        "navigation"
-      ],
-      "title": "The Keel"
-    },
-    {
-      "entity": {
-        "externalKey": "tsonu:keel"
-      },
-      "externalKey": "tsonu:keel:rel_keel_terminus_glasswake",
-      "prose": "[Glasswake](/glass-frontier/entry/glasswake) is its other principal terminus, the first surface settlement the lane reconnected.",
-      "tags": [
-        "trade",
-        "orbital",
-        "salvage",
-        "danger",
-        "navigation"
-      ],
-      "title": "The Keel"
-    },
-    {
-      "entity": {
-        "externalKey": "tsonu:keel"
-      },
-      "externalKey": "tsonu:keel:rel_keel_terminus_ashvane",
-      "prose": "Outbound traffic terminates at [Ashvane](/glass-frontier/entry/ashvane), the far-end settlement that depends on the lane for nearly everything.",
-      "tags": [
-        "trade",
-        "orbital",
-        "salvage",
-        "danger",
-        "navigation"
-      ],
-      "title": "The Keel"
-    },
-    {
-      "entity": {
-        "externalKey": "tsonu:keel"
-      },
-      "externalKey": "tsonu:keel:rel_keel_terminus_mareth",
-      "prose": "One managed branch of the Keel reaches Mareth's holding lanes and periodic aperture.",
-      "tags": [
-        "trade",
-        "orbital",
-        "salvage",
-        "danger",
-        "navigation"
-      ],
-      "title": "The Keel"
-    },
-    {
-      "entity": {
-        "externalKey": "tsonu:keel"
-      },
       "externalKey": "tsonu:keel:geography:0",
       "prose": "The Keel is not a road. It's a corridor through orbital space — a navigable path through the ring, skirting Shear zones, connecting the major nodes where things are produced, refined, and consumed. The route threads between ring habs, passes through managed Shear corridors where debris has been cleared or stabilized, and includes several transition points between orbital and surface-access zones.\n\nKey nodes along the Keel:\n- **Shear production zones** — where [Ratters](/glass-frontier/entry/ratters) and industrial operations harvest raw ringglass from the debris field\n- **Refinement habs** — ring habs that specialize in cutting, tuning, and processing ringglass from aggregate to refined grade\n- **[Keelward](/glass-frontier/entry/keelward)** — Sithari's surface terminal, where freight enters the financial and regulatory center\n- **[Ashvane](/glass-frontier/entry/ashvane)** — the far terminus; an inhabited moon whose Shadewell port anchors the route's other end\n\nTransit time end-to-end depends on the vessel. A fast courier makes it in days. A heavy cargo hauler takes weeks. Navigation, shelter, rescue, and fuel are maintained in sections by carriers, ports, guilds, cooperatives, and public route services. No organization keeps the whole corridor.\n\n[Hinge Six](/glass-frontier/entry/hinge-six) joins the inner and outer route records where traffic turns toward Korvath and Ashvane. The [Pell Freight Assembly](/glass-frontier/entry/pell-freight-assembly) keeps [Cold Lantern](/glass-frontier/entry/cold-lantern) on its claim approaches. At the surface terminals, [Fourth Bell House](/glass-frontier/entry/fourth-bell-house) receives stranded passengers in Keelward and [South Shade](/glass-frontier/entry/south-shade) fits road crews into Shadewell's port schedule. Other waystops belong to hab councils, family carriers, rescue pools, and settlements whose names matter chiefly on the branch they keep.",
       "tags": [
@@ -19323,6 +19658,21 @@
       },
       "externalKey": "tsonu:kyther_range:rel_kyther_supplies_sable_crescent",
       "prose": "The range's southern rivers carry water and mineral sediment toward the [Sable Crescent](/glass-frontier/entry/sable-crescent).",
+      "tags": [
+        "surface",
+        "resonance",
+        "navigation",
+        "materials",
+        "danger"
+      ],
+      "title": "Kyther Range"
+    },
+    {
+      "entity": {
+        "externalKey": "tsonu:kyther_range"
+      },
+      "externalKey": "tsonu:kyther_range:rel_kyther_adjacent_miraeth",
+      "prose": "Miraeth's wooded basins lie along Kyther's wet foothills.",
       "tags": [
         "surface",
         "resonance",
@@ -21021,6 +21371,22 @@
       },
       "externalKey": "tsonu:mareth:rel_mareth_located_in_frontier",
       "prose": "Mareth inhabits a surviving freight gate between two ring fragments.",
+      "tags": [
+        "ring-hab",
+        "ring-era",
+        "transport",
+        "trade",
+        "structural-freq",
+        "kinetic-freq"
+      ],
+      "title": "Mareth"
+    },
+    {
+      "entity": {
+        "externalKey": "tsonu:mareth"
+      },
+      "externalKey": "tsonu:mareth:rel_mareth_terminus_keel",
+      "prose": "One managed branch of the Keel reaches Mareth's holding lanes and periodic aperture.",
       "tags": [
         "ring-hab",
         "ring-era",
@@ -34754,6 +35120,21 @@
     },
     {
       "dst": {
+        "externalKey": "tsonu:kyther_range"
+      },
+      "live": true,
+      "props": {
+        "frame": "kaleidos_surface",
+        "bearing_deg": 90
+      },
+      "relationship": "adjacent_to",
+      "since": 2000,
+      "src": {
+        "externalKey": "tsonu:avar"
+      }
+    },
+    {
+      "dst": {
         "externalKey": "tsonu:kaleidos"
       },
       "live": true,
@@ -38487,6 +38868,21 @@
     },
     {
       "dst": {
+        "externalKey": "tsonu:avar"
+      },
+      "live": true,
+      "props": {
+        "frame": "kaleidos_surface",
+        "bearing_deg": 90
+      },
+      "relationship": "adjacent_to",
+      "since": 2000,
+      "src": {
+        "externalKey": "tsonu:glasswake"
+      }
+    },
+    {
+      "dst": {
         "externalKey": "tsonu:hab_meridian"
       },
       "live": true,
@@ -38535,6 +38931,17 @@
       },
       "live": true,
       "relationship": "participated_in",
+      "since": 2000,
+      "src": {
+        "externalKey": "tsonu:glasswake"
+      }
+    },
+    {
+      "dst": {
+        "externalKey": "tsonu:keel"
+      },
+      "live": true,
+      "relationship": "terminus_of",
       "since": 2000,
       "src": {
         "externalKey": "tsonu:glasswake"
@@ -39587,50 +39994,6 @@
     },
     {
       "dst": {
-        "externalKey": "tsonu:ashvane"
-      },
-      "live": true,
-      "relationship": "terminus_of",
-      "since": 2000,
-      "src": {
-        "externalKey": "tsonu:keel"
-      }
-    },
-    {
-      "dst": {
-        "externalKey": "tsonu:glasswake"
-      },
-      "live": true,
-      "relationship": "terminus_of",
-      "since": 2000,
-      "src": {
-        "externalKey": "tsonu:keel"
-      }
-    },
-    {
-      "dst": {
-        "externalKey": "tsonu:keelward"
-      },
-      "live": true,
-      "relationship": "terminus_of",
-      "since": 2000,
-      "src": {
-        "externalKey": "tsonu:keel"
-      }
-    },
-    {
-      "dst": {
-        "externalKey": "tsonu:mareth"
-      },
-      "live": true,
-      "relationship": "terminus_of",
-      "since": 2000,
-      "src": {
-        "externalKey": "tsonu:keel"
-      }
-    },
-    {
-      "dst": {
         "externalKey": "tsonu:sithari"
       },
       "live": true,
@@ -40577,6 +40940,21 @@
     },
     {
       "dst": {
+        "externalKey": "tsonu:miraeth"
+      },
+      "live": true,
+      "props": {
+        "frame": "kaleidos_surface",
+        "bearing_deg": 225
+      },
+      "relationship": "adjacent_to",
+      "since": 2000,
+      "src": {
+        "externalKey": "tsonu:kyther_range"
+      }
+    },
+    {
+      "dst": {
         "externalKey": "tsonu:kaleidos"
       },
       "live": true,
@@ -41378,6 +41756,17 @@
       "live": true,
       "relationship": "located_in",
       "since": 2140,
+      "src": {
+        "externalKey": "tsonu:mareth"
+      }
+    },
+    {
+      "dst": {
+        "externalKey": "tsonu:keel"
+      },
+      "live": true,
+      "relationship": "terminus_of",
+      "since": 2000,
       "src": {
         "externalKey": "tsonu:mareth"
       }
@@ -49433,5 +49822,5 @@
     }
   ],
   "source": "import",
-  "sourceId": "tsonu-canon@ccddc97d3e268d9fbe25b296f3936ccc621192ff"
+  "sourceId": "tsonu-canon@d3610efe0bf7ebdd1f25adb0376cb9f6979822e0"
 }

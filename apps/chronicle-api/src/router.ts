@@ -32,6 +32,7 @@ type ChronicleSnapshot = Awaited<
 >;
 
 const t = initTRPC.context<Context>().create();
+const MEMBER_GROUPS = ['admin', 'moderator', 'user'] as const;
 const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
   if (!hasAnyGroup(ctx.identity, ['admin', 'moderator'])) {
     throw new TRPCError({ code: 'FORBIDDEN' });
@@ -201,6 +202,11 @@ export const appRouter = t.router({
       ctx.chronicleStore.listCharactersByPlayer(requireCurrentPlayer(ctx, input.playerId))
     ),
 
+  // Cross-player by design. Only member-or-higher viewers receive open chronicles.
+  listChronicleActivity: t.procedure.query(async ({ ctx }) =>
+    ctx.chronicleStore.listChronicleActivity(hasAnyGroup(ctx.identity, MEMBER_GROUPS))
+  ),
+
   listChronicles: t.procedure
     .input(z.object({ playerId: z.string().min(1) }))
     .query(async ({ ctx, input }) =>
@@ -212,11 +218,6 @@ export const appRouter = t.router({
       const models = await ctx.modelConfigStore.listModels();
       return { models };
     }),
-
-  // Cross-player by design: the landing page's recently-closed feed.
-  listRecentClosures: t.procedure.query(async ({ ctx }) =>
-    ctx.chronicleStore.listRecentClosures()
-  ),
 
   setPlayerModelCategory: t.procedure
     .input(

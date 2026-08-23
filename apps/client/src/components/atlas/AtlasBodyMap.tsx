@@ -1,17 +1,25 @@
 import type { HardState } from '@glass-frontier/dto';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import type { AtlasGraph, AtlasNode } from './atlasGraph';
 import { descendantCount, isTetheredEndpoint, terminusPartnerIds } from './atlasGraph';
+import type { PolarPoint, SurfacePoint } from './atlasPositions';
+import {
+  AtlasPositionResolver,
+  hasOwnPolarPosition,
+  localOffset,
+  surfacePoint,
+  toCartesian,
+} from './atlasPositions';
 
 /**
- * The close-orbit chart for a heavily settled body: the planet's limb rises on
- * the left with its surface regions pinned to it, and everything in orbit is
- * arranged to the right by what it actually is — ring regions as arcs with
- * their habs strung along them, trade lanes as spans with their mid-route
- * hubs, span-linked stations tethered back to the surface, and free stations
- * on the low-orbit track. Only drawn for bodies that have both a surface and
- * an orbital layer; lesser bodies stay with plain tiles.
+ * The close-orbit chart for a heavily settled body. When canon declares fixed
+ * spatial geometry, this renders two true panels: a surface map from
+ * latitude/longitude (with adjacency edges and size classes) and a top-down
+ * orbital view from the authored polar offsets, with route geometry drawn
+ * through it and the sunward direction marked. Bodies without declared
+ * positions keep the inferred limb layout. Only drawn for bodies that have
+ * both a surface and an orbital layer; lesser bodies stay with plain tiles.
  */
 type AtlasBodyMapProps = {
   graph: AtlasGraph;
@@ -96,6 +104,32 @@ export function AtlasBodyMap({
   onOpen,
   resolve,
 }: AtlasBodyMapProps): React.JSX.Element {
+  const resolver = useMemo(() => new AtlasPositionResolver(graph), [graph]);
+  const bodyPolar = resolver.resolvePolar(body.entity.id);
+  const declaredOrbiters = body.children.orbit.filter((id) => {
+    const child = graph.nodes.get(id);
+    return child !== undefined && hasOwnPolarPosition(child.entity);
+  });
+  if (bodyPolar !== null && declaredOrbiters.length >= 2) {
+    return (
+      <DeclaredBodyMap
+        body={body}
+        bodyPolar={bodyPolar}
+        graph={graph}
+        onOpen={onOpen}
+        resolver={resolver}
+      />
+    );
+  }
+  return <InferredBodyMap body={body} graph={graph} onOpen={onOpen} resolve={resolve} />;
+}
+
+function InferredBodyMap({
+  body,
+  graph,
+  onOpen,
+  resolve,
+}: AtlasBodyMapProps): React.JSX.Element {
   const layers = layerOrbit(graph, body);
   const surfaceNodes = body.children.surface
     .map((id) => graph.nodes.get(id))
@@ -111,22 +145,7 @@ export function AtlasBodyMap({
     layers.ringRiderIndex.has(node.entity.id)
   );
 
-  const activate = (slug: string) => () => onOpen(slug);
-  const keyActivate = (slug: string) => (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onOpen(slug);
-    }
-  };
-
-  const clickable = (node: AtlasNode) => ({
-    'aria-label': node.entity.name,
-    className: 'atlas-map-body',
-    onClick: activate(node.entity.slug),
-    onKeyDown: keyActivate(node.entity.slug),
-    role: 'link',
-    tabIndex: 0,
-  });
+  const { clickable } = chartInteraction(onOpen);
 
   return (
     <svg
@@ -300,6 +319,432 @@ export function AtlasBodyMap({
           </g>
         );
       })}
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------- */
+/* Declared mode: true surface and orbital panels from authored geometry */
+/* ------------------------------------------------------------------- */
+
+const DECL_WIDTH = 1200;
+const DECL_HEIGHT = 520;
+const SURFACE_X = 24;
+const SURFACE_Y = 84;
+const SURFACE_W = 400;
+const SURFACE_H = 396;
+const ORBIT_CX = 812;
+const ORBIT_CY = 282;
+const ORBIT_MIN_R = 56;
+const ORBIT_MAX_R = 214;
+/** Vertical compression of the local orbital view. */
+const ORBIT_FLATTEN = 0.74;
+
+const SIZE_CLASS_RADIUS: Record<string, number> = {
+  continent: 15,
+  district: 6,
+  region: 10,
+  site: 4.5,
+};
+
+/** Shared click/keyboard affordances for chart glyphs. */
+const chartInteraction = (onOpen: (slug: string) => void) => {
+  const activate = (slug: string) => () => onOpen(slug);
+  const keyActivate = (slug: string) => (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpen(slug);
+    }
+  };
+  const clickable = (node: AtlasNode) => ({
+    'aria-label': node.entity.name,
+    className: 'atlas-map-body',
+    onClick: activate(node.entity.slug),
+    onKeyDown: keyActivate(node.entity.slug),
+    role: 'link',
+    tabIndex: 0,
+  });
+  return { activate, clickable, keyActivate };
+};
+
+type SurfaceEntry = { node: AtlasNode; point: SurfacePoint };
+
+/** Every descendant of the body that declares a surface position. */
+const collectSurfaceEntries = (graph: AtlasGraph, body: AtlasNode): SurfaceEntry[] => {
+  const entries: SurfaceEntry[] = [];
+  const stack = [...body.children.surface, ...body.children.within, ...body.children.orbit];
+  const seen = new Set<string>();
+  while (stack.length > 0) {
+    const id = stack.pop() as string;
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    const node = graph.nodes.get(id);
+    if (!node) {
+      continue;
+    }
+    const point = surfacePoint(node.entity);
+    if (point !== null) {
+      entries.push({ node, point });
+    }
+    stack.push(...node.children.surface, ...node.children.within, ...node.children.orbit);
+  }
+  // North-to-south render order so alternating label sides separates neighbors.
+  return entries.sort(
+    (a, b) =>
+      b.point.latitudeDeg - a.point.latitudeDeg ||
+      a.point.longitudeDeg - b.point.longitudeDeg ||
+      a.node.entity.name.localeCompare(b.node.entity.name)
+  );
+};
+
+type DeclaredBodyMapProps = {
+  graph: AtlasGraph;
+  body: AtlasNode;
+  bodyPolar: PolarPoint;
+  resolver: AtlasPositionResolver;
+  onOpen: (slug: string) => void;
+};
+
+function DeclaredBodyMap({
+  body,
+  bodyPolar,
+  graph,
+  onOpen,
+  resolver,
+}: DeclaredBodyMapProps): React.JSX.Element {
+  const { activate, clickable } = chartInteraction(onOpen);
+
+  /* Surface panel: equirectangular, north up, equal degree scale. */
+  const surfaceEntries = collectSurfaceEntries(graph, body);
+  const lons = surfaceEntries.map((entry) => entry.point.longitudeDeg);
+  const lats = surfaceEntries.map((entry) => entry.point.latitudeDeg);
+  const lonMin = Math.min(...lons, 0) - 8;
+  const lonMax = Math.max(...lons, 0) + 8;
+  const latMin = Math.min(...lats, 0) - 8;
+  const latMax = Math.max(...lats, 0) + 8;
+  const degScale = Math.min(SURFACE_W / (lonMax - lonMin), SURFACE_H / (latMax - latMin));
+  const surfaceOriginX = SURFACE_X + (SURFACE_W - (lonMax - lonMin) * degScale) / 2;
+  const surfaceOriginY = SURFACE_Y + (SURFACE_H + (latMax - latMin) * degScale) / 2;
+  const surfaceScreen = (point: SurfacePoint): { x: number; y: number } => ({
+    x: surfaceOriginX + (point.longitudeDeg - lonMin) * degScale,
+    y: surfaceOriginY - (point.latitudeDeg - latMin) * degScale,
+  });
+  const surfaceById = new Map(surfaceEntries.map((entry) => [entry.node.entity.id, entry]));
+  const adjacency = surfaceEntries.flatMap((entry) =>
+    entry.node.entity.links
+      .filter(
+        (link) =>
+          link.relationship === 'adjacent_to' &&
+          link.direction === 'out' &&
+          surfaceById.has(link.targetId)
+      )
+      .map((link) => ({
+        from: surfaceScreen(entry.point),
+        to: surfaceScreen((surfaceById.get(link.targetId) as SurfaceEntry).point),
+      }))
+  );
+  const graticule: number[] = [];
+  for (let lon = Math.ceil(lonMin / 20) * 20; lon <= lonMax; lon += 20) {
+    graticule.push(lon);
+  }
+
+  /* Orbital panel: top-down local view in authored offsets. */
+  const orbitItems = body.children.orbit.flatMap((childId) => {
+    const child = graph.nodes.get(childId);
+    if (!child || !hasOwnPolarPosition(child.entity)) {
+      return [];
+    }
+    const polar = resolver.resolvePolar(childId);
+    if (polar === null) {
+      return [];
+    }
+    return [{ delta: localOffset(bodyPolar, polar), node: child }];
+  });
+  const maxDistance = Math.max(...orbitItems.map((item) => item.delta.distance), 0.2);
+  const orbitRadiusPx = (distance: number): number =>
+    ORBIT_MIN_R + (ORBIT_MAX_R - ORBIT_MIN_R) * Math.sqrt(distance / maxDistance);
+  const orbitScreen = (delta: { x: number; y: number; distance: number }): { x: number; y: number } => {
+    const r = orbitRadiusPx(delta.distance);
+    return {
+      x: ORBIT_CX + (delta.x / delta.distance) * r,
+      y: ORBIT_CY - (delta.y / delta.distance) * r * ORBIT_FLATTEN,
+    };
+  };
+  const trackDistances = [
+    ...new Set(orbitItems.map((item) => Number(item.delta.distance.toFixed(3)))),
+  ].sort((a, b) => a - b);
+
+  // Sunward: from the body toward the frame origin.
+  const bodyCartesian = toCartesian(bodyPolar);
+  const bodyDistance = Math.hypot(bodyCartesian.x, bodyCartesian.y) || 1;
+  const sunward = {
+    x: ORBIT_CX - (bodyCartesian.x / bodyDistance) * (ORBIT_MAX_R + 34),
+    y: ORBIT_CY + (bodyCartesian.y / bodyDistance) * (ORBIT_MAX_R + 34) * ORBIT_FLATTEN,
+  };
+
+  // Route geometry passing near this body, clipped to the panel's reach.
+  const localRoutes = body.children.orbit.flatMap((childId) => {
+    const child = graph.nodes.get(childId);
+    const geometry = child?.entity.routeGeometry;
+    if (!child || geometry === undefined) {
+      return [];
+    }
+    const pointById = new Map(
+      geometry.points.map((point) => [point.id, resolver.resolveRoutePoint(point)])
+    );
+    const segments = geometry.paths.flatMap((path) => {
+      const projected = path.through.map((pointId) => {
+        const polar = pointById.get(pointId) ?? null;
+        if (polar === null) {
+          return null;
+        }
+        const delta = localOffset(bodyPolar, polar);
+        return delta.distance <= maxDistance * 1.3 && delta.distance > 0.001
+          ? orbitScreen(delta)
+          : null;
+      });
+      const runs: Array<Array<{ x: number; y: number }>> = [];
+      let current: Array<{ x: number; y: number }> = [];
+      for (const point of projected) {
+        if (point === null) {
+          if (current.length >= 2) {
+            runs.push(current);
+          }
+          current = [];
+        } else {
+          current.push(point);
+        }
+      }
+      if (current.length >= 2) {
+        runs.push(current);
+      }
+      return runs.map((points, index) => ({ id: `${path.id}-${index}`, points }));
+    });
+    return segments.length > 0 ? [{ node: child, segments }] : [];
+  });
+
+  const unplaced = body.children.orbit.flatMap((childId) => {
+    const child = graph.nodes.get(childId);
+    if (
+      !child ||
+      hasOwnPolarPosition(child.entity) ||
+      child.entity.routeGeometry !== undefined
+    ) {
+      return [];
+    }
+    return [child];
+  });
+
+  return (
+    <svg
+      className="atlas-map atlas-bodymap"
+      viewBox={`0 0 ${DECL_WIDTH} ${DECL_HEIGHT}`}
+      role="img"
+      aria-label={`Surface and orbit of ${body.entity.name}`}
+    >
+      {/* Surface panel */}
+      <text className="atlas-bodymap-planet-name" x={SURFACE_X + 4} y={40}>
+        {body.entity.name}
+      </text>
+      <text className="atlas-bodymap-layer-label" x={SURFACE_X + 4} y={62}>
+        surface · charted coordinates
+      </text>
+      <rect
+        className="atlas-bodymap-surface-frame"
+        x={SURFACE_X}
+        y={SURFACE_Y}
+        width={SURFACE_W}
+        height={SURFACE_H}
+        rx={8}
+      />
+      {graticule.map((lon) => {
+        const x = surfaceOriginX + (lon - lonMin) * degScale;
+        return (
+          <g key={`lon-${lon}`}>
+            <line
+              className={`atlas-bodymap-graticule${lon === 0 ? ' atlas-bodymap-meridian' : ''}`}
+              x1={x}
+              y1={SURFACE_Y + 6}
+              x2={x}
+              y2={SURFACE_Y + SURFACE_H - 6}
+            />
+            <text className="atlas-bodymap-graticule-label" x={x} y={SURFACE_Y + SURFACE_H - 10} textAnchor="middle">
+              {lon}°
+            </text>
+          </g>
+        );
+      })}
+      <line
+        className="atlas-bodymap-graticule atlas-bodymap-equator"
+        x1={SURFACE_X + 6}
+        y1={surfaceOriginY - (0 - latMin) * degScale}
+        x2={SURFACE_X + SURFACE_W - 6}
+        y2={surfaceOriginY - (0 - latMin) * degScale}
+      />
+      {adjacency.map((edge, index) => (
+        <line
+          key={`adj-${index}`}
+          className="atlas-bodymap-adjacency"
+          x1={edge.from.x}
+          y1={edge.from.y}
+          x2={edge.to.x}
+          y2={edge.to.y}
+        />
+      ))}
+      {surfaceEntries.map(({ node, point }, index) => {
+        const screen = surfaceScreen(point);
+        const radius = SIZE_CLASS_RADIUS[point.sizeClass ?? 'site'] ?? 4.5;
+        const isRegion = point.sizeClass === 'region' || point.sizeClass === 'continent';
+        const labelAbove = index % 2 === 0;
+        return (
+          <g key={node.entity.id} {...clickable(node)}>
+            <title>{`${node.entity.name}${point.sizeClass ? ` — ${point.sizeClass}` : ''}`}</title>
+            {isRegion ? (
+              <circle
+                className="atlas-bodymap-region-extent"
+                cx={screen.x}
+                cy={screen.y}
+                r={radius + 8}
+              />
+            ) : null}
+            <circle
+              className={isRegion ? 'atlas-bodymap-region-dot' : 'atlas-bodymap-surface-dot'}
+              cx={screen.x}
+              cy={screen.y}
+              r={isRegion ? radius * 0.55 : radius}
+            />
+            <text
+              className="atlas-map-name atlas-bodymap-surface-name"
+              x={screen.x}
+              y={labelAbove ? screen.y - radius - 8 : screen.y + radius + 18}
+              textAnchor="middle"
+            >
+              {node.entity.name}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Orbital panel */}
+      <text className="atlas-bodymap-layer-label" x={ORBIT_CX} y={40} textAnchor="middle">
+        orbit · authored offsets
+      </text>
+      {trackDistances.map((distance) => (
+        <ellipse
+          key={`track-${distance}`}
+          className="atlas-bodymap-track"
+          cx={ORBIT_CX}
+          cy={ORBIT_CY}
+          rx={orbitRadiusPx(distance)}
+          ry={orbitRadiusPx(distance) * ORBIT_FLATTEN}
+        />
+      ))}
+      <line
+        className="atlas-bodymap-sunline"
+        x1={ORBIT_CX}
+        y1={ORBIT_CY}
+        x2={sunward.x}
+        y2={sunward.y}
+      />
+      <text className="atlas-bodymap-sun-glyph" x={sunward.x} y={sunward.y}>
+        ☉
+      </text>
+      {localRoutes.map(({ node, segments }) => (
+        <g key={node.entity.id} {...clickable(node)}>
+          <title>{`${node.entity.name} — route`}</title>
+          {segments.map((segment) => (
+            <path
+              key={segment.id}
+              className="atlas-bodymap-lane"
+              fill="none"
+              d={`M ${segment.points.map((point) => `${point.x} ${point.y}`).join(' L ')}`}
+            />
+          ))}
+          <text
+            className="atlas-map-count atlas-bodymap-lane-name"
+            x={(segments[0]?.points[0]?.x ?? ORBIT_CX) + 8}
+            y={(segments[0]?.points[0]?.y ?? ORBIT_CY) - 8}
+          >
+            {node.entity.name}
+          </text>
+        </g>
+      ))}
+      <circle className="atlas-bodymap-planet-dot" cx={ORBIT_CX} cy={ORBIT_CY} r={22} />
+      <text
+        className="atlas-map-name"
+        x={ORBIT_CX}
+        y={ORBIT_CY + 42}
+        textAnchor="middle"
+      >
+        {body.entity.name}
+      </text>
+      {orbitItems.map(({ delta, node }) => {
+        const screen = orbitScreen(delta);
+        const isZone = node.entity.kind === 'geographic_location';
+        // A world_region in orbit is the ring itself: a band, not a point.
+        const isRing = node.entity.subkind === 'world_region';
+        const tethered = isTetheredEndpoint(node);
+        const charted = descendantCount(graph, node.entity.id);
+        return (
+          <g key={node.entity.id} {...clickable(node)}>
+            <title>
+              {`${node.entity.name}${charted > 0 ? ` — ${charted} charted` : ''}${tethered ? ' — span-linked' : ''}`}
+            </title>
+            {isRing ? (
+              <>
+                <ellipse
+                  className="atlas-bodymap-ring"
+                  cx={ORBIT_CX}
+                  cy={ORBIT_CY}
+                  rx={orbitRadiusPx(delta.distance)}
+                  ry={orbitRadiusPx(delta.distance) * ORBIT_FLATTEN}
+                />
+                <circle className="atlas-bodymap-region-dot" cx={screen.x} cy={screen.y} r={3} />
+              </>
+            ) : isZone ? (
+              <rect
+                className="atlas-bodymap-zone-marker"
+                x={screen.x - 5}
+                y={screen.y - 5}
+                width={10}
+                height={10}
+                transform={`rotate(45 ${screen.x} ${screen.y})`}
+              />
+            ) : (
+              <circle
+                className={`atlas-bodymap-station${tethered ? ' atlas-bodymap-station-tethered' : ''}`}
+                cx={screen.x}
+                cy={screen.y}
+                r={4.5}
+              />
+            )}
+            <text className="atlas-map-name" x={screen.x + 10} y={screen.y + 4}>
+              {node.entity.name}
+              {charted > 0 ? (
+                <tspan className="atlas-bodymap-ring-count"> · {charted}</tspan>
+              ) : null}
+            </text>
+          </g>
+        );
+      })}
+      {unplaced.length > 0 ? (
+        <text className="atlas-bodymap-unplaced" x={ORBIT_CX} y={DECL_HEIGHT - 16} textAnchor="middle">
+          position unrecorded:{' '}
+          {unplaced.map((node, index) => (
+            <tspan
+              key={node.entity.id}
+              className="atlas-bodymap-unplaced-link"
+              role="link"
+              onClick={activate(node.entity.slug)}
+            >
+              {index > 0 ? ' · ' : ''}
+              {node.entity.name}
+            </tspan>
+          ))}
+        </text>
+      ) : null}
     </svg>
   );
 }

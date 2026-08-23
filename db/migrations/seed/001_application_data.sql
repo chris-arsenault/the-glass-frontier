@@ -159,6 +159,7 @@ VALUES
   ('fought_over', 'The conflict was fought over the target resource.', 'causal', 0.7),
   ('originated_in', 'Subject originated in the target place or era.', 'causal', 0.5),
   ('participated_in', 'Subject took part in the target incident or conflict.', 'causal', 0.6),
+  ('adjacent_to', 'Two places share a local boundary or lie directly beside one another.', 'spatial', 0.3),
   ('founded_in', 'Subject was founded in the target place.', 'spatial', 0.4),
   ('headquartered_in', 'Subject is headquartered in the target place.', 'spatial', 0.6),
   ('hosts', 'Subject place hosts the target.', 'spatial', 0.4),

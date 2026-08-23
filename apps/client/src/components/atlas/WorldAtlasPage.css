@@ -329,6 +329,8 @@
 
 .atlas-bodymap-surface-name {
   fill: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
 }
 
 .atlas-bodymap-track {
@@ -398,6 +400,118 @@
 
 .atlas-bodymap-hub-name {
   fill: var(--text-muted);
+}
+
+/* Declared geometry: top-down system chart */
+
+.atlas-map-sun-core-dot {
+  fill: #f2d9a4;
+}
+
+.atlas-map-topdown .atlas-map-sun-name {
+  font-size: 12px;
+}
+
+.atlas-map-free-marker {
+  fill: rgb(232 201 143 / 20%);
+  stroke: rgb(232 201 143 / 70%);
+  stroke-width: 1;
+  transition: fill 120ms ease;
+}
+
+.atlas-map-free:hover .atlas-map-free-marker,
+.atlas-map-free:focus-visible .atlas-map-free-marker {
+  fill: rgb(232 201 143 / 55%);
+}
+
+/* Declared geometry: body surface and orbital panels */
+
+.atlas-bodymap-surface-frame {
+  fill: rgb(20 32 58 / 45%);
+  stroke: var(--border-muted);
+  stroke-width: 1;
+}
+
+.atlas-bodymap-graticule {
+  stroke: rgb(148 163 184 / 10%);
+  stroke-width: 1;
+}
+
+.atlas-bodymap-meridian {
+  stroke: rgb(232 201 143 / 30%);
+  stroke-dasharray: 2 4;
+}
+
+.atlas-bodymap-equator {
+  stroke: rgb(148 163 184 / 18%);
+  stroke-dasharray: 2 4;
+}
+
+.atlas-bodymap-graticule-label {
+  fill: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 10px;
+}
+
+.atlas-bodymap-adjacency {
+  stroke: rgb(126 166 232 / 30%);
+  stroke-width: 1;
+}
+
+.atlas-bodymap-region-extent {
+  fill: rgb(96 165 250 / 6%);
+  stroke: rgb(126 166 232 / 30%);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.atlas-bodymap-region-dot {
+  fill: #7ea6e8;
+}
+
+.atlas-bodymap-planet-dot {
+  fill: #234a7c;
+  stroke: #9ec2f5;
+  stroke-width: 1.5;
+}
+
+.atlas-bodymap-sunline {
+  stroke: rgb(232 201 143 / 25%);
+  stroke-dasharray: 2 5;
+  stroke-width: 1;
+}
+
+.atlas-bodymap-sun-glyph {
+  fill: #e8c98f;
+  font-size: 15px;
+  text-anchor: middle;
+}
+
+.atlas-bodymap-zone-marker {
+  fill: rgb(96 165 250 / 15%);
+  stroke: rgb(126 166 232 / 60%);
+  stroke-width: 1.25;
+  transition: fill 120ms ease;
+}
+
+.atlas-map-body:hover .atlas-bodymap-zone-marker,
+.atlas-map-body:focus-visible .atlas-bodymap-zone-marker {
+  fill: rgb(96 165 250 / 40%);
+}
+
+.atlas-bodymap-unplaced {
+  fill: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.atlas-bodymap-unplaced-link {
+  cursor: pointer;
+  fill: var(--text-secondary);
+}
+
+.atlas-bodymap-unplaced-link:hover {
+  fill: var(--text-primary);
 }
 
 /* Gazetteer */

@@ -3,6 +3,7 @@ import type {
   CanonSource,
   Character,
   Chronicle,
+  ChronicleActivity,
   ChronicleSummaryEntry,
   CommitBatchResult,
   ContextSliceEntity,
@@ -11,7 +12,6 @@ import type {
   HardStateProminence,
   HardStateKind,
   PlayableRole,
-  RecentClosure,
   Turn,
   LoreFragment,
   WorldSchema,
@@ -75,8 +75,11 @@ export type ChronicleStore = {
     entry: ChronicleSummaryEntry;
   }) => Promise<boolean>;
   getChronicle: (chronicleId: string) => Promise<Chronicle | null>;
+  listChronicleActivity: (
+    includeActive: boolean,
+    limitPerStatus?: number
+  ) => Promise<ChronicleActivity[]>;
   listChroniclesByPlayer: (playerId: string) => Promise<Chronicle[]>;
-  listRecentClosures: (limit?: number) => Promise<RecentClosure[]>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
 
   commitTurn: (input: {

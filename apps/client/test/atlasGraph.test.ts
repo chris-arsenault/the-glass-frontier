@@ -24,6 +24,7 @@ const entity = (
   links: [],
   name: id.replace(/_/g, ' '),
   playableAs: [],
+  positions: [],
   prominence: 'recognized',
   slug: id,
   updatedAt: 0,

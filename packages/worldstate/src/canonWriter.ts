@@ -11,6 +11,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
+import { entityPropsJson, relationshipPropsJson } from './canonProps';
 import {
   ProposalRejected,
   refKey,
@@ -251,7 +252,7 @@ const insertEntities = async (
     proposal.sourceId ?? null,
     batchId,
     writes.map((write) => write.proposed.externalKey ?? null),
-    writes.map((write) => JSON.stringify({ facts: write.proposed.facts ?? {} })),
+    writes.map((write) => entityPropsJson(write.proposed)),
     writes.map(
       (write) => write.proposed.isLocation ?? getWorldKind(write.proposed.kind)?.isLocation ?? false
     ),
@@ -301,11 +302,7 @@ const insertRelationships = async (
     }
     return {
       dst,
-      props: JSON.stringify({
-        ...(relationship.live === undefined ? {} : { live: relationship.live }),
-        ...(relationship.since === undefined ? {} : { since: relationship.since }),
-        ...(relationship.until === undefined ? {} : { until: relationship.until }),
-      }),
+      props: relationshipPropsJson(relationship),
       src,
       strength: relationship.strength ?? relationshipDefaultStrength(relationship.relationship),
       type: relationship.relationship,

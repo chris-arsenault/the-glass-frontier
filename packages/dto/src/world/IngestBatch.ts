@@ -3,11 +3,14 @@ import { z } from 'zod';
 import {
   HardStateFacts,
   HardStateKind,
+  HardStateLinkProps,
   HardStateProminence,
   HardStateStatus,
   HardStateSubkind,
   PlayableRole,
   RelationshipType,
+  RouteGeometry,
+  SpatialPosition,
 } from './HardState';
 
 /**
@@ -46,9 +49,13 @@ export const ProposedEntity = z.object({
   name: z.string().min(1),
   originBlurb: z.string().max(140).optional(),
   playableAs: z.array(PlayableRole).optional(),
+  /** Authored positions from the source's fixed spatial geometry. */
+  positions: z.array(SpatialPosition).optional(),
   prominence: HardStateProminence.optional(),
   /** Name for this entity within the batch, so relationships can point at it. */
   ref: z.string().min(1).optional(),
+  /** Authored route shape, for route entities like trade lanes. */
+  routeGeometry: RouteGeometry.optional(),
   status: HardStateStatus.optional(),
   subkind: HardStateSubkind.optional(),
   veiled: z.boolean().optional(),
@@ -60,6 +67,8 @@ export const ProposedRelationship = z.object({
   dst: EntityRef,
   /** Whether this relationship is active in the source canon's present. */
   live: z.boolean().optional(),
+  /** Typed relation properties declared by the source schema (bearings, frames…). */
+  props: HardStateLinkProps.optional(),
   relationship: RelationshipType,
   /** In-world year the relation began, when the source records one. */
   since: z.number().int().optional(),

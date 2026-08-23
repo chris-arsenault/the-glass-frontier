@@ -48,10 +48,65 @@ export type RelationshipType = z.infer<typeof RelationshipType>;
 export const HardStateFacts = z.record(z.string(), z.union([z.string(), z.number()]));
 export type HardStateFacts = z.infer<typeof HardStateFacts>;
 
+/**
+ * Coordinates within a spatial frame, stored verbatim from the source: a
+ * polar position uses `radius`/`angle_deg` (or `radial_offset`/
+ * `angle_offset_deg` when relative), a surface position uses `latitude_deg`/
+ * `longitude_deg` with an optional `extent_radius_km` or `size_class`.
+ */
+export const SpatialCoordinates = z.record(z.string(), z.union([z.string(), z.number()]));
+export type SpatialCoordinates = z.infer<typeof SpatialCoordinates>;
+
+/**
+ * An authored position from the source's fixed spatial geometry. Frames and
+ * reference entities are named by their source slugs; the Atlas resolves them
+ * against the entities it already has rather than by id.
+ */
+export const SpatialPosition = z.object({
+  coordinates: SpatialCoordinates,
+  frameId: z.string().min(1),
+  /** Source slug of the entity this position is measured from, if relative. */
+  relativeToId: z.string().min(1).optional(),
+});
+export type SpatialPosition = z.infer<typeof SpatialPosition>;
+
+export const RouteGeometryPoint = z.object({
+  /** Local coordinates in the route's frame, for points that are not entities. */
+  coordinates: SpatialCoordinates.optional(),
+  /** Source slug of the anchored entity, whose own position places the point. */
+  entityId: z.string().min(1).optional(),
+  id: z.string().min(1),
+  kind: z.enum(['anchor', 'point']),
+});
+export type RouteGeometryPoint = z.infer<typeof RouteGeometryPoint>;
+
+export const RouteGeometryPath = z.object({
+  id: z.string().min(1),
+  through: z.array(z.string().min(1)).min(2),
+});
+export type RouteGeometryPath = z.infer<typeof RouteGeometryPath>;
+
+/** The authored shape of a route: named points and the paths through them. */
+export const RouteGeometry = z.object({
+  frameId: z.string().min(1),
+  paths: z.array(RouteGeometryPath).default([]),
+  points: z.array(RouteGeometryPoint).default([]),
+});
+export type RouteGeometry = z.infer<typeof RouteGeometry>;
+
+/** Typed relation properties declared by the source schema (bearings, frames…). */
+export const HardStateLinkProps = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.boolean()])
+);
+export type HardStateLinkProps = z.infer<typeof HardStateLinkProps>;
+
 export const HardStateLink = z.object({
   direction: z.enum(['out', 'in']),
   /** Whether the relationship is active in the source canon's present. */
   live: z.boolean().default(true),
+  /** Typed relation properties, e.g. adjacency bearing and frame. */
+  props: HardStateLinkProps.optional(),
   relationship: RelationshipType,
   /** In-world year the relation began, when the source records one. */
   since: z.number().int().optional(),
@@ -71,6 +126,8 @@ export const HardState = z.object({
   description: z.string().max(2000).optional(),
   /** Hidden canon that player-facing Atlas surfaces must not expose. */
   dm: z.boolean().default(false),
+  /** Stable identity from the source world, e.g. `tsonu:kaleidos`. */
+  externalKey: z.string().min(1).optional(),
   facts: HardStateFacts.default({}),
   id: z.string().min(1),
   /** A reference page rather than an entity in the game-world graph. */
@@ -86,7 +143,11 @@ export const HardState = z.object({
   name: z.string().min(1),
   originBlurb: z.string().max(140).optional(),
   playableAs: z.array(PlayableRole).default([]),
+  /** Authored positions from the source's fixed spatial geometry. */
+  positions: z.array(SpatialPosition).default([]),
   prominence: HardStateProminence.default('recognized'),
+  /** Authored route shape, present only on route entities like trade lanes. */
+  routeGeometry: RouteGeometry.optional(),
   slug: z.string().min(1),
   status: HardStateStatus.optional(),
   subkind: HardStateSubkind.optional(),

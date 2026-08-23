@@ -1,4 +1,4 @@
-import type { RecentClosure } from '@glass-frontier/dto';
+import type { ChronicleActivity } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -30,18 +30,22 @@ export function LandingPage(): React.JSX.Element {
   const openChangelogModal = useUiStore((state) => state.openChangelogModal);
   const [loadingChronicleId, setLoadingChronicleId] = useState<string | null>(null);
   const [chronicleError, setChronicleError] = useState<string | null>(null);
-  const [recentClosures, setRecentClosures] = useState<RecentClosure[]>([]);
+  const [chronicleActivity, setChronicleActivity] = useState<ChronicleActivity[]>([]);
+  const [chronicleActivityError, setChronicleActivityError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const load = async (): Promise<void> => {
       try {
-        const closures = await trpcClient.listRecentClosures.query();
+        const activity = await trpcClient.listChronicleActivity.query();
         if (!cancelled) {
-          setRecentClosures(closures);
+          setChronicleActivity(activity);
+          setChronicleActivityError(false);
         }
       } catch {
-        // The panel simply stays empty when the feed is unavailable.
+        if (!cancelled) {
+          setChronicleActivityError(true);
+        }
       }
     };
     void load();
@@ -267,22 +271,29 @@ export function LandingPage(): React.JSX.Element {
           <header className="landing-panel-header">
             <h2>Around the frontier</h2>
           </header>
-          {recentClosures.length === 0 ? (
+          {chronicleActivityError ? (
+            <p className="landing-error">Chronicle activity is unavailable.</p>
+          ) : chronicleActivity.length === 0 ? (
             <p className="landing-empty-copy">
-              No chronicles have closed yet. Finished stories will appear here.
+              No chronicle activity yet. Stories from across the frontier will appear here.
             </p>
           ) : (
             <ul className="landing-chronicle-list">
-              {recentClosures.map((item) => (
+              {chronicleActivity.map((item) => (
                 <li key={item.id} className="landing-feed-row">
                   <div className="landing-row-copy">
                     <p className="landing-chronicle-title-row">
                       <span className="landing-chronicle-name">{item.title}</span>
-                      <span className="landing-chronicle-date">
-                        {formatDate(new Date(item.closedAt).toISOString(), {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
+                      <span className="landing-chronicle-state">
+                        <span className={`landing-chronicle-status status-${item.status}`}>
+                          {item.status === 'open' ? 'Active' : 'Closed'}
+                        </span>
+                        <span className="landing-chronicle-date">
+                          {formatDate(new Date(item.activityAt).toISOString(), {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </span>
                       </span>
                     </p>
                     <p className="landing-chronicle-meta">

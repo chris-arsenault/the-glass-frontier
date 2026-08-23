@@ -333,11 +333,14 @@ describe('Chronicle anchors', () => {
   });
 });
 
-describe('Recent closures', () => {
-  it('lists closed chronicles with character name and story hook, newest first', async () => {
+describe('Chronicle activity', () => {
+  it('adds open chronicles only when the caller enables member activity', async () => {
     const character = await worldState.chronicles.upsertCharacter(defaultCharacter());
-    await worldState.chronicles.upsertChronicle(
-      defaultChronicle('Open Reach', { title: 'Still Running' })
+    const active = await worldState.chronicles.upsertChronicle(
+      defaultChronicle('Open Reach', {
+        characterId: character.id,
+        title: 'Still Running',
+      })
     );
     const closed = await worldState.chronicles.upsertChronicle(
       defaultChronicle('Closed Reach', {
@@ -355,15 +358,30 @@ describe('Recent closures', () => {
       })
     );
 
-    const closures = await worldState.chronicles.listRecentClosures();
+    const freeActivity = await worldState.chronicles.listChronicleActivity(false);
+    const memberActivity = await worldState.chronicles.listChronicleActivity(true);
 
-    expect(closures).toHaveLength(1);
-    expect(closures[0]).toMatchObject({
+    expect(freeActivity).toHaveLength(1);
+    expect(freeActivity[0]).toMatchObject({
       characterName: character.name,
       hook: 'The reach fell quiet.',
       id: closed.id,
       locationName: 'Closed Reach',
+      status: 'closed',
       title: 'Finished Run',
     });
+    expect(memberActivity).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          characterName: character.name,
+          hook: null,
+          id: active.id,
+          locationName: 'Open Reach',
+          status: 'open',
+          title: 'Still Running',
+        }),
+        expect.objectContaining({ id: closed.id, status: 'closed' }),
+      ])
+    );
   });
 });

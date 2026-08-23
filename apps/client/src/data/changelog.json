@@ -318,7 +318,7 @@
     "id": "2026-08-22-atlas-drilldown",
     "releasedAt": "2026-08-22",
     "summary": "The World Atlas is now an actual atlas",
-    "details": "The Atlas opens on an orbital chart of the Kaleidos system drawn from canon itself: the sun, the eight planets ordered by their inner-of relations, moons, rings, trade lanes drawn between the worlds they link, and how many charted places each body carries. Clicking a body drills into what orbits it, what sits on its surface, and what has been charted within, all the way down to a single settlement — every entity page carries breadcrumbs back up the chain, fact cards, who and what is present there grouped by kind, relationships organized by category, and lore as an expandable reading list. Heavily settled worlds like Kaleidos get an orbit-and-surface chart: surface regions pinned to the planet's limb, ring regions as arcs with their habs strung along them, trade lanes with their mid-route hubs, and span-linked stations tethered back to the surface. The chronicle wizard now browses this same atlas to pick the opening location, and its anchor step groups candidates by kind with prominence badges.",
+    "details": "The Atlas opens on a true top-down chart of the Kaleidos system drawn from canon's authored spatial geometry: the sun at center, each planet on its declared orbit rank at its declared angle, moons beside their primaries, trade lanes drawn through their authored waypoints, and deep-space objects like Hinge Six charted as free markers. Clicking a body drills into what orbits it, what sits on its surface, and what has been charted within, all the way down to a single settlement — every entity page carries breadcrumbs back up the chain, fact cards, who and what is present there grouped by kind, relationships organized by category, and lore as an expandable reading list. Kaleidos gets a two-panel chart from the same coordinates: a surface map with latitude, longitude, adjacency, and settlement size classes, and a local orbital view with the ring band, span-linked stations tethered sunward, and route segments passing through. Worlds without authored coordinates keep the inferred layout. The chronicle wizard browses this same atlas to pick the opening location, and its anchor step groups candidates by kind with prominence badges.",
     "type": "feature"
   },
   {
@@ -352,8 +352,8 @@
   {
     "id": "2026-08-22-landing-recent-closures",
     "releasedAt": "2026-08-22",
-    "summary": "The landing page now shows chronicles that recently ended",
-    "details": "The Around the Frontier panel is live: it lists the most recently completed chronicles across all players, with the character who lived them, where the story ended, and the archivist's closing summary as the hook once it has been written.",
+    "summary": "The landing page now shows chronicle activity across the frontier",
+    "details": "The Around the Frontier panel lists the most recently completed chronicles across all players, with the character who lived them, where the story ended, and the archivist's closing summary as the hook once it has been written. Members, moderators, and admins also see currently open chronicles; free-tier players receive only completed stories.",
     "type": "feature"
   },
   {

@@ -1,8 +1,8 @@
 import type {
   Character,
   Chronicle,
+  ChronicleActivity,
   ChronicleSummaryEntry,
-  RecentClosure,
   Turn,
 } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
@@ -269,39 +269,52 @@ class PostgresChronicleStore implements ChronicleStore {
   }
 
   /**
-   * The landing feed: the most recently closed chronicles across every
-   * player, hooked with the closer's chronicle_story summary once it exists.
-   * `updated_at` stands in for a closure timestamp — closing is the last
-   * write a chronicle receives apart from its closure summaries.
+   * Cross-player landing activity. Closed chronicles are visible to every
+   * authenticated player; callers explicitly opt member-tier viewers into
+   * open chronicles. Each status gets its own cap so one cannot crowd out the
+   * other.
    */
-  async listRecentClosures(limit = 5): Promise<RecentClosure[]> {
-    const capped = Math.max(1, Math.min(limit, 20));
+  async listChronicleActivity(
+    includeActive: boolean,
+    limitPerStatus = 5
+  ): Promise<ChronicleActivity[]> {
+    const capped = Math.max(1, Math.min(limitPerStatus, 20));
     const result = await this.#pool.query<{
       character_name: string | null;
       id: string;
       location_name: string;
       props: Chronicle;
+      status: Chronicle['status'];
       title: string;
       updated_at: Date;
     }>(
-      `SELECT c.id, c.title, c.location_name, c.updated_at, c.props,
-              ch.name AS character_name
-       FROM chronicle c
-       LEFT JOIN character ch ON ch.id = c.primary_char_id
-       WHERE c.status = 'closed'
-       ORDER BY c.updated_at DESC
-       LIMIT $1`,
-      [capped]
+      `WITH ranked_activity AS (
+         SELECT c.id, c.title, c.location_name, c.status, c.updated_at, c.props,
+                ch.name AS character_name,
+                row_number() OVER (
+                  PARTITION BY c.status
+                  ORDER BY c.updated_at DESC
+                ) AS status_rank
+         FROM chronicle c
+         LEFT JOIN character ch ON ch.id = c.primary_char_id
+         WHERE c.status = 'closed' OR ($1::boolean AND c.status = 'open')
+       )
+       SELECT id, title, location_name, status, updated_at, props, character_name
+       FROM ranked_activity
+       WHERE status_rank <= $2
+       ORDER BY updated_at DESC`,
+      [includeActive, capped]
     );
     return result.rows.map((row) => {
       const chronicle = normalizeChronicle(row.props);
       const story = chronicle.summaries.find((summary) => summary.kind === 'chronicle_story');
       return {
+        activityAt: row.updated_at.getTime(),
         characterName: row.character_name,
-        closedAt: row.updated_at.getTime(),
-        hook: story?.summary ?? null,
+        hook: row.status === 'closed' ? story?.summary ?? null : null,
         id: row.id,
         locationName: row.location_name,
+        status: row.status,
         title: row.title,
       };
     });

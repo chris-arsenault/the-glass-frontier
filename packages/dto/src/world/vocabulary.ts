@@ -242,6 +242,7 @@ const RELATIONSHIP_TYPE_DEFS = [
   { category: 'causal', defaultStrength: 0.6, description: 'Subject took part in the target incident or conflict.', id: 'participated_in' },
 
   // Spatial — where things sit relative to one another.
+  { category: 'spatial', defaultStrength: 0.3, description: 'Two places share a local boundary or lie directly beside one another.', id: 'adjacent_to' },
   { category: 'spatial', defaultStrength: 0.4, description: 'Subject was founded in the target place.', id: 'founded_in' },
   { category: 'spatial', defaultStrength: 0.6, description: 'Subject is headquartered in the target place.', id: 'headquartered_in' },
   { category: 'spatial', defaultStrength: 0.4, description: 'Subject place hosts the target.', id: 'hosts' },

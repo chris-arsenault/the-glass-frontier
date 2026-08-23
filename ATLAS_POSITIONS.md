@@ -1,6 +1,14 @@
 # Accurate placement for the Atlas charts
 
-The Atlas charts are inferred, not declared. Planets get positions from
+> **Status:** superseded by canon. tsonu-canon now declares `spatial_frame`,
+> per-entity `position` (polar in orbit ranks, or surface latitude/longitude
+> with size classes), typed relation properties (`adjacent_to` bearings), and
+> `route_geometry` on routes. The importer carries these through `entity.props`
+> and `edge.props`, and the Atlas charts render from them, keeping the
+> inference below as the fallback for undeclared entities. The analysis is
+> kept for the reasoning behind the fallback rules.
+
+The Atlas charts without declared geometry are inferred, not declared. Planets get positions from
 `orbits` edges plus the `inner_of` ordering chain; everything below that is
 hung off a spatial parent and then laid out by convention: surface regions
 stack top-to-bottom on the planet's limb in alphabetical order, orbital

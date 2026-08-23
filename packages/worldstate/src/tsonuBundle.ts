@@ -28,6 +28,25 @@ export type TsonuConnection = {
   from?: number | null;
   live: boolean;
   to?: number | null;
+  /** Typed relation properties declared by the source schema. */
+  properties?: Record<string, string | number | boolean> | null;
+};
+
+export type TsonuPosition = {
+  frame_id: string;
+  relative_to_id?: string | null;
+  coordinates: Record<string, string | number>;
+};
+
+export type TsonuRouteGeometry = {
+  frame_id: string;
+  points: Array<{
+    id: string;
+    kind: 'anchor' | 'point';
+    entity_id?: string | null;
+    coordinates?: Record<string, string | number> | null;
+  }>;
+  paths: Array<{ id: string; through: string[] }>;
 };
 
 export type TsonuEntry = {
@@ -46,6 +65,8 @@ export type TsonuEntry = {
   is_article: boolean;
   origin_blurb?: string | false;
   playable_as: PlayableRole[];
+  positions?: TsonuPosition[];
+  route_geometry?: TsonuRouteGeometry | null;
   veiled: boolean;
   veil_tagline?: string;
 };
@@ -109,13 +130,52 @@ const buildEntity = (entry: TsonuEntry): unknown => ({
   name: entry.title,
   originBlurb: typeof entry.origin_blurb === 'string' ? entry.origin_blurb : undefined,
   playableAs: entry.playable_as,
+  positions: buildPositions(entry),
   prominence: entry.prominence ?? undefined,
+  routeGeometry: buildRouteGeometry(entry),
   // The source schema gives every kind a kind-named default subkind; the
   // bundle stamps it on entries that declare none. Glass drops that echo.
   subkind: entry.subkind === entry.kind ? undefined : entry.subkind ?? undefined,
   veiled: entry.veiled,
   veilTagline: entry.veil_tagline,
 });
+
+/**
+ * Authored spatial positions, with entity references rewritten to the same
+ * `tsonu:` external keys the entities import under, so consumers resolve them
+ * against `externalKey` instead of guessing at slugs.
+ */
+const buildPositions = (entry: TsonuEntry): unknown[] | undefined => {
+  const positions = (entry.positions ?? []).map((position) => ({
+    coordinates: position.coordinates,
+    frameId: position.frame_id,
+    relativeToId:
+      position.relative_to_id === null || position.relative_to_id === undefined
+        ? undefined
+        : key(position.relative_to_id),
+  }));
+  return positions.length > 0 ? positions : undefined;
+};
+
+const buildRouteGeometry = (entry: TsonuEntry): unknown => {
+  const geometry = entry.route_geometry;
+  if (geometry === null || geometry === undefined) {
+    return undefined;
+  }
+  return {
+    frameId: geometry.frame_id,
+    paths: geometry.paths,
+    points: geometry.points.map((point) => ({
+      coordinates: point.coordinates ?? undefined,
+      entityId:
+        point.entity_id === null || point.entity_id === undefined
+          ? undefined
+          : key(point.entity_id),
+      id: point.id,
+      kind: point.kind,
+    })),
+  };
+};
 
 /**
  * The source fact card, verbatim: typed values as they are, entity-link facts
@@ -196,6 +256,10 @@ const buildRelationships = (entry: TsonuEntry): unknown[] =>
     .map((connection) => ({
       dst: { externalKey: key(connection.entry_id) },
       live: connection.live,
+      props:
+        connection.properties === null || connection.properties === undefined
+          ? undefined
+          : connection.properties,
       relationship: connection.relation,
       since: connection.from ?? undefined,
       src: { externalKey: key(entry.id) },

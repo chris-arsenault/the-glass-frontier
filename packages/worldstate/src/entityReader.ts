@@ -3,10 +3,13 @@ import type {
   HardState,
   HardStateKind,
   HardStateLink,
+  HardStateLinkProps,
   HardStateProminence,
   HardStateStatus,
   HardStateSubkind,
   PlayableRole,
+  RouteGeometry,
+  SpatialPosition,
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
@@ -46,7 +49,12 @@ type EntityRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
-  props: { facts?: Record<string, string | number> } | null;
+  props: {
+    facts?: Record<string, string | number>;
+    positions?: SpatialPosition[];
+    routeGeometry?: RouteGeometry;
+  } | null;
+  external_key: string | null;
   dm: boolean;
   is_article: boolean;
   is_location: boolean;
@@ -62,7 +70,12 @@ type LinkRow = {
   dst_id: string;
   type: HardStateLink['relationship'];
   strength: number | null;
-  props: { live?: boolean; since?: number; until?: number } | null;
+  props:
+    | ({ live?: boolean; since?: number; until?: number } & Record<
+        string,
+        string | number | boolean | undefined
+      >)
+    | null;
 };
 type NeighborRow = EntityRow & {
   neighbor_id: string;
@@ -83,8 +96,8 @@ const PROMINENCE_RANK = new Map<HardStateProminence, number>([
 ]);
 
 const ENTITY_SELECT = `SELECT e.id, e.slug, e.kind, e.subkind, e.name,
-  e.description, e.prominence, e.status, e.props, e.dm, e.is_article, e.is_location,
-  e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
+  e.description, e.prominence, e.status, e.props, e.external_key, e.dm, e.is_article,
+  e.is_location, e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
   e.created_at, e.updated_at
   FROM entity e
   JOIN world_prominence wp ON wp.id = e.prominence`;
@@ -165,8 +178,8 @@ const NEIGHBOR_QUERY = `WITH RECURSIVE walk AS (
 )
 SELECT r.neighbor_id, r.root_relationship, r.root_direction, r.relationship,
   r.direction, r.via_id, r.hops, e.id, e.slug, e.kind, e.subkind,
-  e.name, e.description, e.status, e.prominence, e.props, e.dm, e.is_article,
-  e.is_location, e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
+  e.name, e.description, e.status, e.prominence, e.props, e.external_key, e.dm,
+  e.is_article, e.is_location, e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
   e.created_at, e.updated_at
 FROM ranked r
 JOIN entity e ON e.id = r.neighbor_id
@@ -186,6 +199,7 @@ const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   createdAt: rowTimestamp(row.created_at),
   description: optional(row.description),
   dm: row.dm,
+  externalKey: optional(row.external_key),
   facts: rowFacts(row),
   id: row.id,
   isArticle: row.is_article,
@@ -195,7 +209,9 @@ const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   name: row.name,
   originBlurb: optional(row.origin_blurb),
   playableAs: row.playable_as,
+  positions: row.props?.positions ?? [],
   prominence: row.prominence,
+  routeGeometry: row.props?.routeGeometry,
   slug: row.slug,
   status: optional(row.status),
   subkind: optional(row.subkind),
@@ -204,8 +220,22 @@ const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   veilTagline: optional(row.veil_tagline),
 });
 
+/** Edge props minus the temporal envelope: the relation's typed properties. */
+const LINK_ENVELOPE_KEYS = new Set(['live', 'since', 'until']);
+const linkProps = (row: LinkRow): HardStateLinkProps | undefined => {
+  if (row.props === null) {
+    return undefined;
+  }
+  const entries = Object.entries(row.props).filter(
+    (entry): entry is [string, string | number | boolean] =>
+      !LINK_ENVELOPE_KEYS.has(entry[0]) && entry[1] !== undefined
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
 const linkDetails = (row: LinkRow): Omit<HardStateLink, 'direction' | 'relationship' | 'targetId'> => ({
   live: row.props?.live ?? true,
+  props: linkProps(row),
   since: row.props?.since,
   strength: optional(row.strength),
   until: row.props?.until,
