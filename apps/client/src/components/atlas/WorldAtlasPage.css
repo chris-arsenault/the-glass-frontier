@@ -109,6 +109,92 @@
   outline: none;
 }
 
+.atlas-browser-crumbs {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.atlas-browser-crumb {
+  padding: 0;
+  font: inherit;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.atlas-browser-crumb:hover,
+.atlas-browser-crumb:focus-visible {
+  color: var(--text-accent);
+  outline: none;
+  text-decoration: underline;
+}
+
+.atlas-browser-crumb[aria-current='true'] {
+  color: var(--text-primary);
+  cursor: default;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.atlas-browser-selection {
+  text-transform: none;
+}
+
+.atlas-browser-selection strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.atlas-browser-results {
+  margin-top: var(--space-2);
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+/* Cluster chart (interiors without charted geometry) */
+
+.atlas-cluster-ring {
+  fill: none;
+  stroke: rgb(148 163 184 / 14%);
+  stroke-dasharray: 3 5;
+  stroke-width: 1;
+}
+
+.atlas-cluster-dot {
+  fill: #8ea3c4;
+  transition: fill 120ms ease;
+}
+
+.atlas-cluster-selectable .atlas-cluster-dot {
+  fill: #7ea6e8;
+  stroke: rgb(126 166 232 / 45%);
+  stroke-width: 4;
+}
+
+.atlas-map-body:hover .atlas-cluster-dot,
+.atlas-map-body:focus-visible .atlas-cluster-dot {
+  fill: #dbe6f7;
+}
+
+.atlas-cluster-inert {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.atlas-cluster-name {
+  font-size: 12.5px;
+  paint-order: stroke;
+  stroke: #0c1322;
+  stroke-width: 3px;
+}
+
 .atlas-panel,
 .atlas-map-panel {
   padding: var(--space-3) var(--space-4);
@@ -1132,5 +1218,46 @@ a.atlas-link-target:focus-visible {
   font-size: var(--text-sm);
   line-height: 1.55;
   max-width: 60rem;
-  white-space: pre-line;
+}
+
+.atlas-fragment-body p {
+  margin: 0 0 var(--space-2);
+}
+
+.atlas-lore-ref {
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+.atlas-lore-notes {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.atlas-lore-notes-title {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.atlas-lore-notes ul {
+  display: flex;
+  margin: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+}
+
+.atlas-lore-notes li {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.atlas-lore-notes li p {
+  margin: 0;
 }

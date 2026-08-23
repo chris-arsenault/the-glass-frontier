@@ -7,6 +7,7 @@ type LoreFragmentRow = {
   id: string;
   slug: string;
   entity_id: string;
+  external_key: string | null;
   chronicle_id: string | null;
   beat_id: string | null;
   title: string;
@@ -21,6 +22,7 @@ const LORE_SELECT = `SELECT lf.*, e.kind AS entity_kind
 
 const toLoreFragment = (row: LoreFragmentRow): LoreFragment => ({
   entityId: row.entity_id,
+  externalKey: row.external_key ?? undefined,
   id: row.id,
   prose: row.prose,
   slug: row.slug,

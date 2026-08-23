@@ -476,7 +476,6 @@ function LocationStep({
     }),
     [locations]
   );
-  const selected = activeLocationId === null ? undefined : byId.get(activeLocationId);
 
   return (
     <div className="location-step">
@@ -484,8 +483,8 @@ function LocationStep({
         <div>
           <h2>Choose a location</h2>
           <p>
-            The whole charted system is shown for bearings; bright entries are the places a
-            chronicle can open.
+            Click a body to descend into its orbit and surface; click a highlighted place to open
+            the chronicle there.
           </p>
         </div>
         <div className="location-step-actions">
@@ -496,36 +495,16 @@ function LocationStep({
       </header>
       {error ? <p className="wizard-error">{error}</p> : null}
       {isLoading ? <p className="location-step-loading-details">Loading locations…</p> : null}
+      {isLoadingDetails ? (
+        <p className="location-step-loading-details">Loading location details…</p>
+      ) : null}
       <AtlasLocationBrowser
         graph={graph}
         byId={byId}
+        mode="picker"
         onOpen={onSelect}
         selectableIds={selectableIds}
         selectedId={activeLocationId}
-        sidePanel={
-          <section className="atlas-panel location-step-selection" aria-label="Selected location">
-            <h2 className="atlas-panel-heading">Scene opens at</h2>
-            {selected ? (
-              <>
-                <p className="location-step-selection-name">{selected.name}</p>
-                <p className="location-step-selection-meta">
-                  {selected.subkind?.replace(/_/g, ' ') ?? selected.kind}
-                  {selected.status ? ` · ${selected.status}` : ''}
-                </p>
-                {selected.description ? (
-                  <p className="location-step-selection-desc">{selected.description}</p>
-                ) : null}
-                {isLoadingDetails ? (
-                  <p className="location-step-loading-details">Loading location details…</p>
-                ) : null}
-              </>
-            ) : (
-              <p className="atlas-empty-copy">
-                Pick a place on the chart or in the gazetteer.
-              </p>
-            )}
-          </section>
-        }
       />
     </div>
   );

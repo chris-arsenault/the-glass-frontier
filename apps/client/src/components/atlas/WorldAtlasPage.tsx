@@ -1,7 +1,9 @@
 import type { HardState, HardStateLink, LoreFragment } from '@glass-frontier/dto';
 import { WORLD_KINDS, getRelationshipType, getWorldKind } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import remarkGfm from 'remark-gfm';
 
 import { worldAtlasClient } from '../../lib/worldAtlasClient';
 import { useChronicleStartStore } from '../../stores/chronicleStartWizardStore';
@@ -55,10 +57,61 @@ const CHILD_GROUPS: Array<{ key: 'orbit' | 'surface' | 'within'; title: string }
 
 const kindLabel = (kind: string): string => getWorldKind(kind)?.displayName ?? kind;
 
+/** Markdown links flattened to their labels, for comparing against summaries. */
+const stripMarkdownLinks = (text: string): string =>
+  text.replace(/\[([^\]]+)\]\(([^)]*)\)/g, '$1');
+
+const normalizeProse = (text: string): string =>
+  stripMarkdownLinks(text).replace(/\s+/g, ' ').trim();
+
+/**
+ * Relation-carried one-liners versus authored passages, told apart by the
+ * import key: passages arrive as `tsonu:<entry>:<section>:<n>`, annotations a
+ * relationship carries as `tsonu:<entry>:<relation>`.
+ */
+const isRelationNote = (fragment: LoreFragment): boolean => {
+  const key = fragment.externalKey;
+  return key !== undefined && key.startsWith('tsonu:') && key.split(':').length === 3;
+};
+
 const loreSnippet = (prose: string): string => {
-  const words = prose.replace(/\s+/g, ' ').trim().split(' ');
+  const words = normalizeProse(prose).split(' ');
   return `${words.slice(0, 7).join(' ')}${words.length > 7 ? '…' : ''}`;
 };
+
+/**
+ * Lore prose is markdown whose links point at source-world entry routes
+ * (`/glass-frontier/entry/<entry-id>`); resolveHref maps those to atlas slugs
+ * where the entry was imported, and unresolvable references render as plain
+ * emphasized names.
+ */
+function LoreProse({
+  prose,
+  resolveHref,
+}: {
+  prose: string;
+  resolveHref: (href: string) => string | null;
+}): React.JSX.Element {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        a: ({ children, href }) => {
+          const slug = href === undefined ? null : resolveHref(href);
+          return slug === null ? (
+            <span className="atlas-lore-ref">{children}</span>
+          ) : (
+            <Link to={`/atlas/${slug}`} className="atlas-link-target">
+              {children}
+            </Link>
+          );
+        },
+      }}
+    >
+      {prose}
+    </ReactMarkdown>
+  );
+}
 
 const findLinkedEntity = async (
   entity: HardState,
@@ -464,26 +517,47 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
 
   const facts = Object.entries(entity.facts);
 
+  const passages = fragments.filter((fragment) => !isRelationNote(fragment));
+  const relationNotes = fragments.filter(isRelationNote);
+
   // Source summaries are truncated excerpts of the lead lore passage; when
-  // that passage is present below, showing both is pure duplication.
-  const descriptionPrefix = (entity.description ?? '')
+  // that passage is present below, showing both is pure duplication. Both
+  // sides are compared with markdown links flattened, since the passage keeps
+  // its links while the summary is plain text.
+  const descriptionPrefix = normalizeProse(entity.description ?? '')
     .replace(/[.…]+\s*$/u, '')
-    .replace(/\s+/g, ' ')
-    .trim()
     .slice(0, 80);
   const descriptionInLore =
     descriptionPrefix.length > 20 &&
-    fragments.some((fragment) =>
-      fragment.prose.replace(/\s+/g, ' ').trim().startsWith(descriptionPrefix)
-    );
+    passages.some((fragment) => normalizeProse(fragment.prose).startsWith(descriptionPrefix));
 
   // Fragment tags are stamped per entity by the source, so one shared row
   // says everything; per-fragment repeats are noise.
-  const loreTags = [...new Set(fragments.flatMap((fragment) => fragment.tags ?? []))];
+  const loreTags = [...new Set(passages.flatMap((fragment) => fragment.tags ?? []))];
   const loreTitleCounts = new Map<string, number>();
-  for (const fragment of fragments) {
+  for (const fragment of passages) {
     loreTitleCounts.set(fragment.title, (loreTitleCounts.get(fragment.title) ?? 0) + 1);
   }
+
+  const slugByRef = new Map<string, string>();
+  for (const item of world?.all ?? []) {
+    slugByRef.set(item.slug, item.slug);
+    if (item.externalKey !== undefined) {
+      slugByRef.set(item.externalKey, item.slug);
+    }
+  }
+  const resolveLoreHref = (href: string): string | null => {
+    const base = href.split('/').filter((part) => part.length > 0).pop();
+    if (base === undefined) {
+      return null;
+    }
+    return (
+      slugByRef.get(base) ??
+      slugByRef.get(base.replace(/-/g, '_')) ??
+      slugByRef.get(`tsonu:${base.replace(/-/g, '_')}`) ??
+      null
+    );
+  };
 
   return (
     <div className="atlas-entity">
@@ -685,28 +759,46 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
         </section>
       ) : null}
 
-      {fragments.length > 0 ? (
+      {passages.length > 0 || relationNotes.length > 0 ? (
         <section className="atlas-section">
           <h3>
             Lore
-            <span className="atlas-section-count">{fragments.length}</span>
+            {passages.length > 0 ? (
+              <span className="atlas-section-count">{passages.length}</span>
+            ) : null}
             {loreTags.length > 0 ? (
               <span className="atlas-fragment-tags">{loreTags.join(' · ')}</span>
             ) : null}
           </h3>
-          <div className="atlas-fragments">
-            {fragments.map((fragment, index) => (
-              <details key={fragment.id} className="atlas-fragment" open={index === 0}>
-                <summary>
-                  <span className="atlas-fragment-title">{fragment.title}</span>
-                  {(loreTitleCounts.get(fragment.title) ?? 0) > 1 ? (
-                    <span className="atlas-fragment-snippet">{loreSnippet(fragment.prose)}</span>
-                  ) : null}
-                </summary>
-                <p className="atlas-fragment-body">{fragment.prose}</p>
-              </details>
-            ))}
-          </div>
+          {passages.length > 0 ? (
+            <div className="atlas-fragments">
+              {passages.map((fragment, index) => (
+                <details key={fragment.id} className="atlas-fragment" open={index === 0}>
+                  <summary>
+                    <span className="atlas-fragment-title">{fragment.title}</span>
+                    {(loreTitleCounts.get(fragment.title) ?? 0) > 1 ? (
+                      <span className="atlas-fragment-snippet">{loreSnippet(fragment.prose)}</span>
+                    ) : null}
+                  </summary>
+                  <div className="atlas-fragment-body">
+                    <LoreProse prose={fragment.prose} resolveHref={resolveLoreHref} />
+                  </div>
+                </details>
+              ))}
+            </div>
+          ) : null}
+          {relationNotes.length > 0 ? (
+            <div className="atlas-lore-notes">
+              <p className="atlas-lore-notes-title">Relationship notes</p>
+              <ul>
+                {relationNotes.map((note) => (
+                  <li key={note.id}>
+                    <LoreProse prose={note.prose} resolveHref={resolveLoreHref} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </div>

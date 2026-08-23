@@ -376,6 +376,40 @@ function DeclaredSystemChart({
         </g>
       ))}
 
+      {/* Parentless charted places (session-made or unlinked) line the foot. */}
+      {graph.rootIds.map((rootId, index) => {
+        const node = graph.nodes.get(rootId);
+        if (!node) {
+          return null;
+        }
+        const x = (TOP_WIDTH / (graph.rootIds.length + 1)) * (index + 1);
+        const y = TOP_HEIGHT - 42;
+        return (
+          <g
+            key={rootId}
+            className="atlas-map-body atlas-map-free"
+            tabIndex={0}
+            role="link"
+            aria-label={node.entity.name}
+            onClick={activate(node.entity.slug)}
+            onKeyDown={keyActivate(node.entity.slug)}
+          >
+            <title>{`${node.entity.name} — adrift, position unrecorded`}</title>
+            <rect
+              className="atlas-map-free-marker"
+              x={x - 4}
+              y={y - 4}
+              width={8}
+              height={8}
+              transform={`rotate(45 ${x} ${y})`}
+            />
+            <text className="atlas-map-count" x={x} y={y + 19} textAnchor="middle">
+              {node.entity.name}
+            </text>
+          </g>
+        );
+      })}
+
       {planetIds.map((planetId) => {
         const node = graph.nodes.get(planetId);
         const point = planetPoints.get(planetId);

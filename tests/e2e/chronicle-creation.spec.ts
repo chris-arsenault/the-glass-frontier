@@ -61,7 +61,8 @@ test.describe('Chronicle creation', () => {
     await page.getByRole('button', { name: 'Start new' }).click();
     await expect(page.getByRole('heading', { name: 'Start a new chronicle' })).toBeVisible();
 
-    await page.getByRole('button', { name: /Luminous Quay/ }).click();
+    // The picker is the atlas chart; places are SVG glyphs with link role.
+    await page.getByRole('link', { name: /Luminous Quay/ }).first().click();
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'hopeful' }).click();
