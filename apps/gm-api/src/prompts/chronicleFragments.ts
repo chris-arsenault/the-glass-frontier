@@ -47,7 +47,7 @@ ChronicleFragmentTypes[]
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
   ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities', ENTITY_REFERENCES_FRAGMENT]],
-  ['gm-summary', ['intent', 'scene', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
+  ['gm-summary', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', 'beats', 'character', SKILL_CHECK_FRAGMENT, 'wrap', 'seed']],
   ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'character', 'entities', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['intent-beat-detector', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
   ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
@@ -146,7 +146,7 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
   };
 }
 
-function entitiesFragment(context: GraphContext): Array<{
+type EstablishedEntity = {
   slug: string;
   name: string;
   kind: string;
@@ -161,18 +161,44 @@ function entitiesFragment(context: GraphContext): Array<{
     tags: string[];
   }>;
   gmNotes: string[];
-}> {
-  return (context.entityContext?.offered ?? []).map((entry) => ({
-    description: entry.description,
-    facts: entry.facts,
-    gmNotes: entry.gmNotes,
-    kind: entry.kind,
-    loreFragments: entry.loreFragments,
-    name: entry.name,
-    slug: entry.slug,
-    status: entry.status,
-    tags: entry.tags,
-  }));
+};
+
+/**
+ * A veiled shell: a hook line and nothing else. Its description, its single
+ * lore fragment, and its veil tagline are all the same sentence, so sending
+ * the established shape would repeat one line three times and read as settled
+ * canon. The GM gets the hook and the flag instead.
+ */
+type UnwrittenEntity = {
+  slug: string;
+  name: string;
+  kind: string;
+  hook: string | undefined;
+  unwritten: true;
+};
+
+function entitiesFragment(context: GraphContext): Array<EstablishedEntity | UnwrittenEntity> {
+  return (context.entityContext?.offered ?? []).map((entry) =>
+    entry.unwritten
+      ? {
+        hook: entry.description,
+        kind: entry.kind,
+        name: entry.name,
+        slug: entry.slug,
+        unwritten: true as const,
+      }
+      : {
+        description: entry.description,
+        facts: entry.facts,
+        gmNotes: entry.gmNotes,
+        kind: entry.kind,
+        loreFragments: entry.loreFragments,
+        name: entry.name,
+        slug: entry.slug,
+        status: entry.status,
+        tags: entry.tags,
+      }
+  );
 }
 
 function entityReferencesFragment(context: GraphContext): Array<Record<string, unknown>> {

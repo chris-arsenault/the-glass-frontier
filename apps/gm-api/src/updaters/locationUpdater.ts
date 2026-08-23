@@ -19,6 +19,11 @@ export function resolveLocationName(context: GraphContext): string {
   if (destination.length === 0) {
     return context.chronicleState.locationName;
   }
-  log('info', 'Chronicle moved', { destination });
+  log('info', 'Chronicle moved', {
+    chronicleId: context.chronicleId,
+    destination,
+    from: context.chronicleState.locationName,
+    turnSequence: context.turnSequence,
+  });
   return destination;
 }

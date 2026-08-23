@@ -383,10 +383,18 @@ Treat the summary as the canonical record for the turn.
 - If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
   `(collapse)`.
 - No markdown, numbers, or quotes; keep it pure text.
-- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
-  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
+
+## Closing the chronicle
+- The SEED and BEATS sections define the chronicle's primary stakes. `shouldCloseChronicle` is `true`
+  only when the narration clearly resolves those stakes, or a wrap request reaches its final turn.
+- Completing the current intent alone is not resolution: a plan made, a question answered, a route
+  charted, or a single scene finished leaves the chronicle open.
+- Beats still marked `in_progress` are unresolved stakes; do not close over them.
 - If the GM narration asks the player a question or offers a next choice, `shouldCloseChronicle` must
   be `false`; the response has left the scene open.
+- When in doubt, `false`. Chronicles end at wrap requests far more often than on their own.
+
+## Scenes
 - `sceneOutcome` is `continue` unless the active SCENE's own completion rules
   are satisfied by the narration. Use `complete` when the typed scene ends even
   if the chronicle continues.
@@ -485,22 +493,21 @@ text does not explicitly grant, reveal, or consume something, leave the inventor
 ## Output Instructions
 Return your answer using the structured format provided alongside this prompt. Always emit `ops` (use an empty array when nothing changes) and honor the revision contract exactly—no commentary or extra fields.
 $prompt$, now()),
-  ('location-delta', $prompt$You control the location anchor for the chronicle map. Decide whether the latest turn keeps the
-party in place, moves to a known node, or leaves the destination ambiguous.
+  ('location-delta', $prompt$You track where the character actually is. Decide whether the latest turn moved them.
 
 ## Guidance
-- Move only if the GM prose clearly places the focus in a different room, zone, or linked locale.
-- Prefer the most specific destination explicitly mentioned. Never escalate scope unless the GM does.
-- `link` meaning:
-  - `same`: no graph change.
-  - `inside`: destination is a child (room, chamber, sub-area).
-  - `adjacent`: destination is a sibling under the same parent (street-to-street, shop-to-shop).
-  - `linked`: destination is reached via portal/vessel/teleport or exists outside the current parent. Use sparingly
-- If the GM invents a new named space, use that literal string as `destination`.
-- If narration only broadens or narrows focus without a named target, emit `{"action":"uncertain","destination":<best known container>,"link":"same"}`.
+- `move` only when the GM prose depicts the character being somewhere new by the end of the turn —
+  they arrived, entered, stepped through, or the scene is now unmistakably set there.
+- Talking about a place is not being there. Planning a journey, charting a route, naming a
+  destination, or standing ready to depart is `no_change`: "ready to embark for Perch" means they
+  have not left.
+- LOCATION is where the character currently is. When `no_change`, repeat it as `destination`.
+- When moving, use the most specific place the prose actually sets the character in. If the GM
+  invents a new named space, use that literal string as `destination`.
 
 ## Output Instructions
-Reply strictly using the structured format provided with this prompt. Supply literal strings for `action`, `destination`, and `link`; do not include any commentary or extra fields.
+Reply strictly using the structured format provided: `action` is `no_change` or `move`, and
+`destination` is a literal place name. No commentary or extra fields.
 $prompt$, now()),
   ('planning-narrator', $prompt$You are the Glass Frontier GM narrating preparation, travel, or downtime. Summarize progress,
 compress time, and set the stage for the next decisive moment.

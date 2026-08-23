@@ -36,6 +36,25 @@ const buildCharacterDescription = (character: Character | null): string => {
   return `The protagonist is ${character?.name ?? 'the protagonist'} (${character?.pronouns ?? 'they/them'}), an ${character?.archetype ?? 'Unknown Archetype'} with tags: ${formatTags(character?.tags)}.`;
 };
 
+const formatCharacterSheet = (character: Character | null): string => {
+  if (character === null) {
+    return 'Existing character sheet: unavailable.';
+  }
+  const attributes = Object.entries(character.attributes)
+    .map(([name, tier]) => `${name}: ${tier}`)
+    .join(', ');
+  const skills = Object.values(character.skills)
+    .map((skill) => `${skill.name} (${skill.tier})`)
+    .join(', ');
+  const inventory = character.inventory.map((item) => item.name).join(', ');
+  return [
+    'Existing character sheet — everything here was already true before this chronicle:',
+    `  Attributes: ${attributes}`,
+    `  Skills: ${skills.length > 0 ? skills : 'none'}`,
+    `  Inventory: ${inventory.length > 0 ? inventory : 'empty'}`,
+  ].join('\n');
+};
+
 export const buildCharacterImpactPrompt = (context: SummaryContext): string => {
   const characterName = context.character?.name ?? 'the character';
   const beats =
@@ -46,6 +65,8 @@ export const buildCharacterImpactPrompt = (context: SummaryContext): string => {
     `Describe the lasting impact on ${characterName} in at most ONE sentence.`,
     'Write in third-person past tense. Mention only a major ability, item, power, ally, or enemy explicitly and durably gained or lost in the transcript or recorded deltas.',
     `If no qualifying change was explicitly recorded, return exactly ${NO_LASTING_CHARACTER_CHANGE}. Do not infer damage, growth, weakness, trauma, relationships, or consequences.`,
+    'A qualifying change must be absent from the existing sheet below. Restating an attribute, skill, or item the character already had — however prominently it featured — is not a change.',
+    formatCharacterSheet(context.character),
     skillBlock,
     inventoryBlock,
     `Beat recap: ${beats}`,

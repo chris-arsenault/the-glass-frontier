@@ -7,10 +7,18 @@ Treat the summary as the canonical record for the turn.
 - If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
   `(collapse)`.
 - No markdown, numbers, or quotes; keep it pure text.
-- `shouldCloseChronicle` is `true` only when the narration clearly resolves the primary stakes or a
-  wrap request reaches its final turn. Otherwise it must be `false` even if the scene merely pauses.
+
+## Closing the chronicle
+- The SEED and BEATS sections define the chronicle's primary stakes. `shouldCloseChronicle` is `true`
+  only when the narration clearly resolves those stakes, or a wrap request reaches its final turn.
+- Completing the current intent alone is not resolution: a plan made, a question answered, a route
+  charted, or a single scene finished leaves the chronicle open.
+- Beats still marked `in_progress` are unresolved stakes; do not close over them.
 - If the GM narration asks the player a question or offers a next choice, `shouldCloseChronicle` must
   be `false`; the response has left the scene open.
+- When in doubt, `false`. Chronicles end at wrap requests far more often than on their own.
+
+## Scenes
 - `sceneOutcome` is `continue` unless the active SCENE's own completion rules
   are satisfied by the narration. Use `complete` when the typed scene ends even
   if the chronicle continues.

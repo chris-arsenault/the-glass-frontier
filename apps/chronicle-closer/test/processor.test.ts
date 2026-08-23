@@ -103,6 +103,10 @@ describe('ChronicleClosureProcessor', () => {
     expect(buildCharacterImpactPrompt(context)).toContain(
       `return exactly ${NO_LASTING_CHARACTER_CHANGE}`
     );
+    expect(buildCharacterImpactPrompt(context)).toContain(
+      'Existing character sheet — everything here was already true before this chronicle:'
+    );
+    expect(buildCharacterImpactPrompt(context)).toContain('attunement: standard');
   });
 
   it('records no lasting change without appending fabricated character history', async () => {
