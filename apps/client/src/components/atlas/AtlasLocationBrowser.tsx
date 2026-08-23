@@ -17,6 +17,9 @@ import './WorldAtlasPage.css';
  * as the scene opener. Only childless places outside the curated set are
  * inert in the picker.
  */
+const subkindLabel = (entity: HardState): string =>
+  (entity.subkind ?? entity.kind).replace(/_/g, ' ');
+
 type AtlasLocationBrowserProps = {
   graph: AtlasGraph;
   byId: Map<string, HardState>;
@@ -98,13 +101,18 @@ export function AtlasLocationBrowser({
   const focusNode = focusId === null ? null : graph.nodes.get(focusId) ?? null;
   const selected = selectedId === null ? undefined : byId.get(selectedId);
   // The root crumb already names the system, so drop it from the chain.
-  const crumbs =
-    mode === 'picker' && focusNode !== null
-      ? breadcrumbIds(graph, focusNode.entity.id)
-        .filter((id) => id !== graph.systemId)
-        .map((id) => byId.get(id))
-        .filter((entity): entity is HardState => Boolean(entity))
-      : [];
+  const chainTo = (id: string): HardState[] =>
+    breadcrumbIds(graph, id)
+      .filter((chainId) => chainId !== graph.systemId)
+      .map((chainId) => byId.get(chainId))
+      .filter((entity): entity is HardState => Boolean(entity));
+  const crumbs = mode === 'picker' && focusNode !== null ? chainTo(focusNode.entity.id) : [];
+  // Where the up arrow leads: the focused entity's parent, or the system view.
+  const upCrumb = crumbs.length > 1 ? crumbs[crumbs.length - 2] : null;
+  const selectedChain =
+    selected === undefined
+      ? []
+      : chainTo(selected.id).filter((entity) => entity.id !== selected.id);
 
   const chart =
     matches !== null ? (
@@ -135,6 +143,7 @@ export function AtlasLocationBrowser({
           body={focusNode}
           resolve={(id) => byId.get(id)}
           onOpen={handleSlug}
+          selectedId={selectedId}
         />
       ) : (
         <AtlasClusterChart
@@ -142,80 +151,142 @@ export function AtlasLocationBrowser({
           node={focusNode}
           onSelect={handleSlug}
           selectableIds={selectableIds}
+          selectedId={selectedId}
         />
       )
     ) : (
-      <AtlasSystemMap graph={graph} onSelect={handleSlug} />
+      <AtlasSystemMap graph={graph} onSelect={handleSlug} selectedId={selectedId} />
     );
 
-  const mapPanel = (
-    <section className="atlas-map-panel" aria-label={systemName}>
-      <div className="atlas-panel-title-row">
-        {mode === 'picker' ? (
-          <div className="atlas-browser-crumbs">
-            <button
-              type="button"
-              className="atlas-browser-crumb"
-              onClick={() => setFocusId(null)}
-              aria-current={focusNode === null ? 'true' : undefined}
-            >
-              {systemName}
-            </button>
-            {crumbs.map((crumb) => (
-              <React.Fragment key={crumb.id}>
-                <span className="atlas-breadcrumb-sep" aria-hidden="true">
-                  /
-                </span>
-                <button
-                  type="button"
-                  className="atlas-browser-crumb"
-                  onClick={() => setFocusId(crumb.id)}
-                  aria-current={focusNode?.entity.id === crumb.id ? 'true' : undefined}
-                >
-                  {crumb.name}
-                </button>
-              </React.Fragment>
-            ))}
-          </div>
-        ) : (
-          <h2>{systemName}</h2>
-        )}
-        <div className="atlas-browser-tools">
-          {mode === 'picker' ? (
-            <p className="atlas-panel-note atlas-browser-selection">
-              {selected ? (
-                <>
-                  scene opens at <strong>{selected.name}</strong>
-                </>
-              ) : (
-                'pick a highlighted place'
-              )}
-            </p>
-          ) : graph.sunId !== null ? (
-            <p className="atlas-panel-note">
-              {graph.planetIds.length} bodies · click a body to open it
-            </p>
-          ) : null}
-          <input
-            type="search"
-            className="atlas-browser-search"
-            placeholder="Search by name, description, or slug"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-      </div>
-      {chart}
-    </section>
+  const searchInput = (
+    <input
+      type="search"
+      className="atlas-browser-search"
+      placeholder="Search by name, description, or slug"
+      value={query}
+      onChange={(event) => setQuery(event.target.value)}
+    />
   );
 
   if (mode === 'picker') {
-    return <div className="atlas-browser">{mapPanel}</div>;
+    const focusEntity = focusNode?.entity ?? null;
+    const focusCharted = focusEntity === null ? 0 : descendantCount(graph, focusEntity.id);
+    const focusSelectable = focusEntity !== null && isSelectable(focusEntity.id);
+    return (
+      <div className="atlas-browser">
+        <section className="atlas-map-panel" aria-label={systemName}>
+          <div className="atlas-picker-nav">
+            <div className="atlas-browser-crumbs">
+              <button
+                type="button"
+                className="atlas-browser-crumb"
+                onClick={() => setFocusId(null)}
+                aria-current={focusNode === null ? 'true' : undefined}
+              >
+                {systemName}
+              </button>
+              {crumbs.map((crumb) => (
+                <React.Fragment key={crumb.id}>
+                  <span className="atlas-breadcrumb-sep" aria-hidden="true">
+                    /
+                  </span>
+                  <button
+                    type="button"
+                    className="atlas-browser-crumb"
+                    onClick={() => setFocusId(crumb.id)}
+                    aria-current={focusNode?.entity.id === crumb.id ? 'true' : undefined}
+                  >
+                    {crumb.name}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+            {focusNode !== null ? (
+              <button
+                type="button"
+                className="atlas-picker-up"
+                onClick={() => setFocusId(upCrumb?.id ?? null)}
+              >
+                ↑ Up to {upCrumb?.name ?? systemName}
+              </button>
+            ) : null}
+            {searchInput}
+          </div>
+          {focusEntity !== null ? (
+            <div className="atlas-picker-context">
+              <div className="atlas-picker-context-copy">
+                <span className="atlas-picker-context-name">{focusEntity.name}</span>
+                <span className="atlas-picker-context-meta">
+                  {subkindLabel(focusEntity)}
+                  {focusCharted > 0
+                    ? ` · ${focusCharted} charted ${focusCharted === 1 ? 'place' : 'places'}`
+                    : ''}
+                </span>
+                {focusEntity.description ? (
+                  <span className="atlas-picker-context-desc">{focusEntity.description}</span>
+                ) : null}
+              </div>
+              {focusSelectable ? (
+                <button
+                  type="button"
+                  className="atlas-picker-start"
+                  onClick={() => onOpen(focusEntity)}
+                  disabled={selectedId === focusEntity.id}
+                >
+                  {selectedId === focusEntity.id
+                    ? 'Chronicle starts here'
+                    : `Start at ${focusEntity.name}`}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {chart}
+          <div
+            className={`atlas-picker-selection${selected ? '' : ' atlas-picker-selection-empty'}`}
+            role="status"
+          >
+            {selected ? (
+              <>
+                <span className="atlas-picker-selection-label">Chronicle opens at</span>
+                <span className="atlas-picker-selection-name">{selected.name}</span>
+                <span className="atlas-picker-selection-meta">
+                  {subkindLabel(selected)}
+                  {selectedChain.length > 0
+                    ? ` — ${selectedChain.map((entity) => entity.name).join(' · ')}`
+                    : ''}
+                </span>
+                {selected.description ? (
+                  <span className="atlas-picker-selection-desc">{selected.description}</span>
+                ) : null}
+              </>
+            ) : (
+              <span className="atlas-picker-selection-hint">
+                No starting location chosen yet — click a glowing place on the chart, or open a
+                body and use its “Start at …” button.
+              </span>
+            )}
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (
     <div className="atlas-browser">
-      {mapPanel}
+      <section className="atlas-map-panel" aria-label={systemName}>
+        <div className="atlas-panel-title-row">
+          <h2>{systemName}</h2>
+          <div className="atlas-browser-tools">
+            {graph.sunId !== null ? (
+              <p className="atlas-panel-note">
+                {graph.planetIds.length} bodies · click a body to open it
+              </p>
+            ) : null}
+            {searchInput}
+          </div>
+        </div>
+        {chart}
+      </section>
       <div className="atlas-index-columns">
         <section className="atlas-panel" aria-label="Charted places">
           <h2 className="atlas-panel-heading">Gazetteer</h2>

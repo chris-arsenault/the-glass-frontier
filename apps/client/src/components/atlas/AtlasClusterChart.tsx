@@ -15,6 +15,8 @@ type AtlasClusterChartProps = {
   onSelect: (slug: string) => void;
   /** Picker mode: ids that can be chosen; others render as context. */
   selectableIds?: ReadonlySet<string>;
+  /** Entity to render with the chosen-location ring (picker mode). */
+  selectedId?: string | null;
 };
 
 const VIEW_WIDTH = 1200;
@@ -28,6 +30,7 @@ export function AtlasClusterChart({
   node,
   onSelect,
   selectableIds,
+  selectedId = null,
 }: AtlasClusterChartProps): React.JSX.Element {
   const children = childIds(node)
     .map((id) => graph.nodes.get(id))
@@ -72,7 +75,7 @@ export function AtlasClusterChart({
             key={child.entity.id}
             className={`atlas-map-body${inert ? ' atlas-cluster-inert' : ''}${
               selectable && selectableIds !== undefined ? ' atlas-cluster-selectable' : ''
-            }`}
+            }${child.entity.id === selectedId ? ' atlas-map-current' : ''}`}
             tabIndex={inert ? undefined : 0}
             role={inert ? undefined : 'link'}
             aria-label={child.entity.name}

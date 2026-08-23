@@ -114,18 +114,12 @@ export function ChronicleStartWizard() {
       const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
       setLocations(sorted);
       setLocationError(null);
-      const playable = sorted.filter((entity) =>
-        entity.playableAs.includes('chronicle_location')
-      );
-      if (useChronicleStartStore.getState().selectedLocation === null && playable.length > 0) {
-        setSelectedLocation(mapLocation(playable[0]));
-      }
     } catch (err: unknown) {
       setLocationError(err instanceof Error ? err.message : 'Failed to load locations');
     } finally {
       setIsLoadingLocations(false);
     }
-  }, [setSelectedLocation]);
+  }, []);
 
   const refreshLocations = useCallback(async () => {
     setIsLoadingLocations(true);
@@ -483,8 +477,9 @@ function LocationStep({
         <div>
           <h2>Choose a location</h2>
           <p>
-            Click a body to descend into its orbit and surface; click a highlighted place to open
-            the chronicle there.
+            Click a body to descend into its orbit and surface. Glowing places can host a
+            chronicle: click one to choose it, or use “Start at …” to open the chronicle at the
+            body you are viewing.
           </p>
         </div>
         <div className="location-step-actions">

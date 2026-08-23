@@ -26,6 +26,8 @@ type AtlasBodyMapProps = {
   body: AtlasNode;
   resolve: (id: string) => HardState | undefined;
   onOpen: (slug: string) => void;
+  /** Entity to render with the chosen-location ring (picker mode). */
+  selectedId?: string | null;
 };
 
 const VIEW_WIDTH = 1200;
@@ -103,6 +105,7 @@ export function AtlasBodyMap({
   graph,
   onOpen,
   resolve,
+  selectedId = null,
 }: AtlasBodyMapProps): React.JSX.Element {
   const resolver = useMemo(() => new AtlasPositionResolver(graph), [graph]);
   const bodyPolar = resolver.resolvePolar(body.entity.id);
@@ -114,10 +117,19 @@ export function AtlasBodyMap({
         graph={graph}
         onOpen={onOpen}
         resolver={resolver}
+        selectedId={selectedId}
       />
     );
   }
-  return <InferredBodyMap body={body} graph={graph} onOpen={onOpen} resolve={resolve} />;
+  return (
+    <InferredBodyMap
+      body={body}
+      graph={graph}
+      onOpen={onOpen}
+      resolve={resolve}
+      selectedId={selectedId}
+    />
+  );
 }
 
 function InferredBodyMap({
@@ -125,6 +137,7 @@ function InferredBodyMap({
   graph,
   onOpen,
   resolve,
+  selectedId,
 }: AtlasBodyMapProps): React.JSX.Element {
   const layers = layerOrbit(graph, body);
   const surfaceNodes = body.children.surface
@@ -141,7 +154,7 @@ function InferredBodyMap({
     layers.ringRiderIndex.has(node.entity.id)
   );
 
-  const { clickable } = chartInteraction(onOpen);
+  const { clickable } = chartInteraction(onOpen, selectedId);
 
   return (
     <svg
@@ -344,7 +357,7 @@ const SIZE_CLASS_RADIUS: Record<string, number> = {
 };
 
 /** Shared click/keyboard affordances for chart glyphs. */
-const chartInteraction = (onOpen: (slug: string) => void) => {
+const chartInteraction = (onOpen: (slug: string) => void, selectedId?: string | null) => {
   const activate = (slug: string) => () => onOpen(slug);
   const keyActivate = (slug: string) => (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -354,7 +367,7 @@ const chartInteraction = (onOpen: (slug: string) => void) => {
   };
   const clickable = (node: AtlasNode) => ({
     'aria-label': node.entity.name,
-    className: 'atlas-map-body',
+    className: `atlas-map-body${node.entity.id === selectedId ? ' atlas-map-current' : ''}`,
     onClick: activate(node.entity.slug),
     onKeyDown: keyActivate(node.entity.slug),
     role: 'link',
@@ -401,6 +414,7 @@ type DeclaredBodyMapProps = {
   bodyPolar: PolarPoint;
   resolver: AtlasPositionResolver;
   onOpen: (slug: string) => void;
+  selectedId?: string | null;
 };
 
 function DeclaredBodyMap({
@@ -409,8 +423,9 @@ function DeclaredBodyMap({
   graph,
   onOpen,
   resolver,
+  selectedId,
 }: DeclaredBodyMapProps): React.JSX.Element {
-  const { clickable } = chartInteraction(onOpen);
+  const { clickable } = chartInteraction(onOpen, selectedId);
 
   /* Surface panel: equirectangular, north up, equal degree scale. */
   const surfaceEntries = collectSurfaceEntries(graph, body);

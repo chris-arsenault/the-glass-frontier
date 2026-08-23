@@ -24,6 +24,8 @@ import { AtlasPositionResolver, hasOwnPolarPosition, localOffset } from './atlas
 type AtlasSystemMapProps = {
   graph: AtlasGraph;
   onSelect: (slug: string) => void;
+  /** Entity to render with the chosen-location ring (picker mode). */
+  selectedId?: string | null;
 };
 
 const VIEW_WIDTH = 1200;
@@ -55,10 +57,16 @@ const bodyAngle = (index: number, orbitRadius: number): number => {
 type Interactive = {
   activate: (slug: string) => () => void;
   keyActivate: (slug: string) => (event: React.KeyboardEvent) => void;
+  /** Class suffix marking the chosen location's glyph. */
+  current: (id: string) => string;
 };
 
-const useInteractive = (onSelect: (slug: string) => void): Interactive => ({
+const useInteractive = (
+  onSelect: (slug: string) => void,
+  selectedId?: string | null
+): Interactive => ({
   activate: (slug: string) => () => onSelect(slug),
+  current: (id: string) => (id === selectedId ? ' atlas-map-current' : ''),
   keyActivate: (slug: string) => (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -67,7 +75,11 @@ const useInteractive = (onSelect: (slug: string) => void): Interactive => ({
   },
 });
 
-export function AtlasSystemMap({ graph, onSelect }: AtlasSystemMapProps): React.JSX.Element {
+export function AtlasSystemMap({
+  graph,
+  onSelect,
+  selectedId = null,
+}: AtlasSystemMapProps): React.JSX.Element {
   const resolver = useMemo(() => new AtlasPositionResolver(graph), [graph]);
   const declaredPlanetIds = graph.planetIds.filter((id) => {
     const node = graph.nodes.get(id);
@@ -81,10 +93,11 @@ export function AtlasSystemMap({ graph, onSelect }: AtlasSystemMapProps): React.
         resolver={resolver}
         planetIds={declaredPlanetIds}
         onSelect={onSelect}
+        selectedId={selectedId}
       />
     );
   }
-  return <InferredSystemChart graph={graph} onSelect={onSelect} />;
+  return <InferredSystemChart graph={graph} onSelect={onSelect} selectedId={selectedId} />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -117,6 +130,7 @@ type DeclaredSystemChartProps = {
   resolver: AtlasPositionResolver;
   planetIds: string[];
   onSelect: (slug: string) => void;
+  selectedId?: string | null;
 };
 
 function DeclaredSystemChart({
@@ -124,8 +138,9 @@ function DeclaredSystemChart({
   onSelect,
   planetIds,
   resolver,
+  selectedId,
 }: DeclaredSystemChartProps): React.JSX.Element {
-  const { activate, keyActivate } = useInteractive(onSelect);
+  const { activate, current, keyActivate } = useInteractive(onSelect, selectedId);
   const sun = graph.sunId === null ? null : graph.nodes.get(graph.sunId) ?? null;
   const planetSet = new Set(planetIds);
 
@@ -258,7 +273,7 @@ function DeclaredSystemChart({
 
       {sun ? (
         <g
-          className="atlas-map-body atlas-map-sun"
+          className={`atlas-map-body atlas-map-sun${current(sun.entity.id)}`}
           tabIndex={0}
           role="link"
           aria-label={sun.entity.name}
@@ -297,7 +312,7 @@ function DeclaredSystemChart({
         return (
           <g
             key={node.entity.id}
-            className="atlas-map-body atlas-map-lane-group"
+            className={`atlas-map-body atlas-map-lane-group${current(node.entity.id)}`}
             tabIndex={0}
             role="link"
             aria-label={node.entity.name}
@@ -336,7 +351,7 @@ function DeclaredSystemChart({
       {freeMarkers.map(({ node, point }) => (
         <g
           key={node.entity.id}
-          className="atlas-map-body atlas-map-free"
+          className={`atlas-map-body atlas-map-free${current(node.entity.id)}`}
           tabIndex={0}
           role="link"
           aria-label={node.entity.name}
@@ -361,7 +376,7 @@ function DeclaredSystemChart({
       {moons.map(({ node, point }) => (
         <g
           key={node.entity.id}
-          className="atlas-map-body atlas-map-moon"
+          className={`atlas-map-body atlas-map-moon${current(node.entity.id)}`}
           tabIndex={0}
           role="link"
           aria-label={node.entity.name}
@@ -387,7 +402,7 @@ function DeclaredSystemChart({
         return (
           <g
             key={rootId}
-            className="atlas-map-body atlas-map-free"
+            className={`atlas-map-body atlas-map-free${current(node.entity.id)}`}
             tabIndex={0}
             role="link"
             aria-label={node.entity.name}
@@ -436,7 +451,7 @@ function DeclaredSystemChart({
         return (
           <g
             key={planetId}
-            className={`atlas-map-body${isHome ? ' atlas-map-home' : ''}`}
+            className={`atlas-map-body${isHome ? ' atlas-map-home' : ''}${current(planetId)}`}
             tabIndex={0}
             role="link"
             aria-label={node.entity.name}
@@ -487,10 +502,15 @@ function DeclaredSystemChart({
 type InferredSystemChartProps = {
   graph: AtlasGraph;
   onSelect: (slug: string) => void;
+  selectedId?: string | null;
 };
 
-function InferredSystemChart({ graph, onSelect }: InferredSystemChartProps): React.JSX.Element {
-  const { activate, keyActivate } = useInteractive(onSelect);
+function InferredSystemChart({
+  graph,
+  onSelect,
+  selectedId,
+}: InferredSystemChartProps): React.JSX.Element {
+  const { activate, current, keyActivate } = useInteractive(onSelect, selectedId);
   const sun = graph.sunId === null ? null : graph.nodes.get(graph.sunId) ?? null;
   const system = graph.systemId === null ? null : graph.nodes.get(graph.systemId) ?? null;
 
@@ -512,7 +532,7 @@ function InferredSystemChart({ graph, onSelect }: InferredSystemChartProps): Rea
           return (
             <g
               key={node.entity.id}
-              className="atlas-map-body"
+              className={`atlas-map-body${current(node.entity.id)}`}
               tabIndex={0}
               role="link"
               aria-label={node.entity.name}
@@ -598,7 +618,7 @@ function InferredSystemChart({ graph, onSelect }: InferredSystemChartProps): Rea
       ))}
 
       <g
-        className="atlas-map-body atlas-map-sun"
+        className={`atlas-map-body atlas-map-sun${current(sun.entity.id)}`}
         tabIndex={0}
         role="link"
         aria-label={sun.entity.name}
@@ -618,7 +638,7 @@ function InferredSystemChart({ graph, onSelect }: InferredSystemChartProps): Rea
         return (
           <g
             key={node.entity.id}
-            className="atlas-map-body atlas-map-lane-group"
+            className={`atlas-map-body atlas-map-lane-group${current(node.entity.id)}`}
             tabIndex={0}
             role="link"
             aria-label={node.entity.name}
@@ -662,7 +682,7 @@ function InferredSystemChart({ graph, onSelect }: InferredSystemChartProps): Rea
         return (
           <g key={planetId}>
             <g
-              className={`atlas-map-body${isHome ? ' atlas-map-home' : ''}`}
+              className={`atlas-map-body${isHome ? ' atlas-map-home' : ''}${current(planetId)}`}
               tabIndex={0}
               role="link"
               aria-label={node.entity.name}
@@ -703,7 +723,7 @@ function InferredSystemChart({ graph, onSelect }: InferredSystemChartProps): Rea
               return (
                 <g
                   key={moon.entity.id}
-                  className="atlas-map-body atlas-map-moon"
+                  className={`atlas-map-body atlas-map-moon${current(moon.entity.id)}`}
                   tabIndex={0}
                   role="link"
                   aria-label={moon.entity.name}

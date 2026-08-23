@@ -143,13 +143,161 @@
   text-decoration: none;
 }
 
-.atlas-browser-selection {
-  text-transform: none;
+/* Picker chrome: navigation strip, focus context, and the selection bar. */
+
+.atlas-picker-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.atlas-browser-selection strong {
+.atlas-picker-nav .atlas-browser-crumbs {
+  flex: 1;
+}
+
+.atlas-picker-nav .atlas-browser-search {
+  width: 12rem;
+}
+
+.atlas-picker-up {
+  height: var(--control-h);
+  padding: 0 var(--space-3);
   color: var(--text-primary);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-xs);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.atlas-picker-up:hover,
+.atlas-picker-up:focus-visible {
+  color: var(--text-accent);
+  border-color: var(--border-accent);
+  outline: none;
+}
+
+.atlas-picker-context {
+  display: flex;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-secondary);
+  align-items: center;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.atlas-picker-context-copy {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.atlas-picker-context-name {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.atlas-picker-context-meta {
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.atlas-picker-context-desc {
+  display: -webkit-box;
+  color: var(--text-secondary);
+  -webkit-box-orient: vertical;
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.atlas-picker-start {
+  height: var(--control-h);
+  padding: 0 var(--space-4);
+  color: #0b1220;
+  background: var(--text-accent);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.atlas-picker-start:disabled {
+  color: var(--text-accent);
+  background: transparent;
+  cursor: default;
+}
+
+.atlas-picker-start:hover:not(:disabled),
+.atlas-picker-start:focus-visible:not(:disabled) {
+  filter: brightness(1.1);
+  outline: none;
+}
+
+.atlas-picker-selection {
+  display: flex;
+  padding: var(--space-2) var(--space-3);
+  background: rgb(96 165 250 / 8%);
+  align-items: baseline;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  column-gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.atlas-picker-selection-empty {
+  background: var(--surface-secondary);
+  border-color: var(--border-muted);
+  border-style: dashed;
+}
+
+.atlas-picker-selection-label {
+  color: var(--text-accent);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.atlas-picker-selection-name {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.atlas-picker-selection-meta {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.atlas-picker-selection-desc {
+  display: -webkit-box;
+  color: var(--text-secondary);
+  -webkit-box-orient: vertical;
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.atlas-picker-selection-hint {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 
 .atlas-browser-results {
@@ -316,6 +464,27 @@
   50% {
     stroke-opacity: 1;
   }
+}
+
+/* The chosen starting location, on every chart: gold ring, gold label. */
+
+.atlas-map-current {
+  filter: drop-shadow(0 0 5px rgb(253 224 71 / 60%));
+}
+
+.atlas-map-current circle,
+.atlas-map-current rect {
+  stroke: var(--color-accent-yellow);
+  stroke-width: 2;
+}
+
+.atlas-map-current path {
+  stroke: var(--color-accent-yellow);
+}
+
+.atlas-map-current text {
+  fill: var(--color-accent-yellow);
+  font-weight: 700;
 }
 
 .atlas-map-ring {
