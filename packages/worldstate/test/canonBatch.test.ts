@@ -58,12 +58,14 @@ describe('Canon batch commit', () => {
     expect(result.entityCount).toBe(2);
     expect(npc?.links).toContainEqual({
       direction: 'out',
+      live: true,
       relationship: 'member_of',
       strength: 0.7,
       targetId: faction?.id,
     });
     expect(faction?.links).toContainEqual({
       direction: 'in',
+      live: true,
       relationship: 'member_of',
       strength: 0.7,
       targetId: npc?.id,
@@ -201,7 +203,7 @@ describe('Canon batch commit', () => {
         relationships: [
           { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'focus' } },
           { dst: { ref: 'location' }, live: false, relationship: 'operates_in', src: { ref: 'ended' } },
-          { dst: { ref: 'location' }, live: true, relationship: 'related_to', src: { ref: 'article' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'embeds', src: { ref: 'article' } },
           { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'dm' } },
           { dst: { ref: 'era' }, live: true, relationship: 'active_during', src: { ref: 'location' } },
         ],
