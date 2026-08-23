@@ -1,4 +1,4 @@
-import { CanonProposal, type HardStateFacts } from '@glass-frontier/dto';
+import { CanonProposal, type HardStateFacts, type PlayableRole } from '@glass-frontier/dto';
 
 /**
  * The slice of tsonu-canon's internal site bundle
@@ -26,6 +26,7 @@ export type TsonuConnection = {
   relation: string;
   entry_id: string;
   from?: number | null;
+  live: boolean;
   to?: number | null;
 };
 
@@ -37,13 +38,20 @@ export type TsonuEntry = {
   tags: string[];
   prominence: string | null;
   aliases: string[];
+  dm: boolean;
   summary: string | null;
   sections: TsonuSection[];
   facts: TsonuFact[];
   connections: TsonuConnection[];
+  is_article: boolean;
+  origin_blurb?: string | false;
+  playable_as: PlayableRole[];
+  veiled: boolean;
+  veil_tagline?: string;
 };
 
 export type TsonuBundle = {
+  schema_version: number;
   revision: string;
   entries: Record<string, { entry: TsonuEntry }>;
 };
@@ -63,9 +71,23 @@ const key = (id: string): string => `tsonu:${id}`;
  * by its owner id so re-ingest updates in place.
  */
 export const buildTsonuProposal = (bundle: TsonuBundle): CanonProposal => {
+  if (!Number.isInteger(bundle.schema_version) || bundle.schema_version < 6) {
+    throw new Error(`Tsonu bundle schema ${bundle.schema_version} does not include canon metadata`);
+  }
   const entries = Object.values(bundle.entries)
     .map(({ entry }) => entry)
     .sort((a, b) => a.id.localeCompare(b.id));
+  for (const entry of entries) {
+    if (
+      typeof entry.dm !== 'boolean'
+      || typeof entry.is_article !== 'boolean'
+      || !Array.isArray(entry.playable_as)
+      || typeof entry.veiled !== 'boolean'
+      || (entry.veiled && typeof entry.veil_tagline !== 'string')
+    ) {
+      throw new Error(`Tsonu entry ${entry.id} is missing canon metadata`);
+    }
+  }
   const entryIds = new Set(entries.map((entry) => entry.id));
 
   return CanonProposal.parse({
@@ -79,14 +101,20 @@ export const buildTsonuProposal = (bundle: TsonuBundle): CanonProposal => {
 
 const buildEntity = (entry: TsonuEntry): unknown => ({
   description: entry.summary ?? undefined,
+  dm: entry.dm,
   externalKey: key(entry.id),
   facts: buildFacts(entry),
+  isArticle: entry.is_article,
   kind: entry.kind,
   name: entry.title,
+  originBlurb: typeof entry.origin_blurb === 'string' ? entry.origin_blurb : undefined,
+  playableAs: entry.playable_as,
   prominence: entry.prominence ?? undefined,
   // The source schema gives every kind a kind-named default subkind; the
   // bundle stamps it on entries that declare none. Glass drops that echo.
   subkind: entry.subkind === entry.kind ? undefined : entry.subkind ?? undefined,
+  veiled: entry.veiled,
+  veilTagline: entry.veil_tagline,
 });
 
 /**
@@ -153,11 +181,11 @@ const fragmentKey = (
 };
 
 /**
- * Authoring-structure relations, not world facts: `embeds` is the transclusion
- * link (its prose already imports on the owning entry) and `extends` is entry
- * inheritance. Glass does not adopt that layer.
+ * Entry inheritance is authoring structure rather than a world fact. Glass
+ * does not adopt it. `embeds` remains a graph edge because the source uses it
+ * when determining chronicle focus choices.
  */
-export const STRUCTURAL_RELATIONS = new Set(['embeds', 'extends']);
+export const STRUCTURAL_RELATIONS = new Set(['extends']);
 
 const buildRelationships = (entry: TsonuEntry): unknown[] =>
   entry.connections
@@ -167,6 +195,7 @@ const buildRelationships = (entry: TsonuEntry): unknown[] =>
     )
     .map((connection) => ({
       dst: { externalKey: key(connection.entry_id) },
+      live: connection.live,
       relationship: connection.relation,
       since: connection.from ?? undefined,
       src: { externalKey: key(entry.id) },

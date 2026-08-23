@@ -6,6 +6,7 @@ import type {
   HardStateProminence,
   HardStateStatus,
   HardStateSubkind,
+  PlayableRole,
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
@@ -13,12 +14,15 @@ import type { WorldNeighbor } from './types';
 import { now } from './utils';
 
 export type EntityListInput = {
+  dm?: boolean;
+  isArticle?: boolean;
   kind?: HardStateKind;
   /** Only entities that are (or are not) location-shaped. */
   isLocation?: boolean;
   limit?: number;
   minProminence?: HardStateProminence;
   maxProminence?: HardStateProminence;
+  playableAs?: PlayableRole;
 };
 
 export type NeighborListInput = EntityListInput & {
@@ -43,7 +47,13 @@ type EntityRow = {
   prominence: HardStateProminence;
   status: HardStateStatus | null;
   props: { facts?: Record<string, string | number> } | null;
+  dm: boolean;
+  is_article: boolean;
   is_location: boolean;
+  origin_blurb: string | null;
+  playable_as: PlayableRole[];
+  veiled: boolean;
+  veil_tagline: string | null;
   created_at: Date | null;
   updated_at: Date | null;
 };
@@ -52,7 +62,7 @@ type LinkRow = {
   dst_id: string;
   type: HardStateLink['relationship'];
   strength: number | null;
-  props: { since?: number; until?: number } | null;
+  props: { live?: boolean; since?: number; until?: number } | null;
 };
 type NeighborRow = EntityRow & {
   neighbor_id: string;
@@ -73,10 +83,33 @@ const PROMINENCE_RANK = new Map<HardStateProminence, number>([
 ]);
 
 const ENTITY_SELECT = `SELECT e.id, e.slug, e.kind, e.subkind, e.name,
-  e.description, e.prominence, e.status, e.props, e.is_location,
+  e.description, e.prominence, e.status, e.props, e.dm, e.is_article, e.is_location,
+  e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
   e.created_at, e.updated_at
   FROM entity e
   JOIN world_prominence wp ON wp.id = e.prominence`;
+
+const FOCUS_EXCLUDED_RELATIONSHIPS = [
+  'active_during',
+  'created_during',
+  'disappeared_during',
+  'emerged_during',
+  'mentions',
+] as const;
+
+const FOCUS_CHOICE_QUERY = `${ENTITY_SELECT}
+  WHERE e.id IN (
+    SELECT CASE WHEN edge.src_id = $1::uuid THEN edge.dst_id ELSE edge.src_id END
+    FROM edge
+    WHERE (edge.src_id = $1::uuid OR edge.dst_id = $1::uuid)
+      AND COALESCE((edge.props ->> 'live')::boolean, true)
+      AND NOT (edge.type = ANY($2::text[]))
+  )
+    AND NOT e.dm
+    AND NOT e.is_article
+    AND NOT e.is_location
+    AND e.status IS DISTINCT FROM 'shell'
+  ORDER BY wp.rank ASC, e.created_at ASC`;
 
 /**
  * Depth-bounded traversal weighted by relationship strength.
@@ -98,8 +131,13 @@ const NEIGHBOR_QUERY = `WITH RECURSIVE walk AS (
     1 AS hops,
     COALESCE(e.strength, wrk.default_strength)::real AS reach
   FROM edge e
+  JOIN entity root ON root.id = $1::uuid AND NOT root.is_article
   JOIN world_relationship_kind wrk ON wrk.id = e.type AND wrk.category <> 'banned'
-  WHERE e.src_id = $1::uuid OR e.dst_id = $1::uuid
+  JOIN entity neighbor ON neighbor.id = CASE
+    WHEN e.src_id = $1::uuid THEN e.dst_id ELSE e.src_id END
+    AND NOT neighbor.is_article
+  WHERE (e.src_id = $1::uuid OR e.dst_id = $1::uuid)
+    AND COALESCE((e.props ->> 'live')::boolean, true)
   UNION ALL
   SELECT
     CASE WHEN e.src_id = w.neighbor_id THEN e.dst_id ELSE e.src_id END,
@@ -112,7 +150,11 @@ const NEIGHBOR_QUERY = `WITH RECURSIVE walk AS (
   FROM walk w
   JOIN edge e ON e.src_id = w.neighbor_id OR e.dst_id = w.neighbor_id
   JOIN world_relationship_kind wrk ON wrk.id = e.type AND wrk.category <> 'banned'
+  JOIN entity next_entity ON next_entity.id = CASE
+    WHEN e.src_id = w.neighbor_id THEN e.dst_id ELSE e.src_id END
+    AND NOT next_entity.is_article
   WHERE w.hops < $5
+    AND COALESCE((e.props ->> 'live')::boolean, true)
     AND CASE WHEN e.src_id = w.neighbor_id THEN e.dst_id ELSE e.src_id END <> $1::uuid
 ), ranked AS (
   SELECT DISTINCT ON (neighbor_id, root_relationship, root_direction)
@@ -123,7 +165,9 @@ const NEIGHBOR_QUERY = `WITH RECURSIVE walk AS (
 )
 SELECT r.neighbor_id, r.root_relationship, r.root_direction, r.relationship,
   r.direction, r.via_id, r.hops, e.id, e.slug, e.kind, e.subkind,
-  e.name, e.description, e.status, e.prominence, e.created_at, e.updated_at
+  e.name, e.description, e.status, e.prominence, e.props, e.dm, e.is_article,
+  e.is_location, e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
+  e.created_at, e.updated_at
 FROM ranked r
 JOIN entity e ON e.id = r.neighbor_id
 JOIN world_prominence wp ON wp.id = e.prominence
@@ -132,34 +176,47 @@ WHERE wp.rank BETWEEN $2 AND $3
 ORDER BY r.reach DESC, r.hops ASC, e.created_at ASC
 LIMIT $6`;
 
+const optional = <Value>(value: Value | null): Value | undefined => value ?? undefined;
+
+const rowFacts = (row: EntityRow): Record<string, string | number> => row.props?.facts ?? {};
+
+const rowTimestamp = (value: Date | null): number => value?.getTime() ?? now();
+
 const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
-  createdAt: row.created_at?.getTime() ?? now(),
-  description: row.description ?? undefined,
-  facts: row.props?.facts ?? {},
+  createdAt: rowTimestamp(row.created_at),
+  description: optional(row.description),
+  dm: row.dm,
+  facts: rowFacts(row),
   id: row.id,
+  isArticle: row.is_article,
   isLocation: row.is_location,
   kind: row.kind,
   links,
   name: row.name,
+  originBlurb: optional(row.origin_blurb),
+  playableAs: row.playable_as,
   prominence: row.prominence,
   slug: row.slug,
-  status: row.status ?? undefined,
-  subkind: row.subkind ?? undefined,
-  updatedAt: row.updated_at?.getTime() ?? now(),
+  status: optional(row.status),
+  subkind: optional(row.subkind),
+  updatedAt: rowTimestamp(row.updated_at),
+  veiled: row.veiled,
+  veilTagline: optional(row.veil_tagline),
 });
 
-const toLink = (row: LinkRow, entityId: string): HardStateLink =>
-  row.src_id === entityId
-    ? {
-      direction: 'out', relationship: row.type,
-      since: row.props?.since, strength: row.strength ?? undefined,
-      targetId: row.dst_id, until: row.props?.until,
-    }
-    : {
-      direction: 'in', relationship: row.type,
-      since: row.props?.since, strength: row.strength ?? undefined,
-      targetId: row.src_id, until: row.props?.until,
-    };
+const linkDetails = (row: LinkRow): Omit<HardStateLink, 'direction' | 'relationship' | 'targetId'> => ({
+  live: row.props?.live ?? true,
+  since: row.props?.since,
+  strength: optional(row.strength),
+  until: row.props?.until,
+});
+
+const toLink = (row: LinkRow, entityId: string): HardStateLink => ({
+  ...linkDetails(row),
+  direction: row.src_id === entityId ? 'out' : 'in',
+  relationship: row.type,
+  targetId: row.src_id === entityId ? row.dst_id : row.src_id,
+});
 
 const getProminenceRank = (value: HardStateProminence): number => {
   const rank = PROMINENCE_RANK.get(value);
@@ -286,6 +343,15 @@ export class EntityReader {
     return result.rows.map((row) => toEntity(row, links.get(row.id) ?? []));
   }
 
+  async listFocusChoices(input: { locationId: string }): Promise<HardState[]> {
+    const result = await this.#pool.query<EntityRow>(FOCUS_CHOICE_QUERY, [
+      input.locationId,
+      FOCUS_EXCLUDED_RELATIONSHIPS,
+    ]);
+    const links = await this.#listLinksForMany(result.rows.map((row) => row.id));
+    return result.rows.map((row) => toEntity(row, links.get(row.id) ?? []));
+  }
+
   async listNeighbors(input: NeighborListInput): Promise<WorldNeighbor[]> {
     const minRank = getProminenceRank(input.minProminence ?? 'recognized');
     const maxRank = getProminenceRank(input.maxProminence ?? 'mythic');
@@ -300,12 +366,23 @@ export class EntityReader {
   #buildEntityFilters(input: EntityListInput = {}): {
     clauses: string[]; params: Array<string | number | boolean>;
   } {
-    const { isLocation, kind, limit, maxProminence, minProminence } = input;
+    const {
+      dm,
+      isArticle,
+      isLocation,
+      kind,
+      limit,
+      maxProminence,
+      minProminence,
+      playableAs,
+    } = input;
     const params: Array<string | number | boolean> = [
       Math.max(1, Math.min(200, limit ?? 100)),
     ];
     const clauses: string[] = [];
     const filters: Array<[string, string | number | boolean | undefined]> = [
+      ['e.dm =', dm],
+      ['e.is_article =', isArticle],
       ['e.kind =', kind],
       ['e.is_location =', isLocation],
       ['wp.rank >=', minProminence === undefined ? undefined : getProminenceRank(minProminence)],
@@ -316,6 +393,10 @@ export class EntityReader {
         params.push(value);
         clauses.push(`${comparison} $${params.length}`);
       }
+    }
+    if (playableAs !== undefined) {
+      params.push(playableAs);
+      clauses.push(`e.playable_as @> ARRAY[$${params.length}]::text[]`);
     }
     return { clauses, params };
   }

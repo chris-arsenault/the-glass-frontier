@@ -36,6 +36,7 @@ seeds AS (
   SELECT e.id, 0 AS hops, 1.0::real AS reach, ARRAY[e.id]::uuid[] AS path
   FROM entity e
   WHERE e.id = ANY($3::uuid[])
+    AND NOT e.is_article
 ),
 walk AS (
   SELECT id, hops, reach, path FROM seeds
@@ -49,8 +50,10 @@ walk AS (
   JOIN LATERAL (
     SELECT CASE WHEN edge.src_id = walk.id THEN edge.dst_id ELSE edge.src_id END AS id
   ) nxt ON true
+  JOIN entity next_entity ON next_entity.id = nxt.id AND NOT next_entity.is_article
   WHERE walk.hops < ${MAX_GRAPH_HOPS}
     AND kind.category <> 'banned'
+    AND COALESCE((edge.props ->> 'live')::boolean, true)
     AND NOT nxt.id = ANY(walk.path)
     AND walk.reach * COALESCE(edge.strength, kind.default_strength) > 0.05
 ),
@@ -68,6 +71,7 @@ candidates AS (
   JOIN world_prominence prominence ON prominence.id = e.prominence
   LEFT JOIN best ON best.id = e.id
   WHERE e.embedding IS NOT NULL
+    AND NOT e.is_article
     AND e.kind = $2
     AND (
       cardinality($3::uuid[]) = 0

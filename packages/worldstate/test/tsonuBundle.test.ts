@@ -5,22 +5,28 @@ import { buildTsonuProposal, type TsonuBundle, type TsonuEntry } from '../src/ts
 const entry = (overrides: Partial<TsonuEntry> & { id: string }): TsonuEntry => ({
   aliases: [],
   connections: [],
+  dm: false,
   facts: [],
+  is_article: false,
   kind: 'installation',
+  playable_as: [],
   prominence: 'marginal',
   sections: [],
   subkind: 'settlement',
   summary: null,
   tags: [],
   title: overrides.id,
+  veiled: false,
   ...overrides,
 });
 
 const bundle = (entries: TsonuEntry[]): TsonuBundle => ({
   entries: Object.fromEntries(entries.map((each) => [each.id, { entry: each }])),
   revision: 'abc123',
+  schema_version: 6,
 });
 
+const CAROM_KEY = 'tsonu:carom';
 const RATTLE_KEY = 'tsonu:rattle';
 const RAVEL_KEY = 'tsonu:ravel';
 
@@ -49,6 +55,7 @@ describe('buildTsonuProposal', () => {
     expect(proposal.entities).toEqual([
       {
         description: 'The largest sorting deck.',
+        dm: false,
         externalKey: RATTLE_KEY,
         facts: {
           aka: 'Exchange C',
@@ -56,22 +63,31 @@ describe('buildTsonuProposal', () => {
           population: 3500,
           role: 'Sorting deck',
         },
+        isArticle: false,
         kind: 'installation',
         name: 'Rattle',
+        playableAs: [],
         prominence: 'marginal',
         subkind: 'settlement',
+        veiled: false,
       },
     ]);
   });
 
   it('omits facts, description, and prominence when the entry has none', () => {
-    const proposal = buildTsonuProposal(bundle([entry({ id: 'bare', prominence: null })]));
+    const proposal = buildTsonuProposal(
+      bundle([entry({ id: 'bare', origin_blurb: false, prominence: null })])
+    );
 
     expect(proposal.entities[0]).toEqual({
+      dm: false,
       externalKey: 'tsonu:bare',
+      isArticle: false,
       kind: 'installation',
       name: 'bare',
+      playableAs: [],
       subkind: 'settlement',
+      veiled: false,
     });
   });
 
@@ -81,9 +97,13 @@ describe('buildTsonuProposal', () => {
     );
 
     expect(proposal.entities[0]).toEqual({
+      dm: false,
       externalKey: 'tsonu:plain',
+      isArticle: false,
       kind: 'incident',
       name: 'plain',
+      playableAs: [],
+      veiled: false,
     });
   });
 
@@ -167,15 +187,15 @@ describe('buildTsonuProposal', () => {
     ]);
   });
 
-  it('maps outgoing connections to relationships, skipping incoming and structural ones', () => {
+  it('maps outgoing connections to relationships, skipping incoming and inheritance ones', () => {
     const proposal = buildTsonuProposal(
       bundle([
         entry({
           connections: [
-            { direction: 'outgoing', entry_id: 'carom', from: 2305, relation: 'located_in' },
-            { direction: 'outgoing', entry_id: 'carom', from: 2400, relation: 'supplies', to: 2420 },
-            { direction: 'outgoing', entry_id: 'carom', from: 2000, relation: 'embeds' },
-            { direction: 'incoming', entry_id: 'nera_doss', from: 2435, relation: 'operates_in' },
+            { direction: 'outgoing', entry_id: 'carom', from: 2305, live: true, relation: 'located_in' },
+            { direction: 'outgoing', entry_id: 'carom', from: 2400, live: false, relation: 'supplies', to: 2420 },
+            { direction: 'outgoing', entry_id: 'carom', from: 2000, live: true, relation: 'embeds' },
+            { direction: 'incoming', entry_id: 'nera_doss', from: 2435, live: true, relation: 'operates_in' },
           ],
           id: 'rattle',
           title: 'Rattle',
@@ -185,9 +205,49 @@ describe('buildTsonuProposal', () => {
     );
 
     expect(proposal.relationships).toEqual([
-      { dst: { externalKey: 'tsonu:carom' }, relationship: 'located_in', since: 2305, src: { externalKey: RATTLE_KEY } },
-      { dst: { externalKey: 'tsonu:carom' }, relationship: 'supplies', since: 2400, src: { externalKey: RATTLE_KEY }, until: 2420 },
+      { dst: { externalKey: CAROM_KEY }, live: true, relationship: 'located_in', since: 2305, src: { externalKey: RATTLE_KEY } },
+      { dst: { externalKey: CAROM_KEY }, live: false, relationship: 'supplies', since: 2400, src: { externalKey: RATTLE_KEY }, until: 2420 },
+      { dst: { externalKey: CAROM_KEY }, live: true, relationship: 'embeds', since: 2000, src: { externalKey: RATTLE_KEY } },
     ]);
+  });
+
+  it('maps canon selection and veiled metadata without deriving it from kind', () => {
+    const proposal = buildTsonuProposal(bundle([
+      entry({
+        id: 'guide',
+        origin_blurb: 'Raised among the route bells.',
+        playable_as: ['culture'],
+      }),
+      entry({
+        dm: true,
+        id: 'reference',
+        is_article: true,
+      }),
+      entry({
+        id: 'walker',
+        veil_tagline: 'A guide follows the old route bells.',
+        veiled: true,
+      }),
+    ]));
+
+    expect(proposal.entities[0]).toMatchObject({
+      originBlurb: 'Raised among the route bells.',
+      playableAs: ['culture'],
+    });
+    expect(proposal.entities[1]).toMatchObject({
+      dm: true,
+      isArticle: true,
+    });
+    expect(proposal.entities[2]).toMatchObject({
+      veiled: true,
+      veilTagline: 'A guide follows the old route bells.',
+    });
+  });
+
+  it('rejects a bundle from before canon metadata became required', () => {
+    expect(() => buildTsonuProposal({ ...bundle([]), schema_version: 5 })).toThrow(
+      'does not include canon metadata'
+    );
   });
 
   it('orders entities by id so regeneration diffs stay stable', () => {

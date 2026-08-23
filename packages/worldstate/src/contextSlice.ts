@@ -50,6 +50,7 @@ seeds AS (
     CASE WHEN e.id = $1::uuid THEN 1.0 ELSE 0.8 END::real AS reach
   FROM entity e
   WHERE e.id = ANY($2::uuid[])
+    AND NOT e.is_article
 ),
 walk AS (
   SELECT s.id, s.hops, s.reach FROM seeds s
@@ -62,8 +63,10 @@ walk AS (
   JOIN LATERAL (
     SELECT CASE WHEN edge.src_id = w.id THEN edge.dst_id ELSE edge.src_id END AS id
   ) nxt ON true
+  JOIN entity next_entity ON next_entity.id = nxt.id AND NOT next_entity.is_article
   WHERE w.hops < $3
     AND wrk.category <> 'banned'
+    AND COALESCE((edge.props ->> 'live')::boolean, true)
     AND w.reach * COALESCE(edge.strength, wrk.default_strength) > 0.05
 ),
 best AS (
@@ -110,6 +113,7 @@ FROM scored s
 JOIN entity e ON e.id = s.id
 JOIN world_prominence wp ON wp.id = e.prominence
 WHERE wp.rank >= $5
+  AND NOT e.is_article
 ORDER BY score DESC, e.created_at ASC
 LIMIT $7`;
 

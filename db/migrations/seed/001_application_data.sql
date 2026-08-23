@@ -200,6 +200,7 @@ VALUES
   ('designed', 'Subject designed the target.', 'technical', 0.5),
   ('powers', 'Subject powers the target.', 'technical', 0.6),
   ('sourced_from', 'Subject is sourced from the target.', 'technical', 0.5),
+  ('embeds', 'Subject includes the target as part of its reader-facing account.', 'narrative', 0.6),
   ('embodies', 'Subject embodies the target concept.', 'narrative', 0.6),
   ('resonates_with', 'Subject resonates with the target in the sympathetic, narrative sense.', 'narrative', 0.6),
   ('hiding_from', 'DM-only: subject is hiding from or avoiding the target.', 'dm', 0.8),

@@ -88,10 +88,8 @@ export class ChronicleSeedService {
   }
 
   async generateSeeds(request: GenerateSeedRequest): Promise<ChronicleSeed[]> {
-    const [location, anchor] = await Promise.all([
-      this.#ensurePlace(request.locationId),
-      this.#ensureAnchor(request.anchorId),
-    ]);
+    const location = await this.#ensurePlace(request.locationId);
+    const anchor = await this.#ensureAnchor(location.id, request.anchorId);
 
     // Load lore fragments for context
     const [locationLore, anchorLore] = await Promise.all([
@@ -128,10 +126,10 @@ export class ChronicleSeedService {
   }
 
   async generateOpening(request: GenerateOpeningRequest): Promise<string> {
-    const [location, anchor] = await Promise.all([
-      this.#ensurePlace(request.locationId),
-      request.anchorId === undefined ? Promise.resolve(null) : this.#ensureAnchor(request.anchorId),
-    ]);
+    const location = await this.#ensurePlace(request.locationId);
+    const anchor = request.anchorId === undefined
+      ? null
+      : await this.#ensureAnchor(location.id, request.anchorId);
     const [locationLore, anchorLore, instructions, proseModel] = await Promise.all([
       this.#world.listLoreFragmentsByEntity({ entityId: location.id, limit: 5 }),
       anchor === null
@@ -317,16 +315,21 @@ export class ChronicleSeedService {
 
   async #ensurePlace(locationId: string): Promise<HardState> {
     const place = await this.#world.getEntity({ id: locationId });
-    if (place === null || !place.isLocation) {
+    if (
+      place === null
+      || !place.isLocation
+      || !place.playableAs.includes('chronicle_location')
+    ) {
       throw new Error(`Location ${locationId} not found.`);
     }
     return place;
   }
 
-  async #ensureAnchor(anchorId: string): Promise<HardState> {
-    const anchor = await this.#world.getEntity({ id: anchorId });
-    if (anchor === null) {
-      throw new Error(`Anchor entity ${anchorId} not found.`);
+  async #ensureAnchor(locationId: string, anchorId: string): Promise<HardState> {
+    const choices = await this.#world.listFocusChoices({ locationId });
+    const anchor = choices.find((entity) => entity.id === anchorId);
+    if (anchor === undefined) {
+      throw new Error(`Anchor entity ${anchorId} is not a focus choice for this location.`);
     }
     return anchor;
   }

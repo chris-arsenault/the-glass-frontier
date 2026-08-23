@@ -167,6 +167,69 @@ describe('Canon batch commit', () => {
     expect(places.map((entity) => entity.name).sort()).toEqual(['Five Landing', 'The Long Answer']);
   });
 
+  it('stores canon selection metadata and returns only eligible one-hop focus choices', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            kind: 'installation',
+            name: 'Fourth Bell House',
+            originBlurb: 'Raised among the bell keepers.',
+            playableAs: ['chronicle_location', 'homeland'],
+            ref: 'location',
+            subkind: 'settlement',
+          },
+          {
+            kind: 'npc',
+            name: 'Aven Campus',
+            ref: 'focus',
+            subkind: 'specialist',
+            veiled: true,
+            veilTagline: 'Aven Campus restores old bell scores beneath Fourth Bell House.',
+          },
+          { kind: 'npc', name: 'Former Keeper', ref: 'ended', subkind: 'specialist' },
+          {
+            isArticle: true,
+            kind: 'concept',
+            name: 'Bell Keeping',
+            ref: 'article',
+            subkind: 'reference_concept',
+          },
+          { dm: true, kind: 'npc', name: 'Hidden Keeper', ref: 'dm', subkind: 'specialist' },
+          { kind: 'era', name: 'Bell Years', ref: 'era', subkind: 'historical_period' },
+        ],
+        relationships: [
+          { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'focus' } },
+          { dst: { ref: 'location' }, live: false, relationship: 'operates_in', src: { ref: 'ended' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'related_to', src: { ref: 'article' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'dm' } },
+          { dst: { ref: 'era' }, live: true, relationship: 'active_during', src: { ref: 'location' } },
+        ],
+      })
+    );
+
+    const location = await worldState.world.getEntity({ id: result.entityIdsByRef.location });
+    expect(location).toMatchObject({
+      dm: false,
+      isArticle: false,
+      originBlurb: 'Raised among the bell keepers.',
+      playableAs: ['chronicle_location', 'homeland'],
+      veiled: false,
+    });
+
+    const homelands = await worldState.world.listEntities({ playableAs: 'homeland' });
+    expect(homelands.map((entity) => entity.id)).toEqual([result.entityIdsByRef.location]);
+
+    const choices = await worldState.world.listFocusChoices({
+      locationId: result.entityIdsByRef.location,
+    });
+    expect(choices.map((entity) => entity.id)).toEqual([result.entityIdsByRef.focus]);
+    expect(choices[0]).toMatchObject({
+      veiled: true,
+      veilTagline: 'Aven Campus restores old bell scores beneath Fourth Bell House.',
+    });
+  });
+
   it('stores the fact card verbatim', async () => {
     const result = await worldState.world.commitBatch(
       proposal({

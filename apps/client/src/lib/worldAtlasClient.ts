@@ -1,4 +1,4 @@
-import type { HardState, HardStateKind, LoreFragment } from '@glass-frontier/dto';
+import type { HardState, HardStateKind, LoreFragment, PlayableRole } from '@glass-frontier/dto';
 
 import { atlasClient } from './atlasClient';
 
@@ -19,7 +19,15 @@ export const worldAtlasClient = {
     return atlasClient.getEntityNeighbors.query({ identifier: idOrSlug, kind });
   },
 
-  async listEntities(filter?: { kind?: HardStateKind; isLocation?: boolean }): Promise<HardState[]> {
-    return atlasClient.listEntities.query({ isLocation: filter?.isLocation, kind: filter?.kind });
+  async listEntities(filter?: {
+    kind?: HardStateKind;
+    isLocation?: boolean;
+    playableAs?: PlayableRole;
+  }): Promise<HardState[]> {
+    return atlasClient.listEntities.query({
+      isLocation: filter?.isLocation,
+      kind: filter?.kind,
+      playableAs: filter?.playableAs,
+    });
   },
 };

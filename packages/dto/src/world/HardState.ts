@@ -27,6 +27,16 @@ export type HardStateStatus = z.infer<typeof HardStateStatus>;
 export const HardStateProminence = z.enum(WORLD_PROMINENCE_IDS);
 export type HardStateProminence = z.infer<typeof HardStateProminence>;
 
+export const PLAYABLE_ROLE_IDS = [
+  'species',
+  'culture',
+  'homeland',
+  'allegiance',
+  'chronicle_location',
+] as const;
+export const PlayableRole = z.enum(PLAYABLE_ROLE_IDS);
+export type PlayableRole = z.infer<typeof PlayableRole>;
+
 export const RelationshipType = z.enum(RELATIONSHIP_TYPE_IDS);
 export type RelationshipType = z.infer<typeof RelationshipType>;
 
@@ -40,6 +50,8 @@ export type HardStateFacts = z.infer<typeof HardStateFacts>;
 
 export const HardStateLink = z.object({
   direction: z.enum(['out', 'in']),
+  /** Whether the relationship is active in the source canon's present. */
+  live: z.boolean().default(true),
   relationship: RelationshipType,
   /** In-world year the relation began, when the source records one. */
   since: z.number().int().optional(),
@@ -57,8 +69,12 @@ export const HardState = z.object({
     .nonnegative()
     .default(() => Date.now()),
   description: z.string().max(2000).optional(),
+  /** Hidden canon that player-facing Atlas surfaces must not expose. */
+  dm: z.boolean().default(false),
   facts: HardStateFacts.default({}),
   id: z.string().min(1),
+  /** A reference page rather than an entity in the game-world graph. */
+  isArticle: z.boolean().default(false),
   /**
    * Whether this entity is a place a scene can be set — the game-layer
    * "location" concept. Defaulted from the kind at ingest and overridable per
@@ -68,6 +84,8 @@ export const HardState = z.object({
   kind: HardStateKind,
   links: z.array(HardStateLink).default([]),
   name: z.string().min(1),
+  originBlurb: z.string().max(140).optional(),
+  playableAs: z.array(PlayableRole).default([]),
   prominence: HardStateProminence.default('recognized'),
   slug: z.string().min(1),
   status: HardStateStatus.optional(),
@@ -77,6 +95,8 @@ export const HardState = z.object({
     .int()
     .nonnegative()
     .default(() => Date.now()),
+  veiled: z.boolean().default(false),
+  veilTagline: z.string().max(180).optional(),
 });
 
 export type HardState = z.infer<typeof HardState>;

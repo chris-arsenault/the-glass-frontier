@@ -115,6 +115,10 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return this.#entities.listEntitiesByIds(ids);
   }
 
+  async listFocusChoices(input: { locationId: string }): Promise<HardState[]> {
+    return this.#entities.listFocusChoices(input);
+  }
+
   async listNeighbors(input: NeighborListInput): Promise<WorldNeighbor[]> {
     return this.#entities.listNeighbors(input);
   }

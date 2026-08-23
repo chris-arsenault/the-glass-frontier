@@ -108,8 +108,7 @@ export function ChronicleStartWizard() {
 
   const fetchLocations = useCallback(async () => {
     try {
-      // Anything location-shaped can host a scene, whatever its kind.
-      const list = await worldAtlasClient.listEntities({ isLocation: true });
+      const list = await worldAtlasClient.listEntities({ playableAs: 'chronicle_location' });
       const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name));
       setLocations(sorted);
       setLocationError(null);

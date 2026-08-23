@@ -6,6 +6,7 @@ import {
   HardStateProminence,
   HardStateStatus,
   HardStateSubkind,
+  PlayableRole,
   RelationshipType,
 } from './HardState';
 
@@ -31,26 +32,34 @@ export type EntityRef = z.infer<typeof EntityRef>;
 
 export const ProposedEntity = z.object({
   description: z.string().max(2000).optional(),
+  dm: z.boolean().optional(),
   /** Stable identity from the source world; makes re-ingest an update. */
   externalKey: z.string().min(1).optional(),
   /** The source entry's fact card, stored verbatim. */
   facts: HardStateFacts.optional(),
   /** Explicit id, for a seed that pins its own identifiers. */
   id: z.string().uuid().optional(),
+  isArticle: z.boolean().optional(),
   /** Overrides the kind's default when this particular entity is (or is not) a place. */
   isLocation: z.boolean().optional(),
   kind: HardStateKind,
   name: z.string().min(1),
+  originBlurb: z.string().max(140).optional(),
+  playableAs: z.array(PlayableRole).optional(),
   prominence: HardStateProminence.optional(),
   /** Name for this entity within the batch, so relationships can point at it. */
   ref: z.string().min(1).optional(),
   status: HardStateStatus.optional(),
   subkind: HardStateSubkind.optional(),
+  veiled: z.boolean().optional(),
+  veilTagline: z.string().max(180).optional(),
 });
 export type ProposedEntity = z.infer<typeof ProposedEntity>;
 
 export const ProposedRelationship = z.object({
   dst: EntityRef,
+  /** Whether this relationship is active in the source canon's present. */
+  live: z.boolean().optional(),
   relationship: RelationshipType,
   /** In-world year the relation began, when the source records one. */
   since: z.number().int().optional(),

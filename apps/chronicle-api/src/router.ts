@@ -1,4 +1,10 @@
-import type { CharacterOrigin, HardState, Player, PlayerPreferences } from '@glass-frontier/dto';
+import type {
+  CharacterOrigin,
+  HardState,
+  PlayableRole,
+  Player,
+  PlayerPreferences,
+} from '@glass-frontier/dto';
 import {
   CharacterDraft,
   createStartingMomentum,
@@ -324,17 +330,15 @@ async function createChronicleHandler(
 
 /**
  * What each canon origin id has to be. The wizard filters its pickers this way
- * and the server re-checks it, because a draft is player input. A homeland is
- * any entity the world marks as a place rather than one fixed kind, so it is
- * checked by `isLocation` instead of by kind.
+ * and the server re-checks it, because a draft is player input.
  */
 const originChecks = (
   origin: CharacterOrigin
-): Array<{ id: string; kind: string | null; label: string }> => [
-  { id: origin.speciesId, kind: 'species', label: 'species' },
-  { id: origin.cultureId, kind: 'culture', label: 'culture' },
-  { id: origin.homelandId, kind: null, label: 'homeland' },
-  { id: origin.allegianceId, kind: 'faction', label: 'allegiance' },
+): Array<{ id: string; label: string; role: PlayableRole }> => [
+  { id: origin.speciesId, label: 'species', role: 'species' },
+  { id: origin.cultureId, label: 'culture', role: 'culture' },
+  { id: origin.homelandId, label: 'homeland', role: 'homeland' },
+  { id: origin.allegianceId, label: 'allegiance', role: 'allegiance' },
 ];
 
 async function resolveOrigin(ctx: Context, origin: CharacterOrigin): Promise<HardState[]> {
@@ -347,8 +351,7 @@ async function resolveOrigin(ctx: Context, origin: CharacterOrigin): Promise<Har
     if (entity === undefined) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: `Unknown ${check.label} in canon.` });
     }
-    const matches = check.kind === null ? entity.isLocation : entity.kind === check.kind;
-    if (!matches) {
+    if (!entity.playableAs.includes(check.role)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `${entity.name} cannot be a character's ${check.label}.`,

@@ -15,20 +15,25 @@ const entity = (
   overrides: Partial<HardState> & { links?: HardStateLink[] } = {}
 ): HardState => ({
   createdAt: 0,
+  dm: false,
   facts: {},
   id,
+  isArticle: false,
   isLocation: true,
   kind: 'geographic_location',
   links: [],
   name: id.replace(/_/g, ' '),
+  playableAs: [],
   prominence: 'recognized',
   slug: id,
   updatedAt: 0,
+  veiled: false,
   ...overrides,
 });
 
 const out = (relationship: HardStateLink['relationship'], targetId: string): HardStateLink => ({
   direction: 'out',
+  live: true,
   relationship,
   targetId,
 });

@@ -362,5 +362,12 @@
     "summary": "Scene subjects now connect to the world graph",
     "details": "When typed play starts a conversation, battle, hunt, chase, or search, the GM now links its free-text subject to an existing person, creature, faction, place, vessel, or object when the match is clear. Exact names resolve directly; less literal references use Titan text embeddings stored in PostgreSQL and are ranked through the existing relationship graph. Local marginal entities resolve only nearby while renowned and mythic subjects remain recognizable farther across the graph. Uncertain and newly invented subjects remain valid free text instead of forcing a wrong match. Structured model responses now expose scene types, entity kinds, known beat IDs, and offered entity slugs as provider-checked values rather than unrestricted strings.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-23-canon-curated-choices",
+    "releasedAt": "2026-08-23",
+    "summary": "Character and chronicle choices now come directly from canon",
+    "details": "Species, cultures, homelands, allegiances, and chronicle locations now show only the choices selected by the world canon, with concise origin descriptions written for character creation. Chronicle locations offer direct local focus entities, including new one-sentence people and story hooks shared across related places. Reference articles remain available for background reading but no longer appear as people, places, or graph shortcuts, and hidden GM entries stay out of player-facing Atlas results.",
+    "type": "improvement"
   }
 ]

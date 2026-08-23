@@ -17,6 +17,11 @@ import {
   validateProposal,
   type ResolvableEntity,
 } from './canonValidation';
+import {
+  CANON_WRITE_LOCK_SQL,
+  ENTITY_UPSERT_SQL,
+  RELATIONSHIP_UPSERT_SQL,
+} from './canonWriterSql';
 import { withTransaction } from './pg';
 import { normalizeTags, toSnakeCase } from './utils';
 
@@ -32,72 +37,6 @@ type LoreWrite = {
   entityId: string;
   proposed: ProposedLoreFragment;
 };
-
-const CANON_WRITE_LOCK_SQL = `SELECT pg_advisory_xact_lock(
-  hashtext('glass-frontier:canon-writer')
-)`;
-
-const ENTITY_UPSERT_SQL = `INSERT INTO entity
-  (id, slug, kind, subkind, name, description, prominence, status, props, is_location,
-   source, source_id, external_key, batch_id, created_at, updated_at)
-  SELECT id, slug, kind, subkind, name, description, prominence, status, props::jsonb, is_location,
-    $9, $10, external_key, $11::uuid, now(), now()
-  FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[],
-    $6::text[], $7::text[], $8::text[], $12::text[], $13::text[], $14::boolean[])
-    AS t(id, slug, kind, subkind, name, description, prominence, status, external_key, props, is_location)
-  ON CONFLICT (id) DO UPDATE SET slug = EXCLUDED.slug, kind = EXCLUDED.kind,
-    subkind = EXCLUDED.subkind, name = EXCLUDED.name,
-    description = EXCLUDED.description, prominence = EXCLUDED.prominence,
-    status = EXCLUDED.status, props = EXCLUDED.props,
-    is_location = EXCLUDED.is_location, source = EXCLUDED.source,
-    source_id = EXCLUDED.source_id, external_key = EXCLUDED.external_key,
-    batch_id = EXCLUDED.batch_id,
-    embedding = CASE
-      WHEN (entity.name, entity.kind, entity.description)
-        IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.kind, EXCLUDED.description)
-      THEN NULL
-      ELSE entity.embedding
-    END,
-    embedding_model = CASE
-      WHEN (entity.name, entity.kind, entity.description)
-        IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.kind, EXCLUDED.description)
-      THEN NULL
-      ELSE entity.embedding_model
-    END,
-    embedding_updated_at = CASE
-      WHEN (entity.name, entity.kind, entity.description)
-        IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.kind, EXCLUDED.description)
-      THEN NULL
-      ELSE entity.embedding_updated_at
-    END,
-    updated_at = now()
-  WHERE entity.source = EXCLUDED.source
-    AND (entity.slug, entity.kind, entity.subkind, entity.name, entity.description,
-      entity.prominence, entity.status, entity.props, entity.is_location,
-      entity.external_key)
-    IS DISTINCT FROM
-      (EXCLUDED.slug, EXCLUDED.kind, EXCLUDED.subkind, EXCLUDED.name,
-       EXCLUDED.description, EXCLUDED.prominence, EXCLUDED.status,
-       EXCLUDED.props, EXCLUDED.is_location, EXCLUDED.external_key)`;
-
-const RELATIONSHIP_UPSERT_SQL = `INSERT INTO edge
-  (id, src_id, dst_id, type, props, strength, source, source_id, batch_id, created_at)
-  SELECT id, src_id, dst_id, type, props::jsonb, strength, $6, $7, $8::uuid, now()
-  FROM unnest($1::uuid[], $2::uuid[], $3::uuid[], $4::text[], $5::real[], $9::text[])
-    AS t(id, src_id, dst_id, type, strength, props)
-  ON CONFLICT (src_id, dst_id, type) DO UPDATE SET strength = EXCLUDED.strength,
-    props = EXCLUDED.props, source = EXCLUDED.source, source_id = EXCLUDED.source_id,
-    batch_id = EXCLUDED.batch_id
-  WHERE (
-    edge.source = EXCLUDED.source
-    AND (edge.strength, edge.props) IS DISTINCT FROM (EXCLUDED.strength, EXCLUDED.props)
-  ) OR (
-    edge.source <> EXCLUDED.source
-    AND (
-      EXCLUDED.source = 'author'
-      OR (EXCLUDED.source = 'play' AND edge.source IN ('import', 'seed'))
-    )
-  )`;
 
 /**
  * The only writer of canon.
@@ -316,6 +255,12 @@ const insertEntities = async (
     writes.map(
       (write) => write.proposed.isLocation ?? getWorldKind(write.proposed.kind)?.isLocation ?? false
     ),
+    writes.map((write) => write.proposed.isArticle ?? false),
+    writes.map((write) => JSON.stringify(write.proposed.playableAs ?? [])),
+    writes.map((write) => write.proposed.originBlurb ?? null),
+    writes.map((write) => write.proposed.veiled ?? false),
+    writes.map((write) => write.proposed.veilTagline ?? null),
+    writes.map((write) => write.proposed.dm ?? false),
   ]);
 };
 
@@ -357,6 +302,7 @@ const insertRelationships = async (
     return {
       dst,
       props: JSON.stringify({
+        ...(relationship.live === undefined ? {} : { live: relationship.live }),
         ...(relationship.since === undefined ? {} : { since: relationship.since }),
         ...(relationship.until === undefined ? {} : { until: relationship.until }),
       }),

@@ -4,7 +4,7 @@ import type {
   CharacterAttributes,
   CharacterDraft,
   HardState,
-  HardStateKind,
+  PlayableRole,
 } from '@glass-frontier/dto';
 import {
   AllegianceStance,
@@ -63,8 +63,7 @@ type OriginPick = {
   field: keyof Omit<OriginDraft, 'allegianceStance'>;
   heading: string;
   hint: string;
-  kind?: HardStateKind;
-  isLocation?: boolean;
+  role: PlayableRole;
 };
 
 const ORIGIN_PICKS: OriginPick[] = [
@@ -72,25 +71,25 @@ const ORIGIN_PICKS: OriginPick[] = [
     field: 'speciesId',
     heading: 'Species',
     hint: 'Species affects fiction only. It carries no attribute or skill modifiers.',
-    kind: 'species',
+    role: 'species',
   },
   {
     field: 'cultureId',
     heading: 'Culture',
     hint: 'Upbringing, naming and manners. Independent of species.',
-    kind: 'culture',
+    role: 'culture',
   },
   {
     field: 'homelandId',
     heading: 'Homeland',
     hint: 'Where the character is from. The GM uses it for contacts, familiarity and travel.',
-    isLocation: true,
+    role: 'homeland',
   },
   {
     field: 'allegianceId',
     heading: 'Allegiance',
     hint: 'One faction with a claim on the character.',
-    kind: 'faction',
+    role: 'allegiance',
   },
 ];
 
@@ -109,8 +108,7 @@ export function CharacterCreationWizard(): React.JSX.Element {
     Promise.all(
       ORIGIN_PICKS.map(async (pick) => {
         const entities = await worldAtlasClient.listEntities({
-          isLocation: pick.isLocation,
-          kind: pick.kind,
+          playableAs: pick.role,
         });
         return [pick.field, entities] as const;
       })
@@ -287,8 +285,8 @@ function OriginStep({
                   onClick={() => select(pick.field, entity.id)}
                 >
                   <span className="entity-card-name">{entity.name}</span>
-                  {entity.description ? (
-                    <span className="entity-card-description">{entity.description}</span>
+                  {entity.originBlurb ? (
+                    <span className="entity-card-description">{entity.originBlurb}</span>
                   ) : null}
                 </button>
               ))}

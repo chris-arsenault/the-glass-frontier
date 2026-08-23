@@ -11,9 +11,10 @@
  *
  * Deliberate differences from the source:
  * - The source's structural kinds (`loop`, `theme`, `thread`) and wiki
- *   bookkeeping relations (`embeds`, `mentions`, `extends`, `at_stage`,
- *   `fills_beat`, `has_beat`, `has_stage`, `has_archetype`) stay in the
- *   authoring engine; the game graph carries the world atlas only.
+ *   bookkeeping relations (`mentions`, `extends`, `at_stage`, `fills_beat`,
+ *   `has_beat`, `has_stage`, `has_archetype`) stay in the authoring engine;
+ *   the game graph carries the world atlas only. `embeds` remains because the
+ *   source uses it as a live narrative edge in chronicle focus selection.
  * - `defaultStrength` is retrieval policy, not canon: it is the prior used to
  *   weight graph traversal when an edge carries no explicit strength.
  * - Entity statuses are free text. The source schema declares none (its
@@ -290,6 +291,7 @@ const RELATIONSHIP_TYPE_DEFS = [
   { category: 'technical', defaultStrength: 0.5, description: 'Subject is sourced from the target.', id: 'sourced_from' },
 
   // Narrative — meaning and sympathy.
+  { category: 'narrative', defaultStrength: 0.6, description: 'Subject includes the target as part of its reader-facing account.', id: 'embeds' },
   { category: 'narrative', defaultStrength: 0.6, description: 'Subject embodies the target concept.', id: 'embodies' },
   { category: 'narrative', defaultStrength: 0.6, description: 'Subject resonates with the target in the sympathetic, narrative sense.', id: 'resonates_with' },
 

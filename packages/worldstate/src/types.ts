@@ -10,6 +10,7 @@ import type {
   HardState,
   HardStateProminence,
   HardStateKind,
+  PlayableRole,
   RecentClosure,
   Turn,
   LoreFragment,
@@ -122,13 +123,17 @@ export type WorldSchemaStore = {
   findEntitiesByName: (input: { name: string }) => Promise<HardState[]>;
   listEntityStats: (ids: string[]) => Promise<EntityStats[]>;
   listEntities: (input?: {
+    dm?: boolean;
+    isArticle?: boolean;
     kind?: HardStateKind;
     isLocation?: boolean;
     limit?: number;
     minProminence?: HardStateProminence;
     maxProminence?: HardStateProminence;
+    playableAs?: PlayableRole;
   }) => Promise<HardState[]>;
   listEntitiesByIds: (ids: string[]) => Promise<HardState[]>;
+  listFocusChoices: (input: { locationId: string }) => Promise<HardState[]>;
   listNeighbors: (input: {
     id: string;
     kind?: HardStateKind;

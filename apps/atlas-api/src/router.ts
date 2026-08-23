@@ -1,4 +1,9 @@
-import { HardStateKind, HardStateProminence } from '@glass-frontier/dto';
+import {
+  HardStateKind,
+  HardStateProminence,
+  PlayableRole,
+  type HardState,
+} from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -6,9 +11,51 @@ import { z } from 'zod';
 import type { Context } from './context';
 
 const t = initTRPC.context<Context>().create();
+const CHRONICLE_LOCATION_ROLE = 'chronicle_location' as const;
+const ENTITY_NOT_FOUND = 'Entity not found';
 
 const isUuid = (s: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+const findEntity = async (ctx: Context, identifier: string): Promise<HardState | null> => {
+  const entity = isUuid(identifier)
+    ? await ctx.worldSchemaStore.getEntity({ id: identifier })
+    : null;
+  return entity ?? ctx.worldSchemaStore.getEntityBySlug({ slug: identifier });
+};
+
+const isChronicleLocation = (entity: HardState | null | undefined): entity is HardState =>
+  entity !== null
+  && entity !== undefined
+  && !entity.dm
+  && !entity.isArticle
+  && entity.isLocation
+  && entity.playableAs.includes(CHRONICLE_LOCATION_ROLE);
+
+const findChronicleLocation = async (input: {
+  anchor: HardState;
+  ctx: Context;
+  locationSlug?: string;
+}): Promise<HardState> => {
+  if (input.locationSlug !== undefined) {
+    const location = await input.ctx.worldSchemaStore.getEntityBySlug({
+      slug: input.locationSlug,
+    });
+    if (!isChronicleLocation(location)) {
+      throw new Error('Location not found, or the entity is not a place');
+    }
+    return location;
+  }
+
+  const linked = await input.ctx.worldSchemaStore.listEntitiesByIds(
+    input.anchor.links.map((link) => link.targetId)
+  );
+  const location = linked.find(isChronicleLocation);
+  if (location === undefined) {
+    throw new Error('No location neighbors found for anchor entity');
+  }
+  return location;
+};
 
 /**
  * The Atlas reads canon; it does not write it.
@@ -24,7 +71,8 @@ export const appRouter = t.router({
     .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(100) }))
     .query(async ({ ctx, input }) => {
       log('info', 'atlas-api: batchGetEntities', { count: input.ids.length });
-      return ctx.worldSchemaStore.listEntitiesByIds(input.ids);
+      const entities = await ctx.worldSchemaStore.listEntitiesByIds(input.ids);
+      return entities.filter((entity) => !entity.dm && !entity.isArticle);
     }),
 
   // POST /chronicles
@@ -45,24 +93,19 @@ export const appRouter = t.router({
       log('info', 'atlas-api: createChronicle', { title: input.title });
 
       const anchor = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.anchorSlug });
-      if (anchor === null) {
+      if (anchor === null || anchor.dm || anchor.isArticle) {
         throw new Error('Anchor not found');
       }
 
-      let location = null;
-      if (input.locationSlug !== undefined && input.locationSlug.length > 0) {
-        location = await ctx.worldSchemaStore.getEntityBySlug({ slug: input.locationSlug });
-        if (location === null || !location.isLocation) {
-          throw new Error('Location not found, or the entity is not a place');
-        }
-      } else {
-        const linked = await ctx.worldSchemaStore.listEntitiesByIds(
-          anchor.links.map((link) => link.targetId)
-        );
-        location = linked.find((entity) => entity.isLocation) ?? null;
-        if (location === null) {
-          throw new Error('No location neighbors found for anchor entity');
-        }
+      const location = await findChronicleLocation({
+        anchor,
+        ctx,
+        locationSlug: input.locationSlug,
+      });
+
+      const focusChoices = await ctx.worldSchemaStore.listFocusChoices({ locationId: location.id });
+      if (!focusChoices.some((entity) => entity.id === anchor.id)) {
+        throw new Error('Anchor is not a focus choice for this location');
       }
 
       return ctx.chronicleStore.ensureChronicle({
@@ -82,14 +125,12 @@ export const appRouter = t.router({
       log('info', 'atlas-api: getEntity', { identifier: input.identifier });
       const { identifier } = input;
 
-      let entity = isUuid(identifier)
-        ? await ctx.worldSchemaStore.getEntity({ id: identifier })
-        : null;
+      const entity = await findEntity(ctx, identifier);
       if (entity === null) {
-        entity = await ctx.worldSchemaStore.getEntityBySlug({ slug: identifier });
+        throw new Error(ENTITY_NOT_FOUND);
       }
-      if (entity === null) {
-        throw new Error('Entity not found');
+      if (entity.dm) {
+        throw new Error(ENTITY_NOT_FOUND);
       }
 
       const fragments = await ctx.worldSchemaStore.listLoreFragmentsByEntity({
@@ -111,19 +152,15 @@ export const appRouter = t.router({
       log('info', 'atlas-api: getEntityNeighbors', { identifier: input.identifier });
       const { identifier, kind } = input;
 
-      let entity = isUuid(identifier)
-        ? await ctx.worldSchemaStore.getEntity({ id: identifier })
-        : null;
+      const entity = await findEntity(ctx, identifier);
       if (entity === null) {
-        entity = await ctx.worldSchemaStore.getEntityBySlug({ slug: identifier });
+        throw new Error(ENTITY_NOT_FOUND);
       }
-      if (entity === null) {
-        throw new Error('Entity not found');
+      if (!isChronicleLocation(entity)) {
+        throw new Error('Chronicle location not found');
       }
 
-      const neighbors = await ctx.worldSchemaStore.listEntitiesByIds(
-        entity.links.map((link) => link.targetId)
-      );
+      const neighbors = await ctx.worldSchemaStore.listFocusChoices({ locationId: entity.id });
       return {
         entity,
         neighbors:
@@ -140,16 +177,20 @@ export const appRouter = t.router({
         limit: z.number().int().min(1).max(200).optional(),
         maxProminence: HardStateProminence.optional(),
         minProminence: HardStateProminence.optional(),
+        playableAs: PlayableRole.optional(),
       }).optional()
     )
     .query(async ({ ctx, input }) => {
       log('info', 'atlas-api: listEntities', { kind: input?.kind ?? '' });
       return ctx.worldSchemaStore.listEntities({
+        dm: false,
+        isArticle: false,
         isLocation: input?.isLocation,
         kind: input?.kind,
         limit: input?.limit ?? 200,
         maxProminence: input?.maxProminence,
         minProminence: input?.minProminence,
+        playableAs: input?.playableAs,
       });
     }),
 });
