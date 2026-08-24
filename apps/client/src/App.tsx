@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 
 import { WorldAtlasPage } from './components/atlas/WorldAtlasPage';
 import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
 import { ChronicleDrawer } from './components/drawers/ChronicleDrawer/ChronicleDrawer';
 import { TemplateDrawer } from './components/drawers/TemplateDrawer/TemplateDrawer';
-import { AvailableEntitiesPanel } from './components/entities/AvailableEntitiesPanel/AvailableEntitiesPanel';
 import { ChatCanvas } from './components/layout/ChatCanvas/ChatCanvas';
 import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
 import { ChronicleHeader } from './components/layout/ChronicleHeader/ChronicleHeader';
@@ -17,7 +16,8 @@ import { UserGuideModal } from './components/modals/UserGuideModal/UserGuideModa
 import { AuditReviewPage } from './components/moderation/AuditReviewPage/AuditReviewPage';
 import { BugModerationPage } from './components/moderation/BugModerationPage/BugModerationPage';
 import { WorldSchemaPage } from './components/moderation/WorldSchemaPage/WorldSchemaPage';
-import { SideNavigation } from './components/navigation/SideNavigation/SideNavigation';
+import { ChronicleNavigation } from './components/navigation/ChronicleNavigation/ChronicleNavigation';
+import { MainNavigation } from './components/navigation/MainNavigation/MainNavigation';
 import { LandingPage } from './components/pages/LandingPage/LandingPage';
 import { SceneStage } from './components/scene/SceneStage/SceneStage';
 import { PlayerMenu } from './components/widgets/PlayerMenu/PlayerMenu';
@@ -88,30 +88,38 @@ const SiteHeader = (): React.JSX.Element => {
 
 const ChatExperience = (): React.JSX.Element => {
   return (
-    <div className="app-layout">
-      <SideNavigation />
-      <div className="app-content">
-        <div className="app-body">
-          <main className="app-main">
-            <div className="session-bar">
-              <ChronicleHeader />
-            </div>
-            <div className="chronicle-play-area">
-              <aside className="chronicle-entity-rail" aria-label="Nearby entities">
-                <AvailableEntitiesPanel />
-              </aside>
-              <div className="chronicle-narrative">
-                <SceneStage />
-                <ChatCanvas />
-                <ChatComposer />
-              </div>
-            </div>
-          </main>
-        </div>
+    <main className="app-main">
+      <div className="session-bar">
+        <ChronicleHeader />
       </div>
-    </div>
+      <SceneStage />
+      <ChatCanvas />
+      <ChatComposer />
+    </main>
   );
 };
+
+type RouteWorkspaceProps = {
+  children: React.ReactNode;
+  rail: React.ReactNode;
+};
+
+const RouteWorkspace = ({ children, rail }: RouteWorkspaceProps): React.JSX.Element => (
+  <div className="app-layout">
+    {rail}
+    <div className="app-route-surface">{children}</div>
+  </div>
+);
+
+const MainRouteWorkspace = (): React.JSX.Element => (
+  <RouteWorkspace rail={<MainNavigation />}>
+    <Outlet />
+  </RouteWorkspace>
+);
+
+const ChronicleRouteWorkspace = ({ children }: { children: React.ReactNode }): React.JSX.Element => (
+  <RouteWorkspace rail={<ChronicleNavigation />}>{children}</RouteWorkspace>
+);
 
 const ChronicleRoute = (): React.JSX.Element => {
   const { chronicleId: routeChronicleId } = useParams();
@@ -195,29 +203,37 @@ const ChronicleRoute = (): React.JSX.Element => {
 
   if (activeRouteError) {
     return (
-      <div className="chronicle-route-state">
-        <p>{activeRouteError}</p>
-        <button
-          type="button"
-          onClick={() => {
-            void navigate('/', { replace: true });
-          }}
-        >
-          Return to landing
-        </button>
-      </div>
+      <ChronicleRouteWorkspace>
+        <div className="chronicle-route-state">
+          <p>{activeRouteError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              void navigate('/', { replace: true });
+            }}
+          >
+            Return to landing
+          </button>
+        </div>
+      </ChronicleRouteWorkspace>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="chronicle-route-state">
-        <p>Loading chronicle…</p>
-      </div>
+      <ChronicleRouteWorkspace>
+        <div className="chronicle-route-state">
+          <p>Loading chronicle…</p>
+        </div>
+      </ChronicleRouteWorkspace>
     );
   }
 
-  return <ChatExperience />;
+  return (
+    <ChronicleRouteWorkspace>
+      <ChatExperience />
+    </ChronicleRouteWorkspace>
+  );
 };
 
 const LegacyChronicleRedirect = (): React.JSX.Element => {
@@ -241,20 +257,22 @@ export function App(): React.JSX.Element {
     <div className="app-shell">
       <div className="app-frame">
         <SiteHeader />
-        <div className="app-route-surface">
+        <div className="app-route-workspace">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/character/new" element={<CharacterCreationWizard />} />
-            <Route path="/chron/start" element={<ChronicleStartWizard />} />
+            <Route element={<MainRouteWorkspace />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/character/new" element={<CharacterCreationWizard />} />
+              <Route path="/chron/start" element={<ChronicleStartWizard />} />
+              <Route path="/chron" element={<Navigate to="/" replace />} />
+              <Route path="/chronicle" element={<Navigate to="/" replace />} />
+              <Route path="/moderation/audit" element={<AuditReviewPage />} />
+              <Route path="/moderation/bugs" element={<BugModerationPage />} />
+              <Route path="/moderation/worldSchema" element={<WorldSchemaPage />} />
+              <Route path="/atlas/:slug?" element={<WorldAtlasPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
             <Route path="/chron/:chronicleId" element={<ChronicleRoute />} />
-            <Route path="/chron" element={<Navigate to="/" replace />} />
             <Route path="/chronicle/:chronicleId" element={<LegacyChronicleRedirect />} />
-            <Route path="/chronicle" element={<Navigate to="/" replace />} />
-            <Route path="/moderation/audit" element={<AuditReviewPage />} />
-            <Route path="/moderation/bugs" element={<BugModerationPage />} />
-            <Route path="/moderation/worldSchema" element={<WorldSchemaPage />} />
-            <Route path="/atlas/:slug?" element={<WorldAtlasPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>

@@ -27,10 +27,10 @@ test.describe('Chronicle beat lifecycle', () => {
       '#beat:new #mock:beat:new Trace the harmonics through the eastern vault.'
     );
 
-    const beat = page.locator('.session-manager-beat').filter({ hasText: 'Shattered Chorus' });
+    const beat = page.locator('.chronicle-beat').filter({ hasText: 'Shattered Chorus' });
     await expect(beat).toHaveCount(1);
     await expect(beat).toHaveAttribute('data-status', 'in_progress');
-    await expect(beat.locator('.session-manager-beat-status')).toHaveText('In Progress');
+    await expect(beat.locator('.chronicle-beat-status')).toHaveText('In progress');
 
     const resolvingEntry = await sendTurn(
       page,
@@ -40,7 +40,7 @@ test.describe('Chronicle beat lifecycle', () => {
 
     await expect(beat).toHaveCount(1);
     await expect(beat).toHaveAttribute('data-status', 'succeeded');
-    await expect(beat.locator('.session-manager-beat-status')).toHaveText('Succeeded');
+    await expect(beat.locator('.chronicle-beat-status')).toHaveText('Succeeded');
 
     const badge = resolvingEntry.locator('.beat-tracker-badge');
     await expect(badge).toBeVisible();

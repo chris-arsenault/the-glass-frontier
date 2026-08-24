@@ -1,0 +1,141 @@
+.player-directory {
+  display: flex;
+  flex: 1;
+  padding: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.player-directory-header,
+.player-directory-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.player-directory-eyebrow,
+.player-directory-header h2,
+.player-directory-section-header h3 {
+  margin: 0;
+}
+
+.player-directory-eyebrow,
+.player-directory-section-header h3 {
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-directory-header h2 {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.player-directory-refresh {
+  height: 1.5rem;
+  padding: 0 var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-2xs);
+}
+
+.player-directory-refresh:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.player-directory-section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
+}
+
+.player-directory-section-header {
+  margin-bottom: var(--space-2);
+}
+
+.player-directory-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.player-directory-character,
+.player-directory-chronicle {
+  width: 100%;
+  padding: var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+}
+
+.player-directory-character {
+  display: flex;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.player-directory-character:hover,
+.player-directory-character:focus-visible,
+.player-directory-character.is-selected {
+  border-color: var(--border-accent);
+  outline: none;
+}
+
+.player-directory-chronicle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.player-directory-item-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.player-directory-item-title {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-directory-item-meta,
+.player-directory-empty {
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+}
+
+.player-directory-empty {
+  margin: 0;
+}
+
+.player-directory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.player-directory-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: var(--text-xs);
+}

@@ -308,11 +308,26 @@
 
 /* Cluster chart (interiors without charted geometry) */
 
-.atlas-cluster-ring {
+.atlas-terrain-region {
+  fill: rgb(52 74 116 / 18%);
+  stroke: rgb(126 166 232 / 35%);
+  stroke-width: 1.25;
+}
+
+.atlas-terrain-contour {
   fill: none;
-  stroke: rgb(148 163 184 / 14%);
-  stroke-dasharray: 3 5;
+  stroke: rgb(148 163 184 / 10%);
+  stroke-dasharray: 1 6;
   stroke-width: 1;
+}
+
+.atlas-terrain-title {
+  fill: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-style: italic;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .atlas-cluster-dot {

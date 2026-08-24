@@ -4,10 +4,10 @@ import type { AtlasGraph, AtlasNode } from './atlasGraph';
 import { childIds, descendantCount } from './atlasGraph';
 
 /**
- * The drill-down view for places without charted geometry: the focused place
- * at center, everything directly inside it arranged on a ring around it.
- * This is what opens inside ring habitats, regions, and settlements, so the
- * chart can keep descending long after authored coordinates run out.
+ * The drill-down view for places without charted geometry. By the time the
+ * picker reaches this chart the children are contained places (districts,
+ * sites, holds) — never orbiters — so the focused place renders as a stretch
+ * of terrain with its sites scattered inside it, not as a planet with moons.
  */
 type AtlasClusterChartProps = {
   graph: AtlasGraph;
@@ -22,8 +22,37 @@ type AtlasClusterChartProps = {
 const VIEW_WIDTH = 1200;
 const VIEW_HEIGHT = 440;
 const CX = VIEW_WIDTH / 2;
-const CY = VIEW_HEIGHT / 2 - 10;
-const FLATTEN = 0.55;
+const CY = VIEW_HEIGHT / 2;
+const FLATTEN = 0.52;
+
+/** Deterministic [0, 1) from a string, for stable per-entity jitter. */
+const hash01 = (text: string): number => {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967296;
+};
+
+/** An irregular closed outline around the center: terrain, not an orbit. */
+const terrainPath = (seedText: string, baseRadius: number): string => {
+  const phaseA = hash01(seedText) * Math.PI * 2;
+  const phaseB = hash01(`${seedText}:b`) * Math.PI * 2;
+  const points = Array.from({ length: 48 }, (_, step) => {
+    const angle = (step / 48) * Math.PI * 2;
+    const wobble =
+      1 +
+      0.09 * Math.sin(3 * angle + phaseA) +
+      0.06 * Math.sin(5 * angle + phaseB) +
+      0.035 * Math.sin(8 * angle + phaseA + phaseB);
+    const radius = baseRadius * wobble;
+    const x = CX + Math.cos(angle) * radius;
+    const y = CY - Math.sin(angle) * radius * FLATTEN;
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+  return `M ${points.join(' L ')} Z`;
+};
 
 export function AtlasClusterChart({
   graph,
@@ -37,7 +66,8 @@ export function AtlasClusterChart({
     .filter((child): child is AtlasNode => Boolean(child))
     .sort((a, b) => a.entity.name.localeCompare(b.entity.name));
 
-  const ringRadius = Math.min(420, 220 + children.length * 6);
+  const regionRadius = Math.min(430, 300 + children.length * 8);
+  const siteRadius = regionRadius * 0.62;
 
   const isSelectable = (id: string): boolean =>
     selectableIds === undefined || selectableIds.has(id);
@@ -49,23 +79,27 @@ export function AtlasClusterChart({
       role="img"
       aria-label={`Places within ${node.entity.name}`}
     >
-      <ellipse
-        className="atlas-cluster-ring"
-        cx={CX}
-        cy={CY}
-        rx={ringRadius}
-        ry={ringRadius * FLATTEN}
+      <path
+        className="atlas-terrain-region"
+        d={terrainPath(node.entity.slug, regionRadius)}
       />
-      <circle className="atlas-bodymap-planet-dot" cx={CX} cy={CY} r={20} />
-      <text className="atlas-map-name" x={CX} y={CY + 40} textAnchor="middle">
+      <path
+        className="atlas-terrain-contour"
+        d={terrainPath(`${node.entity.slug}:inner`, regionRadius * 0.8)}
+      />
+      <text className="atlas-terrain-title" x={CX} y={CY - regionRadius * FLATTEN + 44} textAnchor="middle">
         {node.entity.name}
       </text>
 
       {children.map((child, index) => {
-        const angle = -90 + (index * 360) / children.length;
+        // A loose scatter inside the region: even bearings with per-place
+        // jitter, so the layout stays stable but never reads as an orbit.
+        const jitter = hash01(child.entity.slug);
+        const angle = -90 + (index * 360) / children.length + (jitter - 0.5) * 24;
         const radians = (angle * Math.PI) / 180;
-        const x = CX + Math.cos(radians) * ringRadius;
-        const y = CY - Math.sin(radians) * ringRadius * FLATTEN;
+        const reach = siteRadius * (0.55 + jitter * 0.45);
+        const x = CX + Math.cos(radians) * reach;
+        const y = CY - Math.sin(radians) * reach * FLATTEN;
         const charted = descendantCount(graph, child.entity.id);
         const selectable = isSelectable(child.entity.id);
         const explorable = charted > 0;
@@ -94,16 +128,18 @@ export function AtlasClusterChart({
             <title>
               {`${child.entity.name}${charted > 0 ? ` — ${charted} charted` : ''}`}
             </title>
-            <circle
-              className="atlas-cluster-dot"
-              cx={x}
-              cy={y}
-              r={charted > 0 ? 6.5 : 4.5}
+            <rect
+              className="atlas-cluster-dot atlas-terrain-site"
+              x={x - (charted > 0 ? 5 : 3.5)}
+              y={y - (charted > 0 ? 5 : 3.5)}
+              width={charted > 0 ? 10 : 7}
+              height={charted > 0 ? 10 : 7}
+              transform={`rotate(45 ${x} ${y})`}
             />
             <text
               className="atlas-map-name atlas-cluster-name"
               x={x}
-              y={y > CY ? y + 22 : y - 12}
+              y={y > CY ? y + 24 : y - 14}
               textAnchor="middle"
             >
               {child.entity.name}
@@ -115,7 +151,7 @@ export function AtlasClusterChart({
         );
       })}
       {children.length === 0 ? (
-        <text className="atlas-map-empty" x={CX} y={CY - 60} textAnchor="middle">
+        <text className="atlas-map-empty" x={CX} y={CY} textAnchor="middle">
           Nothing charted inside {node.entity.name} yet.
         </text>
       ) : null}

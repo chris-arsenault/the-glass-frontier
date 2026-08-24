@@ -28,9 +28,16 @@ test.describe('Chronicle creation', () => {
 
     await page.goto('/');
     await authenticate(page);
-    await expect(page.locator('.landing-status-chip').first()).toHaveText('Ready');
+    const mainRail = page.getByRole('navigation', { name: 'Main' });
+    const characterDirectory = mainRail.locator('.player-directory-section').filter({
+      has: page.getByRole('heading', { name: 'Characters' }),
+    });
+    const chronicleDirectory = mainRail.locator('.player-directory-section').filter({
+      has: page.getByRole('heading', { name: 'Chronicles' }),
+    });
+    await expect(mainRail.locator('.player-directory-refresh')).toHaveText('Ready');
 
-    await page.getByRole('button', { name: 'Create new' }).click();
+    await characterDirectory.getByRole('button', { name: 'New' }).click();
     await expect(page.getByRole('heading', { name: 'Create a character' })).toBeVisible();
 
     // Origin: species, culture, homeland and allegiance all come from canon.
@@ -56,9 +63,9 @@ test.describe('Chronicle creation', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'Create Character' }).click();
-    await expect(page.locator('.landing-my-characters')).toContainText(characterName);
+    await expect(characterDirectory).toContainText(characterName);
 
-    await page.getByRole('button', { name: 'Start new' }).click();
+    await chronicleDirectory.getByRole('button', { name: 'New' }).click();
     await expect(page.getByRole('heading', { name: 'Start a new chronicle' })).toBeVisible();
 
     // SVG link groups can contain unpainted space, so exercise their keyboard contract.
@@ -101,7 +108,7 @@ test.describe('Chronicle creation', () => {
     await expect(page.getByText(GM_RESPONSE_TEXT)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('chat-submit')).toBeEnabled({ timeout: 15_000 });
     await expect(
-      page.locator('.session-manager-beat').filter({ hasText: 'Shattered Chorus' })
+      page.locator('.chronicle-beat').filter({ hasText: 'Shattered Chorus' })
     ).toBeVisible();
   });
 });

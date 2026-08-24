@@ -44,8 +44,10 @@ test.describe('Landing page', () => {
       })
     ).toBeVisible();
 
-    await expect(page.getByRole('heading', { name: 'Your chronicles' })).toBeVisible();
-    await expect(page.locator('.landing-status-chip').first()).toBeVisible();
+    const mainRail = page.getByRole('navigation', { name: 'Main' });
+    await expect(mainRail.getByRole('heading', { name: 'Characters' })).toBeVisible();
+    await expect(mainRail.getByRole('heading', { name: 'Chronicles' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Chronicle' })).toHaveCount(0);
   });
 
   test('shows active chronicles to member-tier players', async ({ page }) => {
@@ -92,25 +94,22 @@ test.describe('Landing page', () => {
     await page.goto('/');
     await authenticate(page);
     const chronicleId = await setSeededChronicleStatus(page, 'closed');
-    const chroniclesPanel = page.locator('.landing-panel').filter({
-      has: page.getByRole('heading', { name: 'Your chronicles' }),
-    });
-
-    await expect(chroniclesPanel.locator('.landing-my-chronicle-meta')).toContainText('Completed');
-    await expect(chroniclesPanel.getByRole('button', { name: 'Completed' })).toBeDisabled();
-    await expect(chroniclesPanel.getByRole('button', { name: 'Resume' })).toHaveCount(0);
-
-    await setSeededChronicleStatus(page, 'open');
-    await chroniclesPanel.getByRole('button', { name: 'Resume' }).click();
-    await expect(page).toHaveURL(`/chron/${chronicleId}`);
-    await expect(page.getByTestId('chat-input')).toBeEnabled();
-
-    await setSeededChronicleStatus(page, 'closed');
-    const chronicleManager = page.getByRole('region', { name: 'Chronicle management' });
-    const chronicleCard = chronicleManager.locator('.session-manager-card').filter({
+    const mainRail = page.getByRole('navigation', { name: 'Main' });
+    const chronicleCard = mainRail.locator('.player-directory-chronicle').filter({
       hasText: 'Playwright Chronicle',
     });
+
+    await expect(chronicleCard).toContainText('Completed');
     await expect(chronicleCard.getByRole('button', { name: 'Completed' })).toBeDisabled();
-    await expect(chronicleCard.getByRole('button', { name: 'Load' })).toHaveCount(0);
+    await expect(chronicleCard.getByRole('button', { name: 'Resume' })).toHaveCount(0);
+
+    await setSeededChronicleStatus(page, 'open');
+    await chronicleCard.getByRole('button', { name: 'Resume' }).click();
+    await expect(page).toHaveURL(`/chron/${chronicleId}`);
+    await expect(page.getByTestId('chat-input')).toBeEnabled();
+    await expect(page.getByRole('navigation', { name: 'Chronicle' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Beats' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nearby entities' })).toBeVisible();
   });
 });

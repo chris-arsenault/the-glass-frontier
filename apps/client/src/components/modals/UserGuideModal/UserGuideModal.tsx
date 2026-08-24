@@ -44,14 +44,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Chronicle Chat',
   },
   {
-    id: 'session-manager',
+    id: 'left-rails',
     steps: [
-      'Select or create characters, load chronicles, and manage beats from the left navigation.',
-      'Use Refresh to pull the latest roster from the narrative services if something looks stale.',
-      'Delete or clear chronicles to make space before starting a fresh run.',
+      'Outside a chronicle, use the main rail to select or create characters and start, resume, or delete chronicles.',
+      'Inside a chronicle, the main directory is replaced by the chronicle rail.',
+      'The chronicle rail keeps the active character and story details above its beats and nearby entities.',
     ],
-    summary: 'Control panel for characters, chronicles, and beat tracking.',
-    title: 'Session Manager',
+    summary: 'Route-specific navigation that separates your directories from the story in progress.',
+    title: 'Main and Chronicle Rails',
   },
   {
     id: 'chronicle-wizard',

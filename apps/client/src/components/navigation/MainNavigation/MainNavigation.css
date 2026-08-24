@@ -1,0 +1,20 @@
+.main-navigation {
+  display: flex;
+  flex: 0 0 264px;
+  width: 264px;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  box-shadow: var(--panel-highlight);
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (width <= 800px) {
+  .main-navigation {
+    width: 100%;
+    flex-basis: auto;
+    max-height: 38vh;
+  }
+}

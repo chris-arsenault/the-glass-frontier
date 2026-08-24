@@ -35,16 +35,16 @@ body {
 .app-layout {
   display: flex;
   flex: 1;
+  width: 100%;
   gap: var(--space-3);
   min-height: 0;
+  min-width: 0;
 }
 
-.app-content {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
+@media (width <= 800px) {
+  .app-layout {
+    flex-direction: column;
+  }
 }
 
 .app-header {

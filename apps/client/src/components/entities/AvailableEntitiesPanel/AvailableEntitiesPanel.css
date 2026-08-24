@@ -1,15 +1,11 @@
 .available-entities {
-  padding: var(--space-2);
-  background: var(--surface-primary);
-  border: 1px solid var(--border-muted);
-  border-radius: var(--radius-md);
-  box-shadow: var(--panel-highlight);
-  box-sizing: border-box;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
 }
 
 .available-entities h2 {
   margin: 0;
-  padding: 0 var(--space-1) var(--space-1);
+  padding: 0 0 var(--space-2);
   color: var(--text-primary);
   font-size: var(--text-2xs);
   font-weight: 600;
@@ -18,7 +14,7 @@
 }
 
 .available-entities-empty {
-  margin: var(--space-1);
+  margin: 0;
   color: var(--text-muted);
   font-size: var(--text-2xs);
 }
@@ -35,7 +31,7 @@
 
 .available-entity-atlas {
   display: flex;
-  padding: 0.35rem var(--space-1);
+  padding: 0.35rem 0;
   color: var(--text-secondary);
   align-items: baseline;
   gap: var(--space-1);

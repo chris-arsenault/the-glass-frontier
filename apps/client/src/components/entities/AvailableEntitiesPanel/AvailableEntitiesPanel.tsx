@@ -13,7 +13,7 @@ export function AvailableEntitiesPanel(): React.JSX.Element | null {
 
   return (
     <section className="available-entities" aria-labelledby="available-entities-title">
-      <h2 id="available-entities-title">Nearby</h2>
+      <h2 id="available-entities-title">Nearby entities</h2>
       {entries.length === 0 ? (
         <p className="available-entities-empty">Gathering the scene…</p>
       ) : (
