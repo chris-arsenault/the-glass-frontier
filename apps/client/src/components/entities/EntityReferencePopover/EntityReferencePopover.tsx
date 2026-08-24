@@ -5,8 +5,8 @@ import type {
 } from '@glass-frontier/dto';
 import type { ComponentProps, ReactNode } from 'react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 
+import { AtlasLink } from '../../atlas/AtlasLink';
 import './EntityReferencePopover.css';
 
 type MarkdownNode = {
@@ -114,12 +114,9 @@ export function EntityReferencePopover({
           <strong>{entity.name}</strong>
           <span>{entity.subkind ?? entity.kind}</span>
           {entity.description ? <span>{entity.description}</span> : null}
-          <Link
-            to={`/atlas/${entity.slug}`}
-            onClick={(event) => event.stopPropagation()}
-          >
+          <AtlasLink slug={entity.slug} onClick={(event) => event.stopPropagation()}>
             Open in Atlas
-          </Link>
+          </AtlasLink>
         </span>
       ) : null}
     </span>

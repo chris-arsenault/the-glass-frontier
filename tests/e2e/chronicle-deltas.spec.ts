@@ -24,6 +24,14 @@ test.describe('Chronicle deltas', () => {
     const locationPill = page.locator('.location-pill-value');
 
     await expect(locationPill).toContainText('Luminous Quay');
+    const locationAtlasLink = locationPill.getByRole('link', { name: 'Luminous Quay' });
+    await expect(locationAtlasLink).toHaveAttribute('href', '/atlas/luminous_quay');
+    await locationAtlasLink.click();
+    const atlasModal = page.getByRole('dialog', { name: 'World Atlas entry' });
+    await expect(
+      atlasModal.getByRole('heading', { level: 1, name: 'Luminous Quay' })
+    ).toBeVisible();
+    await atlasModal.getByRole('button', { name: 'Close Atlas dialog' }).click();
 
     const gmEntry = await sendTurn(
       page,
@@ -32,6 +40,10 @@ test.describe('Chronicle deltas', () => {
     );
 
     await expect(locationPill).toContainText('Auric Causeway', { timeout: 15_000 });
+    const nearbyAtlasLink = page
+      .getByRole('navigation', { name: 'Chronicle' })
+      .getByRole('link', { name: /Luminous Quay/i });
+    await expect(nearbyAtlasLink).toHaveAttribute('href', '/atlas/luminous_quay');
 
     const badge = gmEntry.locator('.inventory-delta-badge');
     await expect(badge).toBeVisible();

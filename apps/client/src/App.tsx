@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 
+import { AtlasModal } from './components/atlas/AtlasModal';
 import { WorldAtlasPage } from './components/atlas/WorldAtlasPage';
 import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
@@ -302,6 +303,7 @@ export function App(): React.JSX.Element {
       <CharacterDrawer />
       <ChronicleDrawer />
       <TemplateDrawer />
+      <AtlasModal />
       <BugReportModal />
       <ChangelogModal />
       <PlayerSettingsModal />

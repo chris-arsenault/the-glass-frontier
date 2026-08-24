@@ -1,0 +1,38 @@
+.atlas-modal {
+  width: min(72rem, 95vw);
+  height: min(54rem, 90vh);
+}
+
+.atlas-modal-header {
+  flex: none;
+}
+
+.atlas-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.atlas-modal-actions a {
+  color: var(--text-accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.atlas-modal-actions a:hover,
+.atlas-modal-actions a:focus-visible {
+  text-decoration: underline;
+}
+
+.atlas-modal-body {
+  min-height: 0;
+}
+
+@media (width <= 720px) {
+  .atlas-modal {
+    width: 96vw;
+    height: 94vh;
+    max-height: 94vh;
+  }
+}

@@ -10,6 +10,7 @@ import { useChronicleStartStore } from '../../stores/chronicleStartWizardStore';
 import { AtlasBodyMap } from './AtlasBodyMap';
 import type { AtlasGraph } from './atlasGraph';
 import { breadcrumbIds, buildAtlasGraph, descendantCount } from './atlasGraph';
+import { AtlasLink } from './AtlasLink';
 import { AtlasLocationBrowser } from './AtlasLocationBrowser';
 import { AtlasSystemMap } from './AtlasSystemMap';
 import './WorldAtlasPage.css';
@@ -101,9 +102,9 @@ function LoreProse({
           return slug === null ? (
             <span className="atlas-lore-ref">{children}</span>
           ) : (
-            <Link to={`/atlas/${slug}`} className="atlas-link-target">
+            <AtlasLink slug={slug} className="atlas-link-target">
               {children}
-            </Link>
+            </AtlasLink>
           );
         },
       }}
@@ -132,9 +133,12 @@ const findLinkedEntity = async (
  * single entity's fact card, lore, and relationships. Canon is written by
  * ingest batches and corrected by reverting one, so nothing here edits.
  */
-export function WorldAtlasPage(): React.JSX.Element {
-  const { slug } = useParams<{ slug?: string }>();
-  const navigate = useNavigate();
+type WorldAtlasViewProps = {
+  onSelect: (slug: string) => void;
+  slug?: string;
+};
+
+export function WorldAtlasView({ onSelect, slug }: WorldAtlasViewProps): React.JSX.Element {
   const [world, setWorld] = useState<WorldData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,13 +179,6 @@ export function WorldAtlasPage(): React.JSX.Element {
     };
   }, [reloadToken]);
 
-  const openSlug = useCallback(
-    (target: string) => {
-      void navigate(`/atlas/${target}`);
-    },
-    [navigate]
-  );
-
   return (
     <div className="atlas-page">
       {slug === undefined ? (
@@ -212,15 +209,30 @@ export function WorldAtlasPage(): React.JSX.Element {
       ) : null}
       {slug === undefined ? (
         world === null ? (
-          <div className="atlas-empty">{isLoading ? 'Charting the system…' : 'No canon loaded.'}</div>
+          <div className="atlas-empty">
+            {isLoading ? 'Charting the system…' : 'No canon loaded.'}
+          </div>
         ) : (
-          <AtlasIndex world={world} onSelect={openSlug} />
+          <AtlasIndex world={world} onSelect={onSelect} />
         )
       ) : (
-        <AtlasEntity key={slug} slug={slug} world={world} onSelect={openSlug} />
+        <AtlasEntity key={slug} slug={slug} world={world} onSelect={onSelect} />
       )}
     </div>
   );
+}
+
+export function WorldAtlasPage(): React.JSX.Element {
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
+  const openSlug = useCallback(
+    (target: string) => {
+      void navigate(`/atlas/${target}`);
+    },
+    [navigate]
+  );
+
+  return <WorldAtlasView slug={slug} onSelect={openSlug} />;
 }
 
 type AtlasIndexProps = {
@@ -573,7 +585,7 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
             <span className="atlas-breadcrumb-sep" aria-hidden="true">
               /
             </span>
-            <Link to={`/atlas/${crumb.slug}`}>{crumb.name}</Link>
+            <AtlasLink slug={crumb.slug}>{crumb.name}</AtlasLink>
           </React.Fragment>
         ))}
       </nav>
@@ -732,9 +744,9 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
                       <div className="atlas-link-body">
                         <span aria-hidden="true">{link.direction === 'in' ? '←' : '→'}</span>
                         {target ? (
-                          <Link to={`/atlas/${target.slug}`} className="atlas-link-target">
+                          <AtlasLink slug={target.slug} className="atlas-link-target">
                             {targetName}
-                          </Link>
+                          </AtlasLink>
                         ) : (
                           <span className="atlas-link-target">{targetName}</span>
                         )}

@@ -111,10 +111,22 @@ test.describe('Landing page', () => {
 
     await expect(lorePanel.getByText('Fresh Signal')).toBeVisible();
     await expect(lorePanel.getByRole('link', { name: 'Oracle Vessel' })).toBeVisible();
-    await expect(entityPanel.getByRole('link', { name: 'Oracle Vessel' })).toBeVisible();
+    const atlasLink = entityPanel.getByRole('link', { name: 'Oracle Vessel' });
+    await expect(atlasLink).toHaveAttribute('href', '/atlas/oracle_vessel');
 
-    await entityPanel.getByRole('link', { name: 'Oracle Vessel' }).click();
+    await atlasLink.click();
+    await expect(page).toHaveURL(/\/$/);
+    const atlasModal = page.getByRole('dialog', { name: 'World Atlas entry' });
+    await expect(atlasModal).toBeVisible();
+    await expect(
+      atlasModal.getByRole('heading', { level: 1, name: 'Oracle Vessel' })
+    ).toBeVisible();
+
+    const fullPageLink = atlasModal.getByRole('link', { name: 'Open full page' });
+    await expect(fullPageLink).toHaveAttribute('href', '/atlas/oracle_vessel');
+    await fullPageLink.click();
     await expect(page).toHaveURL(/\/atlas\/oracle_vessel$/);
+    await expect(page.getByRole('dialog', { name: 'World Atlas entry' })).toHaveCount(0);
   });
 
   test('does not offer to resume completed chronicles', async ({ page }) => {

@@ -1,7 +1,8 @@
 import React from 'react';
 
-import './LocationOverview.css';
 import { useChronicleStore } from '../../../stores/chronicleStore';
+import { AtlasLink } from '../../atlas/AtlasLink';
+import './LocationOverview.css';
 
 /**
  * Where the scene is, as the GM named it.
@@ -31,14 +32,9 @@ export function LocationOverview() {
       <div className="location-pill-label">Location</div>
       <div className="location-pill-value">
         {isAtCanonStart ? (
-          <button
-            type="button"
-            className="location-pill-link"
-            title="Open in World Atlas"
-            onClick={() => window.open(`/atlas/${locationSlug}`, '_blank', 'noopener,noreferrer')}
-          >
+          <AtlasLink className="location-pill-link" slug={locationSlug} title="Open in World Atlas">
             {locationName}
-          </button>
+          </AtlasLink>
         ) : (
           <span>{locationName}</span>
         )}

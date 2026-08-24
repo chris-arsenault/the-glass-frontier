@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom';
-
 import { useChronicleStore } from '../../../stores/chronicleStore';
+import { AtlasLink } from '../../atlas/AtlasLink';
 import './AvailableEntitiesPanel.css';
 
 export function AvailableEntitiesPanel(): React.JSX.Element | null {
@@ -20,16 +19,14 @@ export function AvailableEntitiesPanel(): React.JSX.Element | null {
         <ul className="available-entities-list">
           {entries.map((entity) => (
             <li className="available-entity" key={entity.id}>
-              <Link
+              <AtlasLink
                 className="available-entity-atlas"
-                to={`/atlas/${entity.id}`}
-                target="_blank"
-                rel="noreferrer"
-                title={`Open ${entity.name} in World Atlas in a new tab`}
+                slug={entity.slug}
+                title={`Open ${entity.name} in World Atlas`}
               >
                 <span className="available-entity-name">{entity.name}</span>
                 <span className="available-entity-kind">{entity.subkind ?? entity.kind}</span>
-              </Link>
+              </AtlasLink>
             </li>
           ))}
         </ul>

@@ -460,5 +460,12 @@
     "summary": "Generated seeds are written for your character",
     "details": "Seed generation now reads your character sheet — drive, flaw, origin, allegiance, and skills — alongside the location and anchor lore, and each hook must implicate that character specifically and state a goal worth pursuing, since the seed you pick becomes the chronicle's founding beat. Seeds are also written by the prose model instead of the lightweight classifier. The seed prompt was rebuilt around a strict process-and-data format, and every GM prompt now keeps its instructions fixed while the story data arrives in clearly labeled blocks, a structure enforced by tests. The beat panels no longer claim beats appear only after the first turn.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-24-atlas-modal-links",
+    "releasedAt": "2026-08-24",
+    "summary": "Atlas links now keep your place",
+    "details": "Entity names throughout the dashboard, chronicle rail, location display, transcript references, lore, and Atlas relationships now open the referenced Atlas entry in a dialog instead of replacing the current screen or opening a new tab. Every link still points to the entity's readable slug URL, so it can be copied, opened in a new tab, or expanded into the full Atlas page without finding an internal ID.",
+    "type": "improvement"
   }
 ]

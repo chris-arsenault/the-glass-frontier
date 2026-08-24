@@ -1,12 +1,12 @@
 import { getWorldKind, type ChronicleActivity, type EntityActivityFeed } from '@glass-frontier/dto';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import changelogEntries from '../../../data/changelog.json';
 import { trpcClient } from '../../../lib/trpcClient';
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import { useUiStore } from '../../../stores/uiStore';
 import type { ChangelogEntry } from '../../../types/changelog';
+import { AtlasLink } from '../../atlas/AtlasLink';
 import './LandingPage.css';
 
 const formatDate = (value: string, options?: Intl.DateTimeFormatOptions): string => {
@@ -180,9 +180,9 @@ export function LandingPage(): React.JSX.Element {
               {entityActivity.loreUpdated.map((item) => (
                 <li key={item.id} className="landing-feed-row">
                   <p className="landing-entity-title-row">
-                    <Link className="landing-entity-name" to={`/atlas/${item.slug}`}>
+                    <AtlasLink className="landing-entity-name" slug={item.slug}>
                       {item.name}
-                    </Link>
+                    </AtlasLink>
                     <span className="landing-entity-date">
                       {formatDate(new Date(item.activityAt).toISOString())}
                     </span>
@@ -216,9 +216,9 @@ export function LandingPage(): React.JSX.Element {
               {entityActivity.created.map((item) => (
                 <li key={item.id} className="landing-feed-row">
                   <p className="landing-entity-title-row">
-                    <Link className="landing-entity-name" to={`/atlas/${item.slug}`}>
+                    <AtlasLink className="landing-entity-name" slug={item.slug}>
                       {item.name}
-                    </Link>
+                    </AtlasLink>
                     <span className="landing-entity-date">
                       {formatDate(new Date(item.activityAt).toISOString())}
                     </span>
