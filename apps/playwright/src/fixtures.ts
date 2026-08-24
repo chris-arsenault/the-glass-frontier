@@ -104,6 +104,7 @@ const BASE_CHRONICLE: Chronicle = {
   locationName: 'Luminous Quay',
   openingText: 'You stand beneath the signal gantries of Luminous Quay as the next alarm begins.',
   playerId: PLAYWRIGHT_PLAYER_ID,
+  sceneLedger: null,
   status: 'open',
   summaries: [],
   title: 'Playwright Chronicle',

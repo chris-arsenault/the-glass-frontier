@@ -78,6 +78,8 @@ describe('PromptComposer', () => {
     const composer = new PromptComposer(runtime);
     const scene = {
       id: 'scene:turn-1',
+      progress: 0,
+      progressTarget: 4,
       startedAtTurn: 1,
       subject: 'Amaya Venn',
       subjectKind: 'npc' as const,

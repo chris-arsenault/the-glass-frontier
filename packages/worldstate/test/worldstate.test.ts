@@ -248,6 +248,8 @@ describe('Chronicle turn history', () => {
       defaultChronicle('Dialog Test', {
         activeScene: {
           id: DIALOG_SCENE_ID,
+          progress: 0,
+          progressTarget: 4,
           startedAtTurn: 0,
           subject: DIALOG_SUBJECT,
           subjectKind: 'npc',
@@ -394,6 +396,53 @@ describe('Chronicle activity', () => {
         expect.objectContaining({ id: closed.id, status: 'closed' }),
       ])
     );
+  });
+});
+
+describe('Beat finalization', () => {
+  it('applies dispositions to open beats and leaves terminal beats alone', async () => {
+    const chronicle = await worldState.chronicles.upsertChronicle(
+      defaultChronicle('Finalize Reach', {
+        beats: [
+          {
+            createdAt: 1,
+            description: 'An open goal.',
+            id: 'open_goal',
+            status: 'in_progress',
+            title: 'Open Goal',
+            updatedAt: 1,
+          },
+          {
+            createdAt: 1,
+            description: 'Already done.',
+            id: 'done_goal',
+            resolvedAt: 2,
+            status: 'succeeded',
+            title: 'Done Goal',
+            updatedAt: 2,
+          },
+        ],
+      })
+    );
+
+    const changed = await worldState.chronicles.finalizeBeats({
+      chronicleId: chronicle.id,
+      dispositions: [
+        { beatId: 'open_goal', status: 'abandoned' },
+        { beatId: 'done_goal', status: 'failed' },
+      ],
+    });
+    const stored = await worldState.chronicles.getChronicle(chronicle.id);
+
+    expect(changed).toBe(true);
+    expect(stored?.beats.find((beat) => beat.id === 'open_goal')?.status).toBe('abandoned');
+    expect(stored?.beats.find((beat) => beat.id === 'done_goal')?.status).toBe('succeeded');
+
+    const secondPass = await worldState.chronicles.finalizeBeats({
+      chronicleId: chronicle.id,
+      dispositions: [{ beatId: 'open_goal', status: 'failed' }],
+    });
+    expect(secondPass).toBe(false);
   });
 });
 

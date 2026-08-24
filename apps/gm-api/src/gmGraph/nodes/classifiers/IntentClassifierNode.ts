@@ -90,6 +90,7 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
     const { effectiveScene, replacedSceneId, sceneChange, transition } = resolveEffectiveScene({
       activeScene: context.chronicleState.chronicle.activeScene,
       candidate: result.sceneChange,
+      locationName: context.chronicleState.locationName,
       turnId: context.turnId,
       turnSequence: context.turnSequence,
     });

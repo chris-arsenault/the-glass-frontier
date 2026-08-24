@@ -71,6 +71,10 @@ export type ChronicleStore = {
     chronicleId: string,
     targetEndTurn: number | null
   ) => Promise<Chronicle>;
+  finalizeBeats: (input: {
+    chronicleId: string;
+    dispositions: Array<{ beatId: string; status: 'abandoned' | 'failed' | 'succeeded' }>;
+  }) => Promise<boolean>;
   commitClosureSummary: (input: {
     character?: Character;
     chronicleId: string;

@@ -9,39 +9,18 @@ import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
 import { persistCharacter } from './characterPersistence';
+import {
+  applyBeatDispositions,
+  ensureInventory,
+  initialEntityRoster,
+  normalizeChronicle,
+} from './chronicleNormalization';
 import { ChronicleTurnPersistence } from './chronicleTurnPersistence';
 import { foundingBeats } from './foundingBeat';
 import { upsertNodeIdentity } from './nodeIdentity';
 import { createPool, withTransaction } from './pg';
 import type { ChronicleSnapshot, ChronicleStore } from './types';
 import { isNonEmptyString, serializeJson } from './utils';
-
-const ensureInventory = (character: Character): Character => {
-  if (character.inventory !== undefined) {
-    return character;
-  }
-  return {
-    ...character,
-    inventory: [],
-  };
-};
-
-const initialEntityRoster = (locationName: string, roster?: Chronicle['entityRoster']):
-Chronicle['entityRoster'] => roster ?? {
-  entries: [], locationName, sceneId: null, updatedAtTurn: 0,
-};
-
-const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
-  const beats = Array.isArray(chronicle.beats) ? chronicle.beats : [];
-  const summaries = Array.isArray(chronicle.summaries) ? chronicle.summaries : [];
-  return {
-    ...chronicle,
-    activeScene: chronicle.activeScene ?? null,
-    beats,
-    entityRoster: chronicle.entityRoster,
-    summaries,
-  };
-};
 
 type SessionStateRow = {
   character_state: Character | null;
@@ -251,6 +230,39 @@ class PostgresChronicleStore implements ChronicleStore {
     });
   }
 
+  /**
+   * Applies close-time dispositions to beats that are still open. A beat that
+   * already reached a terminal state keeps it, so a retried closure changes
+   * nothing on the second pass.
+   */
+  async finalizeBeats(input: {
+    chronicleId: string;
+    dispositions: Array<{ beatId: string; status: 'abandoned' | 'failed' | 'succeeded' }>;
+  }): Promise<boolean> {
+    return withTransaction(this.#pool, async (client) => {
+      const result = await client.query<{ props: Chronicle }>(
+        `SELECT c.props
+         FROM chronicle c
+         WHERE c.id = $1::uuid
+         FOR UPDATE OF c`,
+        [input.chronicleId]
+      );
+      const stored = result.rows[0]?.props;
+      if (stored === undefined) {
+        throw new Error(`Chronicle ${input.chronicleId} not found while finalizing beats.`);
+      }
+      const chronicle = normalizeChronicle(stored);
+      const statusByBeatId = new Map(
+        input.dispositions.map((disposition) => [disposition.beatId, disposition.status])
+      );
+      const { beats, changed } = applyBeatDispositions(chronicle.beats, statusByBeatId, Date.now());
+      if (changed) {
+        await this.#persistChronicle(client, { ...chronicle, beats });
+      }
+      return changed;
+    });
+  }
+
   async getChronicle(chronicleId: string): Promise<Chronicle | null> {
     const result = await this.#pool.query<ChronicleRow>(
       `SELECT c.props, c.anchor_entity_id, c.entity_focus
@@ -396,6 +408,7 @@ class PostgresChronicleStore implements ChronicleStore {
       locationName: params.locationName,
       openingText: params.openingText ?? '',
       playerId: params.playerId,
+      sceneLedger: null,
       seedText: params.seedText ?? undefined,
       status: params.status ?? 'open',
       summaries: [],

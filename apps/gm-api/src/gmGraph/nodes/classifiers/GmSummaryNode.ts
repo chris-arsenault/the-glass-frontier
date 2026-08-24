@@ -36,9 +36,10 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
 
   #applySummary(context: GraphContext, response: SummaryResponse): GraphNodeDelta {
     const sceneOutcome = context.effectiveScene === null ? 'continue' : response.sceneOutcome;
-    if (sceneOutcome === 'complete' && context.effectiveScene !== null) {
+    if (sceneOutcome !== 'continue' && context.effectiveScene !== null) {
       log('info', 'gm.scene-completed', {
         chronicleId: context.chronicleId,
+        outcome: sceneOutcome,
         reason: response.sceneOutcomeReason ?? 'unspecified',
         sceneId: context.effectiveScene.id,
         subject: context.effectiveScene.subject,
@@ -49,7 +50,7 @@ class GmSummaryNode extends LlmClassifierNode<SummaryResponse> {
     return {
       gmSummary: response.summary,
       sceneOutcome,
-      sceneOutcomeReason: sceneOutcome === 'complete' ? response.sceneOutcomeReason : null,
+      sceneOutcomeReason: sceneOutcome === 'continue' ? null : response.sceneOutcomeReason,
       shouldCloseChronicle: response.shouldCloseChronicle,
     };
   }

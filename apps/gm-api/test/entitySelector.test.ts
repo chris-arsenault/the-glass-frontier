@@ -83,6 +83,8 @@ describe('buildEntityContext', () => {
     const context = buildContext({
       effectiveScene: {
         id: 'scene:turn-1',
+        progress: 0,
+        progressTarget: 4,
         startedAtTurn: 1,
         subject: 'Amaya Venn',
         subjectEntityId: SUBJECT_ID,

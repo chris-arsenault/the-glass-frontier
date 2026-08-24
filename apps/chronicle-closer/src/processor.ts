@@ -7,6 +7,7 @@ import type { LLMRequest, LLMResponse, RetryLLMClient } from '@glass-frontier/ll
 import { log } from '@glass-frontier/utils';
 import type { ChronicleStore, WorldSchemaStore } from '@glass-frontier/worldstate';
 
+import { reconcileOpenBeats } from './beatReconciliation';
 import { CanonPipeline } from './canonPipeline';
 import {
   buildBeatLines,
@@ -28,6 +29,8 @@ class ChronicleClosureProcessor {
   readonly #llm: RetryLLMClient;
   readonly #modelConfigStore: ModelConfigStore;
 
+  readonly #templateManager: PromptTemplateManager;
+
   constructor(options: {
     chronicleStore: ChronicleStore;
     llmClient: RetryLLMClient;
@@ -38,6 +41,7 @@ class ChronicleClosureProcessor {
     this.#chronicleStore = options.chronicleStore;
     this.#llm = options.llmClient;
     this.#modelConfigStore = options.modelConfigStore;
+    this.#templateManager = options.templateManager;
     this.#canonPipeline = new CanonPipeline({
       llmClient: options.llmClient,
       modelConfigStore: options.modelConfigStore,
@@ -47,11 +51,7 @@ class ChronicleClosureProcessor {
   }
 
   async process(event: ChronicleClosureEvent): Promise<void> {
-    const snapshot = await this.#chronicleStore.getChronicleState(event.chronicleId);
-    if (snapshot === null) {
-      throw new Error(`Chronicle ${event.chronicleId} was not found for closure.`);
-    }
-    this.#assertEventMatchesSnapshot(event, snapshot);
+    const snapshot = await this.#loadReconciledSnapshot(event);
     const context = this.#buildContext(snapshot);
     if (event.summaryKinds.includes('chronicle_story')) {
       await this.#runSummary('chronicle_story', context, event);
@@ -64,6 +64,36 @@ class ChronicleClosureProcessor {
       isAdmin: event.playerIsAdmin,
       name: event.playerName,
     });
+  }
+
+  /**
+   * Loads the chronicle and settles its beat record first: a closed chronicle
+   * leaves no beat open, and every later step — story, bio, canon — reads the
+   * finished goal history.
+   */
+  async #loadReconciledSnapshot(event: ChronicleClosureEvent): Promise<ChronicleSnapshot> {
+    const snapshot = await this.#chronicleStore.getChronicleState(event.chronicleId);
+    if (snapshot === null) {
+      throw new Error(`Chronicle ${event.chronicleId} was not found for closure.`);
+    }
+    this.#assertEventMatchesSnapshot(event, snapshot);
+    const changed = await reconcileOpenBeats({
+      chronicleStore: this.#chronicleStore,
+      llm: this.#llm,
+      modelConfigStore: this.#modelConfigStore,
+      player: {
+        id: event.playerId,
+        isAdmin: event.playerIsAdmin,
+        name: event.playerName,
+      },
+      snapshot,
+      templateManager: this.#templateManager,
+    });
+    if (!changed) {
+      return snapshot;
+    }
+    const refreshed = await this.#chronicleStore.getChronicleState(event.chronicleId);
+    return refreshed ?? snapshot;
   }
 
   #assertEventMatchesSnapshot(

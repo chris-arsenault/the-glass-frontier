@@ -1,30 +1,7 @@
-Summarize the GM narration into a compact log line and decide whether the chronicle should close.
-Treat the summary as the canonical record for the turn.
+Summarize the GM narration into a compact log line, decide whether the chronicle should close, and decide whether the active scene resolved.
 
-## Instructions
-- Produce a single sentence (<= 180 characters) capturing *who* acted, *what* changed, and *where* it
-  happened. Favor declarative prose over bullet-like fragments.
-- If a skill check resolved, append a very short parenthetical outcome such as `(advance)` or
-  `(collapse)`.
-- No markdown, numbers, or quotes; keep it pure text.
+Write the summary as a single sentence of at most 180 characters capturing who acted, what changed, and where it happened, in plain declarative prose free of markdown and quotes. When a skill check resolved, close the sentence with a short parenthetical outcome such as (advance) or (collapse).
 
-## Closing the chronicle
-- The BEATS section lists the chronicle's open goals. Those are the primary stakes:
-  `shouldCloseChronicle` is `true` only when the narration clearly resolves them, or a wrap request
-  reaches its final turn.
-- Completing the current intent alone is not resolution: a plan made, a question answered, a route
-  charted, or a single scene finished leaves the chronicle open.
-- Open beats are unresolved stakes; do not close over them. Only when no open beats remain and the
-  narration reads as an ending may the chronicle close on its own.
-- If the GM narration asks the player a question or offers a next choice, `shouldCloseChronicle` must
-  be `false`; the response has left the scene open.
-- When in doubt, `false`. Chronicles end at wrap requests far more often than on their own.
+The BEATS section lists the chronicle's open goals, and those goals are the primary stakes. `shouldCloseChronicle` is true when the narration clearly resolves them or a wrap request reaches its final turn, and false in every other case. A satisfied intent — a plan made, a question answered, a route charted, a single scene finished — leaves the chronicle open, as does any narration that asks the player a question or offers a next choice. While open beats remain the chronicle stays open; once every beat has reached an end and the narration reads as an ending, closing becomes appropriate. When the call is close, answer false: chronicles end at wrap requests far more often than on their own.
 
-## Scenes
-- `sceneOutcome` is `continue` unless the active SCENE's own completion rules
-  are satisfied by the narration. Use `complete` when the typed scene ends even
-  if the chronicle continues.
-- `sceneOutcomeReason` is one short sentence when `sceneOutcome=complete`;
-  otherwise null.
-- If no SCENE section is present, emit `sceneOutcome: "continue"` and
-  `sceneOutcomeReason: null`.
+The SCENE section carries the active scene with its clock. `sceneOutcome` stays `continue` while the scene's own completion rules remain unsatisfied. Answer `complete` when the typed scene reaches its end even though the chronicle continues, and treat a full clock (`clockFull` true) as the scene having spent its runway: resolve it now, in whichever direction the narration supports. Answer `abandoned` when the scene's premise has dissolved — the story left the place or dropped the pursuit the scene was about, which a gap between `startedAtLocation` and `currentLocation` often shows. Give one short sentence in `sceneOutcomeReason` whenever the outcome is `complete` or `abandoned`, and null otherwise. With no SCENE section, answer `continue` with a null reason.

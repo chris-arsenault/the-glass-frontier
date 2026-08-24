@@ -226,7 +226,7 @@ export const isEligibleForLore = (
 export type SceneSummary = {
   firstTurn: number;
   lastTurn: number;
-  outcome: 'complete' | 'continue';
+  outcome: 'abandoned' | 'complete' | 'continue';
   subject: string;
   subjectKind: string;
   type: string;

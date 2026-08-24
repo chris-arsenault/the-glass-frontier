@@ -5,6 +5,7 @@ import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
 import { EntityRosterState } from './EntityReference';
 import { ChronicleScene } from './Scene';
+import { SceneLedger } from './SceneLedger';
 
 const EntityFocusState = z.object({
   entityScores: z.record(z.string(), z.number()).default({}),
@@ -31,6 +32,7 @@ export const Chronicle = z.object({
   /** The GM-authored scene opener. The seed remains selection copy only. */
   openingText: z.string(),
   playerId: z.string().min(1),
+  sceneLedger: SceneLedger.nullable().default(null),
   seedText: z.string().optional(),
   status: z.enum(['open', 'closed']).default('open'),
   summaries: z.array(ChronicleSummaryEntry).default([]),

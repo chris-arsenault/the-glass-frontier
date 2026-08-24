@@ -1,5 +1,7 @@
 import { log } from '@glass-frontier/utils';
 
+import { mergeSceneLedger } from '../scenes/sceneLedger';
+import { advanceSceneClock } from '../scenes/sceneLifecycle';
 import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
 import { createUpdatedCharacter } from './characterUpdater';
@@ -16,7 +18,29 @@ export class WorldUpdater {
     const inventoryContext = this.#updateInventory(characterContext);
     const beatContext = this.#updateBeats(inventoryContext);
     const locationContext = this.#updateLocation(beatContext);
-    return this.#updateScene(locationContext);
+    const sceneContext = this.#updateScene(locationContext);
+    return this.#updateLedger(sceneContext);
+  }
+
+  #updateLedger(context: GraphContext): GraphContext {
+    if (context.sceneLedgerUpdate === undefined) {
+      return context;
+    }
+    const chronicle = context.chronicleState.chronicle;
+    return {
+      ...context,
+      chronicleState: {
+        ...context.chronicleState,
+        chronicle: {
+          ...chronicle,
+          sceneLedger: mergeSceneLedger(
+            chronicle.sceneLedger,
+            context.sceneLedgerUpdate,
+            context.turnSequence
+          ),
+        },
+      },
+    };
   }
 
   #updateCharacter(context: GraphContext): GraphContext {
@@ -78,7 +102,12 @@ export class WorldUpdater {
   }
 
   #updateScene(context: GraphContext): GraphContext {
-    const activeScene = context.sceneOutcome === 'complete' ? null : context.effectiveScene;
+    const ended = context.sceneOutcome === 'complete' || context.sceneOutcome === 'abandoned';
+    const survivingScene = ended ? null : context.effectiveScene;
+    const activeScene =
+      survivingScene === null || survivingScene === undefined
+        ? null
+        : advanceSceneClock(survivingScene, context.skillCheckResult?.outcomeTier);
     if (activeScene === context.chronicleState.chronicle.activeScene) {
       return context;
     }

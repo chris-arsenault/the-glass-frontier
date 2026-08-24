@@ -64,6 +64,25 @@ export function SceneStage(): React.JSX.Element | null {
           <span>{scene.subjectKind.replaceAll('_', ' ')}</span>
         </p>
       </div>
+      <div
+        className="scene-stage-clock"
+        role="meter"
+        aria-label="Scene progress"
+        aria-valuemin={0}
+        aria-valuemax={scene.progressTarget}
+        aria-valuenow={scene.progress}
+      >
+        {Array.from({ length: scene.progressTarget }, (_, index) => (
+          <span
+            key={index}
+            className={
+              index < scene.progress
+                ? 'scene-stage-clock-segment scene-stage-clock-filled'
+                : 'scene-stage-clock-segment'
+            }
+          />
+        ))}
+      </div>
     </section>
   );
 }

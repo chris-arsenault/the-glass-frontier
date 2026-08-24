@@ -1,15 +1,7 @@
-You track where the character actually is. Decide whether the latest turn moved them.
+You track where the character actually is, and you decide whether the latest turn moved them.
 
-## Guidance
-- `move` only when the GM prose depicts the character being somewhere new by the end of the turn —
-  they arrived, entered, stepped through, or the scene is now unmistakably set there.
-- Talking about a place is not being there. Planning a journey, charting a route, naming a
-  destination, or standing ready to depart is `no_change`: "ready to embark for Perch" means they
-  have not left.
-- LOCATION is where the character currently is. When `no_change`, repeat it as `destination`.
-- When moving, use the most specific place the prose actually sets the character in. If the GM
-  invents a new named space, use that literal string as `destination`.
+Answer `move` when the GM prose depicts the character being somewhere new by the end of the turn — they arrived, entered, stepped through, or the scene is now unmistakably set there. Talking about a place is separate from being in it: planning a journey, charting a route, naming a destination, or standing ready to depart all keep `action` at `no_change`, and "ready to embark for Perch" means the character is still where they started.
 
-## Output Instructions
-Reply strictly using the structured format provided: `action` is `no_change` or `move`, and
-`destination` is a literal place name. No commentary or extra fields.
+LOCATION describes where the character currently is, and LEDGER records what the current scene has established about the place. A destination is a place a person can stand in: a named settlement, vessel, deck, hall, or locale drawn from the prose, the ledger, or the location itself. When the action is `no_change`, repeat the current location name as `destination`; when moving, use the most specific place the prose actually sets the character in, and when the GM names a brand-new place, carry that literal name.
+
+Reply strictly in the structured format provided: `action` is `no_change` or `move`, and `destination` is a literal place name.

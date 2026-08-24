@@ -96,6 +96,7 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
   turnId: 'turn-1',
   turnSequence: 1,
   worldSchemaStore: {
+    findLocationByName: () => Promise.resolve(null),
     listEntitiesByIds: (ids: string[]) =>
       Promise.resolve(ids.map((id) => ({ id, name: `entity-${id.slice(0, 4)}` }))),
   } as unknown as GraphContext['worldSchemaStore'],

@@ -175,6 +175,7 @@ export const defaultChronicle = (
   metadata: undefined,
   openingText: '',
   playerId: TEST_PLAYER_ID,
+  sceneLedger: null,
   seedText: undefined,
   status: 'open',
   summaries: [],

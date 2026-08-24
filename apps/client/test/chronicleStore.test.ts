@@ -80,6 +80,7 @@ const chronicle: Chronicle = {
   locationName: 'Luminous Quay',
   openingText: 'You wait beneath the quay lights.',
   playerId: PLAYER_ID,
+  sceneLedger: null,
   status: 'open',
   summaries: [],
   title: 'Store Test Chronicle',
@@ -236,6 +237,8 @@ describe('chronicleStore turn handling', () => {
     resolveTurn(turnResult(posted.content, {
       activeScene: {
         id: DIALOG_SCENE_ID,
+        progress: 0,
+        progressTarget: 4,
         startedAtTurn: 3,
         subject: DIALOG_SUBJECT,
         subjectKind: 'npc',

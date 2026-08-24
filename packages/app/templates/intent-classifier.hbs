@@ -26,18 +26,7 @@ Tie-breaks:
 
 Use RECENT-EVENTS to resolve pronouns, short follow-ups, and references such as "it" or "that." Classify the current message itself; do not replace its concrete verb with an earlier topic.
 
-Scene handling:
-- `sceneChange` is normally null. If a SCENE section exists, null means the current typed scene continues.
-- Set `sceneChange` only when this message clearly enters or switches to one of these situations:
-  - `dialog`: direct conversation with a named NPC
-  - `battle`: immediate physical conflict with active opposition
-  - `hunt`: sustained tracking or approach toward a quarry
-  - `chase`: active pursuit or escape where distance and route are changing
-  - `search`: sustained inspection of a place, transport, artifact, or other subject
-- Do not emit a change for a passing line of dialogue, one attack inside an existing battle, one observation, or a minor tone change.
-- `subject` is the concise in-world name of what the scene is about.
-- `subjectKind` must use the canonical world kind taxonomy. Common values: npc, creature, faction, geographic_location, installation, transport, artifact, resource, phenomenon, conflict.
-- There is no scene-end signal here. Leaving or resolving a scene remains an action inside it; downstream narration and summary decide completion.
+Scene handling: `sceneChange` stays null while ordinary play continues, and under an existing SCENE section null means that scene carries on. Emit `{type, subject, subjectKind}` when this message clearly enters or switches into a sustained situation: `dialog` for direct conversation with a named NPC, `battle` for immediate physical conflict with active opposition, `hunt` for sustained tracking toward a quarry, `chase` for pursuit or escape where distance and route keep changing, and `search` for sustained inspection of a place, transport, artifact, or other subject. Combat is the clearest case: when the player attacks, defends, or fights back against opposition that resists — and the check lines in RECENT-EVENTS show strikes and maneuvers accumulating — a battle scene is underway, so emit it. A passing remark, a single observation, or one more attack inside an already-open battle is the existing scene continuing, and null is right there. `subject` is the concise in-world name of what the scene revolves around, and `subjectKind` comes from the canonical world kinds (npc, creature, faction, geographic_location, installation, transport, artifact, resource, phenomenon, conflict). Scene endings are decided downstream: from this classifier's view, leaving or resolving a scene is still play inside it.
 
 Output fields:
 - intentType: the single best intent type from the list above

@@ -109,6 +109,27 @@
   letter-spacing: 0.04em;
 }
 
+.scene-stage-clock {
+  display: flex;
+  margin-left: auto;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-1);
+}
+
+.scene-stage-clock-segment {
+  width: 0.85rem;
+  height: 0.85rem;
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border-muted);
+  border-radius: 50%;
+}
+
+.scene-stage-clock-filled {
+  background: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
 @media (width <= 640px) {
   .scene-stage {
     padding: var(--space-3);

@@ -118,3 +118,24 @@
 .wrap-target-panel .panel-label {
   margin-bottom: var(--space-2);
 }
+
+.scene-notebook-place {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.scene-notebook-list {
+  display: flex;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  color: var(--text-secondary);
+  flex-direction: column;
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.scene-notebook-interactions {
+  color: var(--text-muted);
+}

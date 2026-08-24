@@ -14,6 +14,7 @@ import { EntityJudgeNode, EntitySelectorNode } from '@glass-frontier/gm-api/gmGr
 import { GmSummaryNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode';
 import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode';
 import { LocationDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
+import { SceneLedgerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/SceneLedgerNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
 import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
 import type {
@@ -42,6 +43,11 @@ import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNo
 import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
 import { buildSceneContext } from './scenes/sceneLifecycle';
 import { ChronicleTelemetry } from './telemetry';
+import {
+  buildSystemErrorEntry,
+  ensureFailureNotice,
+  narrativeFields,
+} from './turnAssembly';
 import type { GraphContext, ChronicleState } from './types';
 
 type GmEngineOptions = {
@@ -70,7 +76,14 @@ const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'gm-response-node', type: 'sequential' },
   { nodeId: 'gm-entity-reference-resolver', type: 'sequential' },
   {
-    nodeIds: ['entity-judge', 'beat-tracker', 'gm-summary', 'inventory-delta', 'location-delta'],
+    nodeIds: [
+      'entity-judge',
+      'beat-tracker',
+      'gm-summary',
+      'inventory-delta',
+      'location-delta',
+      'scene-ledger',
+    ],
     type: 'parallel',
   },
 ];
@@ -164,7 +177,9 @@ class GmEngine {
       turnSequence,
       worldSchemaStore: this.worldSchemaStore,
     });
-    const { result: graphResult, systemMessage } = await this.#executeGraph(graphInput, jobId);
+    const { result: graphResult, systemMessage: rawSystemMessage } =
+      await this.#executeGraph(graphInput, jobId);
+    const systemMessage = ensureFailureNotice(graphResult, rawSystemMessage);
     const worldUpdater = new WorldUpdater();
     const worldUpdatedContext = await worldUpdater.update(graphResult);
     const updatedContext = await this.#refreshRosterAfterTransition(worldUpdatedContext);
@@ -251,6 +266,7 @@ class GmEngine {
     const entityJudgeNode = new EntityJudgeNode();
     const locationDeltaNode = new LocationDeltaNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
+    const sceneLedgerNode = new SceneLedgerNode();
 
     const nodes = [
       intentClassifier,
@@ -267,6 +283,7 @@ class GmEngine {
       gmSummaryNode,
       locationDeltaNode,
       inventoryDeltaNode,
+      sceneLedgerNode,
     ];
 
     return new GmGraphOrchestrator(
@@ -397,22 +414,11 @@ class GmEngine {
       });
       return {
         result: { ...input, failure: true },
-        systemMessage: this.#buildSystemErrorEntry(message),
+        systemMessage: buildSystemErrorEntry(message),
       };
     }
   }
 
-  #buildSystemErrorEntry(message: string): TranscriptEntry {
-    return {
-      content: message,
-      id: randomUUID(),
-      metadata: {
-        tags: ['system-failure'],
-        timestamp: Date.now(),
-      },
-      role: 'system',
-    };
-  }
 
   #buildTurn({
     chronicleId,
@@ -434,20 +440,16 @@ class GmEngine {
       ? graphResult.chronicleState.chronicle.activeScene
       : graphResult.effectiveScene;
     return {
+      ...narrativeFields(graphResult, failure),
       advancesTimeline: graphResult.advancesTimeline,
-      beatTracker: graphResult.beatTracker,
       chronicleId,
       entityReferences: graphResult.entityReferences,
       entityRoster: graphResult.turnEntityRoster,
       entityUsage: graphResult.entityUsage,
       executedNodes: graphResult.executedNodes,
       failure,
-      gmResponse: graphResult.gmResponse,
-      gmSummary: graphResult.gmSummary,
       gmTrace: graphResult.gmTrace === null ? undefined : graphResult.gmTrace,
       id: turnId,
-      inventoryDelta: graphResult.inventoryDelta,
-      locationDelta: graphResult.locationDelta,
       playerIntent: graphResult.playerIntent,
       playerMessage,
       sceneContext: buildSceneContext(

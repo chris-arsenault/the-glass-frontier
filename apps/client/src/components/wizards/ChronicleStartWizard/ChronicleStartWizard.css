@@ -154,6 +154,12 @@
   transition: filter 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
+.location-step-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .location-step-actions button {
   height: var(--control-h);
   padding: 0 var(--space-3);
@@ -294,10 +300,27 @@
   overflow: hidden;
 }
 
-.location-step-loading-details {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
+/* Fixed-size slot beside Refresh: appearing never shifts the layout. */
+.location-step-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.location-step-spinner[data-active='true'] {
+  animation: location-step-spin 700ms linear infinite;
+  border-color: var(--border-muted);
+  border-top-color: var(--text-accent);
+  opacity: 1;
+}
+
+@keyframes location-step-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Tone step */

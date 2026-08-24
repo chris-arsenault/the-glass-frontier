@@ -11,6 +11,8 @@ const ANCHOR_ID = '99999999-8888-4777-8666-555555555555';
 const sceneContext = (overrides?: Partial<GraphContext>): GraphContext => buildContext({
   effectiveScene: {
     id: 'scene:turn-1',
+    progress: 0,
+    progressTarget: 4,
     startedAtTurn: 1,
     subject: AMAYA_NAME,
     subjectKind: 'npc',

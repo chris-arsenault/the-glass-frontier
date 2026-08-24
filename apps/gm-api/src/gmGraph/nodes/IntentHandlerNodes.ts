@@ -15,6 +15,22 @@ type HandlerOptions = {
 const NARRATIVE_MAX_OUTPUT_TOKENS = 2000;
 const NARRATIVE_REASONING_EFFORT = 'low';
 
+/**
+ * Provider guardrails replace the narration with a stock refusal instead of
+ * erroring. That text must never reach the transcript as GM prose; it becomes
+ * a content_filter turn failure with a player-facing rephrase notice instead.
+ */
+const FILTER_MARKERS = [
+  'blocked by our content filter',
+  'blocked by content filter',
+  'cannot assist with that request',
+];
+
+const isFilterBlockedNarration = (content: string): boolean => {
+  const normalized = content.toLowerCase();
+  return FILTER_MARKERS.some((marker) => normalized.includes(marker));
+};
+
 class GmResponseNode implements GraphNode {
   readonly id: string;
   readonly #handlers: BaseIntentHandlerNode[];
@@ -102,6 +118,9 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         reasoningEffort: NARRATIVE_REASONING_EFFORT,
       }, 'string');
       const cleanedContent = this.#cleanNarration(narration.message);
+      if (isFilterBlockedNarration(cleanedContent)) {
+        return this.#filteredNarrationDelta(context);
+      }
       return {
         advancesTimeline: this.options.advancesTimeline,
         gmResponse: this.#buildTranscript(context, cleanedContent),
@@ -123,8 +142,17 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         stack: error instanceof Error ? (error.stack ?? '') : '',
         turnSequence: context.turnSequence,
       });
-      return { failure: true };
+      return { failure: true, failureReason: 'generation_error' };
     }
+  }
+
+  #filteredNarrationDelta(context: GraphContext): GraphNodeDelta {
+    log('warn', 'gm.narrative-generation-filtered', {
+      chronicleId: context.chronicleId,
+      nodeId: this.options.id,
+      turnSequence: context.turnSequence,
+    });
+    return { failure: true, failureReason: 'content_filter' };
   }
 
   #buildTranscript(context: GraphContext, content: string): TranscriptEntry {

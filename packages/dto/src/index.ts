@@ -12,6 +12,7 @@ export * from './narrative/IntentType';
 export * from './narrative/Intent';
 export * from './narrative/LocationDelta';
 export * from './narrative/Scene';
+export * from './narrative/SceneLedger';
 export * from './narrative/SkillCheck';
 export * from './narrative/TranscriptEntry';
 export * from './narrative/Turn';

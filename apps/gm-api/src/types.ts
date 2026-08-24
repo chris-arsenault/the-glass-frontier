@@ -27,6 +27,7 @@ import type { WorldSchemaStore, ChronicleStore } from '@glass-frontier/worldstat
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
 import type { LocationDeltaDecision } from './gmGraph/nodes/classifiers/LocationDeltaNode';
+import type { SceneLedgerUpdate } from './scenes/sceneLedger';
 
 export type ChronicleState = {
   chronicleId: string;
@@ -94,6 +95,10 @@ export type GraphContext = {
   telemetry: TelemetryLike;
   templates: PromptTemplateRuntime;
   failure: boolean;
+  /** Why the turn failed, when it did: drives the player-facing notice. */
+  failureReason?: 'content_filter' | 'generation_error';
+  /** This turn's scene working-memory report, merged into the chronicle. */
+  sceneLedgerUpdate?: SceneLedgerUpdate;
 
   //stage results
   playerIntent?: Intent;

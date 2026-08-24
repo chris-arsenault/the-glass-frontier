@@ -62,6 +62,7 @@ const chronicle: Chronicle = {
   locationName: 'Brake',
   openingText: 'You wait on Brake as the quartet tunes.',
   playerId: character.playerId,
+  sceneLedger: null,
   status: 'closed',
   summaries: [],
   title: 'Quarantine Quartet',

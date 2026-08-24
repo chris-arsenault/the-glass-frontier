@@ -1,6 +1,7 @@
 import type { GmNote, PromptTemplateId } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
+import { advanceSceneClock, isSceneClockFull } from '../scenes/sceneLifecycle';
 import type { GraphContext } from '../types';
 import {
   formatCharacter,
@@ -27,8 +28,11 @@ export type ChronicleFragmentTypes =
   | 'wrap'
   | 'inventory'
   | 'inventory-detail'
+  | 'ledger'
   | 'scene'
   | 'seed';
+
+const LEDGER_FRAGMENT: ChronicleFragmentTypes = 'ledger';
 
 const CHRONICLE_TONE_FRAGMENT: ChronicleFragmentTypes = 'chronicle-tone';
 const ENTITY_REFERENCES_FRAGMENT: ChronicleFragmentTypes = 'entity-references';
@@ -42,21 +46,22 @@ export const templateFragmentMapping = new Map<
 PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
-  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['beat-tracker', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
-  ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
-  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
+  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities', ENTITY_REFERENCES_FRAGMENT]],
-  ['gm-summary', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', 'beats', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
-  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'character', 'entities', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['gm-summary', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
+  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['intent-beat-detector', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
   ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
-  ['location-delta', ['intent', USER_MESSAGE_FRAGMENT, 'location']],
-  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
+  ['location-delta', ['intent', USER_MESSAGE_FRAGMENT, 'location', LEDGER_FRAGMENT]],
+  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['scene-ledger', ['scene', LEDGER_FRAGMENT, 'location', ENTITY_REFERENCES_FRAGMENT, USER_MESSAGE_FRAGMENT]],
+  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
@@ -71,6 +76,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['intent', intentFragment],
   ['inventory', inventoryFragment],
   [INVENTORY_DETAIL_FRAGMENT, inventoryDetailFragment],
+  [LEDGER_FRAGMENT, ledgerFragment],
   ['location', locationFragment],
   [RECENT_EVENTS_FRAGMENT, recentEventsFragment],
   ['scene', sceneFragment],
@@ -212,12 +218,23 @@ function entityReferencesFragment(context: GraphContext): Array<Record<string, u
 }
 
 /**
- * Where the scene is, as a name. Anything the world knows about the place
- * arrives through the entity slice, which already ranks locations alongside
- * everything else the turn touches.
+ * Where the scene is. The bare name was all the GM used to get, which let a
+ * hostel grow a fish market: when the name matches canon, the place's kind,
+ * description, and status come along so the narration stays the right sort of
+ * place.
  */
-function locationFragment(context: GraphContext): string {
-  return context.chronicleState.locationName;
+async function locationFragment(context: GraphContext): Promise<Record<string, unknown>> {
+  const name = context.chronicleState.locationName;
+  const canon = await context.worldSchemaStore.findLocationByName({ name });
+  if (canon === null) {
+    return { name };
+  }
+  return {
+    description: canon.description ?? null,
+    kind: canon.subkind ?? canon.kind,
+    name,
+    status: canon.status ?? null,
+  };
 }
 
 function inventoryFragment(context: GraphContext): Array<Record<string, unknown>> {
@@ -239,8 +256,33 @@ function intentFragment(context: GraphContext): Record<string, unknown> {
   return formatIntent(context.playerIntent, context.chronicleState.chronicle.beats);
 }
 
+/**
+ * The active scene as the judges and narrators should see it: subject, where
+ * it is set versus where the chronicle is now, and its clock projected through
+ * this turn's check, so the completion judgment reads the same number the
+ * player does.
+ */
 function sceneFragment(context: GraphContext): unknown {
-  return context.effectiveScene;
+  const scene = context.effectiveScene;
+  if (scene === null || scene === undefined) {
+    return null;
+  }
+  const projected = advanceSceneClock(scene, context.skillCheckResult?.outcomeTier);
+  return {
+    clockFull: isSceneClockFull(projected),
+    currentLocation: context.chronicleState.locationName,
+    progress: projected.progress,
+    progressTarget: projected.progressTarget,
+    startedAtLocation: scene.location ?? null,
+    startedAtTurn: scene.startedAtTurn,
+    subject: scene.subject,
+    subjectKind: scene.subjectKind,
+    type: scene.type,
+  };
+}
+
+function ledgerFragment(context: GraphContext): unknown {
+  return context.chronicleState.chronicle.sceneLedger;
 }
 
 function toneFragment(context: GraphContext): string {
@@ -267,10 +309,13 @@ function skillCheckFragment(context: GraphContext): Record<string, unknown> {
 function recentEventsFragment(context: GraphContext): string {
   return context.chronicleState.turns
     .slice(-10)
-    .map(
-      (turn, index) =>
-        `${index + 1} P: ${turn.playerIntent?.intentSummary ?? ''}\n   G: ${turn.gmSummary ?? ''}`
-    )
+    .map((turn, index) => {
+      const check =
+        turn.skillCheckResult === undefined || turn.skillCheckPlan === undefined
+          ? ''
+          : `\n   C: ${turn.skillCheckPlan.skill} at ${turn.skillCheckPlan.riskLevel} risk → ${turn.skillCheckResult.outcomeTier}`;
+      return `${index + 1} P: ${turn.playerIntent?.intentSummary ?? ''}\n   G: ${turn.gmSummary ?? ''}${check}`;
+    })
     .join('\n');
 }
 

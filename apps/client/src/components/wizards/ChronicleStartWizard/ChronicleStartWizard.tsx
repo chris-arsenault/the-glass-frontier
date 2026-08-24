@@ -476,16 +476,19 @@ function LocationStep({
           </p>
         </div>
         <div className="location-step-actions">
+          <span
+            className="location-step-spinner"
+            data-active={isLoading || isLoadingDetails ? 'true' : undefined}
+            role="status"
+            aria-label={isLoading || isLoadingDetails ? 'Loading' : undefined}
+            aria-hidden={isLoading || isLoadingDetails ? undefined : 'true'}
+          />
           <button type="button" onClick={onRefresh} disabled={isLoading}>
-            {isLoading ? 'Refreshing…' : 'Refresh'}
+            Refresh
           </button>
         </div>
       </header>
       {error ? <p className="wizard-error">{error}</p> : null}
-      {isLoading ? <p className="location-step-loading-details">Loading locations…</p> : null}
-      {isLoadingDetails ? (
-        <p className="location-step-loading-details">Loading location details…</p>
-      ) : null}
       <AtlasLocationBrowser
         graph={graph}
         byId={byId}

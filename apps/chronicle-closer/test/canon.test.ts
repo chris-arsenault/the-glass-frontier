@@ -187,6 +187,8 @@ describe('collectScenes', () => {
 
     const scenes = collectScenes(turns, {
       id: 'scene-2',
+      progress: 0,
+      progressTarget: 4,
       startedAtTurn: 2,
       subject: TAVERN_NAME,
       subjectKind: 'installation',

@@ -1,4 +1,4 @@
-import type { ChronicleBeat, Chronicle } from '@glass-frontier/dto';
+import type { ChronicleBeat, Chronicle, SceneLedger } from '@glass-frontier/dto';
 import React, { useMemo, useState, useEffect } from 'react';
 
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
@@ -157,6 +157,45 @@ type WrapTargetPanelProps = {
   currentTurn: number;
 };
 
+/**
+ * The GM's working memory of the current scene, surfaced read-only: what kind
+ * of place this is, who is present, and what just happened. Beta window into
+ * the state that keeps the narration consistent.
+ */
+const SceneNotebookPanel = ({ ledger }: { ledger: SceneLedger | null }): React.JSX.Element | null => {
+  if (ledger === null) {
+    return null;
+  }
+  return (
+    <div>
+      <h3 className="panel-label">GM Notebook</h3>
+      {ledger.place !== null ? (
+        <p className="scene-notebook-place">
+          <strong>{ledger.place.name}</strong> · {ledger.place.kind}
+          <br />
+          {ledger.place.detail}
+        </p>
+      ) : null}
+      {ledger.present.length > 0 ? (
+        <ul className="scene-notebook-list">
+          {ledger.present.map((presence) => (
+            <li key={presence.name}>
+              <strong>{presence.name}</strong> — {presence.detail}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {ledger.interactions.length > 0 ? (
+        <ul className="scene-notebook-list scene-notebook-interactions">
+          {ledger.interactions.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+};
+
 const WrapTargetPanel = ({ currentTurn, targetEndTurn }: WrapTargetPanelProps): React.JSX.Element | null => {
   if (!targetEndTurn) {
     return null;
@@ -254,6 +293,8 @@ export function ChronicleOverview({
       <AnchorEntityPanel anchorEntity={anchorEntity} />
 
       <BeatsPanel beats={beats} focusedBeatId={focusedBeatId} />
+
+      <SceneNotebookPanel ledger={chronicle.sceneLedger} />
 
       <WrapTargetPanel targetEndTurn={chronicle.targetEndTurn} currentTurn={turnSequence} />
     </section>

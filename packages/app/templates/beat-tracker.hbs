@@ -1,22 +1,7 @@
-Track how this turn affects long-term beats. Beats = **multi-turn arcs**, not one-off tasks. Output **JSON only**.
+Track how this turn affects the chronicle's beats. A beat is a multi-turn arc — a goal the story keeps returning to — and the current GM narration is the authoritative account of what just happened; the intent's earlier beat directive is advisory. Use RECENT-EVENTS to interpret short references, and output JSON only, in the structured format provided.
 
-**Advance**: Narration meaningfully progresses the beat's objective.
+Advance a beat (`changeKind: "advance"`) when the narration meaningfully progresses its objective. Resolve a beat (`changeKind: "resolve"`) when its objective is achieved (`status: "succeeded"`) or definitively lost (`status: "failed"`); a resolve always carries one of those two statuses. Abandon a beat (`changeKind: "abandon"`) when the player has clearly moved against its objective or its premise has stopped being true in the fiction. The BEATS section shows each beat's `lastProgressTurn` beside the current turn: a beat that is merely quiet while the player pursues something compatible stays open, and abandonment is reserved for goals the story has actually walked away from.
 
-Treat the current GM narration as the authoritative result of the turn. The intent's earlier beat directive is advisory. Use RECENT-EVENTS to interpret short references, and update a beat whenever the narrated outcome advances, disrupts, succeeds at, fails, supersedes, or abandons its objective.
+Spawn a new beat only when the narration creates a persistent multi-turn objective; when unsure, hold off. A founding beat often bundles several goals — when the story differentiates them, spawn the sharper goal and let it supersede the compound one. Set `supersedes` to an existing beat's id when the new beat is where that goal drifted, the same thread of story reshaped, and leave it null for a genuinely parallel goal: superseding means replacement rather than coexistence.
 
-**Resolve** when:
-1. Objective achieved → `changeKind: "resolve"`, `status: "succeeded"`
-2. Objective failed → `changeKind: "resolve"`, `status: "failed"`
-
-When `changeKind: "resolve"`, MUST set `status` to `"succeeded"` or `"failed"`.
-
-**Abandon**: `changeKind: "abandon"` when the player has clearly moved against the beat's objective or its premise is no longer true in the fiction. Dormancy is not abandonment: the BEATS section shows each beat's `lastProgressTurn` and the current turn, and a beat that is merely quiet while the player pursues something compatible stays open. Abandon only what the story has actually walked away from.
-
-**Spawn**: Only if narration creates a **persistent, multi-turn** objective. If unsure → don't spawn.
-When the new objective is where an existing beat's goal drifted — the same thread of story, reshaped — set `supersedes` to that beat's `id`; it will be closed as superseded by the new one. Leave `supersedes` null for genuinely parallel goals: superseding is for replacement, not coexistence.
-
-**newBeat**: `{title, description, supersedes}` when spawning. Title ≤6 words, description ≤240 chars, `supersedes` an existing beat `id` or null.
-
-**updates**: Changed beats only. `beatId` MUST be the `id` field of a beat exactly as shown in the BEATS section. `changeKind`: "advance"/"resolve"/"abandon". `status`: "in_progress"/"succeeded"/"failed"/"abandoned"/null. Empty array if none.
-
-**focusBeatId**: The `id` of the most affected beat; `null` if none exist.
+`newBeat` is `{title, description, supersedes}` with a title of at most six words and a description of at most 240 characters. `updates` lists only beats that changed, each `beatId` copied exactly from the BEATS section, `changeKind` one of advance, resolve, or abandon, and `status` one of in_progress, succeeded, failed, abandoned, or null. `focusBeatId` names the most affected beat and is null when no beats exist.

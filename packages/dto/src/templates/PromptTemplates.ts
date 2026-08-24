@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PromptTemplateIds = [
   'action-resolver',
   'wrap-resolver',
+  'beat-reconciler',
   'beat-tracker',
   'canon-extractor',
   'canon-resolver',
@@ -26,6 +27,7 @@ export const PromptTemplateIds = [
   'scene-chase',
   'scene-dialog',
   'scene-hunt',
+  'scene-ledger',
   'scene-search',
 ] as const;
 
@@ -47,6 +49,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'action-resolver',
     label: 'Action Resolver',
     officialObjectKey: 'official/action-resolver.hbs',
+    supportsVariants: true,
+  },
+  'beat-reconciler': {
+    description: 'Gives every still-open beat a final disposition when a chronicle closes.',
+    id: 'beat-reconciler',
+    label: 'Beat Reconciler',
+    officialObjectKey: 'official/beat-reconciler.hbs',
     supportsVariants: true,
   },
   'beat-tracker': {
@@ -208,6 +217,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'scene-hunt',
     label: 'Scene: Hunt',
     officialObjectKey: 'official/scene-hunt.hbs',
+    supportsVariants: true,
+  },
+  'scene-ledger': {
+    description: 'Maintains the GM working memory of the current scene: place, presences, interactions.',
+    id: 'scene-ledger',
+    label: 'Scene Ledger',
+    officialObjectKey: 'official/scene-ledger.hbs',
     supportsVariants: true,
   },
   'scene-search': {

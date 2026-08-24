@@ -1,6 +1,8 @@
 import {
+  SCENE_CLOCK_TARGET,
   SceneChange,
   type ChronicleScene,
+  type OutcomeTier,
   type SceneContext,
   type SceneOutcome,
 } from '@glass-frontier/dto';
@@ -33,6 +35,7 @@ const missingCandidateTransition = (candidate: unknown): SceneTransition =>
 export function resolveEffectiveScene(input: {
   activeScene: ChronicleScene | null;
   candidate: unknown;
+  locationName: string;
   turnId: string;
   turnSequence: number;
 }): {
@@ -67,6 +70,9 @@ export function resolveEffectiveScene(input: {
     effectiveScene: {
       ...sceneChange,
       id: `scene:${input.turnId}`,
+      location: input.locationName,
+      progress: 0,
+      progressTarget: SCENE_CLOCK_TARGET,
       startedAtTurn: input.turnSequence,
     },
     replacedSceneId: input.activeScene?.id ?? null,
@@ -74,6 +80,35 @@ export function resolveEffectiveScene(input: {
     transition: input.activeScene === null ? 'started' : 'replaced',
   };
 }
+
+const CLOCK_STEPS = new Map<OutcomeTier, number>([
+  ['advance', 1],
+  ['breakthrough', 2],
+  ['collapse', -2],
+  ['regress', -1],
+  ['stall', 0],
+]);
+
+/**
+ * Moves the scene clock by a check's outcome, clamped to [0, target]. The
+ * clock is the encounter's shared sense of how close it is to resolving:
+ * both the player and the completion judge see the same number.
+ */
+export function advanceSceneClock(
+  scene: ChronicleScene,
+  outcomeTier: OutcomeTier | undefined
+): ChronicleScene {
+  if (outcomeTier === undefined) {
+    return scene;
+  }
+  const target = scene.progressTarget ?? SCENE_CLOCK_TARGET;
+  const step = CLOCK_STEPS.get(outcomeTier) ?? 0;
+  const next = Math.max(0, Math.min(target, (scene.progress ?? 0) + step));
+  return next === scene.progress ? scene : { ...scene, progress: next };
+}
+
+export const isSceneClockFull = (scene: ChronicleScene): boolean =>
+  (scene.progress ?? 0) >= (scene.progressTarget ?? SCENE_CLOCK_TARGET);
 
 export function buildSceneContext(
   scene: ChronicleScene | null,
@@ -85,7 +120,7 @@ export function buildSceneContext(
   }
   return {
     outcome,
-    ...(outcome === 'complete' && outcomeReason !== null
+    ...(outcome !== 'continue' && outcomeReason !== null
       ? { outcomeReason }
       : {}),
     sceneId: scene.id,
