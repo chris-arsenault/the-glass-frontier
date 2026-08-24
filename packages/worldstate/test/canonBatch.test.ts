@@ -298,6 +298,64 @@ describe('Canon batch commit', () => {
     expect(npc?.facts).toEqual({ born: 2410, occupation: 'Deep reader' });
   });
 
+  it('stores descriptive identity on entities and relationships and reads it back', async () => {
+    const sourceKey = 'tsonu:dwarves-test';
+    const appearance = 'Compact and heavy-jointed.';
+    const expression = 'Answers without instruments.';
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            descriptiveIdentity: { appearance },
+            externalKey: sourceKey,
+            identityProvenance: {
+              appearance: [
+                {
+                  key: 'appearance',
+                  operation: 'extend',
+                  sourceExternalKey: sourceKey,
+                  sourceKey: 'appearance',
+                  sourceSlot: 'species',
+                  suppressed: false,
+                  text: appearance,
+                },
+              ],
+            },
+            identitySources: [{ slot: 'species', sourceExternalKey: sourceKey, via: 'direct' }],
+            kind: 'npc',
+            name: 'Orr',
+            ref: 'npc',
+            subkind: 'specialist',
+          },
+          { kind: 'concept', name: 'Resonance Field', ref: 'field' },
+        ],
+        relationships: [
+          {
+            descriptiveIdentity: { expression },
+            dst: { ref: 'field' },
+            identityLocal: { expression: { operation: 'extend', text: expression } },
+            relationship: 'attuned_to',
+            src: { ref: 'npc' },
+          },
+        ],
+      })
+    );
+    const npc = await worldState.world.getEntity({ id: result.entityIdsByRef.npc });
+
+    expect(npc?.descriptiveIdentity).toEqual({ appearance });
+    expect(npc?.identitySources).toEqual([
+      { slot: 'species', sourceExternalKey: sourceKey, via: 'direct' },
+    ]);
+    expect(npc?.identityProvenance?.appearance?.[0]).toMatchObject({
+      sourceSlot: 'species',
+      suppressed: false,
+    });
+    const link = npc?.links.find((each) => each.relationship === 'attuned_to');
+    expect(link?.descriptiveIdentity).toEqual({ expression });
+    expect(link?.identityLocal).toEqual({ expression: { operation: 'extend', text: expression } });
+    expect(link?.props).toBeUndefined();
+  });
+
   it('re-ingests by external key rather than duplicating', async () => {
     const first = await worldState.world.commitBatch(
       proposal({

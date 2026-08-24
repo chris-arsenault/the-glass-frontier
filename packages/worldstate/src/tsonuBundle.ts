@@ -2,6 +2,10 @@ import {
   CanonProposal,
   type GmNote,
   type HardStateFacts,
+  type IdentityContribution,
+  type IdentityLocal,
+  type IdentityProvenance,
+  type IdentitySourceAssignment,
   type PlayableRole,
 } from '@glass-frontier/dto';
 
@@ -26,7 +30,39 @@ export type TsonuFact = {
   links?: Array<{ title: string }>;
 };
 
-export type TsonuConnection = {
+export type TsonuIdentitySource = {
+  slot: string;
+  id: string;
+  via: 'direct' | 'relation';
+  relation?: string | null;
+};
+
+export type TsonuIdentityLocalValue = {
+  operation: 'extend' | 'override';
+  text: string;
+};
+
+export type TsonuIdentityContribution = {
+  key: string;
+  text: string;
+  operation: 'extend' | 'override' | 'replace';
+  owner_type: string;
+  owner_id: string;
+  source_slot?: string | null;
+  source_id?: string | null;
+  source_key?: string | null;
+  suppressed: boolean;
+};
+
+/** The descriptive-identity surface shared by entries and connections. */
+export type TsonuIdentityOwner = {
+  descriptive_identity?: Record<string, string>;
+  identity_sources?: TsonuIdentitySource[];
+  identity_local?: Record<string, TsonuIdentityLocalValue>;
+  identity_provenance?: Record<string, TsonuIdentityContribution[]>;
+};
+
+export type TsonuConnection = TsonuIdentityOwner & {
   direction: 'incoming' | 'outgoing';
   relation: string;
   entry_id: string;
@@ -54,7 +90,7 @@ export type TsonuRouteGeometry = {
   paths: Array<{ id: string; through: string[] }>;
 };
 
-export type TsonuEntry = {
+export type TsonuEntry = TsonuIdentityOwner & {
   id: string;
   title: string;
   kind: string;
@@ -133,6 +169,7 @@ const buildEntity = (entry: TsonuEntry): unknown => ({
   externalKey: key(entry.id),
   facts: buildFacts(entry),
   gmNotes: buildGmNotes(entry),
+  ...buildIdentity(entry),
   isArticle: entry.is_article,
   kind: entry.kind,
   name: entry.title,
@@ -152,6 +189,65 @@ const buildGmNotes = (entry: TsonuEntry): GmNote[] | undefined => {
   const notes = (entry.gm_notes ?? []).filter((note) => note.text.trim().length > 0);
   return notes.length > 0 ? notes : undefined;
 };
+
+/**
+ * The descriptive-identity surface of an entry or connection: the resolved
+ * snapshot, the source-slot assignments (rewritten to external keys so the
+ * inheritance graph survives import), the authored local operations, and the
+ * per-key provenance. Inherited prose stays out of the local dictionary.
+ */
+const buildIdentity = (
+  owner: TsonuIdentityOwner
+): {
+  descriptiveIdentity?: Record<string, string>;
+  identityLocal?: IdentityLocal;
+  identityProvenance?: IdentityProvenance;
+  identitySources?: IdentitySourceAssignment[];
+} => {
+  const resolved = owner.descriptive_identity ?? {};
+  const sources = (owner.identity_sources ?? []).map((source) => ({
+    ...(source.relation === null || source.relation === undefined
+      ? {}
+      : { relation: source.relation }),
+    slot: source.slot,
+    sourceExternalKey: key(source.id),
+    via: source.via,
+  }));
+  const local: IdentityLocal = Object.fromEntries(
+    Object.entries(owner.identity_local ?? {}).map(([name, value]) => [
+      name,
+      { operation: value.operation, text: value.text },
+    ])
+  );
+  const provenance: IdentityProvenance = Object.fromEntries(
+    Object.entries(owner.identity_provenance ?? {}).map(([name, contributions]) => [
+      name,
+      contributions.map((contribution) => buildContribution(contribution)),
+    ])
+  );
+  return {
+    ...(Object.keys(resolved).length > 0 ? { descriptiveIdentity: resolved } : {}),
+    ...(Object.keys(local).length > 0 ? { identityLocal: local } : {}),
+    ...(Object.keys(provenance).length > 0 ? { identityProvenance: provenance } : {}),
+    ...(sources.length > 0 ? { identitySources: sources } : {}),
+  };
+};
+
+const buildContribution = (contribution: TsonuIdentityContribution): IdentityContribution => ({
+  key: contribution.key,
+  operation: contribution.operation,
+  ...(contribution.source_id === null || contribution.source_id === undefined
+    ? {}
+    : { sourceExternalKey: key(contribution.source_id) }),
+  ...(contribution.source_key === null || contribution.source_key === undefined
+    ? {}
+    : { sourceKey: contribution.source_key }),
+  ...(contribution.source_slot === null || contribution.source_slot === undefined
+    ? {}
+    : { sourceSlot: contribution.source_slot }),
+  suppressed: contribution.suppressed,
+  text: contribution.text,
+});
 
 /**
  * Authored spatial positions, with entity references rewritten to the same
@@ -268,6 +364,7 @@ const buildRelationships = (entry: TsonuEntry): unknown[] =>
     )
     .map((connection) => ({
       dst: { externalKey: key(connection.entry_id) },
+      ...buildIdentity(connection),
       live: connection.live,
       props:
         connection.properties === null || connection.properties === undefined

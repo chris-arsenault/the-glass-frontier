@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  DescriptiveIdentity,
   GmNote,
   HardStateFacts,
   HardStateKind,
@@ -29,6 +30,8 @@ export type ContextSliceLore = z.infer<typeof ContextSliceLore>;
  */
 export const ContextSliceEntity = z.object({
   description: z.string().optional(),
+  /** The resolved descriptive-identity snapshot: how this entity looks, dresses, carries, acts. */
+  descriptiveIdentity: DescriptiveIdentity.optional(),
   facts: HardStateFacts.default({}),
   /** How to run this entity. Its consequence reaches the table; its wording does not. */
   gmNotes: z.array(GmNote).default([]),

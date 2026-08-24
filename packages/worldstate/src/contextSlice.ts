@@ -1,7 +1,6 @@
 import type {
   ContextSliceEntity,
   ContextSliceInput,
-  GmNote,
   HardStateKind,
   HardStateProminence,
   HardStateStatus,
@@ -9,6 +8,7 @@ import type {
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
+import type { EntityPropsEnvelope } from './canonProps';
 import { normalizeTags } from './utils';
 
 type SliceRow = {
@@ -20,7 +20,7 @@ type SliceRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
-  props: { facts?: Record<string, string | number>; gmNotes?: GmNote[] } | null;
+  props: EntityPropsEnvelope | null;
   hops: number;
   reach: number;
   tag_overlap: number;
@@ -140,6 +140,34 @@ const PROMINENCE_RANK: Record<HardStateProminence, number> = {
   renowned: 3,
 };
 
+const toSliceEntity = (row: SliceRow): ContextSliceEntity => {
+  const props = row.props ?? {};
+  return {
+    description: row.description ?? undefined,
+    descriptiveIdentity: props.descriptiveIdentity,
+    facts: props.facts ?? {},
+    gmNotes: props.gmNotes ?? [],
+    hops: row.hops,
+    id: row.id,
+    kind: row.kind,
+    lore: (row.lore ?? []).map((fragment) => ({
+      slug: fragment.slug,
+      summary: fragment.summary,
+      tags: fragment.tags,
+      title: fragment.title,
+    })),
+    name: row.name,
+    prominence: row.prominence,
+    reach: row.reach,
+    score: row.score,
+    slug: row.slug,
+    status: row.status ?? undefined,
+    subkind: row.subkind ?? undefined,
+    tags: row.tags ?? [],
+    unwritten: row.unwritten,
+  };
+};
+
 /**
  * Assembles what the GM should know about the world right now.
  * One query, one round trip.
@@ -169,28 +197,6 @@ export class ContextSliceReader {
       input.limit,
     ]);
 
-    return result.rows.map((row) => ({
-      description: row.description ?? undefined,
-      facts: row.props?.facts ?? {},
-      gmNotes: row.props?.gmNotes ?? [],
-      hops: row.hops,
-      id: row.id,
-      kind: row.kind,
-      lore: (row.lore ?? []).map((fragment) => ({
-        slug: fragment.slug,
-        summary: fragment.summary,
-        tags: fragment.tags,
-        title: fragment.title,
-      })),
-      name: row.name,
-      prominence: row.prominence,
-      reach: row.reach,
-      score: row.score,
-      slug: row.slug,
-      status: row.status ?? undefined,
-      subkind: row.subkind ?? undefined,
-      tags: row.tags ?? [],
-      unwritten: row.unwritten,
-    }));
+    return result.rows.map((row) => toSliceEntity(row));
   }
 }

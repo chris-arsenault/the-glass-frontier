@@ -8,11 +8,10 @@ import type {
   HardStateStatus,
   HardStateSubkind,
   PlayableRole,
-  RouteGeometry,
-  SpatialPosition,
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
+import type { EdgePropsEnvelope, EntityPropsEnvelope } from './canonProps';
 import { isEntityOfferable } from './entityOfferability';
 import type { WorldNeighbor } from './types';
 import { now } from './utils';
@@ -50,11 +49,7 @@ type EntityRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
-  props: {
-    facts?: Record<string, string | number>;
-    positions?: SpatialPosition[];
-    routeGeometry?: RouteGeometry;
-  } | null;
+  props: EntityPropsEnvelope | null;
   external_key: string | null;
   dm: boolean;
   is_article: boolean;
@@ -71,12 +66,7 @@ type LinkRow = {
   dst_id: string;
   type: HardStateLink['relationship'];
   strength: number | null;
-  props:
-    | ({ live?: boolean; since?: number; until?: number } & Record<
-        string,
-        string | number | boolean | undefined
-      >)
-    | null;
+  props: (EdgePropsEnvelope & Record<string, unknown>) | null;
 };
 type NeighborRow = EntityRow & {
   neighbor_id: string;
@@ -197,10 +187,14 @@ const rowTimestamp = (value: Date | null): number => value?.getTime() ?? now();
 const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   createdAt: rowTimestamp(row.created_at),
   description: optional(row.description),
+  descriptiveIdentity: row.props?.descriptiveIdentity,
   dm: row.dm,
   externalKey: optional(row.external_key),
   facts: rowFacts(row),
   id: row.id,
+  identityLocal: row.props?.identityLocal,
+  identityProvenance: row.props?.identityProvenance,
+  identitySources: row.props?.identitySources ?? [],
   isArticle: row.is_article,
   isLocation: row.is_location,
   kind: row.kind,
@@ -219,8 +213,16 @@ const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   veilTagline: optional(row.veil_tagline),
 });
 
-/** Edge props minus the temporal envelope: the relation's typed properties. */
-const LINK_ENVELOPE_KEYS = new Set(['live', 'since', 'until']);
+/** Edge props minus the temporal and identity envelope: the relation's typed properties. */
+const LINK_ENVELOPE_KEYS = new Set([
+  'descriptiveIdentity',
+  'identityLocal',
+  'identityProvenance',
+  'identitySources',
+  'live',
+  'since',
+  'until',
+]);
 const linkProps = (row: LinkRow): HardStateLinkProps | undefined => {
   if (row.props === null) {
     return undefined;
@@ -233,6 +235,10 @@ const linkProps = (row: LinkRow): HardStateLinkProps | undefined => {
 };
 
 const linkDetails = (row: LinkRow): Omit<HardStateLink, 'direction' | 'relationship' | 'targetId'> => ({
+  descriptiveIdentity: row.props?.descriptiveIdentity,
+  identityLocal: row.props?.identityLocal,
+  identityProvenance: row.props?.identityProvenance,
+  identitySources: row.props?.identitySources,
   live: row.props?.live ?? true,
   props: linkProps(row),
   since: row.props?.since,

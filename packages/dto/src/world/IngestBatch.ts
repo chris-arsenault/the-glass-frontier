@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  DescriptiveIdentity,
   GmNote,
   HardStateFacts,
   HardStateKind,
@@ -8,6 +9,9 @@ import {
   HardStateProminence,
   HardStateStatus,
   HardStateSubkind,
+  IdentityLocal,
+  IdentityProvenance,
+  IdentitySourceAssignment,
   PlayableRole,
   RelationshipType,
   RouteGeometry,
@@ -36,6 +40,8 @@ export type EntityRef = z.infer<typeof EntityRef>;
 
 export const ProposedEntity = z.object({
   description: z.string().max(2000).optional(),
+  /** The resolved descriptive-identity snapshot from the source canon. */
+  descriptiveIdentity: DescriptiveIdentity.optional(),
   dm: z.boolean().optional(),
   /** Stable identity from the source world; makes re-ingest an update. */
   externalKey: z.string().min(1).optional(),
@@ -45,6 +51,12 @@ export const ProposedEntity = z.object({
   gmNotes: z.array(GmNote).max(3).optional(),
   /** Explicit id, for a seed that pins its own identifiers. */
   id: z.string().uuid().optional(),
+  /** Authored local identity operations; inherited prose is never stamped here. */
+  identityLocal: IdentityLocal.optional(),
+  /** Per-key provenance of the resolved identity, including suppressed rows. */
+  identityProvenance: IdentityProvenance.optional(),
+  /** Identity source-slot assignments — the preserved inheritance graph. */
+  identitySources: z.array(IdentitySourceAssignment).optional(),
   isArticle: z.boolean().optional(),
   /** Overrides the kind's default when this particular entity is (or is not) a place. */
   isLocation: z.boolean().optional(),
@@ -67,7 +79,12 @@ export const ProposedEntity = z.object({
 export type ProposedEntity = z.infer<typeof ProposedEntity>;
 
 export const ProposedRelationship = z.object({
+  /** The relationship's resolved descriptive identity, when the source declares one. */
+  descriptiveIdentity: DescriptiveIdentity.optional(),
   dst: EntityRef,
+  identityLocal: IdentityLocal.optional(),
+  identityProvenance: IdentityProvenance.optional(),
+  identitySources: z.array(IdentitySourceAssignment).optional(),
   /** Whether this relationship is active in the source canon's present. */
   live: z.boolean().optional(),
   /** Typed relation properties declared by the source schema (bearings, frames…). */

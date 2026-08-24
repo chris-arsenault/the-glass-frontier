@@ -18,6 +18,7 @@ const entity = (
   dm: false,
   facts: {},
   id,
+  identitySources: [],
   isArticle: false,
   isLocation: true,
   kind: 'geographic_location',

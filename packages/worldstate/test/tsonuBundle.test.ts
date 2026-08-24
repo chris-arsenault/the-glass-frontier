@@ -281,6 +281,86 @@ describe('buildTsonuProposal', () => {
     });
   });
 
+  it('carries descriptive identity, rewriting source references to external keys', () => {
+    const appearance = 'Compact and heavy-jointed.';
+    const proposal = buildTsonuProposal(
+      bundle([
+        entry({
+          descriptive_identity: { appearance },
+          id: 'tess',
+          identity_local: { appearance: { operation: 'extend', text: 'Wash-worn hands.' } },
+          identity_provenance: {
+            appearance: [
+              {
+                key: 'appearance',
+                operation: 'extend',
+                owner_id: 'tess',
+                owner_type: 'entity',
+                source_id: 'dwarves',
+                source_key: 'appearance',
+                source_slot: 'species',
+                suppressed: false,
+                text: appearance,
+              },
+            ],
+          },
+          identity_sources: [{ id: 'dwarves', slot: 'species', via: 'direct' }],
+          kind: 'npc',
+          subkind: null,
+          title: 'Tess',
+        }),
+      ])
+    );
+
+    expect(proposal.entities[0]).toMatchObject({
+      descriptiveIdentity: { appearance },
+      identityLocal: { appearance: { operation: 'extend', text: 'Wash-worn hands.' } },
+      identityProvenance: {
+        appearance: [
+          {
+            key: 'appearance',
+            operation: 'extend',
+            sourceExternalKey: 'tsonu:dwarves',
+            sourceKey: 'appearance',
+            sourceSlot: 'species',
+            suppressed: false,
+            text: appearance,
+          },
+        ],
+      },
+      identitySources: [{ slot: 'species', sourceExternalKey: 'tsonu:dwarves', via: 'direct' }],
+    });
+  });
+
+  it('carries relationship descriptive identity on the mapped relationship', () => {
+    const expression = 'Moves as one weight.';
+    const proposal = buildTsonuProposal(
+      bundle([
+        entry({
+          connections: [
+            {
+              descriptive_identity: { expression },
+              direction: 'outgoing',
+              entry_id: 'carom',
+              identity_local: { expression: { operation: 'extend', text: expression } },
+              live: true,
+              relation: 'attuned_to',
+            },
+          ],
+          id: 'sarn',
+          title: 'Sarn',
+        }),
+        entry({ id: 'carom', title: 'Carom' }),
+      ])
+    );
+
+    expect(proposal.relationships[0]).toMatchObject({
+      descriptiveIdentity: { expression },
+      identityLocal: { expression: { operation: 'extend', text: expression } },
+      relationship: 'attuned_to',
+    });
+  });
+
   it('rejects a bundle from before canon metadata became required', () => {
     expect(() => buildTsonuProposal({ ...bundle([]), schema_version: 5 })).toThrow(
       'does not include canon metadata'

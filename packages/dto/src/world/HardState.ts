@@ -110,6 +110,52 @@ export const RouteGeometry = z.object({
 });
 export type RouteGeometry = z.infer<typeof RouteGeometry>;
 
+/**
+ * The resolved descriptive-identity snapshot: stable identity keys to composed
+ * text, inherited from source entries and finished by local operations.
+ */
+export const DescriptiveIdentity = z.record(z.string(), z.string().min(1));
+export type DescriptiveIdentity = z.infer<typeof DescriptiveIdentity>;
+
+/** One identity source-slot assignment, referencing the source entry by external key. */
+export const IdentitySourceAssignment = z.object({
+  /** The source relation verb, present when the slot derives from a live relation. */
+  relation: z.string().min(1).optional(),
+  slot: z.string().min(1),
+  sourceExternalKey: z.string().min(1),
+  /** How the source was selected: an authored reference or a live relation. */
+  via: z.enum(['direct', 'relation']),
+});
+export type IdentitySourceAssignment = z.infer<typeof IdentitySourceAssignment>;
+
+/** An authored local identity operation on one key. */
+export const IdentityLocalValue = z.object({
+  operation: z.enum(['extend', 'override']),
+  text: z.string().min(1),
+});
+export type IdentityLocalValue = z.infer<typeof IdentityLocalValue>;
+
+/** The authored local dictionary only — inherited prose is never stamped here. */
+export const IdentityLocal = z.record(z.string(), IdentityLocalValue);
+export type IdentityLocal = z.infer<typeof IdentityLocal>;
+
+/** One provenance row: where a piece of resolved identity text came from. */
+export const IdentityContribution = z.object({
+  key: z.string().min(1),
+  operation: z.enum(['extend', 'override', 'replace']),
+  /** Absent on local operations; the owner itself supplied the text. */
+  sourceExternalKey: z.string().min(1).optional(),
+  /** The key on the source entry the text was projected from. */
+  sourceKey: z.string().min(1).optional(),
+  sourceSlot: z.string().min(1).optional(),
+  suppressed: z.boolean(),
+  text: z.string().min(1),
+});
+export type IdentityContribution = z.infer<typeof IdentityContribution>;
+
+export const IdentityProvenance = z.record(z.string(), z.array(IdentityContribution));
+export type IdentityProvenance = z.infer<typeof IdentityProvenance>;
+
 /** Typed relation properties declared by the source schema (bearings, frames…). */
 export const HardStateLinkProps = z.record(
   z.string(),
@@ -118,7 +164,12 @@ export const HardStateLinkProps = z.record(
 export type HardStateLinkProps = z.infer<typeof HardStateLinkProps>;
 
 export const HardStateLink = z.object({
+  /** The relationship's resolved descriptive identity, when the source declares one. */
+  descriptiveIdentity: DescriptiveIdentity.optional(),
   direction: z.enum(['out', 'in']),
+  identityLocal: IdentityLocal.optional(),
+  identityProvenance: IdentityProvenance.optional(),
+  identitySources: z.array(IdentitySourceAssignment).optional(),
   /** Whether the relationship is active in the source canon's present. */
   live: z.boolean().default(true),
   /** Typed relation properties, e.g. adjacency bearing and frame. */
@@ -140,12 +191,20 @@ export const HardState = z.object({
     .nonnegative()
     .default(() => Date.now()),
   description: z.string().max(2000).optional(),
+  /** The resolved descriptive-identity snapshot from the source canon. */
+  descriptiveIdentity: DescriptiveIdentity.optional(),
   /** Hidden canon that player-facing Atlas surfaces must not expose. */
   dm: z.boolean().default(false),
   /** Stable identity from the source world, e.g. `tsonu:kaleidos`. */
   externalKey: z.string().min(1).optional(),
   facts: HardStateFacts.default({}),
   id: z.string().min(1),
+  /** Authored local identity operations; inherited prose is never stamped here. */
+  identityLocal: IdentityLocal.optional(),
+  /** Per-key provenance of the resolved identity, including suppressed rows. */
+  identityProvenance: IdentityProvenance.optional(),
+  /** Identity source-slot assignments — the preserved inheritance graph. */
+  identitySources: z.array(IdentitySourceAssignment).default([]),
   /** A reference page rather than an entity in the game-world graph. */
   isArticle: z.boolean().default(false),
   /**

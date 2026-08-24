@@ -18,6 +18,7 @@ const entity = (
   externalKey: `tsonu:${id}`,
   facts: {},
   id,
+  identitySources: [],
   isArticle: false,
   isLocation: true,
   kind: 'geographic_location',

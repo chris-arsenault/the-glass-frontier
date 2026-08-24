@@ -28,7 +28,14 @@ const seedWorld = async (): Promise<Record<string, string>> => {
     proposal({
       entities: [
         { kind: 'faction', name: 'Ash Cartel', ref: 'cartel', status: 'active', subkind: 'company' },
-        { kind: 'npc', name: 'Vell', ref: 'npc', status: 'alive', subkind: 'leader' },
+        {
+          descriptiveIdentity: { appearance: 'Tall, with a broker’s stillness.' },
+          kind: 'npc',
+          name: 'Vell',
+          ref: 'npc',
+          status: 'alive',
+          subkind: 'leader',
+        },
         { kind: 'geographic_location', name: 'Cinder Row', ref: 'row', status: 'inhabited', subkind: 'region' },
         { kind: 'geographic_location', name: 'Far Quay', ref: 'quay', status: 'inhabited', subkind: 'region' },
         { kind: 'artifact', name: 'Ash Seal', ref: 'relic', status: 'intact', subkind: 'relic' },
@@ -76,6 +83,9 @@ describe('Context slice', () => {
     const reached = slice.map((entry) => entry.id);
     expect(reached).toContain(ids.npc);
     expect(reached).toContain(ids.row);
+    expect(slice.find((entry) => entry.id === ids.npc)?.descriptiveIdentity).toEqual({
+      appearance: 'Tall, with a broker’s stillness.',
+    });
   });
 
   it('ranks a defining relationship above an incidental one at the same distance', async () => {
