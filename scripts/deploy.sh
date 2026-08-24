@@ -11,6 +11,10 @@ cd "${repo_root}"
 pnpm install --frozen-lockfile
 pnpm run build
 
+# The prompt-template seed is generated from packages/app/templates, so it has
+# to exist before the migrations directory is uploaded.
+pnpm run db:generate-seed
+
 migrations_bucket="$(aws ssm get-parameter \
   --name /ahara/db/migrations-bucket \
   --query Parameter.Value \

@@ -62,6 +62,8 @@ export type EntitySnippet = {
     tags: string[];
   }>;
   score: number;
+  /** A veiled shell nothing has filled in yet: a hook the GM may invent on. */
+  unwritten: boolean;
 };
 
 export type EntityContextSlice = {

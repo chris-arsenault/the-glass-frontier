@@ -38,9 +38,7 @@ class BeatDetectorNode extends LlmClassifierNode<BeatDirective> {
         context.chronicleState.chronicle.beats.map((beat) => beat.id)
       ),
       schemaName: 'intent_beat_detector',
-      shouldRun: (context) =>
-        context.playerIntent !== undefined
-        && context.chronicleState.chronicle.beatsEnabled !== false,
+      shouldRun: (context) => context.playerIntent !== undefined,
       telemetryTag: 'llm.intent-beat-detector'
     });
   }

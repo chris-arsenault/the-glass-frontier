@@ -59,6 +59,17 @@ const userMessage = (text: string): LLMRequest['input'][number] => ({
   role: 'user',
 });
 
+const beatsPayload = (chronicle: ChronicleSnapshot['chronicle']): LLMRequest['input'][number] =>
+  developerMessage({
+    beats: chronicle.beats.map((beat) => ({
+      description: beat.description,
+      id: beat.id,
+      status: beat.status,
+      supersededBy: beat.supersededBy ?? null,
+      title: beat.title,
+    })),
+  });
+
 const rosterPayload = (
   roster: RosterEntry[],
   sceneSubjects: ReadonlySet<string>
@@ -294,6 +305,7 @@ class CanonPipeline {
         input: [
           rosterPayload(roster, sceneSubjectNames(scenes)),
           developerMessage({ scenes }),
+          beatsPayload(chronicle),
           developerMessage({ transcript: buildTurnArtifacts(snapshot.turns).transcript }),
           userMessage(`Archive the chronicle '${chronicle.title}' now.`),
         ],

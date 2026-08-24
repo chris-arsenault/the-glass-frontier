@@ -26,6 +26,7 @@ type SliceRow = {
   score: number;
   tags: string[] | null;
   lore: Array<{ slug: string; summary: string; tags: string[]; title: string }> | null;
+  unwritten: boolean;
 };
 
 /**
@@ -41,7 +42,12 @@ type SliceRow = {
  *   anchor      +2.0 for the chronicle's anchor entity
  *   focus       +1.0 for an entity the recent turns leaned on
  *   tag overlap +0.4 per shared tag with the chronicle's active tags
- *   prominence  +0.1 per tier, so a famous name breaks ties toward itself
+ *   prominence  +0.01 per tier, only enough to break close relevance ties
+ *
+ * `unwritten` marks a veiled shell no chronicle has filled in yet: the source
+ * published it as a hook line with no detail behind it, and no play lore has
+ * accumulated on it. The first chronicle to establish something writes a play
+ * fragment, and the entity stops being unwritten from the next turn onward.
  */
 const CONTEXT_SLICE_QUERY = `
 WITH RECURSIVE
@@ -90,8 +96,12 @@ SELECT e.id, e.slug, e.kind, e.subkind, e.name, e.description, e.prominence,
     + CASE WHEN e.id = $1::uuid THEN 2.0 ELSE 0 END
     + CASE WHEN e.id = ANY($2::uuid[]) THEN 1.0 ELSE 0 END
     + s.tag_overlap * 0.4
-    + wp.rank * 0.1
+    + wp.rank * 0.01
   )::real AS score,
+  (e.veiled AND NOT EXISTS (
+    SELECT 1 FROM lore_fragment lf
+    WHERE lf.entity_id = e.id AND lf.source = 'play'
+  )) AS unwritten,
   ARRAY(
     SELECT DISTINCT tag FROM lore_fragment lf, unnest(lf.tags) AS tag
     WHERE lf.entity_id = e.id
@@ -179,6 +189,7 @@ export class ContextSliceReader {
       status: row.status ?? undefined,
       subkind: row.subkind ?? undefined,
       tags: row.tags ?? [],
+      unwritten: row.unwritten,
     }));
   }
 }

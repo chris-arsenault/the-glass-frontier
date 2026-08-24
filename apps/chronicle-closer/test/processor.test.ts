@@ -50,7 +50,6 @@ const character: Character = {
 const chronicle: Chronicle = {
   activeScene: null,
   beats: [],
-  beatsEnabled: true,
   characterId: character.id,
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {

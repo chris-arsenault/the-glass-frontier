@@ -163,7 +163,6 @@ export const defaultChronicle = (
 ): Chronicle => ({
   activeScene: null,
   beats: [],
-  beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {
     entries: [],

@@ -19,10 +19,8 @@ class BeatTrackerNode extends LlmClassifierNode<BeatTracker> {
   }
 
   #shouldSkip(context: GraphContext): boolean {
-    const beatsEnabled = context.chronicleState.chronicle.beatsEnabled !== false;
     return (
       context.failure
-      || !beatsEnabled
       || context.playerIntent === undefined
       || context.gmResponse === undefined
     );

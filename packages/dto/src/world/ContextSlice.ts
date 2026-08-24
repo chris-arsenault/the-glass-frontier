@@ -22,6 +22,9 @@ export type ContextSliceLore = z.infer<typeof ContextSliceLore>;
  * `reach` is the weighted path cost from the focus set: 1.0 is a focus entity
  * itself, and it falls off with distance scaled by relationship strength, so a
  * defining relationship carries further than an incidental one.
+ *
+ * `unwritten` marks a veiled shell nothing has filled in yet — an authored hook
+ * with no detail behind it, free for the GM to invent on.
  */
 export const ContextSliceEntity = z.object({
   description: z.string().optional(),
@@ -40,6 +43,8 @@ export const ContextSliceEntity = z.object({
   status: HardStateStatus.optional(),
   subkind: HardStateSubkind.optional(),
   tags: z.array(z.string()).default([]),
+  /** A veiled shell no chronicle has established anything about yet. */
+  unwritten: z.boolean().default(false),
 });
 export type ContextSliceEntity = z.infer<typeof ContextSliceEntity>;
 

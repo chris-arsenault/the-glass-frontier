@@ -55,7 +55,6 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     chronicle: {
       activeScene: null,
       beats: [],
-      beatsEnabled: true,
       entityFocus: { entityScores: {}, tagScores: {} },
       entityRoster: {
         entries: [],

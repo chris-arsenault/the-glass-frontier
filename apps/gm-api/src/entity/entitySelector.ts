@@ -1,11 +1,15 @@
 import type { ContextSliceEntity, EntityRosterState } from '@glass-frontier/dto';
-import { toEntityRosterEntries } from '@glass-frontier/worldstate';
+import {
+  curateEntityRoster,
+  isEntityRosterEligible,
+  toEntityRosterEntries,
+} from '@glass-frontier/worldstate';
 
 import type { GraphContext, EntityContextSlice, EntityFocusState, EntitySnippet } from '../types';
 
 const FOCUS_ENTITY_COUNT = 3;
 const FOCUS_TAG_COUNT = 5;
-const CANDIDATE_COUNT = 20;
+const CANDIDATE_COUNT = 50;
 const ROSTER_COUNT = 7;
 
 const topScored = (scores: Record<string, number> | undefined, count: number): string[] =>
@@ -33,19 +37,19 @@ const toCandidate = (entry: ContextSliceEntity): EntitySnippet => ({
   status: entry.status,
   subkind: entry.subkind,
   tags: entry.tags,
+  unwritten: entry.unwritten,
 });
 
 const buildFocusEntities = (
   context: GraphContext,
   locationId: null | string
 ): string[] => {
-  const { anchorEntityId, entityFocus, entityRoster } = context.chronicleState.chronicle;
+  const { anchorEntityId, entityFocus } = context.chronicleState.chronicle;
   return [...new Set([
     anchorEntityId,
     locationId,
     context.effectiveScene?.subjectEntityId,
     ...topEntities(entityFocus, FOCUS_ENTITY_COUNT),
-    ...entityRoster.entries.map((entity) => entity.id),
   ].filter((id): id is string => id !== null && id !== undefined))];
 };
 
@@ -53,17 +57,28 @@ const rosterNeedsRefresh = (
   context: GraphContext,
   entityRoster: EntityRosterState
 ): boolean => entityRoster.entries.length === 0
+  || entityRoster.entries.some((entry) => !isEntityRosterEligible(entry))
   || entityRoster.locationName !== context.chronicleState.locationName
   || entityRoster.sceneId !== (context.effectiveScene?.id ?? null);
 
-const selectRosterIds = (
-  candidates: EntitySnippet[],
-  entityRoster: EntityRosterState,
-  refresh: boolean,
-  targetEntityIds: string[]
-): string[] => {
+type RosterSelectionInput = {
+  candidates: EntitySnippet[];
+  curatedRoster: ContextSliceEntity[];
+  entityRoster: EntityRosterState;
+  refresh: boolean;
+  targetEntityIds: string[];
+};
+
+/** Entities the player targeted lead the roster, cap or no cap. */
+const selectRosterIds = ({
+  candidates,
+  curatedRoster,
+  entityRoster,
+  refresh,
+  targetEntityIds,
+}: RosterSelectionInput): string[] => {
   const selectedIds = refresh
-    ? candidates.slice(0, ROSTER_COUNT).map((entry) => entry.id)
+    ? curatedRoster.map((entry) => entry.id)
     : entityRoster.entries.map((entry) => entry.id);
   for (const targetId of targetEntityIds) {
     if (candidates.some((entry) => entry.id === targetId) && !selectedIds.includes(targetId)) {
@@ -71,6 +86,19 @@ const selectRosterIds = (
     }
   }
   return selectedIds.slice(0, ROSTER_COUNT);
+};
+
+const rosterContext = (
+  context: GraphContext,
+  locationId: string | undefined
+): Parameters<typeof curateEntityRoster>[1] => {
+  const { anchorEntityId, entityFocus } = context.chronicleState.chronicle;
+  return {
+    anchorId: anchorEntityId,
+    locationId,
+    recentIds: topEntities(entityFocus, FOCUS_ENTITY_COUNT),
+    sceneSubjectId: context.effectiveScene?.subjectEntityId,
+  };
 };
 
 const selectSliceEntries = (
@@ -110,7 +138,7 @@ export const buildEntityContext = async (context: GraphContext): Promise<EntityC
   }
 
   const slice = await context.worldSchemaStore.getContextSlice({
-    anchorId: anchorEntityId,
+    anchorId: context.effectiveScene?.subjectEntityId ?? anchorEntityId,
     focusIds: focusEntities,
     focusTags,
     limit: CANDIDATE_COUNT,
@@ -120,19 +148,17 @@ export const buildEntityContext = async (context: GraphContext): Promise<EntityC
   });
 
   const candidates = slice.map(toCandidate);
-  const rosterIds = selectRosterIds(
+  const selectionContext = rosterContext(context, currentLocation?.id);
+  const curatedRoster = curateEntityRoster(slice, selectionContext);
+  const rosterIds = selectRosterIds({
     candidates,
+    curatedRoster,
     entityRoster,
-    rosterNeedsRefresh(context, entityRoster),
-    context.targetEntityIds
-  );
-  const selectedSlice = selectSliceEntries(slice, rosterIds);
-  const roster = toEntityRosterEntries(selectedSlice, {
-    anchorId: anchorEntityId,
-    locationId: currentLocation?.id,
-    recentIds: topEntities(entityFocus, FOCUS_ENTITY_COUNT),
-    sceneSubjectId: context.effectiveScene?.subjectEntityId,
+    refresh: rosterNeedsRefresh(context, entityRoster),
+    targetEntityIds: context.targetEntityIds,
   });
+  const selectedSlice = selectSliceEntries(slice, rosterIds);
+  const roster = toEntityRosterEntries(selectedSlice, selectionContext);
   const offered = roster.flatMap((entry) => {
     const candidate = candidates.find((item) => item.id === entry.id);
     return candidate === undefined ? [] : [candidate];

@@ -194,6 +194,59 @@ describe('Context slice', () => {
     expect(missing).toBeNull();
   });
 
+  it('marks a veiled shell unwritten until play establishes something about it', async () => {
+    const ids = await seedWorld();
+    const veiled = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            description: 'Alen Dorath returns broken bells tuned to other voices.',
+            kind: 'npc',
+            name: 'Alen Dorath',
+            ref: 'shell',
+            status: 'alive',
+            subkind: 'worker',
+            veiled: true,
+            veilTagline: 'Alen Dorath returns broken bells tuned to other voices.',
+          },
+        ],
+        relationships: [
+          { dst: { id: ids.cartel }, relationship: 'leads', src: { ref: 'shell' } },
+        ],
+      })
+    );
+    const shellId = veiled.entityIdsByRef.shell;
+    const sliceInput = {
+      anchorId: ids.cartel,
+      focusIds: [ids.cartel],
+      focusTags: [],
+      limit: 7,
+      loreLimit: 2,
+      maxHops: 2,
+      minProminence: 'marginal' as const,
+    };
+
+    const before = await worldState.world.getContextSlice(sliceInput);
+    expect(before.find((entry) => entry.id === shellId)?.unwritten).toBe(true);
+
+    await worldState.world.commitBatch(
+      proposal({
+        lore: [
+          {
+            entity: { id: shellId },
+            prose: 'Alen traded the tuned bell for passage off the Row.',
+            title: 'The Bell He Kept',
+          },
+        ],
+        source: 'play',
+        sourceId: 'chronicle-1',
+      })
+    );
+
+    const after = await worldState.world.getContextSlice(sliceInput);
+    expect(after.find((entry) => entry.id === shellId)?.unwritten).toBe(false);
+  });
+
   it('returns nothing when there is no focus to walk from', async () => {
     await seedWorld();
     const slice = await worldState.world.getContextSlice({

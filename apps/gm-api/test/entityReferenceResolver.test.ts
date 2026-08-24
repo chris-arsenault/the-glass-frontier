@@ -17,6 +17,7 @@ const entity = (): EntitySnippet => ({
   score: 2,
   slug: 'bellwether',
   tags: ['transit'],
+  unwritten: false,
 });
 
 const contextWithEntity = (overrides?: Partial<GraphContext>): GraphContext => {

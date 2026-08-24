@@ -395,7 +395,42 @@
     "id": "2026-08-23-entity-interaction",
     "releasedAt": "2026-08-23",
     "summary": "Established world entities are now part of ordinary play",
-    "details": "Each chronicle now keeps a small stable roster of nearby, scene-relevant, connected, and recently involved entities. Players can attach up to three of them to a move, while ordinary names, aliases, and clear vague references still resolve from typed prose. Resolved references in player and GM transcript text are underlined and open a compact Atlas preview. The GM receives private authored usage notes only after an entity enters context, can ignore irrelevant entities or apply a note without forcing a name into the prose, and gives the strongest continuity weight to entities the player actually addresses. Chronicle closure now considers referenced entities rather than everything that happened to be displayed.",
+    "details": "Each chronicle now keeps a small stable roster of nearby, scene-relevant, connected, and recently involved entities. The compact roster sits beside the chronicle, shows concrete people, organizations, creatures, vehicles, artifacts, usable resources, specific places, incidents, and rumors, and opens each entity's current Atlas record without interrupting play. Article-like species, eras, concepts, materials, and world-scale locations remain available to free-text reference resolution without being proactively offered. Players interact through typed prose; ordinary names, aliases, and clear vague references resolve against established entities. Resolved references in player and GM transcript text are underlined and open a compact Atlas preview. The GM receives private authored usage notes only after an entity enters context, can ignore irrelevant entities or apply a note without forcing a name into the prose, and gives the strongest continuity weight to entities the player actually addresses. Chronicle closure now considers referenced entities rather than everything that happened to be displayed.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-23-completed-chronicle-resume",
+    "releasedAt": "2026-08-23",
+    "summary": "Completed chronicles can no longer be resumed",
+    "details": "Completed chronicles remain visible in chronicle lists, but their Resume and Load actions are now replaced by a disabled Completed state. This prevents a finished story from being reactivated while keeping its completion status visible.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2026-08-23-unwritten-entities",
+    "releasedAt": "2026-08-23",
+    "summary": "The GM can now invent on the world's unfinished hooks",
+    "details": "Nearly half the world's canon entities were published as hooks: a name, a single suggestive line, and no detail behind them. The GM could not tell them apart from fully written canon, so it treated a blank as settled fact and narrated around it. Those hooks are now marked for the GM as long as no chronicle has established anything about them, and the GM is told to invent them concretely on contact and hold that invention for the rest of the story. The first chronicle to make something of a hook turns it into ordinary canon that later stories must respect. At most two hooks appear among the seven nearby entities a chronicle offers, so play always has both settled ground to stand on and new ground to claim.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-23-canon-import-reconciliation",
+    "releasedAt": "2026-08-23",
+    "summary": "Canon refreshes now remove retired material",
+    "details": "Each supplied canon revision now replaces the previous imported snapshot. Entities, lore fragments, and relationships removed from the source are deleted from the game database instead of lingering in the Atlas or narrative context, while records created through play remain intact unless they belong to a removed entity.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2026-08-24-prompt-template-source",
+    "releasedAt": "2026-08-24",
+    "summary": "GM prompt edits now reach the running game",
+    "details": "Every GM instruction existed in three places: the template files, a copy inside the database seed, and a few hand-written patches in a schema migration. The seed reapplied itself on each release and overwrote the others, so four templates had been edited without any of those edits ever affecting play — including the rules that keep the narrator from inventing your character's actions, the guidance for naming a new skill, and how a chronicle's closing turn resolves. The templates are now the only place an instruction is written, the database is loaded from them on every release, and a test fails if the two ever disagree. Personal template overrides are unaffected and continue to take precedence over the official wording.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2026-08-24-living-beats",
+    "releasedAt": "2026-08-24",
+    "summary": "The chronicle's goal is now a living thing",
+    "details": "Every chronicle now begins with its seed as the founding beat, so the story's initial goal is tracked from turn one instead of living outside the beat system. Beats gained two new endings alongside success and failure: a beat is superseded when a newer goal replaces it as the story's direction, and abandoned when play has genuinely walked away from it — a quiet beat stays open, and the GM sees when each beat last advanced so slow-burn threads survive. The chronicle only closes on its own when its open beats are resolved, and the closing archivist reads the full goal history: earned arcs become lore, superseded beats show where the story turned, abandoned threads stay unresolved. Beat tracking is no longer optional; the wizard toggle is gone.",
     "type": "feature"
   }
 ]

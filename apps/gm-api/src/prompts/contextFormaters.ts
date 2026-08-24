@@ -25,6 +25,7 @@ export function trimSkillsList(skills: Skill[]): Array<{
 export function trimBeatsList(beats: ChronicleBeat[]): Array<{
   description: string;
   id: string;
+  lastProgressTurn: number | null;
   status: string;
   title: string;
 }> {
@@ -36,6 +37,7 @@ export function trimBeatsList(beats: ChronicleBeat[]): Array<{
       return {
         description: b.description,
         id: b.id,
+        lastProgressTurn: b.lastProgressTurn ?? null,
         status: b.status,
         title: b.title,
       };

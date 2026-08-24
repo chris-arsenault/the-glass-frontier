@@ -396,3 +396,33 @@ describe('Chronicle activity', () => {
     );
   });
 });
+
+describe('Founding beat', () => {
+  it('creates a chronicle with its seed as the founding beat', async () => {
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      locationName: 'Seeded Reach',
+      playerId: TEST_PLAYER_ID,
+      seedText: 'A convoy vanishes between relays; someone must learn why.',
+      title: 'The Vanished Convoy',
+    });
+
+    expect(chronicle.beats).toEqual([
+      expect.objectContaining({
+        description: 'A convoy vanishes between relays; someone must learn why.',
+        id: 'founding_beat',
+        status: 'in_progress',
+        title: 'The Vanished Convoy',
+      }),
+    ]);
+  });
+
+  it('creates no founding beat without a seed', async () => {
+    const chronicle = await worldState.chronicles.ensureChronicle({
+      locationName: 'Bare Reach',
+      playerId: TEST_PLAYER_ID,
+      title: 'Unseeded',
+    });
+
+    expect(chronicle.beats).toEqual([]);
+  });
+});

@@ -10,10 +10,14 @@ let worldState: WorldState;
 
 const ACCORD_KEY = 'tsonu:accord';
 const CAROM_KEY = 'tsonu:carom';
+const DRIFT_WITNESS_NAME = 'Drift Witness';
 const FAE_BIOLOGY_KEY = 'tsonu:fae:biology';
 const FRESH_SIGNAL_TITLE = 'Fresh Signal';
 const GNOMES_BIOLOGY_KEY = 'tsonu:gnomes:biology';
+const IMPORT_V1_SOURCE_ID = 'tsonu-canon@v1';
+const IMPORT_V2_SOURCE_ID = 'tsonu-canon@v2';
 const OLDER_SIGNAL_NAME = 'Older Signal';
+const PLAYER_RECORD_TITLE = 'A Player Record';
 const RECENT_ACTIVITY_ARTIFACT_KIND = 'artifact' as const;
 
 beforeAll(async () => {
@@ -313,7 +317,7 @@ describe('Canon batch commit', () => {
         { entity: { ref: 'notes' }, externalKey: GNOMES_BIOLOGY_KEY, prose: 'Gnomish biology.', title: 'Biology' },
       ],
       source: 'import',
-      sourceId: 'tsonu-canon@v1',
+      sourceId: IMPORT_V1_SOURCE_ID,
     }));
 
     await worldState.world.commitBatch(proposal({
@@ -324,7 +328,7 @@ describe('Canon batch commit', () => {
         { entity: { ref: 'notes' }, externalKey: GNOMES_BIOLOGY_KEY, prose: 'Gnomish biology revised.', title: 'Biology' },
       ],
       source: 'import',
-      sourceId: 'tsonu-canon@v2',
+      sourceId: IMPORT_V2_SOURCE_ID,
     }));
 
     const lore = await pool.query<{ external_key: string; slug: string }>(
@@ -338,7 +342,7 @@ describe('Canon batch commit', () => {
     ]);
   });
 
-  it('applies partial imports without deleting omitted rows or overwriting play changes', async () => {
+  it('removes omitted imported lore and relationships without deleting play records', async () => {
     const initial = await worldState.world.commitBatch(
       proposal({
         entities: [
@@ -359,10 +363,10 @@ describe('Canon batch commit', () => {
         ],
         lore: [
           {
-            entity: { ref: 'carom' },
-            externalKey: 'tsonu:carom:main:0',
-            prose: 'Carom holds the surviving settlements.',
-            title: 'Carom',
+            entity: { ref: 'accord' },
+            externalKey: 'tsonu:accord:main:0',
+            prose: 'The Accord governs the surviving settlements.',
+            title: 'The Accord',
           },
         ],
         relationships: [
@@ -374,18 +378,25 @@ describe('Canon batch commit', () => {
           },
         ],
         source: 'import',
-        sourceId: 'tsonu-canon@v1',
+        sourceId: IMPORT_V1_SOURCE_ID,
       })
     );
 
     await worldState.world.commitBatch(
       proposal({
-        relationships: [
+        entities: [
           {
-            dst: { id: initial.entityIdsByRef.carom },
-            relationship: 'governs',
-            src: { id: initial.entityIdsByRef.accord },
-            strength: 0.9,
+            kind: 'npc',
+            name: DRIFT_WITNESS_NAME,
+            ref: 'witness',
+            subkind: 'specialist',
+          },
+        ],
+        lore: [
+          {
+            entity: { id: initial.entityIdsByRef.accord },
+            prose: 'A chronicle changed how the Accord is remembered.',
+            title: PLAYER_RECORD_TITLE,
           },
         ],
         source: 'play',
@@ -403,23 +414,15 @@ describe('Canon batch commit', () => {
             name: 'Tempered Accord',
             subkind: 'government',
           },
-        ],
-        source: 'import',
-        sourceId: 'tsonu-canon@v2',
-      })
-    );
-    await worldState.world.commitBatch(
-      proposal({
-        relationships: [
           {
-            dst: { externalKey: CAROM_KEY },
-            relationship: 'governs',
-            src: { externalKey: ACCORD_KEY },
-            strength: 0.2,
+            externalKey: CAROM_KEY,
+            kind: 'geographic_location',
+            name: 'Carom',
+            subkind: 'celestial_body',
           },
         ],
         source: 'import',
-        sourceId: 'tsonu-canon@v3',
+        sourceId: IMPORT_V2_SOURCE_ID,
       })
     );
 
@@ -432,16 +435,14 @@ describe('Canon batch commit', () => {
        WHERE source = 'import'
        ORDER BY external_key`
     );
-    const lore = await pool.query<{ count: string }>(
-      'SELECT count(*) FROM lore_fragment WHERE source = $1',
+    const lore = await pool.query<{ source: string; title: string }>(
+      'SELECT source, title FROM lore_fragment ORDER BY source, title'
+    );
+    const edge = await pool.query<{ count: string }>(
+      'SELECT count(*) FROM edge WHERE source = $1',
       ['import']
     );
-    const edge = await pool.query<{ source: string; strength: number }>(
-      `SELECT source, strength
-       FROM edge
-       WHERE src_id = $1::uuid AND dst_id = $2::uuid AND type = 'governs'`,
-      [initial.entityIdsByRef.accord, initial.entityIdsByRef.carom]
-    );
+    const witness = await worldState.world.findEntitiesByName({ name: DRIFT_WITNESS_NAME });
 
     expect(importedEntities.rows).toEqual([
       {
@@ -450,8 +451,78 @@ describe('Canon batch commit', () => {
       },
       { description: null, external_key: CAROM_KEY },
     ]);
-    expect(lore.rows[0]?.count).toBe('1');
-    expect(edge.rows[0]).toEqual({ source: 'play', strength: 0.9 });
+    expect(lore.rows).toEqual([{ source: 'play', title: PLAYER_RECORD_TITLE }]);
+    expect(edge.rows[0]?.count).toBe('0');
+    expect(witness).toHaveLength(1);
+  });
+
+  it('deletes imported entities omitted from a later snapshot and their dependent nodes', async () => {
+    const initial = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            externalKey: CAROM_KEY,
+            kind: 'geographic_location',
+            name: 'Carom',
+            ref: 'carom',
+            subkind: 'celestial_body',
+          },
+        ],
+        lore: [
+          {
+            entity: { ref: 'carom' },
+            externalKey: 'tsonu:carom:main:0',
+            prose: 'Carom holds the surviving settlements.',
+            title: 'Carom',
+          },
+        ],
+        source: 'import',
+        sourceId: IMPORT_V1_SOURCE_ID,
+      })
+    );
+    const play = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            kind: 'npc',
+            name: DRIFT_WITNESS_NAME,
+            ref: 'witness',
+            subkind: 'specialist',
+          },
+        ],
+        lore: [
+          {
+            entity: { id: initial.entityIdsByRef.carom },
+            prose: 'A chronicle left its own record on Carom.',
+            title: PLAYER_RECORD_TITLE,
+          },
+        ],
+        source: 'play',
+        sourceId: 'chronicle-closure-1',
+      })
+    );
+    const removedNodeIds = await pool.query<{ id: string }>(
+      `SELECT id FROM node
+       WHERE id = $1::uuid
+          OR id IN (SELECT id FROM lore_fragment WHERE entity_id = $1::uuid)`,
+      [initial.entityIdsByRef.carom]
+    );
+
+    await worldState.world.commitBatch(
+      proposal({
+        source: 'import',
+        sourceId: IMPORT_V2_SOURCE_ID,
+      })
+    );
+
+    const remainingRemovedNodes = await pool.query<{ count: string }>(
+      'SELECT count(*) FROM node WHERE id = ANY($1::uuid[])',
+      [removedNodeIds.rows.map((row) => row.id)]
+    );
+
+    expect(await worldState.world.getEntity({ id: initial.entityIdsByRef.carom })).toBeNull();
+    expect(await worldState.world.getEntity({ id: play.entityIdsByRef.witness })).not.toBeNull();
+    expect(remainingRemovedNodes.rows[0]?.count).toBe('0');
   });
 
   it('gives colliding names a counted suffix, not a random one', async () => {

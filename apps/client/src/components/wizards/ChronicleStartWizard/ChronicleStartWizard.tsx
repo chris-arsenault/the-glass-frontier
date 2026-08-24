@@ -94,8 +94,6 @@ export function ChronicleStartWizard() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [isLoadingLocationDetails, setIsLoadingLocationDetails] = useState(false);
-  const beatsEnabled = useChronicleStartStore((state) => state.beatsEnabled);
-  const setBeatsEnabled = useChronicleStartStore((state) => state.setBeatsEnabled);
   const [seedStatus, setSeedStatus] = useState<SeedStatus>('idle');
   const setSeeds = useChronicleStartStore((state) => state.setSeeds);
   const setToneNotes = useChronicleStartStore((state) => state.setToneNotes);
@@ -241,8 +239,6 @@ export function ChronicleStartWizard() {
           preferredCharacterName={selectedCharacterName}
           customTitle={customTitle}
           setCustomTitle={setCustomTitleOverride}
-          beatsEnabled={beatsEnabled}
-          setBeatsEnabled={setBeatsEnabled}
         />
       );
     default:
@@ -271,9 +267,7 @@ export function ChronicleStartWizard() {
     customTitle,
     selectedSeed,
     selectedCharacterName,
-    beatsEnabled,
     handleSeedSelection,
-    setBeatsEnabled,
     setCustomSeed,
     setSeeds,
     setToneNotes,
@@ -365,7 +359,6 @@ export function ChronicleStartWizard() {
     setCreationError(null);
     const payload: ChronicleSeedCreationDetails = {
       anchorEntityId: selectedAnchorEntity?.id ?? null,
-      beatsEnabled,
       characterId: preferredCharacterId,
       locationId: selectedLocation.id,
       locationName: selectedLocation.name,
@@ -840,12 +833,9 @@ type CreateStepProps = {
   preferredCharacterName: string | null;
   customTitle: string;
   setCustomTitle: (value: string) => void;
-  beatsEnabled: boolean;
-  setBeatsEnabled: (value: boolean) => void;
 }
 
 function CreateStep({
-  beatsEnabled,
   customSeedText,
   customSeedTitle,
   customTitle,
@@ -853,7 +843,6 @@ function CreateStep({
   selectedAnchorEntity,
   selectedLocation,
   selectedSeed,
-  setBeatsEnabled,
   setCustomTitle,
   tone,
 }: CreateStepProps) {
@@ -968,20 +957,6 @@ function CreateStep({
         />
       </section>
 
-      <section className="create-summary-card create-summary-inline">
-        <h3>Chronicle beats</h3>
-        <label className="beat-toggle">
-          <input
-            type="checkbox"
-            checked={beatsEnabled}
-            onChange={(event) => setBeatsEnabled(event.target.checked)}
-          />
-          Enable beat tracking (recommended)
-        </label>
-        <p className="session-manager-hint">
-          Beats track multi-turn goals and guide the GM&apos;s pacing.
-        </p>
-      </section>
     </div>
   );
 }

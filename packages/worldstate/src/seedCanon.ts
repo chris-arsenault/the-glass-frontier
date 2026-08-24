@@ -71,8 +71,8 @@ const storedSeedBatch = async (
 /**
  * Commits the canon artifact. Idempotent by `(source, external_key)`: re-running
  * against a newer artifact updates entities, lore, and edges in place without
- * minting new ids, so chronicle references survive a refresh. Entries removed
- * from the source are not deleted here.
+ * minting new ids, so chronicle references survive a refresh. Each revision is
+ * authoritative: import-owned records omitted from it are removed.
  */
 export const seedCanon = async (pool: Pool): Promise<CanonSeedResult> => {
   const proposal = loadCanonArtifact();

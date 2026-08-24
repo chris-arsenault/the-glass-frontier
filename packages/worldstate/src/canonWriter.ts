@@ -1,6 +1,5 @@
 import {
   getWorldKind,
-  relationshipDefaultStrength,
   type CanonProposal,
   type CanonSource,
   type CommitBatchResult,
@@ -11,18 +10,16 @@ import {
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
-import { entityPropsJson, relationshipPropsJson } from './canonProps';
+import { reconcileImportSnapshot } from './canonImportReconciliation';
+import { entityPropsJson } from './canonProps';
+import { insertRelationships, planRelationshipWrites } from './canonRelationshipWrites';
 import {
   ProposalRejected,
   refKey,
   validateProposal,
   type ResolvableEntity,
 } from './canonValidation';
-import {
-  CANON_WRITE_LOCK_SQL,
-  ENTITY_UPSERT_SQL,
-  RELATIONSHIP_UPSERT_SQL,
-} from './canonWriterSql';
+import { CANON_WRITE_LOCK_SQL, ENTITY_UPSERT_SQL } from './canonWriterSql';
 import { withTransaction } from './pg';
 import { normalizeTags, toSnakeCase } from './utils';
 
@@ -43,8 +40,10 @@ type LoreWrite = {
  * The only writer of canon.
  *
  * A proposal is validated whole against the vocabulary before anything is
- * written, then committed in one transaction under a batch id. Reverting that
- * batch is the correction path — nothing edits canon a row at a time.
+ * written, then committed in one transaction under a batch id. Imported
+ * proposals are authoritative snapshots; other sources add or update only the
+ * records they declare. Reverting a batch is the correction path — nothing
+ * edits canon a row at a time.
  */
 export class CanonWriter {
   readonly #pool: Pool;
@@ -69,10 +68,19 @@ export class CanonWriter {
       await insertEntities(client, writes, batchId, proposal);
 
       const resolved = resolveIds(writes, existing);
-      await insertRelationships(client, proposal, batchId, resolved);
+      const relationshipWrites = planRelationshipWrites(proposal, resolved);
+      await insertRelationships(client, relationshipWrites, proposal, batchId);
 
       const loreWrites = await planLoreWrites(client, proposal, resolved);
       await insertLore(client, loreWrites, batchId, proposal);
+
+      if (proposal.source === 'import') {
+        await reconcileImportSnapshot(client, {
+          entityIds: writes.map((write) => write.id),
+          loreIds: loreWrites.map((write) => write.id),
+          relationships: relationshipWrites,
+        });
+      }
 
       const entityIdsByRef: Record<string, string> = {};
       for (const write of writes) {
@@ -285,42 +293,6 @@ const resolveIds = (
   return resolved;
 };
 
-const insertRelationships = async (
-  client: PoolClient,
-  proposal: CanonProposal,
-  batchId: string,
-  resolved: Map<string, string>
-): Promise<void> => {
-  if (proposal.relationships.length === 0) {
-    return;
-  }
-  const rows = proposal.relationships.map((relationship) => {
-    const src = resolved.get(refKey(relationship.src));
-    const dst = resolved.get(refKey(relationship.dst));
-    if (src === undefined || dst === undefined) {
-      throw new Error('Relationship endpoint went unresolved after validation');
-    }
-    return {
-      dst,
-      props: relationshipPropsJson(relationship),
-      src,
-      strength: relationship.strength ?? relationshipDefaultStrength(relationship.relationship),
-      type: relationship.relationship,
-    };
-  });
-
-  await client.query(RELATIONSHIP_UPSERT_SQL, [
-    rows.map(() => randomUUID()),
-    rows.map((row) => row.src),
-    rows.map((row) => row.dst),
-    rows.map((row) => row.type),
-    rows.map((row) => row.strength),
-    proposal.source,
-    proposal.sourceId ?? null,
-    batchId,
-    rows.map((row) => row.props),
-  ]);
-};
 type PriorLoreWrite = { id: string; slug: string };
 const loadPriorLore = async (
   client: PoolClient,

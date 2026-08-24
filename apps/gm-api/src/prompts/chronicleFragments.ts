@@ -47,7 +47,7 @@ ChronicleFragmentTypes[]
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
   ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities', ENTITY_REFERENCES_FRAGMENT]],
-  ['gm-summary', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', 'beats', 'character', SKILL_CHECK_FRAGMENT, 'wrap', 'seed']],
+  ['gm-summary', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', 'beats', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
   ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', 'character', 'entities', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['intent-beat-detector', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
   ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
@@ -229,7 +229,10 @@ function inventoryDetailFragment(context: GraphContext): Array<Record<string, un
 }
 
 function beatsFragment(context: GraphContext): unknown {
-  return trimBeatsList(context.chronicleState.chronicle.beats);
+  return {
+    currentTurn: context.turnSequence,
+    openBeats: trimBeatsList(context.chronicleState.chronicle.beats),
+  };
 }
 
 function intentFragment(context: GraphContext): Record<string, unknown> {

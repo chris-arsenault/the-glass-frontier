@@ -69,7 +69,6 @@ const PLAYER_ID = 'player-test';
 const chronicle: Chronicle = {
   activeScene: null,
   beats: [],
-  beatsEnabled: true,
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {
     entries: [],

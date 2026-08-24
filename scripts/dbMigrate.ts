@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
 
+import { generatePromptTemplateSeed } from './generatePromptTemplateSeed';
+
 /**
  * The one migration runner.
  *
@@ -70,11 +72,18 @@ export const applyMigrations = async (pool: Pool): Promise<string[]> => {
 };
 
 /**
- * Applies the bootstrap seed — application configuration and world vocabulary.
- * The deploy runs the same files through the migrate Lambda's `seed` operation,
- * and they are written to be idempotent, so this re-runs on every invocation.
+ * Applies the bootstrap seed — application configuration, world vocabulary, and
+ * the prompt templates. The deploy runs the same files through the migrate
+ * Lambda's `seed` operation, and they are written to be idempotent, so this
+ * re-runs on every invocation.
+ *
+ * The prompt-template seed is generated rather than written, so it is produced
+ * here before the directory is read. That ordering is what keeps the database's
+ * prompt bodies equal to `packages/app/templates`; the deploy gets the same
+ * guarantee by generating before it uploads the directory.
  */
 export const applySeed = async (pool: Pool): Promise<string[]> => {
+  await generatePromptTemplateSeed();
   const files = await sqlFilesIn(SEED_DIR);
   for (const filename of files) {
     const sql = await readFile(path.join(SEED_DIR, filename), 'utf8');

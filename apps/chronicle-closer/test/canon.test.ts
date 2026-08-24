@@ -372,7 +372,6 @@ describe('CanonPipeline', () => {
     character: null,
     chronicle: {
       beats: [],
-      beatsEnabled: true,
       entityFocus: { entityScores: {}, tagScores: {} },
       id: CHRONICLE_ID,
       locationName: 'Brake',
@@ -478,9 +477,12 @@ describe('CanonPipeline', () => {
     const extractRequest = generateStructured.mock.calls[0]?.[0] as {
       input: Array<{ content: Array<{ text: string }> }>;
     };
-    expect(extractRequest.input[1]?.content[0]?.text).toContain('"scenes"');
-    expect(extractRequest.input[1]?.content[0]?.text).toContain(TAVERN_NAME);
-    expect(extractRequest.input[2]?.content[0]?.text).toContain('Scene: search');
+    const messageText = (index: number): string =>
+      extractRequest.input.at(index)?.content[0]?.text ?? '';
+    expect(messageText(1)).toContain('"scenes"');
+    expect(messageText(1)).toContain(TAVERN_NAME);
+    expect(messageText(2)).toContain('"beats"');
+    expect(messageText(3)).toContain('Scene: search');
 
     expect(commitBatch).toHaveBeenCalledOnce();
     const proposal = commitBatch.mock.calls[0]?.[0] as CanonProposal;

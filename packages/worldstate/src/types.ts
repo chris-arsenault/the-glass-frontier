@@ -54,7 +54,6 @@ export type ChronicleStore = {
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
-    beatsEnabled?: boolean;
     anchorEntityId?: string | null;
     toneChips?: string[];
     toneNotes?: string;
@@ -97,9 +96,10 @@ export type ChronicleStore = {
  * Canon storage. One writer, several readers.
  *
  * `commitBatch` is the only way canon changes: a validated set of entities,
- * relationships, and lore committed together under a batch id. `revertBatch`
- * is the correction path. There is no per-entity mutation by design — a
- * full-object upsert cannot tell an absent link from a removed one.
+ * relationships, and lore committed together under a batch id. Imported
+ * batches replace the prior imported snapshot; other sources add or update
+ * only their declared records. `revertBatch` is the correction path. There is
+ * no per-entity mutation by design.
  */
 export type WorldSchemaStore = {
   // === The write surface ===

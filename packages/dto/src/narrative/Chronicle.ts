@@ -15,7 +15,6 @@ export const Chronicle = z.object({
   activeScene: ChronicleScene.nullable().default(null),
   anchorEntityId: z.string().min(1).optional(),
   beats: z.array(ChronicleBeat).default([]),
-  beatsEnabled: z.boolean().default(true),
   characterId: z.string().min(1).optional(),
   entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
   entityRoster: EntityRosterState,

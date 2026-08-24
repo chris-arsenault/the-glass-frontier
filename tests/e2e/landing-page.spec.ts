@@ -1,6 +1,33 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { authenticate, resetPlaywrightState } from './utils';
+
+const setSeededChronicleStatus = async (
+  page: Page,
+  status: 'open' | 'closed'
+): Promise<string> => {
+  return page.evaluate(async (nextStatus) => {
+    const modulePath = '/src/stores/chronicleStore.ts';
+    const { useChronicleStore } = await import(modulePath) as typeof import(
+      '../../apps/client/src/stores/chronicleStore'
+    );
+    const initialState = useChronicleStore.getState();
+    if (initialState.availableChronicles.length === 0) {
+      await initialState.refreshPlayerResources();
+    }
+    const chronicle = useChronicleStore.getState().availableChronicles[0];
+    if (!chronicle) {
+      throw new Error('Seeded chronicle not found.');
+    }
+    useChronicleStore.setState((state) => ({
+      availableChronicles: state.availableChronicles.map((entry) =>
+        entry.id === chronicle.id ? { ...entry, status: nextStatus } : entry
+      ),
+    }));
+    return chronicle.id;
+  }, status);
+};
 
 test.describe('Landing page', () => {
   test.beforeEach(async ({ request }) => {
@@ -59,5 +86,31 @@ test.describe('Landing page', () => {
 
     await entityPanel.getByRole('link', { name: 'Oracle Vessel' }).click();
     await expect(page).toHaveURL(/\/atlas\/oracle_vessel$/);
+  });
+
+  test('does not offer to resume completed chronicles', async ({ page }) => {
+    await page.goto('/');
+    await authenticate(page);
+    const chronicleId = await setSeededChronicleStatus(page, 'closed');
+    const chroniclesPanel = page.locator('.landing-panel').filter({
+      has: page.getByRole('heading', { name: 'Your chronicles' }),
+    });
+
+    await expect(chroniclesPanel.locator('.landing-my-chronicle-meta')).toContainText('Completed');
+    await expect(chroniclesPanel.getByRole('button', { name: 'Completed' })).toBeDisabled();
+    await expect(chroniclesPanel.getByRole('button', { name: 'Resume' })).toHaveCount(0);
+
+    await setSeededChronicleStatus(page, 'open');
+    await chroniclesPanel.getByRole('button', { name: 'Resume' }).click();
+    await expect(page).toHaveURL(`/chron/${chronicleId}`);
+    await expect(page.getByTestId('chat-input')).toBeEnabled();
+
+    await setSeededChronicleStatus(page, 'closed');
+    const chronicleManager = page.getByRole('region', { name: 'Chronicle management' });
+    const chronicleCard = chronicleManager.locator('.session-manager-card').filter({
+      hasText: 'Playwright Chronicle',
+    });
+    await expect(chronicleCard.getByRole('button', { name: 'Completed' })).toBeDisabled();
+    await expect(chronicleCard.getByRole('button', { name: 'Load' })).toHaveCount(0);
   });
 });

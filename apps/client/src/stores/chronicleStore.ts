@@ -309,7 +309,6 @@ const createBaseState = () => ({
   availableCharacters: [] as Character[],
   availableChronicles: [] as Chronicle[],
   beats: [] as ChronicleBeat[],
-  beatsEnabled: true,
   character: null as Character | null,
   chronicleId: null as string | null,
   chronicleRecord: null as Chronicle | null,
@@ -348,7 +347,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     set((prev) => ({
       ...prev,
       beats: [],
-      beatsEnabled: true,
       character: null,
       chronicleId: null,
       chronicleRecord: null,
@@ -403,7 +401,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     const targetCharacterId = details.characterId ?? get().preferredCharacterId;
     const trimmedSeed = details.seedText?.trim() ?? '';
     const locationName = details.locationName?.trim() ?? '';
-    const beatsEnabled = details.beatsEnabled ?? true;
     if (!targetCharacterId) {
       throw new Error('Select a character before starting a chronicle.');
     }
@@ -420,7 +417,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         : deriveTitleFromSeed(trimmedSeed);
       const result = await trpcClient.createChronicle.mutate({
         anchorEntityId: details.anchorEntityId ?? undefined,
-        beatsEnabled,
         characterId: targetCharacterId,
         location: { locale: locationName },
         locationId: details.locationId,
@@ -498,7 +494,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
 
       const { messages: messageHistory, turnViews } = flattenTurns(chronicleState.turns ?? []);
       const chronicleBeats = chronicleState.chronicle?.beats ?? [];
-      const beatsEnabled = chronicleState.chronicle?.beatsEnabled !== false;
       const initialFocusBeatId =
         chronicleBeats.find((beat) => beat.status === 'in_progress')?.id ?? null;
       // The generated scene opener always starts the transcript. The seed
@@ -517,7 +512,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             ? mergeChronicleRecord(prev.availableChronicles, chronicleState.chronicle)
             : prev.availableChronicles,
         beats: chronicleBeats,
-        beatsEnabled,
         character: chronicleState.character ?? null,
         chronicleId: chronicleState.chronicleId,
         chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
@@ -739,7 +733,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
           beats,
-          beatsEnabled: prev.beatsEnabled,
           character: nextCharacter,
           chronicleRecord:
             shouldCloseChronicle && prev.chronicleRecord

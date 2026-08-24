@@ -96,10 +96,16 @@ const ChatExperience = (): React.JSX.Element => {
             <div className="session-bar">
               <ChronicleHeader />
             </div>
-            <SceneStage />
-            <AvailableEntitiesPanel />
-            <ChatCanvas />
-            <ChatComposer />
+            <div className="chronicle-play-area">
+              <aside className="chronicle-entity-rail" aria-label="Nearby entities">
+                <AvailableEntitiesPanel />
+              </aside>
+              <div className="chronicle-narrative">
+                <SceneStage />
+                <ChatCanvas />
+                <ChatComposer />
+              </div>
+            </div>
           </main>
         </div>
       </div>

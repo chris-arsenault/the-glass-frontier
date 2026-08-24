@@ -99,8 +99,11 @@ export function LandingPage(): React.JSX.Element {
   const quickChronicles = useMemo(() => availableChronicles.slice(0, 5), [availableChronicles]);
   const hasActiveChronicle = Boolean(currentChronicleId);
 
-  const handleQuickLoad = async (chronicleId: string) => {
-    if (!chronicleId) {
+  const handleQuickLoad = async (
+    chronicleId: string,
+    chronicleStatus: 'open' | 'closed'
+  ) => {
+    if (!chronicleId || chronicleStatus === 'closed') {
       return;
     }
     setChronicleError(null);
@@ -248,10 +251,14 @@ export function LandingPage(): React.JSX.Element {
                   <button
                     type="button"
                     className="landing-link-button"
-                    onClick={() => handleQuickLoad(chronicle.id)}
-                    disabled={Boolean(loadingChronicleId)}
+                    onClick={() => handleQuickLoad(chronicle.id, chronicle.status)}
+                    disabled={chronicle.status === 'closed' || Boolean(loadingChronicleId)}
                   >
-                    {loadingChronicleId === chronicle.id ? 'Loading…' : 'Resume'}
+                    {chronicle.status === 'closed'
+                      ? 'Completed'
+                      : loadingChronicleId === chronicle.id
+                        ? 'Loading…'
+                        : 'Resume'}
                   </button>
                 </li>
               ))}

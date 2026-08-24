@@ -10,6 +10,7 @@ import type { Pool, PoolClient } from 'pg';
 
 import { persistCharacter } from './characterPersistence';
 import { ChronicleTurnPersistence } from './chronicleTurnPersistence';
+import { foundingBeats } from './foundingBeat';
 import { upsertNodeIdentity } from './nodeIdentity';
 import { createPool, withTransaction } from './pg';
 import type { ChronicleSnapshot, ChronicleStore } from './types';
@@ -31,17 +32,12 @@ Chronicle['entityRoster'] => roster ?? {
 };
 
 const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
-  const beatsEnabled =
-    chronicle.beatsEnabled === undefined || chronicle.beatsEnabled === null
-      ? true
-      : Boolean(chronicle.beatsEnabled);
   const beats = Array.isArray(chronicle.beats) ? chronicle.beats : [];
   const summaries = Array.isArray(chronicle.summaries) ? chronicle.summaries : [];
   return {
     ...chronicle,
     activeScene: chronicle.activeScene ?? null,
     beats,
-    beatsEnabled,
     entityRoster: chronicle.entityRoster,
     summaries,
   };
@@ -90,7 +86,6 @@ class PostgresChronicleStore implements ChronicleStore {
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
-    beatsEnabled?: boolean;
     anchorEntityId?: string | null;
     toneChips?: string[];
     toneNotes?: string;
@@ -382,7 +377,6 @@ class PostgresChronicleStore implements ChronicleStore {
       title?: string;
       status?: Chronicle['status'];
       seedText?: string | null;
-      beatsEnabled?: boolean;
       anchorEntityId?: string | null;
       toneChips?: string[];
       toneNotes?: string;
@@ -393,8 +387,7 @@ class PostgresChronicleStore implements ChronicleStore {
     return normalizeChronicle({
       activeScene: null,
       anchorEntityId: params.anchorEntityId ?? undefined,
-      beats: [],
-      beatsEnabled: params.beatsEnabled ?? true,
+      beats: foundingBeats(params.title, params.seedText),
       characterId: params.characterId,
       entityFocus: { entityScores: {}, tagScores: {} },
       entityRoster: initialEntityRoster(params.locationName, params.entityRoster),
@@ -441,17 +434,16 @@ class PostgresChronicleStore implements ChronicleStore {
     await client.query(
       `INSERT INTO chronicle (
          id, title, primary_char_id, status, player_id, location_name, location_id,
-         seed_text, beats_enabled, anchor_entity_id, entity_focus, props,
+         seed_text, anchor_entity_id, entity_focus, props,
          created_at, updated_at
        ) VALUES (
          $1::uuid, $2, $3::uuid, $4, $5, $6, $7::uuid,
-         $8, $9, $10::uuid, $11::jsonb, $12::jsonb, now(), now()
+         $8, $9::uuid, $10::jsonb, $11::jsonb, now(), now()
        ) ON CONFLICT (id) DO UPDATE SET
          title = EXCLUDED.title, primary_char_id = EXCLUDED.primary_char_id,
          status = EXCLUDED.status, player_id = EXCLUDED.player_id,
          location_name = EXCLUDED.location_name,
          location_id = EXCLUDED.location_id, seed_text = EXCLUDED.seed_text,
-         beats_enabled = EXCLUDED.beats_enabled,
          anchor_entity_id = EXCLUDED.anchor_entity_id,
          entity_focus = EXCLUDED.entity_focus, props = EXCLUDED.props,
          updated_at = now()`,
@@ -464,7 +456,6 @@ class PostgresChronicleStore implements ChronicleStore {
         chronicle.locationName,
         chronicle.locationId ?? null,
         chronicle.seedText ?? null,
-        chronicle.beatsEnabled ?? true,
         chronicle.anchorEntityId ?? null,
         JSON.stringify(chronicle.entityFocus ?? { entityScores: {}, tagScores: {} }),
         serializeJson(chronicle),

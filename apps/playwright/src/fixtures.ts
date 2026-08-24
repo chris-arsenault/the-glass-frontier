@@ -91,7 +91,6 @@ const BASE_CHRONICLE: Chronicle = {
   activeScene: null,
   anchorEntityId: GLASS_WARDENS_ID,
   beats: [],
-  beatsEnabled: true,
   characterId: PLAYWRIGHT_CHARACTER_ID,
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {

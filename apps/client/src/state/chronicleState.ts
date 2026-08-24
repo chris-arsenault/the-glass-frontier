@@ -91,7 +91,6 @@ export type TurnProgress = {
 
 export type ChronicleState = {
   beats: ChronicleBeat[];
-  beatsEnabled: boolean;
   focusedBeatId: string | null;
   chronicleId: string | null;
   chronicleRecord: Chronicle | null;
@@ -154,7 +153,6 @@ export type ChronicleSeedCreationDetails = {
   locationName: string;
   title?: string | null;
   seedText: string;
-  beatsEnabled?: boolean;
   toneChips?: string[];
   toneNotes?: string;
 }

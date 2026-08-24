@@ -9,11 +9,13 @@ Treat the summary as the canonical record for the turn.
 - No markdown, numbers, or quotes; keep it pure text.
 
 ## Closing the chronicle
-- The SEED and BEATS sections define the chronicle's primary stakes. `shouldCloseChronicle` is `true`
-  only when the narration clearly resolves those stakes, or a wrap request reaches its final turn.
+- The BEATS section lists the chronicle's open goals. Those are the primary stakes:
+  `shouldCloseChronicle` is `true` only when the narration clearly resolves them, or a wrap request
+  reaches its final turn.
 - Completing the current intent alone is not resolution: a plan made, a question answered, a route
   charted, or a single scene finished leaves the chronicle open.
-- Beats still marked `in_progress` are unresolved stakes; do not close over them.
+- Open beats are unresolved stakes; do not close over them. Only when no open beats remain and the
+  narration reads as an ending may the chronicle close on its own.
 - If the GM narration asks the player a question or offers a next choice, `shouldCloseChronicle` must
   be `false`; the response has left the scene open.
 - When in doubt, `false`. Chronicles end at wrap requests far more often than on their own.

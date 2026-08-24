@@ -23,6 +23,10 @@ const formatBeatStatus = (status: ChronicleBeat['status']): string => {
     return 'Succeeded';
   case 'failed':
     return 'Failed';
+  case 'superseded':
+    return 'Superseded';
+  case 'abandoned':
+    return 'Abandoned';
   default:
     return 'In Progress';
   }
@@ -32,7 +36,6 @@ export function SessionManager() {
   const availableCharacters = useChronicleStore((state) => state.availableCharacters);
   const availableChronicles = useChronicleStore((state) => state.availableChronicles);
   const beats = useChronicleStore((state) => state.beats);
-  const beatsEnabled = useChronicleStore((state) => state.beatsEnabled);
   const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
   const preferredCharacterId = useChronicleStore((state) => state.preferredCharacterId);
   const setPreferredCharacterId = useChronicleStore((state) => state.setPreferredCharacterId);
@@ -86,8 +89,8 @@ export function SessionManager() {
     }
     return map;
   }, [availableCharacters]);
-  const handleLoad = async (chronicleId: string) => {
-    if (!chronicleId) {
+  const handleLoad = async (chronicleId: string, chronicleStatus: 'open' | 'closed') => {
+    if (!chronicleId || chronicleStatus === 'closed') {
       return;
     }
     setError(null);
@@ -318,17 +321,17 @@ export function SessionManager() {
                     {session.characterId
                       ? (characterNameById.get(session.characterId) ?? 'Unassigned')
                       : 'Unassigned'}{' '}
-                    · {session.status}
+                    · {session.status === 'closed' ? 'Completed' : 'In progress'}
                   </p>
                 </div>
                 <div className="session-manager-actions">
                   <button
                     type="button"
                     className="chip-button"
-                    onClick={() => handleLoad(session.id)}
-                    disabled={disabled}
+                    onClick={() => handleLoad(session.id, session.status)}
+                    disabled={disabled || session.status === 'closed'}
                   >
-                    Load
+                    {session.status === 'closed' ? 'Completed' : 'Load'}
                   </button>
                   <button
                     type="button"
@@ -357,8 +360,6 @@ export function SessionManager() {
         </div>
         {!currentChronicleId ? (
           <p className="session-manager-empty">Load a chronicle to view beats.</p>
-        ) : beatsEnabled === false ? (
-          <p className="session-manager-empty">Beats are disabled for this chronicle.</p>
         ) : beats.length === 0 ? (
           <p className="session-manager-empty">
             The GM will establish the opening beat after the first turn.

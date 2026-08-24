@@ -22,6 +22,9 @@ const recordingRuntime = (): {
 
 const ACTION_RESOLVER: PromptTemplateId = 'action-resolver';
 const RECENT_EVENTS_HEADER = '### RECENT-EVENTS';
+const ENTITIES_HEADER = '### ENTITIES';
+const SHELL_NAME = 'Alen Dorath';
+const SHELL_SLUG = 'alen-dorath';
 
 const textOf = (message: { content: Array<{ text: string }> }): string =>
   message.content.map((part) => part.text).join('');
@@ -66,7 +69,7 @@ describe('PromptComposer', () => {
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).not.toContain(RECENT_EVENTS_HEADER);
-    expect(developer).not.toContain('### ENTITIES');
+    expect(developer).not.toContain(ENTITIES_HEADER);
     expect(developer).not.toContain('### WRAP');
   });
 
@@ -118,6 +121,7 @@ describe('PromptComposer', () => {
             score: 1,
             slug: 'ash-cartel',
             tags: ['trade'],
+            unwritten: false,
           },
         ],
         roster: [],
@@ -136,10 +140,51 @@ describe('PromptComposer', () => {
     expect(prompt.input[0]?.role).toBe('user');
     expect(textOf(prompt.input[0])).toBe('The cartel enforcer blocks the doorway.');
     const developer = textOf(prompt.input.at(-1)!);
-    expect(developer).toContain('### ENTITIES');
+    expect(developer).toContain(ENTITIES_HEADER);
     expect(developer).toContain('ash-cartel');
     expect(developer).toContain('A smuggling ring that controls the ash docks.');
     expect(developer).toContain('Its dock crews close ranks when challenged.');
+  });
+
+  it('offers an unwritten entity as a hook rather than as established canon', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const hook = `${SHELL_NAME} buys broken household bells and returns them tuned.`;
+    const context = buildContext({
+      entityContext: {
+        candidates: [],
+        focusEntities: [],
+        focusTags: [],
+        offered: [
+          {
+            description: hook,
+            facts: {},
+            gmNotes: [],
+            id: 'entity-2',
+            kind: 'npc',
+            loreFragments: [{ slug: SHELL_SLUG, summary: hook, tags: [], title: SHELL_NAME }],
+            name: SHELL_NAME,
+            score: 1,
+            slug: SHELL_SLUG,
+            tags: [],
+            unwritten: true,
+          },
+        ],
+        roster: [],
+      },
+      playerIntent: buildIntent(),
+    });
+
+    const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
+    const developer = textOf(prompt.input.at(-1)!);
+    const entities = JSON.parse(
+      developer.split(ENTITIES_HEADER)[1].split('###')[0]
+    ) as Array<Record<string, unknown>>;
+
+    expect(entities).toEqual([
+      { hook, kind: 'npc', name: SHELL_NAME, slug: SHELL_SLUG, unwritten: true },
+    ]);
+    expect(prompt.instructions).toContain('invent it concretely');
   });
 
   it('throws for a template with no registered message order', async () => {

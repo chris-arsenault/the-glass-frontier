@@ -19,6 +19,12 @@ const formatStatus = (status?: BeatTracker['updates'][number]['status']): string
   if (status === 'failed') {
     return 'Failed';
   }
+  if (status === 'superseded') {
+    return 'Superseded';
+  }
+  if (status === 'abandoned') {
+    return 'Abandoned';
+  }
   return 'In Progress';
 };
 

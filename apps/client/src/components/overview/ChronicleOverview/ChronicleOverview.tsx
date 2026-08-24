@@ -12,6 +12,10 @@ const formatBeatStatus = (status: ChronicleBeat['status']): string => {
     return 'Succeeded';
   case 'failed':
     return 'Failed';
+  case 'superseded':
+    return 'Superseded';
+  case 'abandoned':
+    return 'Abandoned';
   default:
     return 'In Progress';
   }
@@ -95,19 +99,9 @@ const AnchorEntityPanel = ({ anchorEntity }: AnchorEntityPanelProps): React.JSX.
 type BeatsPanelProps = {
   beats: ChronicleBeat[];
   focusedBeatId: string | null;
-  beatsEnabled: boolean;
 };
 
-const BeatsPanel = ({ beats, beatsEnabled, focusedBeatId }: BeatsPanelProps): React.JSX.Element => {
-  if (!beatsEnabled) {
-    return (
-      <div>
-        <h3 className="panel-label">Chronicle Beats</h3>
-        <p className="session-panel-empty">Beats are disabled for this chronicle.</p>
-      </div>
-    );
-  }
-
+const BeatsPanel = ({ beats, focusedBeatId }: BeatsPanelProps): React.JSX.Element => {
   if (beats.length === 0) {
     return (
       <div>
@@ -198,7 +192,6 @@ export function ChronicleOverview({
 }: ChronicleOverviewProps): React.JSX.Element | null {
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const beats = useChronicleStore((state) => state.beats);
-  const beatsEnabled = useChronicleStore((state) => state.beatsEnabled);
   const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
   const turnSequence = useChronicleStore((state) => state.turnSequence);
   const turnViews = useChronicleStore((state) => state.turnViews);
@@ -260,7 +253,7 @@ export function ChronicleOverview({
 
       <AnchorEntityPanel anchorEntity={anchorEntity} />
 
-      <BeatsPanel beats={beats} focusedBeatId={focusedBeatId} beatsEnabled={beatsEnabled} />
+      <BeatsPanel beats={beats} focusedBeatId={focusedBeatId} />
 
       <WrapTargetPanel targetEndTurn={chronicle.targetEndTurn} currentTurn={turnSequence} />
     </section>

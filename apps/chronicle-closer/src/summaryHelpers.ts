@@ -24,6 +24,7 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
     `The chronicle ends at ${context.locationName}. This is the final scene location, not a destination. Do not add travel to or from it unless the transcript records that travel.`,
     'Treat the transcript timeline and recorded deltas as the complete history. Preserve the player\'s explicit decisions and chronology. Do not invent actions, motives, equipment, injuries, weakened abilities, destinations, consequences, or facts.',
     'Honor every listed beat, skill check, and inventory change. A planned check without a recorded result is not an outcome.',
+    'Beat statuses are canon: succeeded and failed beats are the story\'s earned arcs; a superseded beat is a goal the story drifted away from toward its successor; an abandoned beat is a thread left behind — it may be mentioned as unresolved but never resolved by invention.',
     beatsBlock,
     skillBlock,
     inventoryBlock,
@@ -229,7 +230,9 @@ export const buildBeatLines = (chronicle: Chronicle): string[] => {
   }
   return chronicle.beats.map((beat) => {
     const status = beat.status ?? 'in_progress';
-    return `[${status}] ${beat.title} — ${beat.description}`;
+    const succession =
+      beat.supersededBy === undefined ? '' : ` (superseded by ${beat.supersededBy})`;
+    return `[${status}]${succession} ${beat.title} — ${beat.description}`;
   });
 };
 
