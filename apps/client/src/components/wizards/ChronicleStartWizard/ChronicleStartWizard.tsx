@@ -586,12 +586,18 @@ function SeedStep({
       setError('Seed generation needs an anchor entity. Pick one on the Anchor step, or write your own seed below.');
       return;
     }
+    const characterId = useChronicleStore.getState().preferredCharacterId;
+    if (!characterId) {
+      setError('Select a character before generating seeds — they shape the hooks.');
+      return;
+    }
     setSeedStatus('loading');
     setError(null);
 
     try {
       const result = await trpcClient.generateChronicleSeeds.mutate({
         anchorId,
+        characterId,
         count: 3,
         locationId,
         playerId,

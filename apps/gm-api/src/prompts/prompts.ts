@@ -107,18 +107,14 @@ class PromptComposer {
   }
 
   async #instructions(templateId: PromptTemplateId, context: GraphContext): Promise<string> {
-    const data = {
-      character: { name: context.chronicleState.character.name },
-      scene: context.effectiveScene,
-    };
-    const base = await this.#templateRuntime.render(templateId, data);
+    const base = await this.#templateRuntime.render(templateId, {});
     const sections = [base];
     if (ENTITY_AWARE_NARRATIVE_TEMPLATES.has(templateId)) {
       sections.push(ENTITY_USAGE_POLICY);
     }
     if (context.effectiveScene !== null && SCENE_AWARE_TEMPLATES.has(templateId)) {
       const sceneTemplateId = getSceneTypeDefinition(context.effectiveScene.type).promptTemplateId;
-      const scenePolicy = await this.#templateRuntime.render(sceneTemplateId, data);
+      const scenePolicy = await this.#templateRuntime.render(sceneTemplateId, {});
       sections.push(`## Active scene policy\n\n${scenePolicy}`);
     }
     return sections.join('\n\n');

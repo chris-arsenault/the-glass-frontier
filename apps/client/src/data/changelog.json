@@ -453,5 +453,12 @@
     "summary": "GM turns respond faster",
     "details": "The engine behind each turn made up to a dozen separate model calls, several of them re-reading the same context. Beat targeting now rides inside the intent classification instead of its own call, and the four post-narration judgments — summary, beats, the scene notebook, and location — are made together in a single pass, which also means they can no longer contradict one another. A typical turn now makes about half the classification calls it used to and resolves noticeably faster.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-24-personal-seeds",
+    "releasedAt": "2026-08-24",
+    "summary": "Generated seeds are written for your character",
+    "details": "Seed generation now reads your character sheet — drive, flaw, origin, allegiance, and skills — alongside the location and anchor lore, and each hook must implicate that character specifically and state a goal worth pursuing, since the seed you pick becomes the chronicle's founding beat. Seeds are also written by the prose model instead of the lightweight classifier. The seed prompt was rebuilt around a strict process-and-data format, and every GM prompt now keeps its instructions fixed while the story data arrives in clearly labeled blocks, a structure enforced by tests. The beat panels no longer claim beats appear only after the first turn.",
+    "type": "improvement"
   }
 ]

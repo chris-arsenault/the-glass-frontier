@@ -481,10 +481,12 @@ describe('CanonPipeline', () => {
     };
     const messageText = (index: number): string =>
       extractRequest.input.at(index)?.content[0]?.text ?? '';
-    expect(messageText(1)).toContain('"scenes"');
-    expect(messageText(1)).toContain(TAVERN_NAME);
-    expect(messageText(2)).toContain('"beats"');
-    expect(messageText(3)).toContain('Scene: search');
+    expect(messageText(0)).toContain('"kinds"');
+    expect(messageText(0)).toContain('"relationshipVerbs"');
+    expect(messageText(2)).toContain('"scenes"');
+    expect(messageText(2)).toContain(TAVERN_NAME);
+    expect(messageText(3)).toContain('"beats"');
+    expect(messageText(4)).toContain('Scene: search');
 
     expect(commitBatch).toHaveBeenCalledOnce();
     const proposal = commitBatch.mock.calls[0]?.[0] as CanonProposal;

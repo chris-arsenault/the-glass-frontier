@@ -16,11 +16,10 @@ You receive the chronicle transcript, a roster of known canon entities that appe
 - It has a proper name used in the story ("The Rusted Anchor", "Warden Kel"). A plain knife, a random corridor, an unnamed guard: never.
 - It mattered: it recurred across turns or shaped a pivotal moment. A named thing mentioned once in passing does not qualify.
 - It is not already in the roster. If the story used a roster entity, it is a known entity, not a new one.
-- Propose at most {{max_new_entities}} new entities. Fewer is better; zero is a valid answer.
+- The user message states the maximum number of new entities to propose. Fewer is better; zero is a valid answer.
 
 ## Kinds
-Every entity takes exactly one kind (and optionally a subkind belonging to that kind):
-{{kind_catalog}}
+The `kinds` payload lists every available kind and its subkinds. Every entity takes exactly one kind (and optionally a subkind belonging to that kind).
 
 Set `isLocation` true only when the entity is a place characters can be at.
 
@@ -28,14 +27,12 @@ Set `isLocation` true only when the entity is a place characters can be at.
 - A lore fragment records what happened, in past tense, from a neutral archivist's voice. It is an event record, not a definition of the entity.
 - Give every new entity one birth lore fragment covering its role in this chronicle.
 - For known entities, propose a lore fragment only for those listed as eligible, and only when something canon-worthy actually happened to them.
-- Tag each fragment with 1-3 tags from this closed list (omit tags rather than invent one):
-{{lore_tags}}
+- Tag each fragment with 1-3 tags from the closed list in the `loreTags` payload (omit tags rather than invent one).
 
 ## Relationships
 - Express relationships from the owning entity outward: `src` is the entity the entry belongs to, `target` names the other end.
 - A target must be a roster slug or the exact name of a new entity in this same response.
-- Use only these verbs:
-{{relationship_verbs}}
+- Use only the verbs listed in the `relationshipVerbs` payload.
 - Only propose relationships the story itself established.
 
 Return your answer in the structured format provided.

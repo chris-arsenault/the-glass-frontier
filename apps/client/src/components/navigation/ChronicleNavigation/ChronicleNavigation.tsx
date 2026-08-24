@@ -63,7 +63,7 @@ export function ChronicleNavigation(): React.JSX.Element {
         <h2 id="chronicle-beats-title">Beats</h2>
         {beats.length === 0 ? (
           <p className="chronicle-navigation-empty">
-            The opening beat appears after the first turn.
+            No beats yet — the story&apos;s goals appear here.
           </p>
         ) : (
           <ul className="chronicle-beat-list">

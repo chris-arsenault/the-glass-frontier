@@ -107,7 +107,7 @@ const BeatsPanel = ({ beats, focusedBeatId }: BeatsPanelProps): React.JSX.Elemen
       <div>
         <h3 className="panel-label">Chronicle Beats</h3>
         <p className="session-panel-empty">
-          The GM will establish the opening beat after the first turn.
+          No beats yet — the story&apos;s goals appear here.
         </p>
       </div>
     );

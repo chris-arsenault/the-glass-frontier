@@ -43,17 +43,19 @@ const SUMMARIZE_MAX_TOKENS = 300;
 const DESCRIPTION_MAX_CHARS = 2000;
 const CLASSIFICATION_CATEGORY = 'classification';
 
-const kindCatalog = (): string =>
-  WORLD_KINDS.map((kind) => {
-    const subkinds = kind.subkinds.length === 0 ? '' : ` Subkinds: ${kind.subkinds.join(', ')}.`;
-    return `- ${kind.id} (${kind.displayName}).${subkinds}`;
-  }).join('\n');
-
-const relationshipVerbList = (): string =>
-  WRITABLE_RELATIONSHIP_TYPES.map((type) => `- ${type.id}: ${type.description}`).join('\n');
-
-const loreTagList = (): string =>
-  WORLD_TAGS.map((tag) => `- ${tag.id}: ${tag.description}`).join('\n');
+const vocabularyPayload = (): LLMRequest['input'][number] =>
+  developerMessage({
+    kinds: WORLD_KINDS.map((kind) => ({
+      displayName: kind.displayName,
+      id: kind.id,
+      subkinds: kind.subkinds,
+    })),
+    loreTags: WORLD_TAGS.map((tag) => ({ description: tag.description, id: tag.id })),
+    relationshipVerbs: WRITABLE_RELATIONSHIP_TYPES.map((type) => ({
+      description: type.description,
+      id: type.id,
+    })),
+  });
 
 const beatsPayload = (chronicle: ChronicleSnapshot['chronicle']): LLMRequest['input'][number] =>
   developerMessage({
@@ -288,22 +290,20 @@ class CanonPipeline {
     const { player, roster, runtime, scenes, snapshot } = input;
     const chronicle = snapshot.chronicle;
     const [instructions, model] = await Promise.all([
-      runtime.render('canon-extractor', {
-        kind_catalog: kindCatalog(),
-        lore_tags: loreTagList(),
-        max_new_entities: newEntityCap(snapshot.turns.length),
-        relationship_verbs: relationshipVerbList(),
-      }),
+      runtime.render('canon-extractor', {}),
       this.#modelConfigStore.getModelForCategory(CLASSIFICATION_CATEGORY, chronicle.playerId),
     ]);
     const response = await this.#llm.generateStructured(
       {
         input: [
+          vocabularyPayload(),
           rosterPayload(roster, sceneSubjectNames(scenes)),
           developerMessage({ scenes }),
           beatsPayload(chronicle),
           developerMessage({ transcript: buildTurnArtifacts(snapshot.turns).transcript }),
-          userMessage(`Archive the chronicle '${chronicle.title}' now.`),
+          userMessage(
+            `Archive the chronicle '${chronicle.title}' now, proposing at most ${newEntityCap(snapshot.turns.length)} new entities.`
+          ),
         ],
         instructions,
         maxOutputTokens: EXTRACT_MAX_TOKENS,

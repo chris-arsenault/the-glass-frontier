@@ -11,6 +11,7 @@ type GenerateSeedRequest = {
   player: LLMPlayer;
   locationId: string;
   anchorId: string;
+  character: Character;
   toneChips?: string[];
   toneNotes?: string;
   count?: number;
@@ -39,17 +40,6 @@ const SeedArraySchema = z.object({
   seeds: z.array(SingleSeedSchema).min(1).max(5),
 });
 
-type SeedTemplatePayload = {
-  breadcrumb: string;
-  location_description: string;
-  location_kind: string;
-  location_name: string;
-  requested: number;
-  tags: string;
-  tone_chips: string;
-  tone_notes: string;
-};
-
 type DeveloperMessage = {
   content: Array<{ text: string; type: 'input_text' }>;
   role: 'developer';
@@ -58,11 +48,13 @@ type DeveloperMessage = {
 type GenerateAllSeedsOptions = {
   anchor: HardState;
   anchorLore: LoreFragment[];
+  character: Character;
   count: number;
   instructions: string;
   location: HardState;
   locationLore: LoreFragment[];
   model: string;
+  originNames: Map<string, string>;
   playerId: string;
   player: LLMPlayer;
   toneChips?: string[];
@@ -92,32 +84,29 @@ export class ChronicleSeedService {
     const anchor = await this.#ensureAnchor(location.id, request.anchorId);
 
     // Load lore fragments for context
-    const [locationLore, anchorLore] = await Promise.all([
+    const [locationLore, anchorLore, originNames] = await Promise.all([
       this.#world.listLoreFragmentsByEntity({ entityId: location.id, limit: 5 }),
       this.#world.listLoreFragmentsByEntity({ entityId: anchor.id, limit: 5 }),
+      this.#resolveOriginNames(request.character),
     ]);
 
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
-    const templateRuntime = this.#createTemplateRuntime(request.playerId);
-    const [instructions, classificationModel] = await Promise.all([
-      this.#renderSeedInstructions({
-        anchor,
-        location,
-        requested,
-        templateRuntime,
-        toneChips: request.toneChips,
-        toneNotes: request.toneNotes,
-      }),
-      this.#modelConfigStore.getModelForCategory('classification', request.playerId),
+    // Seeds are the most creativity-demanding text in the product, and the
+    // chosen one becomes the founding beat: they get the prose model.
+    const [instructions, proseModel] = await Promise.all([
+      this.#createTemplateRuntime(request.playerId).render('chronicle-seed', {}),
+      this.#modelConfigStore.getModelForCategory('prose', request.playerId),
     ]);
     return this.#generateAllSeeds({
       anchor,
       anchorLore,
+      character: request.character,
       count: requested,
       instructions,
       location,
       locationLore,
-      model: classificationModel,
+      model: proseModel,
+      originNames,
       player: request.player,
       playerId: request.playerId,
       toneChips: request.toneChips,
@@ -162,26 +151,24 @@ export class ChronicleSeedService {
     request: GenerateOpeningRequest;
   }): DeveloperMessage[] {
     const developerMessages: DeveloperMessage[] = [
-      this.#createDeveloperMessage({
-        location: this.#buildEntityContext(options.location, options.locationLore),
-      }),
+      this.#createDeveloperMessage(
+        'LOCATION',
+        this.#buildEntityContext(options.location, options.locationLore)
+      ),
     ];
     if (options.anchor !== null) {
-      developerMessages.push(this.#createDeveloperMessage({
-        anchor: this.#buildEntityContext(options.anchor, options.anchorLore),
-      }));
+      developerMessages.push(this.#createDeveloperMessage(
+        'ANCHOR',
+        this.#buildEntityContext(options.anchor, options.anchorLore)
+      ));
     }
     const tone = this.#formatTone(options.request.toneChips, options.request.toneNotes);
     developerMessages.push(
-      this.#createDeveloperMessage({
-        character: options.request.character,
-      }),
-      this.#createDeveloperMessage({
-        chronicle: {
-          seed: options.request.seedText.trim(),
-          title: options.request.title,
-          tone: tone.length > 0 ? tone : 'none specified',
-        },
+      this.#createDeveloperMessage('CHARACTER', options.request.character),
+      this.#createDeveloperMessage('CHRONICLE', {
+        seed: options.request.seedText.trim(),
+        title: options.request.title,
+        tone: tone.length > 0 ? tone : 'none specified',
       })
     );
     return developerMessages;
@@ -264,18 +251,36 @@ export class ChronicleSeedService {
     }));
   }
 
+  /** The origin ids on the sheet become names the seed writer can use. */
+  async #resolveOriginNames(character: Character): Promise<Map<string, string>> {
+    const { allegianceId, cultureId, homelandId, speciesId } = character.origin;
+    const entities = await this.#world.listEntitiesByIds([
+      speciesId,
+      cultureId,
+      homelandId,
+      allegianceId,
+    ]);
+    return new Map(entities.map((entity) => [entity.id, entity.name]));
+  }
+
   #buildDeveloperMessages(options: GenerateAllSeedsOptions): DeveloperMessage[] {
     const messages = [
-      this.#createDeveloperMessage({
-        location: this.#buildEntityContext(options.location, options.locationLore),
-      }),
-      this.#createDeveloperMessage({
-        anchor: this.#buildEntityContext(options.anchor, options.anchorLore),
-      }),
+      this.#createDeveloperMessage(
+        'LOCATION',
+        this.#buildEntityContext(options.location, options.locationLore)
+      ),
+      this.#createDeveloperMessage(
+        'ANCHOR',
+        this.#buildEntityContext(options.anchor, options.anchorLore)
+      ),
+      this.#createDeveloperMessage(
+        'CHARACTER',
+        this.#formatSeedCharacter(options.character, options.originNames)
+      ),
     ];
     const toneDescription = this.#formatTone(options.toneChips, options.toneNotes);
     if (toneDescription.length > 0) {
-      messages.push(this.#createDeveloperMessage(`Tone: ${toneDescription}`));
+      messages.push(this.#createDeveloperMessage('TONE', toneDescription));
     }
     return messages;
   }
@@ -300,13 +305,46 @@ export class ChronicleSeedService {
     const toneClause = toneDescription.length > 0
       ? ` with a ${toneDescription} tone`
       : '';
-    return `Create ${options.count} compelling and diverse seeds for chronicles set in ${options.location.name}, focusing on ${options.anchor.name}${toneClause}. Each seed should offer a different narrative hook or approach.`;
+    return `Create ${options.count} diverse seeds for ${options.character.name}'s next chronicle, set in ${options.location.name} and centered on ${options.anchor.name}${toneClause}. Each seed pursues a different goal.`;
   }
 
-  #createDeveloperMessage(payload: Record<string, unknown> | string): DeveloperMessage {
+  #formatSeedCharacter(
+    character: Character,
+    originNames: Map<string, string>
+  ): Record<string, unknown> {
+    const { origin } = character;
+    return {
+      archetype: character.archetype,
+      bio: character.bio,
+      callings: character.nature.callings,
+      drive: character.nature.drive,
+      flaw: character.nature.flaw,
+      instinct: character.nature.instinct,
+      name: character.name,
+      origin: {
+        allegiance: originNames.get(origin.allegianceId),
+        allegianceStance: origin.allegianceStance,
+        culture: originNames.get(origin.cultureId),
+        homeland: originNames.get(origin.homelandId),
+        species: originNames.get(origin.speciesId),
+      },
+      pronouns: character.pronouns,
+      skills: Object.values(character.skills).map((skill) => ({
+        name: skill.name,
+        tier: skill.tier,
+      })),
+      uniqueThing: character.nature.uniqueThing,
+    };
+  }
+
+  #createDeveloperMessage(
+    key: string,
+    payload: Record<string, unknown> | string
+  ): DeveloperMessage {
+    const body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
     return {
       content: [{
-        text: typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2),
+        text: `### ${key}\n${body}`,
         type: 'input_text',
       }],
       role: 'developer',
@@ -339,64 +377,6 @@ export class ChronicleSeedService {
       manager: this.#templateManager,
       playerId: playerId.trim(),
     });
-  }
-
-  async #renderSeedInstructions(options: {
-    templateRuntime: PromptTemplateRuntime;
-    location: HardState;
-    anchor: HardState;
-    toneChips?: string[];
-    toneNotes?: string;
-    requested: number;
-  }): Promise<string> {
-    const payload = this.#buildSeedTemplatePayload({
-      anchor: options.anchor,
-      location: options.location,
-      requested: options.requested,
-      toneChips: options.toneChips,
-      toneNotes: options.toneNotes,
-    });
-    return options.templateRuntime.render('chronicle-seed', payload);
-  }
-
-  #buildSeedTemplatePayload(options: {
-    location: HardState;
-    anchor: HardState;
-    toneChips?: string[];
-    toneNotes?: string;
-    requested: number;
-  }): SeedTemplatePayload {
-    const toneChips = this.#normalizeToneChips(options.toneChips);
-    const toneNotes = this.#normalizeToneNotes(options.toneNotes);
-    const tags = this.#buildSeedTags(options.location, options.anchor);
-
-    return {
-      breadcrumb: this.#buildBreadcrumb(options.location),
-      location_description: options.location.description ?? 'No description provided.',
-      location_kind: options.location.subkind ?? options.location.kind,
-      location_name: options.location.name,
-      requested: options.requested,
-      tags: tags.length > 0 ? tags.join(', ') : 'none',
-      tone_chips: toneChips.length > 0 ? toneChips.join(', ') : 'none',
-      tone_notes: toneNotes ?? 'none',
-    };
-  }
-
-  #buildBreadcrumb(location: HardState): string {
-    const segments = [location.subkind, location.status].filter(
-      (entry) => entry !== undefined
-    );
-    return segments.length > 0 ? segments.join(' › ') : location.name;
-  }
-
-  #buildSeedTags(location: HardState, anchor: HardState): string[] {
-    return [
-      location.subkind,
-      location.status,
-      anchor.kind,
-      anchor.subkind,
-      anchor.status,
-    ].filter((tag) => tag !== undefined);
   }
 
   #normalizeToneChips(chips?: string[]): string[] {

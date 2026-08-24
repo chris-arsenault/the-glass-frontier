@@ -112,6 +112,7 @@ export const appRouter = t.router({
       z
         .object({
           anchorId: z.string().uuid(),
+          characterId: z.string().min(1),
           count: z.number().int().positive().max(5).optional(),
           locationId: z.string().uuid(),
           playerId: z.string().min(1),
@@ -120,8 +121,11 @@ export const appRouter = t.router({
     )
     .mutation(async ({ ctx, input }) => {
       const playerId = requireCurrentPlayer(ctx, input.playerId);
+      const character = await requireCharacter(ctx, input.characterId);
+      ensureCharacterOwnership(character, playerId);
       return ctx.seedService.generateSeeds({
         anchorId: input.anchorId,
+        character,
         count: input.count,
         locationId: input.locationId,
         player: toLLMPlayer(ctx.identity),

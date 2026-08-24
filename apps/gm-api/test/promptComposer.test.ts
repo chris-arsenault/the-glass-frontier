@@ -30,7 +30,7 @@ const textOf = (message: { content: Array<{ text: string }> }): string =>
   message.content.map((part) => part.text).join('');
 
 describe('PromptComposer', () => {
-  it('renders instructions with the character name available to templates', async () => {
+  it('renders instructions statically', async () => {
     const { rendered, runtime } = recordingRuntime();
     const composer = new PromptComposer(runtime);
     const context = buildContext({ playerIntent: buildIntent() });
@@ -39,7 +39,7 @@ describe('PromptComposer', () => {
 
     expect(prompt.instructions).toContain('instructions:action-resolver');
     expect(prompt.instructions).toContain('no entity must appear');
-    expect(rendered[0]?.data).toEqual({ character: { name: 'Vex' }, scene: null });
+    expect(rendered[0]?.data).toEqual({});
   });
 
   it('assembles the player message plus developer fragments for narration prompts', async () => {
