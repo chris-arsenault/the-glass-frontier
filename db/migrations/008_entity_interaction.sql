@@ -33,6 +33,28 @@ WHERE NOT props ? 'entityRoster';
 ALTER TABLE chronicle_turn
   ADD COLUMN entity_references jsonb;
 
--- The entity-reference-resolver template and the entity-judge wording this
--- migration once wrote by hand now arrive with every other prompt body, from
--- the generated seed that packages/app/templates is the source of.
+INSERT INTO app.prompt_template (id, body, updated_at)
+VALUES (
+  'entity-reference-resolver',
+  $prompt$You resolve vague references in one transcript message to established entities supplied as candidates.
+
+Return a match only when the message contains a specific phrase that refers to one candidate. Relevance alone is not a reference. A candidate merely fitting the subject of the message is not enough. If the phrase could refer to several candidates, return no match for it.
+
+For each match, copy the exact referring substring from the message into `text` and return the candidate's exact `slug`. Do not rewrite, normalize, or expand the substring. Return an empty `matches` array when nothing is clear.
+$prompt$,
+  now()
+)
+ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body, updated_at = EXCLUDED.updated_at;
+
+UPDATE app.prompt_template
+SET body = replace(
+  replace(
+    body,
+    'Do not infer usage from the player''s intent alone.',
+    'Do not infer usage from the player''s intent alone. A resolved GM entity reference means that entity was at least mentioned.'
+  ),
+  'Return your answer using the structured format provided. For each entity, provide:',
+  'Return your answer using the structured format provided. Return every offered entity exactly once. For each entity, provide:'
+),
+updated_at = now()
+WHERE id = 'entity-judge';
