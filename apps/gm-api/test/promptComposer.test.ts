@@ -246,7 +246,7 @@ describe('beat fragments', () => {
       },
     ];
 
-    const prompt = await composer.buildPrompt('beat-tracker', context);
+    const prompt = await composer.buildPrompt('turn-judge', context);
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain('### BEATS');
@@ -266,8 +266,7 @@ describe('beat fragments', () => {
 
     const prompts = await Promise.all([
       'intent-classifier',
-      'intent-beat-detector',
-      'beat-tracker',
+      'turn-judge',
     ].map((templateId) => composer.buildPrompt(templateId as PromptTemplateId, context)));
     for (const prompt of prompts) {
       const developer = textOf(prompt.input.at(-1)!);

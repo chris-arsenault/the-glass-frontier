@@ -13,6 +13,7 @@ type LlmClassifierOptions<TParsed> = {
   applyResult: (context: GraphContext, result: TParsed) => GraphNodeDelta;
   shouldRun: (context: GraphContext) => boolean;
   telemetryTag?: string;
+  maxOutputTokens?: number;
 };
 
 const CLASSIFIER_MAX_TOKEN = 1500;
@@ -50,7 +51,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
         : this.options.schema;
       const response = await context.llm.generateStructured(
         {
-          maxOutputTokens: CLASSIFIER_MAX_TOKEN,
+          maxOutputTokens: this.options.maxOutputTokens ?? CLASSIFIER_MAX_TOKEN,
           model,
           ...prompt,
           metadata: {

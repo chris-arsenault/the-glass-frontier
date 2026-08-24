@@ -5,33 +5,12 @@ import type {
   EntityRosterState,
 } from '@glass-frontier/dto';
 
+import { isEntityOfferable } from './entityOfferability';
 import type { WorldSchemaStore } from './types';
 
 const ENTITY_ROSTER_LIMIT = 7;
 const ENTITY_ROSTER_CANDIDATE_LIMIT = 50;
 const UNWRITTEN_ROSTER_LIMIT = 2;
-const ROSTER_KINDS = new Set<ContextSliceEntity['kind']>([
-  'artifact',
-  'creature',
-  'faction',
-  'incident',
-  'installation',
-  'npc',
-  'rumor',
-  'transport',
-]);
-const ROSTER_LOCATION_SUBKINDS = new Set<ContextSliceEntity['subkind']>([
-  'hazardous_zone',
-  'region',
-  'settlement',
-]);
-const ROSTER_RESOURCE_SUBKINDS = new Set<ContextSliceEntity['subkind']>([
-  'device',
-  'food',
-  'infrastructure',
-  'medicine',
-]);
-
 type EntityRosterContext = {
   anchorId?: string;
   locationId?: string;
@@ -57,23 +36,6 @@ const rosterPriority = (
 };
 
 /**
- * Whether an entity is concrete enough to offer as something play can address.
- * Broader canon remains in the context slice so free-text references can still
- * resolve it; this boundary only controls the proactive roster.
- */
-export const isEntityRosterEligible = (
-  entry: Pick<ContextSliceEntity, 'kind' | 'subkind'>
-): boolean => {
-  if (ROSTER_KINDS.has(entry.kind)) {
-    return true;
-  }
-  if (entry.kind === 'geographic_location') {
-    return ROSTER_LOCATION_SUBKINDS.has(entry.subkind);
-  }
-  return entry.kind === 'resource' && ROSTER_RESOURCE_SUBKINDS.has(entry.subkind);
-};
-
-/**
  * Removes article-like canon and orders the remaining candidates by direct
  * involvement before falling back to graph relevance. It may return fewer
  * than seven entries rather than filling the roster with weakly related lore.
@@ -87,7 +49,7 @@ export const curateEntityRoster = (
   context: EntityRosterContext
 ): ContextSliceEntity[] => {
   const recentIds = new Set(context.recentIds ?? []);
-  const ranked = entries.filter(isEntityRosterEligible).sort((left, right) => {
+  const ranked = entries.filter(isEntityOfferable).sort((left, right) => {
     const priority = rosterPriority(right, context, recentIds)
       - rosterPriority(left, context, recentIds);
     return priority === 0 ? right.score - left.score : priority;

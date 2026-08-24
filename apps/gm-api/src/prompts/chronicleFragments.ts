@@ -47,20 +47,16 @@ PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
   ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['beat-tracker', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
   ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities', ENTITY_REFERENCES_FRAGMENT]],
-  ['gm-summary', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', SKILL_CHECK_FRAGMENT, 'wrap']],
   ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['intent-beat-detector', [RECENT_EVENTS_FRAGMENT, 'intent', 'beats']],
   ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
-  ['location-delta', ['intent', USER_MESSAGE_FRAGMENT, 'location', LEDGER_FRAGMENT]],
   ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['scene-ledger', ['scene', LEDGER_FRAGMENT, 'location', ENTITY_REFERENCES_FRAGMENT, USER_MESSAGE_FRAGMENT]],
+  ['turn-judge', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', SKILL_CHECK_FRAGMENT, 'location', ENTITY_REFERENCES_FRAGMENT, 'wrap']],
   ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 

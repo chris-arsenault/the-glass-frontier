@@ -1,10 +1,10 @@
 import type { ContextSliceEntity, ContextSliceInput } from '@glass-frontier/dto';
 import { describe, expect, it } from 'vitest';
 
+import { isEntityOfferable } from '../src/entityOfferability';
 import {
   buildInitialEntityRoster,
   curateEntityRoster,
-  isEntityRosterEligible,
 } from '../src/entityRoster';
 import type { WorldSchemaStore } from '../src/types';
 
@@ -82,10 +82,13 @@ describe('buildInitialEntityRoster', () => {
       entity('material', 'Ringglass', {
         kind: 'resource', prominence: 'mythic', score: 17, subkind: 'material',
       }),
+      entity('forgotten-person', 'Forgotten Person', {
+        kind: 'npc', prominence: 'forgotten', score: 16, subkind: 'worker',
+      }),
       entity('person', 'K Vara', { kind: 'npc', score: 1, subkind: 'worker' }),
     ];
 
-    expect(entries.filter(isEntityRosterEligible).map((entry) => entry.name)).toEqual(['K Vara']);
+    expect(entries.filter(isEntityOfferable).map((entry) => entry.name)).toEqual(['K Vara']);
   });
 
   it('includes incidents and rumors as actionable story hooks', () => {
@@ -94,7 +97,18 @@ describe('buildInitialEntityRoster', () => {
     });
     const rumor = entity('rumor', 'The Captain Took a Bribe', { kind: 'rumor', subkind: undefined });
 
-    expect([incident, rumor].every(isEntityRosterEligible)).toBe(true);
+    expect([incident, rumor].every(isEntityOfferable)).toBe(true);
+  });
+
+  it('includes specific places and usable resources', () => {
+    const settlement = entity('settlement', 'Bell Hollow', {
+      kind: 'geographic_location', subkind: 'settlement',
+    });
+    const medicine = entity('medicine', 'Blue Salve', {
+      kind: 'resource', subkind: 'medicine',
+    });
+
+    expect([settlement, medicine].every(isEntityOfferable)).toBe(true);
   });
 
   it('prioritizes scene and recent entities without requiring co-location', () => {

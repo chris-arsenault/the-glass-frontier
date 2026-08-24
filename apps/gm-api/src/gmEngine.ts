@@ -11,10 +11,8 @@ import type {
 import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
 import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
 import { EntityJudgeNode, EntitySelectorNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes';
-import { GmSummaryNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/GmSummaryNode';
 import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode';
-import { LocationDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
-import { SceneLedgerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/SceneLedgerNode';
+import { TurnJudgeNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/TurnJudgeNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
 import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
 import type {
@@ -35,8 +33,6 @@ import {
 } from './eventEmitters/closureEmitter';
 import { type TurnProgressPublisher } from './eventEmitters/progressEmitter';
 import { createProgressEmitterFromEnv } from './eventEmitters/progressEmitter';
-import { BeatDetectorNode } from './gmGraph/nodes/classifiers/BeatDetectorNode';
-import { BeatTrackerNode } from './gmGraph/nodes/classifiers/BeatTrackerNode';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceResolverNode';
 import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
@@ -68,7 +64,6 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'chara
 const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'intent-classifier', type: 'sequential' },
   { nodeId: 'scene-subject-resolver', type: 'sequential' },
-  { nodeId: 'intent-beat-detector', type: 'sequential' },
   { nodeId: 'entity-selector', type: 'sequential' },
   { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
   { nodeId: 'check-planner', type: 'sequential' },
@@ -76,14 +71,7 @@ const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'gm-response-node', type: 'sequential' },
   { nodeId: 'gm-entity-reference-resolver', type: 'sequential' },
   {
-    nodeIds: [
-      'entity-judge',
-      'beat-tracker',
-      'gm-summary',
-      'inventory-delta',
-      'location-delta',
-      'scene-ledger',
-    ],
+    nodeIds: ['entity-judge', 'inventory-delta', 'turn-judge'],
     type: 'parallel',
   },
 ];
@@ -257,21 +245,16 @@ class GmEngine {
     const entitySelector = new EntitySelectorNode();
     const playerEntityReferenceResolver = new EntityReferenceResolverNode('player');
     const gmEntityReferenceResolver = new EntityReferenceResolverNode('gm');
-    const beatDetector = new BeatDetectorNode();
-    const beatTracker = new BeatTrackerNode();
     const checkPlanner = new CheckPlannerNode();
-    const gmSummaryNode = new GmSummaryNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
     const entityJudgeNode = new EntityJudgeNode();
-    const locationDeltaNode = new LocationDeltaNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
-    const sceneLedgerNode = new SceneLedgerNode();
+    const turnJudgeNode = new TurnJudgeNode();
 
     const nodes = [
       intentClassifier,
       sceneSubjectResolver,
-      beatDetector,
       checkPlanner,
       entitySelector,
       playerEntityReferenceResolver,
@@ -279,11 +262,8 @@ class GmEngine {
       gmResponseNode,
       gmEntityReferenceResolver,
       entityJudgeNode,
-      beatTracker,
-      gmSummaryNode,
-      locationDeltaNode,
       inventoryDeltaNode,
-      sceneLedgerNode,
+      turnJudgeNode,
     ];
 
     return new GmGraphOrchestrator(

@@ -12,6 +12,7 @@ import type {
   HardStateSubkind,
   Intent,
   LlmTrace,
+  LocationDeltaDecision,
   SceneOutcome,
   SkillCheckPlan,
   SkillCheckResult,
@@ -26,7 +27,6 @@ import type {
 import type { WorldSchemaStore, ChronicleStore } from '@glass-frontier/worldstate';
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
-import type { LocationDeltaDecision } from './gmGraph/nodes/classifiers/LocationDeltaNode';
 import type { SceneLedgerUpdate } from './scenes/sceneLedger';
 
 export type ChronicleState = {

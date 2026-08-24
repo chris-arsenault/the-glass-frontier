@@ -13,6 +13,7 @@ import type {
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
+import { isEntityOfferable } from './entityOfferability';
 import type { WorldNeighbor } from './types';
 import { now } from './utils';
 
@@ -120,8 +121,6 @@ const FOCUS_CHOICE_QUERY = `${ENTITY_SELECT}
   )
     AND NOT e.dm
     AND NOT e.is_article
-    AND NOT e.is_location
-    AND e.status IS DISTINCT FROM 'shell'
   ORDER BY wp.rank ASC, e.created_at ASC`;
 
 /**
@@ -378,8 +377,13 @@ export class EntityReader {
       input.locationId,
       FOCUS_EXCLUDED_RELATIONSHIPS,
     ]);
-    const links = await this.#listLinksForMany(result.rows.map((row) => row.id));
-    return result.rows.map((row) => toEntity(row, links.get(row.id) ?? []));
+    const offerableRows = result.rows.filter((row) => isEntityOfferable({
+      kind: row.kind,
+      prominence: row.prominence,
+      subkind: row.subkind ?? undefined,
+    }));
+    const links = await this.#listLinksForMany(offerableRows.map((row) => row.id));
+    return offerableRows.map((row) => toEntity(row, links.get(row.id) ?? []));
   }
 
   async listNeighbors(input: NeighborListInput): Promise<WorldNeighbor[]> {

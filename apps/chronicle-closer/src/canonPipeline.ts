@@ -6,7 +6,13 @@ import {
   WORLD_TAGS,
   WRITABLE_RELATIONSHIP_TYPES,
 } from '@glass-frontier/dto';
-import type { LLMPlayer, LLMRequest, RetryLLMClient } from '@glass-frontier/llm-client';
+import {
+  developerJsonMessage as developerMessage,
+  userTextMessage as userMessage,
+  type LLMPlayer,
+  type LLMRequest,
+  type RetryLLMClient,
+} from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import type { ChronicleSnapshot, WorldSchemaStore } from '@glass-frontier/worldstate';
 
@@ -48,16 +54,6 @@ const relationshipVerbList = (): string =>
 
 const loreTagList = (): string =>
   WORLD_TAGS.map((tag) => `- ${tag.id}: ${tag.description}`).join('\n');
-
-const developerMessage = (payload: Record<string, unknown>): LLMRequest['input'][number] => ({
-  content: [{ text: JSON.stringify(payload, null, 2), type: 'input_text' }],
-  role: 'developer',
-});
-
-const userMessage = (text: string): LLMRequest['input'][number] => ({
-  content: [{ text, type: 'input_text' }],
-  role: 'user',
-});
 
 const beatsPayload = (chronicle: ChronicleSnapshot['chronicle']): LLMRequest['input'][number] =>
   developerMessage({

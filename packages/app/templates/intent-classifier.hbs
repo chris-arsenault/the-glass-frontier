@@ -28,6 +28,8 @@ Use RECENT-EVENTS to resolve pronouns, short follow-ups, and references such as 
 
 Scene handling: `sceneChange` stays null while ordinary play continues, and under an existing SCENE section null means that scene carries on. Emit `{type, subject, subjectKind}` when this message clearly enters or switches into a sustained situation: `dialog` for direct conversation with a named NPC, `battle` for immediate physical conflict with active opposition, `hunt` for sustained tracking toward a quarry, `chase` for pursuit or escape where distance and route keep changing, and `search` for sustained inspection of a place, transport, artifact, or other subject. Combat is the clearest case: when the player attacks, defends, or fights back against opposition that resists — and the check lines in RECENT-EVENTS show strikes and maneuvers accumulating — a battle scene is underway, so emit it. A passing remark, a single observation, or one more attack inside an already-open battle is the existing scene continuing, and null is right there. `subject` is the concise in-world name of what the scene revolves around, and `subjectKind` comes from the canonical world kinds (npc, creature, faction, geographic_location, installation, transport, artifact, resource, phenomenon, conflict). Scene endings are decided downstream: from this classifier's view, leaving or resolving a scene is still play inside it.
 
+Beat targeting: `beatDirective` states how this intent relates to the chronicle's long-horizon beats. Answer `existing` with the beat's `id` in `targetBeatId` when the intent clearly progresses, disrupts, resolves, or abandons a beat listed in the BEATS section, even when the immediate action is small. Answer `new` when the intent introduces a fresh multi-turn goal, mystery, or problem rather than a one-off action, and `independent` with a null target when no beat is meaningfully touched. The directive's `summary` explains the targeting in at most 140 characters, and RECENT-EVENTS resolves short follow-ups here just as it does for intent.
+
 Output fields:
 - intentType: the single best intent type from the list above
 - intentSummary: concise paraphrase of the player's request (<=140 chars)
@@ -36,5 +38,6 @@ Output fields:
 - creativeSpark: true only when the intent shows genuine improvisation or imaginative flair beyond the obvious move
 - handlerHints: 0-8 lowercase hints that nudge downstream narration (e.g., "whispered", "hurried"); emit [] when none apply
 - sceneChange: `{type, subject, subjectKind}` only for a clear typed-scene entry/switch; otherwise null
+- beatDirective: `{kind, summary, targetBeatId}` per the beat targeting rules above
 
-Never emit prose beyond the fields. Always satisfy the JSON schema.
+Always satisfy the JSON schema exactly.

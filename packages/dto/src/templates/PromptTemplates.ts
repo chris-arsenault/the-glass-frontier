@@ -4,7 +4,6 @@ export const PromptTemplateIds = [
   'action-resolver',
   'wrap-resolver',
   'beat-reconciler',
-  'beat-tracker',
   'canon-extractor',
   'canon-resolver',
   'check-planner',
@@ -14,12 +13,9 @@ export const PromptTemplateIds = [
   'entity-judge',
   'entity-reference-resolver',
   'entity-summarizer',
-  'gm-summary',
   'inquiry-describer',
-  'intent-beat-detector',
   'intent-classifier',
   'inventory-delta',
-  'location-delta',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
@@ -27,8 +23,8 @@ export const PromptTemplateIds = [
   'scene-chase',
   'scene-dialog',
   'scene-hunt',
-  'scene-ledger',
   'scene-search',
+  'turn-judge',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -56,13 +52,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'beat-reconciler',
     label: 'Beat Reconciler',
     officialObjectKey: 'official/beat-reconciler.hbs',
-    supportsVariants: true,
-  },
-  'beat-tracker': {
-    description: 'Evaluates and updates chronicle beats using player and GM context.',
-    id: 'beat-tracker',
-    label: 'Beat Tracker',
-    officialObjectKey: 'official/beat-tracker.hbs',
     supportsVariants: true,
   },
   'canon-extractor': {
@@ -128,25 +117,11 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/entity-summarizer.hbs',
     supportsVariants: true,
   },
-  'gm-summary': {
-    description: 'Condenses narrated output into a log-friendly summary line.',
-    id: 'gm-summary',
-    label: 'GM Summary',
-    officialObjectKey: 'official/gm-summary.hbs',
-    supportsVariants: true,
-  },
   'inquiry-describer': {
     description: 'Provides sensory-rich scene description for inquiry turns.',
     id: 'inquiry-describer',
     label: 'Inquiry Describer',
     officialObjectKey: 'official/inquiry-describer.hbs',
-    supportsVariants: true,
-  },
-  'intent-beat-detector': {
-    description: 'Determines whether the current intent advances, spawns, or ignores a beat.',
-    id: 'intent-beat-detector',
-    label: 'Intent Beat Detector',
-    officialObjectKey: 'official/intent-beat-detector.hbs',
     supportsVariants: true,
   },
   'intent-classifier': {
@@ -161,13 +136,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'inventory-delta',
     label: 'Inventory Delta',
     officialObjectKey: 'official/inventory-delta.hbs',
-    supportsVariants: true,
-  },
-  'location-delta': {
-    description: 'Decides if the scene anchor shifts within the location graph.',
-    id: 'location-delta',
-    label: 'Location Delta',
-    officialObjectKey: 'official/location-delta.hbs',
     supportsVariants: true,
   },
   'planning-narrator': {
@@ -219,18 +187,18 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/scene-hunt.hbs',
     supportsVariants: true,
   },
-  'scene-ledger': {
-    description: 'Maintains the GM working memory of the current scene: place, presences, interactions.',
-    id: 'scene-ledger',
-    label: 'Scene Ledger',
-    officialObjectKey: 'official/scene-ledger.hbs',
-    supportsVariants: true,
-  },
   'scene-search': {
     description: 'Applies search-specific intent, check, narration, and completion rules.',
     id: 'scene-search',
     label: 'Scene: Search',
     officialObjectKey: 'official/scene-search.hbs',
+    supportsVariants: true,
+  },
+  'turn-judge': {
+    description: 'Judges the narrated turn in one pass: summary, close decision, scene outcome, beats, ledger, and location.',
+    id: 'turn-judge',
+    label: 'Turn Judge',
+    officialObjectKey: 'official/turn-judge.hbs',
     supportsVariants: true,
   },
   'wrap-resolver': {

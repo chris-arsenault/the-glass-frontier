@@ -604,6 +604,9 @@ importers:
       '@aws-sdk/client-secrets-manager':
         specifier: ^3.1115.0
         version: 3.1115.0
+      '@glass-frontier/app':
+        specifier: workspace:*
+        version: link:../app
       '@glass-frontier/node-utils':
         specifier: workspace:*
         version: link:../node-utils

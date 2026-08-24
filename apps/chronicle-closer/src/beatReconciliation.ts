@@ -1,7 +1,13 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
 import { PromptTemplateRuntime } from '@glass-frontier/app';
 import type { ChronicleBeat } from '@glass-frontier/dto';
-import type { LLMPlayer, LLMRequest, RetryLLMClient } from '@glass-frontier/llm-client';
+import {
+  developerJsonMessage as developerJson,
+  userTextMessage,
+  type LLMPlayer,
+  type LLMRequest,
+  type RetryLLMClient,
+} from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import type { ChronicleSnapshot, ChronicleStore } from '@glass-frontier/worldstate';
 import { z } from 'zod';
@@ -72,11 +78,6 @@ export const reconcileOpenBeats = async (input: {
   return changed;
 };
 
-const developerJson = (payload: Record<string, unknown>): LLMRequest['input'][number] => ({
-  content: [{ text: JSON.stringify(payload, null, 2), type: 'input_text' }],
-  role: 'developer',
-});
-
 const reconciliationRequest = (input: {
   instructions: string;
   model: string;
@@ -87,10 +88,7 @@ const reconciliationRequest = (input: {
   input: [
     developerJson({ openBeats: input.openBeats.map(describeBeat) }),
     developerJson({ transcript: buildTurnArtifacts(input.snapshot.turns).transcript }),
-    {
-      content: [{ text: 'Give each open beat its final disposition.', type: 'input_text' }],
-      role: 'user',
-    },
+    userTextMessage('Give each open beat its final disposition.'),
   ],
   instructions: input.instructions,
   maxOutputTokens: RECONCILE_MAX_TOKENS,

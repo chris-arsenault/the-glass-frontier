@@ -78,6 +78,21 @@ describe('buildEntityContext', () => {
     expect(sliceInputs).toHaveLength(1);
   });
 
+  it('offers an eligible chronicle anchor', async () => {
+    const anchor = entity(ANCHOR_ID, 'Bell Salve', {
+      kind: 'resource',
+      subkind: 'medicine',
+    });
+    const { store } = stubWorldStore({ locationId: LOCATION_ID, slice: [anchor] });
+    const context = buildContext({ worldSchemaStore: store });
+    context.chronicleState.chronicle.anchorEntityId = ANCHOR_ID;
+
+    const result = await buildEntityContext(context);
+
+    expect(result.offered.map((entry) => entry.id)).toEqual([ANCHOR_ID]);
+    expect(result.roster[0]?.availability).toContain('anchor');
+  });
+
   it('seeds retrieval from a resolved scene subject', async () => {
     const { sliceInputs, store } = stubWorldStore({ locationId: null });
     const context = buildContext({

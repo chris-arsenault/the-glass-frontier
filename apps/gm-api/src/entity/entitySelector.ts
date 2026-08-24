@@ -1,7 +1,7 @@
 import type { ContextSliceEntity, EntityRosterState } from '@glass-frontier/dto';
 import {
   curateEntityRoster,
-  isEntityRosterEligible,
+  isEntityOfferable,
   toEntityRosterEntries,
 } from '@glass-frontier/worldstate';
 
@@ -57,7 +57,7 @@ const rosterNeedsRefresh = (
   context: GraphContext,
   entityRoster: EntityRosterState
 ): boolean => entityRoster.entries.length === 0
-  || entityRoster.entries.some((entry) => !isEntityRosterEligible(entry))
+  || entityRoster.entries.some((entry) => !isEntityOfferable(entry))
   || entityRoster.locationName !== context.chronicleState.locationName
   || entityRoster.sceneId !== (context.effectiveScene?.id ?? null);
 

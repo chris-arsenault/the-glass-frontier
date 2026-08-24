@@ -13,10 +13,10 @@ export { ProposalRejected, validateProposal } from './canonValidation';
 
 // === Canon import tooling ===
 export { buildTsonuProposal } from './tsonuBundle';
+export { isEntityOfferable } from './entityOfferability';
 export {
   buildInitialEntityRoster,
   curateEntityRoster,
-  isEntityRosterEligible,
   toEntityRosterEntries,
 } from './entityRoster';
 

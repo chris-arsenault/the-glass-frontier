@@ -27,6 +27,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1115.0",
     "@aws-sdk/client-secrets-manager": "^3.1115.0",
+    "@glass-frontier/app": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/ops": "workspace:*",
     "@glass-frontier/utils": "workspace:*",

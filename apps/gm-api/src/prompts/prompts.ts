@@ -19,20 +19,16 @@ const REFLECTION_WEAVER: PromptTemplateId = 'reflection-weaver';
 const WRAP_RESOLVER: PromptTemplateId = 'wrap-resolver';
 const messageOrder = new Map<PromptTemplateId, MessageOrder>([
   [ACTION_RESOLVER, PLAYER_MESSAGE_ORDER],
-  ['beat-tracker', BOTH_MESSAGE_ORDER],
   ['check-planner', PLAYER_MESSAGE_ORDER],
   [CLARIFICATION_RESPONDER, PLAYER_MESSAGE_ORDER],
   ['entity-judge', GM_MESSAGE_ORDER],
-  ['gm-summary', GM_MESSAGE_ORDER],
   [INQUIRY_DESCRIBER, PLAYER_MESSAGE_ORDER],
-  ['intent-beat-detector', PLAYER_MESSAGE_ORDER],
   ['intent-classifier', PLAYER_MESSAGE_ORDER],
   ['inventory-delta', GM_MESSAGE_ORDER],
-  ['location-delta', GM_MESSAGE_ORDER],
   [PLANNING_NARRATOR, PLAYER_MESSAGE_ORDER],
   [POSSIBILITY_ADVISOR, PLAYER_MESSAGE_ORDER],
   [REFLECTION_WEAVER, PLAYER_MESSAGE_ORDER],
-  ['scene-ledger', GM_MESSAGE_ORDER],
+  ['turn-judge', BOTH_MESSAGE_ORDER],
   [WRAP_RESOLVER, PLAYER_MESSAGE_ORDER],
 ]);
 
@@ -40,12 +36,12 @@ const SCENE_AWARE_TEMPLATES = new Set<PromptTemplateId>([
   ACTION_RESOLVER,
   'check-planner',
   CLARIFICATION_RESPONDER,
-  'gm-summary',
   INQUIRY_DESCRIBER,
   'intent-classifier',
   PLANNING_NARRATOR,
   POSSIBILITY_ADVISOR,
   REFLECTION_WEAVER,
+  'turn-judge',
   WRAP_RESOLVER,
 ]);
 const ENTITY_AWARE_NARRATIVE_TEMPLATES = new Set<PromptTemplateId>([

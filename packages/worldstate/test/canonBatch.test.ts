@@ -198,6 +198,32 @@ describe('Canon batch commit', () => {
             veiled: true,
             veilTagline: 'Aven Campus restores old bell scores beneath Fourth Bell House.',
           },
+          {
+            isLocation: true,
+            kind: 'installation',
+            name: 'Bell Annex',
+            ref: 'annex',
+            subkind: 'settlement',
+          },
+          {
+            kind: 'resource',
+            name: 'Bell Salve',
+            ref: 'medicine',
+            subkind: 'medicine',
+          },
+          {
+            kind: 'resource',
+            name: 'Bell Bronze',
+            ref: 'material',
+            subkind: 'material',
+          },
+          {
+            kind: 'npc',
+            name: 'Forgotten Keeper',
+            prominence: 'forgotten',
+            ref: 'forgotten',
+            subkind: 'specialist',
+          },
           { kind: 'npc', name: 'Former Keeper', ref: 'ended', subkind: 'specialist' },
           {
             isArticle: true,
@@ -211,6 +237,10 @@ describe('Canon batch commit', () => {
         ],
         relationships: [
           { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'focus' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'located_in', src: { ref: 'annex' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'located_in', src: { ref: 'medicine' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'located_in', src: { ref: 'material' } },
+          { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'forgotten' } },
           { dst: { ref: 'location' }, live: false, relationship: 'operates_in', src: { ref: 'ended' } },
           { dst: { ref: 'location' }, live: true, relationship: 'embeds', src: { ref: 'article' } },
           { dst: { ref: 'location' }, live: true, relationship: 'operates_in', src: { ref: 'dm' } },
@@ -234,10 +264,17 @@ describe('Canon batch commit', () => {
     const choices = await worldState.world.listFocusChoices({
       locationId: result.entityIdsByRef.location,
     });
-    expect(choices.map((entity) => entity.id)).toEqual([result.entityIdsByRef.focus]);
-    expect(choices[0]).toMatchObject({
+    expect(new Set(choices.map((entity) => entity.id))).toEqual(new Set([
+      result.entityIdsByRef.annex,
+      result.entityIdsByRef.focus,
+      result.entityIdsByRef.medicine,
+    ]));
+    expect(choices.find((entity) => entity.id === result.entityIdsByRef.focus)).toMatchObject({
       veiled: true,
       veilTagline: 'Aven Campus restores old bell scores beneath Fourth Bell House.',
+    });
+    expect(choices.find((entity) => entity.id === result.entityIdsByRef.annex)).toMatchObject({
+      isLocation: true,
     });
   });
 

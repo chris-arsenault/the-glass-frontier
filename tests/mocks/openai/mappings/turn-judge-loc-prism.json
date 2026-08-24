@@ -1,0 +1,40 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'turn_judge_response')]"
+      },
+      {
+        "contains": "#loc:prism"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "{\"summary\":\"MOCK SUMMARY: The scout steps onto the prism walk.\",\"shouldCloseChronicle\":false,\"sceneOutcome\":\"continue\",\"sceneOutcomeReason\":null,\"beats\":{\"focusBeatId\":null,\"newBeat\":null,\"updates\":[]},\"ledger\":{\"interactions\":[],\"place\":null,\"present\":[]},\"location\":{\"action\":\"move\",\"destination\":\"Prism Walk\"}}"
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "{\"summary\":\"MOCK SUMMARY: The scout steps onto the prism walk.\",\"shouldCloseChronicle\":false,\"sceneOutcome\":\"continue\",\"sceneOutcomeReason\":null,\"beats\":{\"focusBeatId\":null,\"newBeat\":null,\"updates\":[]},\"ledger\":{\"interactions\":[],\"place\":null,\"present\":[]},\"location\":{\"action\":\"move\",\"destination\":\"Prism Walk\"}}",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 90,
+        "output_tokens": 60,
+        "total_tokens": 150
+      }
+    }
+  }
+}

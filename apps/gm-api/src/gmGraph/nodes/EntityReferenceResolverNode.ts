@@ -1,4 +1,5 @@
 import type { EntityReference, EntityReferenceSpan, EntityRosterEntry } from '@glass-frontier/dto';
+import { developerTextMessage, userTextMessage } from '@glass-frontier/llm-client';
 import type { ReferenceEntityCandidate } from '@glass-frontier/worldstate';
 import { z } from 'zod';
 
@@ -266,14 +267,8 @@ export class EntityReferenceResolverNode implements GraphNode {
     ]);
     const response = await context.llm.generateStructured({
       input: [
-        { content: [{ text: content, type: 'input_text' }], role: 'user' },
-        {
-          content: [{
-            text: candidatePrompt(candidates, ranked),
-            type: 'input_text',
-          }],
-          role: 'developer',
-        },
+        userTextMessage(content),
+        developerTextMessage(candidatePrompt(candidates, ranked)),
       ],
       instructions,
       maxOutputTokens: 700,
