@@ -114,6 +114,14 @@ export function AtlasLocationBrowser({
       ? []
       : chainTo(selected.id).filter((entity) => entity.id !== selected.id);
 
+  // Only celestial bodies get the orbit/surface chart; settlements and
+  // regions with sub-places open as cluster views instead.
+  const focusIsBody =
+    focusNode !== null &&
+    (focusNode.children.orbit.length > 0 ||
+      (focusNode.children.surface.length > 0 &&
+        focusNode.entity.subkind === 'celestial_body'));
+
   const chart =
     matches !== null ? (
       <ul className="atlas-gazetteer atlas-browser-results">
@@ -136,8 +144,8 @@ export function AtlasLocationBrowser({
           ))
         )}
       </ul>
-    ) : mode === 'picker' && focusNode !== null ? (
-      focusNode.children.orbit.length > 0 || focusNode.children.surface.length > 0 ? (
+    ) : mode === 'picker' && focusNode !== null && focusNode.entity.id !== graph.sunId ? (
+      focusIsBody ? (
         <AtlasBodyMap
           graph={graph}
           body={focusNode}

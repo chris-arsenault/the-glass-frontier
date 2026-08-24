@@ -619,14 +619,17 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
         </dl>
       ) : null}
 
-      {entity.subkind === 'star_system' && world !== null ? (
-        <section className="atlas-section atlas-bodymap-panel">
-          <h3>System chart</h3>
-          <AtlasSystemMap graph={world.graph} onSelect={onSelect} />
-        </section>
-      ) : null}
+      {/* The sun's neighborhood IS the system: show the system chart for both. */}
+      {(entity.subkind === 'star_system' || entity.id === world?.graph.sunId) &&
+      world !== null ? (
+          <section className="atlas-section atlas-bodymap-panel">
+            <h3>System chart</h3>
+            <AtlasSystemMap graph={world.graph} onSelect={onSelect} />
+          </section>
+        ) : null}
 
       {entity.subkind !== 'star_system' &&
+      entity.id !== world?.graph.sunId &&
       node !== null &&
       world !== null &&
       node.children.orbit.length > 0 ? (

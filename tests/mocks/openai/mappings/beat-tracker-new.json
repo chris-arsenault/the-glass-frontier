@@ -8,7 +8,7 @@
         "matchesJsonPath": "$[?(@.text.format.name == 'beat_tracker_schema')]"
       },
       {
-        "matchesJsonPath": "$[?(@.input[0].content[0].text contains '#beat:new')]"
+        "contains": "#beat:new"
       }
     ]
   },

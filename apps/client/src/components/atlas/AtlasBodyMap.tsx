@@ -338,10 +338,10 @@ function InferredBodyMap({
 
 const DECL_WIDTH = 1200;
 const DECL_HEIGHT = 520;
-const SURFACE_X = 24;
-const SURFACE_Y = 84;
-const SURFACE_W = 400;
-const SURFACE_H = 396;
+/** The surface renders as a globe disc, not a flat chart. */
+const GLOBE_CX = 300;
+const GLOBE_CY = 292;
+const GLOBE_R = 162;
 const ORBIT_CX = 812;
 const ORBIT_CY = 282;
 const ORBIT_MIN_R = 56;
@@ -427,21 +427,109 @@ function DeclaredBodyMap({
 }: DeclaredBodyMapProps): React.JSX.Element {
   const { clickable } = chartInteraction(onOpen, selectedId);
 
-  /* Surface panel: equirectangular, north up, equal degree scale. */
+  /* Surface panel: an orthographic globe turned toward the charted face. */
   const surfaceEntries = collectSurfaceEntries(graph, body);
-  const lons = surfaceEntries.map((entry) => entry.point.longitudeDeg);
-  const lats = surfaceEntries.map((entry) => entry.point.latitudeDeg);
-  const lonMin = Math.min(...lons, 0) - 8;
-  const lonMax = Math.max(...lons, 0) + 8;
-  const latMin = Math.min(...lats, 0) - 8;
-  const latMax = Math.max(...lats, 0) + 8;
-  const degScale = Math.min(SURFACE_W / (lonMax - lonMin), SURFACE_H / (latMax - latMin));
-  const surfaceOriginX = SURFACE_X + (SURFACE_W - (lonMax - lonMin) * degScale) / 2;
-  const surfaceOriginY = SURFACE_Y + (SURFACE_H + (latMax - latMin) * degScale) / 2;
-  const surfaceScreen = (point: SurfacePoint): { x: number; y: number } => ({
-    x: surfaceOriginX + (point.longitudeDeg - lonMin) * degScale,
-    y: surfaceOriginY - (point.latitudeDeg - latMin) * degScale,
-  });
+  const rad = (deg: number): number => (deg * Math.PI) / 180;
+  const lon0 =
+    surfaceEntries.length > 0
+      ? surfaceEntries.reduce((sum, entry) => sum + entry.point.longitudeDeg, 0) /
+        surfaceEntries.length
+      : 0;
+  const lat0 = Math.max(
+    -50,
+    Math.min(
+      50,
+      surfaceEntries.length > 0
+        ? surfaceEntries.reduce((sum, entry) => sum + entry.point.latitudeDeg, 0) /
+          surfaceEntries.length
+        : 0
+    )
+  );
+  const sinLat0 = Math.sin(rad(lat0));
+  const cosLat0 = Math.cos(rad(lat0));
+  type Projected = { x: number; y: number; visible: boolean };
+  const project = (latDeg: number, lonDeg: number): Projected => {
+    const lat = rad(latDeg);
+    const dLon = rad(lonDeg - lon0);
+    const behind = sinLat0 * Math.sin(lat) + cosLat0 * Math.cos(lat) * Math.cos(dLon) < 0;
+    let x = Math.cos(lat) * Math.sin(dLon);
+    let y = cosLat0 * Math.sin(lat) - sinLat0 * Math.cos(lat) * Math.cos(dLon);
+    if (behind) {
+      // The far hemisphere pins to the limb instead of vanishing.
+      const length = Math.hypot(x, y) || 1;
+      x /= length;
+      y /= length;
+    }
+    return { visible: !behind, x: GLOBE_CX + x * GLOBE_R, y: GLOBE_CY - y * GLOBE_R };
+  };
+  const surfaceScreen = (point: SurfacePoint): Projected =>
+    project(point.latitudeDeg, point.longitudeDeg);
+
+  /** Visible runs of a sampled graticule line, as one path string. */
+  const graticulePath = (points: Projected[]): string | null => {
+    const runs: Projected[][] = [];
+    let current: Projected[] = [];
+    for (const point of points) {
+      if (point.visible) {
+        current.push(point);
+      } else {
+        if (current.length >= 2) {
+          runs.push(current);
+        }
+        current = [];
+      }
+    }
+    if (current.length >= 2) {
+      runs.push(current);
+    }
+    if (runs.length === 0) {
+      return null;
+    }
+    return runs
+      .map(
+        (run) =>
+          `M ${run.map((point) => `${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' L ')}`
+      )
+      .join(' ');
+  };
+  const meridianBase = Math.round(lon0 / 30) * 30;
+  const meridians = [-60, -30, 0, 30, 60].map((offset) => ({
+    lon: meridianBase + offset,
+    path: graticulePath(
+      Array.from({ length: 37 }, (_, step) => project(-90 + step * 5, meridianBase + offset))
+    ),
+  }));
+  const parallels = [-60, -30, 0, 30, 60].map((lat) => ({
+    lat,
+    path: graticulePath(
+      Array.from({ length: 73 }, (_, step) => project(lat, lon0 - 180 + step * 5))
+    ),
+  }));
+
+  // Rim labels with leader lines: every name sits outside the globe at the
+  // bearing of its place, spaced apart so dense clusters stay readable.
+  const surfaceLabels = new Map<string, { angle: number }>();
+  {
+    const measured = surfaceEntries
+      .map((entry) => {
+        const screen = surfaceScreen(entry.point);
+        return {
+          angle: (Math.atan2(screen.y - GLOBE_CY, screen.x - GLOBE_CX) * 180) / Math.PI,
+          id: entry.node.entity.id,
+        };
+      })
+      .sort((a, b) => a.angle - b.angle);
+    const GAP = 15;
+    for (let index = 1; index < measured.length; index += 1) {
+      if (measured[index].angle < measured[index - 1].angle + GAP) {
+        measured[index].angle = measured[index - 1].angle + GAP;
+      }
+    }
+    for (const item of measured) {
+      surfaceLabels.set(item.id, { angle: item.angle });
+    }
+  }
+
   const surfaceById = new Map(surfaceEntries.map((entry) => [entry.node.entity.id, entry]));
   const adjacency = surfaceEntries.flatMap((entry) =>
     entry.node.entity.links
@@ -455,11 +543,8 @@ function DeclaredBodyMap({
         from: surfaceScreen(entry.point),
         to: surfaceScreen((surfaceById.get(link.targetId) as SurfaceEntry).point),
       }))
+      .filter((edge) => edge.from.visible && edge.to.visible)
   );
-  const graticule: number[] = [];
-  for (let lon = Math.ceil(lonMin / 20) * 20; lon <= lonMax; lon += 20) {
-    graticule.push(lon);
-  }
 
   /* Orbital panel: top-down local view in authored offsets. */
   const hasSurface = surfaceEntries.length > 0;
@@ -638,52 +723,48 @@ function DeclaredBodyMap({
       role="img"
       aria-label={`Surface and orbit of ${body.entity.name}`}
     >
+      <defs>
+        <radialGradient id="atlas-globe-shade" cx="38%" cy="30%" r="85%">
+          <stop offset="0%" className="atlas-globe-light" />
+          <stop offset="100%" className="atlas-globe-dark" />
+        </radialGradient>
+      </defs>
       {hasSurface ? (
         <>
-          {/* Surface panel */}
-          <text className="atlas-bodymap-planet-name" x={SURFACE_X + 4} y={40}>
+          {/* Surface globe */}
+          <text className="atlas-bodymap-planet-name" x={28} y={40}>
             {body.entity.name}
           </text>
-          <text className="atlas-bodymap-layer-label" x={SURFACE_X + 4} y={62}>
-            surface · charted coordinates
+          <text className="atlas-bodymap-layer-label" x={28} y={62}>
+            surface
           </text>
-          <rect
-            className="atlas-bodymap-surface-frame"
-            x={SURFACE_X}
-            y={SURFACE_Y}
-            width={SURFACE_W}
-            height={SURFACE_H}
-            rx={8}
+          <circle
+            className="atlas-bodymap-globe"
+            cx={GLOBE_CX}
+            cy={GLOBE_CY}
+            r={GLOBE_R}
+            fill="url(#atlas-globe-shade)"
           />
-          {graticule.map((lon) => {
-            const x = surfaceOriginX + (lon - lonMin) * degScale;
-            return (
-              <g key={`lon-${lon}`}>
-                <line
-                  className={`atlas-bodymap-graticule${lon === 0 ? ' atlas-bodymap-meridian' : ''}`}
-                  x1={x}
-                  y1={SURFACE_Y + 6}
-                  x2={x}
-                  y2={SURFACE_Y + SURFACE_H - 6}
-                />
-                <text
-                  className="atlas-bodymap-graticule-label"
-                  x={x}
-                  y={SURFACE_Y + SURFACE_H - 10}
-                  textAnchor="middle"
-                >
-                  {lon}°
-                </text>
-              </g>
-            );
-          })}
-          <line
-            className="atlas-bodymap-graticule atlas-bodymap-equator"
-            x1={SURFACE_X + 6}
-            y1={surfaceOriginY - (0 - latMin) * degScale}
-            x2={SURFACE_X + SURFACE_W - 6}
-            y2={surfaceOriginY - (0 - latMin) * degScale}
-          />
+          {meridians.map(({ lon, path }) =>
+            path === null ? null : (
+              <path
+                key={`lon-${lon}`}
+                className={`atlas-bodymap-graticule${lon === 0 ? ' atlas-bodymap-meridian' : ''}`}
+                d={path}
+                fill="none"
+              />
+            )
+          )}
+          {parallels.map(({ lat, path }) =>
+            path === null ? null : (
+              <path
+                key={`lat-${lat}`}
+                className={`atlas-bodymap-graticule${lat === 0 ? ' atlas-bodymap-equator' : ''}`}
+                d={path}
+                fill="none"
+              />
+            )
+          )}
           {adjacency.map((edge, index) => (
             <line
               key={`adj-${index}`}
@@ -694,11 +775,18 @@ function DeclaredBodyMap({
               y2={edge.to.y}
             />
           ))}
-          {surfaceEntries.map(({ node, point }, index) => {
+          {surfaceEntries.map(({ node, point }) => {
             const screen = surfaceScreen(point);
             const radius = SIZE_CLASS_RADIUS[point.sizeClass ?? 'site'] ?? 4.5;
             const isRegion = point.sizeClass === 'region' || point.sizeClass === 'continent';
-            const labelAbove = index % 2 === 0;
+            const angle = surfaceLabels.get(node.entity.id)?.angle ?? 0;
+            const radians = (angle * Math.PI) / 180;
+            const rimX = GLOBE_CX + Math.cos(radians) * (GLOBE_R + 10);
+            const rimY = GLOBE_CY + Math.sin(radians) * (GLOBE_R + 10);
+            const labelX = GLOBE_CX + Math.cos(radians) * (GLOBE_R + 18);
+            const labelY = GLOBE_CY + Math.sin(radians) * (GLOBE_R + 18) + 4;
+            const anchor =
+              Math.cos(radians) > 0.25 ? 'start' : Math.cos(radians) < -0.25 ? 'end' : 'middle';
             return (
               <g key={node.entity.id} {...clickable(node)}>
                 <title>{`${node.entity.name}${point.sizeClass ? ` — ${point.sizeClass}` : ''}`}</title>
@@ -710,6 +798,13 @@ function DeclaredBodyMap({
                     r={radius + 8}
                   />
                 ) : null}
+                <line
+                  className="atlas-bodymap-leader"
+                  x1={screen.x}
+                  y1={screen.y}
+                  x2={rimX}
+                  y2={rimY}
+                />
                 <circle
                   className={isRegion ? 'atlas-bodymap-region-dot' : 'atlas-bodymap-surface-dot'}
                   cx={screen.x}
@@ -718,9 +813,9 @@ function DeclaredBodyMap({
                 />
                 <text
                   className="atlas-map-name atlas-bodymap-surface-name"
-                  x={screen.x}
-                  y={labelAbove ? screen.y - radius - 8 : screen.y + radius + 18}
-                  textAnchor="middle"
+                  x={labelX}
+                  y={labelY}
+                  textAnchor={anchor}
                 >
                   {node.entity.name}
                 </text>
@@ -729,14 +824,14 @@ function DeclaredBodyMap({
           })}
         </>
       ) : (
-        <text className="atlas-bodymap-planet-name" x={SURFACE_X + 4} y={40}>
+        <text className="atlas-bodymap-planet-name" x={28} y={40}>
           {body.entity.name}
         </text>
       )}
 
       {/* Orbital panel */}
       <text className="atlas-bodymap-layer-label" x={orbitCx} y={40} textAnchor="middle">
-        orbit · authored offsets
+        orbit
       </text>
       {trackDistances.map((distance) => (
         <ellipse
@@ -899,7 +994,7 @@ function DeclaredBodyMap({
         const charted = descendantCount(graph, node.entity.id);
         return (
           <g key={node.entity.id} {...clickable(node)}>
-            <title>{`${node.entity.name} — position unrecorded`}</title>
+            <title>{`${node.entity.name} — exact position unknown`}</title>
             <rect
               className="atlas-bodymap-zone-marker"
               x={point.x - 4}
@@ -924,7 +1019,7 @@ function DeclaredBodyMap({
           y={DECL_HEIGHT - 12}
           textAnchor="middle"
         >
-          dashed outer track: position unrecorded in canon
+          dashed ring: exact positions unknown
         </text>
       ) : null}
     </svg>

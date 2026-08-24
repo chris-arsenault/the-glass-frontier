@@ -9,9 +9,7 @@
       "role": "assistant"
     }
   ],
-  "output_text": [
-    "You stand beneath the signal gantries of Luminous Quay as a fractured beacon pulses below the deck. Dockhands clear the eastern access while the Glass Wardens hold the hatch open for one last descent."
-  ],
+  "output_text": "You stand beneath the signal gantries of Luminous Quay as a fractured beacon pulses below the deck. Dockhands clear the eastern access while the Glass Wardens hold the hatch open for one last descent.",
   "stop_reason": "stop",
   "usage": {
     "input_tokens": 20,

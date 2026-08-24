@@ -116,6 +116,7 @@ describe('EntityReferenceResolverNode', () => {
           similarity: 0.79,
           slug: 'bellwether',
         }]),
+        hasEntityEmbeddings: () => Promise.resolve(true),
       } as unknown as GraphContext['worldSchemaStore'],
     });
 
@@ -129,5 +130,26 @@ describe('EntityReferenceResolverNode', () => {
         span: { end: 19, start: 8, text: 'the captain' },
       }),
     ]);
+  });
+
+  it('does not request an embedding when none of the candidate kinds have embeddings', async () => {
+    const embed = vi.fn();
+    const context = contextWithEntity({
+      embeddings: { embed },
+      playerMessage: {
+        content: 'I ask whether the fare is negotiable.',
+        id: 'message-4',
+        metadata: { tags: [], timestamp: 0 },
+        role: 'player',
+      },
+      worldSchemaStore: {
+        hasEntityEmbeddings: () => Promise.resolve(false),
+      } as unknown as GraphContext['worldSchemaStore'],
+    });
+
+    const result = await new EntityReferenceResolverNode('player').execute(context);
+
+    expect(result.entityReferences).toEqual([]);
+    expect(embed).not.toHaveBeenCalled();
   });
 });

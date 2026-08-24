@@ -682,16 +682,23 @@
   fill: rgb(232 201 143 / 55%);
 }
 
-/* Declared geometry: body surface and orbital panels */
+/* Declared geometry: body surface globe and orbital panel */
 
-.atlas-bodymap-surface-frame {
-  fill: rgb(20 32 58 / 45%);
-  stroke: var(--border-muted);
-  stroke-width: 1;
+.atlas-bodymap-globe {
+  stroke: rgb(126 166 232 / 45%);
+  stroke-width: 1.25;
+}
+
+.atlas-globe-light {
+  stop-color: #24365e;
+}
+
+.atlas-globe-dark {
+  stop-color: #0d1730;
 }
 
 .atlas-bodymap-graticule {
-  stroke: rgb(148 163 184 / 10%);
+  stroke: rgb(148 163 184 / 14%);
   stroke-width: 1;
 }
 
@@ -701,14 +708,13 @@
 }
 
 .atlas-bodymap-equator {
-  stroke: rgb(148 163 184 / 18%);
+  stroke: rgb(148 163 184 / 22%);
   stroke-dasharray: 2 4;
 }
 
-.atlas-bodymap-graticule-label {
-  fill: var(--text-muted);
-  font-family: var(--font-ui);
-  font-size: 10px;
+.atlas-bodymap-leader {
+  stroke: rgb(148 163 184 / 22%);
+  stroke-width: 0.75;
 }
 
 .atlas-bodymap-adjacency {

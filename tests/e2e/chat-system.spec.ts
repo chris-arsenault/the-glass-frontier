@@ -10,11 +10,14 @@ import {
 
 const PIPELINE_ORDER = [
   'intent-classifier',
+  'scene-subject-resolver',
   'intent-beat-detector',
-  'check-planner',
   'entity-selector',
+  'player-entity-reference-resolver',
+  'check-planner',
   'check-runner',
   'gm-response-node (action)',
+  'gm-entity-reference-resolver',
   'entity-judge',
   'beat-tracker',
   'gm-summary',

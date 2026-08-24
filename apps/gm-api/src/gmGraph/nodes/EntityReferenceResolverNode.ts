@@ -222,6 +222,13 @@ export class EntityReferenceResolverNode implements GraphNode {
       return [];
     }
     try {
+      const candidateKinds = [...new Set(candidates.map((candidate) => candidate.kind))];
+      const hasEmbeddings = (await Promise.all(
+        candidateKinds.map((kind) => context.worldSchemaStore.hasEntityEmbeddings(kind))
+      )).some(Boolean);
+      if (!hasEmbeddings) {
+        return [];
+      }
       const embedding = await context.embeddings.embed(content);
       const ranked = (await context.worldSchemaStore.findReferenceCandidates({
         candidateIds: candidates.map((candidate) => candidate.id),

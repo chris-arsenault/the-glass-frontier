@@ -409,7 +409,7 @@ function DeclaredSystemChart({
             onClick={activate(node.entity.slug)}
             onKeyDown={keyActivate(node.entity.slug)}
           >
-            <title>{`${node.entity.name} — adrift, position unrecorded`}</title>
+            <title>{`${node.entity.name} — exact position unknown`}</title>
             <rect
               className="atlas-map-free-marker"
               x={x - 4}

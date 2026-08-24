@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"results\":[{\"slug\":\"glass_wardens\",\"usage\":\"central\",\"emergentTags\":[\"protector\",\"ancient-order\",\"archive-keeper\"]}]}"
+          "text": "{\"results\":[{\"slug\":\"glass_wardens\",\"usage\":\"central\",\"emergentTags\":[\"protector\",\"ancient-order\",\"archive-keeper\"]},{\"slug\":\"luminous_quay\",\"usage\":\"mentioned\",\"emergentTags\":[]},{\"slug\":\"oracle_vessel\",\"usage\":\"unused\",\"emergentTags\":[]}]}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"results\":[{\"slug\":\"glass_wardens\",\"usage\":\"central\",\"emergentTags\":[\"protector\",\"ancient-order\",\"archive-keeper\"]}]}"
+    "{\"results\":[{\"slug\":\"glass_wardens\",\"usage\":\"central\",\"emergentTags\":[\"protector\",\"ancient-order\",\"archive-keeper\"]},{\"slug\":\"luminous_quay\",\"usage\":\"mentioned\",\"emergentTags\":[]},{\"slug\":\"oracle_vessel\",\"usage\":\"unused\",\"emergentTags\":[]}]}"
   ],
   "stop_reason": "stop",
   "usage": {

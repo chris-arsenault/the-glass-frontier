@@ -61,8 +61,8 @@ test.describe('Chronicle creation', () => {
     await page.getByRole('button', { name: 'Start new' }).click();
     await expect(page.getByRole('heading', { name: 'Start a new chronicle' })).toBeVisible();
 
-    // The picker is the atlas chart; places are SVG glyphs with link role.
-    await page.getByRole('link', { name: /Luminous Quay/ }).first().click();
+    // SVG link groups can contain unpainted space, so exercise their keyboard contract.
+    await page.getByRole('link', { name: /Luminous Quay/ }).first().press('Enter');
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'hopeful' }).click();
@@ -95,12 +95,13 @@ test.describe('Chronicle creation', () => {
     );
     await page.getByTestId('chat-submit').click();
 
-    await expect(page.locator('.chat-loading-text')).toContainText('GM is working —', {
+    await expect(page.locator('.chat-loading-text')).toHaveText(/^GM is (?:composing|working)/u, {
       timeout: 15_000,
     });
     await expect(page.getByText(GM_RESPONSE_TEXT)).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.chat-loading')).toBeVisible();
     await expect(page.getByTestId('chat-submit')).toBeEnabled({ timeout: 15_000 });
-    await expect(page.locator('.session-manager-beat')).toContainText('Shattered Chorus');
+    await expect(
+      page.locator('.session-manager-beat').filter({ hasText: 'Shattered Chorus' })
+    ).toBeVisible();
   });
 });

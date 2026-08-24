@@ -236,6 +236,8 @@ export async function seedPlaywrightFixtures(connectionString: string): Promise<
       { ...LOCATION_ROOT, ref: 'location' },
       { ...NON_LOCATION_ENTITIES[0], ref: 'warden' },
       { ...NON_LOCATION_ENTITIES[1], ref: 'relic' },
+      { ...NON_LOCATION_ENTITIES[2], ref: 'species' },
+      { ...NON_LOCATION_ENTITIES[3], ref: 'culture' },
     ],
     lore: [
       {
