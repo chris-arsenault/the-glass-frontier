@@ -467,5 +467,12 @@
     "summary": "Atlas links now keep your place",
     "details": "Entity names throughout the dashboard, chronicle rail, location display, transcript references, lore, and Atlas relationships now open the referenced Atlas entry in a dialog instead of replacing the current screen or opening a new tab. Every link still points to the entity's readable slug URL, so it can be copied, opened in a new tab, or expanded into the full Atlas page without finding an internal ID.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-24-prompt-delivery-fix",
+    "releasedAt": "2026-08-24",
+    "summary": "Turns work again, and prompt updates actually ship",
+    "details": "A recent restructuring left the deploy unable to deliver prompt template updates, so production kept old prompts and every turn failed after its narration streamed, showing both a GM response and an error notice. The deploy now regenerates the prompt seed before uploading it, restoring the missing turn-judge prompt and putting all current prompts — now in a consistent role, process, and data-legend format — live. Moderator diagnostics also gained read access to the LLM audit tables.",
+    "type": "bugfix"
   }
 ]

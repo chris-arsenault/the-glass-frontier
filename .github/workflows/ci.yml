@@ -82,6 +82,9 @@ jobs:
       - name: Build deployment artifacts
         run: pnpm run build
 
+      - name: Generate prompt template seed
+        run: pnpm run db:generate-seed
+
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE }}

@@ -11,7 +11,7 @@ describe('narration prompt contracts', () => {
 
     expect(prompt).toContain('Deliberately performing badly');
     expect(prompt).toContain('Use reflection only for internal thoughts or emotions');
-    expect(prompt).toContain('Classify the current message itself');
+    expect(prompt).toContain('do not replace its concrete verb with an earlier topic');
   });
 
   it('keeps every narration handler in second person', () => {
