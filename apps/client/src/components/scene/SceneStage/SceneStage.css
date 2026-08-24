@@ -111,10 +111,10 @@
 
 .scene-stage-clock {
   display: flex;
-  margin-left: auto;
   align-items: center;
   align-self: center;
   gap: var(--space-1);
+  margin-left: auto;
 }
 
 .scene-stage-clock-segment {
