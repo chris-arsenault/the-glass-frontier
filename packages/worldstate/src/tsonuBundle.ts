@@ -1,4 +1,9 @@
-import { CanonProposal, type HardStateFacts, type PlayableRole } from '@glass-frontier/dto';
+import {
+  CanonProposal,
+  type GmNote,
+  type HardStateFacts,
+  type PlayableRole,
+} from '@glass-frontier/dto';
 
 /**
  * The slice of tsonu-canon's internal site bundle
@@ -69,6 +74,8 @@ export type TsonuEntry = {
   route_geometry?: TsonuRouteGeometry | null;
   veiled: boolean;
   veil_tagline?: string;
+  /** How to run the entry, declared on the source entity. */
+  gm_notes?: GmNote[];
 };
 
 export type TsonuBundle = {
@@ -141,18 +148,8 @@ const buildEntity = (entry: TsonuEntry): unknown => ({
   veilTagline: entry.veil_tagline,
 });
 
-const buildGmNotes = (entry: TsonuEntry): string[] | undefined => {
-  const notes = entry.sections
-    .filter((section) => section.format === 'prose' && section.section === 'usage_notes')
-    .flatMap((section) => {
-      const bullets = section.markdown
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith('- '))
-        .map((line) => line.slice(2).trim());
-      return bullets.length > 0 ? bullets : [section.markdown.trim()];
-    })
-    .filter((note) => note.length > 0);
+const buildGmNotes = (entry: TsonuEntry): GmNote[] | undefined => {
+  const notes = (entry.gm_notes ?? []).filter((note) => note.text.trim().length > 0);
   return notes.length > 0 ? notes : undefined;
 };
 
@@ -217,7 +214,7 @@ const buildLore = (entry: TsonuEntry, entryIds: Set<string>): unknown[] => {
   const positionBySection = new Map<string, number>();
   const fragments: unknown[] = [];
   for (const section of entry.sections) {
-    if (section.format !== 'prose' || section.section === 'usage_notes') {
+    if (section.format !== 'prose') {
       continue;
     }
     const owner = section.owner_id;

@@ -113,7 +113,9 @@ describe('PromptComposer', () => {
           {
             description: 'A smuggling ring that controls the ash docks.',
             facts: { founded: 2402 },
-            gmNotes: ['Its dock crews close ranks when challenged.'],
+            gmNotes: [
+              { kind: 'complicates' as const, text: 'Its dock crews close ranks when challenged.' },
+            ],
             id: 'entity-1',
             kind: 'faction',
             loreFragments: [],

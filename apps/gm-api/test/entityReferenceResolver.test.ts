@@ -9,7 +9,7 @@ const ENTITY_ID = '11111111-2222-4333-8444-555555555555';
 const entity = (): EntitySnippet => ({
   description: 'A vessel whose captain rejects insulting fares.',
   facts: { aka: 'Old Bell' },
-  gmNotes: ['The captain refuses low-ball transit fares.'],
+  gmNotes: [{ kind: 'triggered_by' as const, text: 'The captain refuses low-ball transit fares.' }],
   id: ENTITY_ID,
   kind: 'transport',
   loreFragments: [],

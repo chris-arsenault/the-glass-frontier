@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  GmNote,
   HardStateFacts,
   HardStateKind,
   HardStateProminence,
@@ -29,8 +30,8 @@ export type ContextSliceLore = z.infer<typeof ContextSliceLore>;
 export const ContextSliceEntity = z.object({
   description: z.string().optional(),
   facts: HardStateFacts.default({}),
-  /** Private usage guidance. Never include this object in a player response. */
-  gmNotes: z.array(z.string()).default([]),
+  /** How to run this entity. Its consequence reaches the table; its wording does not. */
+  gmNotes: z.array(GmNote).default([]),
   hops: z.number().int().nonnegative(),
   id: z.string().min(1),
   kind: HardStateKind,

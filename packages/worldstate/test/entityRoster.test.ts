@@ -42,7 +42,7 @@ describe('buildInitialEntityRoster', () => {
         request = input;
         return Promise.resolve([
           entity(LOCATION_ID, 'Glass Harbor', {
-            gmNotes: ['The watch arrives after loud noises.'],
+            gmNotes: [{ kind: 'appears' as const, text: 'The watch arrives after loud noises.' }],
           }),
           entity(ANCHOR_ID, 'The Ferryman'),
         ]);

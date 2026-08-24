@@ -149,19 +149,16 @@ describe('buildTsonuProposal', () => {
     ]);
   });
 
-  it('keeps usage notes on the entity and out of player-facing lore', () => {
+  it('carries the declared GM notes onto the entity, separate from lore', () => {
     const proposal = buildTsonuProposal(
       bundle([
         entry({
+          gm_notes: [
+            { kind: 'appears', text: 'Arrives when a route bell repeats.' },
+            { kind: 'triggered_by', text: 'Refuses unsealed cargo.' },
+          ],
           id: 'ravel',
           sections: [
-            {
-              format: 'prose',
-              heading: 'DM Usage Notes',
-              markdown: '- Arrives when a route bell repeats.\n- Refuses unsealed cargo.',
-              owner_id: 'ravel',
-              section: 'usage_notes',
-            },
             {
               format: 'prose',
               heading: 'History',
@@ -175,8 +172,8 @@ describe('buildTsonuProposal', () => {
     );
 
     expect(proposal.entities[0]?.gmNotes).toEqual([
-      'Arrives when a route bell repeats.',
-      'Refuses unsealed cargo.',
+      { kind: 'appears', text: 'Arrives when a route bell repeats.' },
+      { kind: 'triggered_by', text: 'Refuses unsealed cargo.' },
     ]);
     expect(proposal.lore).toEqual([
       {

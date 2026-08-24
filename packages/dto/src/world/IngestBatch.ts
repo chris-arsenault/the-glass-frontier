@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  GmNote,
   HardStateFacts,
   HardStateKind,
   HardStateLinkProps,
@@ -40,8 +41,8 @@ export const ProposedEntity = z.object({
   externalKey: z.string().min(1).optional(),
   /** The source entry's fact card, stored verbatim. */
   facts: HardStateFacts.optional(),
-  /** Private guidance for the GM when this entity is already in turn context. */
-  gmNotes: z.array(z.string().min(1).max(2000)).max(32).optional(),
+  /** How to run this entity, from the source entry. At most three. */
+  gmNotes: z.array(GmNote).max(3).optional(),
   /** Explicit id, for a seed that pins its own identifiers. */
   id: z.string().uuid().optional(),
   isArticle: z.boolean().optional(),

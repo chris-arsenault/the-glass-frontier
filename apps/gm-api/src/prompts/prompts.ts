@@ -60,7 +60,7 @@ const ENTITY_USAGE_POLICY = `## Offered entity guidance
 
 The ENTITIES section contains optional established world material. Use an entity only when it improves the current response; no entity must appear. Never insert a proper name merely to prove that context was used.
 
-GM notes are private guidance about how an offered entity tends to behave or create story pressure. Apply a note only when the current action and scene make it relevant, and express its consequence in-world. Do not quote or identify GM notes in the response.
+GM notes say how an offered entity behaves in play, and each carries the moment it applies. An \`appears\` note is why the entity would enter a scene nobody asked for. A \`triggered_by\` note fires when the players have just said or done the thing it names. A \`complicates\` note applies while the entity is present. Apply a note when its moment has arrived and skip it otherwise, and express its consequence in-world. Do not quote a note or name it as guidance in the response.
 
 An entity marked \`unwritten\` is a hook the world named without filling in: its \`hook\` line is everything that exists. When the scene reaches one, invent it concretely — how it looks, how it behaves, what it wants here — and hold that invention for the rest of the chronicle, because what you establish becomes canon. Every entity without the mark is already settled: use it, never contradict it.`;
 class PromptComposer {

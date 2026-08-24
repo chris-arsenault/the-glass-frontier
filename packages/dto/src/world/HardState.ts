@@ -48,6 +48,22 @@ export type RelationshipType = z.infer<typeof RelationshipType>;
 export const HardStateFacts = z.record(z.string(), z.union([z.string(), z.number()]));
 export type HardStateFacts = z.infer<typeof HardStateFacts>;
 
+export const GM_NOTE_KIND_IDS = ['appears', 'triggered_by', 'complicates'] as const;
+export const GmNoteKind = z.enum(GM_NOTE_KIND_IDS);
+export type GmNoteKind = z.infer<typeof GmNoteKind>;
+
+/**
+ * One instruction for running an entity, published with its lore. The kind says
+ * when it applies: `appears` when the entity enters a scene nobody asked for,
+ * `triggered_by` when the players said or did the thing it names, and
+ * `complicates` once it is already present.
+ */
+export const GmNote = z.object({
+  kind: GmNoteKind,
+  text: z.string().min(1).max(320),
+});
+export type GmNote = z.infer<typeof GmNote>;
+
 /**
  * Coordinates within a spatial frame, stored verbatim from the source: a
  * polar position uses `radius`/`angle_deg` (or `radial_offset`/

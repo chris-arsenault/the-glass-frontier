@@ -6,6 +6,7 @@ import type {
   ChronicleScene,
   EntityReference,
   EntityRosterEntry,
+  GmNote,
   HardStateKind,
   HardStateStatus,
   HardStateSubkind,
@@ -52,8 +53,8 @@ export type EntitySnippet = {
   status?: HardStateStatus;
   /** The entry's fact card — the small answers a reader expects up front. */
   facts: Record<string, string | number>;
-  /** Private guidance for narration only. */
-  gmNotes: string[];
+  /** How to run this entity. Its consequence reaches the table; its wording does not. */
+  gmNotes: GmNote[];
   tags: string[];
   loreFragments: Array<{
     slug: string;

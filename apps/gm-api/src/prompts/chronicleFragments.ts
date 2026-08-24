@@ -1,4 +1,4 @@
-import type { PromptTemplateId } from '@glass-frontier/dto';
+import type { GmNote, PromptTemplateId } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
@@ -160,7 +160,7 @@ type EstablishedEntity = {
     summary: string;
     tags: string[];
   }>;
-  gmNotes: string[];
+  gmNotes: GmNote[];
 };
 
 /**

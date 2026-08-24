@@ -1,6 +1,7 @@
 import type {
   ContextSliceEntity,
   ContextSliceInput,
+  GmNote,
   HardStateKind,
   HardStateProminence,
   HardStateStatus,
@@ -19,7 +20,7 @@ type SliceRow = {
   description: string | null;
   prominence: HardStateProminence;
   status: HardStateStatus | null;
-  props: { facts?: Record<string, string | number>; gmNotes?: string[] } | null;
+  props: { facts?: Record<string, string | number>; gmNotes?: GmNote[] } | null;
   hops: number;
   reach: number;
   tag_overlap: number;
