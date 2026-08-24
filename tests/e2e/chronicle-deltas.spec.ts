@@ -47,7 +47,10 @@ test.describe('Chronicle deltas', () => {
     await beatBadge.hover();
     await expect(beatBadge.locator('.beat-tracker-tooltip')).toContainText('Shattered Chorus');
 
-    await page.getByRole('button', { name: 'Toggle character sheet' }).click();
+    await page
+      .getByRole('navigation', { name: 'Chronicle' })
+      .getByRole('button', { name: 'E2E Scout', exact: true })
+      .click();
     const drawer = page.locator('.character-drawer.open');
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole('heading', { name: 'Gear' })).toBeVisible();

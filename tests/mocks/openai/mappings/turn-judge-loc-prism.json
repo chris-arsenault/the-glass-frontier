@@ -1,5 +1,5 @@
 {
-  "priority": 0,
+  "priority": 1,
   "request": {
     "method": "POST",
     "urlPath": "/v1/responses",

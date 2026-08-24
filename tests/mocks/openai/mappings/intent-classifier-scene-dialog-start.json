@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
+              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
+        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
       ],
       "stop_reason": "stop",
       "usage": {

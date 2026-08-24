@@ -11,7 +11,6 @@ import {
 const PIPELINE_ORDER = [
   'intent-classifier',
   'scene-subject-resolver',
-  'intent-beat-detector',
   'entity-selector',
   'player-entity-reference-resolver',
   'check-planner',
@@ -19,10 +18,8 @@ const PIPELINE_ORDER = [
   'gm-response-node (action)',
   'gm-entity-reference-resolver',
   'entity-judge',
-  'beat-tracker',
-  'gm-summary',
   'inventory-delta',
-  'location-delta',
+  'turn-judge',
 ] as const;
 
 test.describe('Chat system', () => {

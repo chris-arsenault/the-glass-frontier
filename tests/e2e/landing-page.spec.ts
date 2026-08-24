@@ -34,6 +34,33 @@ test.describe('Landing page', () => {
     await resetPlaywrightState(request);
   });
 
+  test('hides the login screen while stored credentials are being checked', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(async () => {
+      const modulePath = '/src/stores/authStore.ts';
+      const { useAuthStore } = (await import(
+        modulePath
+      )) as typeof import('../../apps/client/src/stores/authStore');
+      useAuthStore.setState({
+        isAuthenticated: false,
+        isCheckingCredentials: true,
+      });
+    });
+
+    await expect(page.getByRole('status')).toContainText('Loading Glass Frontier…');
+    await expect(page.getByRole('button', { name: 'Sign In' })).toHaveCount(0);
+
+    await page.evaluate(async () => {
+      const modulePath = '/src/stores/authStore.ts';
+      const { useAuthStore } = (await import(
+        modulePath
+      )) as typeof import('../../apps/client/src/stores/authStore');
+      useAuthStore.setState({ isCheckingCredentials: false });
+    });
+
+    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
+  });
+
   test('is accessible once authenticated', async ({ page }) => {
     await page.goto('/');
     await authenticate(page);

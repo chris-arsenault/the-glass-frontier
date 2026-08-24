@@ -1,0 +1,43 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'turn_judge_response')]"
+      },
+      {
+        "contains": "#loc:auric"
+      },
+      {
+        "contains": "#beat:new"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "{\"summary\":\"MOCK SUMMARY: A new thread emerges as the scout crosses onto the causeway.\",\"shouldCloseChronicle\":false,\"sceneOutcome\":\"continue\",\"sceneOutcomeReason\":null,\"beats\":{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":{\"title\":\"Shattered Chorus\",\"description\":\"Investigate the harmonics pulsing through the eastern vault.\",\"supersedes\":null},\"updates\":[]},\"ledger\":{\"interactions\":[],\"place\":null,\"present\":[]},\"location\":{\"action\":\"move\",\"destination\":\"Auric Causeway\"}}"
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "{\"summary\":\"MOCK SUMMARY: A new thread emerges as the scout crosses onto the causeway.\",\"shouldCloseChronicle\":false,\"sceneOutcome\":\"continue\",\"sceneOutcomeReason\":null,\"beats\":{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":{\"title\":\"Shattered Chorus\",\"description\":\"Investigate the harmonics pulsing through the eastern vault.\",\"supersedes\":null},\"updates\":[]},\"ledger\":{\"interactions\":[],\"place\":null,\"present\":[]},\"location\":{\"action\":\"move\",\"destination\":\"Auric Causeway\"}}",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 90,
+        "output_tokens": 60,
+        "total_tokens": 150
+      }
+    }
+  }
+}

@@ -26,12 +26,18 @@ if (resolvedPoolId === undefined || resolvedClientId === undefined) {
   );
 }
 
-const userPool = resolvedPoolId !== undefined && resolvedClientId !== undefined
-  ? new CognitoUserPool({
+const createUserPool = (): CognitoUserPool | null => {
+  if (resolvedPoolId === undefined || resolvedClientId === undefined) {
+    return null;
+  }
+
+  return new CognitoUserPool({
     ClientId: resolvedClientId,
     UserPoolId: resolvedPoolId,
-  })
-  : null;
+  });
+};
+
+const userPool = createUserPool();
 
 type AuthTokens = {
   idToken: string;
@@ -42,11 +48,13 @@ type AuthTokens = {
 type AuthState = {
   isAuthenticated: boolean;
   isAuthenticating: boolean;
+  isCheckingCredentials: boolean;
   error: string | null;
   tokens: AuthTokens | null;
   username: string;
   newPasswordRequired: boolean;
   challengeUser: CognitoUser | null;
+  checkStoredCredentials: () => void;
   login: (username: string, password: string) => Promise<void>;
   completeNewPassword: (newPassword: string) => Promise<void>;
   logout: () => void;
@@ -98,16 +106,13 @@ const completePasswordChallenge = (
   });
 };
 
-const setAuthenticatedState = (
-  set: StoreSet,
-  tokens: AuthTokens,
-  username?: string
-): void => {
+const setAuthenticatedState = (set: StoreSet, tokens: AuthTokens, username?: string): void => {
   set({
     challengeUser: null,
     error: null,
     isAuthenticated: true,
     isAuthenticating: false,
+    isCheckingCredentials: false,
     newPasswordRequired: false,
     tokens,
     ...(username !== undefined ? { username } : {}),
@@ -122,6 +127,7 @@ const getCurrentUser = (): CognitoUser | null => {
 };
 
 let refreshPromise: Promise<AuthTokens | null> | null = null;
+let credentialCheckStarted = false;
 
 const setAuthFailure = (set: StoreSet, errorMessage: string): void => {
   set({
@@ -129,6 +135,7 @@ const setAuthFailure = (set: StoreSet, errorMessage: string): void => {
     error: errorMessage,
     isAuthenticated: false,
     isAuthenticating: false,
+    isCheckingCredentials: false,
     newPasswordRequired: false,
     tokens: null,
   });
@@ -225,6 +232,7 @@ const createRefreshHandler = (set: StoreSet, get: StoreGet) => {
             error: err instanceof Error ? err.message : 'Session expired.',
             isAuthenticated: false,
             isAuthenticating: false,
+            isCheckingCredentials: false,
             newPasswordRequired: false,
             tokens: null,
             username: '',
@@ -244,12 +252,45 @@ const createRefreshHandler = (set: StoreSet, get: StoreGet) => {
   };
 };
 
+const createStoredCredentialCheckHandler = (set: StoreSet) => {
+  return (): void => {
+    if (credentialCheckStarted) {
+      return;
+    }
+    credentialCheckStarted = true;
+
+    const currentUser = getCurrentUser();
+    if (currentUser === null) {
+      set({ isCheckingCredentials: false });
+      return;
+    }
+
+    currentUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+      if (err !== null || session === null || !session.isValid()) {
+        set({
+          error: null,
+          isAuthenticated: false,
+          isAuthenticating: false,
+          isCheckingCredentials: false,
+          tokens: null,
+          username: '',
+        });
+        return;
+      }
+
+      setAuthenticatedState(set, extractTokens(session), currentUser.getUsername());
+    });
+  };
+};
+
 export const useAuthStore = create<AuthState>()((set, get) => ({
   challengeUser: null,
+  checkStoredCredentials: createStoredCredentialCheckHandler(set),
   completeNewPassword: createCompleteNewPasswordHandler(set, get),
   error: null,
   isAuthenticated: false,
   isAuthenticating: false,
+  isCheckingCredentials: true,
   login: createLoginHandler(set, get),
   logout() {
     const currentTokens = get().tokens;
@@ -264,6 +305,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       error: null,
       isAuthenticated: false,
       isAuthenticating: false,
+      isCheckingCredentials: false,
       newPasswordRequired: false,
       tokens: null,
       username: '',
@@ -274,24 +316,3 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   tokens: null,
   username: '',
 }));
-
-if (userPool !== null) {
-  const currentUser = userPool.getCurrentUser();
-  if (currentUser !== null) {
-    currentUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
-      if (err !== null || session === null) {
-        return;
-      }
-
-      if (session.isValid()) {
-        useAuthStore.setState({
-          error: null,
-          isAuthenticated: true,
-          isAuthenticating: false,
-          tokens: extractTokens(session),
-          username: currentUser.getUsername(),
-        });
-      }
-    });
-  }
-}

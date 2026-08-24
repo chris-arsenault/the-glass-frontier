@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Consider retuning the beacon safely\",\"intentType\":\"possibility\",\"routerRationale\":\"The player explores a hypothetical approach without acting.\",\"tone\":\"curious\"}"
+              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Consider retuning the beacon safely\",\"intentType\":\"possibility\",\"routerRationale\":\"The player explores a hypothetical approach without acting.\",\"tone\":\"curious\"}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Consider retuning the beacon safely\",\"intentType\":\"possibility\",\"routerRationale\":\"The player explores a hypothetical approach without acting.\",\"tone\":\"curious\"}"
+        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Consider retuning the beacon safely\",\"intentType\":\"possibility\",\"routerRationale\":\"The player explores a hypothetical approach without acting.\",\"tone\":\"curious\"}"
       ],
       "stop_reason": "stop",
       "usage": {

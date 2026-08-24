@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"creativeSpark\":true,\"handlerHints\":[\"remembered\"],\"intentSummary\":\"Recall the Wardens' warning\",\"intentType\":\"reflection\",\"routerRationale\":\"The player expresses an internal memory without changing the scene.\",\"tone\":\"haunted\"}"
+              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":true,\"handlerHints\":[\"remembered\"],\"intentSummary\":\"Recall the Wardens' warning\",\"intentType\":\"reflection\",\"routerRationale\":\"The player expresses an internal memory without changing the scene.\",\"tone\":\"haunted\"}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"creativeSpark\":true,\"handlerHints\":[\"remembered\"],\"intentSummary\":\"Recall the Wardens' warning\",\"intentType\":\"reflection\",\"routerRationale\":\"The player expresses an internal memory without changing the scene.\",\"tone\":\"haunted\"}"
+        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":true,\"handlerHints\":[\"remembered\"],\"intentSummary\":\"Recall the Wardens' warning\",\"intentType\":\"reflection\",\"routerRationale\":\"The player expresses an internal memory without changing the scene.\",\"tone\":\"haunted\"}"
       ],
       "stop_reason": "stop",
       "usage": {

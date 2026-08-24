@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"creativeSpark\":false,\"handlerHints\":[\"quiet\"],\"intentSummary\":\"Prepare a route through the patrol gaps\",\"intentType\":\"planning\",\"routerRationale\":\"The player prepares an approach for later action.\",\"tone\":\"careful\"}"
+              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[\"quiet\"],\"intentSummary\":\"Prepare a route through the patrol gaps\",\"intentType\":\"planning\",\"routerRationale\":\"The player prepares an approach for later action.\",\"tone\":\"careful\"}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"creativeSpark\":false,\"handlerHints\":[\"quiet\"],\"intentSummary\":\"Prepare a route through the patrol gaps\",\"intentType\":\"planning\",\"routerRationale\":\"The player prepares an approach for later action.\",\"tone\":\"careful\"}"
+        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[\"quiet\"],\"intentSummary\":\"Prepare a route through the patrol gaps\",\"intentType\":\"planning\",\"routerRationale\":\"The player prepares an approach for later action.\",\"tone\":\"careful\"}"
       ],
       "stop_reason": "stop",
       "usage": {

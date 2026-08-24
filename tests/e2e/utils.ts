@@ -12,16 +12,18 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
   await page.evaluate(
     async ({ groups }) => {
       const modulePath = '/src/stores/authStore.ts';
-      const module = await import(modulePath) as typeof import(
-        '../../apps/client/src/stores/authStore'
-      );
+      const module = (await import(
+        modulePath
+      )) as typeof import('../../apps/client/src/stores/authStore');
       const base64Url = (payload: Record<string, unknown>): string => {
         const json = JSON.stringify(payload);
         const encoded = globalThis.btoa(json);
         return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/u, '');
       };
       const normalizedGroups = Array.isArray(groups)
-        ? groups.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        ? groups.filter(
+            (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0
+          )
         : [];
       const header = base64Url({ alg: 'none', typ: 'JWT' });
       const body = base64Url({
@@ -42,6 +44,7 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
         error: null,
         isAuthenticated: true,
         isAuthenticating: false,
+        isCheckingCredentials: false,
         newPasswordRequired: false,
         tokens: {
           accessToken,
@@ -58,9 +61,9 @@ export const authenticate = async (page: Page, options?: AuthOptions) => {
 export const seedChronicle = async (page: Page): Promise<{ chronicleId: string }> => {
   return page.evaluate(async () => {
     const modulePath = '/src/stores/chronicleStore.ts';
-    const { useChronicleStore } = await import(modulePath) as typeof import(
-      '../../apps/client/src/stores/chronicleStore'
-    );
+    const { useChronicleStore } = (await import(
+      modulePath
+    )) as typeof import('../../apps/client/src/stores/chronicleStore');
     const store = useChronicleStore.getState();
 
     await store.refreshPlayerResources();

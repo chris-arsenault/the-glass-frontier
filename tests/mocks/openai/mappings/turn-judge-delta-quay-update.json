@@ -1,0 +1,43 @@
+{
+  "priority": 0,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.text.format.name == 'turn_judge_response')]"
+      },
+      {
+        "contains": "#loc:quay"
+      },
+      {
+        "contains": "#beat:update"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "output": [
+        {
+          "content": [
+            {
+              "text": "{\"summary\":\"MOCK SUMMARY: The scout advances the vault thread back at the quay.\",\"shouldCloseChronicle\":false,\"sceneOutcome\":\"continue\",\"sceneOutcomeReason\":null,\"beats\":{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":null,\"updates\":[{\"beatId\":\"shattered_chorus\",\"changeKind\":\"advance\",\"description\":\"Marked progress toward cracking the vault tone.\",\"status\":\"in_progress\"}]},\"ledger\":{\"interactions\":[],\"place\":null,\"present\":[]},\"location\":{\"action\":\"move\",\"destination\":\"Luminous Quay\"}}"
+            }
+          ],
+          "role": "assistant"
+        }
+      ],
+      "output_text": "{\"summary\":\"MOCK SUMMARY: The scout advances the vault thread back at the quay.\",\"shouldCloseChronicle\":false,\"sceneOutcome\":\"continue\",\"sceneOutcomeReason\":null,\"beats\":{\"focusBeatId\":\"shattered_chorus\",\"newBeat\":null,\"updates\":[{\"beatId\":\"shattered_chorus\",\"changeKind\":\"advance\",\"description\":\"Marked progress toward cracking the vault tone.\",\"status\":\"in_progress\"}]},\"ledger\":{\"interactions\":[],\"place\":null,\"present\":[]},\"location\":{\"action\":\"move\",\"destination\":\"Luminous Quay\"}}",
+      "stop_reason": "stop",
+      "usage": {
+        "input_tokens": 90,
+        "output_tokens": 60,
+        "total_tokens": 150
+      }
+    }
+  }
+}

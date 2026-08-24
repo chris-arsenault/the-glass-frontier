@@ -1,3 +1,35 @@
+.credential-check-screen {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  color: var(--text-muted);
+  background: var(--bg-shell);
+  align-items: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.credential-check-screen p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.credential-check-spinner {
+  width: 1.75rem;
+  height: 1.75rem;
+  animation: credential-check-spin 800ms linear infinite;
+  border: 2px solid var(--border-muted);
+  border-radius: 50%;
+  border-top-color: var(--text-accent);
+}
+
+@keyframes credential-check-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .app-main {
   display: flex;
   flex: 1;
@@ -36,7 +68,10 @@
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: 500;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .session-guide-button:hover,
@@ -60,7 +95,10 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   justify-content: center;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .session-changelog-button:hover,
@@ -165,7 +203,9 @@
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: 500;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
 }
 
 .chronicle-route-state button:hover,

@@ -374,7 +374,7 @@
     "id": "2026-08-23-auth-session-refresh",
     "releasedAt": "2026-08-23",
     "summary": "Expired sessions now refresh during play",
-    "details": "The client now renews an expiring Cognito access token before its next API request, so a session can continue after the original token times out without a hard browser refresh. A readable unauthorized response still gets one refresh-and-retry attempt, while a session that can no longer be renewed returns to login instead of leaving the interface apparently signed in.",
+    "details": "The client now renews an expiring Cognito access token before its next API request, so a session can continue after the original token times out without a hard browser refresh. A readable unauthorized response still gets one refresh-and-retry attempt, while a session that can no longer be renewed returns to login instead of leaving the interface apparently signed in. On initial load, a neutral loading screen now remains visible while stored credentials are checked, then gives way to either the signed-in app or the login screen without flashing the wrong destination first.",
     "type": "bugfix"
   },
   {

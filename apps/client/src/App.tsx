@@ -117,9 +117,11 @@ const MainRouteWorkspace = (): React.JSX.Element => (
   </RouteWorkspace>
 );
 
-const ChronicleRouteWorkspace = ({ children }: { children: React.ReactNode }): React.JSX.Element => (
-  <RouteWorkspace rail={<ChronicleNavigation />}>{children}</RouteWorkspace>
-);
+const ChronicleRouteWorkspace = ({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element => <RouteWorkspace rail={<ChronicleNavigation />}>{children}</RouteWorkspace>;
 
 const ChronicleRoute = (): React.JSX.Element => {
   const { chronicleId: routeChronicleId } = useParams();
@@ -173,7 +175,9 @@ const ChronicleRoute = (): React.JSX.Element => {
           return;
         }
         const message =
-          error instanceof Error ? error.message : 'Unable to load chronicle. Returning to landing.';
+          error instanceof Error
+            ? error.message
+            : 'Unable to load chronicle. Returning to landing.';
         failedChronicleRef.current = routeChronicleId;
         setRouteError({ chronicleId: routeChronicleId, message });
         if (pendingChronicleRef.current === routeChronicleId) {
@@ -196,8 +200,7 @@ const ChronicleRoute = (): React.JSX.Element => {
     return <Navigate to="/" replace />;
   }
 
-  const isLoading =
-    connectionState === 'connecting' || currentChronicleId !== routeChronicleId;
+  const isLoading = connectionState === 'connecting' || currentChronicleId !== routeChronicleId;
   const activeRouteError =
     routeError && routeError.chronicleId === routeChronicleId ? routeError.message : null;
 
@@ -244,10 +247,30 @@ const LegacyChronicleRedirect = (): React.JSX.Element => {
   return <Navigate to={`/chron/${chronicleId}`} replace />;
 };
 
+const CredentialCheckScreen = (): React.JSX.Element => {
+  return (
+    <main className="credential-check-screen" role="status" aria-busy="true" aria-live="polite">
+      <span className="credential-check-spinner" aria-hidden="true" />
+      <p>Loading Glass Frontier…</p>
+    </main>
+  );
+};
+
 export function App(): React.JSX.Element {
+  const checkStoredCredentials = useAuthStore((state) => state.checkStoredCredentials);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  usePlayerResources(isAuthenticated);
-  useProgressStreamConnection(isAuthenticated);
+  const isCheckingCredentials = useAuthStore((state) => state.isCheckingCredentials);
+  const canUseAuthenticatedServices = isAuthenticated && !isCheckingCredentials;
+  usePlayerResources(canUseAuthenticatedServices);
+  useProgressStreamConnection(canUseAuthenticatedServices);
+
+  useEffect(() => {
+    checkStoredCredentials();
+  }, [checkStoredCredentials]);
+
+  if (isCheckingCredentials) {
+    return <CredentialCheckScreen />;
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen />;

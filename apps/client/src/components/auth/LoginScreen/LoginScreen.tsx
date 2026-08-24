@@ -66,7 +66,13 @@ type LoginFormProps = {
   showLocalLogin?: boolean;
 };
 
-const LoginForm = ({ error, isAuthenticating, onLocalLogin, onSubmit, showLocalLogin }: LoginFormProps) => {
+const LoginForm = ({
+  error,
+  isAuthenticating,
+  onLocalLogin,
+  onSubmit,
+  showLocalLogin,
+}: LoginFormProps) => {
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
 
@@ -208,7 +214,8 @@ const PasswordField = ({ disabled, id, label, onChange, value }: PasswordFieldPr
   </>
 );
 
-const LOCAL_AUTH_ENABLED = String(import.meta.env.VITE_COGNITO_CLIENT_ID ?? '').toLowerCase() === 'local-e2e';
+const LOCAL_AUTH_ENABLED =
+  String(import.meta.env.VITE_COGNITO_CLIENT_ID ?? '').toLowerCase() === 'local-e2e';
 const LOCAL_PLAYER_ID = 'playwright-e2e';
 
 const encodeSegment = (payload: Record<string, unknown>) => {
@@ -279,6 +286,7 @@ const useLoginViewModel = () => {
       error: null,
       isAuthenticated: true,
       isAuthenticating: false,
+      isCheckingCredentials: false,
       newPasswordRequired: false,
       tokens: {
         accessToken,
