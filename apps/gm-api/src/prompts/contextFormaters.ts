@@ -13,16 +13,30 @@ const SEEDED_TIERS = new Set<OutcomeTier>(['stall', 'regress', 'collapse']);
 
 /**
  * Nothing caps what a player can type, so the turn record needs its own
- * ceiling: twice the length a classifier paraphrase is allowed. Ordinary play
- * never comes near it, and a message that does is pasted material rather than
- * an instruction to the GM.
+ * ceiling. Across every turn played so far the longest message runs 288
+ * characters and the average 139, so this leaves ordinary play — and a good
+ * deal of room above it — untouched, and catches only pasted material.
  */
-const MAX_RECORDED_PLAYER_CHARS = 900;
+const MAX_RECORDED_PLAYER_CHARS = 1_500;
 
-export function recordedPlayerMessage(content: string): string {
-  return content.length <= MAX_RECORDED_PLAYER_CHARS
-    ? content
-    : `${content.slice(0, MAX_RECORDED_PLAYER_CHARS)} […the player's message continues past what the record keeps]`;
+/**
+ * Past the ceiling the record carries the classifier's paraphrase rather than
+ * a clipped message: a cut sentence reads as though the player stopped there,
+ * while the paraphrase covers the whole of what they asked for. A turn that
+ * failed before classification has no paraphrase to carry, so its message is
+ * capped instead.
+ */
+export function recordedPlayerMessage(
+  content: string,
+  intentSummary: string | undefined
+): string {
+  if (content.length <= MAX_RECORDED_PLAYER_CHARS) {
+    return content;
+  }
+  if (intentSummary !== undefined && intentSummary.trim().length > 0) {
+    return `[long message, summarized] ${intentSummary}`;
+  }
+  return `${content.slice(0, MAX_RECORDED_PLAYER_CHARS)} […message continues]`;
 }
 
 export function trimSkillsList(skills: Skill[]): Array<{

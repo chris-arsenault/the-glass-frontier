@@ -343,7 +343,9 @@ function recentEventsFragment(context: GraphContext): string {
           : `\nC: ${turn.skillCheckPlan.skill} at ${turn.skillCheckPlan.riskLevel} risk`
             + ` → ${turn.skillCheckResult.outcomeTier}`;
       return `Turn ${turn.turnSequence + 1}`
-        + `\nP: ${recordedPlayerMessage(turn.playerMessage.content)}`
+        + `\nP: ${recordedPlayerMessage(
+          turn.playerMessage.content, turn.playerIntent?.intentSummary
+        )}`
         + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`;
     })
     .join('\n\n');

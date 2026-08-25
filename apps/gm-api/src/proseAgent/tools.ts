@@ -35,10 +35,12 @@ const resolveVisible = async (
   return entity === null || entity.dm ? null : entity;
 };
 
-/** The player's words are cut only past the record ceiling, never by default. */
+/** Verbatim unless the message is oversized, and then its paraphrase. */
 const renderTurn = (turn: GraphContext['chronicleState']['turns'][number]): unknown => ({
   gm: turn.gmSummary ?? turn.gmResponse?.content,
-  player: recordedPlayerMessage(turn.playerMessage.content),
+  player: recordedPlayerMessage(
+    turn.playerMessage.content, turn.playerIntent?.intentSummary
+  ),
   seq: turn.turnSequence,
 });
 

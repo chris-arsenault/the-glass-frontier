@@ -312,13 +312,15 @@ describe('the turn record', () => {
 });
 
 describe('an oversized player message', () => {
-  it('keeps the record readable without losing that the message ran on', async () => {
+  it('carries the paraphrase instead of the message', async () => {
     const { runtime } = recordingRuntime();
     const composer = new PromptComposer(runtime);
     const context = buildContext({ playerIntent: buildIntent() });
-    const pasted = `${'a'.repeat(900)}NEEDLE${'b'.repeat(500)}`;
+    const pasted = 'a'.repeat(1_600);
+
     context.chronicleState.turns = [{
       gmResponse: { content: CHECKPOINT_NARRATION },
+      playerIntent: buildIntent({ intentSummary: 'Vex reads the whole manifest aloud.' }),
       playerMessage: { content: pasted },
       turnSequence: 0,
     }] as unknown as GraphContext['chronicleState']['turns'];
@@ -326,9 +328,23 @@ describe('an oversized player message', () => {
     const prompt = await composer.buildPrompt(TURN_JUDGE, context);
     const developer = textOf(prompt.input.at(-1)!);
 
-    expect(developer).toContain('a'.repeat(900));
-    expect(developer).not.toContain('NEEDLE');
-    expect(developer).toContain('continues past what the record keeps');
+    expect(developer).toContain('[long message, summarized] Vex reads the whole manifest aloud.');
+    expect(developer).not.toContain('a'.repeat(1_500));
+  });
+
+  it('caps the message when the turn never reached the classifier', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const context = buildContext({ playerIntent: buildIntent() });
+    context.chronicleState.turns = [{
+      gmResponse: { content: CHECKPOINT_NARRATION },
+      playerMessage: { content: 'a'.repeat(1_600) },
+      turnSequence: 0,
+    }] as unknown as GraphContext['chronicleState']['turns'];
+
+    const prompt = await composer.buildPrompt(TURN_JUDGE, context);
+
+    expect(textOf(prompt.input.at(-1)!)).toContain('…message continues');
   });
 
   it('leaves an ordinary message whole', async () => {
