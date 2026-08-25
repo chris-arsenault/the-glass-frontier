@@ -41,11 +41,15 @@ function log(
     return;
   }
 
+  // A metadata key named `message` must not clobber the log's name — it made
+  // logs like prose-agent.panel.failed unfindable. It ships as errorMessage.
+  const { message: metadataMessage, ...rest } = metadata;
   const payload = {
     level,
     message,
     timestamp: new Date().toISOString(),
-    ...metadata,
+    ...rest,
+    ...metadataMessage !== undefined && { errorMessage: metadataMessage },
   };
 
   console.log(JSON.stringify(payload));
