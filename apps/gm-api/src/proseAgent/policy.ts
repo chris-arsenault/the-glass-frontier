@@ -22,28 +22,38 @@ beats volume. Route each need to one tool:
 | finish the turn | submit_turn |
 
 Rounds are scarce; calls are not. Select everything the turn needs from the
-index, then open it all in ONE round by making the tool calls together. These
-are the only tools; do not look for others. Each result carries the slugs, ids,
-or sequence numbers its follow-up takes. Entities marked unwritten are veiled
-shells: narrate them as hooks, never invent canon detail for them. Do not
-re-request material already provided.
+index, then open it all in ONE round by making the tool calls together — a round
+with a single call is almost always a wasted round. These are the only tools; do
+not look for others. Each result carries the slugs, ids, or sequence numbers its
+follow-up takes. An entity marked unwritten is a hook: invent it concretely in
+the narration when the turn calls for it, and hold that invention — what you
+establish becomes canon. Do not re-request material already provided.
+
+What you retrieve must surface in the narration — as an event, a detail, or a
+voice, never as transcription. The moment the sufficiency check is satisfied,
+call submit_turn; further retrieval is waste.
 
 Finish by calling submit_turn with the narration and the entity sidecar. List every
-canon entity your narration used, with usage "central" when it drives the turn and
-"mentioned" otherwise, plus any emergent tags worth keeping. Only entities whose
-material you received — in the seed or through tools — may appear in the sidecar.`;
+canon entity your narration used, identified by the slug the index or tools gave
+you, with usage "central" when it drives the turn and "mentioned" otherwise, plus
+any emergent tags worth keeping. Only entities whose material you received — in
+the seed or through tools — may appear in the sidecar.`;
 
 /** Per-intent sufficiency checks, in the canon's identity-field vocabulary. */
 const SUFFICIENCY_CHECKLISTS = new Map<IntentType, string>([
   ['action', 'Before submitting: for a checked action, have you read the location\'s '
     + 'hazards/risks and any opposing entity\'s methods/threat? On failure tiers, '
-    + 'ground the complication in retrieved material.'],
+    + 'ground the complication in retrieved material. For the turn\'s world motion, '
+    + 'read the stakes or methods of someone present and let them act on it.'],
   ['clarification', 'Retrieve only if the disputed fact lives in canon; otherwise answer '
     + 'from the scene record.'],
   ['inquiry', 'Before submitting: have you opened the asked-about entity\'s identity and '
-    + 'searched its lore for the question\'s terms?'],
+    + 'searched its lore for the question\'s terms? If the question is addressed to a '
+    + 'present character, read their identity and relationship to the player before '
+    + 'answering in their voice.'],
   ['planning', 'Before submitting: have you read the identity (access, hazards) of places '
-    + 'the preparation or route crosses?'],
+    + 'the preparation or route crosses? For the turn\'s world motion, read the stakes '
+    + 'or methods of someone present and let them act on it.'],
   ['possibility', 'Before submitting: are both options grounded in retrieved identity or '
     + 'relationship material (methods, access, terms), not invention?'],
   ['reflection', 'Retrieve only when the reflection turns on an established fact or past '

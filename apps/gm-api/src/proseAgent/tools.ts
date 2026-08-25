@@ -9,8 +9,9 @@ import { buildTocEntries } from './seedPack';
 import type { ToolSession } from './toolSession';
 
 const UNKNOWN_ENTITY_POLICY =
-  'If it exists under another name, find its slug with search. If it is '
-  + 'genuinely unwritten, narrate it as a hook without inventing canon detail.';
+  'If it exists under another name, find its slug with search. If nothing '
+  + 'matches, it has no canon entry: do not present it as established canon; '
+  + 'the template\'s invention rules govern whether it may appear as new fiction.';
 
 const LORE_EXCERPT_LENGTH = 200;
 const HISTORY_CONTENT_LENGTH = 300;
@@ -55,7 +56,7 @@ const readIdentityTool = ({ context, session }: ToolDeps): AgentTool => tool({
     if (entity === null) {
       return session.wrapResult(`identity:${slug}`, () => unknownEntity(slug));
     }
-    session.recordServedEntity(entity.id);
+    session.recordServedEntity(entity.id, entity.slug);
     const identity = entity.descriptiveIdentity ?? {};
     const requested = Object.fromEntries(
       Object.entries(identity).filter(([key]) => keys.includes(key))
@@ -104,8 +105,8 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
         `No live relationship between ${slug} and ${targetSlug}. `
         + 'Check either entity\'s world-index entry for its actual relationships.');
     }
-    session.recordServedEntity(entity.id);
-    session.recordServedEntity(target.id);
+    session.recordServedEntity(entity.id, entity.slug);
+    session.recordServedEntity(target.id, target.slug);
     return session.wrapResult(`relationship:${slug}:${targetSlug}`, () => JSON.stringify(
       edges.map((edge) => ({
         direction: edge.direction,
@@ -121,8 +122,9 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
 /** Discovery stays cheap: neighbors as index entries — key names, no values. */
 const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'List the world-index entries of an entity\'s neighbors: their identity '
-    + 'field names, relationships, and lore counts — no field content.',
+    'List compact world-index entries for an entity\'s neighbors: identity '
+    + 'field names, lore counts, and edges as "verb:slug" handles — no field '
+    + 'content.',
   execute: async ({ slug }: { slug: string }) => {
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
@@ -134,7 +136,12 @@ const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
       .slice(0, MAX_EXPAND_NEIGHBORS);
     const neighbors = await context.worldSchemaStore.listEntitiesByIds(targetIds);
     const entries = await buildTocEntries(context.worldSchemaStore, neighbors);
-    return session.wrapResult(`expand:${slug}`, () => JSON.stringify(entries));
+    const slim = entries.map(({ relationships, ...entry }) => ({
+      ...entry,
+      edges: relationships.map((edge) =>
+        `${edge.direction === 'out' ? '' : '<-'}${edge.verb}:${edge.targetSlug}`),
+    }));
+    return session.wrapResult(`expand:${slug}`, () => JSON.stringify(slim));
   },
   inputSchema: z.object({ slug: z.string() }),
 });

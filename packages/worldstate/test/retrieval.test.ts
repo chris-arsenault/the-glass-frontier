@@ -202,6 +202,22 @@ describe('lore search', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]?.title).toBe('Glasshouse debts');
   });
+
+  it('falls back to OR matching when a multi-word query matches nothing conjunctively', async () => {
+    await worldState.world.commitBatch(
+      proposal({
+        entities: [{ kind: 'geographic_location', name: 'The Tidebreak', ref: 'tidebreak' }],
+        lore: [{
+          entity: { ref: 'tidebreak' },
+          prose: 'The seawall holds against every storm surge.',
+          title: 'Seawall',
+        }],
+      })
+    );
+    const hits = await worldState.world.searchLoreFragments({ query: 'seawall lighthouse' });
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.title).toBe('Seawall');
+  });
 });
 
 describe('entity candidate search', () => {

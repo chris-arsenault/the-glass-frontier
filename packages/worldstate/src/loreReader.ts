@@ -1,7 +1,7 @@
 import type { HardStateKind, LoreFragment } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
-import { now } from './utils';
+import { now, orSearchQuery } from './utils';
 
 type LoreFragmentRow = {
   id: string;
@@ -74,15 +74,32 @@ export class LoreReader {
     limit?: number;
   }): Promise<LoreFragment[]> {
     const limit = Math.max(1, Math.min(20, input.limit ?? 5));
+    const rows = await this.#searchRows(input.query, input.entityId ?? null, limit);
+    if (rows.length > 0) {
+      return rows.map(toLoreFragment);
+    }
+    const orQuery = orSearchQuery(input.query);
+    if (orQuery === null) {
+      return [];
+    }
+    const fallback = await this.#searchRows(orQuery, input.entityId ?? null, limit);
+    return fallback.map(toLoreFragment);
+  }
+
+  async #searchRows(
+    query: string,
+    entityId: string | null,
+    limit: number
+  ): Promise<LoreFragmentRow[]> {
     const result = await this.#pool.query<LoreFragmentRow>(
       `${LORE_SELECT}
        WHERE lf.search @@ websearch_to_tsquery('english', $1)
        AND NOT e.dm
        AND ($2::uuid IS NULL OR lf.entity_id = $2::uuid)
        ORDER BY ts_rank(lf.search, websearch_to_tsquery('english', $1)) DESC LIMIT $3`,
-      [input.query, input.entityId ?? null, limit]
+      [query, entityId, limit]
     );
-    return result.rows.map(toLoreFragment);
+    return result.rows;
   }
 
   /**

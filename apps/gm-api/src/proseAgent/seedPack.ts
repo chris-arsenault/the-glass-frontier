@@ -37,7 +37,7 @@ export type SeedTocEntry = {
 
 export type SeedPack = {
   sections: Array<{ name: string; value: unknown }>;
-  seedEntityIds: string[];
+  seedEntities: Array<{ id: string; slug: string }>;
   toc: SeedTocEntry[];
 };
 
@@ -149,7 +149,7 @@ export const buildSeedPack = async (context: GraphContext): Promise<SeedPack> =>
   const visible = entities.filter((entity) => !entity.dm);
   return {
     sections: sectionValues,
-    seedEntityIds: visible.map((entity) => entity.id),
+    seedEntities: visible.map((entity) => ({ id: entity.id, slug: entity.slug })),
     toc: await buildTocEntries(context.worldSchemaStore, visible),
   };
 };

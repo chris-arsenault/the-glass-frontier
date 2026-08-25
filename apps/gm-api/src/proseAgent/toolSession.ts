@@ -20,22 +20,30 @@ const estimateTokens = (text: string): number => Math.ceil(text.length / BYTES_P
 export class ToolSession {
   readonly #served = new Map<string, number>();
   readonly #servedEntityIds = new Set<string>();
+  readonly #servedSlugToId = new Map<string, string>();
   #spentTokens = 0;
   #currentStep = 0;
   #budgetReminderSent = false;
   #finalRoundReminderSent = false;
   readonly #maxSteps: number;
 
-  constructor(options: { maxSteps: number; seedEntityIds: string[] }) {
+  constructor(options: { maxSteps: number; seedEntities: Array<{ id: string; slug: string }> }) {
     this.#maxSteps = options.maxSteps;
-    for (const id of options.seedEntityIds) {
-      this.#servedEntityIds.add(id);
+    for (const entity of options.seedEntities) {
+      this.recordServedEntity(entity.id, entity.slug);
     }
   }
 
-  /** Entity ids whose material the model has seen — the sidecar provenance set. */
-  get servedEntityIds(): ReadonlySet<string> {
-    return this.#servedEntityIds;
+  /**
+   * Resolves a sidecar reference — models declare entities by slug as the
+   * tools name them, but ids are accepted too — to the canonical entity id,
+   * or undefined when no served material matches.
+   */
+  resolveServedId(reference: string): string | undefined {
+    if (this.#servedEntityIds.has(reference)) {
+      return reference;
+    }
+    return this.#servedSlugToId.get(reference);
   }
 
   get spentTokens(): number {
@@ -47,8 +55,11 @@ export class ToolSession {
     this.#currentStep = stepNumber;
   }
 
-  recordServedEntity(entityId: string): void {
+  recordServedEntity(entityId: string, slug?: string): void {
     this.#servedEntityIds.add(entityId);
+    if (slug !== undefined) {
+      this.#servedSlugToId.set(slug, entityId);
+    }
   }
 
   /**

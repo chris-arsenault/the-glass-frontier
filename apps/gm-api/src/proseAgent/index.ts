@@ -105,17 +105,18 @@ const stepListener = (session: ToolSession, deps: ProseAgentDeps) =>
 const provenanceFiltered = (
   context: GraphContext,
   entries: ProseAgentSidecarEntry[],
-  served: ReadonlySet<string>
-): ProseAgentSidecarEntry[] => entries.filter((entry) => {
-  if (served.has(entry.entityId)) {
-    return true;
+  session: ToolSession
+): ProseAgentSidecarEntry[] => entries.flatMap((entry) => {
+  const entityId = session.resolveServedId(entry.entityId);
+  if (entityId !== undefined) {
+    return [{ ...entry, entityId }];
   }
   log('warn', 'prose-agent.sidecar.unserved_entity', {
     chronicleId: context.chronicleId,
     entityId: entry.entityId,
     turnId: context.turnId,
   });
-  return false;
+  return [];
 });
 
 /**
@@ -140,7 +141,7 @@ export const runProseAgent = async (
   const pack = await buildSeedPack(context);
   const session = new ToolSession({
     maxSteps: PROSE_AGENT_MAX_STEPS,
-    seedEntityIds: pack.seedEntityIds,
+    seedEntities: pack.seedEntities,
   });
 
   const result = await deps.agentLoop.run({
@@ -164,7 +165,7 @@ export const runProseAgent = async (
   return {
     costUsd: calculateActualCostUsd(model, result.usage),
     prose: parsed.prose,
-    sidecar: provenanceFiltered(context, parsed.entities, session.servedEntityIds),
+    sidecar: provenanceFiltered(context, parsed.entities, session),
     stepCount: result.stepCount,
     usage: result.usage,
   };

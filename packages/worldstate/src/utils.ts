@@ -50,3 +50,13 @@ export const toSnakeCase = (value: string): string => {
 };
 
 export const now = (): number => Date.now();
+
+/**
+ * `websearch_to_tsquery` ANDs plain words, so a multi-word query that matches
+ * nothing as a conjunction should be retried as a disjunction. Returns the
+ * OR-joined form, or null when the query is a single word (no retry needed).
+ */
+export const orSearchQuery = (query: string): string | null => {
+  const words = query.trim().split(/\s+/);
+  return words.length < 2 ? null : words.join(' OR ');
+};

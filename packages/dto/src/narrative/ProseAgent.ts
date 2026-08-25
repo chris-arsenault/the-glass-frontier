@@ -7,7 +7,8 @@ import { z } from 'zod';
  */
 export const ProseAgentSidecarEntry = z.object({
   emergentTags: z.array(z.string()).default([]),
-  entityId: z.string().min(1),
+  entityId: z.string().min(1)
+    .describe('The entity\'s slug exactly as the world index or tools named it.'),
   usage: z.enum(['mentioned', 'central']),
 });
 export type ProseAgentSidecarEntry = z.infer<typeof ProseAgentSidecarEntry>;

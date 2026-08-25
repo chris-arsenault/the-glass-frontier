@@ -24,7 +24,7 @@ const runTool = async (agentTool: unknown, input: unknown): Promise<string> => {
   return executable.execute(input, {});
 };
 
-const freshSession = (): ToolSession => new ToolSession({ maxSteps: 5, seedEntityIds: [] });
+const freshSession = (): ToolSession => new ToolSession({ maxSteps: 5, seedEntities: [] });
 
 const entity = (overrides: Partial<HardState> & { id: string; slug: string }): HardState =>
   ({
@@ -162,6 +162,8 @@ describe('prose agent tools', () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
     const raw = await runTool(tools.expand, { slug: KORVATH_SLUG });
     expect(raw).toContain(GUILD_SLUG);
+    expect(raw).toContain('"edges"');
+    expect(raw).not.toContain('relationships');
     expect(raw).not.toContain('hidden-broker');
     expect(raw).not.toContain('wary');
   });
@@ -170,7 +172,7 @@ describe('prose agent tools', () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
     const raw = await runTool(tools.search, { query: 'glasshouse' });
     expect(raw).toContain('No canon entity resembles');
-    expect(raw).toContain('unwritten');
+    expect(raw).toContain('no canon entry');
   });
 
   it('read_turns reads a fixed window in play order', async () => {
@@ -256,7 +258,7 @@ describe('runProseAgent', () => {
       () => toolCallResponse('read_identity', { keys: ['manner'], slug: KORVATH_SLUG }),
       () => toolCallResponse('submit_turn', {
         entities: [
-          { emergentTags: ['tithe'], entityId: KORVATH_ID, usage: 'central' },
+          { emergentTags: ['tithe'], entityId: KORVATH_SLUG, usage: 'central' },
           { emergentTags: [], entityId: 'never-served-id', usage: 'mentioned' },
         ],
         prose: 'Korvath counts the tithe twice before he answers you.',

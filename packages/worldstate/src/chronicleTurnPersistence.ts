@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 
 import { upsertNodeIdentity } from './nodeIdentity';
 import { withTransaction } from './pg';
+import { orSearchQuery } from './utils';
 
 export type CommitTurnInput = {
   character: Character | null;
@@ -254,14 +255,27 @@ export class ChronicleTurnPersistence {
   /** Full-text search over a chronicle's turn prose, best match first. */
   async search(input: TurnSearchInput): Promise<Turn[]> {
     const limit = Math.max(1, Math.min(20, input.limit ?? 5));
+    const rows = await this.#searchRows(input.chronicleId, input.query, limit);
+    if (rows.length > 0) {
+      return rows.map(toTurn);
+    }
+    const orQuery = orSearchQuery(input.query);
+    if (orQuery === null) {
+      return [];
+    }
+    const fallback = await this.#searchRows(input.chronicleId, orQuery, limit);
+    return fallback.map(toTurn);
+  }
+
+  async #searchRows(chronicleId: string, query: string, limit: number): Promise<TurnRow[]> {
     const result = await this.#pool.query<TurnRow>(
       `${TURN_SELECT}
        WHERE chronicle_id = $1::uuid
        AND search @@ websearch_to_tsquery('english', $2)
        ORDER BY ts_rank(search, websearch_to_tsquery('english', $2)) DESC LIMIT $3`,
-      [input.chronicleId, input.query, limit]
+      [chronicleId, query, limit]
     );
-    return result.rows.map(toTurn);
+    return result.rows;
   }
 
   async deleteForChronicle(client: PoolClient, chronicleId: string): Promise<void> {
