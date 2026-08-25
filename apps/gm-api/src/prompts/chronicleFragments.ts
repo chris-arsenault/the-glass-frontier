@@ -9,6 +9,7 @@ import {
   formatInventoryItem,
   formatInventoryItemDetail,
   formatSkillCheck,
+  recordedPlayerMessage,
   trimBeatsList,
 } from './contextFormaters';
 
@@ -341,7 +342,8 @@ function recentEventsFragment(context: GraphContext): string {
           ? ''
           : `\nC: ${turn.skillCheckPlan.skill} at ${turn.skillCheckPlan.riskLevel} risk`
             + ` → ${turn.skillCheckResult.outcomeTier}`;
-      return `Turn ${turn.turnSequence + 1}\nP: ${turn.playerMessage.content}`
+      return `Turn ${turn.turnSequence + 1}`
+        + `\nP: ${recordedPlayerMessage(turn.playerMessage.content)}`
         + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`;
     })
     .join('\n\n');

@@ -53,7 +53,7 @@ const intentResponseSchema = (context: GraphContext): z.ZodType<IntentResponse> 
     intentSummary: z
       .string()
       .min(1)
-      .describe('Concise paraphrase of the player’s request (≤ 140 characters).'),
+      .describe('Concise paraphrase of the player’s request (≤ 450 characters).'),
     intentType: IntentType.describe('One of the canonical Glass Frontier intent types.'),
     routerRationale: z
       .string()

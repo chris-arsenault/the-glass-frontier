@@ -32,7 +32,7 @@ WRAP: present only when the player requested wrap-up; carries `turnsLeft`.
 
 Output fields:
 - intentType: the single best intent type from the list above
-- intentSummary: concise paraphrase of the player's request (<=140 chars)
+- intentSummary: paraphrase of the player's request, keeping every distinct thing they asked for rather than only the headline action (<=450 chars)
 - routerRationale: one sentence explaining why this classification was chosen (<160 chars), no meta
 - tone: one narrative tone adjective grounded in the current scene (e.g., tense, wry, mournful)
 - creativeSpark: true only when the intent shows genuine improvisation or imaginative flair beyond the obvious move

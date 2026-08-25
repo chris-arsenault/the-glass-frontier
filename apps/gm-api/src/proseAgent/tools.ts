@@ -4,6 +4,7 @@ import { type ToolSet, tool } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
 
+import { recordedPlayerMessage } from '../prompts/contextFormaters';
 import type { GraphContext } from '../types';
 import { buildTocEntries, renderWorldIndex } from './seedPack';
 import type { ToolSession } from './toolSession';
@@ -34,10 +35,10 @@ const resolveVisible = async (
   return entity === null || entity.dm ? null : entity;
 };
 
-/** The player's words are never cut: a clipped ask is a misread ask. */
+/** The player's words are cut only past the record ceiling, never by default. */
 const renderTurn = (turn: GraphContext['chronicleState']['turns'][number]): unknown => ({
   gm: turn.gmSummary ?? turn.gmResponse?.content,
-  player: turn.playerMessage.content,
+  player: recordedPlayerMessage(turn.playerMessage.content),
   seq: turn.turnSequence,
 });
 

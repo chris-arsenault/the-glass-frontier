@@ -11,6 +11,20 @@ import type {
 
 const SEEDED_TIERS = new Set<OutcomeTier>(['stall', 'regress', 'collapse']);
 
+/**
+ * Nothing caps what a player can type, so the turn record needs its own
+ * ceiling: twice the length a classifier paraphrase is allowed. Ordinary play
+ * never comes near it, and a message that does is pasted material rather than
+ * an instruction to the GM.
+ */
+const MAX_RECORDED_PLAYER_CHARS = 900;
+
+export function recordedPlayerMessage(content: string): string {
+  return content.length <= MAX_RECORDED_PLAYER_CHARS
+    ? content
+    : `${content.slice(0, MAX_RECORDED_PLAYER_CHARS)} […the player's message continues past what the record keeps]`;
+}
+
 export function trimSkillsList(skills: Skill[]): Array<{
   attribute: string;
   name: string;

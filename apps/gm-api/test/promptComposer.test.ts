@@ -311,6 +311,43 @@ describe('the turn record', () => {
   });
 });
 
+describe('an oversized player message', () => {
+  it('keeps the record readable without losing that the message ran on', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const context = buildContext({ playerIntent: buildIntent() });
+    const pasted = `${'a'.repeat(900)}NEEDLE${'b'.repeat(500)}`;
+    context.chronicleState.turns = [{
+      gmResponse: { content: CHECKPOINT_NARRATION },
+      playerMessage: { content: pasted },
+      turnSequence: 0,
+    }] as unknown as GraphContext['chronicleState']['turns'];
+
+    const prompt = await composer.buildPrompt(TURN_JUDGE, context);
+    const developer = textOf(prompt.input.at(-1)!);
+
+    expect(developer).toContain('a'.repeat(900));
+    expect(developer).not.toContain('NEEDLE');
+    expect(developer).toContain('continues past what the record keeps');
+  });
+
+  it('leaves an ordinary message whole', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const context = buildContext({ playerIntent: buildIntent() });
+    const spoken = 'i tell the broker i am done with him and walk toward the cargo bay';
+    context.chronicleState.turns = [{
+      gmResponse: { content: CHECKPOINT_NARRATION },
+      playerMessage: { content: spoken },
+      turnSequence: 0,
+    }] as unknown as GraphContext['chronicleState']['turns'];
+
+    const prompt = await composer.buildPrompt(TURN_JUDGE, context);
+
+    expect(textOf(prompt.input.at(-1)!)).toContain(spoken);
+  });
+});
+
 describe('check-planner fragments', () => {
   it('includes scene context alongside intent and character', async () => {
     const { runtime } = recordingRuntime();
