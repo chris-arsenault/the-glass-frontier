@@ -481,5 +481,12 @@
     "summary": "Compare candidate GM narrators on every turn",
     "details": "Each turn now also runs a panel of experimental GM narrators that search world canon, relationships, lore, and chronicle history themselves before writing, instead of receiving a pre-selected slice. Expanded GM messages gain a pager to cycle between the current narrator's response and each panel response, labeled by model. The story is still driven only by the current narrator; turns may take longer while the panel runs. The GM's narration prompts have been restored to their earlier, terser wording on every path after the reformatted versions produced flatter, more generic prose. One panel model that kept rewriting failed rolls as successes has been retired, so the panel is now two narrators instead of three.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-25-complication-ratchet",
+    "releasedAt": "2026-08-25",
+    "summary": "Stop every turn from piling on new trouble",
+    "details": "The GM prepares several possible complications before a roll and used to play all of them no matter how the roll went, so even a success ended with fresh problems and a run of bad luck spiralled with no way out. A turn that goes badly now brings one complication, and a turn that goes well brings none. The GM also tracks its story goals more honestly: a turn spent on something the current goal never asked for no longer counts as progress toward it, and a fight or conversation that is already several turns old can now be recognized as a scene instead of going untracked.",
+    "type": "improvement"
   }
 ]

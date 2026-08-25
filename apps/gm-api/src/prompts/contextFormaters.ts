@@ -3,10 +3,13 @@ import type {
   ChronicleBeat,
   InventoryEntry,
   Intent,
+  OutcomeTier,
   Skill,
   SkillCheckPlan,
   SkillCheckResult,
 } from '@glass-frontier/dto';
+
+const SEEDED_TIERS = new Set<OutcomeTier>(['stall', 'regress', 'collapse']);
 
 export function trimSkillsList(skills: Skill[]): Array<{
   attribute: string;
@@ -97,6 +100,22 @@ export function formatIntent(
   };
 }
 
+/**
+ * The planner writes three complication seeds before the dice are rolled, and
+ * the narrator played all three whatever came back — so a success still
+ * shipped three fresh ways to lose and every turn ratcheted the pressure up.
+ * A turn that went badly gets one seed; a turn that went well gets none.
+ */
+function seedsForOutcome(
+  seeds: string[] | undefined,
+  outcome: OutcomeTier | undefined
+): string[] {
+  if (outcome === undefined || !SEEDED_TIERS.has(outcome)) {
+    return [];
+  }
+  return (seeds ?? []).slice(0, 1);
+}
+
 export function formatSkillCheck(
   plan: SkillCheckPlan | null | undefined,
   result: SkillCheckResult | null | undefined
@@ -105,7 +124,9 @@ export function formatSkillCheck(
   const resultDetails: Partial<SkillCheckResult> = result ?? {};
   return {
     attribute: planDetails.attribute,
-    complicationSeeds: planDetails.complicationSeeds ?? [],
+    complicationSeeds: seedsForOutcome(
+      planDetails.complicationSeeds, resultDetails.outcomeTier
+    ),
     outcome: resultDetails.outcomeTier,
     plannedAdvantage: planDetails.advantage,
     requiresCheck: planDetails.requiresCheck,
