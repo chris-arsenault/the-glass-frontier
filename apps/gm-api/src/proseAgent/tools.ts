@@ -67,7 +67,6 @@ const readIdentityTool = ({ context, session }: ToolDeps): AgentTool => tool({
       () => JSON.stringify({
         description: entity.description,
         facts: entity.facts,
-        id: entity.id,
         identity: requested,
         ...missing.length > 0 && { missingKeys: missing },
         name: entity.name,
@@ -171,7 +170,7 @@ const searchTool = ({ context, session }: ToolDeps): AgentTool => tool({
 const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
     'Full-text search lore prose across all canon. Include an entity\'s name '
-    + 'in the query to scope to it. Returns ids for read_lore.',
+    + 'in the query to scope to it. Returns lore slugs for read_lore.',
   execute: async ({ query }: { query: string }) => {
     const fragments = await context.worldSchemaStore.searchLoreFragments({
       limit: 5,
@@ -182,7 +181,7 @@ const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
         ? `No lore matches "${query}".`
         : JSON.stringify(fragments.map((fragment) => ({
           excerpt: fragment.prose.slice(0, LORE_EXCERPT_LENGTH),
-          id: fragment.id,
+          slug: fragment.slug,
           title: fragment.title,
         }))));
   },
@@ -190,23 +189,33 @@ const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
 });
 
 const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
-  description: 'Read up to five full lore fragments by id from search_lore results.',
-  execute: async ({ ids }: { ids: string[] }) => {
-    const fragments = (await Promise.all(
-      ids.slice(0, 5).map(async (id) => context.worldSchemaStore.getLoreFragment({ id }))
-    )).filter((fragment) => fragment !== null);
+  description:
+    'Read up to five full lore fragments by the lore slugs search_lore '
+    + 'returned.',
+  execute: async ({ slugs }: { slugs: string[] }) => {
+    const wanted = slugs.slice(0, 5);
+    const fragments = await context.worldSchemaStore.listLoreFragmentsBySlugs({
+      slugs: wanted,
+    });
     for (const fragment of fragments) {
-      session.recordServedEntity(fragment.entityId);
+      session.recordServedEntity(fragment.entityId, fragment.entitySlug);
     }
-    return session.wrapResult(`lore:${[...ids].sort().join(',')}`, () => JSON.stringify(
-      fragments.map((fragment) => ({
-        entityId: fragment.entityId,
+    const missing = wanted.filter(
+      (slug) => !fragments.some((fragment) => fragment.slug === slug)
+    );
+    return session.wrapResult(`lore:${[...wanted].sort().join(',')}`, () => JSON.stringify({
+      fragments: fragments.map((fragment) => ({
+        entitySlug: fragment.entitySlug,
         prose: fragment.prose,
         title: fragment.title,
-      }))
-    ));
+      })),
+      ...missing.length > 0 && {
+        note: `No lore fragment has the slug ${missing.join(', ')}. `
+          + 'Use a slug exactly as search_lore returned it.',
+      },
+    }));
   },
-  inputSchema: z.object({ ids: z.array(z.string()).min(1).max(5) }),
+  inputSchema: z.object({ slugs: z.array(z.string()).min(1).max(5) }),
 });
 
 const searchHistoryTool = ({ context, session }: ToolDeps): AgentTool => tool({

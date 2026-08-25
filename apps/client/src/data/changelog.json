@@ -479,7 +479,7 @@
     "id": "2026-08-25-prose-agent-panel",
     "releasedAt": "2026-08-25",
     "summary": "Compare candidate GM narrators on every turn",
-    "details": "Each turn now also runs a panel of experimental GM narrators that search world canon, relationships, lore, and chronicle history themselves before writing, instead of receiving a pre-selected slice. Expanded GM messages gain a pager to cycle between the current narrator's response and each panel response, labeled by model. The story is still driven only by the current narrator; turns may take longer while the panel runs. GM prompts were also tightened across both paths: mechanics vocabulary no longer leaks into narration, questions addressed to present characters are answered in their voice, and the world now moves a little on its own each turn without overriding the player's stated action.",
+    "details": "Each turn now also runs a panel of experimental GM narrators that search world canon, relationships, lore, and chronicle history themselves before writing, instead of receiving a pre-selected slice. Expanded GM messages gain a pager to cycle between the current narrator's response and each panel response, labeled by model. The story is still driven only by the current narrator; turns may take longer while the panel runs. The GM's narration prompts have been restored to their earlier, terser wording on every path after the reformatted versions produced flatter, more generic prose. One panel model that kept rewriting failed rolls as successes has been retired, so the panel is now two narrators instead of three.",
     "type": "improvement"
   }
 ]

@@ -15,13 +15,15 @@ type LoreFragmentRow = {
   tags: string[];
   created_at: Date | null;
   entity_kind: HardStateKind;
+  entity_slug: string;
 };
 
-const LORE_SELECT = `SELECT lf.*, e.kind AS entity_kind
+const LORE_SELECT = `SELECT lf.*, e.kind AS entity_kind, e.slug AS entity_slug
   FROM lore_fragment lf JOIN entity e ON e.id = lf.entity_id`;
 
 const toLoreFragment = (row: LoreFragmentRow): LoreFragment => ({
   entityId: row.entity_id,
+  entitySlug: row.entity_slug,
   externalKey: row.external_key ?? undefined,
   id: row.id,
   prose: row.prose,
@@ -53,6 +55,17 @@ export class LoreReader {
     );
     const row = result.rows[0];
     return row === undefined ? null : toLoreFragment(row);
+  }
+
+  /** Fragments named the way search results name them: by their own slug. */
+  async listBySlugs(input: { slugs: string[] }): Promise<LoreFragment[]> {
+    if (input.slugs.length === 0) {
+      return [];
+    }
+    const result = await this.#pool.query<LoreFragmentRow>(
+      `${LORE_SELECT} WHERE lf.slug = ANY($1::text[]) AND NOT e.dm`, [input.slugs]
+    );
+    return result.rows.map(toLoreFragment);
   }
 
   async listByEntity(input: { entityId: string; limit?: number }): Promise<LoreFragment[]> {
@@ -101,7 +114,7 @@ export class LoreReader {
     const perEntityLimit = Math.max(1, Math.min(50, input.perEntityLimit ?? 5));
     const result = await this.#pool.query<LoreFragmentRow>(
       `SELECT * FROM (
-         SELECT lf.*, e.kind AS entity_kind,
+         SELECT lf.*, e.kind AS entity_kind, e.slug AS entity_slug,
            row_number() OVER (PARTITION BY lf.entity_id ORDER BY lf.created_at DESC) AS rn
          FROM lore_fragment lf
          JOIN entity e ON e.id = lf.entity_id

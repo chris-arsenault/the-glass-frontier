@@ -205,7 +205,6 @@ function entitiesFragment(context: GraphContext): Array<EstablishedEntity | Unwr
 
 function entityReferencesFragment(context: GraphContext): Array<Record<string, unknown>> {
   return (context.entityReferences ?? []).map((reference) => ({
-    entityId: reference.entityId,
     entitySlug: reference.entitySlug,
     method: reference.method,
     speaker: reference.speaker,

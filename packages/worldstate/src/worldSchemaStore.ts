@@ -160,6 +160,10 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return this.#lore.get(input);
   }
 
+  async listLoreFragmentsBySlugs(input: { slugs: string[] }): Promise<LoreFragment[]> {
+    return this.#lore.listBySlugs(input);
+  }
+
   async listLoreFragmentsByEntity(input: {
     entityId: string;
     limit?: number;

@@ -38,6 +38,7 @@ Output fields:
 - creativeSpark: true only when the intent shows genuine improvisation or imaginative flair beyond the obvious move
 - handlerHints: 0-8 lowercase hints that nudge downstream narration (e.g., "whispered", "hurried"); emit [] when none apply
 - sceneChange: `{type, subject, subjectKind}` only for a clear typed-scene entry/switch; otherwise null
+- sceneRationale: name the scene type you weighed and what decided it, whether or not you emitted one (<=140 chars), e.g. "battle considered: blows traded two turns running, opening it" or "dialog considered: one question, not a sustained exchange"
 - beatDirective: `{kind, summary, targetBeatId}` per step 10
 
 Always satisfy the JSON schema exactly.

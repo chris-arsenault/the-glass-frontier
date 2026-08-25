@@ -10,6 +10,8 @@ export const LoreFragmentSource = z.object({
 
 export const LoreFragment = z.object({
   entityId: z.string().min(1),
+  /** The owning entity's slug, so callers can name it without a uuid. */
+  entitySlug: z.string().min(1),
   /**
    * Stable identity from the source world. Encodes what owns the prose:
    * `tsonu:<entry>:<section>:<n>` is an authored passage of the entry, while

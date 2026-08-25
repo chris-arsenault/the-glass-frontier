@@ -239,7 +239,7 @@ describe('prose agent panel', () => {
     const alternates = await runProseAgentPanel(agentContext(), panelLoop);
     expect(attempted.sort()).toEqual([...PANEL_MODELS].sort());
     expect(alternates.map((alternate) => alternate.modelId).sort())
-      .toEqual(['amazon-nova-2-lite', SONNET_MODEL_ID].sort());
+      .toEqual([SONNET_MODEL_ID]);
     expect(alternates[0]?.prose).toContain('Narration from');
     expect(alternates.every((alternate) => alternate.costUsd > 0)).toBe(true);
   });
@@ -258,8 +258,8 @@ describe('runProseAgent', () => {
       () => toolCallResponse('read_identity', { keys: ['manner'], slug: KORVATH_SLUG }),
       () => toolCallResponse('submit_turn', {
         entities: [
-          { emergentTags: ['tithe'], entityId: KORVATH_SLUG, usage: 'central' },
-          { emergentTags: [], entityId: 'never-served-id', usage: 'mentioned' },
+          { emergentTags: ['tithe'], entitySlug: KORVATH_SLUG, usage: 'central' },
+          { emergentTags: [], entitySlug: 'never-served-slug', usage: 'mentioned' },
         ],
         prose: 'Korvath counts the tithe twice before he answers you.',
       }),

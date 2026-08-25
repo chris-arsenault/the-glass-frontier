@@ -2,8 +2,9 @@ import { MODEL_CATALOG } from '@glass-frontier/app';
 import {
   type IntentType,
   type PromptTemplateId,
-  type ProseAgentSidecarEntry,
+  type ProseAgentSidecarInput,
   ProseAgentResult,
+  type ProseSidecarEntry,
 } from '@glass-frontier/dto';
 import {
   type AgentLoopClient,
@@ -33,7 +34,7 @@ const PROSE_AGENT_REASONING_EFFORT = 'low';
 export type ProseAgentOutcome = {
   costUsd: number;
   prose: string;
-  sidecar: ProseAgentSidecarEntry[];
+  sidecar: ProseSidecarEntry[];
   stepCount: number;
   usage: TokenUsage;
 };
@@ -104,16 +105,16 @@ const stepListener = (session: ToolSession, deps: ProseAgentDeps) =>
 
 const provenanceFiltered = (
   context: GraphContext,
-  entries: ProseAgentSidecarEntry[],
+  entries: ProseAgentSidecarInput[],
   session: ToolSession
-): ProseAgentSidecarEntry[] => entries.flatMap((entry) => {
-  const entityId = session.resolveServedId(entry.entityId);
+): ProseSidecarEntry[] => entries.flatMap(({ entitySlug, ...entry }) => {
+  const entityId = session.resolveServedId(entitySlug);
   if (entityId !== undefined) {
     return [{ ...entry, entityId }];
   }
   log('warn', 'prose-agent.sidecar.unserved_entity', {
     chronicleId: context.chronicleId,
-    entityId: entry.entityId,
+    entitySlug,
     turnId: context.turnId,
   });
   return [];

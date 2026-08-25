@@ -218,6 +218,36 @@ describe('lore search', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]?.title).toBe('Seawall');
   });
+
+  it('reads fragments back by the slug search returned, with the owning entity named', async () => {
+    await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'geographic_location', name: 'The Kiln Row', ref: 'kiln_row' },
+          { dm: true, kind: 'geographic_location', name: 'Ash Cellar', ref: 'ash_cellar' },
+        ],
+        lore: [
+          {
+            entity: { ref: 'kiln_row' },
+            prose: 'The kilns run hot until the tide turns.',
+            title: 'Kiln hours',
+          },
+          {
+            entity: { ref: 'ash_cellar' },
+            prose: 'The cellar keeps what the kilns will not.',
+            title: 'Cellar stock',
+          },
+        ],
+      })
+    );
+    const [found] = await worldState.world.searchLoreFragments({ query: 'kilns tide' });
+    const fragments = await worldState.world.listLoreFragmentsBySlugs({
+      slugs: [found?.slug ?? '', 'no-such-lore-slug'],
+    });
+    expect(fragments).toHaveLength(1);
+    expect(fragments[0]?.title).toBe('Kiln hours');
+    expect(fragments[0]?.entitySlug).toBe('the_kiln_row');
+  });
 });
 
 describe('entity candidate search', () => {

@@ -62,6 +62,13 @@ const intentResponseSchema = (context: GraphContext): z.ZodType<IntentResponse> 
     sceneChange: SceneChangeCandidate.nullable()
       .default(null)
       .describe('New typed scene when play enters or switches scene; null to continue current context.'),
+    sceneRationale: z
+      .string()
+      .min(1)
+      .describe(
+        'Why this turn opens, continues, or stays out of a typed scene — name the '
+        + 'scene type you considered and what decided it (≤ 140 characters).'
+      ),
     tone: z.string().min(1).describe('Narrative tone adjective grounded in the current scene.'),
   });
 
@@ -73,21 +80,26 @@ type IntentResponse = {
   intentType: Intent['intentType'];
   routerRationale: string;
   sceneChange: z.infer<typeof SceneChangeCandidate> | null;
+  sceneRationale: string;
   tone: string;
 };
 const NODE_ID = 'intent-classifier';
 
+/**
+ * Logged every turn, including the turns that stay out of a typed scene — a
+ * chronicle that never reaches a battle or dialog scene is exactly the case
+ * that used to leave no trace, and `rationale` is the classifier's own account
+ * of why.
+ */
 const logSceneLifecycle = (input: {
   candidate: unknown;
   context: GraphContext;
   effectiveScene: ChronicleScene | null;
+  rationale: string;
   replacedSceneId: string | null;
   transition: SceneTransition;
 }): void => {
-  const { candidate, context, effectiveScene, replacedSceneId, transition } = input;
-  if (transition === 'none') {
-    return;
-  }
+  const { candidate, context, effectiveScene, rationale, replacedSceneId, transition } = input;
   const scene = effectiveScene === null
     ? { sceneId: '', subject: '', subjectKind: '', type: '' }
     : {
@@ -101,6 +113,7 @@ const logSceneLifecycle = (input: {
     ...scene,
     candidate: level === 'warn' ? JSON.stringify(candidate) : '',
     chronicleId: context.chronicleId,
+    rationale,
     replacedSceneId: replacedSceneId === null ? '' : replacedSceneId,
     transition,
     turnSequence: context.turnSequence,
@@ -132,6 +145,7 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       candidate: result.sceneChange,
       context,
       effectiveScene,
+      rationale: result.sceneRationale,
       replacedSceneId,
       transition,
     });
@@ -147,6 +161,7 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       },
       routerRationale: result.routerRationale,
       sceneChange,
+      sceneRationale: result.sceneRationale,
       tone: result.tone,
     };
     return { effectiveScene, playerIntent: intent };

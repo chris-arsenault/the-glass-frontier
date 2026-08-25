@@ -179,6 +179,7 @@ export type WorldSchemaStore = {
     entityIds: string[];
     perEntityLimit?: number;
   }) => Promise<Map<string, LoreFragment[]>>;
+  listLoreFragmentsBySlugs: (input: { slugs: string[] }) => Promise<LoreFragment[]>;
   searchLoreFragments: (input: {
     query: string;
     entityId?: string;

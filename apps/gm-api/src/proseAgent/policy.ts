@@ -24,8 +24,8 @@ beats volume. Route each need to one tool:
 Rounds are scarce; calls are not. Select everything the turn needs from the
 index, then open it all in ONE round by making the tool calls together — a round
 with a single call is almost always a wasted round. These are the only tools; do
-not look for others. Each result carries the slugs, ids, or sequence numbers its
-follow-up takes. An entity marked unwritten is a hook: invent it concretely in
+not look for others. Everything is named by slug or by turn sequence number;
+each result carries the handles its follow-up takes. An entity marked unwritten is a hook: invent it concretely in
 the narration when the turn calls for it, and hold that invention — what you
 establish becomes canon. Do not re-request material already provided.
 
@@ -34,9 +34,9 @@ voice, never as transcription. The moment the sufficiency check is satisfied,
 call submit_turn; further retrieval is waste.
 
 Finish by calling submit_turn with the narration and the entity sidecar. List every
-canon entity your narration used, identified by the slug the index or tools gave
-you, with usage "central" when it drives the turn and "mentioned" otherwise, plus
-any emergent tags worth keeping. Only entities whose material you received — in
+canon entity your narration used under entitySlug, exactly as the index or tools
+spelled it — never a name you coined for the scene — with usage "central" when it
+drives the turn and "mentioned" otherwise, plus any emergent tags worth keeping. Only entities whose material you received — in
 the seed or through tools — may appear in the sidecar.`;
 
 /** Per-intent sufficiency checks, in the canon's identity-field vocabulary. */

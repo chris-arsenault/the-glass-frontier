@@ -18,6 +18,7 @@ export const buildIntent = (overrides?: Partial<Intent>): Intent => ({
   metadata: { tags: [], timestamp: 0 },
   routerRationale: 'Concrete verb aimed at the world.',
   sceneChange: null,
+  sceneRationale: 'Battle considered: one action against no active opposition.',
   tone: 'tense',
   ...overrides,
 });
