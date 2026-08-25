@@ -116,6 +116,13 @@ function seedsForOutcome(
   return (seeds ?? []).slice(0, 1);
 }
 
+function resolveSwing(result: Partial<SkillCheckResult>): string | undefined {
+  if (result.advantage === true) {
+    return 'advantage';
+  }
+  return result.disadvantage === true ? 'disadvantage' : undefined;
+}
+
 export function formatSkillCheck(
   plan: SkillCheckPlan | null | undefined,
   result: SkillCheckResult | null | undefined
@@ -128,12 +135,14 @@ export function formatSkillCheck(
       planDetails.complicationSeeds, resultDetails.outcomeTier
     ),
     outcome: resultDetails.outcomeTier,
-    plannedAdvantage: planDetails.advantage,
     requiresCheck: planDetails.requiresCheck,
-    resultAdvantage: resultDetails.advantage,
-    resultDisadvantage: resultDetails.disadvantage,
     riskLevel: planDetails.riskLevel,
     skill: planDetails.skill,
+    // One field instead of three. The narrator was reading `plannedAdvantage:
+    // disadvantage, resultAdvantage: false, resultDisadvantage: false` and
+    // having to work out which one applied; only the state the roll actually
+    // ran under matters, and when it ran even, there is nothing to say.
+    swing: resolveSwing(resultDetails),
   };
 }
 

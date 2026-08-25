@@ -6,9 +6,12 @@ import type {
 } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
+import { renderBlock } from '../prompts/blockRender';
 import type { ChronicleFragmentTypes } from '../prompts/chronicleFragments';
 import { extractFragment } from '../prompts/chronicleFragments';
 import type { GraphContext } from '../types';
+
+const INDENT = '  ';
 
 /**
  * The ToC schema is v0 and expected to iterate during shadow review. Nothing
@@ -154,9 +157,6 @@ export const buildSeedPack = async (context: GraphContext): Promise<SeedPack> =>
   };
 };
 
-const renderValue = (value: unknown): string =>
-  typeof value === 'string' ? value : JSON.stringify(value);
-
 const isEmpty = (value: unknown): boolean =>
   value === undefined
   || value === null
@@ -165,15 +165,45 @@ const isEmpty = (value: unknown): boolean =>
     (inner) => inner === undefined || inner === null
   ));
 
+const edgeHandle = (edge: SeedTocEntry['relationships'][number]): string =>
+  `${edge.direction === 'out' ? '' : '<-'}${edge.verb}:${edge.targetSlug}`;
+
+/**
+ * One entity, one stanza. The index is a menu of what can be opened, so it
+ * carries field *names* and edge handles — never field values. The generic
+ * block renderer would spend a line per relationship field; here the whole
+ * edge fits in a handle the retrieval tools accept verbatim.
+ */
+const tocStanza = (entry: SeedTocEntry): string => {
+  const heading = [
+    `${entry.slug} · ${entry.kind} · ${entry.prominence}`,
+    entry.status === undefined ? '' : ` · ${entry.status}`,
+    entry.unwritten ? ' · unwritten' : '',
+    entry.blurb === undefined ? '' : ` — ${entry.blurb}`,
+  ].join('');
+  const detail = [
+    entry.factKeys.length > 0 ? `${INDENT}facts: ${entry.factKeys.join(', ')}` : '',
+    entry.identityKeys.length > 0 ? `${INDENT}identity: ${entry.identityKeys.join(', ')}` : '',
+    entry.relationships.length > 0
+      ? `${INDENT}edges: ${entry.relationships.map(edgeHandle).join(', ')}`
+      : '',
+    entry.loreCount > 0 ? `${INDENT}lore: ${entry.loreCount}` : '',
+  ].filter((line) => line.length > 0);
+  return [heading, ...detail].join('\n');
+};
+
+export const renderWorldIndex = (toc: SeedTocEntry[]): string =>
+  toc.map(tocStanza).join('\n');
+
 /** One user message: the seed sections, the world index, then the player message. */
 export const renderSeedPack = (pack: SeedPack, playerMessage: string): string => {
   const parts: string[] = [];
   for (const section of pack.sections) {
     if (!isEmpty(section.value)) {
-      parts.push(`### ${section.name}\n${renderValue(section.value)}`);
+      parts.push(`### ${section.name}\n${renderBlock(section.value)}`);
     }
   }
-  parts.push(`### WORLD-INDEX\n${JSON.stringify(pack.toc)}`);
+  parts.push(`### WORLD-INDEX\n${renderWorldIndex(pack.toc)}`);
   parts.push(`### PLAYER-MESSAGE\n${playerMessage}`);
   return parts.join('\n\n');
 };

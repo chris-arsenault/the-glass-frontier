@@ -4,6 +4,7 @@ import type { Prompt } from '@glass-frontier/llm-client';
 
 import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
+import { renderBlock } from './blockRender';
 import { extractFragment, templateFragmentMapping } from './chronicleFragments';
 
 type MessageOrder = 'player' | 'gm' | 'both';
@@ -149,8 +150,7 @@ class PromptComposer {
     if (this.#isEmptyFragment(value)) {
       return [];
     }
-    const content = typeof value === 'string' ? value : JSON.stringify(value);
-    return [`### ${fragmentType.toUpperCase()}`, content, '\n'];
+    return [`### ${fragmentType.toUpperCase()}`, renderBlock(value), '\n'];
   }
 
   #isEmptyFragment(fragment: unknown): boolean {

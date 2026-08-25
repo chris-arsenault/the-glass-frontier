@@ -32,6 +32,20 @@ export type ChronicleFragmentTypes =
   | 'scene'
   | 'seed';
 
+const MAX_ANCHOR_LORE = 3;
+const MAX_ENTITY_GM_NOTES = 2;
+const MAX_ENTITY_LORE = 2;
+
+const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]*\)/gu;
+
+/**
+ * Canon prose is authored for the Atlas, so it carries markdown links back
+ * into the app — `[Daro Venn](/glass-frontier/entry/daro-venn)` was reaching
+ * the narrator verbatim. The model wants the name, not the route.
+ */
+const plainProse = (text: string | undefined): string | undefined =>
+  text === undefined ? undefined : text.replaceAll(MARKDOWN_LINK, '$1');
+
 const LEDGER_FRAGMENT: ChronicleFragmentTypes = 'ledger';
 
 const CHRONICLE_TONE_FRAGMENT: ChronicleFragmentTypes = 'chronicle-tone';
@@ -130,20 +144,16 @@ async function anchorFragment(context: GraphContext): Promise<Record<string, unk
   }
   return {
     anchor: {
-      description: entity.description ?? null,
+      description: plainProse(entity.description),
       kind: entity.kind,
       name: entity.name,
-      recentLore: fragments.map((fragment) => ({
-        prose: fragment.prose,
-        slug: fragment.slug,
-        tags: fragment.tags,
+      recentLore: fragments.slice(0, MAX_ANCHOR_LORE).map((fragment) => ({
+        prose: plainProse(fragment.prose),
         title: fragment.title,
       })),
-      relationships: entity.links.length,
       slug: entity.slug,
       status: entity.status ?? null,
       subkind: entity.subkind ?? null,
-      tags: Array.from(new Set(fragments.flatMap((fragment) => fragment.tags))),
     },
   };
 }
@@ -155,14 +165,11 @@ type EstablishedEntity = {
   description: string | undefined;
   facts: Record<string, string | number>;
   status: string | undefined;
-  tags: string[];
   loreFragments: Array<{
-    slug: string;
     title: string;
-    summary: string;
-    tags: string[];
+    summary: string | undefined;
   }>;
-  gmNotes: GmNote[];
+  gmNotes: Array<{ kind: GmNote['kind']; text: string | undefined }>;
 };
 
 /**
@@ -183,22 +190,27 @@ function entitiesFragment(context: GraphContext): Array<EstablishedEntity | Unwr
   return (context.entityContext?.offered ?? []).map((entry) =>
     entry.unwritten
       ? {
-        hook: entry.description,
+        hook: plainProse(entry.description),
         kind: entry.kind,
         name: entry.name,
         slug: entry.slug,
         unwritten: true as const,
       }
       : {
-        description: entry.description,
+        description: plainProse(entry.description),
         facts: entry.facts,
-        gmNotes: entry.gmNotes,
+        gmNotes: entry.gmNotes.slice(0, MAX_ENTITY_GM_NOTES).map((note) => ({
+          kind: note.kind,
+          text: plainProse(note.text),
+        })),
         kind: entry.kind,
-        loreFragments: entry.loreFragments,
+        loreFragments: entry.loreFragments.slice(0, MAX_ENTITY_LORE).map((fragment) => ({
+          summary: plainProse(fragment.summary),
+          title: fragment.title,
+        })),
         name: entry.name,
         slug: entry.slug,
         status: entry.status,
-        tags: entry.tags,
       }
   );
 }

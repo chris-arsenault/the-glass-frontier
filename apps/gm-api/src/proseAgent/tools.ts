@@ -5,7 +5,7 @@ import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
 
 import type { GraphContext } from '../types';
-import { buildTocEntries } from './seedPack';
+import { buildTocEntries, renderWorldIndex } from './seedPack';
 import type { ToolSession } from './toolSession';
 
 const UNKNOWN_ENTITY_POLICY =
@@ -135,12 +135,7 @@ const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
       .slice(0, MAX_EXPAND_NEIGHBORS);
     const neighbors = await context.worldSchemaStore.listEntitiesByIds(targetIds);
     const entries = await buildTocEntries(context.worldSchemaStore, neighbors);
-    const slim = entries.map(({ relationships, ...entry }) => ({
-      ...entry,
-      edges: relationships.map((edge) =>
-        `${edge.direction === 'out' ? '' : '<-'}${edge.verb}:${edge.targetSlug}`),
-    }));
-    return session.wrapResult(`expand:${slug}`, () => JSON.stringify(slim));
+    return session.wrapResult(`expand:${slug}`, () => renderWorldIndex(entries));
   },
   inputSchema: z.object({ slug: z.string() }),
 });

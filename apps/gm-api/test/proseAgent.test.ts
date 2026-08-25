@@ -162,7 +162,8 @@ describe('prose agent tools', () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
     const raw = await runTool(tools.expand, { slug: KORVATH_SLUG });
     expect(raw).toContain(GUILD_SLUG);
-    expect(raw).toContain('"edges"');
+    expect(raw).toContain('identity: disposition, manner, stakes');
+    expect(raw).not.toContain('"');
     expect(raw).not.toContain('relationships');
     expect(raw).not.toContain('hidden-broker');
     expect(raw).not.toContain('wary');

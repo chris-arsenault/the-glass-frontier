@@ -181,13 +181,11 @@ describe('PromptComposer', () => {
 
     const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
     const developer = textOf(prompt.input.at(-1)!);
-    const entities = JSON.parse(
-      developer.split(ENTITIES_HEADER)[1].split('###')[0]
-    ) as Array<Record<string, unknown>>;
+    const entities = developer.split(ENTITIES_HEADER)[1]?.split('###')[0]?.trim();
 
-    expect(entities).toEqual([
-      { hook, kind: 'npc', name: SHELL_NAME, slug: SHELL_SLUG, unwritten: true },
-    ]);
+    expect(entities).toBe(
+      `- hook: ${hook}\n  kind: npc\n  name: ${SHELL_NAME}\n  slug: ${SHELL_SLUG}\n  unwritten: true`
+    );
     expect(prompt.instructions).toContain('invent it concretely');
   });
 
@@ -226,7 +224,7 @@ describe('chronicle tone and wrap fragments', () => {
     const prompt = await composer.buildPrompt('intent-classifier', context);
     const developer = textOf(prompt.input.at(-1)!);
 
-    expect(developer).toContain('"turnsLeft":0');
+    expect(developer).toContain('turnsLeft: 0');
   });
 });
 
@@ -250,7 +248,7 @@ describe('beat fragments', () => {
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain('### BEATS');
-    expect(developer).toContain('"id":"trace_the_sabotage"');
+    expect(developer).toContain('id: trace_the_sabotage');
   });
 
   it('gives intent and beat classifiers the recent turn record', async () => {
@@ -330,9 +328,10 @@ describe('check-planner fragments', () => {
     const prompt = await composer.buildPrompt(ACTION_RESOLVER, context);
     const developer = textOf(prompt.input.at(-1)!);
 
-    expect(developer).toContain('"requiresCheck":true');
-    expect(developer).toContain('"plannedAdvantage":"disadvantage"');
-    expect(developer).toContain('"resultDisadvantage":true');
+    expect(developer).toContain('requiresCheck: true');
+    expect(developer).toContain('swing: disadvantage');
+    expect(developer).toContain('outcome: collapse');
     expect(developer).toContain('The audience turns openly hostile.');
+    expect(developer).not.toContain('plannedAdvantage');
   });
 });
