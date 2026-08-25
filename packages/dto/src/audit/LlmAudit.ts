@@ -95,6 +95,11 @@ export const AuditReviewRecordSchema = z.object({
 export type AuditReviewRecord = z.infer<typeof AuditReviewRecordSchema>;
 
 export const AuditLogEntrySchema = z.object({
+  characterId: z.string().optional().nullable(),
+  /** Resolved when the record is read; absent once the character is deleted. */
+  characterName: z.string().optional().nullable(),
+  chronicleId: z.string().optional().nullable(),
+  chronicleTitle: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
   durationMs: z.number().int().nonnegative().optional().nullable(),
@@ -103,6 +108,7 @@ export const AuditLogEntrySchema = z.object({
   nodeId: z.string().optional().nullable(),
   playerFeedback: z.array(PlayerFeedbackRecordSchema).optional(),
   playerId: z.string().optional().nullable(),
+  playerName: z.string().optional().nullable(),
   providerId: z.string().min(1),
   request: z.record(z.string(), z.any()),
   requestContextId: z.string().optional().nullable(),
@@ -114,7 +120,10 @@ export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditQueueItemSchema = z.object({
   auditId: z.string().min(1),
+  characterId: z.string().optional().nullable(),
+  characterName: z.string().optional().nullable(),
   chronicleId: z.string().optional().nullable(),
+  chronicleTitle: z.string().optional().nullable(),
   createdAt: z.string().min(1),
   createdAtMs: z.number().int().nonnegative(),
   durationMs: z.number().int().nonnegative().optional().nullable(),
@@ -123,6 +132,7 @@ export const AuditQueueItemSchema = z.object({
   notes: z.string().optional().nullable(),
   playerFeedback: z.array(PlayerFeedbackRecordSchema).optional(),
   playerId: z.string().optional().nullable(),
+  playerName: z.string().optional().nullable(),
   providerId: z.string().optional().nullable(),
   requestContextId: z.string().optional().nullable(),
   reviewerId: z.string().optional().nullable(),

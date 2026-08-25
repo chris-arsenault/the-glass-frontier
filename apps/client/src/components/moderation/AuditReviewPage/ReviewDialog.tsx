@@ -100,12 +100,20 @@ const formatDuration = (durationMs: number): string => {
 };
 
 const MetadataSection = ({ detail }: { detail: AuditLogEntry }) => {
-  if (!detail.durationMs) {
+  const facts: Array<{ label: string; value: string }> = [
+    ...detail.chronicleTitle ? [{ label: 'Chronicle', value: detail.chronicleTitle }] : [],
+    ...detail.characterName ? [{ label: 'Character', value: detail.characterName }] : [],
+    ...detail.playerName ? [{ label: 'Player', value: detail.playerName }] : [],
+    ...detail.durationMs ? [{ label: 'Request Duration', value: formatDuration(detail.durationMs) }] : [],
+  ];
+  if (facts.length === 0) {
     return null;
   }
   return (
-    <div className="audit-metadata" style={{ backgroundColor: '#f5f5f5', borderRadius: '4px', color: '#333', marginBottom: '16px', padding: '8px' }}>
-      <strong>Request Duration:</strong> {formatDuration(detail.durationMs)}
+    <div className="audit-metadata" style={{ backgroundColor: '#f5f5f5', borderRadius: '4px', color: '#333', display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '16px', padding: '8px' }}>
+      {facts.map((fact) => (
+        <span key={fact.label}><strong>{fact.label}:</strong> {fact.value}</span>
+      ))}
     </div>
   );
 };

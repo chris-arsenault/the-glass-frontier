@@ -42,7 +42,27 @@ type AuditEntryRow = {
   scope_type?: string;
   scope_ref?: string | null;
   turn_sequence?: number | null;
+  chronicle_title: string | null;
+  character_name: string | null;
+  player_name: string | null;
 };
+
+/**
+ * Names for the ids every audit row already carries. Resolved on read rather
+ * than copied in at write time, so the whole existing log reads back named and
+ * a rename shows up everywhere at once. Outer joins: a deleted chronicle or
+ * character leaves the record readable without its name.
+ */
+const AUDIT_ENTRY_SELECT = `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id,
+              e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at,
+              e.duration_ms, g.scope_type, g.scope_ref, t.turn_sequence,
+              c.title AS chronicle_title, ch.name AS character_name, p.username AS player_name
+       FROM ops.audit_entry e
+       JOIN ops.audit_group g ON g.id = e.group_id
+       LEFT JOIN chronicle_turn t ON t.id = e.turn_id
+       LEFT JOIN chronicle c ON c.id = e.chronicle_id
+       LEFT JOIN character ch ON ch.id = e.character_id
+       LEFT JOIN app.player p ON p.id = e.player_id`;
 
 type CursorPayload = {
   ts: number;
@@ -132,11 +152,7 @@ export class AuditLogStore {
 
   async get(entryId: string): Promise<{ entry: AuditLogEntry; groupId: string } | null> {
     const result = await this.#pool.query<AuditEntryRow>(
-      `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at, e.duration_ms,
-              g.scope_type, g.scope_ref, t.turn_sequence
-       FROM ops.audit_entry e
-       JOIN ops.audit_group g ON g.id = e.group_id
-       LEFT JOIN chronicle_turn t ON t.id = e.turn_id
+      `${AUDIT_ENTRY_SELECT}
        WHERE e.id = $1::uuid`,
       [entryId]
     );
@@ -204,11 +220,7 @@ export class AuditLogStore {
 
     const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const result = await this.#pool.query<AuditEntryRow>(
-      `SELECT e.id, e.group_id, e.player_id, e.chronicle_id, e.character_id, e.turn_id, e.provider_id, e.request, e.response, e.metadata, e.created_at, e.duration_ms,
-              g.scope_type, g.scope_ref, t.turn_sequence
-       FROM ops.audit_entry e
-       JOIN ops.audit_group g ON g.id = e.group_id
-       LEFT JOIN chronicle_turn t ON t.id = e.turn_id
+      `${AUDIT_ENTRY_SELECT}
        ${whereSql}
        ORDER BY e.created_at DESC, e.id DESC
        LIMIT ${limit + 1}`,
@@ -238,7 +250,9 @@ export class AuditLogStore {
     };
     const parsed = AuditLogEntrySchema.safeParse({
       characterId: row.character_id ?? undefined,
+      characterName: row.character_name ?? undefined,
       chronicleId: row.chronicle_id ?? undefined,
+      chronicleTitle: row.chronicle_title ?? undefined,
       createdAt: row.created_at.toISOString(),
       createdAtMs: row.created_at.getTime(),
       durationMs: row.duration_ms ?? undefined,
@@ -246,6 +260,7 @@ export class AuditLogStore {
       metadata,
       nodeId: (metadata as { nodeId?: string } | undefined)?.nodeId,
       playerId: row.player_id,
+      playerName: row.player_name ?? undefined,
       providerId: row.provider_id,
       request: row.request,
       requestContextId: (metadata as { requestContextId?: string } | undefined)?.requestContextId,

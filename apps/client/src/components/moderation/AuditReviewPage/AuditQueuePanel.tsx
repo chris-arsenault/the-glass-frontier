@@ -19,10 +19,12 @@ const formatDuration = (durationMs: number | null | undefined): string => {
 };
 
 type AuditGridRow = {
+  characterName: string;
+  chronicleTitle: string;
   createdAt: number | string;
   durationMs?: number | null;
   id: string;
-  playerId: string;
+  playerName: string;
   providerId: string;
   status: AuditReviewStatus;
   templateLabel: string;
@@ -125,13 +127,15 @@ const useQueueRows = (items: AuditQueueItem[], expandedGroups: Set<string>) =>
 
       // Add group row
       const groupRow: AuditGridRow = {
+        characterName: earliestItem.characterName ?? 'n/a',
+        chronicleTitle: earliestItem.chronicleTitle ?? 'n/a',
         createdAt: earliestItem.createdAt,
         durationMs: null,
         groupId,
         id: groupId,
         isGroup: true,
         itemCount: groupItems.length,
-        playerId: earliestItem.playerId ?? 'n/a',
+        playerName: earliestItem.playerName ?? 'n/a',
         providerId: 'Turn Group',
         status: groupStatus,
         templateLabel: turnLabel,
@@ -144,11 +148,13 @@ const useQueueRows = (items: AuditQueueItem[], expandedGroups: Set<string>) =>
       const isExpanded = expandedGroups.has(groupId);
       for (const item of groupItems) {
         const childRow: AuditGridRow = {
+          characterName: item.characterName ?? 'n/a',
+          chronicleTitle: item.chronicleTitle ?? 'n/a',
           createdAt: item.createdAt,
           durationMs: item.durationMs ?? null,
           id: item.storageKey,
           isGroup: false,
-          playerId: item.playerId ?? 'n/a',
+          playerName: item.playerName ?? 'n/a',
           providerId: item.providerId ?? 'n/a',
           status: item.status,
           templateLabel: item.templateId
@@ -203,7 +209,9 @@ const useQueueColumns = (
           return <span style={{ marginLeft: '32px' }}>{params.row.templateLabel}</span>;
         },
       },
-      { field: 'playerId', flex: 1, headerName: 'Player' },
+      { field: 'chronicleTitle', flex: 1, headerName: 'Chronicle' },
+      { field: 'characterName', flex: 0.8, headerName: 'Character' },
+      { field: 'playerName', flex: 0.8, headerName: 'Player' },
       { field: 'providerId', flex: 1, headerName: 'Provider' },
       {
         field: 'status',

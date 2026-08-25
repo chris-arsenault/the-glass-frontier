@@ -143,7 +143,10 @@ export class OpsStore {
       const metadata = bundle.entry.metadata as Record<string, unknown> | null | undefined;
       const item: AuditQueueItem = {
         auditId: bundle.entry.id,
-        chronicleId: typeof metadata?.chronicleId === 'string' ? metadata.chronicleId : null,
+        characterId: bundle.entry.characterId ?? null,
+        characterName: bundle.entry.characterName ?? null,
+        chronicleId: bundle.entry.chronicleId ?? null,
+        chronicleTitle: bundle.entry.chronicleTitle ?? null,
         createdAt: bundle.entry.createdAt,
         createdAtMs: bundle.entry.createdAtMs,
         durationMs: bundle.entry.durationMs ?? null,
@@ -152,6 +155,7 @@ export class OpsStore {
         notes: bundle.review?.notes ?? null,
         playerFeedback: bundle.feedback,
         playerId: bundle.entry.playerId ?? null,
+        playerName: bundle.entry.playerName ?? null,
         providerId: bundle.entry.providerId ?? null,
         requestContextId: bundle.entry.requestContextId ?? null,
         reviewerId: bundle.review?.reviewerId ?? null,

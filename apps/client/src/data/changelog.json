@@ -488,5 +488,12 @@
     "summary": "Stop every turn from piling on new trouble",
     "details": "The GM prepares several possible complications before a roll and used to play all of them no matter how the roll went, so even a success ended with fresh problems and a run of bad luck spiralled with no way out. A turn that goes badly now brings one complication, and a turn that goes well brings none. The GM also tracks its story goals more honestly: a turn spent on something the current goal never asked for no longer counts as progress toward it, and a fight or conversation that is already several turns old can now be recognized as a scene instead of going untracked.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-25-audit-names",
+    "releasedAt": "2026-08-25",
+    "summary": "Name the chronicle, character, and player in audit review",
+    "details": "The moderator audit queue identified every request by raw id, so finding the turn you cared about meant recognizing a uuid. The queue and the review dialog now show the chronicle title, character name, and player name instead. Names are resolved when a record is read, so the entire existing audit history reads back named and a later rename shows up everywhere at once.",
+    "type": "improvement"
   }
 ]
