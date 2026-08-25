@@ -34,6 +34,10 @@ export class ToolSession {
     }
   }
 
+  get spentTokens(): number {
+    return this.#spentTokens;
+  }
+
   /**
    * Resolves a sidecar reference — models declare entities by slug as the
    * tools name them, but ids are accepted too — to the canonical entity id,
@@ -44,10 +48,6 @@ export class ToolSession {
       return reference;
     }
     return this.#servedSlugToId.get(reference);
-  }
-
-  get spentTokens(): number {
-    return this.#spentTokens;
   }
 
   /** Fed from the loop's onStep so reminders can key off rounds remaining. */

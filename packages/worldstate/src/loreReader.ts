@@ -86,22 +86,6 @@ export class LoreReader {
     return fallback.map(toLoreFragment);
   }
 
-  async #searchRows(
-    query: string,
-    entityId: string | null,
-    limit: number
-  ): Promise<LoreFragmentRow[]> {
-    const result = await this.#pool.query<LoreFragmentRow>(
-      `${LORE_SELECT}
-       WHERE lf.search @@ websearch_to_tsquery('english', $1)
-       AND NOT e.dm
-       AND ($2::uuid IS NULL OR lf.entity_id = $2::uuid)
-       ORDER BY ts_rank(lf.search, websearch_to_tsquery('english', $1)) DESC LIMIT $3`,
-      [query, entityId, limit]
-    );
-    return result.rows;
-  }
-
   /**
    * Fragments for several entities at once, capped per entity. Replaces a
    * per-entity query loop in context assembly.
@@ -131,5 +115,21 @@ export class LoreReader {
       grouped.set(row.entity_id, [...(grouped.get(row.entity_id) ?? []), toLoreFragment(row)]);
     }
     return grouped;
+  }
+
+  async #searchRows(
+    query: string,
+    entityId: string | null,
+    limit: number
+  ): Promise<LoreFragmentRow[]> {
+    const result = await this.#pool.query<LoreFragmentRow>(
+      `${LORE_SELECT}
+       WHERE lf.search @@ websearch_to_tsquery('english', $1)
+       AND NOT e.dm
+       AND ($2::uuid IS NULL OR lf.entity_id = $2::uuid)
+       ORDER BY ts_rank(lf.search, websearch_to_tsquery('english', $1)) DESC LIMIT $3`,
+      [query, entityId, limit]
+    );
+    return result.rows;
   }
 }

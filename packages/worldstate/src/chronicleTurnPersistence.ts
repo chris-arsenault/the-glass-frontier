@@ -267,17 +267,6 @@ export class ChronicleTurnPersistence {
     return fallback.map(toTurn);
   }
 
-  async #searchRows(chronicleId: string, query: string, limit: number): Promise<TurnRow[]> {
-    const result = await this.#pool.query<TurnRow>(
-      `${TURN_SELECT}
-       WHERE chronicle_id = $1::uuid
-       AND search @@ websearch_to_tsquery('english', $2)
-       ORDER BY ts_rank(search, websearch_to_tsquery('english', $2)) DESC LIMIT $3`,
-      [chronicleId, query, limit]
-    );
-    return result.rows;
-  }
-
   async deleteForChronicle(client: PoolClient, chronicleId: string): Promise<void> {
     const turnIds = await client.query<{ id: string }>(
       'SELECT id FROM chronicle_turn WHERE chronicle_id = $1::uuid', [chronicleId]
@@ -289,6 +278,17 @@ export class ChronicleTurnPersistence {
         [turnIds.rows.map((row) => row.id)]
       );
     }
+  }
+
+  async #searchRows(chronicleId: string, query: string, limit: number): Promise<TurnRow[]> {
+    const result = await this.#pool.query<TurnRow>(
+      `${TURN_SELECT}
+       WHERE chronicle_id = $1::uuid
+       AND search @@ websearch_to_tsquery('english', $2)
+       ORDER BY ts_rank(search, websearch_to_tsquery('english', $2)) DESC LIMIT $3`,
+      [chronicleId, query, limit]
+    );
+    return result.rows;
   }
 
   async #persist(
