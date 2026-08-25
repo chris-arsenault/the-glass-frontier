@@ -22,6 +22,8 @@ const recordingRuntime = (): {
 
 const ACTION_RESOLVER: PromptTemplateId = 'action-resolver';
 const RECENT_EVENTS_HEADER = '### RECENT-EVENTS';
+const TURN_JUDGE = 'turn-judge';
+const CHECKPOINT_NARRATION = 'Vex slipped past the checkpoint.';
 const ENTITIES_HEADER = '### ENTITIES';
 const SHELL_NAME = 'Alen Dorath';
 const SHELL_SLUG = 'alen-dorath';
@@ -244,7 +246,7 @@ describe('beat fragments', () => {
       },
     ];
 
-    const prompt = await composer.buildPrompt('turn-judge', context);
+    const prompt = await composer.buildPrompt(TURN_JUDGE, context);
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain('### BEATS');
@@ -257,19 +259,54 @@ describe('beat fragments', () => {
     const context = buildContext({ playerIntent: buildIntent() });
     context.chronicleState.turns = [
       {
+        gmResponse: { content: 'The relay hall quiets as Vex takes the dais.' },
         gmSummary: 'Vex begins the relay performance under observation.',
         playerIntent: buildIntent({ intentSummary: 'Begin the relay performance.' }),
+        playerMessage: { content: 'i start playing, watching the room for whoever flinches' },
+        turnSequence: 0,
       },
     ] as unknown as GraphContext['chronicleState']['turns'];
 
     const prompts = await Promise.all([
       'intent-classifier',
-      'turn-judge',
+      TURN_JUDGE,
     ].map((templateId) => composer.buildPrompt(templateId as PromptTemplateId, context)));
     for (const prompt of prompts) {
       const developer = textOf(prompt.input.at(-1)!);
       expect(developer).toContain(RECENT_EVENTS_HEADER);
-      expect(developer).toContain('Vex begins the relay performance under observation.');
+      expect(developer).toContain('watching the room for whoever flinches');
+      expect(developer).toContain('The relay hall quiets as Vex takes the dais.');
+      expect(developer).not.toContain('Begin the relay performance.');
+    }
+  });
+});
+
+describe('the turn record', () => {
+  it('keeps the last five narrations verbatim and summarizes the ones before them', async () => {
+    const { runtime } = recordingRuntime();
+    const composer = new PromptComposer(runtime);
+    const context = buildContext({ playerIntent: buildIntent() });
+    context.chronicleState.turns = Array.from({ length: 8 }, (_, index) => ({
+      gmResponse: { content: `full narration ${index}` },
+      gmSummary: `summary ${index}`,
+      playerIntent: buildIntent({ intentSummary: `paraphrase ${index}` }),
+      playerMessage: { content: `player words ${index}` },
+      turnSequence: index,
+    })) as unknown as GraphContext['chronicleState']['turns'];
+
+    const prompt = await composer.buildPrompt(TURN_JUDGE, context);
+    const developer = textOf(prompt.input.at(-1)!);
+
+    for (let index = 0; index < 8; index += 1) {
+      expect(developer, `turn ${index} player words`).toContain(`player words ${index}`);
+      expect(developer, `turn ${index} paraphrase`).not.toContain(`paraphrase ${index}`);
+    }
+    for (const index of [3, 4, 5, 6, 7]) {
+      expect(developer, `turn ${index} verbatim`).toContain(`full narration ${index}`);
+    }
+    for (const index of [0, 1, 2]) {
+      expect(developer, `turn ${index} summarized`).toContain(`summary ${index}`);
+      expect(developer, `turn ${index} not verbatim`).not.toContain(`full narration ${index}`);
     }
   });
 });
@@ -280,8 +317,11 @@ describe('check-planner fragments', () => {
     const composer = new PromptComposer(runtime);
     const turns = [
       {
-        gmSummary: 'Vex slipped past the checkpoint.',
+        gmResponse: { content: CHECKPOINT_NARRATION },
+        gmSummary: CHECKPOINT_NARRATION,
         playerIntent: buildIntent({ intentSummary: 'Slip past the checkpoint.' }),
+        playerMessage: { content: 'wait for the guard to turn, then walk through' },
+        turnSequence: 0,
       },
     ] as unknown as GraphContext['chronicleState']['turns'];
     const context = buildContext({ playerIntent: buildIntent() });
@@ -291,7 +331,7 @@ describe('check-planner fragments', () => {
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain(RECENT_EVENTS_HEADER);
-    expect(developer).toContain('Vex slipped past the checkpoint.');
+    expect(developer).toContain(CHECKPOINT_NARRATION);
     expect(developer).toContain('### LOCATION');
     expect(developer).toContain('### CHARACTER');
   });

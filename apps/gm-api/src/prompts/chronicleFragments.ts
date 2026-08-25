@@ -32,6 +32,9 @@ export type ChronicleFragmentTypes =
   | 'scene'
   | 'seed';
 
+const RECENT_TURN_WINDOW = 10;
+const VERBATIM_TURNS = 5;
+
 const MAX_ANCHOR_LORE = 3;
 const MAX_ENTITY_GM_NOTES = 2;
 const MAX_ENTITY_LORE = 2;
@@ -313,17 +316,35 @@ function skillCheckFragment(context: GraphContext): Record<string, unknown> {
   return formatSkillCheck(context.skillCheckPlan, context.skillCheckResult);
 }
 
+/**
+ * The turn record, most recent last.
+ *
+ * The player's line is what the player actually typed, always and in full.
+ * It used to be `playerIntent.intentSummary` — the classifier's paraphrase —
+ * so "i don't really have time to deal with this insignificant scum" reached
+ * the narrator as "Zale pulls out her stun piston and shoots the scum", and
+ * the wish to be done with the man vanished from the record entirely.
+ *
+ * The recent turns carry the narration itself; older ones fall back to their
+ * summary, which is what a summary is for.
+ */
 function recentEventsFragment(context: GraphContext): string {
-  return context.chronicleState.turns
-    .slice(-10)
+  const turns = context.chronicleState.turns.slice(-RECENT_TURN_WINDOW);
+  const verbatimFrom = turns.length - VERBATIM_TURNS;
+  return turns
     .map((turn, index) => {
+      const gm = index >= verbatimFrom
+        ? turn.gmResponse?.content ?? turn.gmSummary
+        : turn.gmSummary;
       const check =
         turn.skillCheckResult === undefined || turn.skillCheckPlan === undefined
           ? ''
-          : `\n   C: ${turn.skillCheckPlan.skill} at ${turn.skillCheckPlan.riskLevel} risk → ${turn.skillCheckResult.outcomeTier}`;
-      return `${index + 1} P: ${turn.playerIntent?.intentSummary ?? ''}\n   G: ${turn.gmSummary ?? ''}${check}`;
+          : `\nC: ${turn.skillCheckPlan.skill} at ${turn.skillCheckPlan.riskLevel} risk`
+            + ` → ${turn.skillCheckResult.outcomeTier}`;
+      return `Turn ${turn.turnSequence + 1}\nP: ${turn.playerMessage.content}`
+        + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`;
     })
-    .join('\n');
+    .join('\n\n');
 }
 
 function wrapFragment(context: GraphContext): Record<string, number> | string {

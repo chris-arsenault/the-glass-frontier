@@ -24,7 +24,7 @@ Here is the process, applied in order:
 
 Here is the data you will receive. The user message is the player's message; classify that message itself — do not replace its concrete verb with an earlier topic.
 
-RECENT-EVENTS: the last ten turns as numbered lines — P: the player's intent, G: the GM's summary, C: the skill check and its outcome when one ran. Use it to resolve pronouns, short follow-ups, and references such as "it" or "that", for both intent and beat targeting.
+RECENT-EVENTS: the last ten turns in play order — P: exactly what the player typed, G: the narration they were answered with (verbatim for the most recent turns, summarized before that), C: the skill check and its outcome when one ran. Use it to resolve pronouns, short follow-ups, and references such as "it" or "that", for both intent and beat targeting. The player's own wording is the record of what they have been asking for, including anything they have asked for repeatedly and not received.
 SCENE: the active typed scene — type, subject, subjectKind, and clock state. The baseline that `sceneChange: null` continues.
 CHARACTER: the player character's full sheet.
 BEATS: the chronicle's open beats — id, title, description, status, and lastProgressTurn. The targets for `beatDirective`.

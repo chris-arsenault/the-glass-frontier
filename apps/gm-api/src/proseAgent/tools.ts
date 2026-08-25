@@ -14,7 +14,6 @@ const UNKNOWN_ENTITY_POLICY =
   + 'the template\'s invention rules govern whether it may appear as new fiction.';
 
 const LORE_EXCERPT_LENGTH = 200;
-const HISTORY_CONTENT_LENGTH = 300;
 const MAX_EXPAND_NEIGHBORS = 8;
 
 type ToolDeps = {
@@ -35,9 +34,10 @@ const resolveVisible = async (
   return entity === null || entity.dm ? null : entity;
 };
 
+/** The player's words are never cut: a clipped ask is a misread ask. */
 const renderTurn = (turn: GraphContext['chronicleState']['turns'][number]): unknown => ({
-  gm: turn.gmSummary ?? turn.gmResponse?.content.slice(0, HISTORY_CONTENT_LENGTH),
-  player: turn.playerMessage.content.slice(0, HISTORY_CONTENT_LENGTH),
+  gm: turn.gmSummary ?? turn.gmResponse?.content,
+  player: turn.playerMessage.content,
   seq: turn.turnSequence,
 });
 
