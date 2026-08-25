@@ -15,29 +15,22 @@ import {
   initialEntityRoster,
   normalizeChronicle,
 } from './chronicleNormalization';
-import { ChronicleTurnPersistence } from './chronicleTurnPersistence';
+import {
+  type CharacterRow,
+  type ChronicleRow,
+  resolveSessionTurnSequence,
+  type SessionStateRow,
+} from './chronicleRows';
+import {
+  ChronicleTurnPersistence,
+  type TurnSearchInput,
+  type TurnWindowInput,
+} from './chronicleTurnPersistence';
 import { foundingBeats } from './foundingBeat';
 import { upsertNodeIdentity } from './nodeIdentity';
 import { createPool, withTransaction } from './pg';
 import type { ChronicleSnapshot, ChronicleStore } from './types';
 import { isNonEmptyString, serializeJson } from './utils';
-
-type SessionStateRow = {
-  character_state: Character | null;
-  last_turn_sequence: number;
-};
-
-type CharacterRow = { inventory: Character['inventory'] | null; props: Character };
-type ChronicleRow = {
-  anchor_entity_id: string | null;
-  entity_focus: Chronicle['entityFocus'] | null;
-  props: Chronicle;
-};
-
-const resolveSessionTurnSequence = (
-  session: SessionStateRow | undefined,
-  turns: Turn[]
-): number => session?.last_turn_sequence ?? turns.at(-1)?.turnSequence ?? -1;
 
 /**
  * Session storage. Holds one player's chronicle, character, and turns.
@@ -367,6 +360,14 @@ class PostgresChronicleStore implements ChronicleStore {
 
   async listChronicleTurns(chronicleId: string): Promise<Turn[]> {
     return this.#turns.list(chronicleId);
+  }
+
+  async listTurnWindow(input: TurnWindowInput): Promise<Turn[]> {
+    return this.#turns.listWindow(input);
+  }
+
+  async searchTurns(input: TurnSearchInput): Promise<Turn[]> {
+    return this.#turns.search(input);
   }
 
   async #assertPlayerExists(

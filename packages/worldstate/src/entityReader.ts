@@ -61,7 +61,7 @@ type EntityRow = {
   created_at: Date | null;
   updated_at: Date | null;
 };
-type LinkRow = {
+export type LinkRow = {
   src_id: string;
   dst_id: string;
   type: HardStateLink['relationship'];
@@ -223,7 +223,7 @@ const LINK_ENVELOPE_KEYS = new Set([
   'since',
   'until',
 ]);
-const linkProps = (row: LinkRow): HardStateLinkProps | undefined => {
+export const linkProps = (row: LinkRow): HardStateLinkProps | undefined => {
   if (row.props === null) {
     return undefined;
   }

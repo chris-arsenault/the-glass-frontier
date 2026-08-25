@@ -178,6 +178,7 @@ export function ChatCanvas() {
   const streamRef = useRef<HTMLDivElement | null>(null);
   const [feedbackCache, setFeedbackCache] = useState<Record<string, true>>(() => readFeedbackCache());
   const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(null);
+  const [responseIndexByEntry, setResponseIndexByEntry] = useState<Record<string, number>>({});
   const [feedbackSentiment, setFeedbackSentiment] = useState<PlayerFeedbackSentiment>('positive');
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -425,6 +426,32 @@ export function ChatCanvas() {
             );
             const entityRoster = view?.entityRoster ?? [];
             const entityById = new Map(entityRoster.map((entity) => [entity.id, entity]));
+            const proseAlternates = entry.role === 'gm' ? (view?.proseAlternates ?? []) : [];
+            const responseCount = 1 + proseAlternates.length;
+            const selectedResponse = Math.min(
+              responseIndexByEntry[entry.id] ?? 0,
+              responseCount - 1
+            );
+            const displayedContent =
+              selectedResponse === 0
+                ? (entry.content ?? '')
+                : (proseAlternates[selectedResponse - 1]?.prose ?? '');
+            const responseModelLabel =
+              selectedResponse === 0
+                ? 'current narrator'
+                : (proseAlternates[selectedResponse - 1]?.modelId ?? '');
+            const responseCostUsd =
+              selectedResponse === 0
+                ? (view?.proseCostUsd ?? null)
+                : (proseAlternates[selectedResponse - 1]?.costUsd ?? null);
+            const responseCostLabel =
+              responseCostUsd === null ? '' : ` · $${responseCostUsd.toFixed(4)}`;
+            const cycleResponse = (direction: number) => {
+              setResponseIndexByEntry((prev) => ({
+                ...prev,
+                [entry.id]: (selectedResponse + direction + responseCount) % responseCount,
+              }));
+            };
 
             return (
               <article
@@ -532,6 +559,36 @@ export function ChatCanvas() {
                     <>
                       {isExpanded(entry.id) ? (
                         <div className="chat-entry-content">
+                          {responseCount > 1 ? (
+                            <div className="chat-entry-response-pager">
+                              <button
+                                type="button"
+                                className="chat-response-pager-button"
+                                aria-label="Previous response"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  cycleResponse(-1);
+                                }}
+                              >
+                                ‹
+                              </button>
+                              <span>
+                                {selectedResponse + 1}/{responseCount} · {responseModelLabel}
+                                {responseCostLabel}
+                              </span>
+                              <button
+                                type="button"
+                                className="chat-response-pager-button"
+                                aria-label="Next response"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  cycleResponse(1);
+                                }}
+                              >
+                                ›
+                              </button>
+                            </div>
+                          ) : null}
                           <ReactMarkdown
                             components={{
                               a: (props) => (
@@ -543,7 +600,7 @@ export function ChatCanvas() {
                               entityReferenceRemarkPlugin(entityReferences),
                             ]}
                           >
-                            {entry.content ?? ''}
+                            {displayedContent}
                           </ReactMarkdown>
                         </div>
                       ) : (

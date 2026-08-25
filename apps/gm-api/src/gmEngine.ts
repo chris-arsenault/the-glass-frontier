@@ -7,6 +7,7 @@ import type {
   Chronicle,
   ChronicleClosureEvent,
   ChronicleSummaryKind,
+  ProseAlternate,
 } from '@glass-frontier/dto';
 import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
 import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
@@ -16,6 +17,7 @@ import { TurnJudgeNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
 import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
 import type {
+  AgentLoopClient,
   LLMPlayer,
   RetryLLMClient,
   TextEmbeddingClient,
@@ -37,6 +39,7 @@ import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifi
 import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceResolverNode';
 import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
 import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
+import { runProseAgentPanel } from './proseAgent/panel';
 import { buildSceneContext } from './scenes/sceneLifecycle';
 import { ChronicleTelemetry } from './telemetry';
 import {
@@ -51,6 +54,7 @@ type GmEngineOptions = {
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
+  agentLoop: AgentLoopClient;
   embeddings: TextEmbeddingClient;
   modelConfigStore: ModelConfigStore;
 };
@@ -106,6 +110,7 @@ class GmEngine {
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
   readonly llm: RetryLLMClient;
+  readonly agentLoop: AgentLoopClient;
   readonly embeddings: TextEmbeddingClient;
   readonly progressEmitter: TurnProgressPublisher;
   readonly closureEmitter: ChronicleClosurePublisher;
@@ -118,6 +123,7 @@ class GmEngine {
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
+    this.agentLoop = options.agentLoop;
     this.embeddings = options.embeddings;
     this.modelConfigStore = options.modelConfigStore;
     this.progressEmitter = createProgressEmitterFromEnv();
@@ -168,6 +174,9 @@ class GmEngine {
     const { result: graphResult, systemMessage: rawSystemMessage } =
       await this.#executeGraph(graphInput, jobId);
     const systemMessage = ensureFailureNotice(graphResult, rawSystemMessage);
+    // The agent panel runs concurrently with the world update; its responses
+    // are persisted on the turn so the client can page through them.
+    const panelPromise = this.#runPanel(graphResult);
     const worldUpdater = new WorldUpdater();
     const worldUpdatedContext = await worldUpdater.update(graphResult);
     const updatedContext = await this.#refreshRosterAfterTransition(worldUpdatedContext);
@@ -194,6 +203,7 @@ class GmEngine {
       }
       : updatedContext;
 
+    const proseAlternates = await panelPromise;
     const turn = this.#buildTurn({
       chronicleId,
       graphResult: finalContext,
@@ -202,6 +212,7 @@ class GmEngine {
       turnId,
       turnSequence,
     });
+    this.#attachPanelResponses(turn, proseAlternates);
 
     if (shouldClose) {
       await this.#emitClosureEvent({
@@ -315,6 +326,20 @@ class GmEngine {
       throw new Error('Chronicle state missing player identifier for template resolution');
     }
     return playerId.trim();
+  }
+
+  #attachPanelResponses(turn: Turn, proseAlternates: ProseAlternate[]): void {
+    if (proseAlternates.length > 0 && !turn.failure) {
+      turn.proseAlternates = proseAlternates;
+    }
+  }
+
+  /** Panel only turns whose canonical prose completed; never throws. */
+  async #runPanel(context: GraphContext): Promise<ProseAlternate[]> {
+    if (context.failure || context.gmResponse === undefined || context.playerIntent === undefined) {
+      return [];
+    }
+    return runProseAgentPanel(context, this.agentLoop);
   }
 
   #createTemplateRuntime(playerId: string): PromptTemplateRuntime {
@@ -432,6 +457,7 @@ class GmEngine {
       id: turnId,
       playerIntent: graphResult.playerIntent,
       playerMessage,
+      proseCostUsd: failure ? undefined : graphResult.proseCostUsd,
       sceneContext: buildSceneContext(
         governingScene,
         failure ? 'continue' : graphResult.sceneOutcome,

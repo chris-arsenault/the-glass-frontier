@@ -6,6 +6,7 @@ import { BeatTrackerSchema } from './ChronicleBeat';
 import { EntityReference, EntityRosterEntry, EntityUsageEntry } from './EntityReference';
 import { Intent } from './Intent';
 import { LocationDeltaDecision } from './LocationDelta';
+import { ProseAlternate } from './ProseAgent';
 import { SceneContext } from './Scene';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
@@ -27,6 +28,10 @@ export const TurnSchema = z.object({
   locationDelta: LocationDeltaDecision.optional(),
   playerIntent: Intent.optional(),
   playerMessage: TranscriptEntry,
+  /** Agent-panel narrations recorded next to the canonical one during evaluation. */
+  proseAlternates: z.array(ProseAlternate).optional(),
+  /** USD cost of the canonical narration call, for comparison with the panel. */
+  proseCostUsd: z.number().nonnegative().optional(),
   sceneContext: SceneContext.nullable().optional(),
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),

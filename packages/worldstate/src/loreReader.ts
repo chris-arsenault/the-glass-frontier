@@ -65,6 +65,27 @@ export class LoreReader {
   }
 
   /**
+   * Full-text search over lore prose, best match first. Fragments belonging
+   * to DM-only entities are excluded; this is a player-facing read.
+   */
+  async search(input: {
+    query: string;
+    entityId?: string;
+    limit?: number;
+  }): Promise<LoreFragment[]> {
+    const limit = Math.max(1, Math.min(20, input.limit ?? 5));
+    const result = await this.#pool.query<LoreFragmentRow>(
+      `${LORE_SELECT}
+       WHERE lf.search @@ websearch_to_tsquery('english', $1)
+       AND NOT e.dm
+       AND ($2::uuid IS NULL OR lf.entity_id = $2::uuid)
+       ORDER BY ts_rank(lf.search, websearch_to_tsquery('english', $1)) DESC LIMIT $3`,
+      [input.query, input.entityId ?? null, limit]
+    );
+    return result.rows.map(toLoreFragment);
+  }
+
+  /**
    * Fragments for several entities at once, capped per entity. Replaces a
    * per-entity query loop in context assembly.
    */

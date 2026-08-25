@@ -16,6 +16,7 @@ import type {
   PlayerFeedbackVisibilityLevel,
   EntityReference,
   EntityRosterEntry,
+  ProseAlternate,
 } from '@glass-frontier/dto';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
@@ -45,6 +46,8 @@ export type TurnView = {
   intentType: Intent['intentType'] | null;
   inventoryDelta: InventoryDelta | null;
   playerIntent: Intent | null;
+  proseAlternates: ProseAlternate[] | null;
+  proseCostUsd: number | null;
   sceneContext: SceneContext | null;
   skillCheckPlan: SkillCheckPlan | null;
   skillCheckResult: SkillCheckResult | null;

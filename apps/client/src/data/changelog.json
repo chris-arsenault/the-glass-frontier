@@ -474,5 +474,12 @@
     "summary": "Turns work again, and prompt updates actually ship",
     "details": "A recent restructuring left the deploy unable to deliver prompt template updates, so production kept old prompts and every turn failed after its narration streamed, showing both a GM response and an error notice. The deploy now regenerates the prompt seed before uploading it, restoring the missing turn-judge prompt and putting all current prompts — now in a consistent role, process, and data-legend format — live. Moderator diagnostics also gained read access to the LLM audit tables.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-25-prose-agent-panel",
+    "releasedAt": "2026-08-25",
+    "summary": "Compare candidate GM narrators on every turn",
+    "details": "Each turn now also runs a panel of experimental GM narrators that search world canon, relationships, lore, and chronicle history themselves before writing, instead of receiving a pre-selected slice. Expanded GM messages gain a pager to cycle between the current narrator's response and each panel response, labeled by model. The story is still driven only by the current narrator; turns may take longer while the panel runs.",
+    "type": "improvement"
   }
 ]

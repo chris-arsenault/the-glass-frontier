@@ -25,6 +25,7 @@ export type { ChronicleStore, ChronicleSnapshot, WorldSchemaStore, WorldNeighbor
 export type { EntityStats } from './entityReader';
 export type {
   EntityEmbeddingSource,
+  EntitySearchCandidate,
   ReferenceEntityCandidate,
   SubjectEntityCandidate,
 } from './entityEmbeddings';

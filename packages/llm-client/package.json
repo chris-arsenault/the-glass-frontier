@@ -25,12 +25,14 @@
     "test": "tsc -p test/tsconfig.json --pretty false && vitest run"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.62",
     "@aws-sdk/client-bedrock-runtime": "^3.1115.0",
     "@aws-sdk/client-secrets-manager": "^3.1115.0",
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/ops": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
+    "ai": "^7.0.79",
     "openai": "^7.5.0",
     "zod": "^4.1.12"
   },

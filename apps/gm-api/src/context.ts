@@ -8,6 +8,7 @@ import {
   createPool,
 } from '@glass-frontier/app';
 import {
+  createAgentLoopClient,
   createLLMClient,
   loadOpenAiApiKeyFromSecrets,
   TitanTextEmbeddingClient,
@@ -63,6 +64,7 @@ export async function initializeForLambda(): Promise<void> {
   const llmClient = createLLMClient({ pool });
 
   engine = new GmEngine({
+    agentLoop: createAgentLoopClient({ pool }),
     chronicleStore,
     embeddings,
     llmClient,
@@ -94,6 +96,7 @@ function initializeLocal(): void {
   const llmClient = createLLMClient();
 
   engine = new GmEngine({
+    agentLoop: createAgentLoopClient(),
     chronicleStore,
     embeddings,
     llmClient,

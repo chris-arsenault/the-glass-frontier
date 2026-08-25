@@ -24,10 +24,10 @@
     "@glass-frontier/app": "workspace:*",
     "@glass-frontier/dto": "workspace:*",
     "@glass-frontier/llm-client": "workspace:*",
-    "@glass-frontier/worldstate": "workspace:*",
+    "@glass-frontier/node-utils": "workspace:*",
     "@glass-frontier/skill-check-resolver": "workspace:*",
     "@glass-frontier/utils": "workspace:*",
-    "@glass-frontier/node-utils": "workspace:*",
+    "@glass-frontier/worldstate": "workspace:*",
     "@trpc/client": "^11.18.0",
     "@trpc/server": "^11.18.0",
     "handlebars": "^4.7.9",
@@ -36,6 +36,7 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.158",
     "@types/express": "^5.0.5",
+    "ai": "^7.0.79",
     "eslint": "^9.39.1",
     "tsup": "^8.5.1",
     "vitest": "^4.0.8"

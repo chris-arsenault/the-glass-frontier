@@ -354,6 +354,21 @@ describe('Canon batch commit', () => {
     expect(link?.descriptiveIdentity).toEqual({ expression });
     expect(link?.identityLocal).toEqual({ expression: { operation: 'extend', text: expression } });
     expect(link?.props).toBeUndefined();
+
+    const among = await worldState.world.listRelationshipsAmong({
+      entityIds: [result.entityIdsByRef.npc, result.entityIdsByRef.field],
+    });
+    expect(among).toHaveLength(1);
+    expect(among[0]).toMatchObject({
+      descriptiveIdentity: { expression },
+      dstId: result.entityIdsByRef.field,
+      relationship: 'attuned_to',
+      srcId: result.entityIdsByRef.npc,
+    });
+    const bounded = await worldState.world.listRelationshipsAmong({
+      entityIds: [result.entityIdsByRef.npc],
+    });
+    expect(bounded).toHaveLength(0);
   });
 
   it('re-ingests by external key rather than duplicating', async () => {

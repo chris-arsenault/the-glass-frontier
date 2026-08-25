@@ -12,14 +12,17 @@ import type {
   HardState,
   HardStateProminence,
   HardStateKind,
+  LiveRelationship,
   PlayableRole,
   Turn,
   LoreFragment,
   WorldSchema,
 } from '@glass-frontier/dto';
 
+import type { TurnSearchInput, TurnWindowInput } from './chronicleTurnPersistence';
 import type {
   EntityEmbeddingSource,
+  EntitySearchCandidate,
   ReferenceEntityCandidate,
   SubjectEntityCandidate,
 } from './entityEmbeddings';
@@ -94,6 +97,8 @@ export type ChronicleStore = {
     turn: Turn;
   }) => Promise<Turn>;
   listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
+  listTurnWindow: (input: TurnWindowInput) => Promise<Turn[]>;
+  searchTurns: (input: TurnSearchInput) => Promise<Turn[]>;
 };
 
 /**
@@ -116,6 +121,7 @@ export type WorldSchemaStore = {
 
   // === The per-turn read surface ===
   getContextSlice: (input: ContextSliceInput) => Promise<ContextSliceEntity[]>;
+  listRelationshipsAmong: (input: { entityIds: string[] }) => Promise<LiveRelationship[]>;
   hasEntityEmbeddings: (kind: HardStateKind) => Promise<boolean>;
   listMissingEntityEmbeddings: (limit?: number) => Promise<EntityEmbeddingSource[]>;
   saveEntityEmbedding: (id: string, embedding: number[]) => Promise<void>;
@@ -130,6 +136,10 @@ export type WorldSchemaStore = {
     embedding: number[];
     limit?: number;
   }) => Promise<ReferenceEntityCandidate[]>;
+  findEntityCandidates: (input: {
+    embedding: number[];
+    limit?: number;
+  }) => Promise<EntitySearchCandidate[]>;
 
   // === Entity reads ===
   getEntityActivity: (limitPerList?: number) => Promise<EntityActivityFeed>;
@@ -169,4 +179,9 @@ export type WorldSchemaStore = {
     entityIds: string[];
     perEntityLimit?: number;
   }) => Promise<Map<string, LoreFragment[]>>;
+  searchLoreFragments: (input: {
+    query: string;
+    entityId?: string;
+    limit?: number;
+  }) => Promise<LoreFragment[]>;
 };

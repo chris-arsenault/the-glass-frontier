@@ -10,6 +10,19 @@ export type CommitTurnInput = {
   turn: Turn;
 };
 
+export type TurnWindowInput = {
+  chronicleId: string;
+  fromSequence?: number;
+  toSequence?: number;
+  limit?: number;
+};
+
+export type TurnSearchInput = {
+  chronicleId: string;
+  query: string;
+  limit?: number;
+};
+
 type PersistChronicle = (client: PoolClient, chronicle: Chronicle) => Promise<void>;
 type TurnRow = {
   id: string;
@@ -36,6 +49,8 @@ type TurnRow = {
   location_delta: Turn['locationDelta'] | null;
   beat_tracker: Turn['beatTracker'] | null;
   gm_trace: Turn['gmTrace'] | null;
+  prose_alternates: Turn['proseAlternates'] | null;
+  prose_cost_usd: number | null;
   entity_references: Turn['entityReferences'] | null;
   entity_roster: Turn['entityRoster'] | null;
   entity_usage: Turn['entityUsage'] | null;
@@ -48,7 +63,8 @@ const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace, entity_roster, entity_references, entity_usage
+  beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
+  entity_roster, entity_references, entity_usage
   FROM chronicle_turn`;
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
@@ -59,12 +75,13 @@ const TURN_INSERT = `INSERT INTO chronicle_turn (
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace, entity_roster, entity_references, entity_usage
+  beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
+  entity_roster, entity_references, entity_usage
 ) VALUES (
   $1::uuid, $2::uuid, $3, now(), $4, $5, $6,
   $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12, $13, $14::jsonb, $15,
   $16, $17, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb,
-  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26::jsonb, $27::jsonb
+  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26, $27::jsonb, $28::jsonb, $29::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -130,6 +147,8 @@ const toTurn = (row: TurnRow): Turn => ({
     metadata: row.player_message_metadata ?? defaultMetadata(),
     role: 'player',
   },
+  proseAlternates: optional(row.prose_alternates),
+  proseCostUsd: optional(row.prose_cost_usd),
   sceneContext: optional(row.scene_context),
   skillCheckPlan: optional(row.skill_check_plan),
   skillCheckResult: optional(row.skill_check_result),
@@ -162,6 +181,8 @@ const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unkn
   optionalJson(turn.locationDelta),
   optionalJson(turn.beatTracker),
   optionalJson(turn.gmTrace),
+  optionalJson(turn.proseAlternates),
+  valueOr(turn.proseCostUsd, null),
   optionalJson(turn.entityRoster),
   optionalJson(turn.entityReferences),
   optionalJson(turn.entityUsage),
@@ -198,6 +219,47 @@ export class ChronicleTurnPersistence {
     const result = await this.#pool.query<TurnRow>(
       `${TURN_SELECT} WHERE chronicle_id = $1::uuid ORDER BY turn_sequence ASC`,
       [chronicleId]
+    );
+    return result.rows.map(toTurn);
+  }
+
+  /**
+   * A bounded slice of a chronicle's turns. With sequence bounds, the
+   * inclusive range in play order; without bounds, the most recent turns.
+   */
+  async listWindow(input: TurnWindowInput): Promise<Turn[]> {
+    const limit = Math.max(1, Math.min(50, input.limit ?? 20));
+    if (input.fromSequence === undefined && input.toSequence === undefined) {
+      const result = await this.#pool.query<TurnRow>(
+        `${TURN_SELECT} WHERE chronicle_id = $1::uuid
+         ORDER BY turn_sequence DESC LIMIT $2`,
+        [input.chronicleId, limit]
+      );
+      return result.rows.map(toTurn).reverse();
+    }
+    const result = await this.#pool.query<TurnRow>(
+      `${TURN_SELECT} WHERE chronicle_id = $1::uuid
+       AND turn_sequence >= $2 AND turn_sequence <= $3
+       ORDER BY turn_sequence ASC LIMIT $4`,
+      [
+        input.chronicleId,
+        input.fromSequence ?? 0,
+        input.toSequence ?? Number.MAX_SAFE_INTEGER,
+        limit,
+      ]
+    );
+    return result.rows.map(toTurn);
+  }
+
+  /** Full-text search over a chronicle's turn prose, best match first. */
+  async search(input: TurnSearchInput): Promise<Turn[]> {
+    const limit = Math.max(1, Math.min(20, input.limit ?? 5));
+    const result = await this.#pool.query<TurnRow>(
+      `${TURN_SELECT}
+       WHERE chronicle_id = $1::uuid
+       AND search @@ websearch_to_tsquery('english', $2)
+       ORDER BY ts_rank(search, websearch_to_tsquery('english', $2)) DESC LIMIT $3`,
+      [input.chronicleId, input.query, limit]
     );
     return result.rows.map(toTurn);
   }

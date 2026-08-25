@@ -31,6 +31,14 @@ export type ReferenceEntityCandidate = {
   slug: string;
 };
 
+export type EntitySearchCandidate = {
+  id: string;
+  kind: HardStateKind;
+  name: string;
+  similarity: number;
+  slug: string;
+};
+
 type SubjectCandidateRow = Omit<SubjectEntityCandidate, 'reach'> & {
   reach: number | null;
 };
@@ -172,6 +180,28 @@ export class EntityEmbeddingReader {
       ...row,
       reach: row.reach ?? 0,
     }));
+  }
+
+  /**
+   * Global semantic entity discovery, unrestricted by a candidate set.
+   * Player-facing: DM-only and article entities are excluded.
+   */
+  async findEntityCandidates(input: {
+    embedding: number[];
+    limit?: number;
+  }): Promise<EntitySearchCandidate[]> {
+    const result = await this.#pool.query<EntitySearchCandidate>(
+      `SELECT e.id, e.slug, e.name, e.kind,
+         (1 - (e.embedding <=> $1::vector))::real AS similarity
+       FROM entity e
+       WHERE e.embedding IS NOT NULL
+         AND NOT e.is_article
+         AND NOT e.dm
+       ORDER BY e.embedding <=> $1::vector
+       LIMIT $2`,
+      [vectorLiteral(input.embedding), Math.max(1, Math.min(input.limit ?? 5, 12))]
+    );
+    return result.rows;
   }
 
   async findReferenceCandidates(input: {

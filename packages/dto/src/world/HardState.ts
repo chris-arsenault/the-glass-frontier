@@ -184,6 +184,26 @@ export const HardStateLink = z.object({
 });
 export type HardStateLink = z.infer<typeof HardStateLink>;
 
+/**
+ * One live canonical relationship among a selected entity set — the batched
+ * relationship read model for scene context: canonical endpoints, verb,
+ * interval, typed props, and the edge's descriptive identity.
+ */
+export const LiveRelationship = z.object({
+  descriptiveIdentity: DescriptiveIdentity.optional(),
+  dstId: z.string().min(1),
+  identityLocal: IdentityLocal.optional(),
+  identityProvenance: IdentityProvenance.optional(),
+  identitySources: z.array(IdentitySourceAssignment).optional(),
+  props: HardStateLinkProps.optional(),
+  relationship: RelationshipType,
+  since: z.number().int().optional(),
+  srcId: z.string().min(1),
+  strength: z.number().min(0).max(1).optional(),
+  until: z.number().int().optional(),
+});
+export type LiveRelationship = z.infer<typeof LiveRelationship>;
+
 export const HardState = z.object({
   createdAt: z
     .number()

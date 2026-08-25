@@ -1,6 +1,7 @@
+import { MODEL_CATALOG } from '@glass-frontier/app';
 import type { IntentType, PromptTemplateId, TranscriptEntry } from '@glass-frontier/dto';
 import { PromptComposer } from '@glass-frontier/gm-api/prompts/prompts';
-import { isLlmBudgetExceededError } from '@glass-frontier/llm-client';
+import { calculateActualCostUsd, isLlmBudgetExceededError } from '@glass-frontier/llm-client';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../../types';
@@ -25,6 +26,14 @@ const FILTER_MARKERS = [
   'blocked by content filter',
   'cannot assist with that request',
 ];
+
+const narrationCostUsd = (
+  modelId: string,
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number }
+): number | undefined => {
+  const catalogModel = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
+  return catalogModel === undefined ? undefined : calculateActualCostUsd(catalogModel, usage);
+};
 
 const isFilterBlockedNarration = (content: string): boolean => {
   const normalized = content.toLowerCase();
@@ -129,6 +138,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
           nodeId: this.options.id,
           requestId: narration.requestId,
         },
+        proseCostUsd: narrationCostUsd(model, narration.usage),
       };
 
     } catch (error) {

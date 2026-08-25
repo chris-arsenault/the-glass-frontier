@@ -107,6 +107,8 @@ export type GraphContext = {
   skillCheckResult?: SkillCheckResult;
   gmSummary?: string,
   gmTrace?: LlmTrace | null;
+  /** USD cost of the canonical narration call, for the evaluation cost display. */
+  proseCostUsd?: number;
   effectiveScene: ChronicleScene | null;
   sceneOutcome: SceneOutcome;
   sceneOutcomeReason: string | null;

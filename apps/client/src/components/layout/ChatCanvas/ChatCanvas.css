@@ -588,3 +588,27 @@
   cursor: not-allowed;
   opacity: 0.5;
 }
+
+.chat-entry-response-pager {
+  display: flex;
+  color: #9fb4d4;
+  align-items: center;
+  font-size: 0.75rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  text-transform: lowercase;
+}
+
+.chat-response-pager-button {
+  padding: 0 var(--space-2);
+  color: inherit;
+  background: rgb(148 163 184 / 12%);
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.chat-response-pager-button:hover {
+  background: rgb(148 163 184 / 22%);
+}

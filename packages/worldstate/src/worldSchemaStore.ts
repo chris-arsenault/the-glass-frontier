@@ -5,6 +5,7 @@ import type {
   ContextSliceInput,
   EntityActivityFeed,
   HardState,
+  LiveRelationship,
   LoreFragment,
   WorldSchema,
 } from '@glass-frontier/dto';
@@ -16,6 +17,7 @@ import { EntityActivityReader } from './entityActivityReader';
 import {
   type EntityEmbeddingSource,
   EntityEmbeddingReader,
+  type EntitySearchCandidate,
   type ReferenceEntityCandidate,
   type SubjectEntityCandidate,
 } from './entityEmbeddings';
@@ -23,6 +25,7 @@ import type { EntityListInput, EntityStats, NeighborListInput } from './entityRe
 import { EntityReader } from './entityReader';
 import { LoreReader } from './loreReader';
 import { createPool } from './pg';
+import { RelationshipReader } from './relationshipReader';
 import type { WorldNeighbor, WorldSchemaStore } from './types';
 import { WorldSchemaConfiguration } from './worldSchemaConfiguration';
 
@@ -39,6 +42,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
   readonly #embeddings: EntityEmbeddingReader;
   readonly #entities: EntityReader;
   readonly #lore: LoreReader;
+  readonly #relationships: RelationshipReader;
   readonly #schema: WorldSchemaConfiguration;
   readonly #writer: CanonWriter;
 
@@ -48,8 +52,13 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     this.#embeddings = new EntityEmbeddingReader(options.pool);
     this.#entities = new EntityReader(options.pool);
     this.#lore = new LoreReader(options.pool);
+    this.#relationships = new RelationshipReader(options.pool);
     this.#schema = new WorldSchemaConfiguration(options.pool);
     this.#writer = new CanonWriter(options.pool);
+  }
+
+  async listRelationshipsAmong(input: { entityIds: string[] }): Promise<LiveRelationship[]> {
+    return this.#relationships.listRelationshipsAmong(input);
   }
 
   async commitBatch(proposal: CanonProposal): Promise<CommitBatchResult> {
@@ -87,6 +96,13 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     limit?: number;
   }): Promise<ReferenceEntityCandidate[]> {
     return this.#embeddings.findReferenceCandidates(input);
+  }
+
+  async findEntityCandidates(input: {
+    embedding: number[];
+    limit?: number;
+  }): Promise<EntitySearchCandidate[]> {
+    return this.#embeddings.findEntityCandidates(input);
   }
 
   async revertBatch(batchId: string): Promise<void> {
@@ -156,6 +172,14 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     perEntityLimit?: number;
   }): Promise<Map<string, LoreFragment[]>> {
     return this.#lore.listByEntities(input);
+  }
+
+  async searchLoreFragments(input: {
+    query: string;
+    entityId?: string;
+    limit?: number;
+  }): Promise<LoreFragment[]> {
+    return this.#lore.search(input);
   }
 
   async getWorldSchema(): Promise<WorldSchema> {
