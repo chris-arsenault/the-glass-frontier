@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderBlock } from '../src/prompts/blockRender';
+import { renderBlock } from '../src/promptContext/blockRender';
 
 describe('prompt block rendering', () => {
   it('writes a flat record as labeled lines', () => {

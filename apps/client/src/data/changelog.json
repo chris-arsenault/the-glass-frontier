@@ -516,5 +516,12 @@
     "summary": "Character choices now look selected",
     "details": "Species, culture, homeland, allegiance, standing, archetype, and attribute choices now switch from muted gray to a filled teal treatment with a bright border when selected. The larger choice cards also show a check mark, while keyboard focus keeps its separate visible ring.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-26-one-canon-view",
+    "releasedAt": "2026-08-26",
+    "summary": "One way of showing the world to the GM",
+    "details": "The chronicle opening and the turn engine each had their own way of describing a place to the model, and only one of them was ever maintained. The opening was still shipping your character's species, culture, homeland, and allegiance as raw identifiers, five entire lore articles for a single location with the same tags repeated in each, and Atlas links written into the prose. Both now go through one description of an entity, so a fix reaches every prompt at once. That description leads with the canon's own summary of a place or person — its setting, what happens there, and what makes it dangerous — with lore kept as short entries underneath instead of the other way around, and it carries the GM notes an entry publishes, which the opening never saw at all.",
+    "type": "improvement"
   }
 ]

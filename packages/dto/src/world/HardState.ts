@@ -218,6 +218,12 @@ export const HardState = z.object({
   /** Stable identity from the source world, e.g. `tsonu:kaleidos`. */
   externalKey: z.string().min(1).optional(),
   facts: HardStateFacts.default({}),
+  /**
+   * How to run this entity. Stored in the props envelope and, until now, only
+   * ever surfaced by the context slice — so every reader that went through
+   * `getEntity` silently had none, including the chronicle opening.
+   */
+  gmNotes: z.array(GmNote).optional(),
   id: z.string().min(1),
   /** Authored local identity operations; inherited prose is never stamped here. */
   identityLocal: IdentityLocal.optional(),

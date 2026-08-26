@@ -1,10 +1,9 @@
-import type { PromptTemplateRuntime } from '@glass-frontier/app';
+import { type PromptTemplateRuntime, renderBlock } from '@glass-frontier/app';
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import type { Prompt } from '@glass-frontier/llm-client';
 
 import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
-import { renderBlock } from './blockRender';
 import { extractFragment, templateFragmentMapping } from './chronicleFragments';
 
 type MessageOrder = 'player' | 'gm' | 'both';

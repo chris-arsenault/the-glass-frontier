@@ -1,5 +1,11 @@
 import type { ModelConfigStore, PromptTemplateManager } from '@glass-frontier/app';
-import { PromptTemplateRuntime } from '@glass-frontier/app';
+import {
+  characterView,
+  entityView,
+  originNamesFrom,
+  PromptTemplateRuntime,
+  renderBlock,
+} from '@glass-frontier/app';
 import type { Character, ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
 import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
 import type { WorldSchemaStore } from '@glass-frontier/worldstate';
@@ -119,19 +125,23 @@ export class ChronicleSeedService {
     const anchor = request.anchorId === undefined
       ? null
       : await this.#ensureAnchor(location.id, request.anchorId);
-    const [locationLore, anchorLore, instructions, proseModel] = await Promise.all([
+    const [locationLore, anchorLore, instructions, proseModel, originNames] = await Promise.all([
       this.#world.listLoreFragmentsByEntity({ entityId: location.id, limit: 5 }),
       anchor === null
         ? Promise.resolve([])
         : this.#world.listLoreFragmentsByEntity({ entityId: anchor.id, limit: 5 }),
       this.#createTemplateRuntime(request.playerId).render('chronicle-opening', {}),
       this.#modelConfigStore.getModelForCategory('prose', request.playerId),
+      // The opening used to ship the character record untouched, so its
+      // species, culture, homeland, and allegiance arrived as four uuids.
+      this.#resolveOriginNames(request.character),
     ]);
     const developerMessages = this.#buildOpeningDeveloperMessages({
       anchor,
       anchorLore,
       location,
       locationLore,
+      originNames,
       request,
     });
     return this.#generateOpeningText({
@@ -148,6 +158,7 @@ export class ChronicleSeedService {
     anchorLore: LoreFragment[];
     location: HardState;
     locationLore: LoreFragment[];
+    originNames: Map<string, string>;
     request: GenerateOpeningRequest;
   }): DeveloperMessage[] {
     const developerMessages: DeveloperMessage[] = [
@@ -164,7 +175,10 @@ export class ChronicleSeedService {
     }
     const tone = this.#formatTone(options.request.toneChips, options.request.toneNotes);
     developerMessages.push(
-      this.#createDeveloperMessage('CHARACTER', options.request.character),
+      this.#createDeveloperMessage(
+        'CHARACTER',
+        this.#formatSeedCharacter(options.request.character, options.originNames)
+      ),
       this.#createDeveloperMessage('CHRONICLE', {
         seed: options.request.seedText.trim(),
         title: options.request.title,
@@ -285,19 +299,14 @@ export class ChronicleSeedService {
     return messages;
   }
 
+  /**
+   * Canon as the shared view renders it — facts, GM notes, and summarized
+   * lore, with Atlas links stripped. What stood here shipped whole lore
+   * fragments, each carrying the same tag array and the same one-word title,
+   * and no GM notes at all.
+   */
   #buildEntityContext(entity: HardState, lore: LoreFragment[]): Record<string, unknown> {
-    return {
-      description: entity.description ?? null,
-      kind: entity.kind,
-      loreFragments: lore.map((fragment) => ({
-        prose: fragment.prose,
-        tags: fragment.tags,
-        title: fragment.title,
-      })),
-      name: entity.name,
-      status: entity.status ?? null,
-      subkind: entity.subkind ?? null,
-    };
+    return { ...entityView(entity, lore) };
   }
 
   #buildUserMessage(options: GenerateAllSeedsOptions): string {
@@ -312,36 +321,19 @@ export class ChronicleSeedService {
     character: Character,
     originNames: Map<string, string>
   ): Record<string, unknown> {
-    const { origin } = character;
-    return {
-      archetype: character.archetype,
-      bio: character.bio,
-      callings: character.nature.callings,
-      drive: character.nature.drive,
-      flaw: character.nature.flaw,
-      instinct: character.nature.instinct,
-      name: character.name,
-      origin: {
-        allegiance: originNames.get(origin.allegianceId),
-        allegianceStance: origin.allegianceStance,
-        culture: originNames.get(origin.cultureId),
-        homeland: originNames.get(origin.homelandId),
-        species: originNames.get(origin.speciesId),
-      },
-      pronouns: character.pronouns,
-      skills: Object.values(character.skills).map((skill) => ({
-        name: skill.name,
-        tier: skill.tier,
-      })),
-      uniqueThing: character.nature.uniqueThing,
-    };
+    return characterView(character, originNamesFrom(character, originNames));
   }
 
+  /**
+   * The same labelled-lines format the GM pipeline uses. This path rendered
+   * `JSON.stringify(payload, null, 2)`, so a location block ran to 5.5k of
+   * braces and repeated tag arrays for an eighty-word opening.
+   */
   #createDeveloperMessage(
     key: string,
     payload: Record<string, unknown> | string
   ): DeveloperMessage {
-    const body = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+    const body = typeof payload === 'string' ? payload : renderBlock(payload);
     return {
       content: [{
         text: `### ${key}\n${body}`,

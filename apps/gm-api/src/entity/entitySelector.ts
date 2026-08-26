@@ -26,6 +26,7 @@ const topEntities = (focus: EntityFocusState | null | undefined, count: number):
 
 const toCandidate = (entry: ContextSliceEntity): EntitySnippet => ({
   description: entry.description,
+  descriptiveIdentity: entry.descriptiveIdentity,
   facts: entry.facts,
   gmNotes: entry.gmNotes,
   id: entry.id,

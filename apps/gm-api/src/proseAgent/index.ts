@@ -1,4 +1,4 @@
-import { MODEL_CATALOG } from '@glass-frontier/app';
+import { MODEL_CATALOG, renderBlock } from '@glass-frontier/app';
 import {
   type IntentType,
   type PromptTemplateId,
@@ -13,7 +13,6 @@ import {
 } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 
-import { renderBlock } from '../prompts/blockRender';
 import { PromptComposer } from '../prompts/prompts';
 import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';

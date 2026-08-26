@@ -25,3 +25,15 @@ export {
   withTransaction,
   type PgOptions,
 } from './pg';
+export { renderBlock } from './promptContext/blockRender';
+export {
+  characterView,
+  entityView,
+  type EntityView,
+  type EntityViewOptions,
+  identityView,
+  originEntityIds,
+  originNamesFrom,
+  type OriginNames,
+  plainProse,
+} from './promptContext/promptViews';

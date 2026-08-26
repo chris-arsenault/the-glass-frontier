@@ -1,3 +1,4 @@
+import { renderBlock } from '@glass-frontier/app';
 import type {
   HardState,
   HardStateKind,
@@ -6,7 +7,6 @@ import type {
 } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
-import { renderBlock } from '../prompts/blockRender';
 import type { ChronicleFragmentTypes } from '../prompts/chronicleFragments';
 import { extractFragment } from '../prompts/chronicleFragments';
 import type { GraphContext } from '../types';

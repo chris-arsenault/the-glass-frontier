@@ -1,5 +1,6 @@
 import type {
   CanonSource,
+  GmNote,
   HardState,
   HardStateKind,
   HardStateLink,
@@ -119,6 +120,9 @@ const optional = <Value>(value: Value | null): Value | undefined => value ?? und
 
 const rowFacts = (row: EntityRow): Record<string, string | number> => row.props?.facts ?? {};
 
+/** How to run the entity. Lived only in the props envelope until now. */
+const rowGmNotes = (row: EntityRow): GmNote[] => row.props?.gmNotes ?? [];
+
 const rowTimestamp = (value: Date | null): number => value?.getTime() ?? now();
 
 const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
@@ -128,6 +132,7 @@ const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
   dm: row.dm,
   externalKey: optional(row.external_key),
   facts: rowFacts(row),
+  gmNotes: rowGmNotes(row),
   id: row.id,
   identityLocal: row.props?.identityLocal,
   identityProvenance: row.props?.identityProvenance,

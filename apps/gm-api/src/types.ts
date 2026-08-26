@@ -4,6 +4,7 @@ import type {
   Character,
   Chronicle,
   ChronicleScene,
+  DescriptiveIdentity,
   EntityReference,
   EntityRosterEntry,
   Front,
@@ -55,6 +56,12 @@ export type EntitySnippet = {
   subkind?: HardStateSubkind;
   description?: string;
   status?: HardStateStatus;
+  /**
+   * The canon's composed prose under stable keys — `setting`, `activity`,
+   * `hazards`. The summary a scene needs; absent on entities the source has not
+   * resolved one for.
+   */
+  descriptiveIdentity?: DescriptiveIdentity;
   /** The entry's fact card — the small answers a reader expects up front. */
   facts: Record<string, string | number>;
   /** How to run this entity. Its consequence reaches the table; its wording does not. */

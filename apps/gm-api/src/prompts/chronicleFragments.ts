@@ -1,3 +1,10 @@
+import {
+  characterView,
+  identityView,
+  originEntityIds,
+  originNamesFrom,
+  plainProse,
+} from '@glass-frontier/app';
 import type { GmNote, PromptTemplateId } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
@@ -5,7 +12,6 @@ import { advanceSceneClock, isSceneClockFull } from '../scenes/sceneLifecycle';
 import type { GraphContext } from '../types';
 import { visibleFronts } from '../world/fronts';
 import {
-  formatCharacter,
   formatIntent,
   formatInventoryItem,
   formatInventoryItemDetail,
@@ -41,16 +47,6 @@ const VERBATIM_TURNS = 5;
 const MAX_ANCHOR_LORE = 3;
 const MAX_ENTITY_GM_NOTES = 2;
 const MAX_ENTITY_LORE = 2;
-
-const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]*\)/gu;
-
-/**
- * Canon prose is authored for the Atlas, so it carries markdown links back
- * into the app — `[Daro Venn](/glass-frontier/entry/daro-venn)` was reaching
- * the narrator verbatim. The model wants the name, not the route.
- */
-const plainProse = (text: string | undefined): string | undefined =>
-  text === undefined ? undefined : text.replaceAll(MARKDOWN_LINK, '$1');
 
 const LEDGER_FRAGMENT: ChronicleFragmentTypes = 'ledger';
 
@@ -135,20 +131,9 @@ function userMessageFragment(context: GraphContext): string {
 
 async function characterFragment(context: GraphContext): Promise<Record<string, unknown>> {
   const character = context.chronicleState.character;
-  const { allegianceId, cultureId, homelandId, speciesId } = character.origin;
-  const entities = await context.worldSchemaStore.listEntitiesByIds([
-    speciesId,
-    cultureId,
-    homelandId,
-    allegianceId,
-  ]);
+  const entities = await context.worldSchemaStore.listEntitiesByIds(originEntityIds(character));
   const names = new Map(entities.map((entity) => [entity.id, entity.name]));
-  return formatCharacter(character, {
-    allegiance: names.get(allegianceId),
-    culture: names.get(cultureId),
-    homeland: names.get(homelandId),
-    species: names.get(speciesId),
-  });
+  return characterView(character, originNamesFrom(character, names));
 }
 
 async function anchorFragment(context: GraphContext): Promise<Record<string, unknown>> {
@@ -184,6 +169,7 @@ type EstablishedEntity = {
   name: string;
   kind: string;
   description: string | undefined;
+  descriptiveIdentity: Record<string, string | undefined> | undefined;
   facts: Record<string, string | number>;
   status: string | undefined;
   loreFragments: Array<{
@@ -219,6 +205,7 @@ function entitiesFragment(context: GraphContext): Array<EstablishedEntity | Unwr
       }
       : {
         description: plainProse(entry.description),
+        descriptiveIdentity: identityView(entry.descriptiveIdentity),
         facts: entry.facts,
         gmNotes: entry.gmNotes.slice(0, MAX_ENTITY_GM_NOTES).map((note) => ({
           kind: note.kind,

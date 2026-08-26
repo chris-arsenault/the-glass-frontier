@@ -1,10 +1,8 @@
 import type {
-  Character,
   ChronicleBeat,
   InventoryEntry,
   Intent,
   OutcomeTier,
-  Skill,
   SkillCheckPlan,
   SkillCheckResult,
 } from '@glass-frontier/dto';
@@ -39,20 +37,6 @@ export function recordedPlayerMessage(
   return `${content.slice(0, MAX_RECORDED_PLAYER_CHARS)} […message continues]`;
 }
 
-export function trimSkillsList(skills: Skill[]): Array<{
-  attribute: string;
-  name: string;
-  tier: string;
-}> {
-  return skills.map((s) => {
-    return {
-      attribute: s.attribute,
-      name: s.name,
-      tier: s.tier,
-    };
-  });
-}
-
 export function trimBeatsList(beats: ChronicleBeat[]): Array<{
   description: string;
   id: string;
@@ -83,32 +67,8 @@ export type OriginNames = {
   species: string | undefined;
 };
 
-// Formatters
-export function formatCharacter(
-  character: Character,
-  originNames: OriginNames
-): Record<string, unknown> {
-  return {
-    archetype: character.archetype,
-    attributes: character.attributes,
-    bio: character.bio,
-    callings: character.nature.callings,
-    drive: character.nature.drive,
-    flaw: character.nature.flaw,
-    instinct: character.nature.instinct,
-    name: character.name,
-    origin: {
-      allegiance: originNames.allegiance,
-      allegianceStance: character.origin.allegianceStance,
-      culture: originNames.culture,
-      homeland: originNames.homeland,
-      species: originNames.species,
-    },
-    pronouns: character.pronouns,
-    skills: trimSkillsList(Object.values(character.skills)),
-    uniqueThing: character.nature.uniqueThing,
-  };
-}
+// The character view lives in @glass-frontier/app so the seed and opening,
+// which never went through this file, produce the same shape.
 
 export function formatIntent(
   intent: Intent | null | undefined,
