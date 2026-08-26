@@ -1,5 +1,5 @@
 import type { Front } from '@glass-frontier/dto';
-import React from 'react';
+import React, { useState } from 'react';
 
 type WorldPanelProps = {
   content: string | null;
@@ -16,33 +16,46 @@ type WorldPanelProps = {
  * with the other pipeline traces.
  */
 export function WorldPanel({ content, fronts }: WorldPanelProps): React.JSX.Element | null {
+  const [isOpen, setIsOpen] = useState(false);
   const live = (fronts ?? []).filter((front) => front.status !== 'spent');
   if (content === null && live.length === 0) {
     return null;
   }
   return (
     <section className="chat-entry-world" aria-label="What the world is doing">
-      {content === null ? null : <p className="chat-entry-world-text">{content}</p>}
-      {live.length === 0 ? null : (
-        <ul className="chat-entry-front-list">
-          {live.map((front) => (
-            <li
-              key={front.id}
-              className={`chat-entry-front chat-entry-front-${front.status}`}
-              title={front.nextSign}
-            >
-              <span className="chat-entry-front-clock" aria-label="Clock">
-                {'●'.repeat(Math.min(front.filled, front.size))}
-                {'○'.repeat(Math.max(0, front.size - front.filled))}
-              </span>
-              <span className="chat-entry-front-intent">{front.intent}</span>
-              <span className="chat-entry-front-agent">{front.agentSlug}</span>
-              {front.status === 'fired' ? (
-                <span className="chat-entry-front-fired">landed</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+      <button
+        type="button"
+        className="chat-entry-world-toggle"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        {isOpen ? '▾' : '▸'} The world{live.length === 0 ? '' : ` · ${live.length} running`}
+      </button>
+      {!isOpen ? null : (
+        <>
+          {content === null ? null : <p className="chat-entry-world-text">{content}</p>}
+          {live.length === 0 ? null : (
+            <ul className="chat-entry-front-list">
+              {live.map((front) => (
+                <li
+                  key={front.id}
+                  className={`chat-entry-front chat-entry-front-${front.status}`}
+                  title={front.nextSign}
+                >
+                  <span className="chat-entry-front-clock" aria-label="Clock">
+                    {'●'.repeat(Math.min(front.filled, front.size))}
+                    {'○'.repeat(Math.max(0, front.size - front.filled))}
+                  </span>
+                  <span className="chat-entry-front-intent">{front.intent}</span>
+                  <span className="chat-entry-front-agent">{front.agentSlug}</span>
+                  {front.status === 'fired' ? (
+                    <span className="chat-entry-front-fired">landed</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </section>
   );
