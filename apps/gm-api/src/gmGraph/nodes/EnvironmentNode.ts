@@ -2,7 +2,6 @@ import { MODEL_CATALOG } from '@glass-frontier/app';
 import { type Front, WorldTurn } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
 
-import { renderBlock } from '../../prompts/blockRender';
 import { buildSeedPack, renderSeedPack } from '../../proseAgent/seedPack';
 import { createProseAgentTools } from '../../proseAgent/tools';
 import { ToolSession } from '../../proseAgent/toolSession';
@@ -91,11 +90,9 @@ export class EnvironmentNode implements GraphNode {
         : ENVIRONMENT_INSTRUCTIONS,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       maxSteps: MAX_STEPS,
-      messages: [{
-        content: `${renderSeedPack(pack, context.playerMessage.content)}`
-          + `\n\n### FRONTS\n${live.length === 0 ? 'none' : renderBlock(live)}`,
-        role: 'user',
-      }],
+      // FRONTS rides in the seed pack now, so the scout and the world read
+      // the same block rather than two shapes of the same thing.
+      messages: [{ content: renderSeedPack(pack, context.playerMessage.content), role: 'user' }],
       metadata: {
         chronicleId: context.chronicleId,
         nodeId: this.id,

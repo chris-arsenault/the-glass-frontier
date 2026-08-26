@@ -56,6 +56,7 @@ const SHARED_SECTIONS: Array<{ name: string; fragment: ChronicleFragmentTypes }>
   { fragment: 'chronicle-tone', name: 'CHRONICLE-TONE' },
   { fragment: 'intent', name: 'INTENT' },
   { fragment: 'scene', name: 'SCENE' },
+  { fragment: 'fronts', name: 'FRONTS' },
   { fragment: 'ledger', name: 'LEDGER' },
   { fragment: 'entity-references', name: 'PLAYER-REFERENCES' },
   { fragment: 'character', name: 'CHARACTER' },

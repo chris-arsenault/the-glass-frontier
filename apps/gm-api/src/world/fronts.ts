@@ -15,9 +15,18 @@ export const applyWorldTurn = (
   report: WorldTurn,
   turnSequence: number
 ): Front[] => {
-  const ticked = fronts.map((front) => tick(front, report, turnSequence));
+  const pruned = fronts.map((front) => abandon(front, report, turnSequence));
+  const ticked = pruned.map((front) => tick(front, report, turnSequence));
   const withFiring = resolveFiring(ticked, report.firedFrontId, turnSequence);
   return withProposal(withFiring, report, turnSequence);
+};
+
+/** A premise that no longer holds frees its slot; its clock is not spent. */
+const abandon = (front: Front, report: WorldTurn, turnSequence: number): Front => {
+  if (front.status !== 'active' || !report.abandonedFrontIds.includes(front.id)) {
+    return front;
+  }
+  return { ...front, status: 'abandoned' as const, updatedAtTurn: turnSequence };
 };
 
 const tick = (front: Front, report: WorldTurn, turnSequence: number): Front => {

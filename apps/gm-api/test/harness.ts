@@ -64,6 +64,7 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
         sceneId: null,
         updatedAtTurn: 0,
       },
+      fronts: [],
       seedText: 'A derelict relay station hums back to life.',
       toneChips: [],
       toneNotes: '',

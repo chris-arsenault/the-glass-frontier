@@ -3,6 +3,7 @@ import { isNonEmptyString } from '@glass-frontier/utils';
 
 import { advanceSceneClock, isSceneClockFull } from '../scenes/sceneLifecycle';
 import type { GraphContext } from '../types';
+import { visibleFronts } from '../world/fronts';
 import {
   formatCharacter,
   formatIntent,
@@ -29,6 +30,7 @@ export type ChronicleFragmentTypes =
   | 'wrap'
   | 'inventory'
   | 'inventory-detail'
+  | 'fronts'
   | 'ledger'
   | 'scene'
   | 'seed';
@@ -104,6 +106,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['intent', intentFragment],
   ['inventory', inventoryFragment],
   [INVENTORY_DETAIL_FRAGMENT, inventoryDetailFragment],
+  ['fronts', frontsFragment],
   [LEDGER_FRAGMENT, ledgerFragment],
   ['location', locationFragment],
   [RECENT_EVENTS_FRAGMENT, recentEventsFragment],
@@ -312,6 +315,22 @@ function sceneFragment(context: GraphContext): unknown {
 
 function ledgerFragment(context: GraphContext): unknown {
   return context.chronicleState.chronicle.sceneLedger;
+}
+
+/**
+ * What the world is working toward, as retrieval hints — never as a boundary
+ * on what may be looked up. Spent and abandoned agendas are left out; a front
+ * that has already landed stays visible for the turn it lands on.
+ */
+function frontsFragment(context: GraphContext): unknown {
+  return visibleFronts(context.chronicleState.chronicle.fronts).map((front) => ({
+    agent: front.agentSlug,
+    clock: `${front.filled}/${front.size}`,
+    id: front.id,
+    intent: front.intent,
+    nextSign: front.nextSign,
+    ...front.status === 'fired' ? { landing: true } : {},
+  }));
 }
 
 function toneFragment(context: GraphContext): string {

@@ -31,6 +31,13 @@ const FrontProposal = z.object({
  */
 export const WorldTurn = z.object({
   /**
+   * Fronts whose premise no longer holds — the thing was already achieved by
+   * other means, the pursuer is gone, the fiction moved somewhere the agenda
+   * cannot follow. Without this an agenda that has quietly become nonsense
+   * holds one of three slots until a clock it will never fill runs out.
+   */
+  abandonedFrontIds: z.array(z.string().min(1)).max(3).default([]),
+  /**
    * At most one front may fire on a turn. A firing front is one whose clock
    * has filled and whose consequence arrives now.
    */

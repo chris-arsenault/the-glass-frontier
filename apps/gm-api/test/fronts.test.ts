@@ -19,6 +19,7 @@ const front = (overrides?: Partial<Front>): Front => ({
 });
 
 const report = (overrides?: Partial<WorldTurn>): WorldTurn => ({
+  abandonedFrontIds: [],
   firedFrontId: null,
   proposal: null,
   ticks: [],
@@ -95,6 +96,37 @@ describe('front bookkeeping', () => {
       4
     );
     expect(full).toHaveLength(3);
+  });
+
+  it('abandons a front whose premise dissolved, freeing its slot', () => {
+    const fronts = [front({ filled: 2 })];
+
+    const [abandoned] = applyWorldTurn(
+      fronts,
+      report({ abandonedFrontIds: [AUDIT_FRONT] }),
+      6
+    );
+    expect(abandoned?.status).toBe('abandoned');
+
+    const proposal = {
+      agentSlug: 'clarisant',
+      intent: 'Certify the tuners working the yard',
+      nextSign: 'A certifier books passage',
+      size: 4,
+    };
+    const reopened = applyWorldTurn(
+      [front({ id: 'a' }), front({ agentSlug: 'b', id: 'b' }), front({ agentSlug: 'c', id: 'c' })],
+      report({ abandonedFrontIds: ['a'], proposal }),
+      7
+    );
+    expect(reopened.filter((entry) => entry.status === 'active')).toHaveLength(3);
+    expect(reopened.some((entry) => entry.agentSlug === 'clarisant')).toBe(true);
+  });
+
+  it('does not abandon a front that is merely slow', () => {
+    const [held] = applyWorldTurn([front({ filled: 1 })], report(), 9);
+
+    expect(held?.status).toBe('active');
   });
 
   it('shows the environment only what is live or just landed', () => {

@@ -34,6 +34,12 @@ has sat still is a scene where offscreen things have had room to move.
 When a clock fills, that front's consequence arrives now. Name it in
 firedFrontId. At most one front lands per turn.
 
+An agenda whose premise has stopped being true does not need to run down its
+clock: name it in abandonedFrontIds and it is over. Someone else got there
+first, the pursuer is dead or gone, the story has moved somewhere the agenda
+cannot follow. Do not abandon a front merely because it is slow — slow is what
+a clock is for.
+
 You may propose one new front, and only for an entity that already exists in
 canon and already has a reason to want something. Do not invent an actor. If
 the world already has enough in motion, propose nothing.

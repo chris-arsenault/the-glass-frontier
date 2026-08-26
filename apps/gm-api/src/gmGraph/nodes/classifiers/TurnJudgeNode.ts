@@ -23,11 +23,12 @@ const TurnJudgeSchema = z.object({
   ledger: SceneLedgerUpdateSchema,
   location: LocationDeltaDecision,
   /**
-   * How far the turn moved the scene toward resolving. The clock used to move
-   * only on a die roll, so a scene of conversation never advanced no matter
-   * what happened in it.
+   * How far the turn moved the scene toward resolving, negative when the scene
+   * lost ground. Null when there is nothing to say, which leaves the check's
+   * outcome tier to move the clock as it always did — a default of zero would
+   * silently retire the dice, since zero is indistinguishable from an answer.
    */
-  sceneClockSegments: z.number().int().min(0).max(3).default(0),
+  sceneClockSegments: z.number().int().min(-2).max(3).nullable().default(null),
   sceneOutcome: SceneOutcome.default('continue'),
   sceneOutcomeReason: z.string().min(1).nullable().default(null),
   shouldCloseChronicle: z.boolean(),
@@ -73,7 +74,7 @@ class TurnJudgeNode extends LlmClassifierNode<TurnJudgeResponse> {
       beatTracker: { ...result.beats, tags: this.#loreTags(context) },
       gmSummary: result.summary,
       locationDelta: result.location,
-      sceneClockSegments: result.sceneClockSegments,
+      sceneClockSegments: result.sceneClockSegments ?? undefined,
       sceneLedgerUpdate: result.ledger,
       sceneOutcome,
       sceneOutcomeReason: sceneOutcome === 'continue' ? null : result.sceneOutcomeReason,
