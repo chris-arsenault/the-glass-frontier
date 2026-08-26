@@ -90,9 +90,9 @@ export class EnvironmentNode implements GraphNode {
         : ENVIRONMENT_INSTRUCTIONS,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       maxSteps: MAX_STEPS,
-      // FRONTS rides in the seed pack now, so the scout and the world read
-      // the same block rather than two shapes of the same thing.
-      messages: [{ content: renderSeedPack(pack, context.playerMessage.content), role: 'user' }],
+      // Null player message: the world is told where things stand and nothing
+      // about the move the player is in the middle of making.
+      messages: [{ content: renderSeedPack(pack, null), role: 'user' }],
       metadata: {
         chronicleId: context.chronicleId,
         nodeId: this.id,

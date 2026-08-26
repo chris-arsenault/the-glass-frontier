@@ -117,8 +117,31 @@ const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string
   material: brief.material,
   present: brief.present,
   scene: brief.scene,
-  ...worldContent === undefined ? {} : { world: worldContent },
+  ...worldContent === undefined ? {} : { elsewhere: worldContent },
 });
+
+/**
+ * A turn with nothing retrieved, for when the scout stops without submitting.
+ *
+ * The loop ends on a plain-text reply, and a scout that talked instead of
+ * calling `submit_brief` used to take the whole turn down with it — two of the
+ * nine turns in Hidden Messages died that way. The writer has the scene
+ * record, the character, and the check; it can narrate without the world
+ * material, and a thinner turn beats a dead one.
+ */
+const UNESTABLISHED = 'not established this turn';
+
+const EMPTY_BRIEF: TurnBrief = {
+  complication: null,
+  entities: [],
+  material: [],
+  present: [],
+  scene: {
+    changed: UNESTABLISHED,
+    endsWhen: UNESTABLISHED,
+    stakes: UNESTABLISHED,
+  },
+};
 
 const runScout = async (
   context: GraphContext,
@@ -132,6 +155,35 @@ const runScout = async (
     seedEntities: pack.seedEntities,
   });
   const model = await resolveProseModel(context, playerId, deps.modelId);
+  try {
+    return await scoutRound(context, deps, { intentType, model, pack, playerId, session });
+  } catch (error) {
+    log('warn', 'prose-agent.scout.no_brief', {
+      chronicleId: context.chronicleId,
+      message: error instanceof Error ? error.message : 'unknown',
+      turnId: context.turnId,
+    });
+    return {
+      brief: EMPTY_BRIEF,
+      session,
+      stepCount: 0,
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+    };
+  }
+};
+
+const scoutRound = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  round: {
+    intentType: IntentType;
+    model: Awaited<ReturnType<typeof resolveProseModel>>;
+    pack: Awaited<ReturnType<typeof buildSeedPack>>;
+    playerId: string;
+    session: ToolSession;
+  }
+): Promise<{ brief: TurnBrief; session: ToolSession; stepCount: number; usage: TokenUsage }> => {
+  const { intentType, model, pack, playerId, session } = round;
   const result = await deps.agentLoop.run({
     finishToolName: 'submit_brief',
     instructions: `${SCOUT_INSTRUCTIONS}\n\n${scoutFocus(intentType)}`,
