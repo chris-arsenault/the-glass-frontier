@@ -19,7 +19,9 @@ export const MENTIONED_IN_PREDICATE = `NOT e.dm AND NOT e.is_article
   AND (
     ${wordBoundaryMatch('e.name')}
     OR EXISTS (
-      SELECT 1 FROM unnest(string_to_array(coalesce(e.facts->>'aka', ''), ',')) AS alias
+      -- Facts live inside the props envelope; there is no facts column.
+      SELECT 1
+      FROM unnest(string_to_array(coalesce(e.props->'facts'->>'aka', ''), ',')) AS alias
       WHERE btrim(alias) <> '' AND ${wordBoundaryMatch('btrim(alias)')}
     )
   )`;

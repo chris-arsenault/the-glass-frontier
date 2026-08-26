@@ -281,6 +281,7 @@ function OriginStep({
                 <button
                   key={entity.id}
                   type="button"
+                  aria-pressed={origin[pick.field] === entity.id}
                   className={`entity-card${origin[pick.field] === entity.id ? ' selected' : ''}`}
                   onClick={() => select(pick.field, entity.id)}
                 >
@@ -303,6 +304,7 @@ function OriginStep({
             <button
               key={stance}
               type="button"
+              aria-pressed={origin.allegianceStance === stance}
               className={`wizard-chip${origin.allegianceStance === stance ? ' selected' : ''}`}
               onClick={() => update({ origin: { ...origin, allegianceStance: stance } })}
             >
@@ -343,14 +345,15 @@ function ConceptStep(): React.JSX.Element {
         <h2>Archetype</h2>
         <p className="wizard-hint">
           A short label for what the character does: Fault-Singer, Ghost Pilot, Glasswright. A
-          preset also sets two advanced attributes and three skills, which you can edit in the
-          next two steps.
+          preset also sets two advanced attributes and three skills, which you can edit in the next
+          two steps.
         </p>
         <div className="chip-row">
           {ARCHETYPE_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
+              aria-pressed={presetId === preset.id}
               className={`wizard-chip${presetId === preset.id ? ' selected' : ''}`}
               onClick={() =>
                 update({
@@ -393,11 +396,7 @@ function ConceptStep(): React.JSX.Element {
   );
 }
 
-function AptitudesStep({
-  issues,
-}: {
-  issues: Array<{ message: string }>;
-}): React.JSX.Element {
+function AptitudesStep({ issues }: { issues: Array<{ message: string }> }): React.JSX.Element {
   const attributes = useCharacterCreationStore((state) => state.attributes);
   const setAttribute = useCharacterCreationStore((state) => state.setAttribute);
 
@@ -406,8 +405,8 @@ function AptitudesStep({
       <section className="wizard-section">
         <h2>Attributes</h2>
         <p className="wizard-hint">
-          All seven start at standard. Raise exactly {CREATION_ADVANCED_COUNT} to advanced. You
-          may raise one more to superior if you drop one to rudimentary.
+          All seven start at standard. Raise exactly {CREATION_ADVANCED_COUNT} to advanced. You may
+          raise one more to superior if you drop one to rudimentary.
         </p>
         <div className="attribute-grid">
           {Attribute.options.map((attribute) => (
@@ -418,6 +417,7 @@ function AptitudesStep({
                   <button
                     key={tier}
                     type="button"
+                    aria-pressed={attributes[attribute as AttributeName] === tier}
                     className={`tier-button${
                       attributes[attribute as AttributeName] === tier ? ' selected' : ''
                     }`}
@@ -446,8 +446,8 @@ function SkillsStep({ issues }: { issues: Array<{ message: string }> }): React.J
       <section className="wizard-section">
         <h2>Skills</h2>
         <p className="wizard-hint">
-          Three skills: one artisan, two apprentice. Write each as an action in the present tense
-          — &ldquo;break sealed doors&rdquo;, &ldquo;read fault bands&rdquo;, &ldquo;talk down
+          Three skills: one artisan, two apprentice. Write each as an action in the present tense —
+          &ldquo;break sealed doors&rdquo;, &ldquo;read fault bands&rdquo;, &ldquo;talk down
           crowds&rdquo;. Any skill the character has not declared rolls at fool.
         </p>
         <div className="skill-slot-list">
@@ -598,10 +598,7 @@ function ReviewStep({
         <h2>Origin</h2>
         <dl className="review-list">
           <ReviewRow label="Homeland" value={nameFor('homelandId')} />
-          <ReviewRow
-            label={state.origin.allegianceStance}
-            value={nameFor('allegianceId')}
-          />
+          <ReviewRow label={state.origin.allegianceStance} value={nameFor('allegianceId')} />
         </dl>
       </section>
 

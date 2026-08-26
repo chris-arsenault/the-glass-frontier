@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 
 import {
   authenticate,
@@ -6,6 +7,13 @@ import {
   resetPlaywrightState,
   resetWiremockScenarios,
 } from './utils';
+
+const selectOriginChoice = async (choice: Locator): Promise<void> => {
+  await expect(choice).toHaveAttribute('aria-pressed', 'false');
+  await choice.click();
+  await expect(choice).toHaveAttribute('aria-pressed', 'true');
+  await expect(choice).toHaveCSS('border-color', 'rgb(45, 212, 191)');
+};
 
 test.describe('Chronicle creation', () => {
   test.beforeEach(async ({ request }) => {
@@ -15,6 +23,21 @@ test.describe('Chronicle creation', () => {
 
   test.afterEach(async ({ request }) => {
     await resetPlaywrightState(request);
+  });
+
+  test('marks origin choices as selected', async ({ page }) => {
+    await page.goto('/');
+    await authenticate(page);
+    const characterDirectory = page
+      .getByRole('navigation', { name: 'Main' })
+      .locator('.player-directory-section')
+      .filter({ has: page.getByRole('heading', { name: 'Characters' }) });
+
+    await characterDirectory.getByRole('button', { name: 'New' }).click();
+    await selectOriginChoice(page.getByRole('button', { name: /Sitharian/ }));
+    await selectOriginChoice(page.getByRole('button', { name: /Quay-Keeper/ }));
+    await selectOriginChoice(page.getByRole('button', { name: /Luminous Quay/ }));
+    await selectOriginChoice(page.getByRole('button', { name: /Glass Wardens/ }));
   });
 
   test('creates a character and chronicle through the wizard, then streams the first turn', async ({
@@ -69,7 +92,10 @@ test.describe('Chronicle creation', () => {
     await expect(page.getByRole('heading', { name: 'Start a new chronicle' })).toBeVisible();
 
     // SVG link groups can contain unpainted space, so exercise their keyboard contract.
-    await page.getByRole('link', { name: /Luminous Quay/ }).first().press('Enter');
+    await page
+      .getByRole('link', { name: /Luminous Quay/ })
+      .first()
+      .press('Enter');
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'hopeful' }).click();

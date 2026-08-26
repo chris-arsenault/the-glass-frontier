@@ -176,6 +176,44 @@ describe('prose alternates', () => {
   });
 });
 
+describe('entity mentions', () => {
+  it('finds an entity by name or by an aka alias, and only on word boundaries', async () => {
+    await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          {
+            facts: { aka: 'Old Bell, The Bell' },
+            kind: 'transport',
+            name: 'Bellwether',
+            ref: 'bellwether',
+          },
+          { dm: true, kind: 'npc', name: 'Hidden Broker', ref: 'broker' },
+        ],
+      })
+    );
+
+    const byName = await worldState.world.findEntitiesMentionedIn({
+      text: 'I wave the Bellwether down.',
+    });
+    expect(byName.map((entity) => entity.name)).toEqual(['Bellwether']);
+
+    const byAlias = await worldState.world.findEntitiesMentionedIn({
+      text: 'I ask Old Bell for passage.',
+    });
+    expect(byAlias.map((entity) => entity.name)).toEqual(['Bellwether']);
+
+    const partial = await worldState.world.findEntitiesMentionedIn({
+      text: 'The bellwethering crowd moves on.',
+    });
+    expect(partial).toStrictEqual([]);
+
+    const dmOnly = await worldState.world.findEntitiesMentionedIn({
+      text: 'I look for the Hidden Broker.',
+    });
+    expect(dmOnly).toStrictEqual([]);
+  });
+});
+
 describe('the world record', () => {
   it('keeps what the world did and finds it by searching the chronicle', async () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
@@ -262,6 +300,33 @@ describe('lore search', () => {
     expect(hits[0]?.title).toBe('Seawall');
   });
 
+  it('reads an entity\'s tags from its lore, which is what feeds entity focus', async () => {
+    const committed = await worldState.world.commitBatch(
+      proposal({
+        entities: [{ kind: 'faction', name: 'The Ledger Court', ref: 'court' }],
+        lore: [
+          {
+            entity: { ref: 'court' },
+            prose: 'The court settles salvage claims by weight.',
+            tags: ['trade', 'salvage'],
+            title: 'Claims by weight',
+          },
+          {
+            entity: { ref: 'court' },
+            prose: 'It refuses claims filed after the tide.',
+            tags: ['trade'],
+            title: 'Tide rule',
+          },
+        ],
+      })
+    );
+    const entityId = committed.entityIdsByRef.court ?? '';
+
+    const tags = await worldState.world.listTagsByEntities({ entityIds: [entityId] });
+
+    expect([...(tags.get(entityId) ?? [])].sort()).toEqual(['salvage', 'trade']);
+  });
+
   it('reads fragments back by the slug search returned, with the owning entity named', async () => {
     await worldState.world.commitBatch(
       proposal({
@@ -290,6 +355,29 @@ describe('lore search', () => {
     expect(fragments).toHaveLength(1);
     expect(fragments[0]?.title).toBe('Kiln hours');
     expect(fragments[0]?.entitySlug).toBe('the_kiln_row');
+  });
+});
+
+describe('reference candidates', () => {
+  it('searches every player-visible entity when no candidate list is given', async () => {
+    const result = await worldState.world.commitBatch(
+      proposal({
+        entities: [
+          { kind: 'npc', name: 'Renn Duvasi', ref: 'renn' },
+          { dm: true, kind: 'npc', name: 'The Quiet Partner', ref: 'partner' },
+        ],
+      })
+    );
+    const rennId = result.entityIdsByRef.renn ?? '';
+    const embedding = await worldState.world.getEntity({ id: rennId });
+    expect(embedding).not.toBeNull();
+
+    const ranked = await worldState.world.findReferenceCandidates({
+      embedding: Array.from({ length: 256 }, () => 0.01),
+      limit: 5,
+    });
+
+    expect(ranked.every((candidate) => candidate.slug !== 'the_quiet_partner')).toBe(true);
   });
 });
 

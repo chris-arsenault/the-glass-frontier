@@ -509,5 +509,12 @@
     "summary": "The world does things you did not cause",
     "details": "Until now every event in a chronicle was a reaction to something you had just done: the jam happened because you fired, the vortex opened because you accelerated. The GM now takes a turn as the world before your action is weighed — the people elsewhere, the factions, the machinery all get to act on what they want, out of what canon already says about them. What they are doing is recorded on every turn whether or not the narration shows it, so something that stirs quietly now can arrive later. Behind that, the GM keeps up to three running agendas with clocks; when a clock fills, that thing happens. Your action always resolves exactly as you described it — what changes is the situation you are standing in when it does. Scenes also stop needing dice to move: a conversation or a search that genuinely got somewhere now advances the scene. At the All visibility level you can see the world's turn and its clocks under each GM reply.",
     "type": "feature"
+  },
+  {
+    "id": "2026-08-26-character-choice-contrast",
+    "releasedAt": "2026-08-26",
+    "summary": "Character choices now look selected",
+    "details": "Species, culture, homeland, allegiance, standing, archetype, and attribute choices now switch from muted gray to a filled teal treatment with a bright border when selected. The larger choice cards also show a check mark, while keyboard focus keeps its separate visible ring.",
+    "type": "improvement"
   }
 ]
