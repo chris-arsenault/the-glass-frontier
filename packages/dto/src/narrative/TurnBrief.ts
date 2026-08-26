@@ -3,13 +3,27 @@ import { z } from 'zod';
 /**
  * What the scout hands the writer.
  *
- * Retrieval and prose used to be one call: the model held the world index, the
- * tool schemas, the retrieval policy, and the narration instructions at once,
- * and the prose competed with all of it for attention. The scout does the
- * looking and writes down only what bears on this turn; the writer receives
- * this and nothing about retrieval at all.
+ * The writer holds the things a paraphrase would break — the player's own
+ * words, the check another node already decided, the scene clock, the item
+ * manifest, the reply it wrote last turn — and this for everything else. The
+ * scout is the only stage that has read both the chronicle and the world, so
+ * it is the one that exercises judgement, and it does that here in prose
+ * rather than by handing over a list for the writer to work out.
+ *
+ * The writer used to receive eleven raw context blocks and a brief synthesized
+ * from those same blocks. Two authorities on one scene disagree eventually:
+ * on The Silent Test the brief said Vask was present, CHARACTER said Hundson,
+ * and the narration seated both of them.
  */
 export const TurnBrief = z.object({
+  /**
+   * Who this person is, already translated out of the character sheet and into
+   * how they behave here. The sheet's origins are four names — a species, a
+   * culture, a homeland, an allegiance — and each of them is a canon entity
+   * the writer never sees.
+   */
+  character: z.string().min(1)
+    .describe('Who the player is in this world, written as how they behave here.'),
   /**
    * The turn's fallout, written after the dice are known and grounded in
    * retrieved material rather than in generic weather. Null when the turn
@@ -25,19 +39,30 @@ export const TurnBrief = z.object({
     usage: z.enum(['mentioned', 'central']),
   })),
   /**
-   * Established world material this turn should use, in the scout's own words
-   * — one line each, already selected. Not transcription: the line is what
-   * matters about the fact, not the fact's whole entry.
+   * The story so far as it bears on this turn. The writer keeps last turn's
+   * narration verbatim so it cannot contradict its own words; everything
+   * before that is the scout's to read — through the turn index when the
+   * player reaches back past the recent window — and to tell as one thing.
    */
-  material: z.array(z.string().min(1)).max(6)
-    .describe('Up to six lines of retrieved canon that bear on this turn.'),
+  history: z.string().min(1).nullable()
+    .describe('What has happened that bears on this turn; null on the first turn.'),
   /**
-   * Who and what is in the scene, and what each of them is after. The writer
-   * needs this to let someone other than the player act.
+   * Where this happens and what it does to whoever stands in it. The writer's
+   * old LOCATION block was a name, a kind, and one line of description.
    */
-  present: z.array(z.string().min(1)).max(6)
-    .describe('Who or what is present, each with what it wants right now.'),
-  /** The scout's read of where the scene stands. Drives scene and beat state. */
+  location: z.string().min(1)
+    .describe('Where this happens and what the place does to whoever is in it.'),
+  /**
+   * Who and what is in the scene, what each wants, and what canon says they
+   * are like. This is what lets the world act instead of only reacting.
+   */
+  present: z.string().min(1)
+    .describe('Who and what is in the scene, what they want, what they are like.'),
+  /**
+   * The scout's read of where the scene stands. Drives scene and beat state
+   * through `applySceneRead`; the writer receives the scene's own record
+   * instead, because a clock is a number and does not paraphrase.
+   */
   scene: z.object({
     /** What this turn changed about the situation, or that nothing changed. */
     changed: z.string().min(1),

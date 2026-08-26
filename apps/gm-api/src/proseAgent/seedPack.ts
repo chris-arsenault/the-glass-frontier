@@ -27,14 +27,21 @@ export type SeedTocEntry = {
   status?: HardStateStatus;
   blurb?: string;
   unwritten: boolean;
-  identityKeys: string[];
+  /**
+   * How much there is to open, not what it is called. The index used to print
+   * `identity: access, hazards, setting, activity`, and a scout that read that
+   * as a menu asked `open` for the key named `identity` and got nothing. There
+   * are thirty of these key names across the canon and no turn where opening
+   * `access` without `hazards` is the right call, so the count is the whole of
+   * what a chooser needs.
+   */
+  noteCount: number;
   factKeys: string[];
   relationships: Array<{
     verb: string;
     direction: 'out' | 'in';
     targetSlug: string;
     targetName: string;
-    identityKeys: string[];
   }>;
   loreCount: number;
 };
@@ -49,22 +56,33 @@ const MAX_SEED_ENTITIES = 6;
 /** bloom_zones printed 21 edges into a hunting turn; a menu is not a database. */
 const MAX_INDEX_EDGES = 6;
 
-/** The fragments the seed pack shares with the one-shot prompt, by section name. */
+/**
+ * The fragments the seed pack shares with the one-shot prompt, in the order
+ * they matter to the scout.
+ *
+ * CHARACTER leads. It used to sit ninth, below tone and fronts, and the scout
+ * read the turn from the top down as a world with an unnamed actor in it: on
+ * The Silent Test it looked the player up in canon, found nothing, and put the
+ * one NPC it could read in their place. The player is the subject of the turn
+ * and reads first. Everything else follows in the order it constrains the
+ * reading — what is being attempted, where, under what pressure, then the
+ * standing context the storyteller already holds.
+ */
 const SHARED_SECTIONS: Array<{ name: string; fragment: ChronicleFragmentTypes }> = [
+  { fragment: 'character', name: 'CHARACTER' },
+  { fragment: 'intent', name: 'INTENT' },
+  { fragment: 'location', name: 'LOCATION' },
+  { fragment: 'skill-check', name: 'SKILL-CHECK' },
+  { fragment: 'scene', name: 'SCENE' },
+  { fragment: 'ledger', name: 'LEDGER' },
   { fragment: 'recent-events', name: 'RECENT-EVENTS' },
+  { fragment: 'fronts', name: 'FRONTS' },
+  { fragment: 'entity-references', name: 'PLAYER-REFERENCES' },
+  { fragment: 'inventory-detail', name: 'INVENTORY-DETAIL' },
+  { fragment: 'seed', name: 'SEED' },
   { fragment: 'tone', name: 'TONE' },
   { fragment: 'chronicle-tone', name: 'CHRONICLE-TONE' },
-  { fragment: 'intent', name: 'INTENT' },
-  { fragment: 'scene', name: 'SCENE' },
-  { fragment: 'fronts', name: 'FRONTS' },
-  { fragment: 'ledger', name: 'LEDGER' },
-  { fragment: 'entity-references', name: 'PLAYER-REFERENCES' },
-  { fragment: 'character', name: 'CHARACTER' },
-  { fragment: 'skill-check', name: 'SKILL-CHECK' },
-  { fragment: 'location', name: 'LOCATION' },
-  { fragment: 'inventory-detail', name: 'INVENTORY-DETAIL' },
   { fragment: 'wrap', name: 'WRAP' },
-  { fragment: 'seed', name: 'SEED' },
 ];
 
 const firstSentence = (text: string | undefined): string | undefined => {
@@ -108,10 +126,11 @@ const tocEntry = (
 ): SeedTocEntry => ({
   blurb: entity.veiled ? entity.veilTagline : firstSentence(entity.description),
   factKeys: Object.keys(entity.facts),
-  identityKeys: Object.keys(entity.descriptiveIdentity ?? {}),
   kind: entity.kind,
   loreCount,
   name: entity.name,
+  noteCount:
+    Object.keys(entity.descriptiveIdentity ?? {}).length + (entity.gmNotes ?? []).length,
   prominence: entity.prominence,
   relationships: entity.links
     .filter((link) => link.live !== false)
@@ -122,7 +141,6 @@ const tocEntry = (
       }
       return [{
         direction: link.direction,
-        identityKeys: Object.keys(link.descriptiveIdentity ?? {}),
         targetName: target.name,
         targetSlug: target.slug,
         verb: link.relationship,
@@ -183,9 +201,10 @@ const edgeHandle = (edge: SeedTocEntry['relationships'][number]): string =>
 
 /**
  * One entity, one stanza. The index is a menu of what can be opened, so it
- * carries field *names* and edge handles — never field values. The generic
- * block renderer would spend a line per relationship field; here the whole
- * edge fits in a handle the retrieval tools accept verbatim.
+ * carries how much there is and edge handles — never field values, and never
+ * field names, which a chooser cannot act on and a model will mistake for tool
+ * arguments. The generic block renderer would spend a line per relationship
+ * field; here the whole edge fits in a handle the retrieval tools take verbatim.
  */
 const tocStanza = (entry: SeedTocEntry): string => {
   const heading = [
@@ -196,7 +215,7 @@ const tocStanza = (entry: SeedTocEntry): string => {
   ].join('');
   const detail = [
     entry.factKeys.length > 0 ? `${INDENT}facts: ${entry.factKeys.join(', ')}` : '',
-    entry.identityKeys.length > 0 ? `${INDENT}identity: ${entry.identityKeys.join(', ')}` : '',
+    entry.noteCount > 0 ? `${INDENT}notes: ${entry.noteCount}` : '',
     entry.relationships.length > 0
       ? `${INDENT}edges: ${entry.relationships.slice(0, MAX_INDEX_EDGES).map(edgeHandle).join(', ')}`
         + (entry.relationships.length > MAX_INDEX_EDGES

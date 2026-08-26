@@ -22,7 +22,12 @@ import { createProseAgentTools } from './tools';
 import { ToolSession } from './toolSession';
 
 export const PROSE_AGENT_MAX_STEPS = 5;
-const SCOUT_MAX_OUTPUT_TOKENS = 2_000;
+/**
+ * The scout writes the brief, so its ceiling is the brief's ceiling. At 2,000
+ * it could not have written a long one had it wanted to, and the six-line
+ * briefs it did write were never tested against a limit it could reach.
+ */
+const SCOUT_MAX_OUTPUT_TOKENS = 8_000;
 const PROSE_MAX_OUTPUT_TOKENS = 2_000;
 const SCOUT_REASONING_EFFORT = 'low';
 const PROSE_REASONING_EFFORT = 'low';
@@ -106,16 +111,21 @@ const provenanceFiltered = (
 });
 
 /**
- * Everything the scout learned, as the writer's one world-facing block, plus
- * what the world did before the dice. The writer is not obliged to show the
- * world's move — the world does what it does, the narration shows what the
- * camera catches — so a quiet turn stays quiet and lands later.
+ * Everything the scout judged, as the writer's one authored block, plus what
+ * the world did before the dice. The writer is not obliged to show the world's
+ * move — the world does what it does, the narration shows what the camera
+ * catches — so a quiet turn stays quiet and lands later.
+ *
+ * `brief.scene` is absent here on purpose: it is the scout's proposed scene
+ * state, read by `applySceneRead`, while the writer receives the scene's own
+ * record with its clock intact.
  */
 const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string => renderBlock({
+  character: brief.character,
   complication: brief.complication,
-  material: brief.material,
+  history: brief.history,
+  location: brief.location,
   present: brief.present,
-  scene: brief.scene,
   ...worldContent === undefined ? {} : { world: worldContent },
 });
 
@@ -131,10 +141,12 @@ const UNESTABLISHED = 'not established this turn';
  * check; a thinner turn beats one the player has to retype.
  */
 const EMPTY_BRIEF: TurnBrief = {
+  character: UNESTABLISHED,
   complication: null,
   entities: [],
-  material: [],
-  present: [],
+  history: null,
+  location: UNESTABLISHED,
+  present: UNESTABLISHED,
   scene: { changed: UNESTABLISHED, endsWhen: UNESTABLISHED, stakes: UNESTABLISHED },
 };
 

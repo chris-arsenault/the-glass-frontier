@@ -76,6 +76,10 @@ const worldStore = (): GraphContext['worldSchemaStore'] => {
       Promise.resolve(ids.flatMap((id) => (all.has(id) ? [all.get(id) as HardState] : []))),
     listEntityStats: (ids: string[]) =>
       Promise.resolve(ids.map((id) => ({ edgeCount: 1, id, loreCount: 3, source: 'seed' }))),
+    listLoreFragmentsByEntity: ({ entityId }: { entityId: string }) =>
+      Promise.resolve(entityId === KORVATH_ID
+        ? [{ prose: 'He turned away the tithe barge twice.', title: 'The Refused Barge' }]
+        : []),
     listRelationshipsAmong: () => Promise.resolve([]),
     searchLoreFragments: () => Promise.resolve([]),
   } as unknown as GraphContext['worldSchemaStore'];
@@ -131,14 +135,24 @@ describe('tool session', () => {
 });
 
 describe('seed pack', () => {
-  it('lists identity keys without values and hides dm targets', async () => {
+  it('counts what can be opened without naming fields or values', async () => {
     const pack = await buildSeedPack(agentContext());
     const korvathEntry = pack.toc.find((entry) => entry.slug === KORVATH_SLUG);
-    expect(korvathEntry?.identityKeys.sort()).toEqual(['disposition', 'manner', 'stakes']);
-    expect(JSON.stringify(pack.toc)).not.toContain('wary');
+    expect(korvathEntry?.noteCount).toBe(3);
+    const rendered = JSON.stringify(pack.toc);
+    expect(rendered).not.toContain('wary');
+    // Field names are as unusable to a chooser as field values are cheap to leak.
+    expect(rendered).not.toContain('disposition');
     expect(korvathEntry?.relationships.map((rel) => rel.targetSlug)).toEqual([GUILD_SLUG]);
-    expect(korvathEntry?.relationships[0]?.identityKeys.sort()).toEqual(['cost', 'terms']);
     expect(korvathEntry?.loreCount).toBe(3);
+  });
+
+  it('puts the player character first, ahead of the world', async () => {
+    const pack = await buildSeedPack(agentContext());
+    const named = pack.sections.map((section) => section.name);
+
+    expect(named[0]).toBe('CHARACTER');
+    expect(named.indexOf('CHARACTER')).toBeLessThan(named.indexOf('FRONTS'));
   });
 
   it('leaves roster entries out of the index unless the turn touches them', async () => {
@@ -152,15 +166,23 @@ describe('seed pack', () => {
 });
 
 describe('prose agent tools', () => {
-  it('read_identity returns only the requested keys and reports missing ones', async () => {
+  it('open returns every identity field and note without being asked for keys', async () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
-    const raw = await runTool(tools.read_identity, {
-      keys: ['manner', 'no-such-key'],
-      slug: KORVATH_SLUG,
-    });
+    const raw = await runTool(tools.open, { slug: KORVATH_SLUG });
+
     expect(raw).toContain('clipped');
-    expect(raw).not.toContain('wary');
-    expect(raw).toContain('missingKeys');
+    expect(raw).toContain('wary');
+  });
+
+  it('open narrows to lore or to notes when asked', async () => {
+    const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
+    const notes = await runTool(tools.open, { include: 'notes', slug: KORVATH_SLUG });
+    const lore = await runTool(tools.open, { include: 'lore', slug: KORVATH_SLUG });
+
+    expect(notes).toContain('clipped');
+    expect(notes).not.toContain('"lore"');
+    expect(lore).toContain('"lore"');
+    expect(lore).not.toContain('clipped');
   });
 
   it('read_relationship returns one edge with its fields', async () => {
@@ -178,7 +200,8 @@ describe('prose agent tools', () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
     const raw = await runTool(tools.expand, { slug: KORVATH_SLUG });
     expect(raw).toContain(GUILD_SLUG);
-    expect(raw).toContain('identity: disposition, manner, stakes');
+    expect(raw).toContain('notes: 3');
+    expect(raw).not.toContain('disposition');
     expect(raw).not.toContain('"');
     expect(raw).not.toContain('relationships');
     expect(raw).not.toContain('hidden-broker');
@@ -235,13 +258,15 @@ const toolCallResponse = (
 });
 
 const briefInput = (): Record<string, unknown> => ({
+  character: 'A glasswright whose hands answer before their voice does.',
   complication: null,
   entities: [
     { emergentTags: ['tithe'], entitySlug: KORVATH_SLUG, usage: 'central' },
     { emergentTags: [], entitySlug: 'never-served-slug', usage: 'mentioned' },
   ],
-  material: ['Korvath counts every tithe twice.'],
-  present: ['Korvath, wanting the tithe settled before dark'],
+  history: null,
+  location: 'The tithe yards, where every crate is counted twice before dark.',
+  present: 'Korvath counts the tithe, wanting it settled before dark.',
   scene: {
     changed: 'nothing yet',
     endsWhen: 'the tithe is settled or refused',
@@ -295,7 +320,7 @@ describe('prose agent panel', () => {
 describe('runProseAgent', () => {
   it('produces prose with a provenance-checked sidecar', async () => {
     const responses = [
-      () => toolCallResponse('read_identity', { keys: ['manner'], slug: KORVATH_SLUG }),
+      () => toolCallResponse('open', { slug: KORVATH_SLUG }),
       () => toolCallResponse('submit_brief', briefInput()),
     ];
     let call = 0;
@@ -320,7 +345,7 @@ describe('runProseAgent', () => {
       onStep: (step) => steps.push(step.stepNumber),
     });
     expect(outcome.prose).toContain('counts the tithe');
-    expect(outcome.brief.material).toContain('Korvath counts every tithe twice.');
+    expect(outcome.brief.present).toContain('Korvath counts the tithe');
     expect(outcome.sidecar).toEqual([
       {
         emergentTags: ['tithe'],

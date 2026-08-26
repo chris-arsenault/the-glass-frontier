@@ -31,6 +31,7 @@ export type ChronicleFragmentTypes =
   | 'skill-check'
   | 'user-message'
   | 'recent-events'
+  | 'last-reply'
   | 'tone'
   | 'chronicle-tone'
   | 'wrap'
@@ -53,14 +54,26 @@ const LEDGER_FRAGMENT: ChronicleFragmentTypes = 'ledger';
 const CHRONICLE_TONE_FRAGMENT: ChronicleFragmentTypes = 'chronicle-tone';
 const ENTITY_REFERENCES_FRAGMENT: ChronicleFragmentTypes = 'entity-references';
 const INVENTORY_DETAIL_FRAGMENT: ChronicleFragmentTypes = 'inventory-detail';
+const LAST_REPLY_FRAGMENT: ChronicleFragmentTypes = 'last-reply';
 const RECENT_EVENTS_FRAGMENT: ChronicleFragmentTypes = 'recent-events';
 const SKILL_CHECK_FRAGMENT: ChronicleFragmentTypes = 'skill-check';
 const USER_MESSAGE_FRAGMENT: ChronicleFragmentTypes = 'user-message';
 
+/**
+ * What the writer holds in the original, because passing it through the scout
+ * would lose or corrupt it: the scene clock is a number, the item list is a
+ * manifest, last turn's narration is the voice this turn must not contradict,
+ * the seed is the premise, and tone is an instruction rather than information.
+ * Everything the writer needs judgement about — who this person is, where they
+ * are, who is with them, what has happened — arrives as the brief, written by
+ * the only stage that has read both the chronicle and the world.
+ *
+ * SKILL-CHECK joins this list per template, and the player's own message
+ * arrives through `messageOrder`.
+ */
 // prettier-ignore
 const WRITER_FRAGMENTS: ChronicleFragmentTypes[] = [
-  RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene',
-  LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location',
+  'tone', CHRONICLE_TONE_FRAGMENT, 'scene', LAST_REPLY_FRAGMENT,
   INVENTORY_DETAIL_FRAGMENT, 'seed',
 ];
 
@@ -69,8 +82,10 @@ PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
   ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  // The writer templates carry no world dump: the scout's BRIEF replaces
-  // ANCHOR and ENTITIES, which is the point of retrieving at all.
+  // The writer templates carry no world dump and no raw chronicle context the
+  // scout has already read for them: BRIEF replaces ANCHOR, ENTITIES, CHARACTER,
+  // LOCATION, LEDGER, RECENT-EVENTS, and INTENT, which is the point of
+  // retrieving at all.
   ['agent-action-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT]],
   ['agent-clarification-responder', WRITER_FRAGMENTS],
   ['agent-inquiry-describer', WRITER_FRAGMENTS],
@@ -104,6 +119,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   [INVENTORY_DETAIL_FRAGMENT, inventoryDetailFragment],
   ['fronts', frontsFragment],
   [LEDGER_FRAGMENT, ledgerFragment],
+  [LAST_REPLY_FRAGMENT, lastReplyFragment],
   ['location', locationFragment],
   [RECENT_EVENTS_FRAGMENT, recentEventsFragment],
   ['scene', sceneFragment],
@@ -379,6 +395,17 @@ function recentEventsFragment(context: GraphContext): string {
         + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`;
     })
     .join('\n\n');
+}
+
+/**
+ * Last turn's narration, exactly as it was written. The writer is continuing
+ * its own prose and must not contradict a detail it put on the page one turn
+ * ago; everything further back reaches it through the brief's history, read
+ * against what this turn is actually about.
+ */
+function lastReplyFragment(context: GraphContext): string {
+  const previous = context.chronicleState.turns.at(-1);
+  return previous?.gmResponse?.content ?? previous?.gmSummary ?? '';
 }
 
 function wrapFragment(context: GraphContext): Record<string, number> | string {

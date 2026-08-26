@@ -2,6 +2,7 @@ import type { PromptTemplateRuntime } from '@glass-frontier/app';
 import type { PromptTemplateId } from '@glass-frontier/dto';
 import { describe, expect, it } from 'vitest';
 
+import type { ChronicleFragmentTypes } from '../src/prompts/chronicleFragments';
 import { templateFragmentMapping } from '../src/prompts/chronicleFragments';
 import { PromptComposer } from '../src/prompts/prompts';
 import { buildContext, buildIntent } from './harness';
@@ -94,5 +95,33 @@ describe('composed prompt format', () => {
     const dataMessage = textOf(prompt.input.at(-1)!);
 
     expect(blockViolations(dataMessage, allowedKeys)).toStrictEqual([]);
+  });
+});
+
+/**
+ * The writer used to hold eleven raw context blocks and a brief synthesized
+ * from those same blocks. Two authorities on one scene disagree eventually: on
+ * The Silent Test the brief said Vask was present and CHARACTER said Hundson,
+ * and the narration seated both.
+ */
+describe('the writer/scout contract', () => {
+  const writerTemplates = templateIds.filter((id) => id.startsWith('agent-'));
+  const scoutAnswersFor: ChronicleFragmentTypes[] = [
+    'character', 'location', 'ledger', 'recent-events', 'intent', 'entity-references',
+  ];
+
+  it.each(writerTemplates)('%s takes no block the scout answers for', (templateId) => {
+    const fragments = templateFragmentMapping.get(templateId) ?? [];
+
+    expect(fragments.filter((fragment) => scoutAnswersFor.includes(fragment)))
+      .toStrictEqual([]);
+  });
+
+  it.each(writerTemplates)('%s keeps what a retelling would break', (templateId) => {
+    const fragments = templateFragmentMapping.get(templateId) ?? [];
+
+    expect(fragments).toContain('scene');
+    expect(fragments).toContain('inventory-detail');
+    expect(fragments).toContain('last-reply');
   });
 });

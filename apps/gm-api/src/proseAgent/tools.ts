@@ -16,6 +16,11 @@ const UNKNOWN_ENTITY_POLICY =
 
 const LORE_EXCERPT_LENGTH = 200;
 const MAX_EXPAND_NEIGHBORS = 8;
+/** Shadewell has eleven passages; a whole-entity read must still fit a round. */
+const MAX_OPEN_LORE = 6;
+
+const OPEN_INCLUDE = ['notes', 'lore', 'both'] as const;
+type OpenInclude = (typeof OPEN_INCLUDE)[number];
 
 type ToolDeps = {
   context: GraphContext;
@@ -45,41 +50,50 @@ const renderTurn = (turn: GraphContext['chronicleState']['turns'][number]): unkn
 });
 
 /**
- * Selective by construction: the caller names the identity keys it wants (the
- * world index lists them), and only those values enter the transcript. The
- * short facts card and description ride along because they are a few tokens
- * and ground the fields.
+ * One entity, opened whole.
+ *
+ * This took a slug and a list of identity key names, and the scout had to guess
+ * them from the index: it asked for the key `identity` — the container — and
+ * got `{}` back while Shadewell's four fields sat unread. There are thirty key
+ * names across the canon, no room to teach them, and no turn where `access`
+ * without `hazards` is the right read. The choice left is the one worth making:
+ * how the entity is run, what has been written about it, or both.
  */
-const readIdentityTool = ({ context, session }: ToolDeps): AgentTool => tool({
+const openTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Read the named identity fields of one entity, by the key names its '
-    + 'world-index entry lists. Also returns its short description and facts.',
-  execute: async ({ keys, slug }: { keys: string[]; slug: string }) => {
+    'Open one entity by slug. `notes` gives how it is run and what it is like, '
+    + '`lore` gives its written passages, `both` gives everything — default '
+    + '`both`. Its description and fact card come with every call.',
+  execute: async ({ include, slug }: { include?: OpenInclude; slug: string }) => {
+    const want = include ?? 'both';
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
-      return session.wrapResult(`identity:${slug}`, () => unknownEntity(slug));
+      return session.wrapResult(`open:${slug}`, () => unknownEntity(slug));
     }
     session.recordServedEntity({ id: entity.id, slug: entity.slug });
-    const identity = entity.descriptiveIdentity ?? {};
-    const requested = Object.fromEntries(
-      Object.entries(identity).filter(([key]) => keys.includes(key))
-    );
-    const missing = keys.filter((key) => !(key in identity));
-    return session.wrapResult(
-      `identity:${slug}:${[...keys].sort().join(',')}`,
-      () => JSON.stringify({
-        description: entity.description,
-        facts: entity.facts,
-        identity: requested,
-        ...missing.length > 0 && { missingKeys: missing },
-        name: entity.name,
-        slug: entity.slug,
-        status: entity.status,
-      })
-    );
+    const lore = want === 'notes'
+      ? []
+      : await context.worldSchemaStore.listLoreFragmentsByEntity({
+        entityId: entity.id, limit: MAX_OPEN_LORE,
+      });
+    return session.wrapResult(`open:${slug}:${want}`, () => JSON.stringify({
+      description: entity.description,
+      facts: entity.facts,
+      ...want === 'lore' ? {} : {
+        gmNotes: (entity.gmNotes ?? []).map((note) => `${note.kind}: ${note.text}`),
+        identity: entity.descriptiveIdentity ?? {},
+      },
+      kind: entity.kind,
+      ...want === 'notes' ? {} : {
+        lore: lore.map((fragment) => ({ prose: fragment.prose, title: fragment.title })),
+      },
+      name: entity.name,
+      slug: entity.slug,
+      status: entity.status,
+    }));
   },
   inputSchema: z.object({
-    keys: z.array(z.string()).min(1),
+    include: z.enum(OPEN_INCLUDE).optional(),
     slug: z.string(),
   }),
 });
@@ -87,8 +101,8 @@ const readIdentityTool = ({ context, session }: ToolDeps): AgentTool => tool({
 /** One edge, both endpoints named — no candidate-set arrays to assemble. */
 const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Read the descriptive fields (terms, basis, conduct, cost, ...) of the '
-    + 'relationship between two entities named by slug.',
+    'Open the relationship between two entities named by slug: the verb that '
+    + 'joins them and everything the canon says about how it works.',
   execute: async ({ slug, targetSlug }: { slug: string; targetSlug: string }) => {
     const store = context.worldSchemaStore;
     const [entity, target] = await Promise.all([
@@ -124,9 +138,9 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
 /** Discovery stays cheap: neighbors as index entries — key names, no values. */
 const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'List compact world-index entries for an entity\'s neighbors: identity '
-    + 'field names, lore counts, and edges as "verb:slug" handles — no field '
-    + 'content.',
+    'List compact world-index entries for an entity\'s neighbors: how much each '
+    + 'has to open and its edges as "verb:slug" handles — no content. Open the '
+    + 'ones that matter with open.',
   execute: async ({ slug }: { slug: string }) => {
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
@@ -146,7 +160,7 @@ const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
 const searchTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
     'Find canon entities by meaning — a name, a role, a place. Returns slugs '
-    + 'for read_identity, read_relationship, and expand.',
+    + 'for open, read_relationship, and expand.',
   execute: async ({ query }: { query: string }) => {
     const embedding = await context.embeddings.embed(query);
     const candidates = await context.worldSchemaStore.findEntityCandidates({
@@ -312,7 +326,7 @@ const withCallLogging = (
 export const createProseAgentTools = (deps: ToolDeps): ToolSet => {
   const tools: ToolSet = {
     expand: expandTool(deps),
-    read_identity: readIdentityTool(deps),
+    open: openTool(deps),
     read_lore: readLoreTool(deps),
     read_relationship: readRelationshipTool(deps),
     read_turns: readTurnsTool(deps),

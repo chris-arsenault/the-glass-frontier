@@ -18,6 +18,35 @@ player never sees, extending the scene ledger: where the scene is heading, what
 would end it, what is being held back. Designed after the current prompt round
 is judged.
 
+**The environment stage sees the player's pending move.** Its request carries
+`### INTENT`, `### PLAYER-MESSAGE`, and `### SKILL-CHECK`, and its own recorded
+thinking reads "Given the player's intent to find a local artisan … I'll propose
+a new front for them to assist Hundson." A stage whose whole purpose is the
+world acting on its own account is planning around the action it has not seen
+resolve. Withholding those three blocks is the fix. Deferred until the prompt
+inputs themselves are fixed.
+
+**Writer word floors are too low.** Raise once, deliberately, after the input
+work lands — not as a reaction to one short turn.
+
+**The world writes what cannot be witnessed.** Offstage motion and hidden
+motivation reach the page as stated fact. One sentence at the source, not a
+hard control.
+
+## Retrieval
+
+**`search` returns near-identical results regardless of query.** The place name
+dominates the embedding, so a scout that searches four different things gets
+four versions of the same list and burns its rounds re-searching. Observed in
+Hidden Messages: 4 of 5 rounds spent on searches that added nothing.
+
+**No way to learn an entity's field names.** `search` returns kind, name, and
+slug only; `expand(slug)` shows neighbours' entries. A scout that wants a
+specific field has to guess key names — one guessed `keys: ["name","detail"]`
+and got `missingKeys` with empty identity and facts. Now that
+`descriptiveIdentity` is in production the guessable surface is larger, not
+smaller.
+
 **Skills the sheet cannot serve.** Zale's three skills forced Bow hunting for a
 stun piston and Manipulate others for a smoke-bomb escape, at rudimentary
 finesse — the −2/−4 modifiers behind five straight bad tiers. Her instinct is
