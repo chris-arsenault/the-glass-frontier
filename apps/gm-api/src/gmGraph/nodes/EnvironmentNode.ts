@@ -75,7 +75,11 @@ export class EnvironmentNode implements GraphNode {
     fronts: Front[]
   ): Promise<{ finishToolInput: unknown; stepCount: number }> {
     const pack = await buildSeedPack(context);
-    const session = new ToolSession({ maxSteps: MAX_STEPS, seedEntities: pack.seedEntities });
+    const session = new ToolSession({
+      finishTool: 'submit_world',
+      maxSteps: MAX_STEPS,
+      seedEntities: pack.seedEntities,
+    });
     const playerId = context.chronicleState.chronicle.playerId;
     const modelId = await context.modelConfigStore.getModelForCategory('prose', playerId);
     const model = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);

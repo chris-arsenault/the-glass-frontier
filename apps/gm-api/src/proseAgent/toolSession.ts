@@ -8,12 +8,21 @@ export const RETRIEVED_TOKEN_BUDGET = 8_000;
 const PER_RESULT_TOKEN_CAP = 1_200;
 const BYTES_PER_TOKEN = 4;
 
-const BUDGET_REMINDER =
+/**
+ * The reminders name the finish tool, so the caller supplies it.
+ *
+ * They used to say `submit_turn`, which stopped existing when the loop was
+ * split into a scout that calls `submit_brief` and an environment stage that
+ * calls `submit_world`. On the penultimate round the agent was being told, in
+ * its own transcript, to call a tool it had not been given — and turns died
+ * with "Agent loop ended without calling submit_brief".
+ */
+const budgetReminder = (finishTool: string): string =>
   '[reminder] The retrieval budget is nearly spent. Open only what is still '
-  + 'essential, then call submit_turn.';
-const FINAL_ROUND_REMINDER =
-  '[reminder] One retrieval round remains. Check the sufficiency list for this '
-  + 'intent now; your next response after this round must be submit_turn.';
+  + `essential, then call ${finishTool}.`;
+const finalRoundReminder = (finishTool: string): string =>
+  '[reminder] One retrieval round remains. Gather what is still missing now; '
+  + `your next response after this round must be ${finishTool}.`;
 
 const estimateTokens = (text: string): number => Math.ceil(text.length / BYTES_PER_TOKEN);
 
@@ -30,8 +39,14 @@ export class ToolSession {
   #budgetReminderSent = false;
   #finalRoundReminderSent = false;
   readonly #maxSteps: number;
+  readonly #finishTool: string;
 
-  constructor(options: { maxSteps: number; seedEntities: ServedEntity[] }) {
+  constructor(options: {
+    finishTool: string;
+    maxSteps: number;
+    seedEntities: ServedEntity[];
+  }) {
+    this.#finishTool = options.finishTool;
     this.#maxSteps = options.maxSteps;
     for (const entity of options.seedEntities) {
       this.recordServedEntity(entity);
@@ -92,11 +107,11 @@ export class ToolSession {
     const reminders: string[] = [];
     if (!this.#budgetReminderSent && this.#spentTokens >= RETRIEVED_TOKEN_BUDGET) {
       this.#budgetReminderSent = true;
-      reminders.push(BUDGET_REMINDER);
+      reminders.push(budgetReminder(this.#finishTool));
     }
     if (!this.#finalRoundReminderSent && this.#currentStep >= this.#maxSteps - 3) {
       this.#finalRoundReminderSent = true;
-      reminders.push(FINAL_ROUND_REMINDER);
+      reminders.push(finalRoundReminder(this.#finishTool));
     }
     return reminders.length === 0 ? text : `${text}\n\n${reminders.join('\n')}`;
   }

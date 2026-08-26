@@ -24,7 +24,8 @@ const runTool = async (agentTool: unknown, input: unknown): Promise<string> => {
   return executable.execute(input, {});
 };
 
-const freshSession = (): ToolSession => new ToolSession({ maxSteps: 5, seedEntities: [] });
+const freshSession = (): ToolSession =>
+  new ToolSession({ finishTool: 'submit_brief', maxSteps: 5, seedEntities: [] });
 
 const entity = (overrides: Partial<HardState> & { id: string; slug: string }): HardState =>
   ({
@@ -121,6 +122,9 @@ describe('tool session', () => {
       filler.push(session.wrapResult(`identity:filler-${index}`, () => 'x'.repeat(6_000)));
     }
     expect(filler.filter((text) => text.includes(BUDGET_REMINDER_TEXT))).toHaveLength(1);
+    // The reminder must name a tool the agent was actually given.
+    expect(filler.find((text) => text.includes(BUDGET_REMINDER_TEXT)))
+      .toContain('call submit_brief');
     const after = session.wrapResult('identity:z', () => 'short');
     expect(after).not.toContain(BUDGET_REMINDER_TEXT);
   });

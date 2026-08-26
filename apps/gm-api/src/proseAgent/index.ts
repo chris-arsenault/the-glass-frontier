@@ -147,6 +147,7 @@ const runScout = async (
 ): Promise<{ brief: TurnBrief; session: ToolSession; stepCount: number; usage: TokenUsage }> => {
   const pack = await buildSeedPack(context);
   const session = new ToolSession({
+    finishTool: 'submit_brief',
     maxSteps: PROSE_AGENT_MAX_STEPS,
     seedEntities: pack.seedEntities,
   });
