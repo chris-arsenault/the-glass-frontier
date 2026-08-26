@@ -502,5 +502,12 @@
     "summary": "The GM looks things up before it writes",
     "details": "Turns are now written in two passes. A scout searches world canon, relationships, lore, and past turns for what this particular turn needs, then hands the storyteller a short brief: what it found, who is present and what they want, what is at stake, and the complication when a roll goes badly. The storyteller writes from that brief alone, so the prose is no longer competing with a catalogue of world data it never asked for. The world material offered to the GM is now only what the turn actually touches — a chronicle about hunting in a gas giant no longer carries a pilgrim bead and a guild charter around with it. Rolls are much rarer: they are there for tension, not to adjudicate every sentence. Scenes now track what is at stake, what would end them, and whether anything changed, so a scene that has stalled can be recognized as stalled.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-26-world-agency",
+    "releasedAt": "2026-08-26",
+    "summary": "The world does things you did not cause",
+    "details": "Until now every event in a chronicle was a reaction to something you had just done: the jam happened because you fired, the vortex opened because you accelerated. The GM now takes a turn as the world before your action is weighed — the people elsewhere, the factions, the machinery all get to act on what they want, out of what canon already says about them. What they are doing is recorded on every turn whether or not the narration shows it, so something that stirs quietly now can arrive later. Behind that, the GM keeps up to three running agendas with clocks; when a clock fills, that thing happens. Your action always resolves exactly as you described it — what changes is the situation you are standing in when it does. Scenes also stop needing dice to move: a conversation or a search that genuinely got somewhere now advances the scene. At the All visibility level you can see the world's turn and its clocks under each GM reply.",
+    "type": "feature"
   }
 ]

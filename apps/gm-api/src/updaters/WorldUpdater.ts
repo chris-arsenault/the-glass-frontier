@@ -108,7 +108,11 @@ export class WorldUpdater {
       survivingScene === null || survivingScene === undefined
         ? null
         : applySceneRead(
-          advanceSceneClock(survivingScene, context.skillCheckResult?.outcomeTier),
+          advanceSceneClock(
+            survivingScene,
+            context.skillCheckResult?.outcomeTier,
+            context.sceneClockSegments
+          ),
           context.turnBrief?.scene
         );
     if (activeScene === context.chronicleState.chronicle.activeScene) {

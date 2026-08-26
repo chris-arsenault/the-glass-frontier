@@ -344,6 +344,10 @@ function skillCheckFragment(context: GraphContext): Record<string, unknown> {
  * the narrator as "Zale pulls out her stun piston and shoots the scum", and
  * the wish to be done with the man vanished from the record entirely.
  *
+ * The world's line is what the world was doing that turn, whether or not the
+ * narration showed it: a front that stirred quietly on turn three is still
+ * here to be found when it lands on turn nine.
+ *
  * The recent turns carry the narration itself; older ones fall back to their
  * summary, which is what a summary is for.
  */
@@ -360,10 +364,12 @@ function recentEventsFragment(context: GraphContext): string {
           ? ''
           : `\nC: ${turn.skillCheckPlan.skill} at ${turn.skillCheckPlan.riskLevel} risk`
             + ` → ${turn.skillCheckResult.outcomeTier}`;
+      const world = turn.worldContent === undefined ? '' : `\nW: ${turn.worldContent}`;
       return `Turn ${turn.turnSequence + 1}`
         + `\nP: ${recordedPlayerMessage(
           turn.playerMessage.content, turn.playerIntent?.intentSummary
         )}`
+        + world
         + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`;
     })
     .join('\n\n');

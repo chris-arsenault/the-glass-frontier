@@ -106,12 +106,18 @@ const provenanceFiltered = (
   return [];
 });
 
-/** Everything the scout learned, as the writer's one world-facing block. */
-const renderBrief = (brief: TurnBrief): string => renderBlock({
+/**
+ * Everything the scout learned, as the writer's one world-facing block, plus
+ * what the world did before the dice. The writer is not obliged to show the
+ * world's move — the world does what it does, the narration shows what the
+ * camera catches — so a quiet turn stays quiet and lands later.
+ */
+const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string => renderBlock({
   complication: brief.complication,
   material: brief.material,
   present: brief.present,
   scene: brief.scene,
+  ...worldContent === undefined ? {} : { world: worldContent },
 });
 
 const runScout = async (
@@ -166,7 +172,10 @@ const writeProse = async (
   const narration = await context.llm.generate({
     ...prompt,
     input: [...prompt.input, {
-      content: [{ text: `### BRIEF\n${renderBrief(brief)}`, type: 'input_text' as const }],
+      content: [{
+        text: `### BRIEF\n${renderBrief(brief, context.worldContent)}`,
+        type: 'input_text' as const,
+      }],
       role: 'developer' as const,
     }],
     instructions: `${prompt.instructions}${scenePolicy}`,

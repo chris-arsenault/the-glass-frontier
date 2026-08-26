@@ -4,6 +4,7 @@ import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDeltaSchema } from '../Inventory';
 import { BeatTrackerSchema } from './ChronicleBeat';
 import { EntityReference, EntityRosterEntry, EntityUsageEntry } from './EntityReference';
+import { Front } from './Front';
 import { Intent } from './Intent';
 import { LocationDeltaDecision } from './LocationDelta';
 import { ProseAlternate } from './ProseAgent';
@@ -37,5 +38,13 @@ export const TurnSchema = z.object({
   skillCheckResult: SkillCheckResult.optional(),
   systemMessage: TranscriptEntry.optional(),
   turnSequence: z.number().int().nonnegative(),
+  /**
+   * What the world did this turn, recorded whether or not the narration showed
+   * it. Read back into later turns so a quiet stir on one turn is still there
+   * when it lands on another.
+   */
+  worldContent: z.string().optional(),
+  /** The state of the world's own agendas as this turn left them. */
+  worldFronts: z.array(Front).optional(),
 });
 export type Turn = z.infer<typeof TurnSchema>;

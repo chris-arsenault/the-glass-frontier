@@ -26,6 +26,7 @@ import {
 } from '../../entities/EntityReferencePopover/EntityReferencePopover';
 import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
 import './ChatCanvas.css';
+import { WorldPanel } from './WorldPanel';
 
 type FeedbackTarget = {
   auditId: string;
@@ -100,7 +101,7 @@ const describePlayerBeatLabel = (directive: PlayerBeatDirective | null): string 
 const PROGRESS_NODE_LABELS: Record<string, string> = {
   'check-planner': 'weighing the risk',
   'check-runner': 'rolling the dice',
-  'entity-selector': 'gathering the scene',
+  environment: 'the world takes its turn',
   'gm-response-node': 'writing the narration',
   'intent-classifier': 'reading your intent',
   'inventory-delta': 'checking your gear',
@@ -624,6 +625,13 @@ export function ChatCanvas() {
                             </span>
                           ))}
                         </div>
+                      ) : null}
+
+                      {showAll ? (
+                        <WorldPanel
+                          content={view?.worldContent ?? null}
+                          fronts={view?.worldFronts ?? null}
+                        />
                       ) : null}
 
                       {showAll && view?.executedNodes?.length ? (

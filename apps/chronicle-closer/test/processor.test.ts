@@ -58,6 +58,7 @@ const chronicle: Chronicle = {
     sceneId: null,
     updatedAtTurn: 0,
   },
+  fronts: [],
   id: 'chronicle-1',
   locationName: 'Brake',
   openingText: 'You wait on Brake as the quartet tunes.',

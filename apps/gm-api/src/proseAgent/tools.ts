@@ -1,5 +1,5 @@
 import type { HardState } from '@glass-frontier/dto';
-import { TurnBrief } from '@glass-frontier/dto';
+import { TurnBrief, WorldTurn } from '@glass-frontier/dto';
 import { type ToolSet, tool } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
@@ -251,6 +251,14 @@ const readTurnsTool = ({ context, session }: ToolDeps): AgentTool => tool({
   inputSchema: z.object({ fromSequence: z.number().int().nonnegative() }),
 });
 
+const submitWorldTool = (): AgentTool => tool({
+  description:
+    'Report what the world is doing: its text, front movement, at most one '
+    + 'firing, and at most one new front. The only way to finish.',
+  execute: (input: WorldTurn) => input,
+  inputSchema: WorldTurn,
+});
+
 const submitBriefTool = (): AgentTool => tool({
   description:
     'Hand the storyteller what you found: material, present, complication, '
@@ -312,6 +320,7 @@ export const createProseAgentTools = (deps: ToolDeps): ToolSet => {
     search_history: searchHistoryTool(deps),
     search_lore: searchLoreTool(deps),
     submit_brief: submitBriefTool(),
+    submit_world: submitWorldTool(),
   };
   return Object.fromEntries(
     Object.entries(tools).map(([name, agentTool]) => [

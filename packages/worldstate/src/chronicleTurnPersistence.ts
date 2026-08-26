@@ -55,6 +55,8 @@ type TurnRow = {
   entity_references: Turn['entityReferences'] | null;
   entity_roster: Turn['entityRoster'] | null;
   entity_usage: Turn['entityUsage'] | null;
+  world_content: string | null;
+  world_fronts: Turn['worldFronts'] | null;
 };
 
 const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
@@ -65,7 +67,8 @@ const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
   beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
-  entity_roster, entity_references, entity_usage
+  entity_roster, entity_references, entity_usage,
+  world_content, world_fronts
   FROM chronicle_turn`;
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
@@ -77,12 +80,14 @@ const TURN_INSERT = `INSERT INTO chronicle_turn (
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
   beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
-  entity_roster, entity_references, entity_usage
+  entity_roster, entity_references, entity_usage,
+  world_content, world_fronts
 ) VALUES (
   $1::uuid, $2::uuid, $3, now(), $4, $5, $6,
   $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12, $13, $14::jsonb, $15,
   $16, $17, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb,
-  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26, $27::jsonb, $28::jsonb, $29::jsonb
+  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26, $27::jsonb, $28::jsonb, $29::jsonb,
+  $30, $31::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -155,6 +160,8 @@ const toTurn = (row: TurnRow): Turn => ({
   skillCheckResult: optional(row.skill_check_result),
   systemMessage: toSystemMessage(row),
   turnSequence: row.turn_sequence,
+  worldContent: optional(row.world_content),
+  worldFronts: optional(row.world_fronts),
 });
 
 const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unknown[] => [
@@ -187,6 +194,8 @@ const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unkn
   optionalJson(turn.entityRoster),
   optionalJson(turn.entityReferences),
   optionalJson(turn.entityUsage),
+  valueOr(turn.worldContent, null),
+  optionalJson(turn.worldFronts),
 ];
 
 export class ChronicleTurnPersistence {

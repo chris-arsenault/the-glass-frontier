@@ -404,6 +404,7 @@ class PostgresChronicleStore implements ChronicleStore {
       characterId: params.characterId,
       entityFocus: { entityScores: {}, tagScores: {} },
       entityRoster: initialEntityRoster(params.locationName, params.entityRoster),
+      fronts: [],
       id: chronicleId,
       locationId: params.locationId ?? undefined,
       locationName: params.locationName,

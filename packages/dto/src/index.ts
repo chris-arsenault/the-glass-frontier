@@ -2,6 +2,8 @@ export * from './Character';
 export * from './characterCreation';
 export * from './mechanics';
 export * from './narrative/Chronicle';
+export * from './narrative/Front';
+export * from './narrative/WorldTurn';
 export * from './narrative/ChronicleActivity';
 export * from './narrative/ChronicleBeat';
 export * from './narrative/ChronicleSummary';

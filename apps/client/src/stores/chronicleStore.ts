@@ -87,6 +87,8 @@ const emptyTurnView = (): TurnView => ({
   skillProgress: null,
   turnId: null,
   turnSequence: null,
+  worldContent: null,
+  worldFronts: null,
 });
 
 const turnViewFromTurn = (turn: Turn): TurnView => ({
@@ -110,6 +112,8 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   skillProgress: null,
   turnId: turn.id ?? null,
   turnSequence: turn.turnSequence ?? null,
+  worldContent: turn.worldContent ?? null,
+  worldFronts: turn.worldFronts ?? null,
 });
 
 const upsertChatEntry = (

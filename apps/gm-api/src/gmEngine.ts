@@ -37,6 +37,7 @@ import { type TurnProgressPublisher } from './eventEmitters/progressEmitter';
 import { createProgressEmitterFromEnv } from './eventEmitters/progressEmitter';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceResolverNode';
+import { EnvironmentNode } from './gmGraph/nodes/EnvironmentNode';
 import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
 import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
 import { runProseAgentPanel } from './proseAgent/panel';
@@ -66,19 +67,16 @@ type HandlePlayerMessageOptions = {
 
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 /**
- * Nothing selects the GM's world material before the turn any more.
- *
- * `entity-selector` walked two hops from the anchor and handed the narrator
- * seven entities; the scout finds what it needs instead. What survives ahead
- * of prose is only what later stages genuinely need: what the player named,
- * which the scene resolver and check planner both read. The GM-side reference
- * resolver and the entity judge are gone with it — the scout's sidecar already
- * knows which entities the turn used, because it opened them.
+ * Nothing selects the GM's world material before the turn. What survives ahead
+ * of prose is only what later stages need: what the player named, and what the
+ * world decided to do — which happens before the check so it can never be a
+ * consequence of the roll.
  */
 const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'intent-classifier', type: 'sequential' },
   { nodeId: 'scene-subject-resolver', type: 'sequential' },
   { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
+  { nodeId: 'environment', type: 'sequential' },
   { nodeId: 'check-planner', type: 'sequential' },
   { nodeId: 'check-runner', type: 'sequential' },
   { nodeId: 'gm-response-node', type: 'sequential' },
@@ -262,6 +260,7 @@ class GmEngine {
     const intentClassifier = new IntentClassifierNode();
     const sceneSubjectResolver = new SceneSubjectResolverNode();
     const playerEntityReferenceResolver = new EntityReferenceResolverNode('player');
+    const environmentNode = new EnvironmentNode();
     const checkPlanner = new CheckPlannerNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
@@ -273,6 +272,7 @@ class GmEngine {
       sceneSubjectResolver,
       checkPlanner,
       playerEntityReferenceResolver,
+      environmentNode,
       checkRunner,
       gmResponseNode,
       inventoryDeltaNode,
@@ -462,7 +462,11 @@ class GmEngine {
       skillCheckPlan: graphResult.skillCheckPlan,
       skillCheckResult: graphResult.skillCheckResult,
       systemMessage,
-      turnSequence
+      turnSequence,
+      // Kept even on a failed turn: the world moved before the failure, and
+      // the next turn should know it.
+      worldContent: graphResult.worldContent,
+      worldFronts: graphResult.worldFronts,
     };
   }
 

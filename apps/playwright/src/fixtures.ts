@@ -99,6 +99,7 @@ const BASE_CHRONICLE: Chronicle = {
     sceneId: null,
     updatedAtTurn: 0,
   },
+  fronts: [],
   id: PLAYWRIGHT_CHRONICLE_ID,
   locationId: LOCATION_ROOT_ID,
   locationName: 'Luminous Quay',

@@ -90,19 +90,25 @@ const CLOCK_STEPS = new Map<OutcomeTier, number>([
 ]);
 
 /**
- * Moves the scene clock by a check's outcome, clamped to [0, target]. The
- * clock is the encounter's shared sense of how close it is to resolving:
- * both the player and the completion judge see the same number.
+ * Moves the scene clock, clamped to [0, target]. The clock is the encounter's
+ * shared sense of how close it is to resolving: both the player and the
+ * completion judge see the same number.
+ *
+ * Dice are one input, not the only one. When only a check ran, its tier moves
+ * the clock as it always did; when the turn judge has read the turn and said
+ * how far it carried the scene, that reading wins, because a scene of
+ * conversation or search can move a great deal without anyone rolling.
  */
 export function advanceSceneClock(
   scene: ChronicleScene,
-  outcomeTier: OutcomeTier | undefined
+  outcomeTier: OutcomeTier | undefined,
+  judgedSegments?: number
 ): ChronicleScene {
-  if (outcomeTier === undefined) {
+  if (outcomeTier === undefined && judgedSegments === undefined) {
     return scene;
   }
   const target = scene.progressTarget ?? SCENE_CLOCK_TARGET;
-  const step = CLOCK_STEPS.get(outcomeTier) ?? 0;
+  const step = judgedSegments ?? CLOCK_STEPS.get(outcomeTier ?? 'stall') ?? 0;
   const next = Math.max(0, Math.min(target, (scene.progress ?? 0) + step));
   return next === scene.progress ? scene : { ...scene, progress: next };
 }

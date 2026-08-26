@@ -170,6 +170,7 @@ export const defaultChronicle = (
     sceneId: null,
     updatedAtTurn: 0,
   },
+  fronts: [],
   id: randomUUID(),
   locationName,
   metadata: undefined,

@@ -6,6 +6,7 @@ import type {
   ChronicleScene,
   EntityReference,
   EntityRosterEntry,
+  Front,
   GmNote,
   HardStateKind,
   HardStateStatus,
@@ -114,7 +115,13 @@ export type GraphContext = {
   proseCostUsd?: number;
   /** What the scout found for this turn: material, who is present, scene read. */
   turnBrief?: TurnBrief;
+  /** What the world did this turn, decided before the check was planned. */
+  worldContent?: string;
+  /** The world's agendas as this turn left them. */
+  worldFronts?: Front[];
   effectiveScene: ChronicleScene | null;
+  /** How far the turn judge says this turn moved the scene, 0 to 3. */
+  sceneClockSegments?: number;
   sceneOutcome: SceneOutcome;
   sceneOutcomeReason: string | null;
   shouldCloseChronicle: boolean;

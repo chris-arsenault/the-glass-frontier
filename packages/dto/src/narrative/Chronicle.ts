@@ -4,6 +4,7 @@ import { Metadata } from '../Metadata';
 import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
 import { EntityRosterState } from './EntityReference';
+import { Front } from './Front';
 import { ChronicleScene } from './Scene';
 import { SceneLedger } from './SceneLedger';
 
@@ -19,6 +20,8 @@ export const Chronicle = z.object({
   characterId: z.string().min(1).optional(),
   entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
   entityRoster: EntityRosterState,
+  /** What the world is pursuing on its own account. Never player-facing state. */
+  fronts: z.array(Front).default([]),
   id: z.string().min(1),
   /**
    * The canon place the chronicle started from, when it started from one.

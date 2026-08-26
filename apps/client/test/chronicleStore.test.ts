@@ -76,6 +76,7 @@ const chronicle: Chronicle = {
     sceneId: null,
     updatedAtTurn: 0,
   },
+  fronts: [],
   id: CHRONICLE_ID,
   locationName: 'Luminous Quay',
   openingText: 'You wait beneath the quay lights.',

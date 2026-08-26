@@ -16,6 +16,7 @@ import type {
   PlayerFeedbackVisibilityLevel,
   EntityReference,
   EntityRosterEntry,
+  Front,
   ProseAlternate,
 } from '@glass-frontier/dto';
 
@@ -55,6 +56,10 @@ export type TurnView = {
   skillProgress: SkillProgressBadge[] | null;
   turnId: string | null;
   turnSequence: number | null;
+  /** What the world was doing this turn, whether or not the narration showed it. */
+  worldContent: string | null;
+  /** The world's own agendas as this turn left them. */
+  worldFronts: Front[] | null;
 }
 
 export type SkillProgressBadge =
