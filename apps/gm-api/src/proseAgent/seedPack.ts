@@ -212,29 +212,14 @@ export const renderWorldIndex = (toc: SeedTocEntry[]): string =>
   toc.map(tocStanza).join('\n');
 
 /** One user message: the seed sections, the world index, then the player message. */
-/**
- * `playerMessage` is null for the environment stage.
- *
- * Shown the player's pending action, the world writes its reaction to it: on
- * turn 2 of Hidden Messages the artisan community was "intrigued by Hundson's
- * discovery and offers to help" before he had shown the roll to a living
- * soul. The world is told where the player is and what has already happened,
- * and nothing about what they are about to do.
- */
-export const renderSeedPack = (pack: SeedPack, playerMessage: string | null): string => {
-  const withheld = playerMessage === null ? PLAYER_WITHHELD : [];
+export const renderSeedPack = (pack: SeedPack, playerMessage: string): string => {
   const parts: string[] = [];
   for (const section of pack.sections) {
-    if (!isEmpty(section.value) && !withheld.includes(section.name)) {
+    if (!isEmpty(section.value)) {
       parts.push(`### ${section.name}\n${renderBlock(section.value)}`);
     }
   }
   parts.push(`### WORLD-INDEX\n${renderWorldIndex(pack.toc)}`);
-  if (playerMessage !== null) {
-    parts.push(`### PLAYER-MESSAGE\n${playerMessage}`);
-  }
+  parts.push(`### PLAYER-MESSAGE\n${playerMessage}`);
   return parts.join('\n\n');
 };
-
-/** Sections that describe the turn the player is taking, not the situation. */
-const PLAYER_WITHHELD = ['INTENT', 'SKILL-CHECK'];
