@@ -7,7 +7,7 @@ describe('production canon artifact', () => {
     const proposal = loadCanonArtifact();
 
     expect(proposal.source).toBe('import');
-    expect(proposal.sourceId).toMatch(/^tsonu-canon@[0-9a-f]{40}$/);
+    expect(proposal.sourceId).toMatch(/^tsonu-canon@[0-9a-f]{40}\+[0-9a-f]{12}$/);
     expect(proposal.entities.length).toBeGreaterThan(0);
     expect(proposal.lore.length).toBeGreaterThan(0);
     expect(proposal.relationships.length).toBeGreaterThan(0);

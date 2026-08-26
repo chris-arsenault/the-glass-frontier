@@ -8,6 +8,7 @@ import {
   type IdentitySourceAssignment,
   type PlayableRole,
 } from '@glass-frontier/dto';
+import { createHash } from 'node:crypto';
 
 /**
  * The slice of tsonu-canon's internal site bundle
@@ -124,6 +125,29 @@ export type TsonuBundle = {
 const key = (id: string): string => `tsonu:${id}`;
 
 /**
+ * The identity `seedCanon` applies exactly once. It names the upstream revision
+ * and then the content that revision produced, because the two move
+ * independently: this importer gained descriptive identity against an unchanged
+ * `tsonu-canon@5cca4534`, so the deploy found that id already applied and
+ * reported `unchanged` on every push for two days while the artifact carried
+ * 237 resolved identities the database never received. A revision alone
+ * describes where the canon came from, not what was built from it.
+ */
+const artifactSourceId = (revision: string, proposal: CanonProposal): string => {
+  const digest = createHash('sha256')
+    .update(
+      JSON.stringify({
+        entities: proposal.entities,
+        lore: proposal.lore,
+        relationships: proposal.relationships,
+      })
+    )
+    .digest('hex')
+    .slice(0, 12);
+  return `tsonu-canon@${revision}+${digest}`;
+};
+
+/**
  * Maps the tsonu bundle to one canon proposal: every entry becomes an entity,
  * every prose block it owns becomes a lore fragment, and every outgoing
  * connection becomes a relationship. The bundle lists each edge exactly once as
@@ -154,13 +178,14 @@ export const buildTsonuProposal = (bundle: TsonuBundle): CanonProposal => {
   }
   const entryIds = new Set(entries.map((entry) => entry.id));
 
-  return CanonProposal.parse({
+  const proposal = CanonProposal.parse({
     entities: entries.map((entry) => buildEntity(entry)),
     lore: entries.flatMap((entry) => buildLore(entry, entryIds)),
     relationships: entries.flatMap((entry) => buildRelationships(entry)),
     source: 'import',
     sourceId: `tsonu-canon@${bundle.revision}`,
   });
+  return { ...proposal, sourceId: artifactSourceId(bundle.revision, proposal) };
 };
 
 const buildEntity = (entry: TsonuEntry): unknown => ({

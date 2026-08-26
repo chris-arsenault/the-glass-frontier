@@ -51,7 +51,7 @@ describe('buildTsonuProposal', () => {
     );
 
     expect(proposal.source).toBe('import');
-    expect(proposal.sourceId).toBe('tsonu-canon@abc123');
+    expect(proposal.sourceId).toMatch(/^tsonu-canon@abc123\+[0-9a-f]{12}$/);
     expect(proposal.entities).toEqual([
       {
         description: 'The largest sorting deck.',
@@ -371,5 +371,28 @@ describe('buildTsonuProposal', () => {
     const proposal = buildTsonuProposal(bundle([entry({ id: 'zephyr' }), entry({ id: 'anvil' })]));
 
     expect(proposal.entities.map((each) => each.externalKey)).toEqual(['tsonu:anvil', 'tsonu:zephyr']);
+  });
+
+  it('gives the same content the same source id, so a deploy applies it once', () => {
+    const twice = [0, 1].map(() =>
+      buildTsonuProposal(bundle([entry({ id: 'anvil', summary: 'A forge.' })])).sourceId
+    );
+
+    expect(twice[0]).toBe(twice[1]);
+  });
+
+  /**
+   * The seed skips a source id it has already applied. When the id named only
+   * the upstream revision, this importer could gain a whole field — descriptive
+   * identity did — and every deploy would report the canon unchanged.
+   */
+  it('changes the source id when the content changes under one revision', () => {
+    const before = buildTsonuProposal(bundle([entry({ id: 'anvil', summary: 'A forge.' })]));
+    const after = buildTsonuProposal(
+      bundle([entry({ id: 'anvil', summary: 'A forge, and a debt.' })])
+    );
+
+    expect(after.sourceId).not.toBe(before.sourceId);
+    expect(after.sourceId).toMatch(/^tsonu-canon@abc123\+/);
   });
 });
