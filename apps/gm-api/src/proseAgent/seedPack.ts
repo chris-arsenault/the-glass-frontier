@@ -10,6 +10,7 @@ import { renderBlock } from '../prompts/blockRender';
 import type { ChronicleFragmentTypes } from '../prompts/chronicleFragments';
 import { extractFragment } from '../prompts/chronicleFragments';
 import type { GraphContext } from '../types';
+import type { ServedEntity } from './toolSession';
 
 const INDENT = '  ';
 
@@ -40,7 +41,7 @@ export type SeedTocEntry = {
 
 export type SeedPack = {
   sections: Array<{ name: string; value: unknown }>;
-  seedEntities: Array<{ id: string; slug: string }>;
+  seedEntities: ServedEntity[];
   toc: SeedTocEntry[];
 };
 

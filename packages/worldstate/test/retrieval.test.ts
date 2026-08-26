@@ -152,7 +152,12 @@ describe('prose alternates', () => {
       costUsd: 0.0123,
       modelId: 'claude-sonnet-5',
       prose: 'The dockmaster narrows his eyes.',
-      sidecar: [{ emergentTags: [], entityId: crypto.randomUUID(), usage: 'central' as const }],
+      sidecar: [{
+        emergentTags: [],
+        entityId: crypto.randomUUID(),
+        entitySlug: 'korvath',
+        usage: 'central' as const,
+      }],
       stepCount: 2,
       totalTokens: 900,
     }];

@@ -57,6 +57,26 @@ export class LoreReader {
     return row === undefined ? null : toLoreFragment(row);
   }
 
+  /**
+   * An entity's tags are the distinct tags of its lore, which is how the
+   * context slice has always derived them. Read directly so callers that never
+   * went through the slice — the prose agent's sidecar, above all — can score
+   * focus without building one.
+   */
+  async listTagsByEntities(input: { entityIds: string[] }): Promise<Map<string, string[]>> {
+    if (input.entityIds.length === 0) {
+      return new Map();
+    }
+    const result = await this.#pool.query<{ entity_id: string; tags: string[] }>(
+      `SELECT lf.entity_id, array_agg(DISTINCT tag) AS tags
+       FROM lore_fragment lf, unnest(lf.tags) AS tag
+       WHERE lf.entity_id = ANY($1::uuid[])
+       GROUP BY lf.entity_id`,
+      [input.entityIds]
+    );
+    return new Map(result.rows.map((row) => [row.entity_id, row.tags]));
+  }
+
   /** Fragments named the way search results name them: by their own slug. */
   async listBySlugs(input: { slugs: string[] }): Promise<LoreFragment[]> {
     if (input.slugs.length === 0) {

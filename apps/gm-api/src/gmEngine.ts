@@ -11,7 +11,7 @@ import type {
 } from '@glass-frontier/dto';
 import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
 import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
-import { EntityJudgeNode, EntitySelectorNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes';
+import { EntitySelectorNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes';
 import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode';
 import { TurnJudgeNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/TurnJudgeNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
@@ -72,10 +72,12 @@ const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
   { nodeId: 'check-planner', type: 'sequential' },
   { nodeId: 'check-runner', type: 'sequential' },
+  // The scout's sidecar replaced both the GM-side reference resolver and the
+  // entity judge: it already knows which entities the turn used, because it
+  // opened them, so neither guess needs a model call any more.
   { nodeId: 'gm-response-node', type: 'sequential' },
-  { nodeId: 'gm-entity-reference-resolver', type: 'sequential' },
   {
-    nodeIds: ['entity-judge', 'inventory-delta', 'turn-judge'],
+    nodeIds: ['inventory-delta', 'turn-judge'],
     type: 'parallel',
   },
 ];
@@ -255,11 +257,9 @@ class GmEngine {
     const sceneSubjectResolver = new SceneSubjectResolverNode();
     const entitySelector = new EntitySelectorNode();
     const playerEntityReferenceResolver = new EntityReferenceResolverNode('player');
-    const gmEntityReferenceResolver = new EntityReferenceResolverNode('gm');
     const checkPlanner = new CheckPlannerNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
-    const entityJudgeNode = new EntityJudgeNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
     const turnJudgeNode = new TurnJudgeNode();
 
@@ -271,8 +271,6 @@ class GmEngine {
       playerEntityReferenceResolver,
       checkRunner,
       gmResponseNode,
-      gmEntityReferenceResolver,
-      entityJudgeNode,
       inventoryDeltaNode,
       turnJudgeNode,
     ];

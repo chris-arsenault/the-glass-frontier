@@ -2,6 +2,7 @@ import type { IntentType, PromptTemplateId, TranscriptEntry } from '@glass-front
 import { isLlmBudgetExceededError } from '@glass-frontier/llm-client';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
+import { applySidecar } from '../../entity/sidecarApply';
 import { runProseAgent } from '../../proseAgent';
 import type { GraphContext } from '../../types';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
@@ -109,9 +110,10 @@ abstract class BaseIntentHandlerNode implements GraphNode {
       if (isFilterBlockedNarration(cleanedContent)) {
         return this.#filteredNarrationDelta(context);
       }
+      const gmResponse = this.#buildTranscript(context, cleanedContent);
       return {
         advancesTimeline: this.options.advancesTimeline,
-        gmResponse: this.#buildTranscript(context, cleanedContent),
+        gmResponse,
         gmTrace: {
           auditId: outcome.requestId,
           nodeId: this.options.id,
@@ -119,6 +121,7 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         },
         proseCostUsd: outcome.costUsd,
         turnBrief: outcome.brief,
+        ...await applySidecar(context, outcome.sidecar, gmResponse),
       };
 
     } catch (error) {

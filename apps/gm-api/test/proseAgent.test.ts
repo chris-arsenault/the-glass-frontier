@@ -316,7 +316,12 @@ describe('runProseAgent', () => {
     expect(outcome.prose).toContain('counts the tithe');
     expect(outcome.brief.material).toContain('Korvath counts every tithe twice.');
     expect(outcome.sidecar).toEqual([
-      { emergentTags: ['tithe'], entityId: KORVATH_ID, usage: 'central' },
+      {
+        emergentTags: ['tithe'],
+        entityId: KORVATH_ID,
+        entitySlug: KORVATH_SLUG,
+        usage: 'central',
+      },
     ]);
     expect(outcome.stepCount).toBe(2);
     expect(steps).toEqual([0, 1]);

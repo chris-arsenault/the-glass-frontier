@@ -20,6 +20,7 @@ export type ProseAgentSidecarInput = z.infer<typeof ProseAgentSidecarInput>;
 export const ProseSidecarEntry = z.object({
   emergentTags: z.array(z.string()).default([]),
   entityId: z.string().min(1),
+  entitySlug: z.string().min(1),
   usage: z.enum(['mentioned', 'central']),
 });
 export type ProseSidecarEntry = z.infer<typeof ProseSidecarEntry>;

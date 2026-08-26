@@ -83,18 +83,20 @@ const stepListener = (session: ToolSession, deps: ProseAgentDeps) =>
   };
 
 /**
- * Slugs the scout names are resolved to canonical ids here, and anything it
- * names that it never opened is dropped: a sidecar is a record of what was
- * read, not of what was imagined.
+ * Slugs the scout names are resolved against what it actually opened, and
+ * anything it names but never read is dropped: a sidecar is a record of what
+ * was retrieved, not of what was imagined. This is the only source of entity
+ * usage now — the judge that used to re-read the narration and score the
+ * offered list is gone, along with its LLM call.
  */
 const provenanceFiltered = (
   context: GraphContext,
   entries: TurnBrief['entities'],
   session: ToolSession
 ): ProseSidecarEntry[] => entries.flatMap(({ entitySlug, ...entry }) => {
-  const entityId = session.resolveServedId(entitySlug);
-  if (entityId !== undefined) {
-    return [{ ...entry, entityId }];
+  const served = session.resolveServed(entitySlug);
+  if (served !== undefined) {
+    return [{ ...entry, entityId: served.id, entitySlug: served.slug }];
   }
   log('warn', 'prose-agent.sidecar.unserved_entity', {
     chronicleId: context.chronicleId,

@@ -59,7 +59,7 @@ const readIdentityTool = ({ context, session }: ToolDeps): AgentTool => tool({
     if (entity === null) {
       return session.wrapResult(`identity:${slug}`, () => unknownEntity(slug));
     }
-    session.recordServedEntity(entity.id, entity.slug);
+    session.recordServedEntity({ id: entity.id, slug: entity.slug });
     const identity = entity.descriptiveIdentity ?? {};
     const requested = Object.fromEntries(
       Object.entries(identity).filter(([key]) => keys.includes(key))
@@ -107,8 +107,8 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
         `No live relationship between ${slug} and ${targetSlug}. `
         + 'Check either entity\'s world-index entry for its actual relationships.');
     }
-    session.recordServedEntity(entity.id, entity.slug);
-    session.recordServedEntity(target.id, target.slug);
+    session.recordServedEntity({ id: entity.id, slug: entity.slug });
+    session.recordServedEntity({ id: target.id, slug: target.slug });
     return session.wrapResult(`relationship:${slug}:${targetSlug}`, () => JSON.stringify(
       edges.map((edge) => ({
         direction: edge.direction,
@@ -196,7 +196,7 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
       slugs: wanted,
     });
     for (const fragment of fragments) {
-      session.recordServedEntity(fragment.entityId, fragment.entitySlug);
+      session.recordServedEntity({ id: fragment.entityId, slug: fragment.entitySlug });
     }
     const missing = wanted.filter(
       (slug) => !fragments.some((fragment) => fragment.slug === slug)

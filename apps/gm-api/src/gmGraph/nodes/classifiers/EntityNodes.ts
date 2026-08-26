@@ -1,42 +1,15 @@
-import { log } from '@glass-frontier/utils';
-import { z, type ZodType } from 'zod';
-
-import { applyEntityUsage, type EntityUsageClassification } from '../../../entity/entityFocus';
 import { buildEntityContext } from '../../../entity/entitySelector';
 import type { GraphContext } from '../../../types';
 import type { GraphNode, GraphNodeDelta } from '../graphNode';
-import { LlmClassifierNode } from './LlmClassiferNode';
 
-type EntityJudgeResponse = {
-  results: Array<{
-    emergentTags?: string[] | null;
-    slug: string;
-    usage: 'unused' | 'mentioned' | 'central';
-  }>;
-};
-
-const entityJudgeSchema = (slugs: string[]): ZodType<EntityJudgeResponse> => {
-  if (slugs.length === 0) {
-    throw new Error('Entity judge requires at least one offered entity.');
-  }
-  return z.object({
-    results: z.array(
-      z.object({
-        emergentTags: z.array(z.string()).nullable().optional().describe('2-4 word tags capturing new narrative themes about this entity. Recorded on the turn for later canon review; they do not steer this chronicle\'s retrieval.'),
-        slug: z.enum(slugs as [string, ...string[]]).describe('The slug of the entity'),
-        usage: z.enum(['unused', 'mentioned', 'central']).describe('How central this entity was to the story'),
-      })
-    ).length(slugs.length).superRefine((results, issueContext) => {
-      if (new Set(results.map((entry) => entry.slug)).size !== slugs.length) {
-        issueContext.addIssue({
-          code: 'custom',
-          message: 'Return each offered entity exactly once.',
-        });
-      }
-    }),
-  });
-};
-
+/**
+ * Builds the turn's entity context: the candidate pool the player reference
+ * resolver matches against, and the roster the client shows.
+ *
+ * It no longer picks what the GM is allowed to know. The prose agent
+ * discovers that for itself, so the judge that used to score this node's
+ * offered list against the finished narration is gone.
+ */
 export class EntitySelectorNode implements GraphNode {
   readonly id = 'entity-selector';
 
@@ -60,75 +33,6 @@ export class EntitySelectorNode implements GraphNode {
       },
       entityContext,
       turnEntityRoster: entityContext.roster,
-    };
-  }
-}
-
-export class EntityJudgeNode extends LlmClassifierNode<EntityJudgeResponse> {
-  readonly id = 'entity-judge';
-
-  constructor() {
-    super({
-      applyResult: (context, result) => this.#applyEntityUsage(context, result),
-      id: 'entity-judge',
-      schema: (context) => entityJudgeSchema(
-        (context.entityContext?.offered ?? []).map((entity) => entity.slug)
-      ),
-      schemaName: 'entity_judge_schema',
-      shouldRun: (context) => !context.failure
-        && context.gmResponse !== undefined
-        && (context.entityContext?.offered.length ?? 0) > 0,
-      telemetryTag: 'llm.entity-judge'
-    });
-  }
-
-  #applyEntityUsage(context: GraphContext, result: EntityJudgeResponse): GraphNodeDelta {
-    const usage: EntityUsageClassification[] = result.results.flatMap((entry) => {
-      const source = context.entityContext?.offered.find((candidate) => candidate.slug === entry.slug);
-      if (source === undefined) {
-        log('warn', 'gm.entity-judge-unmatched-slug', {
-          chronicleId: context.chronicleId,
-          offeredSlugs: (context.entityContext?.offered ?? [])
-            .map((candidate) => candidate.slug)
-            .join(', '),
-          slug: entry.slug,
-          turnSequence: context.turnSequence,
-        });
-        return [];
-      }
-      return [{
-        emergentTags: entry.emergentTags ?? null,
-        entityId: source.id,
-        entitySlug: entry.slug,
-        tags: source.tags,
-        usage: entry.usage,
-      }];
-    });
-
-    const playerReferences = (context.entityReferences ?? [])
-      .filter((reference) => reference.speaker === 'player')
-      .flatMap((reference) => {
-        const source = context.entityContext?.candidates.find(
-          (candidate) => candidate.id === reference.entityId
-        );
-        return source === undefined ? [] : [{ entityId: source.id, tags: source.tags }];
-      });
-    const nextFocus = applyEntityUsage(
-      context.chronicleState.chronicle.entityFocus,
-      usage,
-      playerReferences
-    );
-    const updatedChronicle = {
-      ...context.chronicleState.chronicle,
-      entityFocus: nextFocus,
-    };
-
-    return {
-      chronicleState: {
-        ...context.chronicleState,
-        chronicle: updatedChronicle,
-      },
-      entityUsage: usage,
     };
   }
 }
