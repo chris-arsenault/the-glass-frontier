@@ -4,6 +4,7 @@ import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
 import { runProseAgent } from './index';
+import { runOneShotProse } from './oneShot';
 
 /**
  * The comparison panel. Claude now writes the canonical turn through the same
@@ -16,6 +17,9 @@ import { runProseAgent } from './index';
  * and emitted HTML entities into prose.
  */
 export const PANEL_MODELS = ['amazon-nova-pro'];
+
+/** The pre-retrieval narrator, kept so agentic-versus-not stays measurable. */
+export const ONE_SHOT_PANEL_MODELS = ['amazon-nova-pro'];
 
 const runPanelist = async (
   context: GraphContext,
@@ -76,8 +80,43 @@ export const runProseAgentPanel = async (
   context: GraphContext,
   agentLoop: AgentLoopClient
 ): Promise<ProseAlternate[]> => {
-  const responses = await Promise.all(
-    PANEL_MODELS.map(async (modelId) => runPanelist(context, agentLoop, modelId))
-  );
+  const responses = await Promise.all([
+    ...PANEL_MODELS.map(async (modelId) => runPanelist(context, agentLoop, modelId)),
+    ...ONE_SHOT_PANEL_MODELS.map(async (modelId) => oneShotPanelist(context, modelId)),
+  ]);
   return responses.filter((response) => response !== null);
+};
+
+/**
+ * The pre-retrieval narrator runs beside the agentic ones so the comparison
+ * the panel exists for is still measurable: same turn, same model, no
+ * retrieval. Its failure drops its response like any other panelist's.
+ */
+const oneShotPanelist = async (
+  context: GraphContext,
+  modelId: string
+): Promise<ProseAlternate | null> => {
+  const startedAt = Date.now();
+  try {
+    const alternate = await runOneShotProse(context, modelId);
+    log('info', 'prose-agent.panel.completed', {
+      chronicleId: context.chronicleId,
+      durationMs: Date.now() - startedAt,
+      modelId: alternate.modelId,
+      sidecarEntities: 0,
+      stepCount: 1,
+      totalTokens: alternate.totalTokens,
+      turnId: context.turnId,
+    });
+    return alternate;
+  } catch (error) {
+    log('warn', 'prose-agent.panel.failed', {
+      chronicleId: context.chronicleId,
+      durationMs: Date.now() - startedAt,
+      message: error instanceof Error ? error.message : 'unknown',
+      modelId: `${modelId} (one-shot)`,
+      turnId: context.turnId,
+    });
+    return null;
+  }
 };

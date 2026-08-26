@@ -273,9 +273,11 @@ describe('prose agent panel', () => {
     } as unknown as AgentLoopClient;
     const alternates = await runProseAgentPanel(writerContext(), panelLoop);
     expect(attempted.sort()).toEqual([...PANEL_MODELS].sort());
-    expect(alternates.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
-    expect(alternates[0]?.prose).toContain('Korvath counts the tithe');
-    expect(alternates.every((alternate) => alternate.costUsd > 0)).toBe(true);
+    const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
+    expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
+    expect(agentic[0]?.prose).toContain('Korvath counts the tithe');
+    expect(agentic.every((alternate) => alternate.costUsd > 0)).toBe(true);
+    expect(alternates.some((alternate) => alternate.modelId.includes('one-shot'))).toBe(true);
   });
 
   it('never throws when every panelist fails', async () => {

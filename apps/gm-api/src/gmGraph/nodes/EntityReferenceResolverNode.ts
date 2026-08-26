@@ -1,4 +1,4 @@
-import type { EntityReference, EntityReferenceSpan } from '@glass-frontier/dto';
+import type { EntityReference, EntityReferenceSpan, HardState } from '@glass-frontier/dto';
 import { developerTextMessage, userTextMessage } from '@glass-frontier/llm-client';
 import type { ReferenceEntityCandidate } from '@glass-frontier/worldstate';
 import { z } from 'zod';
@@ -35,6 +35,23 @@ const findSpan = (content: string, term: string): EntityReferenceSpan | null => 
   const start = match.index + (match[1]?.length ?? 0);
   return { end: start + match[2].length, start, text: match[2] };
 };
+
+/** Grounding needs a name, a slug, and the alias card; the rest is prose context. */
+const toSnippet = (entity: HardState): EntitySnippet => ({
+  description: entity.description,
+  facts: entity.facts,
+  gmNotes: [],
+  id: entity.id,
+  kind: entity.kind,
+  loreFragments: [],
+  name: entity.name,
+  score: 1,
+  slug: entity.slug,
+  status: entity.status,
+  subkind: entity.subkind,
+  tags: [],
+  unwritten: false,
+});
 
 const aliases = (entity: EntitySnippet): string[] => {
   const aka = entity.facts.aka;
@@ -125,11 +142,19 @@ export class EntityReferenceResolverNode implements GraphNode {
    * narration actually used.
    */
   async execute(context: GraphContext): Promise<GraphNodeDelta> {
-    const message = context.playerMessage;
-    if (context.failure || context.entityContext === undefined) {
+    if (context.failure) {
       return {};
     }
-    const candidates = context.entityContext.candidates;
+    const message = context.playerMessage;
+    const named = await context.worldSchemaStore.findEntitiesMentionedIn({
+      text: message.content,
+    });
+    const targeted = context.targetEntityIds.length === 0
+      ? []
+      : await context.worldSchemaStore.listEntitiesByIds(context.targetEntityIds);
+    const candidates = [...targeted, ...named]
+      .filter((entity, index, all) => all.findIndex((other) => other.id === entity.id) === index)
+      .map(toSnippet);
     const exact = this.#resolveExact(context, message.content, message.id, candidates);
     const semantic = exact.length === 0
       ? await this.#resolveSemantic(context, message.content, message.id, candidates)

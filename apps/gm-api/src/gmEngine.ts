@@ -11,7 +11,6 @@ import type {
 } from '@glass-frontier/dto';
 import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
 import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
-import { EntitySelectorNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/EntityNodes';
 import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode';
 import { TurnJudgeNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/TurnJudgeNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
@@ -66,16 +65,22 @@ type HandlePlayerMessageOptions = {
 };
 
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
+/**
+ * Nothing selects the GM's world material before the turn any more.
+ *
+ * `entity-selector` walked two hops from the anchor and handed the narrator
+ * seven entities; the scout finds what it needs instead. What survives ahead
+ * of prose is only what later stages genuinely need: what the player named,
+ * which the scene resolver and check planner both read. The GM-side reference
+ * resolver and the entity judge are gone with it — the scout's sidecar already
+ * knows which entities the turn used, because it opened them.
+ */
 const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'intent-classifier', type: 'sequential' },
   { nodeId: 'scene-subject-resolver', type: 'sequential' },
-  { nodeId: 'entity-selector', type: 'sequential' },
   { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
   { nodeId: 'check-planner', type: 'sequential' },
   { nodeId: 'check-runner', type: 'sequential' },
-  // The scout's sidecar replaced both the GM-side reference resolver and the
-  // entity judge: it already knows which entities the turn used, because it
-  // opened them, so neither guess needs a model call any more.
   { nodeId: 'gm-response-node', type: 'sequential' },
   {
     nodeIds: ['inventory-delta', 'turn-judge'],
@@ -256,7 +261,6 @@ class GmEngine {
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
     const sceneSubjectResolver = new SceneSubjectResolverNode();
-    const entitySelector = new EntitySelectorNode();
     const playerEntityReferenceResolver = new EntityReferenceResolverNode('player');
     const checkPlanner = new CheckPlannerNode();
     const checkRunner = new CheckRunnerNode();
@@ -268,7 +272,6 @@ class GmEngine {
       intentClassifier,
       sceneSubjectResolver,
       checkPlanner,
-      entitySelector,
       playerEntityReferenceResolver,
       checkRunner,
       gmResponseNode,

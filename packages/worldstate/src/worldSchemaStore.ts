@@ -128,6 +128,10 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
     return this.#entities.findLocationByName(input);
   }
 
+  async findEntitiesMentionedIn(input: { text: string }): Promise<HardState[]> {
+    return this.#entities.findEntitiesMentionedIn(input);
+  }
+
   async findEntitiesByName(input: { name: string }): Promise<HardState[]> {
     return this.#entities.findEntitiesByName(input);
   }

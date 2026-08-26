@@ -20,25 +20,20 @@ const entity = (): EntitySnippet => ({
   unwritten: false,
 });
 
+/**
+ * Grounding reads canon directly now, so the fixture is a world store that
+ * answers with the one entity rather than a pre-scored slice on the context.
+ */
 const contextWithEntity = (overrides?: Partial<GraphContext>): GraphContext => {
   const candidate = entity();
-  return buildContext({
-    entityContext: {
-      candidates: [candidate],
-      focusEntities: [],
-      focusTags: [],
-      offered: [candidate],
-      roster: [{
-        availability: ['connected'],
-        description: candidate.description,
-        id: candidate.id,
-        kind: candidate.kind,
-        name: candidate.name,
-        slug: candidate.slug,
-      }],
-    },
-    ...overrides,
-  });
+  const store = {
+    findEntitiesMentionedIn: ({ text }: { text: string }) => Promise.resolve(
+      /bellwether|old bell/iu.test(text) ? [candidate] : []
+    ),
+    findReferenceCandidates: () => Promise.resolve([]),
+    listEntitiesByIds: () => Promise.resolve([candidate]),
+  } as unknown as GraphContext['worldSchemaStore'];
+  return buildContext({ worldSchemaStore: store, ...overrides });
 };
 
 describe('EntityReferenceResolverNode', () => {
@@ -110,13 +105,14 @@ describe('EntityReferenceResolverNode', () => {
         render: () => Promise.resolve('Resolve references.'),
       } as unknown as GraphContext['templates'],
       worldSchemaStore: {
+        findEntitiesMentionedIn: () => Promise.resolve([]),
         findReferenceCandidates: () => Promise.resolve([{
           id: ENTITY_ID,
           name: 'Bellwether',
           similarity: 0.79,
           slug: 'bellwether',
         }]),
-        hasEntityEmbeddings: () => Promise.resolve(true),
+        listEntitiesByIds: () => Promise.resolve([entity()]),
       } as unknown as GraphContext['worldSchemaStore'],
     });
 
@@ -145,7 +141,9 @@ describe('EntityReferenceResolverNode', () => {
         role: 'player',
       },
       worldSchemaStore: {
+        findEntitiesMentionedIn: () => Promise.resolve([]),
         findReferenceCandidates,
+        listEntitiesByIds: () => Promise.resolve([]),
       } as unknown as GraphContext['worldSchemaStore'],
     });
 
