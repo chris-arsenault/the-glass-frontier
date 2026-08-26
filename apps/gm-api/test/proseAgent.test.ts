@@ -83,6 +83,9 @@ const worldStore = (): GraphContext['worldSchemaStore'] => {
 const agentContext = (): GraphContext => {
   const context = buildContext({
     playerIntent: buildIntent(),
+    // Korvath reaches the index because this turn names him, not because a
+    // scorer put him on a roster — the roster no longer seeds anything.
+    targetEntityIds: [KORVATH_ID],
     worldSchemaStore: worldStore(),
   });
   context.chronicleState.chronicle.entityRoster = {
@@ -132,6 +135,15 @@ describe('seed pack', () => {
     expect(korvathEntry?.relationships.map((rel) => rel.targetSlug)).toEqual([GUILD_SLUG]);
     expect(korvathEntry?.relationships[0]?.identityKeys.sort()).toEqual(['cost', 'terms']);
     expect(korvathEntry?.loreCount).toBe(3);
+  });
+
+  it('leaves roster entries out of the index unless the turn touches them', async () => {
+    const context = agentContext();
+    context.targetEntityIds = [];
+    const pack = await buildSeedPack(context);
+
+    expect(pack.toc).toStrictEqual([]);
+    expect(pack.seedEntities).toStrictEqual([]);
   });
 });
 
@@ -218,30 +230,51 @@ const toolCallResponse = (
   warnings: [],
 });
 
+const briefInput = (): Record<string, unknown> => ({
+  complication: null,
+  entities: [
+    { emergentTags: ['tithe'], entitySlug: KORVATH_SLUG, usage: 'central' },
+    { emergentTags: [], entitySlug: 'never-served-slug', usage: 'mentioned' },
+  ],
+  material: ['Korvath counts every tithe twice.'],
+  present: ['Korvath, wanting the tithe settled before dark'],
+  scene: {
+    changed: 'nothing yet',
+    endsWhen: 'the tithe is settled or refused',
+    stakes: 'the tithe',
+  },
+});
+
+/** A context whose writer stage returns prose, so the second call resolves. */
+const writerContext = (): GraphContext => {
+  const context = agentContext();
+  context.llm = {
+    generate: () => Promise.resolve({
+      message: 'Korvath counts the tithe twice before he answers you.',
+      requestId: 'req-writer',
+      usage: { inputTokens: 50, outputTokens: 30, totalTokens: 80 },
+    }),
+  } as unknown as GraphContext['llm'];
+  return context;
+};
+
 describe('prose agent panel', () => {
   it('runs every panel model and drops only the failed ones', async () => {
     const attempted: string[] = [];
     const panelLoop = {
       run: (request: { model: { modelId: string } }) => {
         attempted.push(request.model.modelId);
-        if (request.model.modelId === 'amazon-nova-pro') {
-          return Promise.reject(new Error('bedrock unavailable'));
-        }
         return Promise.resolve({
-          finishToolInput: {
-            entities: [],
-            prose: `Narration from ${request.model.modelId}.`,
-          },
+          finishToolInput: briefInput(),
           stepCount: 2,
           usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
         });
       },
     } as unknown as AgentLoopClient;
-    const alternates = await runProseAgentPanel(agentContext(), panelLoop);
+    const alternates = await runProseAgentPanel(writerContext(), panelLoop);
     expect(attempted.sort()).toEqual([...PANEL_MODELS].sort());
-    expect(alternates.map((alternate) => alternate.modelId).sort())
-      .toEqual([SONNET_MODEL_ID]);
-    expect(alternates[0]?.prose).toContain('Narration from');
+    expect(alternates.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
+    expect(alternates[0]?.prose).toContain('Korvath counts the tithe');
     expect(alternates.every((alternate) => alternate.costUsd > 0)).toBe(true);
   });
 
@@ -257,13 +290,7 @@ describe('runProseAgent', () => {
   it('produces prose with a provenance-checked sidecar', async () => {
     const responses = [
       () => toolCallResponse('read_identity', { keys: ['manner'], slug: KORVATH_SLUG }),
-      () => toolCallResponse('submit_turn', {
-        entities: [
-          { emergentTags: ['tithe'], entitySlug: KORVATH_SLUG, usage: 'central' },
-          { emergentTags: [], entitySlug: 'never-served-slug', usage: 'mentioned' },
-        ],
-        prose: 'Korvath counts the tithe twice before he answers you.',
-      }),
+      () => toolCallResponse('submit_brief', briefInput()),
     ];
     let call = 0;
     const mockModel = new MockLanguageModelV4({
@@ -282,11 +309,12 @@ describe('runProseAgent', () => {
       successHandler: null,
     });
     const steps: number[] = [];
-    const outcome = await runProseAgent(agentContext(), {
+    const outcome = await runProseAgent(writerContext(), {
       agentLoop,
       onStep: (step) => steps.push(step.stepNumber),
     });
     expect(outcome.prose).toContain('counts the tithe');
+    expect(outcome.brief.material).toContain('Korvath counts every tithe twice.');
     expect(outcome.sidecar).toEqual([
       { emergentTags: ['tithe'], entityId: KORVATH_ID, usage: 'central' },
     ]);

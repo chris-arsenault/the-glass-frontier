@@ -44,7 +44,9 @@ export type SeedPack = {
   toc: SeedTocEntry[];
 };
 
-const MAX_SEED_ENTITIES = 12;
+const MAX_SEED_ENTITIES = 6;
+/** bloom_zones printed 21 edges into a hunting turn; a menu is not a database. */
+const MAX_INDEX_EDGES = 6;
 
 /** The fragments the seed pack shares with the one-shot prompt, by section name. */
 const SHARED_SECTIONS: Array<{ name: string; fragment: ChronicleFragmentTypes }> = [
@@ -71,14 +73,23 @@ const firstSentence = (text: string | undefined): string | undefined => {
   return period === -1 ? text : text.slice(0, period + 1);
 };
 
-/** Seed collection is deliberately one small function; iterate here. */
+/**
+ * Only what this turn actually touches.
+ *
+ * The index used to open with the curated roster — seven entities chosen by a
+ * scorer before anyone knew what the turn was about — and a chronicle about
+ * hunting animals in a gas giant carried a pilgrim bead, a Tuner guild, and a
+ * region of orbital reality tears for its whole run. The roster is gone: what
+ * seeds the index is the place, the anchor, the scene's subject, and whatever
+ * the player or the scene named. Everything else is the scout's to discover
+ * with `search`, which is the entire point of giving it tools.
+ */
 export const collectSeedIds = async (context: GraphContext): Promise<string[]> => {
   const chronicle = context.chronicleState.chronicle;
   const location = await context.worldSchemaStore.findLocationByName({
     name: context.chronicleState.locationName,
   });
   const candidates = [
-    ...(chronicle.entityRoster?.entries ?? []).map((entry) => entry.id),
     chronicle.anchorEntityId,
     context.effectiveScene?.subjectEntityId,
     ...(context.entityReferences ?? []).map((reference) => reference.entityId),
@@ -185,7 +196,10 @@ const tocStanza = (entry: SeedTocEntry): string => {
     entry.factKeys.length > 0 ? `${INDENT}facts: ${entry.factKeys.join(', ')}` : '',
     entry.identityKeys.length > 0 ? `${INDENT}identity: ${entry.identityKeys.join(', ')}` : '',
     entry.relationships.length > 0
-      ? `${INDENT}edges: ${entry.relationships.map(edgeHandle).join(', ')}`
+      ? `${INDENT}edges: ${entry.relationships.slice(0, MAX_INDEX_EDGES).map(edgeHandle).join(', ')}`
+        + (entry.relationships.length > MAX_INDEX_EDGES
+          ? ` (+${entry.relationships.length - MAX_INDEX_EDGES} more via expand)`
+          : '')
       : '',
     entry.loreCount > 0 ? `${INDENT}lore: ${entry.loreCount}` : '',
   ].filter((line) => line.length > 0);

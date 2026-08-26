@@ -19,6 +19,13 @@ const POSSIBILITY_ADVISOR: PromptTemplateId = 'possibility-advisor';
 const REFLECTION_WEAVER: PromptTemplateId = 'reflection-weaver';
 const WRAP_RESOLVER: PromptTemplateId = 'wrap-resolver';
 const messageOrder = new Map<PromptTemplateId, MessageOrder>([
+  ['agent-action-resolver', PLAYER_MESSAGE_ORDER],
+  ['agent-clarification-responder', PLAYER_MESSAGE_ORDER],
+  ['agent-inquiry-describer', PLAYER_MESSAGE_ORDER],
+  ['agent-planning-narrator', PLAYER_MESSAGE_ORDER],
+  ['agent-possibility-advisor', PLAYER_MESSAGE_ORDER],
+  ['agent-reflection-weaver', PLAYER_MESSAGE_ORDER],
+  ['agent-wrap-resolver', PLAYER_MESSAGE_ORDER],
   [ACTION_RESOLVER, PLAYER_MESSAGE_ORDER],
   ['check-planner', PLAYER_MESSAGE_ORDER],
   [CLARIFICATION_RESPONDER, PLAYER_MESSAGE_ORDER],

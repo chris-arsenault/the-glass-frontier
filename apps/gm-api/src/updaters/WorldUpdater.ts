@@ -1,7 +1,7 @@
 import { log } from '@glass-frontier/utils';
 
 import { mergeSceneLedger } from '../scenes/sceneLedger';
-import { advanceSceneClock } from '../scenes/sceneLifecycle';
+import { advanceSceneClock, applySceneRead } from '../scenes/sceneLifecycle';
 import type { GraphContext } from '../types';
 import { createUpdatedBeats } from './beatUpdater';
 import { createUpdatedCharacter } from './characterUpdater';
@@ -107,7 +107,10 @@ export class WorldUpdater {
     const activeScene =
       survivingScene === null || survivingScene === undefined
         ? null
-        : advanceSceneClock(survivingScene, context.skillCheckResult?.outcomeTier);
+        : applySceneRead(
+          advanceSceneClock(survivingScene, context.skillCheckResult?.outcomeTier),
+          context.turnBrief?.scene
+        );
     if (activeScene === context.chronicleState.chronicle.activeScene) {
       return context;
     }

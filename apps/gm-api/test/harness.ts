@@ -25,6 +25,7 @@ export const buildIntent = (overrides?: Partial<Intent>): Intent => ({
 
 export const buildContext = (overrides?: Partial<GraphContext>): GraphContext => ({
   advancesTimeline: false,
+  agentLoop: {} as GraphContext['agentLoop'],
   chronicleId: 'chronicle-1',
   chronicleState: {
     character: {

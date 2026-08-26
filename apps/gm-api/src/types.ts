@@ -18,8 +18,10 @@ import type {
   SkillCheckResult,
   TranscriptEntry,
   Turn,
+  TurnBrief,
 } from '@glass-frontier/dto';
 import type {
+  AgentLoopClient,
   LLMPlayer,
   RetryLLMClient,
   TextEmbeddingClient,
@@ -89,6 +91,7 @@ export type GraphContext = {
 
   //operations
   llm: RetryLLMClient;
+  agentLoop: AgentLoopClient;
   embeddings: TextEmbeddingClient;
   llmPlayer: LLMPlayer;
   modelConfigStore: ModelConfigStore;
@@ -109,6 +112,8 @@ export type GraphContext = {
   gmTrace?: LlmTrace | null;
   /** USD cost of the canonical narration call, for the evaluation cost display. */
   proseCostUsd?: number;
+  /** What the scout found for this turn: material, who is present, scene read. */
+  turnBrief?: TurnBrief;
   effectiveScene: ChronicleScene | null;
   sceneOutcome: SceneOutcome;
   sceneOutcomeReason: string | null;

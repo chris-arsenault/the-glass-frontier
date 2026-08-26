@@ -34,7 +34,17 @@ export const SceneChange = SceneChangeCandidate.extend({
 });
 export type SceneChange = z.infer<typeof SceneChange>;
 
+/**
+ * What the scene is actually about, refreshed every turn from the scout's
+ * read. A scene used to be a type and a subject word, which told the GM that a
+ * hunt was open and nothing about how it was going; these say what is at risk,
+ * what would end it, and whether the last turn moved it at all.
+ */
 export const ChronicleScene = SceneChange.extend({
+  /** What the last turn changed about the situation, or that nothing did. */
+  changed: z.string().min(1).optional(),
+  /** The condition that ends this scene. */
+  endsWhen: z.string().min(1).optional(),
   id: z.string().min(1),
   /** Where the scene is set: the chronicle's location when it began. */
   location: z.string().min(1).optional(),
@@ -44,6 +54,10 @@ export const ChronicleScene = SceneChange.extend({
    */
   progress: z.number().int().nonnegative().default(0),
   progressTarget: z.number().int().positive().default(SCENE_CLOCK_TARGET),
+  /** Turns since the scene last changed. Rises while a scene spins. */
+  quietTurns: z.number().int().nonnegative().optional(),
+  /** What is at risk right now. */
+  stakes: z.string().min(1).optional(),
   startedAtTurn: z.number().int().nonnegative(),
 });
 export type ChronicleScene = z.infer<typeof ChronicleScene>;

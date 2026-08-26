@@ -60,11 +60,26 @@ const SKILL_CHECK_FRAGMENT: ChronicleFragmentTypes = 'skill-check';
 const USER_MESSAGE_FRAGMENT: ChronicleFragmentTypes = 'user-message';
 
 // prettier-ignore
+const WRITER_FRAGMENTS: ChronicleFragmentTypes[] = [
+  RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene',
+  LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location',
+  INVENTORY_DETAIL_FRAGMENT, 'seed',
+];
+
 export const templateFragmentMapping = new Map<
 PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
   ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  // The writer templates carry no world dump: the scout's BRIEF replaces
+  // ANCHOR and ENTITIES, which is the point of retrieving at all.
+  ['agent-action-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT]],
+  ['agent-clarification-responder', WRITER_FRAGMENTS],
+  ['agent-inquiry-describer', WRITER_FRAGMENTS],
+  ['agent-planning-narrator', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT]],
+  ['agent-possibility-advisor', WRITER_FRAGMENTS],
+  ['agent-reflection-weaver', WRITER_FRAGMENTS],
+  ['agent-wrap-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT, 'wrap']],
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
   ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['entity-judge', ['entities', ENTITY_REFERENCES_FRAGMENT]],
@@ -280,10 +295,14 @@ function sceneFragment(context: GraphContext): unknown {
   }
   const projected = advanceSceneClock(scene, context.skillCheckResult?.outcomeTier);
   return {
+    changedLastTurn: scene.changed,
     clockFull: isSceneClockFull(projected),
     currentLocation: context.chronicleState.locationName,
+    endsWhen: scene.endsWhen,
     progress: projected.progress,
     progressTarget: projected.progressTarget,
+    quietTurns: scene.quietTurns,
+    stakes: scene.stakes,
     startedAtLocation: scene.location ?? null,
     startedAtTurn: scene.startedAtTurn,
     subject: scene.subject,

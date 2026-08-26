@@ -1,9 +1,8 @@
-import { MODEL_CATALOG } from '@glass-frontier/app';
 import type { IntentType, PromptTemplateId, TranscriptEntry } from '@glass-frontier/dto';
-import { PromptComposer } from '@glass-frontier/gm-api/prompts/prompts';
-import { calculateActualCostUsd, isLlmBudgetExceededError } from '@glass-frontier/llm-client';
+import { isLlmBudgetExceededError } from '@glass-frontier/llm-client';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
+import { runProseAgent } from '../../proseAgent';
 import type { GraphContext } from '../../types';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
 
@@ -12,9 +11,6 @@ type HandlerOptions = {
   id: PromptTemplateId;
   intentType: IntentType;
 };
-
-const NARRATIVE_MAX_OUTPUT_TOKENS = 2000;
-const NARRATIVE_REASONING_EFFORT = 'low';
 
 /**
  * Provider guardrails replace the narration with a stock refusal instead of
@@ -26,14 +22,6 @@ const FILTER_MARKERS = [
   'blocked by content filter',
   'cannot assist with that request',
 ];
-
-const narrationCostUsd = (
-  modelId: string,
-  usage: { inputTokens: number; outputTokens: number; totalTokens: number }
-): number | undefined => {
-  const catalogModel = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
-  return catalogModel === undefined ? undefined : calculateActualCostUsd(catalogModel, usage);
-};
 
 const isFilterBlockedNarration = (content: string): boolean => {
   const normalized = content.toLowerCase();
@@ -105,28 +93,19 @@ abstract class BaseIntentHandlerNode implements GraphNode {
     this.id = options.id;
   }
 
-  // Eligibility is enforced by GmResponseNode before dispatch.
+  /**
+   * Eligibility is enforced by GmResponseNode before dispatch.
+   *
+   * The turn the story keeps is written by the scout-and-writer path: a scout
+   * retrieves what the turn needs and briefs a writer that holds nothing but
+   * the narration job. The one-shot prompt this node used to send is gone —
+   * it had the whole world index and the retrieval policy in front of it and
+   * wrote around them.
+   */
   async execute(context: GraphContext): Promise<GraphNodeDelta> {
     try {
-      const playerId = context.chronicleState.chronicle.playerId;
-      const model = await context.modelConfigStore.getModelForCategory('prose', playerId);
-      const composer = new PromptComposer(context.templates);
-      const prompt = await composer.buildPrompt(this.options.id, context);
-      const narration = await context.llm.generate({
-        maxOutputTokens: NARRATIVE_MAX_OUTPUT_TOKENS,
-        model,
-        ...prompt,
-        metadata: {
-          chronicleId: context.chronicleId,
-          nodeId: this.options.id,
-          playerId,
-          turnId: context.turnId,
-          turnSequence: String(context.turnSequence)
-        },
-        player: context.llmPlayer,
-        reasoningEffort: NARRATIVE_REASONING_EFFORT,
-      }, 'string');
-      const cleanedContent = this.#cleanNarration(narration.message);
+      const outcome = await runProseAgent(context, { agentLoop: context.agentLoop });
+      const cleanedContent = this.#cleanNarration(outcome.prose);
       if (isFilterBlockedNarration(cleanedContent)) {
         return this.#filteredNarrationDelta(context);
       }
@@ -134,11 +113,12 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         advancesTimeline: this.options.advancesTimeline,
         gmResponse: this.#buildTranscript(context, cleanedContent),
         gmTrace: {
-          auditId: narration.requestId,
+          auditId: outcome.requestId,
           nodeId: this.options.id,
-          requestId: narration.requestId,
+          requestId: outcome.requestId,
         },
-        proseCostUsd: narrationCostUsd(model, narration.usage),
+        proseCostUsd: outcome.costUsd,
+        turnBrief: outcome.brief,
       };
 
     } catch (error) {

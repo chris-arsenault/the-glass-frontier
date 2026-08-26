@@ -495,5 +495,12 @@
     "summary": "Name the chronicle, character, and player in audit review",
     "details": "The moderator audit queue identified every request by raw id, so finding the turn you cared about meant recognizing a uuid. The queue and the review dialog now show the chronicle title, character name, and player name instead. Names are resolved when a record is read, so the entire existing audit history reads back named and a later rename shows up everywhere at once.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-26-scout-and-writer",
+    "releasedAt": "2026-08-26",
+    "summary": "The GM looks things up before it writes",
+    "details": "Turns are now written in two passes. A scout searches world canon, relationships, lore, and past turns for what this particular turn needs, then hands the storyteller a short brief: what it found, who is present and what they want, what is at stake, and the complication when a roll goes badly. The storyteller writes from that brief alone, so the prose is no longer competing with a catalogue of world data it never asked for. The world material offered to the GM is now only what the turn actually touches — a chronicle about hunting in a gas giant no longer carries a pilgrim bead and a guild charter around with it. Rolls are much rarer: they are there for tension, not to adjudicate every sentence. Scenes now track what is at stake, what would end them, and whether anything changed, so a scene that has stalled can be recognized as stalled.",
+    "type": "improvement"
   }
 ]

@@ -2,9 +2,8 @@ import { MODEL_CATALOG } from '@glass-frontier/app';
 import {
   type IntentType,
   type PromptTemplateId,
-  type ProseAgentSidecarInput,
-  ProseAgentResult,
   type ProseSidecarEntry,
+  TurnBrief,
 } from '@glass-frontier/dto';
 import {
   type AgentLoopClient,
@@ -14,26 +13,27 @@ import {
 } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 
+import { renderBlock } from '../prompts/blockRender';
+import { PromptComposer } from '../prompts/prompts';
 import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
-import {
-  agentTemplateFor,
-  HISTORY_POLICY,
-  PLAIN_REGISTER_POLICY,
-  RETRIEVAL_POLICY,
-  sufficiencyChecklist,
-} from './policy';
+import { agentTemplateFor, SCOUT_INSTRUCTIONS, scoutFocus } from './policy';
 import { buildSeedPack, renderSeedPack } from './seedPack';
 import { createProseAgentTools } from './tools';
 import { ToolSession } from './toolSession';
 
 export const PROSE_AGENT_MAX_STEPS = 5;
-const PROSE_AGENT_MAX_OUTPUT_TOKENS = 4_000;
-const PROSE_AGENT_REASONING_EFFORT = 'low';
+const SCOUT_MAX_OUTPUT_TOKENS = 2_000;
+const PROSE_MAX_OUTPUT_TOKENS = 2_000;
+const SCOUT_REASONING_EFFORT = 'low';
+const PROSE_REASONING_EFFORT = 'low';
 
 export type ProseAgentOutcome = {
+  brief: TurnBrief;
   costUsd: number;
   prose: string;
+  /** The writer's audit id, so the turn trace still points at a real record. */
+  requestId: string;
   sidecar: ProseSidecarEntry[];
   stepCount: number;
   usage: TokenUsage;
@@ -44,29 +44,8 @@ export type ProseAgentDeps = {
   onStep?: (step: AgentLoopStep) => void;
   /** Bake-off override: run on this catalog model instead of the player's prose config. */
   modelId?: string;
-  /** Bake-off variant: append the plain-register instruction. */
-  plainRegister?: boolean;
   /** Extra audit metadata (e.g. shadow labels), merged into every call's record. */
   metadata?: Record<string, string>;
-};
-
-const buildInstructions = async (
-  context: GraphContext,
-  intentType: IntentType,
-  templateId: PromptTemplateId,
-  plainRegister: boolean
-): Promise<string> => {
-  const sections: string[] = [await context.templates.render(templateId, {})];
-  sections.push(RETRIEVAL_POLICY);
-  sections.push(`## Sufficiency\n\n${sufficiencyChecklist(intentType)}\n${HISTORY_POLICY}`);
-  if (plainRegister) {
-    sections.push(PLAIN_REGISTER_POLICY);
-  }
-  if (context.effectiveScene !== null) {
-    const sceneTemplateId = getSceneTypeDefinition(context.effectiveScene.type).promptTemplateId;
-    sections.push(`## Active scene policy\n\n${await context.templates.render(sceneTemplateId, {})}`);
-  }
-  return sections.join('\n\n');
 };
 
 const resolveProseModel = async (
@@ -83,15 +62,15 @@ const resolveProseModel = async (
   return model;
 };
 
-const loopMetadata = (
+const callMetadata = (
   context: GraphContext,
   deps: ProseAgentDeps,
   playerId: string,
-  templateId: PromptTemplateId
+  nodeId: string
 ): Record<string, string> => ({
   ...deps.metadata,
   chronicleId: context.chronicleId,
-  nodeId: templateId,
+  nodeId,
   playerId,
   turnId: context.turnId,
   turnSequence: String(context.turnSequence),
@@ -103,9 +82,14 @@ const stepListener = (session: ToolSession, deps: ProseAgentDeps) =>
     deps.onStep?.(step);
   };
 
+/**
+ * Slugs the scout names are resolved to canonical ids here, and anything it
+ * names that it never opened is dropped: a sidecar is a record of what was
+ * read, not of what was imagined.
+ */
 const provenanceFiltered = (
   context: GraphContext,
-  entries: ProseAgentSidecarInput[],
+  entries: TurnBrief['entities'],
   session: ToolSession
 ): ProseSidecarEntry[] => entries.flatMap(({ entitySlug, ...entry }) => {
   const entityId = session.resolveServedId(entitySlug);
@@ -120,10 +104,90 @@ const provenanceFiltered = (
   return [];
 });
 
+/** Everything the scout learned, as the writer's one world-facing block. */
+const renderBrief = (brief: TurnBrief): string => renderBlock({
+  complication: brief.complication,
+  material: brief.material,
+  present: brief.present,
+  scene: brief.scene,
+});
+
+const runScout = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  playerId: string,
+  intentType: IntentType
+): Promise<{ brief: TurnBrief; session: ToolSession; stepCount: number; usage: TokenUsage }> => {
+  const pack = await buildSeedPack(context);
+  const session = new ToolSession({
+    maxSteps: PROSE_AGENT_MAX_STEPS,
+    seedEntities: pack.seedEntities,
+  });
+  const model = await resolveProseModel(context, playerId, deps.modelId);
+  const result = await deps.agentLoop.run({
+    finishToolName: 'submit_brief',
+    instructions: `${SCOUT_INSTRUCTIONS}\n\n${scoutFocus(intentType)}`,
+    maxOutputTokens: SCOUT_MAX_OUTPUT_TOKENS,
+    maxSteps: PROSE_AGENT_MAX_STEPS,
+    messages: [{
+      content: renderSeedPack(pack, context.playerMessage.content),
+      role: 'user',
+    }],
+    metadata: callMetadata(context, deps, playerId, 'scout'),
+    model,
+    onStep: stepListener(session, deps),
+    player: context.llmPlayer,
+    reasoningEffort: SCOUT_REASONING_EFFORT,
+    tools: createProseAgentTools({ context, session }),
+  });
+  return {
+    brief: TurnBrief.parse(result.finishToolInput),
+    session,
+    stepCount: result.stepCount,
+    usage: result.usage,
+  };
+};
+
+const writeProse = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: { brief: TurnBrief; playerId: string; templateId: PromptTemplateId }
+): Promise<{ prose: string; requestId: string; usage: TokenUsage }> => {
+  const { brief, playerId, templateId } = target;
+  const composer = new PromptComposer(context.templates);
+  const prompt = await composer.buildPrompt(templateId, context);
+  const scenePolicy = context.effectiveScene === null
+    ? ''
+    : `\n\n## Active scene policy\n\n${await context.templates.render(
+      getSceneTypeDefinition(context.effectiveScene.type).promptTemplateId, {}
+    )}`;
+  const narration = await context.llm.generate({
+    ...prompt,
+    input: [...prompt.input, {
+      content: [{ text: `### BRIEF\n${renderBrief(brief)}`, type: 'input_text' as const }],
+      role: 'developer' as const,
+    }],
+    instructions: `${prompt.instructions}${scenePolicy}`,
+    maxOutputTokens: PROSE_MAX_OUTPUT_TOKENS,
+    metadata: callMetadata(context, deps, playerId, templateId),
+    model: (await resolveProseModel(context, playerId, deps.modelId)).modelId,
+    player: context.llmPlayer,
+    reasoningEffort: PROSE_REASONING_EFFORT,
+  }, 'string');
+  if (typeof narration.message !== 'string') {
+    throw new Error('The writer returned a non-text narration.');
+  }
+  return {
+    prose: narration.message.trim(),
+    requestId: narration.requestId,
+    usage: narration.usage,
+  };
+};
+
 /**
- * Runs one agentic prose turn: seed pack in, retrieval rounds, prose plus a
- * provenance-checked entity sidecar out. Reads the same GraphContext the
- * one-shot prose node reads; writes nothing.
+ * One turn in two stages: the scout retrieves and briefs, the writer narrates
+ * from the brief with no tools, no index, and no retrieval policy competing
+ * for its attention.
  */
 export const runProseAgent = async (
   context: GraphContext,
@@ -133,41 +197,26 @@ export const runProseAgent = async (
   if (intent === undefined) {
     throw new Error('Prose agent requires a classified player intent.');
   }
-  const templateId = agentTemplateFor(intent.intentType);
   const playerId = context.chronicleState.chronicle.playerId;
   const model = await resolveProseModel(context, playerId, deps.modelId);
-  const instructions = await buildInstructions(
-    context, intent.intentType, templateId, deps.plainRegister ?? false
-  );
-  const pack = await buildSeedPack(context);
-  const session = new ToolSession({
-    maxSteps: PROSE_AGENT_MAX_STEPS,
-    seedEntities: pack.seedEntities,
+  const scout = await runScout(context, deps, playerId, intent.intentType);
+  const written = await writeProse(context, deps, {
+    brief: scout.brief,
+    playerId,
+    templateId: agentTemplateFor(intent.intentType),
   });
-
-  const result = await deps.agentLoop.run({
-    finishToolName: 'submit_turn',
-    instructions,
-    maxOutputTokens: PROSE_AGENT_MAX_OUTPUT_TOKENS,
-    maxSteps: PROSE_AGENT_MAX_STEPS,
-    messages: [{
-      content: renderSeedPack(pack, context.playerMessage.content),
-      role: 'user',
-    }],
-    metadata: loopMetadata(context, deps, playerId, templateId),
-    model,
-    onStep: stepListener(session, deps),
-    player: context.llmPlayer,
-    reasoningEffort: PROSE_AGENT_REASONING_EFFORT,
-    tools: createProseAgentTools({ context, session }),
-  });
-
-  const parsed = ProseAgentResult.parse(result.finishToolInput);
+  const usage: TokenUsage = {
+    inputTokens: scout.usage.inputTokens + written.usage.inputTokens,
+    outputTokens: scout.usage.outputTokens + written.usage.outputTokens,
+    totalTokens: scout.usage.totalTokens + written.usage.totalTokens,
+  };
   return {
-    costUsd: calculateActualCostUsd(model, result.usage),
-    prose: parsed.prose,
-    sidecar: provenanceFiltered(context, parsed.entities, session),
-    stepCount: result.stepCount,
-    usage: result.usage,
+    brief: scout.brief,
+    costUsd: calculateActualCostUsd(model, usage),
+    prose: written.prose,
+    requestId: written.requestId,
+    sidecar: provenanceFiltered(context, scout.brief.entities, scout.session),
+    stepCount: scout.stepCount,
+    usage,
   };
 };

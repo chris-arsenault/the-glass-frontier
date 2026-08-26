@@ -107,6 +107,32 @@ export function advanceSceneClock(
   return next === scene.progress ? scene : { ...scene, progress: next };
 }
 
+const NOTHING_CHANGED = /^(nothing|no change|unchanged)\b/iu;
+
+/**
+ * Folds the scout's read of the scene into the scene itself, and counts the
+ * turns that changed nothing. The clock only ever moved on a die roll, so a
+ * scene of pure conversation or search sat at the same number for its whole
+ * life and looked identical to a scene that had stalled; `quietTurns` is the
+ * measure that notices.
+ */
+export function applySceneRead(
+  scene: ChronicleScene,
+  read: { changed: string; endsWhen: string; stakes: string } | undefined
+): ChronicleScene {
+  if (read === undefined) {
+    return scene;
+  }
+  const quiet = NOTHING_CHANGED.test(read.changed.trim());
+  return {
+    ...scene,
+    changed: read.changed,
+    endsWhen: read.endsWhen,
+    quietTurns: quiet ? (scene.quietTurns ?? 0) + 1 : 0,
+    stakes: read.stakes,
+  };
+}
+
 export const isSceneClockFull = (scene: ChronicleScene): boolean =>
   (scene.progress ?? 0) >= (scene.progressTarget ?? SCENE_CLOCK_TARGET);
 

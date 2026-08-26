@@ -381,6 +381,7 @@ class GmEngine {
   }): GraphContext {
     return {
       advancesTimeline: false,
+      agentLoop: this.agentLoop,
       chronicleId,
       chronicleState,
       chronicleStore,

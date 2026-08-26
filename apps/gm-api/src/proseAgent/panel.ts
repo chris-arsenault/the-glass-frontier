@@ -6,15 +6,16 @@ import type { GraphContext } from '../types';
 import { runProseAgent } from './index';
 
 /**
- * The evaluation panel: every turn runs all agent models in parallel alongside
- * the canonical narrator, and every response is persisted for the client to
- * page through. Claude Haiku 4.5 joins once it has a model-catalog entry.
+ * The comparison panel. Claude now writes the canonical turn through the same
+ * scout-and-writer path, so the panel exists to show what a cheaper model
+ * makes of the identical brief; its responses are persisted for the client to
+ * page through and never enter the story.
  *
  * Nova 2 Lite is out: across the Shadowed Cargo turns it rewrote every failed
  * check as a success, spent five retrieval rounds to transcribe what it read,
  * and emitted HTML entities into prose.
  */
-export const PANEL_MODELS = ['claude-sonnet-5', 'amazon-nova-pro'];
+export const PANEL_MODELS = ['amazon-nova-pro'];
 
 const runPanelist = async (
   context: GraphContext,

@@ -1,5 +1,5 @@
 import type { HardState } from '@glass-frontier/dto';
-import { ProseAgentResult } from '@glass-frontier/dto';
+import { TurnBrief } from '@glass-frontier/dto';
 import { type ToolSet, tool } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
@@ -251,12 +251,12 @@ const readTurnsTool = ({ context, session }: ToolDeps): AgentTool => tool({
   inputSchema: z.object({ fromSequence: z.number().int().nonnegative() }),
 });
 
-const submitTurnTool = (): AgentTool => tool({
+const submitBriefTool = (): AgentTool => tool({
   description:
-    'Submit the final narration and its entity sidecar. The only way to '
-    + 'finish the turn.',
-  execute: (input: ProseAgentResult) => input,
-  inputSchema: ProseAgentResult,
+    'Hand the storyteller what you found: material, present, complication, '
+    + 'scene, entities. The only way to finish.',
+  execute: (input: TurnBrief) => input,
+  inputSchema: TurnBrief,
 });
 
 /**
@@ -311,7 +311,7 @@ export const createProseAgentTools = (deps: ToolDeps): ToolSet => {
     search: searchTool(deps),
     search_history: searchHistoryTool(deps),
     search_lore: searchLoreTool(deps),
-    submit_turn: submitTurnTool(),
+    submit_brief: submitBriefTool(),
   };
   return Object.fromEntries(
     Object.entries(tools).map(([name, agentTool]) => [
