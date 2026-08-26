@@ -111,12 +111,18 @@ WHERE similarity >= 0.5
 ORDER BY score DESC, similarity DESC
 LIMIT $4`;
 
+/**
+ * A null candidate list searches the whole player-visible entity space. The
+ * reference resolver used to be handed a pre-scored slice, so a player naming
+ * something the slice had not reached went unresolved; canon it has never
+ * heard of is exactly what a player is most likely to name.
+ */
 const REFERENCE_CANDIDATE_QUERY = `
 SELECT e.id, e.slug, e.name,
   (1 - (e.embedding <=> $1::vector))::real AS similarity
 FROM entity e
 WHERE e.embedding IS NOT NULL
-  AND e.id = ANY($2::uuid[])
+  AND ($2::uuid[] IS NULL OR e.id = ANY($2::uuid[]))
   AND NOT e.is_article
   AND NOT e.dm
 ORDER BY e.embedding <=> $1::vector
@@ -204,19 +210,17 @@ export class EntityEmbeddingReader {
     return result.rows;
   }
 
+  /** Omit `candidateIds` to search all player-visible entities. */
   async findReferenceCandidates(input: {
-    candidateIds: string[];
+    candidateIds?: string[];
     embedding: number[];
     limit?: number;
   }): Promise<ReferenceEntityCandidate[]> {
-    if (input.candidateIds.length === 0) {
-      return [];
-    }
     const result = await this.#pool.query<ReferenceEntityCandidate>(
       REFERENCE_CANDIDATE_QUERY,
       [
         vectorLiteral(input.embedding),
-        [...new Set(input.candidateIds)],
+        input.candidateIds === undefined ? null : [...new Set(input.candidateIds)],
         Math.max(1, Math.min(input.limit ?? 5, 12)),
       ]
     );

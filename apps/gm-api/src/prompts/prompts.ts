@@ -29,7 +29,6 @@ const messageOrder = new Map<PromptTemplateId, MessageOrder>([
   [ACTION_RESOLVER, PLAYER_MESSAGE_ORDER],
   ['check-planner', PLAYER_MESSAGE_ORDER],
   [CLARIFICATION_RESPONDER, PLAYER_MESSAGE_ORDER],
-  ['entity-judge', GM_MESSAGE_ORDER],
   [INQUIRY_DESCRIBER, PLAYER_MESSAGE_ORDER],
   ['intent-classifier', PLAYER_MESSAGE_ORDER],
   ['inventory-delta', GM_MESSAGE_ORDER],

@@ -9,8 +9,20 @@ client UI redesign beyond progress labels, any second migrations directory.
 
 ## Confirmed decisions
 
-- The retrieval loop runs on the prose model itself (one loop, tool rounds capped), for all
-  seven intent handlers. A separate retriever-then-one-shot design is rejected.
+- ~~The retrieval loop runs on the prose model itself (one loop, tool rounds capped), for all
+  seven intent handlers. A separate retriever-then-one-shot design is rejected.~~
+  **Amended 2026-08-26: retrieval and prose are split.** A scout holds the tools and the
+  index, retrieves, and submits a brief (`submit_brief`: material, present, complication,
+  scene read, entity sidecar); a writer receives that brief plus the scene record and
+  narrates with no tools, no index, and no retrieval policy. Evidence for the reversal: in
+  the M3 panel, Claude finished at `stepCount: 1` on most turns — straight to submission,
+  no retrieval — while carrying a 4.1k world index behind a 3.5k policy, and Nova 2 Lite
+  spent five rounds transcribing what it read. The original decision assumed one loop would
+  let retrieval and voice inform each other; what it produced was prose competing with a
+  catalogue for the same attention. Known cost of the amendment: two calls per turn instead
+  of one, and the writer can no longer go back for something the scout missed — the brief is
+  final. If a later index/policy tuning makes one loop viable, this is the decision to
+  revisit first.
 - Replaced at cutover: `entity-selector` as prose-context provider, the one-shot
   `gm-response-node` call, `gm-entity-reference-resolver`, and `entity-judge`.
 - Preserved unchanged: `intent-classifier`, `scene-subject-resolver`, `check-planner`,

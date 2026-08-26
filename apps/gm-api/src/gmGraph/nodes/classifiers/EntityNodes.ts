@@ -3,12 +3,11 @@ import type { GraphContext } from '../../../types';
 import type { GraphNode, GraphNodeDelta } from '../graphNode';
 
 /**
- * Builds the turn's entity context: the candidate pool the player reference
- * resolver matches against, and the roster the client shows.
+ * Builds the candidate pool the player's reference resolver matches against.
  *
- * It no longer picks what the GM is allowed to know. The prose agent
- * discovers that for itself, so the judge that used to score this node's
- * offered list against the finished narration is gone.
+ * It no longer picks what the GM is allowed to know — the prose agent
+ * discovers that for itself — and it no longer writes the roster, which is
+ * derived after the turn from what the narration used.
  */
 export class EntitySelectorNode implements GraphNode {
   readonly id = 'entity-selector';
@@ -17,22 +16,6 @@ export class EntitySelectorNode implements GraphNode {
     if (context.failure) {
       return {};
     }
-    const entityContext = await buildEntityContext(context);
-    return {
-      chronicleState: {
-        ...context.chronicleState,
-        chronicle: {
-          ...context.chronicleState.chronicle,
-          entityRoster: {
-            entries: entityContext.roster,
-            locationName: context.chronicleState.locationName,
-            sceneId: context.effectiveScene?.id ?? null,
-            updatedAtTurn: context.turnSequence,
-          },
-        },
-      },
-      entityContext,
-      turnEntityRoster: entityContext.roster,
-    };
+    return { entityContext: await buildEntityContext(context) };
   }
 }

@@ -132,7 +132,7 @@ export type WorldSchemaStore = {
     limit?: number;
   }) => Promise<SubjectEntityCandidate[]>;
   findReferenceCandidates: (input: {
-    candidateIds: string[];
+    candidateIds?: string[];
     embedding: number[];
     limit?: number;
   }) => Promise<ReferenceEntityCandidate[]>;

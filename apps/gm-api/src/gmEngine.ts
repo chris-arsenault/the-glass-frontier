@@ -29,6 +29,7 @@ import {
 } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
+import { withDerivedRoster } from './entity/derivedRoster';
 import {
   type ChronicleClosurePublisher,
   createClosureEmitterFromEnv
@@ -283,21 +284,14 @@ class GmEngine {
     );
   }
 
+  /**
+   * The roster is written after the turn, from what the turn used. It was
+   * refreshed by re-running the selector whenever the scene or location
+   * changed, which asked a scorer to guess the cast again; the narration has
+   * already answered that question by the time we get here.
+   */
   async #refreshRosterAfterTransition(context: GraphContext): Promise<GraphContext> {
-    const roster = context.chronicleState.chronicle.entityRoster;
-    const sceneId = context.chronicleState.chronicle.activeScene?.id ?? null;
-    if (
-      context.failure
-      || (roster.locationName === context.chronicleState.locationName && roster.sceneId === sceneId)
-    ) {
-      return context;
-    }
-    const turnEntityRoster = context.turnEntityRoster;
-    const delta = await new EntitySelectorNode().execute({
-      ...context,
-      effectiveScene: context.chronicleState.chronicle.activeScene,
-    });
-    return { ...context, ...delta, turnEntityRoster };
+    return withDerivedRoster(context);
   }
 
   #assertChronicleId(chronicleId: string): void {

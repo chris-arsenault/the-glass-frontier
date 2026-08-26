@@ -100,14 +100,13 @@ const describePlayerBeatLabel = (directive: PlayerBeatDirective | null): string 
 const PROGRESS_NODE_LABELS: Record<string, string> = {
   'check-planner': 'weighing the risk',
   'check-runner': 'rolling the dice',
-  'entity-judge': 'noting who mattered',
   'entity-selector': 'gathering the scene',
-  'gm-entity-reference-resolver': 'linking the narration to canon',
   'gm-response-node': 'writing the narration',
   'intent-classifier': 'reading your intent',
   'inventory-delta': 'checking your gear',
   'player-entity-reference-resolver': 'linking your words to canon',
   'scene-subject-resolver': 'finding the scene subject',
+  scout: 'looking things up',
   'turn-judge': 'judging the turn',
 };
 

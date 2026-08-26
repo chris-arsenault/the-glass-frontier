@@ -132,10 +132,12 @@ describe('EntityReferenceResolverNode', () => {
     ]);
   });
 
-  it('does not request an embedding when none of the candidate kinds have embeddings', async () => {
-    const embed = vi.fn();
+  it('searches the whole entity space, not the turn\'s candidate slice', async () => {
+    const findReferenceCandidates = vi.fn(
+      (_input: Record<string, unknown>) => Promise.resolve([])
+    );
     const context = contextWithEntity({
-      embeddings: { embed },
+      embeddings: { embed: () => Promise.resolve([0.1, 0.2]) },
       playerMessage: {
         content: 'I ask whether the fare is negotiable.',
         id: 'message-4',
@@ -143,13 +145,13 @@ describe('EntityReferenceResolverNode', () => {
         role: 'player',
       },
       worldSchemaStore: {
-        hasEntityEmbeddings: () => Promise.resolve(false),
+        findReferenceCandidates,
       } as unknown as GraphContext['worldSchemaStore'],
     });
 
-    const result = await new EntityReferenceResolverNode('player').execute(context);
+    await new EntityReferenceResolverNode('player').execute(context);
 
-    expect(result.entityReferences).toEqual([]);
-    expect(embed).not.toHaveBeenCalled();
+    const input = findReferenceCandidates.mock.calls[0]?.[0] ?? {};
+    expect(Object.keys(input)).not.toContain('candidateIds');
   });
 });

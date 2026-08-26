@@ -1,4 +1,4 @@
-import type { EntityReference, EntityReferenceSpan, EntityRosterEntry } from '@glass-frontier/dto';
+import type { EntityReference, EntityReferenceSpan } from '@glass-frontier/dto';
 import { developerTextMessage, userTextMessage } from '@glass-frontier/llm-client';
 import type { ReferenceEntityCandidate } from '@glass-frontier/worldstate';
 import { z } from 'zod';
@@ -52,17 +52,6 @@ const exactSpan = (content: string, entity: EntitySnippet): EntityReferenceSpan 
 const overlaps = (left: EntityReferenceSpan, right: EntityReferenceSpan): boolean =>
   left.start < right.end && right.start < left.end;
 
-const publicEntry = (entity: EntitySnippet): EntityRosterEntry => ({
-  availability: ['connected'],
-  description: entity.description,
-  id: entity.id,
-  kind: entity.kind,
-  name: entity.name,
-  slug: entity.slug,
-  status: entity.status,
-  subkind: entity.subkind,
-});
-
 const candidatePrompt = (
   candidates: EntitySnippet[],
   ranked: ReferenceEntityCandidate[]
@@ -115,40 +104,6 @@ const semanticReferences = ({
   return references;
 };
 
-const promoteReferences = (
-  context: GraphContext,
-  references: EntityReference[]
-): Pick<GraphNodeDelta, 'chronicleState' | 'entityContext' | 'turnEntityRoster'> => {
-  const entityContext = context.entityContext;
-  if (entityContext === undefined) {
-    return {};
-  }
-  const promoted = references.flatMap((reference) => {
-    const candidate = entityContext.candidates.find((entity) => entity.id === reference.entityId);
-    return candidate === undefined ? [] : [candidate];
-  });
-  const offered = [...promoted, ...entityContext.offered]
-    .filter((entity, index, all) => all.findIndex((other) => other.id === entity.id) === index)
-    .slice(0, 7);
-  const prior = new Map(entityContext.roster.map((entry) => [entry.id, entry]));
-  const roster = offered.map((entity) => prior.get(entity.id) ?? publicEntry(entity));
-  return {
-    chronicleState: {
-      ...context.chronicleState,
-      chronicle: {
-        ...context.chronicleState.chronicle,
-        entityRoster: {
-          ...context.chronicleState.chronicle.entityRoster,
-          entries: roster,
-          updatedAtTurn: context.turnSequence,
-        },
-      },
-    },
-    entityContext: { ...entityContext, offered, roster },
-    turnEntityRoster: roster,
-  };
-};
-
 export class EntityReferenceResolverNode implements GraphNode {
   readonly id: string;
   readonly #speaker: ResolverSpeaker;
@@ -158,26 +113,28 @@ export class EntityReferenceResolverNode implements GraphNode {
     this.id = `${speaker}-entity-reference-resolver`;
   }
 
+  /**
+   * Resolves what the player named against the whole entity space.
+   *
+   * It used to match against the selector's 50-candidate slice — a two-hop
+   * walk from the anchor — so a player naming something the walk had not
+   * reached simply went unresolved. It also promoted whatever it found onto
+   * the roster, which is how a passing mention became part of the GM's
+   * permitted knowledge for the rest of the chronicle. Both are gone: the
+   * search is global, and the roster is derived after the turn from what the
+   * narration actually used.
+   */
   async execute(context: GraphContext): Promise<GraphNodeDelta> {
-    const message = this.#speaker === 'player' ? context.playerMessage : context.gmResponse;
-    if (context.failure || message === undefined || context.entityContext === undefined) {
+    const message = context.playerMessage;
+    if (context.failure || context.entityContext === undefined) {
       return {};
     }
-    const candidates = this.#speaker === 'player'
-      ? context.entityContext.candidates
-      : context.entityContext.offered;
+    const candidates = context.entityContext.candidates;
     const exact = this.#resolveExact(context, message.content, message.id, candidates);
     const semantic = exact.length === 0
       ? await this.#resolveSemantic(context, message.content, message.id, candidates)
       : [];
-    const references = [...(context.entityReferences ?? []), ...exact, ...semantic];
-    if (this.#speaker === 'gm') {
-      return { entityReferences: references };
-    }
-    return {
-      ...promoteReferences(context, [...exact, ...semantic]),
-      entityReferences: references,
-    };
+    return { entityReferences: [...(context.entityReferences ?? []), ...exact, ...semantic] };
   }
 
   #resolveExact(
@@ -219,20 +176,12 @@ export class EntityReferenceResolverNode implements GraphNode {
     transcriptEntryId: string,
     candidates: EntitySnippet[]
   ): Promise<EntityReference[]> {
-    if (content.trim().length < 3 || candidates.length === 0) {
+    if (content.trim().length < 3) {
       return [];
     }
     try {
-      const candidateKinds = [...new Set(candidates.map((candidate) => candidate.kind))];
-      const hasEmbeddings = (await Promise.all(
-        candidateKinds.map((kind) => context.worldSchemaStore.hasEntityEmbeddings(kind))
-      )).some(Boolean);
-      if (!hasEmbeddings) {
-        return [];
-      }
       const embedding = await context.embeddings.embed(content);
       const ranked = (await context.worldSchemaStore.findReferenceCandidates({
-        candidateIds: candidates.map((candidate) => candidate.id),
         embedding,
         limit: 5,
       })).filter((candidate) => candidate.similarity >= MIN_SEMANTIC_SIMILARITY);

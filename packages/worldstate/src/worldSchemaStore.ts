@@ -91,7 +91,7 @@ class PostgresWorldSchemaStore implements WorldSchemaStore {
   }
 
   async findReferenceCandidates(input: {
-    candidateIds: string[];
+    candidateIds?: string[];
     embedding: number[];
     limit?: number;
   }): Promise<ReferenceEntityCandidate[]> {

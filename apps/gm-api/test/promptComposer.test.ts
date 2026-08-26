@@ -105,53 +105,6 @@ describe('PromptComposer', () => {
     expect(developer).toContain('Amaya Venn');
   });
 
-  it('gives the entity judge the GM response as the user message and entities as a fragment', async () => {
-    const { runtime } = recordingRuntime();
-    const composer = new PromptComposer(runtime);
-    const context = buildContext({
-      entityContext: {
-        candidates: [],
-        focusEntities: [],
-        focusTags: [],
-        offered: [
-          {
-            description: 'A smuggling ring that controls the ash docks.',
-            facts: { founded: 2402 },
-            gmNotes: [
-              { kind: 'complicates' as const, text: 'Its dock crews close ranks when challenged.' },
-            ],
-            id: 'entity-1',
-            kind: 'faction',
-            loreFragments: [],
-            name: 'Ash Cartel',
-            score: 1,
-            slug: 'ash-cartel',
-            tags: ['trade'],
-            unwritten: false,
-          },
-        ],
-        roster: [],
-      },
-      gmResponse: {
-        content: 'The cartel enforcer blocks the doorway.',
-        id: 'gm-1',
-        metadata: { tags: [], timestamp: 0 },
-        role: 'gm',
-      },
-      playerIntent: buildIntent(),
-    });
-
-    const prompt = await composer.buildPrompt('entity-judge', context);
-
-    expect(prompt.input[0]?.role).toBe('user');
-    expect(textOf(prompt.input[0])).toBe('The cartel enforcer blocks the doorway.');
-    const developer = textOf(prompt.input.at(-1)!);
-    expect(developer).toContain(ENTITIES_HEADER);
-    expect(developer).toContain('ash-cartel');
-    expect(developer).toContain('A smuggling ring that controls the ash docks.');
-    expect(developer).toContain('Its dock crews close ranks when challenged.');
-  });
-
   it('offers an unwritten entity as a hook rather than as established canon', async () => {
     const { runtime } = recordingRuntime();
     const composer = new PromptComposer(runtime);
