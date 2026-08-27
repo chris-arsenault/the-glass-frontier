@@ -12,25 +12,46 @@ import {
   type TokenUsage,
 } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
+import { z } from 'zod';
 
 import { PromptComposer } from '../prompts/prompts';
 import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
-import { agentTemplateFor, SCOUT_CLOSING, SCOUT_INSTRUCTIONS, scoutFocus } from './policy';
+import {
+  agentTemplateFor,
+  COMPOSE_INSTRUCTIONS,
+  EVALUATOR_INSTRUCTIONS,
+  EXTRACT_INSTRUCTIONS,
+  SEARCH_INSTRUCTIONS,
+  searchFocus,
+} from './policy';
 import { buildSeedPack, renderSeedPack } from './seedPack';
 import { createProseAgentTools } from './tools';
-import { ToolSession } from './toolSession';
+import { RETRIEVED_TOKEN_BUDGET, ToolSession } from './toolSession';
 
-export const PROSE_AGENT_MAX_STEPS = 5;
-/**
- * The scout writes the brief, so its ceiling is the brief's ceiling. At 2,000
- * it could not have written a long one had it wanted to, and the six-line
- * briefs it did write were never tested against a limit it could reach.
- */
-const SCOUT_MAX_OUTPUT_TOKENS = 8_000;
+/** Steps per search invocation; the evaluator, not the cap, ends research. */
+const SEARCH_MAX_STEPS = 2;
+/** Research iterations (search + evaluate) before composing regardless. */
+const MAX_RESEARCH_ITERATIONS = 3;
+const SEARCH_MAX_OUTPUT_TOKENS = 2_000;
+const EVALUATOR_MAX_OUTPUT_TOKENS = 1_000;
+const COMPOSE_MAX_OUTPUT_TOKENS = 4_000;
+const EXTRACT_MAX_OUTPUT_TOKENS = 4_000;
 const PROSE_MAX_OUTPUT_TOKENS = 2_000;
 const SCOUT_REASONING_EFFORT = 'low';
 const PROSE_REASONING_EFFORT = 'low';
+
+/**
+ * The evaluator's verdict: research is sufficient, or these are the gaps.
+ * Gaps name missing information, and the next search invocation decides how
+ * to reach it — the evaluator judges, the searcher retrieves.
+ */
+const RetrievalVerdict = z.object({
+  gaps: z.array(z.string().min(1)).max(4).default([])
+    .describe('What the brief cannot be written without, as information, not tool calls.'),
+  status: z.enum(['sufficient', 'continue']),
+});
+type RetrievalVerdict = z.infer<typeof RetrievalVerdict>;
 
 export type ProseAgentOutcome = {
   brief: TurnBrief;
@@ -86,12 +107,25 @@ const stepListener = (session: ToolSession, deps: ProseAgentDeps) =>
     deps.onStep?.(step);
   };
 
+const sumUsage = (entries: TokenUsage[]): TokenUsage => {
+  const total: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  for (const entry of entries) {
+    total.inputTokens += entry.inputTokens;
+    total.outputTokens += entry.outputTokens;
+    total.totalTokens += entry.totalTokens;
+  }
+  return total;
+};
+
+const userMessage = (text: string): {
+  content: Array<{ text: string; type: 'input_text' }>;
+  role: 'user';
+} => ({ content: [{ text, type: 'input_text' }], role: 'user' });
+
 /**
- * Slugs the scout names are resolved against what it actually opened, and
- * anything it names but never read is dropped: a sidecar is a record of what
- * was retrieved, not of what was imagined. This is the only source of entity
- * usage now — the judge that used to re-read the narration and score the
- * offered list is gone, along with its LLM call.
+ * Slugs the brief names are resolved against what the research actually
+ * opened, and anything named but never read is dropped: a sidecar is a record
+ * of what was retrieved, not of what was imagined.
  */
 const provenanceFiltered = (
   context: GraphContext,
@@ -111,10 +145,10 @@ const provenanceFiltered = (
 });
 
 /**
- * Everything the scout judged, as the writer's one authored block, plus what
- * the world did before the dice. The writer is not obliged to show the world's
- * move — the world does what it does, the narration shows what the camera
- * catches — so a quiet turn stays quiet and lands later.
+ * Everything the research judged, as the writer's one authored block, plus
+ * what the world did before the dice. The writer is not obliged to show the
+ * world's move — the world does what it does, the narration shows what the
+ * camera catches — so a quiet turn stays quiet and lands later.
  *
  * `brief.scene` is absent here on purpose: it is the scout's proposed scene
  * state, read by `applySceneRead`, while the writer receives the scene's own
@@ -132,13 +166,9 @@ const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string
 const UNESTABLISHED = 'not established this turn';
 
 /**
- * A turn with nothing retrieved, for when the scout stops without submitting.
- *
- * The agent loop ends when the model answers in plain text instead of calling
- * a tool, and that used to surface as a dead turn — two of the nine turns in
- * Hidden Messages died on "Agent loop ended after 2 step(s) without calling
- * submit_brief". The writer still has the scene record, the character, and the
- * check; a thinner turn beats one the player has to retype.
+ * A turn with nothing usable retrieved or composed. The writer still has the
+ * scene record, the check, and the player's words; a thinner turn beats one
+ * the player has to retype.
  */
 const EMPTY_BRIEF: TurnBrief = {
   character: UNESTABLISHED,
@@ -150,42 +180,155 @@ const EMPTY_BRIEF: TurnBrief = {
   scene: { changed: UNESTABLISHED, endsWhen: UNESTABLISHED, stakes: UNESTABLISHED },
 };
 
+type ResearchTarget = {
+  intentType: IntentType;
+  model: Awaited<ReturnType<typeof resolveProseModel>>;
+  playerId: string;
+  session: ToolSession;
+  task: string;
+};
+
+/** The searcher's message: the turn, then what is held and what is missing. */
+const searchMessage = (target: ResearchTarget, gaps: string[]): string => {
+  if (gaps.length === 0) {
+    return target.task;
+  }
+  return `${target.task}\n\n### RETRIEVED\n${target.session.renderRecord()}`
+    + `\n\n### GAPS\n${gaps.map((gap) => `- ${gap}`).join('\n')}`;
+};
+
+const runSearch = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: ResearchTarget,
+  gaps: string[]
+): Promise<{ stepCount: number; usage: TokenUsage }> => deps.agentLoop.run({
+  instructions: `${SEARCH_INSTRUCTIONS}\n\n${searchFocus(target.intentType)}`,
+  maxOutputTokens: SEARCH_MAX_OUTPUT_TOKENS,
+  maxSteps: SEARCH_MAX_STEPS,
+  messages: [{ content: searchMessage(target, gaps), role: 'user' }],
+  metadata: callMetadata(context, deps, target.playerId, 'scout'),
+  model: target.model,
+  onStep: stepListener(target.session, deps),
+  player: context.llmPlayer,
+  reasoningEffort: SCOUT_REASONING_EFFORT,
+  tools: createProseAgentTools({ context, session: target.session }),
+});
+
+/** The evaluator judges from the raw record, never the searcher's account. */
+const evaluateResearch = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: ResearchTarget
+): Promise<{ usage: TokenUsage; verdict: RetrievalVerdict }> => {
+  const response = await context.llm.generateStructured(
+    {
+      input: [userMessage(
+        `${target.task}\n\n### RETRIEVED\n${target.session.renderRecord()}`
+      )],
+      instructions: EVALUATOR_INSTRUCTIONS,
+      maxOutputTokens: EVALUATOR_MAX_OUTPUT_TOKENS,
+      metadata: callMetadata(context, deps, target.playerId, 'scout-evaluator'),
+      model: target.model.modelId,
+      player: context.llmPlayer,
+      reasoningEffort: SCOUT_REASONING_EFFORT,
+    },
+    RetrievalVerdict,
+    'retrieval_verdict_schema'
+  );
+  return { usage: response.usage, verdict: response.data };
+};
+
+/** The brief as prose in labeled sections — the format the models write well. */
+const composeBrief = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: ResearchTarget
+): Promise<{ text: string; usage: TokenUsage }> => {
+  const response = await context.llm.generate({
+    input: [userMessage(
+      `${target.task}\n\n### RETRIEVED\n${target.session.renderRecord()}`
+    )],
+    instructions: COMPOSE_INSTRUCTIONS,
+    maxOutputTokens: COMPOSE_MAX_OUTPUT_TOKENS,
+    metadata: callMetadata(context, deps, target.playerId, 'scout-composer'),
+    model: target.model.modelId,
+    player: context.llmPlayer,
+    reasoningEffort: SCOUT_REASONING_EFFORT,
+  }, 'string');
+  if (typeof response.message !== 'string' || response.message.trim().length === 0) {
+    throw new Error('The composer returned no brief text.');
+  }
+  return { text: response.message, usage: response.usage };
+};
+
+/** Prose into schema: the low-reasoning half, on the classification model. */
+const extractBrief = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: ResearchTarget,
+  briefText: string
+): Promise<{ brief: TurnBrief; usage: TokenUsage }> => {
+  const model = await context.modelConfigStore.getModelForCategory(
+    'classification',
+    target.playerId
+  );
+  const response = await context.llm.generateStructured(
+    {
+      input: [userMessage(`### BRIEF-TEXT\n${briefText}`)],
+      instructions: EXTRACT_INSTRUCTIONS,
+      maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS,
+      metadata: callMetadata(context, deps, target.playerId, 'scout-extractor'),
+      model,
+      player: context.llmPlayer,
+      reasoningEffort: SCOUT_REASONING_EFFORT,
+    },
+    TurnBrief,
+    'turn_brief_schema'
+  );
+  return { brief: response.data, usage: response.usage };
+};
+
 /**
- * A brief that fails whole-object validation still carries its valid fields.
- * On The Silent Test a scout wrote `scene` as prose instead of the object and
- * the writer received the empty fallback — six good fields discarded over one
- * bad one. Each field is parsed on its own; only the ones that fail fall back.
+ * The research loop: search, then let a separate invocation judge whether
+ * the record suffices. The searcher never decides that research is complete —
+ * combining "find more" and "decide whether more is needed" in one call made
+ * stopping the cheapest answer, and both models took it at two or three
+ * calls. The harness owns the hard limits: iteration cap and token budget.
  */
-const salvageBrief = (context: GraphContext, input: unknown): TurnBrief => {
-  const direct = TurnBrief.safeParse(input);
-  if (direct.success) {
-    return direct.data;
+const runResearch = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: ResearchTarget
+): Promise<{ stepCount: number; usages: TokenUsage[] }> => {
+  const usages: TokenUsage[] = [];
+  let stepCount = 0;
+  let gaps: string[] = [];
+  for (let iteration = 1; iteration <= MAX_RESEARCH_ITERATIONS; iteration += 1) {
+    // eslint-disable-next-line no-await-in-loop -- each round builds on the last
+    const search = await runSearch(context, deps, target, gaps);
+    stepCount += search.stepCount;
+    usages.push(search.usage);
+    if (iteration === MAX_RESEARCH_ITERATIONS
+      || target.session.spentTokens >= RETRIEVED_TOKEN_BUDGET) {
+      break;
+    }
+    // eslint-disable-next-line no-await-in-loop -- the verdict gates the next round
+    const evaluated = await evaluateResearch(context, deps, target);
+    usages.push(evaluated.usage);
+    log('info', 'prose-agent.research.verdict', {
+      chronicleId: context.chronicleId,
+      gaps: evaluated.verdict.gaps.join(' | ').slice(0, 300),
+      iteration,
+      status: evaluated.verdict.status,
+      turnId: context.turnId,
+    });
+    if (evaluated.verdict.status === 'sufficient' || evaluated.verdict.gaps.length === 0) {
+      break;
+    }
+    gaps = evaluated.verdict.gaps;
   }
-  const source: unknown = typeof input === 'string' ? JSON.parse(input) : input;
-  if (source === null || typeof source !== 'object') {
-    throw new Error('submit_brief input is not an object.');
-  }
-  const submitted = new Map<string, unknown>(
-    Object.entries(source as Record<string, unknown>)
-  );
-  const fallbacks = new Map<string, unknown>(Object.entries(EMPTY_BRIEF));
-  const dropped: string[] = [];
-  const brief = Object.fromEntries(
-    Object.entries(TurnBrief.shape).map(([key, schema]) => {
-      const parsed = schema.safeParse(submitted.get(key));
-      if (parsed.success) {
-        return [key, parsed.data];
-      }
-      dropped.push(key);
-      return [key, fallbacks.get(key)];
-    })
-  );
-  log('warn', 'prose-agent.brief.salvaged', {
-    chronicleId: context.chronicleId,
-    droppedFields: dropped.join(','),
-    turnId: context.turnId,
-  });
-  return TurnBrief.parse(brief);
+  return { stepCount, usages };
 };
 
 const runScout = async (
@@ -195,14 +338,24 @@ const runScout = async (
   intentType: IntentType
 ): Promise<{ brief: TurnBrief; session: ToolSession; stepCount: number; usage: TokenUsage }> => {
   const pack = await buildSeedPack(context);
-  const session = new ToolSession({
-    finishTool: 'submit_brief',
-    maxSteps: PROSE_AGENT_MAX_STEPS,
-    seedEntities: pack.seedEntities,
-  });
-  const model = await resolveProseModel(context, playerId, deps.modelId);
+  const session = new ToolSession({ seedEntities: pack.seedEntities });
+  const target: ResearchTarget = {
+    intentType,
+    model: await resolveProseModel(context, playerId, deps.modelId),
+    playerId,
+    session,
+    task: renderSeedPack(pack, context.playerMessage.content),
+  };
   try {
-    return await scoutRound(context, deps, { intentType, model, pack, playerId, session });
+    const research = await runResearch(context, deps, target);
+    const composed = await composeBrief(context, deps, target);
+    const extracted = await extractBrief(context, deps, target, composed.text);
+    return {
+      brief: extracted.brief,
+      session,
+      stepCount: research.stepCount,
+      usage: sumUsage([...research.usages, composed.usage, extracted.usage]),
+    };
   } catch (error) {
     log('warn', 'prose-agent.scout.no_brief', {
       chronicleId: context.chronicleId,
@@ -216,42 +369,6 @@ const runScout = async (
       usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     };
   }
-};
-
-const scoutRound = async (
-  context: GraphContext,
-  deps: ProseAgentDeps,
-  round: {
-    intentType: IntentType;
-    model: Awaited<ReturnType<typeof resolveProseModel>>;
-    pack: Awaited<ReturnType<typeof buildSeedPack>>;
-    playerId: string;
-    session: ToolSession;
-  }
-): Promise<{ brief: TurnBrief; session: ToolSession; stepCount: number; usage: TokenUsage }> => {
-  const { intentType, model, pack, playerId, session } = round;
-  const result = await deps.agentLoop.run({
-    finishToolName: 'submit_brief',
-    instructions: `${SCOUT_INSTRUCTIONS}\n\n${scoutFocus(intentType)}`,
-    maxOutputTokens: SCOUT_MAX_OUTPUT_TOKENS,
-    maxSteps: PROSE_AGENT_MAX_STEPS,
-    messages: [{
-      content: `${renderSeedPack(pack, context.playerMessage.content)}\n\n${SCOUT_CLOSING}`,
-      role: 'user',
-    }],
-    metadata: callMetadata(context, deps, playerId, 'scout'),
-    model,
-    onStep: stepListener(session, deps),
-    player: context.llmPlayer,
-    reasoningEffort: SCOUT_REASONING_EFFORT,
-    tools: createProseAgentTools({ context, session }),
-  });
-  return {
-    brief: salvageBrief(context, result.finishToolInput),
-    session,
-    stepCount: result.stepCount,
-    usage: result.usage,
-  };
 };
 
 const writeProse = async (
@@ -294,9 +411,10 @@ const writeProse = async (
 };
 
 /**
- * One turn in two stages: the scout retrieves and briefs, the writer narrates
- * from the brief with no tools, no index, and no retrieval policy competing
- * for its attention.
+ * One turn in stages: research retrieves under an evaluator's judgment, the
+ * composer writes the brief, the extractor structures it, and the writer
+ * narrates from the brief with no tools, no index, and no retrieval policy
+ * competing for its attention.
  */
 export const runProseAgent = async (
   context: GraphContext,
@@ -314,11 +432,7 @@ export const runProseAgent = async (
     playerId,
     templateId: agentTemplateFor(intent.intentType),
   });
-  const usage: TokenUsage = {
-    inputTokens: scout.usage.inputTokens + written.usage.inputTokens,
-    outputTokens: scout.usage.outputTokens + written.usage.outputTokens,
-    totalTokens: scout.usage.totalTokens + written.usage.totalTokens,
-  };
+  const usage = sumUsage([scout.usage, written.usage]);
   return {
     brief: scout.brief,
     costUsd: calculateActualCostUsd(model, usage),

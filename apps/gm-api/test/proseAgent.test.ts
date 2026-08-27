@@ -16,17 +16,16 @@ const GUILD_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const HIDDEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KORVATH_SLUG = 'korvath-dockmaster';
 const GUILD_SLUG = 'harbor-guild';
-const BUDGET_REMINDER_TEXT = '[reminder] The retrieval budget';
-const TITHE_COUNTING = 'Korvath counts the tithe';
 const SONNET_MODEL_ID = 'claude-sonnet-5';
+const TITHE_COUNTING = 'Korvath counts the tithe';
+const SMALL_USAGE = { inputTokens: 50, outputTokens: 30, totalTokens: 80 };
 
 const runTool = async (agentTool: unknown, input: unknown): Promise<string> => {
   const executable = agentTool as { execute: (i: unknown, o: unknown) => Promise<string> };
   return executable.execute(input, {});
 };
 
-const freshSession = (): ToolSession =>
-  new ToolSession({ finishTool: 'submit_brief', maxSteps: 5, seedEntities: [] });
+const freshSession = (): ToolSession => new ToolSession({ seedEntities: [] });
 
 const entity = (overrides: Partial<HardState> & { id: string; slug: string }): HardState =>
   ({
@@ -116,22 +115,27 @@ const agentContext = (): GraphContext => {
 };
 
 describe('tool session', () => {
-  it('suppresses repeats, caps results, and reminds about the budget once', () => {
+  it('suppresses repeats, caps results, and keeps the retrieval record', () => {
     const session = freshSession();
-    const first = session.wrapResult('identity:a', () => 'x'.repeat(40_000));
+    const first = session.wrapResult('open:a:both', () => 'x'.repeat(40_000));
     expect(first).toContain('[truncated');
-    const second = session.wrapResult('identity:a', () => 'never rendered');
+    const second = session.wrapResult('open:a:both', () => 'never rendered');
     expect(second).toContain('[already provided in round 1]');
-    const filler: string[] = [];
-    for (let index = 0; index < 6; index += 1) {
-      filler.push(session.wrapResult(`identity:filler-${index}`, () => 'x'.repeat(6_000)));
-    }
-    expect(filler.filter((text) => text.includes(BUDGET_REMINDER_TEXT))).toHaveLength(1);
-    // The reminder must name a tool the agent was actually given.
-    expect(filler.find((text) => text.includes(BUDGET_REMINDER_TEXT)))
-      .toContain('call submit_brief');
-    const after = session.wrapResult('identity:z', () => 'short');
-    expect(after).not.toContain(BUDGET_REMINDER_TEXT);
+    session.recordCall({
+      input: '{"slug":"a"}',
+      outcome: { result: 'description: a place' },
+      tool: 'open',
+    });
+    session.recordCall({
+      input: '{"slug":"globitz"}',
+      outcome: { error: 'No canon entity with slug "globitz".' },
+      tool: 'open',
+    });
+    const record = session.renderRecord();
+    expect(record).toContain('## open({"slug":"a"})');
+    expect(record).toContain('description: a place');
+    expect(record).toContain('MISS: No canon entity with slug "globitz".');
+    expect(session.callCount).toBe(2);
   });
 });
 
@@ -167,12 +171,13 @@ describe('seed pack', () => {
 });
 
 describe('prose agent tools', () => {
-  it('open returns every identity field and note without being asked for keys', async () => {
+  it('open returns every identity field and note as labeled text, not JSON', async () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
     const raw = await runTool(tools.open, { slug: KORVATH_SLUG });
 
     expect(raw).toContain('clipped');
     expect(raw).toContain('wary');
+    expect(raw).not.toContain('{"');
   });
 
   it('open narrows to lore or to notes when asked', async () => {
@@ -181,8 +186,8 @@ describe('prose agent tools', () => {
     const lore = await runTool(tools.open, { include: 'lore', slug: KORVATH_SLUG });
 
     expect(notes).toContain('clipped');
-    expect(notes).not.toContain('"lore"');
-    expect(lore).toContain('"lore"');
+    expect(notes).not.toContain('lore:');
+    expect(lore).toContain('lore:');
     expect(lore).not.toContain('clipped');
   });
 
@@ -232,16 +237,19 @@ describe('prose agent tools', () => {
     expect(raw).not.toContain(GUILD_SLUG);
   });
 
-  it('open and search_history fail as errors on misses instead of returning prose', async () => {
+  it('open and search_history fail as errors on misses, and the record keeps the miss', async () => {
     const context = agentContext();
     context.chronicleStore = {
       searchTurns: () => Promise.resolve([]),
     } as unknown as GraphContext['chronicleStore'];
-    const tools = createProseAgentTools({ context, session: freshSession() });
+    const session = freshSession();
+    const tools = createProseAgentTools({ context, session });
     await expect(runTool(tools.open, { slug: 'globitz' }))
       .rejects.toThrow('No canon entity with slug "globitz"');
     await expect(runTool(tools.search_history, { query: 'globitz' }))
       .rejects.toThrow('No past turn mentions "globitz"');
+    expect(session.renderRecord()).toContain('MISS: No canon entity with slug "globitz"');
+    expect(session.callCount).toBe(2);
   });
 
   it('read_turns reads a fixed window in play order', async () => {
@@ -255,7 +263,7 @@ describe('prose agent tools', () => {
     } as unknown as GraphContext['chronicleStore'];
     const tools = createProseAgentTools({ context, session: freshSession() });
     const raw = await runTool(tools.read_turns, { fromSequence: 4 });
-    expect(raw).toBe('[]');
+    expect(raw).toBe('');
   });
 });
 
@@ -264,9 +272,13 @@ const usage = {
   outputTokens: { reasoning: undefined, text: undefined, total: 20 },
 };
 
+type MockContent =
+  | { input: string; toolCallId: string; toolName: string; type: 'tool-call' }
+  | { text: string; type: 'text' };
+
 type MockGenerateResponse = {
-  content: Array<{ input: string; toolCallId: string; toolName: string; type: 'tool-call' }>;
-  finishReason: { raw: undefined; unified: 'tool-calls' };
+  content: MockContent[];
+  finishReason: { raw: undefined; unified: 'stop' | 'tool-calls' };
   usage: typeof usage;
   warnings: [];
 };
@@ -281,7 +293,14 @@ const toolCallResponse = (
     toolName,
     type: 'tool-call',
   }],
-  finishReason: { raw: undefined, unified: 'tool-calls' },
+  finishReason: { raw: undefined, unified: 'tool-calls' as const },
+  usage,
+  warnings: [],
+});
+
+const textResponse = (text: string): MockGenerateResponse => ({
+  content: [{ text, type: 'text' as const }],
+  finishReason: { raw: undefined, unified: 'stop' as const },
   usage,
   warnings: [],
 });
@@ -303,48 +322,50 @@ const briefInput = (): Record<string, unknown> => ({
   },
 });
 
-/** A context whose writer stage returns prose, so the second call resolves. */
-const writerContext = (): GraphContext => {
-  const context = agentContext();
-  context.llm = {
-    generate: () => Promise.resolve({
-      message: 'Korvath counts the tithe twice before he answers you.',
-      requestId: 'req-writer',
-      usage: { inputTokens: 50, outputTokens: 30, totalTokens: 80 },
-    }),
-  } as unknown as GraphContext['llm'];
-  return context;
-};
+type Verdict = { gaps: string[]; status: 'sufficient' | 'continue' };
 
-describe('prose agent panel', () => {
-  it('runs every panel model and drops only the failed ones', async () => {
-    const attempted: string[] = [];
-    const panelLoop = {
-      run: (request: { model: { modelId: string } }) => {
-        attempted.push(request.model.modelId);
+/**
+ * The llm stages behind the scout — evaluator, composer, extractor, writer —
+ * dispatched the way production tells them apart: schema name and node id.
+ */
+const llmStub = (options?: {
+  extractFails?: boolean;
+  verdicts?: Verdict[];
+}): GraphContext['llm'] => {
+  let verdictIndex = 0;
+  return {
+    generate: (request: { metadata?: { nodeId?: string } }) => {
+      if (request.metadata?.nodeId === 'scout-composer') {
         return Promise.resolve({
-          finishToolInput: briefInput(),
-          stepCount: 2,
-          usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
+          message: 'CHARACTER:\nA glasswright.\n\nLOCATION:\nThe tithe yards.',
+          requestId: 'req-composer',
+          usage: SMALL_USAGE,
         });
-      },
-    } as unknown as AgentLoopClient;
-    const alternates = await runProseAgentPanel(writerContext(), panelLoop);
-    expect(attempted.sort()).toEqual([...PANEL_MODELS].sort());
-    const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
-    expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
-    expect(agentic[0]?.prose).toContain(TITHE_COUNTING);
-    expect(agentic.every((alternate) => alternate.costUsd > 0)).toBe(true);
-    expect(alternates.some((alternate) => alternate.modelId.includes('one-shot'))).toBe(true);
-  });
-
-  it('never throws when every panelist fails', async () => {
-    const failingLoop = {
-      run: () => Promise.reject(new Error('bedrock unavailable')),
-    } as unknown as AgentLoopClient;
-    await expect(runProseAgentPanel(agentContext(), failingLoop)).resolves.toEqual([]);
-  });
-});
+      }
+      return Promise.resolve({
+        message: 'Korvath counts the tithe twice before he answers you.',
+        requestId: 'req-writer',
+        usage: SMALL_USAGE,
+      });
+    },
+    generateStructured: (
+      _request: unknown,
+      _schema: unknown,
+      schemaName: string
+    ) => {
+      if (schemaName === 'retrieval_verdict_schema') {
+        const verdicts = options?.verdicts ?? [{ gaps: [], status: 'sufficient' as const }];
+        const verdict = verdicts[Math.min(verdictIndex, verdicts.length - 1)];
+        verdictIndex += 1;
+        return Promise.resolve({ data: verdict, rawResponse: {}, usage: SMALL_USAGE });
+      }
+      if (options?.extractFails === true) {
+        return Promise.reject(new Error('extraction failed'));
+      }
+      return Promise.resolve({ data: briefInput(), rawResponse: {}, usage: SMALL_USAGE });
+    },
+  } as unknown as GraphContext['llm'];
+};
 
 const scriptedLoop = (responses: Array<() => MockGenerateResponse>): AgentLoopClient => {
   let call = 0;
@@ -365,14 +386,52 @@ const scriptedLoop = (responses: Array<() => MockGenerateResponse>): AgentLoopCl
   });
 };
 
+describe('prose agent panel', () => {
+  it('runs every panel model and drops only the failed ones', async () => {
+    const attempted: string[] = [];
+    const panelLoop = {
+      run: (request: { model: { modelId: string } }) => {
+        attempted.push(request.model.modelId);
+        return Promise.resolve({
+          stepCount: 2,
+          usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
+        });
+      },
+    } as unknown as AgentLoopClient;
+    const context = agentContext();
+    context.llm = llmStub();
+    const alternates = await runProseAgentPanel(context, panelLoop);
+    const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
+    expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
+    expect(agentic[0]?.prose).toContain(TITHE_COUNTING);
+    expect(agentic.every((alternate) => alternate.costUsd > 0)).toBe(true);
+    expect(alternates.some((alternate) => alternate.modelId.includes('one-shot'))).toBe(true);
+  });
+
+  it('survives a failing research loop by writing from the empty brief', async () => {
+    const failingLoop = {
+      run: () => Promise.reject(new Error('bedrock unavailable')),
+    } as unknown as AgentLoopClient;
+    const context = agentContext();
+    context.llm = llmStub({ extractFails: true });
+    const alternates = await runProseAgentPanel(context, failingLoop);
+    const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
+    expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
+    expect(agentic[0]?.prose).toContain(TITHE_COUNTING);
+    expect(agentic[0]?.sidecar).toEqual([]);
+  });
+});
+
 describe('runProseAgent', () => {
-  it('produces prose with a provenance-checked sidecar', async () => {
+  it('researches, composes, extracts, and writes with a provenance-checked sidecar', async () => {
     const agentLoop = scriptedLoop([
       () => toolCallResponse('open', { slug: KORVATH_SLUG }),
-      () => toolCallResponse('submit_brief', briefInput()),
+      () => textResponse('That covers the yard.'),
     ]);
+    const context = agentContext();
+    context.llm = llmStub();
     const steps: number[] = [];
-    const outcome = await runProseAgent(writerContext(), {
+    const outcome = await runProseAgent(context, {
       agentLoop,
       onStep: (step) => steps.push(step.stepNumber),
     });
@@ -390,21 +449,44 @@ describe('runProseAgent', () => {
     expect(steps).toEqual([0, 1]);
   });
 
-  /**
-   * On The Silent Test a scout wrote `scene` as prose and the writer received
-   * the empty fallback — six good fields discarded over one bad one.
-   */
-  it('salvages the valid fields of a brief whose shape is partly wrong', async () => {
-    const agentLoop = scriptedLoop([
-      () => toolCallResponse('open', { slug: KORVATH_SLUG }),
-      () => toolCallResponse('submit_brief', {
-        ...briefInput(),
-        scene: 'Stakes: the tithe. The scene ends when it is settled.',
+  it('feeds evaluator gaps into the next search round', async () => {
+    const searchMessages: string[] = [];
+    const stubLoop = {
+      run: (request: { messages: Array<{ content: string }> }) => {
+        searchMessages.push(request.messages[0]?.content ?? '');
+        return Promise.resolve({
+          stepCount: 1,
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        });
+      },
+    } as unknown as AgentLoopClient;
+    const context = agentContext();
+    context.llm = llmStub({
+      verdicts: [
+        { gaps: ['What the chronicle established about the Globitz'], status: 'continue' },
+        { gaps: [], status: 'sufficient' },
+      ],
+    });
+    await runProseAgent(context, { agentLoop: stubLoop });
+    expect(searchMessages).toHaveLength(2);
+    expect(searchMessages[0]).not.toContain('### GAPS');
+    expect(searchMessages[1]).toContain('### GAPS');
+    expect(searchMessages[1]).toContain('What the chronicle established about the Globitz');
+    expect(searchMessages[1]).toContain('### RETRIEVED');
+  });
+
+  it('falls back to the empty brief when extraction fails, and still writes', async () => {
+    const stubLoop = {
+      run: () => Promise.resolve({
+        stepCount: 1,
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
       }),
-    ]);
-    const outcome = await runProseAgent(writerContext(), { agentLoop });
-    expect(outcome.brief.present).toContain(TITHE_COUNTING);
-    expect(outcome.brief.character).toContain('glasswright');
-    expect(outcome.brief.scene.changed).toBe('not established this turn');
+    } as unknown as AgentLoopClient;
+    const context = agentContext();
+    context.llm = llmStub({ extractFails: true });
+    const outcome = await runProseAgent(context, { agentLoop: stubLoop });
+    expect(outcome.brief.character).toBe('not established this turn');
+    expect(outcome.prose).toContain('counts the tithe');
+    expect(outcome.sidecar).toEqual([]);
   });
 });

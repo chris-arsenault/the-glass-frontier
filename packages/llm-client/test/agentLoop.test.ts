@@ -54,16 +54,18 @@ const toolCallResponse = (
   warnings: [],
 });
 
+const textResponse = (text: string): MockGenerateResponse => ({
+  content: [{ text, type: 'text' as const }],
+  finishReason: { raw: undefined, unified: 'stop' as const },
+  usage,
+  warnings: [],
+});
+
 const tools = {
   read_identity: tool({
     description: 'Read identity fields for an entity.',
     execute: ({ entityId }: { entityId: string }) => ({ entityId, text: 'prose' }),
     inputSchema: z.object({ entityId: z.string() }),
-  }),
-  submit_turn: tool({
-    description: 'Submit the final narration.',
-    execute: (input: { prose: string }) => input,
-    inputSchema: z.object({ prose: z.string() }),
   }),
 };
 
@@ -90,7 +92,6 @@ const successHandler = (): { handler: LLMSuccessHandler; handleSuccess: Mock } =
 const loopRequest = (
   overrides?: Partial<AgentLoopRequest>
 ): AgentLoopRequest => ({
-  finishToolName: 'submit_turn',
   instructions: 'You are a game master.',
   maxOutputTokens: 2000,
   maxSteps: 4,
@@ -132,7 +133,7 @@ const client = (options: {
 };
 
 describe('agent loop', () => {
-  it('runs retrieval rounds until the finish tool and reports each step', async () => {
+  it('runs retrieval rounds until the model stops calling tools', async () => {
     const store = budgetStore();
     const { handler, handleSuccess } = successHandler();
     const steps: Array<{ stepNumber: number; toolNames: string[] }> = [];
@@ -140,7 +141,8 @@ describe('agent loop', () => {
       handler,
       responses: [
         () => toolCallResponse('read_identity', { entityId: 'korvath' }),
-        () => toolCallResponse('submit_turn', { prose: 'Korvath stiffens.' }),
+        () => toolCallResponse('read_identity', { entityId: 'veska' }),
+        () => textResponse('That covers the ground.'),
       ],
       store,
     });
@@ -149,17 +151,27 @@ describe('agent loop', () => {
         onStep: (step) => steps.push({ stepNumber: step.stepNumber, toolNames: step.toolNames }),
       })
     );
-    expect(result.finishToolInput).toEqual({ prose: 'Korvath stiffens.' });
-    expect(result.stepCount).toBe(2);
-    expect(result.usage.inputTokens).toBe(200);
-    expect(store.reserve).toHaveBeenCalledTimes(2);
-    expect(store.settle).toHaveBeenCalledTimes(2);
+    expect(result.stepCount).toBe(3);
+    expect(result.usage.inputTokens).toBe(300);
+    expect(store.reserve).toHaveBeenCalledTimes(3);
+    expect(store.settle).toHaveBeenCalledTimes(3);
     expect(store.release).not.toHaveBeenCalled();
-    expect(handleSuccess).toHaveBeenCalledTimes(2);
-    expect(steps).toEqual([
-      { stepNumber: 0, toolNames: ['read_identity'] },
-      { stepNumber: 1, toolNames: ['submit_turn'] },
+    expect(handleSuccess).toHaveBeenCalledTimes(3);
+    expect(steps.map((step) => step.toolNames)).toEqual([
+      ['read_identity'], ['read_identity'], [],
     ]);
+  });
+
+  it('stops at the step cap when the model keeps calling tools', async () => {
+    const loop = client({
+      responses: [
+        () => toolCallResponse('read_identity', { entityId: 'korvath' }),
+        () => toolCallResponse('read_identity', { entityId: 'veska' }),
+      ],
+      store: budgetStore(),
+    });
+    const result = await loop.client.run(loopRequest({ maxSteps: 2 }));
+    expect(result.stepCount).toBe(2);
   });
 
   it('surfaces schema-invalid tool calls in the step report', async () => {
@@ -167,7 +179,7 @@ describe('agent loop', () => {
     const loop = client({
       responses: [
         () => toolCallResponse('read_identity', { wrong: 'shape' }),
-        () => toolCallResponse('submit_turn', { prose: 'Recovered.' }),
+        () => textResponse('Moving on.'),
       ],
       store: budgetStore(),
     });
@@ -178,19 +190,18 @@ describe('agent loop', () => {
     expect(steps[1]?.toolErrors).toEqual([]);
   });
 
-  it('forces the finish tool on the final permitted step', async () => {
+  it('never forces a tool choice: forcing suppresses tool-selection reasoning', async () => {
     const loop = client({
       responses: [
         () => toolCallResponse('read_identity', { entityId: 'korvath' }),
-        () => toolCallResponse('read_identity', { entityId: 'veska' }),
-        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+        () => textResponse('Done.'),
       ],
       store: budgetStore(),
     });
-    const result = await loop.client.run(loopRequest({ maxSteps: 3 }));
-    expect(result.stepCount).toBe(3);
-    const finalCall = loop.mockModel.doGenerateCalls.at(-1);
-    expect(finalCall?.toolChoice).toEqual({ toolName: 'submit_turn', type: 'tool' });
+    await loop.client.run(loopRequest());
+    for (const call of loop.mockModel.doGenerateCalls) {
+      expect(call.toolChoice).toEqual({ type: 'auto' });
+    }
   });
 
   it('keeps one adaptive thinking configuration across every step', async () => {
@@ -198,7 +209,7 @@ describe('agent loop', () => {
       responses: [
         () => toolCallResponse('read_identity', { entityId: 'korvath' }),
         () => toolCallResponse('read_identity', { entityId: 'veska' }),
-        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+        () => textResponse('Done.'),
       ],
       store: budgetStore(),
     });
@@ -209,25 +220,6 @@ describe('agent loop', () => {
     for (const call of loop.mockModel.doGenerateCalls) {
       expect(call.providerOptions).toEqual(adaptive);
     }
-    expect(loop.mockModel.doGenerateCalls[1]?.toolChoice).toEqual({ type: 'auto' });
-  });
-
-  it('forces retrieval on the first step and frees the steps between', async () => {
-    const loop = client({
-      responses: [
-        () => toolCallResponse('read_identity', { entityId: 'korvath' }),
-        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
-      ],
-      store: budgetStore(),
-    });
-    await loop.client.run(loopRequest());
-    const first = loop.mockModel.doGenerateCalls[0];
-    expect(first?.toolChoice).toEqual({ type: 'required' });
-    expect(first?.tools?.map((entry) => entry.name)).toEqual(['read_identity']);
-    const second = loop.mockModel.doGenerateCalls[1];
-    expect(second?.toolChoice).toEqual({ type: 'auto' });
-    expect(second?.tools?.map((entry) => entry.name))
-      .toEqual(['read_identity', 'submit_turn']);
   });
 
   it('runs non-Anthropic models greedy and Anthropic models on their reasoning defaults', async () => {
@@ -235,7 +227,7 @@ describe('agent loop', () => {
     const novaLoop = client({
       responses: [
         () => toolCallResponse('read_identity', { entityId: 'korvath' }),
-        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+        () => textResponse('Done.'),
       ],
       store: budgetStore(),
     });
@@ -245,7 +237,7 @@ describe('agent loop', () => {
     const anthropicLoop = client({
       responses: [
         () => toolCallResponse('read_identity', { entityId: 'korvath' }),
-        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+        () => textResponse('Done.'),
       ],
       store: budgetStore(),
     });
@@ -281,23 +273,6 @@ describe('agent loop', () => {
       code: 'monthly_llm_budget_exceeded',
     });
     expect(store.settle).toHaveBeenCalledTimes(1);
-  });
-
-  it('fails loudly when the loop ends without the finish tool', async () => {
-    const loop = client({
-      responses: [
-        () => ({
-          content: [{ text: 'I decline to use tools.', type: 'text' as const }],
-          finishReason: { raw: undefined, unified: 'stop' as const },
-          usage,
-          warnings: [],
-        }),
-      ],
-      store: budgetStore(),
-    });
-    await expect(loop.client.run(loopRequest())).rejects.toMatchObject({
-      code: 'agent_loop_incomplete',
-    });
   });
 
   it('rejects non-Bedrock models', async () => {

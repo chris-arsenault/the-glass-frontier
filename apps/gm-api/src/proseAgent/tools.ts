@@ -1,5 +1,5 @@
+import { renderBlock } from '@glass-frontier/app';
 import type { HardState } from '@glass-frontier/dto';
-import { TurnBrief, WorldTurn } from '@glass-frontier/dto';
 import { type ToolSet, tool } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 import { z } from 'zod';
@@ -37,9 +37,6 @@ const SEARCH_SIMILARITY_FLOOR = 0.4;
  */
 class RetrievalMissError extends Error {}
 
-const OPEN_INCLUDE = ['notes', 'lore', 'both'] as const;
-type OpenInclude = (typeof OPEN_INCLUDE)[number];
-
 type ToolDeps = {
   context: GraphContext;
   session: ToolSession;
@@ -68,21 +65,19 @@ const renderTurn = (turn: GraphContext['chronicleState']['turns'][number]): unkn
 });
 
 /**
- * One entity, opened whole.
- *
- * This took a slug and a list of identity key names, and the scout had to guess
- * them from the index: it asked for the key `identity` — the container — and
- * got `{}` back while Shadewell's four fields sat unread. There are thirty key
- * names across the canon, no room to teach them, and no turn where `access`
- * without `hazards` is the right read. The choice left is the one worth making:
- * how the entity is run, what has been written about it, or both.
+ * One entity, opened whole, rendered as labeled text rather than escaped
+ * JSON: a result the model has to mentally unescape is a result it reasons
+ * over worse and reuses less.
  */
 const openTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Open one entity by slug. `notes` gives how it is run and what it is like, '
-    + '`lore` gives its written passages, `both` gives everything — default '
-    + '`both`. Its description and fact card come with every call.',
-  execute: async ({ include, slug }: { include?: OpenInclude; slug: string }) => {
+    'Read one canon entity whole, by slug. Returns its description, fact '
+    + 'card, GM notes, identity prose, and written passages — `notes` narrows '
+    + 'to how it is run and what it is like, `lore` to its passages, `both` '
+    + '(the default) gives everything. Use it for every entity that matters '
+    + 'to the turn once you hold its slug from the index or from search. It '
+    + 'reads canon only: for what happened in play, use search_history.',
+  execute: async ({ include, slug }: { include?: 'notes' | 'lore' | 'both'; slug: string }) => {
     const want = include ?? 'both';
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
@@ -94,7 +89,7 @@ const openTool = ({ context, session }: ToolDeps): AgentTool => tool({
       : await context.worldSchemaStore.listLoreFragmentsByEntity({
         entityId: entity.id, limit: MAX_OPEN_LORE,
       });
-    return session.wrapResult(`open:${slug}:${want}`, () => JSON.stringify({
+    return session.wrapResult(`open:${slug}:${want}`, () => renderBlock({
       description: entity.description,
       facts: entity.facts,
       ...want === 'lore' ? {} : {
@@ -111,7 +106,7 @@ const openTool = ({ context, session }: ToolDeps): AgentTool => tool({
     }));
   },
   inputSchema: z.object({
-    include: z.enum(OPEN_INCLUDE).optional(),
+    include: z.enum(['notes', 'lore', 'both']).optional(),
     slug: z.string(),
   }),
 });
@@ -119,8 +114,11 @@ const openTool = ({ context, session }: ToolDeps): AgentTool => tool({
 /** One edge, both endpoints named — no candidate-set arrays to assemble. */
 const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Open the relationship between two entities named by slug: the verb that '
-    + 'joins them and everything the canon says about how it works.',
+    'Read what joins two specific canon entities: the verb between them and '
+    + 'everything canon says about how that tie works. Use it when both slugs '
+    + 'are in hand and their standing with each other bears on the turn — an '
+    + 'employer and a worker, rivals, a keeper and its charge. It answers '
+    + 'nothing about either entity alone; open does that.',
   execute: async ({ slug, targetSlug }: { slug: string; targetSlug: string }) => {
     const store = context.worldSchemaStore;
     const [entity, target] = await Promise.all([
@@ -140,7 +138,7 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
     }
     session.recordServedEntity({ id: entity.id, slug: entity.slug });
     session.recordServedEntity({ id: target.id, slug: target.slug });
-    return session.wrapResult(`relationship:${slug}:${targetSlug}`, () => JSON.stringify(
+    return session.wrapResult(`relationship:${slug}:${targetSlug}`, () => renderBlock(
       edges.map((edge) => ({
         direction: edge.direction,
         identity: edge.descriptiveIdentity ?? {},
@@ -155,9 +153,10 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
 /** Discovery stays cheap: neighbors as index entries — key names, no values. */
 const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'List compact world-index entries for an entity\'s neighbors: how much each '
-    + 'has to open and its edges as "verb:slug" handles — no content. Open the '
-    + 'ones that matter with open.',
+    'List compact world-index entries for one entity\'s neighbors: how much '
+    + 'each has to open and its edges as "verb:slug" handles, no content. Use '
+    + 'it to see what surrounds a place or figure before deciding what to '
+    + 'open; it never returns the material itself.',
   execute: async ({ slug }: { slug: string }) => {
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
@@ -179,8 +178,10 @@ const searchTool = ({ context, session }: ToolDeps): AgentTool => tool({
     'Find canon entities by meaning — a name, a role, a phrase of the '
     + 'player\'s. Most of the world is not in WORLD-INDEX, and things often '
     + 'live under another name than the player used; this is how the rest of '
-    + 'the canon is reached. Returns slugs with a similarity score for open, '
-    + 'read_relationship, and expand.',
+    + 'canon is reached. Returns slugs with a similarity score for open, '
+    + 'read_relationship, and expand. It finds entities only: for passages of '
+    + 'writing use search_lore, and for events of this chronicle use '
+    + 'search_history.',
   execute: async ({ query }: { query: string }) => {
     const embedding = await context.embeddings.embed(query);
     const candidates = await context.worldSchemaStore.findEntityCandidates({
@@ -198,21 +199,26 @@ const searchTool = ({ context, session }: ToolDeps): AgentTool => tool({
         + UNKNOWN_ENTITY_POLICY
       );
     }
-    return session.wrapResult(`search:${query}`, () =>
-      JSON.stringify(matches.map((candidate) => ({
+    return session.wrapResult(`search:${query}`, () => renderBlock(
+      matches.map((candidate) => ({
         kind: candidate.kind,
         name: candidate.name,
         similarity: Math.round(candidate.similarity * 100) / 100,
         slug: candidate.slug,
-      }))));
+      }))
+    ));
   },
   inputSchema: z.object({ query: z.string().min(2) }),
 });
 
 const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Full-text search lore prose across all canon. Include an entity\'s name '
-    + 'in the query to scope to it. Returns lore slugs for read_lore.',
+    'Full-text search the canon\'s written passages for keywords — texture '
+    + 'and detail about subjects you already know exist. Use it after search '
+    + 'or the index has named the subject, to reach writing that opening one '
+    + 'entity would miss; include the subject\'s name in the query to scope '
+    + 'to it. It reads authored canon, never the events of this chronicle — '
+    + 'those live in search_history.',
   execute: async ({ query }: { query: string }) => {
     const fragments = await context.worldSchemaStore.searchLoreFragments({
       limit: 5,
@@ -224,20 +230,22 @@ const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
         + 'search entities by meaning instead.'
       );
     }
-    return session.wrapResult(`search-lore:${query}`, () =>
-      JSON.stringify(fragments.map((fragment) => ({
+    return session.wrapResult(`search-lore:${query}`, () => renderBlock(
+      fragments.map((fragment) => ({
         excerpt: fragment.prose.slice(0, LORE_EXCERPT_LENGTH),
         slug: fragment.slug,
         title: fragment.title,
-      }))));
+      }))
+    ));
   },
   inputSchema: z.object({ query: z.string().min(2) }),
 });
 
 const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Read up to five full lore fragments by the lore slugs search_lore '
-    + 'returned.',
+    'Read up to five full lore passages by the lore slugs search_lore '
+    + 'returned. The excerpts search_lore shows are openings, not the whole; '
+    + 'read the full passage before the brief relies on it.',
   execute: async ({ slugs }: { slugs: string[] }) => {
     const wanted = slugs.slice(0, 5);
     const fragments = await context.worldSchemaStore.listLoreFragmentsBySlugs({
@@ -255,7 +263,7 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
         + 'Use a slug exactly as search_lore returned it.'
       );
     }
-    return session.wrapResult(`lore:${[...wanted].sort().join(',')}`, () => JSON.stringify({
+    return session.wrapResult(`lore:${[...wanted].sort().join(',')}`, () => renderBlock({
       fragments: fragments.map((fragment) => ({
         entitySlug: fragment.entitySlug,
         prose: fragment.prose,
@@ -272,12 +280,12 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
 
 const searchHistoryTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Full-text search this chronicle\'s past turns for an event, name, or '
-    + 'phrase. The chronicle\'s memory beyond RECENT-EVENTS lives here: names '
-    + 'the player coined and things that happened to them were established in '
-    + 'past narration, not in canon, and a brief written without them repeats '
-    + 'or contradicts what the story already settled. Returns turn sequence '
-    + 'numbers for read_turns.',
+    'Full-text search this chronicle\'s own past turns for an event, name, '
+    + 'or phrase. The chronicle\'s memory beyond RECENT-EVENTS lives here and '
+    + 'nowhere else: names the player coined, promises made, damage done, and '
+    + 'anything narration established are in past turns, not in canon, and a '
+    + 'brief written without them repeats or contradicts what the story '
+    + 'already settled. Returns turn sequence numbers for read_turns.',
   execute: async ({ query }: { query: string }) => {
     const turns = await context.chronicleStore.searchTurns({
       chronicleId: context.chronicleId,
@@ -290,16 +298,19 @@ const searchHistoryTool = ({ context, session }: ToolDeps): AgentTool => tool({
         + 'or read_turns for the stretch of play where it would have happened.'
       );
     }
-    return session.wrapResult(`search-history:${query}`, () =>
-      JSON.stringify(turns.map(renderTurn)));
+    return session.wrapResult(`search-history:${query}`, () => renderBlock(
+      turns.map(renderTurn)
+    ));
   },
   inputSchema: z.object({ query: z.string().min(2) }),
 });
 
 const readTurnsTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Read ten consecutive past turns starting at a sequence number, in play '
-    + 'order.',
+    'Read ten consecutive past turns of this chronicle starting at a '
+    + 'sequence number, in play order — the full record of what was said and '
+    + 'narrated. Use it to read around a turn search_history found, or to '
+    + 'walk a stretch of play from its start.',
   execute: async ({ fromSequence }: { fromSequence: number }) => {
     const turns = await context.chronicleStore.listTurnWindow({
       chronicleId: context.chronicleId,
@@ -307,36 +318,21 @@ const readTurnsTool = ({ context, session }: ToolDeps): AgentTool => tool({
       limit: 10,
       toSequence: fromSequence + 9,
     });
-    return session.wrapResult(`turns:${fromSequence}`, () =>
-      JSON.stringify(turns.map(renderTurn)));
+    return session.wrapResult(`turns:${fromSequence}`, () => renderBlock(
+      turns.map(renderTurn)
+    ));
   },
   inputSchema: z.object({ fromSequence: z.number().int().nonnegative() }),
 });
 
-const submitWorldTool = (): AgentTool => tool({
-  description:
-    'Report what the world is doing: its text, front movement, at most one '
-    + 'firing, and at most one new front. The only way to finish.',
-  execute: (input: WorldTurn) => input,
-  inputSchema: WorldTurn,
-});
-
-const submitBriefTool = (): AgentTool => tool({
-  description:
-    'Hand the storyteller what you found: material, present, complication, '
-    + 'scene, entities. The only way to finish.',
-  execute: (input: TurnBrief) => input,
-  inputSchema: TurnBrief,
-});
-
 /**
- * Logs every executed call with its received arguments so misdesigned or
- * misused signatures are debuggable from production logs. Schema-invalid
- * calls never reach execute; those surface through the loop's per-step
- * toolErrors (logged by the panel).
+ * Logs every executed call and lands it in the session's retrieval record —
+ * result or miss — so the evaluator judges from what was actually retrieved.
+ * Schema-invalid calls never reach execute; those surface through the loop's
+ * per-step toolErrors.
  */
-const withCallLogging = (
-  context: GraphContext,
+const withCallRecording = (
+  { context, session }: ToolDeps,
   toolName: string,
   agentTool: AgentTool
 ): AgentTool => {
@@ -345,23 +341,35 @@ const withCallLogging = (
     ...agentTool,
     execute: async (input: unknown, options: unknown): Promise<unknown> => {
       const startedAt = Date.now();
+      const inputText = JSON.stringify(input).slice(0, 300);
       try {
         const result = await inner(input, options);
+        session.recordCall({
+          input: inputText,
+          outcome: { result: typeof result === 'string' ? result : JSON.stringify(result) },
+          tool: toolName,
+        });
         log('info', 'prose-agent.tool.call', {
           chronicleId: context.chronicleId,
           durationMs: Date.now() - startedAt,
-          input: JSON.stringify(input).slice(0, 300),
+          input: inputText,
           resultChars: typeof result === 'string' ? result.length : -1,
           tool: toolName,
           turnId: context.turnId,
         });
         return result;
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'unknown';
+        session.recordCall({
+          input: inputText,
+          outcome: { error: message },
+          tool: toolName,
+        });
         log(error instanceof RetrievalMissError ? 'info' : 'warn', 'prose-agent.tool.threw', {
           chronicleId: context.chronicleId,
           durationMs: Date.now() - startedAt,
-          input: JSON.stringify(input).slice(0, 300),
-          message: error instanceof Error ? error.message : 'unknown',
+          input: inputText,
+          message,
           tool: toolName,
           turnId: context.turnId,
         });
@@ -381,13 +389,11 @@ export const createProseAgentTools = (deps: ToolDeps): ToolSet => {
     search: searchTool(deps),
     search_history: searchHistoryTool(deps),
     search_lore: searchLoreTool(deps),
-    submit_brief: submitBriefTool(),
-    submit_world: submitWorldTool(),
   };
   return Object.fromEntries(
     Object.entries(tools).map(([name, agentTool]) => [
       name,
-      withCallLogging(deps.context, name, agentTool),
+      withCallRecording(deps, name, agentTool),
     ])
   );
 };

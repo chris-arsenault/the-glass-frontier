@@ -544,5 +544,12 @@
     "summary": "The world stops narrating you and starts moving on its own",
     "details": "The GM's world stage — the pass that decides what everything that is not you is doing — was reading your message, your character sheet, and your intent before deciding, and it answered them: its first agenda in a chronicle was your own task with your name on it, and its world line each turn restated whatever you had just done. It no longer sees you at all. It receives the world's own material — the agendas already running, what canon says about the place and the figures pursuing those agendas, the last narration, and its own record of what the world has been doing — and continues that motion. The canon it needs is fetched for it directly instead of hoping it goes looking, so a city whose repair lines are shut becomes an agenda with a named faction rather than weather. An agenda proposed for something that does not exist in canon is discarded instead of tracked, which is the door your own character came through.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-research-under-judgment",
+    "releasedAt": "2026-08-28",
+    "summary": "The GM's research runs under a judge instead of grading itself",
+    "details": "The pass that reads the world before your turn used to decide for itself when it had read enough, and the same call that would have had to do more work was the call allowed to declare the work done — so it stopped early, reliably, on every model we run. Research is now split from judgment: one invocation retrieves, a separate one inspects everything actually retrieved and either closes the research or names what is still missing, and those gaps drive the next round of retrieval. The brief itself moved out of a tool call: models write measurably worse prose inside escaped JSON arguments, and both of ours had been failing there — one wrote a field as prose where the schema wanted structure, the other abandoned the tool call entirely. The brief is now composed as plain labeled prose, the format models write well, and a small second step files it into the schema. Tool results also stopped arriving as escaped JSON, every tool now says when it should and should not be used, and nothing forces a tool call anymore — forcing turns off the tool-selection reasoning both providers document as load-bearing.",
+    "type": "improvement"
   }
 ]

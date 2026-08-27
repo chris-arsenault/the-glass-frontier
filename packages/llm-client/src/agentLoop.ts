@@ -4,7 +4,6 @@ import { createOpsStore } from '@glass-frontier/ops';
 import type { LoggableMetadata } from '@glass-frontier/utils';
 import {
   generateText,
-  hasToolCall,
   type LanguageModel,
   type LanguageModelMiddleware,
   type ModelMessage,
@@ -32,8 +31,6 @@ export type AgentLoopStep = {
 };
 
 export type AgentLoopRequest = {
-  /** The tool whose call ends the loop; forced on the final permitted step. */
-  finishToolName: string;
   instructions: string;
   maxOutputTokens: number;
   maxSteps: number;
@@ -47,7 +44,6 @@ export type AgentLoopRequest = {
 };
 
 export type AgentLoopResult = {
-  finishToolInput: unknown;
   stepCount: number;
   usage: TokenUsage;
 };
@@ -138,10 +134,13 @@ const renderPrompt = (prompt: unknown): PromptInput[] => {
 };
 
 /**
- * The GM prose agent's tool loop: the Vercel AI SDK multi-step loop over
+ * The GM prose agent's retrieval loop: the Vercel AI SDK multi-step loop over
  * Bedrock Converse, with every model call passing through the monthly budget
- * (reserve/settle) and the audit/usage sinks. Termination is a call to the
- * finish tool; the step cap forces that call rather than truncating.
+ * (reserve/settle) and the audit/usage sinks. The loop only retrieves — it
+ * ends when the model stops calling tools or the step cap lands, and a
+ * separate invocation judges whether what it gathered is enough. There is no
+ * finish tool and no forced tool choice: forcing suppresses the tool-selection
+ * reasoning both providers document as load-bearing.
  */
 export class AgentLoopClient {
   readonly #budgetManager: LlmBudgetManager | null;
@@ -162,27 +161,6 @@ export class AgentLoopClient {
     const region = process.env.AWS_REGION?.trim() ?? 'us-east-1';
     const bedrock = createAmazonBedrock({ region });
     return (apiModelId) => bedrock(apiModelId);
-  }
-
-  /**
-   * The final permitted step must finish, and the first step must retrieve:
-   * shallow turns come from loops that go straight to the finish tool with
-   * nothing read. Every step between is the model's.
-   */
-  static #prepareStep(request: AgentLoopRequest): Parameters<typeof generateText>[0]['prepareStep'] {
-    return ({ stepNumber: current }) => {
-      if (current >= request.maxSteps - 1) {
-        return { toolChoice: { toolName: request.finishToolName, type: 'tool' } };
-      }
-      if (current === 0) {
-        return {
-          activeTools: Object.keys(request.tools)
-            .filter((name) => name !== request.finishToolName),
-          toolChoice: 'required',
-        };
-      }
-      return { toolChoice: 'auto' };
-    };
   }
 
   async run(request: AgentLoopRequest): Promise<AgentLoopResult> {
@@ -217,9 +195,8 @@ export class AgentLoopClient {
         });
         stepNumber += 1;
       },
-      prepareStep: AgentLoopClient.#prepareStep(request),
       providerOptions: this.#providerOptions(request),
-      stopWhen: [stepCountIs(request.maxSteps), hasToolCall(request.finishToolName)],
+      stopWhen: [stepCountIs(request.maxSteps)],
       system: request.instructions,
       // AWS recommends greedy decoding for Nova tool calling; Anthropic models
       // run adaptive reasoning, which owns its own sampling.
@@ -227,29 +204,9 @@ export class AgentLoopClient {
       tools: request.tools,
     });
     return {
-      finishToolInput: this.#finishToolInput(result.steps, request.finishToolName),
       stepCount: result.steps.length,
       usage: toTokenUsage(result.totalUsage),
     };
-  }
-
-  #finishToolInput(
-    steps: Array<{ toolCalls: Array<{ input: unknown; toolName: string }> }>,
-    finishToolName: string
-  ): unknown {
-    const finishCall = steps
-      .flatMap((step) => step.toolCalls)
-      .filter((call) => call.toolName === finishToolName)
-      .at(-1);
-    if (finishCall === undefined) {
-      throw new ProviderError({
-        code: 'agent_loop_incomplete',
-        message: `Agent loop ended after ${steps.length} step(s) without calling ${finishToolName}.`,
-        retryable: false,
-        status: 502,
-      });
-    }
-    return finishCall.input;
   }
 
   /**

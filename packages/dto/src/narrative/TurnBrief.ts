@@ -64,12 +64,12 @@ export const TurnBrief = z.object({
    * instead, because a clock is a number and does not paraphrase.
    */
   scene: z.object({
-    /** What this turn changed about the situation, or that nothing changed. */
-    changed: z.string().min(1),
-    /** What would end this scene — the condition, not a guess at the outcome. */
-    endsWhen: z.string().min(1),
-    /** What is at stake right now, in one line. */
-    stakes: z.string().min(1),
-  }),
+    changed: z.string().min(1)
+      .describe('What this turn changed about the situation, or that nothing changed.'),
+    endsWhen: z.string().min(1)
+      .describe('What would end this scene — the condition, not a guess at the outcome.'),
+    stakes: z.string().min(1)
+      .describe('What is at stake right now, in one line.'),
+  }).describe('The scout\'s read of where the scene stands, as three short statements.'),
 });
 export type TurnBrief = z.infer<typeof TurnBrief>;
