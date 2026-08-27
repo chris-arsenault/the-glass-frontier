@@ -112,7 +112,18 @@ export const mapBedrockStructuredRequest = <T>(
       toolChoice: { tool: { name: request.schemaName } },
       tools: [{
         toolSpec: {
-          description: `Extract structured data matching the ${request.schemaName} schema`,
+          // Forcing a tool choice is not the same as being understood. Given
+          // the old description — "Extract structured data matching the
+          // <name> schema" — and instructions phrased as prose ("answer
+          // continue", "report the gaps"), qwen3-next-80b answered in prose on
+          // 8 of 12 real-sized evaluator payloads, and the harness saw a
+          // forced call that never arrived. Saying that the call *is* the
+          // response took both it and gpt-oss-120b to 12 of 12 on the same
+          // payloads. The description is part of the prompt, not a label.
+          description:
+            `Deliver your response by calling ${request.schemaName}. This call `
+            + 'is the entire response: every field belongs in the arguments, '
+            + 'and any prose written outside the call is discarded unread.',
           inputSchema: { json: toJsonDocument(normalizedSchema) },
           name: request.schemaName,
         },

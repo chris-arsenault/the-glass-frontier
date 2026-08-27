@@ -593,5 +593,26 @@
     "summary": "Canon search now scores whether an entry answers you, not whether it sounds like you",
     "details": "Searching canon by meaning used to put your words and the world's entries into one space and measure how alike the two sentences were. But canon reads \"Heat-road haulers carry bulk freight between Ashvane towns\" while you ask \"what's moving the cargo out here\" — those answer each other without resembling each other. Canon and queries are now embedded separately by a model trained for exactly that asymmetry, at four times the previous detail. The improvement is measurable: against four hundred real canon entries, ten plain-language questions now find the right entry nine times out of ten, where the old thresholds would have discarded six of them as noise. Every cutoff in the system was re-measured against the new model rather than carried over — the old numbers were tuned for the old one and would have rejected correct matches, including a fifth of scene subjects and a sixth of the things you name directly. Invented words are still rejected: thirteen nonsense phrases were tested and none scored high enough to come back as canon. Existing canon is re-indexed automatically; until that finishes, searching by meaning returns nothing rather than something wrong. Scene-subject matching now applies its measured cutoff in one place, so candidates between the new and old floors reach the resolver instead of disappearing inside the index.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-world-can-introduce-its-own",
+    "releasedAt": "2026-08-28",
+    "summary": "The world can start something with someone nobody wrote down yet",
+    "details": "The pass that decides what the world is doing on its own account could only ever hand an agenda to a figure already written into canon — a rule added to stop it handing one to you, which it did once. The cost was a world that could never introduce the night crew, the rival office, or the machine that turns out to matter, so everything happening offstage had to be traceable to something already indexed. It can now name a figure of its own and start them going; the only thing it still may not do is run your agenda. It has also been told plainly what belongs there: a lift that comes down out of sequence, a route whose readings changed, a shift that never clocked off — motion that isn't about you, that you may never learn the cause of, and that the story can later turn out to have needed. Your own work disturbing something offstage is now a reason for that thing to move, not a reason to leave it out.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-beats-name-the-arc",
+    "releasedAt": "2026-08-28",
+    "summary": "New story threads get named instead of quietly ignored",
+    "details": "The turn judge was told to hold off on starting a new story beat whenever it was unsure, and it duly started none — a recent chronicle ran three turns in which a dimensional key was built and revealed to the one person who could act on it, and the only beat recorded was the one the chronicle opened with. It is now told the cost runs the other way: naming a beat that later goes quiet costs a line in a list, while failing to name one costs the arc. When a turn changes what the story is about and no open beat covers it, that thread gets a name. The scene notebook also has to list whoever you are speaking to by name — a scene whose other party was missing read to every later turn as a room you were standing in alone.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-structured-calls-say-so",
+    "releasedAt": "2026-08-28",
+    "summary": "Fixed silent stage failures that emptied the GM's research",
+    "details": "Several stages hand back a structured record rather than prose, and they were asked for it in prose — \"answer continue\", \"report the gaps\" — with the tool they were meant to call described only as \"extract structured data matching the schema\". Given a full-sized turn, models did what they were asked and wrote the answer out in prose, which the engine could not read, so the stage failed and the turn continued with an empty research brief. In one chronicle that happened four times across three turns, and the resulting ungrounded narration was then treated as established fact by the next turn's research. Every structured stage now names the call it must make and says that the call is the whole response. Measured against real turn-sized inputs, this took compliance from 4 in 12 to 12 in 12 on the affected models.",
+    "type": "bugfix"
   }
 ]

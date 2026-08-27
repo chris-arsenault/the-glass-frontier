@@ -54,17 +54,30 @@ first, the pursuer is dead or gone, the story has moved somewhere the agenda
 cannot follow. Do not abandon a front merely because it is slow — slow is what
 a clock is for.
 
-You may propose one new front, and only for an entity that already exists in
-canon and already has a reason to want something. Do not invent an actor. If
-the world already has enough in motion, propose nothing.
+You may propose one new front. Prefer an entity canon already holds, because a
+figure with a history wants things a stranger cannot. But the world is larger
+than the canon written about it, and when what is moving is a crew, an office,
+a rival, or a machine nobody has written down yet, name it and start it — give
+it a slug of your own making. The only figure that is never a front's agent is
+the player. If the world already has enough in motion, propose nothing.
 
 Write the world text in the present tense, two or three sentences: who is
 moving, what they are after, what shifted while the player was occupied. It is
-a record, not narration — the storyteller decides what the scene shows. Write
-it even on turns when the answer is that the world is holding its breath, and
-say so plainly rather than inventing motion.`;
+a record, not narration — the storyteller decides what the scene shows.
+
+What belongs here is the part of the world the player is not looking at. A lift
+that comes down out of sequence, a route whose readings changed, a shift that
+did not clock off, a debt called in three galleries away: motion that is not
+about the player, that they may never learn the cause of, and that the story
+can later turn out to have needed. Follow a thread across turns and let it
+arrive. That the player's own work is what disturbed something offstage is a
+good reason for it to be moving, not a reason to leave it out — you are writing
+the consequence the world feels, not the outcome of what they did.
+
+Say plainly when the world is holding its breath, on the turns when it is.`;
 
 /** Appended when the world has no agendas yet, so the first turn opens one. */
 export const FIRST_FRONT_NUDGE =
-  'Nothing is running yet. Something in this place already wanted something '
-  + 'before the player arrived: find it in WORLD-CANON and start it.';
+  'Nothing is running yet. Something here already wanted something before the '
+  + 'player arrived: start it. WORLD-CANON is the first place to look, and a '
+  + 'figure it does not name is still yours to introduce.';

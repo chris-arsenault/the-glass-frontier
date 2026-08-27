@@ -48,8 +48,15 @@ const PROSE_REASONING_EFFORT = 'low';
  */
 const RetrievalVerdict = z.object({
   gaps: z.array(z.string().min(1)).max(4).default([])
-    .describe('What the brief cannot be written without, as information, not tool calls.'),
-  status: z.enum(['sufficient', 'continue']),
+    .describe(
+      'What the brief cannot be written without, as information, not tool '
+      + 'calls. Empty when status is sufficient.'
+    ),
+  status: z.enum(['sufficient', 'continue'])
+    .describe(
+      '`continue` when another round of retrieval is needed, `sufficient` '
+      + 'when the brief can be written from what is already retrieved.'
+    ),
 });
 type RetrievalVerdict = z.infer<typeof RetrievalVerdict>;
 

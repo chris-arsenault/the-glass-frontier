@@ -79,28 +79,42 @@ describe('environment node', () => {
     expect(captured.instructions).toContain('Nothing is running yet');
   });
 
-  it('drops a proposed front whose agent is not canon and keeps a canon one', async () => {
+  it('starts a front for a figure canon has never written down', async () => {
     const proposal = {
-      agentSlug: YARD_SLUG,
+      // No such entity exists. A world that may only be pursued by figures
+      // someone already indexed cannot introduce the crew that makes a place
+      // feel bigger than its index.
+      agentSlug: 'south_hoist_night_crew',
       intent: 'Reopen the south hoist before inspection',
       nextSign: 'A crew chief argues with the red tag',
       size: 4,
     };
-    const dropped: { instructions?: string; text?: string } = {};
-    const droppedDelta = await new EnvironmentNode().execute(environmentContext({
+    const captured: { instructions?: string; text?: string } = {};
+    const delta = await new EnvironmentNode().execute(environmentContext({
       agentEntity: null,
-      captured: dropped,
+      captured,
       report: worldReport({ proposal }),
     }));
-    expect(droppedDelta.worldFronts).toStrictEqual([]);
 
-    const kept: { instructions?: string; text?: string } = {};
-    const keptDelta = await new EnvironmentNode().execute(environmentContext({
+    expect(delta.worldFronts?.map((front) => front.agentSlug))
+      .toStrictEqual(['south_hoist_night_crew']);
+  });
+
+  it('refuses only the front that would run the player\'s own agenda', async () => {
+    const captured: { instructions?: string; text?: string } = {};
+    const delta = await new EnvironmentNode().execute(environmentContext({
       agentEntity: YARD,
-      captured: kept,
-      report: worldReport({ proposal }),
+      captured,
+      report: worldReport({
+        proposal: {
+          agentSlug: 'vex',
+          intent: 'Pry the access panel open before anyone notices',
+          nextSign: 'The panel bolts sit looser than they did',
+          size: 4,
+        },
+      }),
     }));
-    expect(keptDelta.worldFronts?.map((front) => front.agentSlug))
-      .toStrictEqual([YARD_SLUG]);
+
+    expect(delta.worldFronts).toStrictEqual([]);
   });
 });

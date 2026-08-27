@@ -53,7 +53,7 @@ export class EnvironmentNode implements GraphNode {
 
   async #run(context: GraphContext): Promise<GraphNodeDelta> {
     const fronts = context.chronicleState.chronicle.fronts;
-    const report = await vetProposal(context, await this.#ask(context, fronts));
+    const report = vetProposal(context, await this.#ask(context, fronts));
     const nextFronts = applyWorldTurn(fronts, report, context.turnSequence);
     log('info', 'gm.environment', {
       chronicleId: context.chronicleId,
@@ -104,25 +104,30 @@ export class EnvironmentNode implements GraphNode {
 }
 
 /**
- * A proposal is only as real as its agent. The schema asks for a canon slug,
- * but the first front this stage ever proposed named the player character —
- * not canon, not the world's to run. An agent that does not resolve to a
- * visible canon entity drops the proposal; the fronts already running are
- * untouched.
+ * The one thing the world may not do is run the player's own agenda.
+ *
+ * This used to require the agent to resolve to a visible canon entity, which
+ * fixed the bug it was written for — the first front this stage ever proposed
+ * named the player character — by forbidding something much larger. A world
+ * that can only ever be pursued by figures someone already wrote down cannot
+ * introduce the crew, the office, or the rival that makes a place feel bigger
+ * than its index, and the chronicles read that way. An unwritten agent is now
+ * a front like any other; canon catches up to the story, not the other way
+ * round.
  */
-const vetProposal = async (context: GraphContext, report: WorldTurn): Promise<WorldTurn> => {
+const vetProposal = (context: GraphContext, report: WorldTurn): WorldTurn => {
   if (report.proposal === null) {
     return report;
   }
-  const agent = await context.worldSchemaStore.getEntityBySlug({
-    slug: report.proposal.agentSlug,
-  });
-  if (agent !== null && !agent.dm) {
+  const characterName = context.chronicleState.character.name.trim().toLowerCase();
+  const agent = report.proposal.agentSlug.replaceAll('_', ' ').trim().toLowerCase();
+  if (!characterName.startsWith(agent) && !agent.startsWith(characterName)) {
     return report;
   }
   log('warn', 'gm.environment.proposal-dropped', {
     agentSlug: report.proposal.agentSlug,
     chronicleId: context.chronicleId,
+    reason: 'the player is never a front agent',
     turnId: context.turnId,
   });
   return { ...report, proposal: null };

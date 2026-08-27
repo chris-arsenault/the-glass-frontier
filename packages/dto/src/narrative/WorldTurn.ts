@@ -12,7 +12,11 @@ const FrontTick = z.object({
 /** A new agenda, always anchored to an entity that already exists in canon. */
 const FrontProposal = z.object({
   agentSlug: z.string().min(1)
-    .describe('The canon entity pursuing this, by the slug the index or tools gave you.'),
+    .describe(
+      'Who is pursuing this, as a slug: the one canon gave you when canon has '
+      + 'them, or one you coin for a figure the world has that nobody has '
+      + 'written down yet. Never the player.'
+    ),
   intent: z.string().min(1).describe('What it is trying to bring about, in one line.'),
   nextSign: z.string().min(1)
     .describe('What the player would notice next if they were paying attention.'),
