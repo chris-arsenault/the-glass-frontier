@@ -1,5 +1,6 @@
+import { MODEL_CATALOG } from '@glass-frontier/app';
 import type { HardState } from '@glass-frontier/dto';
-import { AgentLoopClient } from '@glass-frontier/llm-client';
+import { AgentLoopClient, calculateActualCostUsd } from '@glass-frontier/llm-client';
 import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
 
@@ -18,6 +19,7 @@ const HIDDEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KORVATH_SLUG = 'korvath-dockmaster';
 const GUILD_SLUG = 'harbor-guild';
 const SONNET_MODEL_ID = 'claude-sonnet-5';
+const CLASSIFICATION_MODEL_ID = 'amazon-nova-2-lite';
 const OSS_MODEL_ID = 'gpt-oss-120b';
 const QWEN_MODEL_ID = 'qwen3-32b';
 const TITHE_COUNTING = 'Korvath counts the tithe';
@@ -533,6 +535,35 @@ describe('one-shot retrieval', () => {
 });
 
 describe('runProseAgent', () => {
+  it('prices classification usage on the classification model', async () => {
+    const stubLoop = {
+      run: () => Promise.resolve({ stepCount: 1, usage: SMALL_USAGE }),
+    } as unknown as AgentLoopClient;
+    const context = agentContext();
+    context.llm = llmStub();
+    context.modelConfigStore = {
+      getModelForCategory: (category: string) => Promise.resolve(
+        category === 'classification' ? CLASSIFICATION_MODEL_ID : SONNET_MODEL_ID
+      ),
+    } as unknown as GraphContext['modelConfigStore'];
+
+    const outcome = await runProseAgent(context, { agentLoop: stubLoop });
+    const proseModel = MODEL_CATALOG.models.find((model) => model.modelId === SONNET_MODEL_ID);
+    const classificationModel = MODEL_CATALOG.models.find(
+      (model) => model.modelId === CLASSIFICATION_MODEL_ID
+    );
+    if (proseModel === undefined || classificationModel === undefined) {
+      throw new Error('Expected test models in the catalog.');
+    }
+    const proseUsage = { inputTokens: 200, outputTokens: 120, totalTokens: 320 };
+
+    expect(outcome.usage).toEqual({ inputTokens: 250, outputTokens: 150, totalTokens: 400 });
+    expect(outcome.costUsd).toBe(
+      calculateActualCostUsd(proseModel, proseUsage)
+      + calculateActualCostUsd(classificationModel, SMALL_USAGE)
+    );
+  });
+
   it('researches, composes, extracts, and writes with a provenance-checked sidecar', async () => {
     const agentLoop = scriptedLoop([
       () => toolCallResponse('open', { slug: KORVATH_SLUG }),

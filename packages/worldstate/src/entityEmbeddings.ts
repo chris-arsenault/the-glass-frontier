@@ -116,7 +116,6 @@ candidates AS (
 SELECT id, slug, name, kind, prominence, hops, reach, similarity,
   (similarity * 0.75 + reach * 0.2 + rank * 0.0125)::real AS score
 FROM candidates
-WHERE similarity >= 0.5
 ORDER BY score DESC, similarity DESC
 LIMIT $4`;
 

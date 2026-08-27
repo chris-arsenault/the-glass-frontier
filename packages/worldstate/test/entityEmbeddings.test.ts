@@ -27,7 +27,38 @@ const embedding = (second: number): number[] => [
   ...Array.from({ length: ENTITY_EMBEDDING_DIMENSIONS - 2 }, () => 0),
 ];
 
+const embeddingAtSimilarity = (similarity: number): number[] => [
+  similarity,
+  Math.sqrt(1 - similarity ** 2),
+  ...Array.from({ length: ENTITY_EMBEDDING_DIMENSIONS - 2 }, () => 0),
+];
+
 describe('entity embedding retrieval', () => {
+  it('leaves scene-subject similarity acceptance to the resolver', async () => {
+    const result = await worldState.world.commitBatch(proposal({
+      entities: [{
+        kind: 'npc',
+        name: 'Threshold Candidate',
+        prominence: 'recognized',
+        ref: 'threshold-candidate',
+      }],
+    }));
+    const candidateId = result.entityIdsByRef['threshold-candidate'];
+    if (candidateId === undefined) {
+      throw new Error('Expected the threshold candidate ref to resolve.');
+    }
+    await worldState.world.saveEntityEmbedding(candidateId, embeddingAtSimilarity(0.46));
+
+    const candidates = await worldState.world.findSubjectCandidates({
+      embedding: embedding(0),
+      focusIds: [],
+      kind: 'npc',
+    });
+
+    expect(candidates[0]?.id).toBe(candidateId);
+    expect(candidates[0]?.similarity).toBeCloseTo(0.46, 3);
+  });
+
   it('uses prominence-dependent graph distance for vector candidates', async () => {
     const entities = Array.from({ length: 9 }, (_, index) => ({
       kind: 'npc' as const,

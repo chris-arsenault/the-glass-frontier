@@ -48,7 +48,7 @@ describe('SceneSubjectResolverNode', () => {
     expect(embed).not.toHaveBeenCalled();
   });
 
-  it('uses vector candidates ranked from the graph when exact matching fails', async () => {
+  it('accepts a vector candidate above the resolver similarity floor', async () => {
     const findSubjectCandidates = vi.fn().mockResolvedValue([{
       hops: 2,
       id: AMAYA_ID,
@@ -57,7 +57,7 @@ describe('SceneSubjectResolverNode', () => {
       prominence: 'marginal',
       reach: 0.7,
       score: 0.82,
-      similarity: 0.86,
+      similarity: 0.46,
       slug: 'amaya_venn',
     }]);
     const context = sceneContext({

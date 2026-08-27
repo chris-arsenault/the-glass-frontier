@@ -1,4 +1,4 @@
-import { MODEL_CATALOG, renderBlock } from '@glass-frontier/app';
+import { type CatalogModel, MODEL_CATALOG, renderBlock } from '@glass-frontier/app';
 import {
   type IntentType,
   type PromptTemplateId,
@@ -73,18 +73,22 @@ export type ProseAgentDeps = {
   metadata?: Record<string, string>;
 };
 
+const resolveCatalogModel = (modelId: string, purpose: string): CatalogModel => {
+  const model = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
+  if (model === undefined) {
+    throw new Error(`${purpose} model ${modelId} is not in the model catalog.`);
+  }
+  return model;
+};
+
 const resolveProseModel = async (
   context: GraphContext,
   playerId: string,
   overrideModelId?: string
-): Promise<NonNullable<(typeof MODEL_CATALOG.models)[number]>> => {
+): Promise<CatalogModel> => {
   const modelId = overrideModelId
     ?? await context.modelConfigStore.getModelForCategory('prose', playerId);
-  const model = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
-  if (model === undefined) {
-    throw new Error(`Prose model ${modelId} is not in the model catalog.`);
-  }
-  return model;
+  return resolveCatalogModel(modelId, 'Prose');
 };
 
 const callMetadata = (
@@ -182,7 +186,7 @@ const EMPTY_BRIEF: TurnBrief = {
 
 type ResearchTarget = {
   intentType: IntentType;
-  model: Awaited<ReturnType<typeof resolveProseModel>>;
+  model: CatalogModel;
   playerId: string;
   session: ToolSession;
   task: string;
@@ -268,25 +272,30 @@ const extractBrief = async (
   deps: ProseAgentDeps,
   target: ResearchTarget,
   briefText: string
-): Promise<{ brief: TurnBrief; usage: TokenUsage }> => {
-  const model = await context.modelConfigStore.getModelForCategory(
+): Promise<{ brief: TurnBrief; costUsd: number; usage: TokenUsage }> => {
+  const modelId = await context.modelConfigStore.getModelForCategory(
     'classification',
     target.playerId
   );
+  const model = resolveCatalogModel(modelId, 'Classification');
   const response = await context.llm.generateStructured(
     {
       input: [userMessage(`### BRIEF-TEXT\n${briefText}`)],
       instructions: EXTRACT_INSTRUCTIONS,
       maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS,
       metadata: callMetadata(context, deps, target.playerId, 'scout-extractor'),
-      model,
+      model: model.modelId,
       player: context.llmPlayer,
       reasoningEffort: SCOUT_REASONING_EFFORT,
     },
     TurnBrief,
     'turn_brief_schema'
   );
-  return { brief: response.data, usage: response.usage };
+  return {
+    brief: response.data,
+    costUsd: calculateActualCostUsd(model, response.usage),
+    usage: response.usage,
+  };
 };
 
 /**
@@ -334,14 +343,20 @@ const runResearch = async (
 const runScout = async (
   context: GraphContext,
   deps: ProseAgentDeps,
-  playerId: string,
-  intentType: IntentType
-): Promise<{ brief: TurnBrief; session: ToolSession; stepCount: number; usage: TokenUsage }> => {
+  input: { intentType: IntentType; model: CatalogModel; playerId: string }
+): Promise<{
+  brief: TurnBrief;
+  costUsd: number;
+  session: ToolSession;
+  stepCount: number;
+  usage: TokenUsage;
+}> => {
+  const { intentType, model, playerId } = input;
   const pack = await buildSeedPack(context);
   const session = new ToolSession({ seedEntities: pack.seedEntities });
   const target: ResearchTarget = {
     intentType,
-    model: await resolveProseModel(context, playerId, deps.modelId),
+    model,
     playerId,
     session,
     task: renderSeedPack(pack, context.playerMessage.content),
@@ -350,11 +365,13 @@ const runScout = async (
     const research = await runResearch(context, deps, target);
     const composed = await composeBrief(context, deps, target);
     const extracted = await extractBrief(context, deps, target, composed.text);
+    const proseUsage = sumUsage([...research.usages, composed.usage]);
     return {
       brief: extracted.brief,
+      costUsd: calculateActualCostUsd(model, proseUsage) + extracted.costUsd,
       session,
       stepCount: research.stepCount,
-      usage: sumUsage([...research.usages, composed.usage, extracted.usage]),
+      usage: sumUsage([proseUsage, extracted.usage]),
     };
   } catch (error) {
     log('warn', 'prose-agent.scout.no_brief', {
@@ -364,6 +381,7 @@ const runScout = async (
     });
     return {
       brief: EMPTY_BRIEF,
+      costUsd: 0,
       session,
       stepCount: 0,
       usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
@@ -374,9 +392,14 @@ const runScout = async (
 const writeProse = async (
   context: GraphContext,
   deps: ProseAgentDeps,
-  target: { brief: TurnBrief; playerId: string; templateId: PromptTemplateId }
+  target: {
+    brief: TurnBrief;
+    model: CatalogModel;
+    playerId: string;
+    templateId: PromptTemplateId;
+  }
 ): Promise<{ prose: string; requestId: string; usage: TokenUsage }> => {
-  const { brief, playerId, templateId } = target;
+  const { brief, model, playerId, templateId } = target;
   const composer = new PromptComposer(context.templates);
   const prompt = await composer.buildPrompt(templateId, context);
   const scenePolicy = context.effectiveScene === null
@@ -396,7 +419,7 @@ const writeProse = async (
     instructions: `${prompt.instructions}${scenePolicy}`,
     maxOutputTokens: PROSE_MAX_OUTPUT_TOKENS,
     metadata: callMetadata(context, deps, playerId, templateId),
-    model: (await resolveProseModel(context, playerId, deps.modelId)).modelId,
+    model: model.modelId,
     player: context.llmPlayer,
     reasoningEffort: PROSE_REASONING_EFFORT,
   }, 'string');
@@ -426,16 +449,21 @@ export const runProseAgent = async (
   }
   const playerId = context.chronicleState.chronicle.playerId;
   const model = await resolveProseModel(context, playerId, deps.modelId);
-  const scout = await runScout(context, deps, playerId, intent.intentType);
+  const scout = await runScout(context, deps, {
+    intentType: intent.intentType,
+    model,
+    playerId,
+  });
   const written = await writeProse(context, deps, {
     brief: scout.brief,
+    model,
     playerId,
     templateId: agentTemplateFor(intent.intentType),
   });
   const usage = sumUsage([scout.usage, written.usage]);
   return {
     brief: scout.brief,
-    costUsd: calculateActualCostUsd(model, usage),
+    costUsd: scout.costUsd + calculateActualCostUsd(model, written.usage),
     prose: written.prose,
     requestId: written.requestId,
     sidecar: provenanceFiltered(context, scout.brief.entities, scout.session),

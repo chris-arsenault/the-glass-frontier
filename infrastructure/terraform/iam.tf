@@ -141,8 +141,8 @@ resource "aws_iam_role_policy_attachment" "gm_progress_queue" {
   policy_arn = aws_iam_policy.chronicle_progress_queue.arn
 }
 
-# Bedrock model invocation permissions for the configured Claude and Nova models
-# Cross-region inference profiles can route to any region, so we use * for region
+# Bedrock model invocation permissions for every configured Bedrock model.
+# Cross-region inference profiles can route to any region, so we use * for region.
 data "aws_iam_policy_document" "bedrock_invoke" {
   statement {
     actions = [
@@ -154,9 +154,14 @@ data "aws_iam_policy_document" "bedrock_invoke" {
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-2-lite-v1:0",
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-pro-v1:0",
       "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5",
-      "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0",
       "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
-      "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0"
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
+      "arn:aws:bedrock:*::foundation-model/cohere.embed-v4:0",
+      "arn:aws:bedrock:*::foundation-model/moonshot.kimi-k2-thinking",
+      "arn:aws:bedrock:*::foundation-model/openai.gpt-oss-120b-1:0",
+      "arn:aws:bedrock:*::foundation-model/openai.gpt-oss-20b-1:0",
+      "arn:aws:bedrock:*::foundation-model/qwen.qwen3-32b-v1:0",
+      "arn:aws:bedrock:*::foundation-model/qwen.qwen3-next-80b-a3b"
     ]
   }
 }
