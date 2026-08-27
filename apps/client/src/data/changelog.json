@@ -621,5 +621,12 @@
     "summary": "The dice now tell the GM what happened in a sentence, and complications come from the world",
     "details": "A resolved check used to reach the GM as a single word — advance, regress, collapse — beside an instruction to honor it. Nothing in any of the thirty-one prompts ever said what those five words mean, so the GM was asked to honor a scale it had never been shown and guessed from the word itself; in a recent chronicle a catastrophic failure was narrated as a triumph because 'collapse', in a room full of resonant screens, reads as something falling over. The result now arrives as one plain sentence saying what the check did to what your character was reaching for, with their recent run of luck and the odds they faced folded into it. How that lands is still entirely the GM's to write. Separately, the pre-written complications are gone: they were drafted before the dice by a stage that had read nothing about the world, which is why failure so often arrived as a convenient tremor or a passing patrol. The complication is now written after the outcome is known by whichever stage has actually read the setting — so what goes wrong belongs to this place and these people.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-machinery-stays-backstage",
+    "releasedAt": "2026-08-28",
+    "summary": "The GM stops reading the rulebook out loud, and a failed research pass says why",
+    "details": "One narrator wrote your 'fledgling negotiate deals skill' straight into the story. The rule against naming the machinery — drive, flaw, instinct, skill, check, tier, momentum — existed in exactly one of the thirteen prompts that write prose; it is now in all of them, and the line describing how a roll went no longer quotes the skill's internal name either. Separately, when the GM's research pass fails the turn still continues on what it has, but the record of that failure said only 'Error' with no further detail, and reported the work as though none had been done — so a pass that searched and lost its findings looked identical to one that never searched. It now names the stage that failed and what it rejected, keeps the honest count of what was retrieved, and marks the resulting narration so the two can be told apart.",
+    "type": "bugfix"
   }
 ]

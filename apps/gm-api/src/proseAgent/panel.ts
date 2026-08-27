@@ -51,13 +51,18 @@ const agenticPanelist = async (
       },
     });
     log('info', 'prose-agent.panel.completed', {
+      briefFailed: String(outcome.briefFailed),
       chronicleId: context.chronicleId,
       durationMs: Date.now() - startedAt,
       modelId,
+      stepCount: String(outcome.stepCount),
       totalTokens: outcome.usage.totalTokens,
       turnId: context.turnId,
     });
     return {
+      // Reading retrieval against no retrieval means knowing which of these
+      // actually had a brief behind it.
+      briefFailed: outcome.briefFailed,
       costUsd: outcome.costUsd,
       modelId,
       prose: outcome.prose,

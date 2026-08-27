@@ -18,34 +18,38 @@ player never sees, extending the scene ledger: where the scene is heading, what
 would end it, what is being held back. Designed after the current prompt round
 is judged.
 
-**The environment stage sees the player's pending move.** Its request carries
-`### INTENT`, `### PLAYER-MESSAGE`, and `### SKILL-CHECK`, and its own recorded
-thinking reads "Given the player's intent to find a local artisan … I'll propose
-a new front for them to assist Hundson." A stage whose whole purpose is the
-world acting on its own account is planning around the action it has not seen
-resolve. Withholding those three blocks is the fix. Deferred until the prompt
-inputs themselves are fixed.
-
 **Writer word floors are too low.** Raise once, deliberately, after the input
 work lands — not as a reaction to one short turn.
 
-**The world writes what cannot be witnessed.** Offstage motion and hidden
-motivation reach the page as stated fact. One sentence at the source, not a
-hard control.
+**Scene ledger hygiene.** `sceneLedger.ts:33` concatenates `interactions` with
+no dedup, and A Beautiful Thing Bought as Ringglass recorded "Hundson sets up a
+resonant screen around the crate" twice from one event — the judge restated a
+prior turn's line and nothing caught it. The same ledger lists the player
+character in `present`, which is the roster of who acts when the player pauses.
 
 ## Retrieval
 
-**`search` returns near-identical results regardless of query.** The place name
-dominates the embedding, so a scout that searches four different things gets
-four versions of the same list and burns its rounds re-searching. Observed in
-Hidden Messages: 4 of 5 rounds spent on searches that added nothing.
+**Say what a similarity score means where it is read.** The `search` floor sits
+at 0.32 with invented phrases topping out at 0.304 — 0.017 of separation, and
+neither a z-score over the query's own background nor a margin-over-p99
+separates the classes any better (both overlap worse; measured). The floor is
+the best single discriminator available, so the mitigation is not a better
+number: the tool already returns the similarity to the model, and the tool
+description should say what the bands mean — at or above 0.5 a named match,
+0.32 to 0.45 a lead to confirm rather than a fact — so a 0.33 hit is discounted
+instead of believed.
 
-**No way to learn an entity's field names.** `search` returns kind, name, and
-slug only; `expand(slug)` shows neighbours' entries. A scout that wants a
-specific field has to guess key names — one guessed `keys: ["name","detail"]`
-and got `missingKeys` with empty identity and facts. Now that
-`descriptiveIdentity` is in production the guessable surface is larger, not
-smaller.
+**Coined names never register.** A player naming something the world has not
+written down — "Globbin", "globitz" — leaves `entity_references` empty, so the
+name exists only in that turn's prose and is gone by the next. The evaluator now
+at least notices (it asked whether Globbin had any canon basis), but nothing
+persists a coinage. Agreed shape, never built: a `coinedNames` list on chronicle
+state alongside `fronts`, written by the entity-reference resolver when a
+definite referent matches no candidate, surfaced as one seed-pack block.
+Promotion of a coinage to real canon at chronicle closure is a separate
+question. Supersedes the older "entity aliases" framing, which tried to hang the
+alias off scene-ledger `present` entries and stalled on where the alias points
+when the figure was never minted.
 
 **Skills the sheet cannot serve.** Zale's three skills forced Bow hunting for a
 stun piston and Manipulate others for a smoke-bomb escape, at rudimentary
@@ -54,46 +58,35 @@ finesse — the −2/−4 modifiers behind five straight bad tiers. Her instinct
 covers either. Either the sheet needs a wider skill set at creation, or the
 planner needs a fallback that is not the nearest bad match.
 
-**Entity aliases.** Proposed, awaiting a decision: give each scene-ledger
-`present` entry an optional `entitySlug`, so a player's improvised name ("the
-scum") points at the canon figure it means (the rival broker). Fixes retrieval
-misses on ledger nouns, sidecar entries dropped as unserved, and continuity
-across improvised naming. Blocked on where the alias points when the figure was
-never minted as an entity — smallest answer is letting the turn judge create a
-chronicle-scoped entity for a figure the scene keeps naming.
-
-## Turn pipeline
-
-**Inventory deltas never land.** After seven turns `character.inventory` is
-still `[]` while the delta node emitted `update`/`remove` ops for a stun piston,
-Cute Girl Glasses, and a Smoke Bomb that were never added. Player-asserted props
-get narrated and staged in the ledger but never become holdings. Not
-investigated — the round was not aimed at inventory.
+**Confirm the asymmetric embedding fixed same-query results.** `search` used to
+return near-identical results whatever it was asked, because the place name
+dominated a symmetric embedding — 4 of 5 rounds in Hidden Messages spent on
+searches that added nothing. Cohere Embed v4 with separate query and document
+spaces should fix exactly that, and measured against 400 production entities it
+does. Unverified in play: the canon re-embed has not run.
 
 ## Models and providers
 
 **Nova's content filter is nondeterministic.** Two of seven turns came back
 `stopReason: content_filtered` with zero output tokens; replaying the exact
 blocked payload passed 10/10 later. It is a classifier over generated text, not
-a word list, and there is no strictness knob. A turn currently fails and asks
-the player to rephrase — one retry before surfacing the failure would hide most
-of it.
-
-**Sonnet retrieves nothing.** Every panel run finished at `stepCount: 1` —
-straight to `submit_turn`, no tool calls — while writing the best prose from the
-seed pack alone, at 3.5x the cost of the Nova paths. Decide whether that is
-fine (the seed pack is enough) or whether the pack should shrink so retrieval
-earns its keep.
+a word list, and there is no strictness knob. Nova is no longer a prose default
+but is still the classification model, so a filtered classifier still fails a
+turn. One retry before surfacing the failure would hide most of it.
 
 **Sonnet on Bedrock is intermittently unavailable.** `ServiceUnavailableException`
 on `us.anthropic.claude-sonnet-5` dropped it from two turns' panels. The panel's
 failure-drop is working as designed; drops are findable in the logs as
 `prose-agent.panel.failed`. Watch whether it recurs.
 
-**Haiku 4.5 joins the panel** once it has a model-catalog entry.
+**Haiku 4.5 joins the panel** once it has a model-catalog entry. Cheaper now
+that the provider no longer rejects models by name.
 
 ## Evaluation
 
-**Re-judge all four narrators** once live turns accumulate on the restored
-pre-KEY prompts. No categorical model verdicts before then — the last round's
-prompts are not the ones running now.
+**Read retrieval against no retrieval.** The panel's whole purpose, and it has
+never yielded a reading: the one chronicle that could have produced it had its
+scout throw on three of three turns, and every alternate reported `stepCount: 0`
+whether it had researched or not. `briefFailed` now distinguishes those, and the
+forced-tool fix should stop the throws. Needs live turns, then a comparison of
+each model's agentic response against its own one-shot on the same turn.

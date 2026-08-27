@@ -35,7 +35,7 @@ describe('outcome framing', () => {
     // The tier used to arrive as its own name beside "honor its tier", and no
     // template ever said what the five names mean.
     expect(outcome({ outcomeTier: 'collapse' })).toContain('failed at it');
-    expect(outcome({ outcomeTier: 'regress' })).toContain('did not get it');
+    expect(outcome({ outcomeTier: 'regress' })).toContain('did not get what they were after');
     expect(outcome({ outcomeTier: 'advance' })).toContain('get what they were reaching for');
   });
 
@@ -45,8 +45,10 @@ describe('outcome framing', () => {
     }
   });
 
-  it('names the skill the planner chose', () => {
-    expect(outcome()).toContain('manipulate others');
+  it('never names the skill, which is a slug the narrator is forbidden to say', () => {
+    // gpt-oss quoted one into the prose: "your fledgling 'negotiate deals' skill".
+    expect(outcome()).not.toContain('manipulate others');
+    expect(outcome()).toContain('what they described');
   });
 
   it('reads the same at every magnitude, because the tier is the magnitude', () => {

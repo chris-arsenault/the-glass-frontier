@@ -374,8 +374,9 @@ describe('check-planner fragments', () => {
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain('requiresCheck: true');
-    // The sentence carries the skill, the failure, the swing and the footing.
-    expect(developer).toContain('performance');
+    // The sentence carries the failure, the swing and the footing — never the
+    // skill slug, which the narrator is forbidden to say.
+    expect(developer).toContain('what they described');
     expect(developer).toContain('failed at it');
     expect(developer).toContain('against the odds');
     expect(developer).toContain('worn footing');

@@ -25,6 +25,12 @@ import {
   SEARCH_INSTRUCTIONS,
   searchFocus,
 } from './policy';
+import {
+  describeError,
+  EMPTY_BRIEF,
+  type ScoutOutcome,
+  type ScoutProgress,
+} from './scoutResult';
 import { buildSeedPack, renderSeedPack } from './seedPack';
 import { createProseAgentTools } from './tools';
 import { RETRIEVED_TOKEN_BUDGET, ToolSession } from './toolSession';
@@ -62,6 +68,8 @@ type RetrievalVerdict = z.infer<typeof RetrievalVerdict>;
 
 export type ProseAgentOutcome = {
   brief: TurnBrief;
+  /** The research threw and this narration was written from an empty brief. */
+  briefFailed: boolean;
   costUsd: number;
   prose: string;
   /** The writer's audit id, so the turn trace still points at a real record. */
@@ -173,23 +181,6 @@ const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string
   present: brief.present,
   ...worldContent === undefined ? {} : { world: worldContent },
 });
-
-const UNESTABLISHED = 'not established this turn';
-
-/**
- * A turn with nothing usable retrieved or composed. The writer still has the
- * scene record, the check, and the player's words; a thinner turn beats one
- * the player has to retype.
- */
-const EMPTY_BRIEF: TurnBrief = {
-  character: UNESTABLISHED,
-  complication: null,
-  entities: [],
-  history: null,
-  location: UNESTABLISHED,
-  present: UNESTABLISHED,
-  scene: { changed: UNESTABLISHED, endsWhen: UNESTABLISHED, stakes: UNESTABLISHED },
-};
 
 type ResearchTarget = {
   intentType: IntentType;
@@ -347,17 +338,39 @@ const runResearch = async (
   return { stepCount, usages };
 };
 
+/** The whole path a brief takes when nothing throws. */
+const composeAndExtract = async (
+  context: GraphContext,
+  deps: ProseAgentDeps,
+  target: ResearchTarget,
+  progress: ScoutProgress
+): Promise<ScoutOutcome> => {
+  const research = await runResearch(context, deps, target);
+  progress.stepCount = research.stepCount;
+  progress.usages.push(...research.usages);
+
+  progress.stage = 'compose';
+  const composed = await composeBrief(context, deps, target);
+  progress.usages.push(composed.usage);
+
+  progress.stage = 'extract';
+  const extracted = await extractBrief(context, deps, target, composed.text);
+  const proseUsage = sumUsage(progress.usages);
+  return {
+    brief: extracted.brief,
+    briefFailed: false,
+    costUsd: calculateActualCostUsd(target.model, proseUsage) + extracted.costUsd,
+    session: target.session,
+    stepCount: progress.stepCount,
+    usage: sumUsage([proseUsage, extracted.usage]),
+  };
+};
+
 const runScout = async (
   context: GraphContext,
   deps: ProseAgentDeps,
   input: { intentType: IntentType; model: CatalogModel; playerId: string }
-): Promise<{
-  brief: TurnBrief;
-  costUsd: number;
-  session: ToolSession;
-  stepCount: number;
-  usage: TokenUsage;
-}> => {
+): Promise<ScoutOutcome> => {
   const { intentType, model, playerId } = input;
   const pack = await buildSeedPack(context);
   const session = new ToolSession({ seedEntities: pack.seedEntities });
@@ -368,30 +381,32 @@ const runScout = async (
     session,
     task: renderSeedPack(pack, context.playerMessage.content),
   };
+  // `progress` is held outside the try so a failure can still report the
+  // research that did happen. Reporting zero steps and zero cost made a thrown
+  // scout look like one that chose not to search, which is what made kimi's
+  // panel responses unreadable across a whole chronicle.
+  const progress: ScoutProgress = { stage: 'research', stepCount: 0, usages: [] };
   try {
-    const research = await runResearch(context, deps, target);
-    const composed = await composeBrief(context, deps, target);
-    const extracted = await extractBrief(context, deps, target, composed.text);
-    const proseUsage = sumUsage([...research.usages, composed.usage]);
-    return {
-      brief: extracted.brief,
-      costUsd: calculateActualCostUsd(model, proseUsage) + extracted.costUsd,
-      session,
-      stepCount: research.stepCount,
-      usage: sumUsage([proseUsage, extracted.usage]),
-    };
+    return await composeAndExtract(context, deps, target, progress);
   } catch (error) {
+    const usage = sumUsage(progress.usages);
     log('warn', 'prose-agent.scout.no_brief', {
+      calls: String(session.callCount),
       chronicleId: context.chronicleId,
-      message: error instanceof Error ? error.message : 'unknown',
+      detail: describeError(error),
+      modelId: model.modelId,
+      stage: progress.stage,
+      stepCount: String(progress.stepCount),
       turnId: context.turnId,
     });
     return {
       brief: EMPTY_BRIEF,
-      costUsd: 0,
+      briefFailed: true,
+      // The tokens were spent whether or not a brief came back.
+      costUsd: calculateActualCostUsd(model, usage),
       session,
-      stepCount: 0,
-      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      stepCount: progress.stepCount,
+      usage,
     };
   }
 };
@@ -470,6 +485,7 @@ export const runProseAgent = async (
   const usage = sumUsage([scout.usage, written.usage]);
   return {
     brief: scout.brief,
+    briefFailed: scout.briefFailed,
     costUsd: scout.costUsd + calculateActualCostUsd(model, written.usage),
     prose: written.prose,
     requestId: written.requestId,

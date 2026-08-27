@@ -23,26 +23,28 @@ import type {
  * and leaves every question of how that lands to the stage that has read the
  * world.
  */
-const OUTCOME_FRAMING = new Map<OutcomeTier, (skill: string) => string>([
-  ['breakthrough', (skill) =>
-    `The character set out to ${skill} and it worked better than they had any `
-    + 'right to expect. Give them what they were reaching for and something '
-    + 'beyond it that they did not think to ask for.'],
-  ['advance', (skill) =>
-    `The character set out to ${skill} and did it to the best of their `
-    + 'ability. They get what they were reaching for; the turn costs them '
-    + 'nothing they will feel.'],
-  ['stall', (skill) =>
-    `The character set out to ${skill} and neither gained nor lost ground. `
-    + 'They do not get what they were reaching for, and nothing has gone wrong '
-    + 'yet — the situation is where it was, and time has passed in it.'],
-  ['regress', (skill) =>
-    `The character set out to ${skill} and did not get it. Something is worse `
-    + 'than before they tried, and it follows from what they did.'],
-  ['collapse', (skill) =>
-    `The character set out to ${skill} and failed at it. The failure costs `
-    + 'them something well beyond the attempt, and what it costs them is the '
-    + 'turn.'],
+const OUTCOME_FRAMING = new Map<OutcomeTier, () => string>([
+  ['breakthrough', () =>
+    'The character did what they described and it worked better than they had '
+    + 'any right to expect. Give them what they were reaching for and '
+    + 'something beyond it that they did not think to ask for.'],
+  ['advance', () =>
+    'The character did what they described, to the best of their ability. '
+    + 'They get what they were reaching for; the turn costs them nothing they '
+    + 'will feel.'],
+  ['stall', () =>
+    'The character did what they described and neither gained nor lost '
+    + 'ground. They do not get what they were reaching for, and nothing has '
+    + 'gone wrong yet — the situation is where it was, and time has passed in '
+    + 'it.'],
+  ['regress', () =>
+    'The character did what they described and did not get what they were '
+    + 'after. Something is worse than before they tried, and it follows from '
+    + 'what they did.'],
+  ['collapse', () =>
+    'The character did what they described and failed at it. The failure '
+    + 'costs them something well beyond the attempt, and what it costs them is '
+    + 'the turn.'],
 ]);
 
 /**
@@ -157,10 +159,13 @@ export function formatIntent(
  * The whole result as one instruction, or nothing when no check ran.
  *
  * The margin never appears: a collapse at −9 and a collapse at −5 are the same
- * turn, and the tier already is the magnitude.
+ * turn, and the tier already is the magnitude. Neither does the skill: it is a
+ * slug from the planner, the narrator is forbidden to say it, and gpt-oss
+ * quoted one straight into the prose — "your fledgling 'negotiate deals'
+ * skill". The narrator already holds the player's own words for what was
+ * attempted.
  */
 const outcomeInstruction = (
-  plan: Partial<SkillCheckPlan>,
   result: Partial<SkillCheckResult>
 ): string | undefined => {
   const framing = result.outcomeTier === undefined
@@ -169,9 +174,7 @@ const outcomeInstruction = (
   if (framing === undefined) {
     return undefined;
   }
-  return framing(plan.skill ?? 'do what they described')
-    + swingClause(result)
-    + momentumClause(result.newMomentum);
+  return framing() + swingClause(result) + momentumClause(result.newMomentum);
 };
 
 export function formatSkillCheck(
@@ -184,7 +187,7 @@ export function formatSkillCheck(
     // One instruction instead of a tier, a swing, a margin and three seeds.
     // What survives is how to frame the turn; how that lands belongs to the
     // stage holding the world.
-    outcome: outcomeInstruction(planDetails, resultDetails),
+    outcome: outcomeInstruction(resultDetails),
     requiresCheck: planDetails.requiresCheck,
     riskLevel: planDetails.riskLevel,
   };

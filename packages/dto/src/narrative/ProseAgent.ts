@@ -38,12 +38,20 @@ export type ProseAgentResult = z.infer<typeof ProseAgentResult>;
  * candidate narrations.
  */
 export const ProseAlternate = z.object({
+  /**
+   * This response was written from an empty brief because its research threw.
+   * Without it a discarded brief is indistinguishable from a scout that simply
+   * chose not to search, and comparing retrieval against no retrieval silently
+   * compares two turns that both had none.
+   */
+  briefFailed: z.boolean().default(false),
   /** Total USD cost of this panelist's whole loop for the turn. */
   costUsd: z.number().nonnegative(),
   modelId: z.string().min(1),
   prose: z.string().min(1),
   sidecar: z.array(ProseSidecarEntry),
-  stepCount: z.number().int().positive(),
+  /** Zero is a real answer: research that threw on its first round did none. */
+  stepCount: z.number().int().nonnegative(),
   totalTokens: z.number().int().nonnegative(),
 });
 export type ProseAlternate = z.infer<typeof ProseAlternate>;

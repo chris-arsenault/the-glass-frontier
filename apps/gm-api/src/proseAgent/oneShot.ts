@@ -95,6 +95,9 @@ export const runOneShotProse = async (
     throw new Error('The one-shot narrator returned a non-text narration.');
   }
   return {
+    // The one-shot has no brief to lose: its world arrives whole, or the whole
+    // call throws.
+    briefFailed: false,
     costUsd: calculateActualCostUsd(model, narration.usage),
     modelId: `${model.modelId} (one-shot)`,
     prose: narration.message.trim(),

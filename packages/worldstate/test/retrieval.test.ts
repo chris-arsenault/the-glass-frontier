@@ -150,6 +150,7 @@ describe('prose alternates', () => {
       playerId: TEST_PLAYER_ID,
     });
     const alternates = [{
+      briefFailed: false,
       costUsd: 0.0123,
       modelId: 'claude-sonnet-5',
       prose: 'The dockmaster narrows his eyes.',
