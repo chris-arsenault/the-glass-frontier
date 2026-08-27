@@ -7,7 +7,14 @@ import type { EntitySnippet, GraphContext } from '../../types';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
 
 const MAX_REFERENCES = 3;
-const MIN_SEMANTIC_SIMILARITY = 0.5;
+/**
+ * This resolver sends a bare name, as the player typed it. Measured under
+ * Cohere Embed v4 at 1024 dimensions against 400 production entities: the
+ * correct entity came back first in all thirty trials, scoring 0.469 at worst
+ * and 0.559 at the median, while invented phrases top out at 0.305. The old
+ * 0.5 was set against Titan and here rejects five of thirty correct matches.
+ */
+const MIN_SEMANTIC_SIMILARITY = 0.4;
 
 type ResolverSpeaker = 'player' | 'gm';
 type ResolverMatch = { slug: string; text: string };
@@ -205,7 +212,7 @@ export class EntityReferenceResolverNode implements GraphNode {
       return [];
     }
     try {
-      const embedding = await context.embeddings.embed(content);
+      const embedding = await context.embeddings.embed(content, 'query');
       const ranked = (await context.worldSchemaStore.findReferenceCandidates({
         embedding,
         limit: 5,

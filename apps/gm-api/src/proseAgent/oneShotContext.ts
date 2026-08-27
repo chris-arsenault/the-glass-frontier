@@ -85,7 +85,7 @@ const vectorMatches = async (context: GraphContext): Promise<string[]> => {
   if (query.trim().length === 0) {
     return [];
   }
-  const embedding = await context.embeddings.embed(query);
+  const embedding = await context.embeddings.embed(query, 'query');
   const candidates = await context.worldSchemaStore.findEntityCandidates({
     embedding,
     limit: VECTOR_MATCH_COUNT,

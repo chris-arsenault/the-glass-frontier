@@ -11,7 +11,7 @@ import {
   createAgentLoopClient,
   createLLMClient,
   loadOpenAiApiKeyFromSecrets,
-  TitanTextEmbeddingClient,
+  CohereTextEmbeddingClient,
 } from '@glass-frontier/llm-client';
 import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import {
@@ -42,7 +42,7 @@ let appStore: AppStore | undefined;
 let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
 let engine: GmEngine | undefined;
-const embeddings = new TitanTextEmbeddingClient();
+const embeddings = new CohereTextEmbeddingClient();
 
 /**
  * Initialize context for the Lambda runtime.

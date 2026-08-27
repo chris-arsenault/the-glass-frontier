@@ -20,14 +20,21 @@ const MAX_EXPAND_NEIGHBORS = 8;
 /** Shadewell has eleven passages; a whole-entity read must still fit a round. */
 const MAX_OPEN_LORE = 6;
 /**
- * Below this cosine similarity a "match" is embedding noise. Measured against
- * the production canon (Titan v2, 256 dims): invented words top out at
- * 0.29–0.34 ("globitz", "flurbotron xyzzy"), topical paraphrases reach
- * 0.34–0.36 ("pressure valve"), and real names score 0.53–0.83 ("Vask",
- * "port city on Ashvane"). 0.4 keeps every legitimate result observed and
- * rejects every invented one.
+ * Below this cosine similarity a "match" is embedding noise.
+ *
+ * Re-measured against 400 production canon entities under Cohere Embed v4 at
+ * 1024 dimensions, queries embedded as `search_query` and canon as
+ * `search_document`. Thirteen invented phrases ("globitz", "the Zorbnak
+ * Protocol", "a snorklewhack in the manifold") top out at 0.305; ten topical
+ * paraphrases run 0.261–0.473; fourteen real names run 0.474–0.660. At 0.32
+ * every invented phrase is rejected and nine of ten paraphrases survive — the
+ * tenth, "the law about cooling during a heat emergency", scores 0.261 and
+ * sits inside the invented band, so no floor separates it.
+ *
+ * Titan's 0.4 does not transfer: under this model it would discard six of the
+ * ten paraphrases, which is most of what searching by meaning is for.
  */
-export const SEARCH_SIMILARITY_FLOOR = 0.4;
+export const SEARCH_SIMILARITY_FLOOR = 0.32;
 
 /**
  * A retrieval miss is an error, not a result: as text it reads as world-fact
@@ -187,7 +194,7 @@ const searchTool = ({ context, session }: ToolDeps): AgentTool => tool({
     + 'writing use search_lore, and for events of this chronicle use '
     + 'search_history.',
   execute: async ({ query }: { query: string }) => {
-    const embedding = await context.embeddings.embed(query);
+    const embedding = await context.embeddings.embed(query, 'query');
     const candidates = await context.worldSchemaStore.findEntityCandidates({
       embedding,
       limit: 5,

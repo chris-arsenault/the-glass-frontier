@@ -13,7 +13,9 @@ export const embedMissingEntities = async (
       return embedded;
     }
     await Promise.all(sources.map(async (source) => {
-      const embedding = await embeddings.embed(source.text);
+      // Canon is the document side: what a query is scored against, never the
+      // thing doing the asking.
+      const embedding = await embeddings.embed(source.text, 'document');
       await world.saveEntityEmbedding(source.id, embedding);
     }));
     return embedBatch(embedded + sources.length);

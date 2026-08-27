@@ -2,6 +2,7 @@ import type { Turn } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { ENTITY_EMBEDDING_DIMENSIONS } from '../src/entityEmbeddings';
 import type { WorldState } from '../src/worldState';
 import {
   commitChronicleTurn,
@@ -373,7 +374,7 @@ describe('reference candidates', () => {
     expect(embedding).not.toBeNull();
 
     const ranked = await worldState.world.findReferenceCandidates({
-      embedding: Array.from({ length: 256 }, () => 0.01),
+      embedding: Array.from({ length: ENTITY_EMBEDDING_DIMENSIONS }, () => 0.01),
       limit: 5,
     });
 
@@ -396,7 +397,9 @@ describe('entity candidate search', () => {
     if (korvathId === undefined || brokerId === undefined) {
       throw new Error('Expected seeded entity refs to resolve.');
     }
-    const near = [1, 0.5, ...Array.from({ length: 254 }, () => 0)];
+    const near = [
+      1, 0.5, ...Array.from({ length: ENTITY_EMBEDDING_DIMENSIONS - 2 }, () => 0),
+    ];
     await worldState.world.saveEntityEmbedding(korvathId, near);
     await worldState.world.saveEntityEmbedding(brokerId, near);
     const candidates = await worldState.world.findEntityCandidates({ embedding: near });

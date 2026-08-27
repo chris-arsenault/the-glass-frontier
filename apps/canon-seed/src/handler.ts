@@ -1,4 +1,4 @@
-import { TitanTextEmbeddingClient } from '@glass-frontier/llm-client/embeddings';
+import { CohereTextEmbeddingClient } from '@glass-frontier/llm-client/embeddings';
 import { log } from '@glass-frontier/utils';
 import { createWorldSchemaStore } from '@glass-frontier/worldstate';
 import { createLambdaPool } from '@glass-frontier/worldstate/pg';
@@ -18,7 +18,7 @@ const isCanonSeedEvent = (event: unknown): event is CanonSeedEvent =>
   event.operation === 'seed-canon';
 
 let pool: ReturnType<typeof createLambdaPool> | undefined;
-const embeddings = new TitanTextEmbeddingClient();
+const embeddings = new CohereTextEmbeddingClient();
 
 const getPool = (): ReturnType<typeof createLambdaPool> => {
   pool ??= createLambdaPool();

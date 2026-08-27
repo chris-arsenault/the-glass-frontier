@@ -12,7 +12,14 @@ import type { GraphNode, GraphNodeDelta } from './graphNode';
 
 const FOCUS_ENTITY_COUNT = 3;
 const MIN_SCORE_MARGIN = 0.04;
-const MIN_SIMILARITY = 0.6;
+/**
+ * This resolver sends a name and its kind together, which scores higher than a
+ * bare name. Measured under Cohere Embed v4 at 1024 dimensions against 400
+ * production entities: the correct entity came back first in all thirty
+ * trials, scoring 0.550 at worst and 0.666 at the median. The old 0.6 was set
+ * against Titan and here rejects eight of thirty correct subjects.
+ */
+const MIN_SIMILARITY = 0.45;
 
 type SubjectResolutionState = {
   effectiveScene: ChronicleScene;
@@ -150,7 +157,8 @@ export class SceneSubjectResolverNode implements GraphNode {
       ]),
     ];
     const embedding = await context.embeddings.embed(
-      `${sceneChange.subject}\nkind: ${sceneChange.subjectKind}`
+      `${sceneChange.subject}\nkind: ${sceneChange.subjectKind}`,
+      'query'
     );
     return acceptedCandidate(await context.worldSchemaStore.findSubjectCandidates({
       embedding,

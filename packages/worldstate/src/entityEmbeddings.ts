@@ -4,7 +4,16 @@ import type {
 } from '@glass-frontier/dto';
 import type { Pool } from 'pg';
 
-const EMBEDDING_MODEL = 'amazon.titan-embed-text-v2:0';
+const EMBEDDING_MODEL = 'cohere.embed-v4:0';
+
+/**
+ * The width of `entity.embedding`, which is this layer's contract rather than
+ * the embedding provider's: worldstate does not know or care which model wrote
+ * a vector, only that it fits the column. Changing it means a migration and a
+ * full re-embed, because vectors of different widths describe different spaces
+ * and a similarity between them is noise.
+ */
+export const ENTITY_EMBEDDING_DIMENSIONS = 1024;
 const MAX_GRAPH_HOPS = 8;
 
 export type EntityEmbeddingSource = {
@@ -159,6 +168,14 @@ export class EntityEmbeddingReader {
   }
 
   async save(id: string, embedding: number[]): Promise<void> {
+    // Postgres would reject this too, but only from inside a batch of sixteen
+    // where the message names neither the entity nor the width it got.
+    if (embedding.length !== ENTITY_EMBEDDING_DIMENSIONS) {
+      throw new Error(
+        `Entity ${id} embedding is ${embedding.length} wide; the column holds `
+        + `${ENTITY_EMBEDDING_DIMENSIONS}.`
+      );
+    }
     await this.#pool.query(
       `UPDATE entity
        SET embedding = $2::vector, embedding_model = $3, embedding_updated_at = now()

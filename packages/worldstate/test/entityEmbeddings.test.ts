@@ -1,6 +1,7 @@
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { ENTITY_EMBEDDING_DIMENSIONS } from '../src/entityEmbeddings';
 import type { WorldState } from '../src/worldState';
 import { proposal, resetDatabase, startHarness } from './harness';
 
@@ -19,10 +20,11 @@ afterAll(async () => {
   await pool.end();
 });
 
+/** As wide as the column: the entity vector is Cohere Embed v4 at 1024. */
 const embedding = (second: number): number[] => [
   1,
   second,
-  ...Array.from({ length: 254 }, () => 0),
+  ...Array.from({ length: ENTITY_EMBEDDING_DIMENSIONS - 2 }, () => 0),
 ];
 
 describe('entity embedding retrieval', () => {

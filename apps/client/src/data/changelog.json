@@ -586,5 +586,12 @@
     "summary": "Five open-weight models, and Nova's price was wrong",
     "details": "GPT OSS 120B and 20B, Kimi K2 Thinking, Qwen3 Next 80B, and Qwen3 32B are now selectable. Every one was checked against Bedrock directly rather than taken on reputation: all are on-demand in this region, all handle tool use through the same interface the retrieval loop uses, and all honor a forced tool choice, which is how structured output is produced. Prices come from AWS's own pricing service. Several are genuinely cheaper than what was on offer — GPT OSS 120B costs a fifth of Nova Pro per million input tokens and Qwen3 32B a fifth of its output — though Kimi K2 Thinking is not: its output runs above Nova Pro's. MiniMax M2.5 was measured and left out because it ignores a forced tool choice, which would break structured output. The catalog's Nova prices were also twice the real rate on output for both Nova Pro and Nova 2 Lite, so cost reporting had been overstating them.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-asymmetric-canon-search",
+    "releasedAt": "2026-08-28",
+    "summary": "Canon search now scores whether an entry answers you, not whether it sounds like you",
+    "details": "Searching canon by meaning used to put your words and the world's entries into one space and measure how alike the two sentences were. But canon reads \"Heat-road haulers carry bulk freight between Ashvane towns\" while you ask \"what's moving the cargo out here\" — those answer each other without resembling each other. Canon and queries are now embedded separately by a model trained for exactly that asymmetry, at four times the previous detail. The improvement is measurable: against four hundred real canon entries, ten plain-language questions now find the right entry nine times out of ten, where the old thresholds would have discarded six of them as noise. Every cutoff in the system was re-measured against the new model rather than carried over — the old numbers were tuned for the old one and would have rejected correct matches, including a fifth of scene subjects and a sixth of the things you name directly. Invented words are still rejected: thirteen nonsense phrases were tested and none scored high enough to come back as canon. Existing canon is re-indexed automatically; until that finishes, searching by meaning returns nothing rather than something wrong.",
+    "type": "improvement"
   }
 ]
