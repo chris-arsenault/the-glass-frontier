@@ -21,3 +21,5 @@ packages/*/src/**/*.d.ts
 /.beads/beads.left.jsonl
 /.beads/beads.left.meta.json
 db/migrations/seed/002_prompt_templates.sql
+# Terminal paste capture: session scratch, not repository content.
+.sulion-paste/
