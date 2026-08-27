@@ -53,7 +53,6 @@ const plan = (
 ): SkillCheckPlan => ({
   advantage,
   attribute: 'presence',
-  complicationSeeds: ['The audience turns openly hostile.'],
   creativeSpark: false,
   metadata: { tags: [], timestamp: 0 },
   requiresCheck: true,

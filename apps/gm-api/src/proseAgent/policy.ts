@@ -93,10 +93,13 @@ HISTORY: what has happened that bears on this turn — the chronicle's memory
 lives here, because the storyteller keeps only last turn's narration. Write
 "none" on the first turn.
 
-COMPLICATION: read SKILL-CHECK. On a stall, regress, or collapse, name one
-piece of fallout that follows from the retrieved material: this place, these
-people, this history. On advance or breakthrough, or when no check ran,
-write "none".
+COMPLICATION: read SKILL-CHECK. Its outcome line is one sentence saying how
+the turn went. When that sentence says the character did not get what they were
+reaching for, name what that costs them, drawn from the retrieved material:
+this place, these people, this history. It is the shape of the failure, not
+decoration on a success — a turn the world merely reacts to has no
+complication. When the sentence says they got what they were after, or no
+check ran, write "none".
 
 SCENE-STAKES: what is at stake right now, in one line.
 

@@ -35,7 +35,10 @@ describe('narration prompt contracts', () => {
     for (const template of ['action-resolver', 'planning-narrator', 'wrap-resolver']) {
       const prompt = loadTemplate(template);
       expect(prompt).toContain('requiresCheck');
-      expect(prompt).toContain('honor its outcome and advantage state');
+      // The outcome reaches every narrator as a sentence to follow, never as a
+      // tier name it was never taught to read.
+      expect(prompt).toContain('one sentence telling you how the turn went');
+      expect(prompt).not.toContain('complication seeds');
     }
   });
 });

@@ -342,7 +342,7 @@ describe('check-planner fragments', () => {
     expect(developer).toContain('### CHARACTER');
   });
 
-  it('exposes the full planned and resolved check contract to narration', async () => {
+  it('hands narration one framing sentence instead of the machinery', async () => {
     const { runtime } = recordingRuntime();
     const composer = new PromptComposer(runtime);
     const context = buildContext({
@@ -350,7 +350,6 @@ describe('check-planner fragments', () => {
       skillCheckPlan: {
         advantage: 'disadvantage',
         attribute: 'presence',
-        complicationSeeds: ['The audience turns openly hostile.'],
         creativeSpark: false,
         metadata: { tags: [], timestamp: 0 },
         requiresCheck: true,
@@ -375,9 +374,14 @@ describe('check-planner fragments', () => {
     const developer = textOf(prompt.input.at(-1)!);
 
     expect(developer).toContain('requiresCheck: true');
-    expect(developer).toContain('swing: disadvantage');
-    expect(developer).toContain('outcome: collapse');
-    expect(developer).toContain('The audience turns openly hostile.');
+    // The sentence carries the skill, the failure, the swing and the footing.
+    expect(developer).toContain('performance');
+    expect(developer).toContain('failed at it');
+    expect(developer).toContain('against the odds');
+    expect(developer).toContain('worn footing');
+    // And none of the machinery a narrator was never taught to read.
+    expect(developer).not.toContain('collapse');
+    expect(developer).not.toContain('swing:');
     expect(developer).not.toContain('plannedAdvantage');
   });
 });

@@ -11,15 +11,6 @@ const PlannerPlanSchema = z.object({
     .enum(['advantage', 'disadvantage', 'none'])
     .describe('Situational edge for the check: advantage, disadvantage, or none.'),
   attribute: Attribute.describe('Attribute that best matches the player’s approach.'),
-  complicationSeeds: z
-    .array(
-      z
-        .string()
-        .min(1)
-        .describe('≤ 90 char hook for how failure or a mixed result complicates things.')
-    )
-    .min(0)
-    .describe('2–3 complication hooks when requiresCheck=true; otherwise an empty array.'),
   requiresCheck: z
     .boolean()
     .describe('True when the move is meaningfully risky or contested and needs a roll.'),
@@ -61,7 +52,6 @@ class CheckPlannerNode extends LlmClassifierNode<PlannerPlan> {
     const skillCheckPlan: SkillCheckPlan = {
       advantage: result.advantage,
       attribute: result.attribute,
-      complicationSeeds: result.complicationSeeds,
       creativeSpark: context.playerIntent?.creativeSpark ?? false,
       metadata: {
         tags: [],
