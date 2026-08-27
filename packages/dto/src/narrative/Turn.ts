@@ -15,6 +15,8 @@ import { TranscriptEntry } from './TranscriptEntry';
 export const TurnSchema = z.object({
   advancesTimeline: z.boolean().optional(),
   beatTracker: BeatTrackerSchema.optional(),
+  /** Whether persistence has the chronicle checkpoint required to branch here. */
+  canBranch: z.boolean().optional(),
   chronicleId: z.string().min(1),
   entityReferences: z.array(EntityReference).optional(),
   entityRoster: z.array(EntityRosterEntry).optional(),

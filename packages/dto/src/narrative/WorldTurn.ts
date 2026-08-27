@@ -51,7 +51,19 @@ export const WorldTurn = z.object({
    * tense. Two or three sentences: who is moving, what they are after, what
    * changed while the player was occupied. Not narration — the writer decides
    * what the camera catches.
+   *
+   * The description is load-bearing. Without it the model reads a field named
+   * `world` beside a LOCATION block and a SCENE carrying `currentLocation`,
+   * and answers the question it looks like: on Radiators Raised in Daylight
+   * turns 3 and 4 it returned the single word "Ashvane" and the world's whole
+   * account of itself was lost.
    */
-  world: z.string().min(1),
+  world: z.string().min(1)
+    .describe(
+      'Two or three sentences of what everything that is not the player is '
+      + 'doing right now: who is moving, what they are after, what shifted '
+      + 'while the player was occupied. Present tense, prose, never a place '
+      + 'name and never a summary of the player\'s action.'
+    ),
 });
 export type WorldTurn = z.infer<typeof WorldTurn>;

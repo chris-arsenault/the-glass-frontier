@@ -5,7 +5,7 @@
     "urlPath": "/v1/responses",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$[?(@.metadata.nodeId == 'clarification-responder')]"
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'agent-clarification-responder')]"
       }
     ]
   },

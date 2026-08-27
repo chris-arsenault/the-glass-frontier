@@ -27,7 +27,7 @@ const MAX_OPEN_LORE = 6;
  * "port city on Ashvane"). 0.4 keeps every legitimate result observed and
  * rejects every invented one.
  */
-const SEARCH_SIMILARITY_FLOOR = 0.4;
+export const SEARCH_SIMILARITY_FLOOR = 0.4;
 
 /**
  * A retrieval miss is an error, not a result: as text it reads as world-fact
@@ -46,6 +46,10 @@ type AgentTool = ToolSet[string];
 
 const unknownEntity = (slug: string): string =>
   `No canon entity with slug "${slug}". ${UNKNOWN_ENTITY_POLICY}`;
+
+const MISSING_LORE = (slugs: string[]): string =>
+  `No lore passage has the loreSlug ${slugs.join(', ')}. `
+  + 'Use a loreSlug exactly as search_lore returned it.';
 
 const resolveVisible = async (
   store: GraphContext['worldSchemaStore'],
@@ -233,7 +237,8 @@ const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
     return session.wrapResult(`search-lore:${query}`, () => renderBlock(
       fragments.map((fragment) => ({
         excerpt: fragment.prose.slice(0, LORE_EXCERPT_LENGTH),
-        slug: fragment.slug,
+        loreSlug: fragment.slug,
+        readWith: 'read_lore',
         title: fragment.title,
       }))
     ));
@@ -241,13 +246,22 @@ const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
   inputSchema: z.object({ query: z.string().min(2) }),
 });
 
+/**
+ * `loreSlug`, not `slug`: a passage handle and an entity slug are different
+ * namespaces, and while both were called `slug` the model fed the handle it
+ * had just been given to the tool whose parameter matched the name. Fifteen of
+ * the twenty-nine tool errors on Radiators Raised in Daylight were
+ * `open({ slug: 'frag_heavy_hauler' })` and its kind.
+ */
 const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Read up to five full lore passages by the lore slugs search_lore '
+    'Read up to five full lore passages by the loreSlug handles search_lore '
     + 'returned. The excerpts search_lore shows are openings, not the whole; '
-    + 'read the full passage before the brief relies on it.',
-  execute: async ({ slugs }: { slugs: string[] }) => {
-    const wanted = slugs.slice(0, 5);
+    + 'read the full passage before the brief relies on it. A loreSlug names a '
+    + 'passage and is only ever read here — open takes entity slugs and will '
+    + 'not find one.',
+  execute: async ({ loreSlugs }: { loreSlugs: string[] }) => {
+    const wanted = loreSlugs.slice(0, 5);
     const fragments = await context.worldSchemaStore.listLoreFragmentsBySlugs({
       slugs: wanted,
     });
@@ -258,10 +272,7 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
       (slug) => !fragments.some((fragment) => fragment.slug === slug)
     );
     if (fragments.length === 0) {
-      throw new RetrievalMissError(
-        `No lore fragment has the slug ${missing.join(', ')}. `
-        + 'Use a slug exactly as search_lore returned it.'
-      );
+      throw new RetrievalMissError(MISSING_LORE(missing));
     }
     return session.wrapResult(`lore:${[...wanted].sort().join(',')}`, () => renderBlock({
       fragments: fragments.map((fragment) => ({
@@ -269,13 +280,10 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
         prose: fragment.prose,
         title: fragment.title,
       })),
-      ...missing.length > 0 && {
-        note: `No lore fragment has the slug ${missing.join(', ')}. `
-          + 'Use a slug exactly as search_lore returned it.',
-      },
+      ...missing.length > 0 && { note: MISSING_LORE(missing) },
     }));
   },
-  inputSchema: z.object({ slugs: z.array(z.string()).min(1).max(5) }),
+  inputSchema: z.object({ loreSlugs: z.array(z.string()).min(1).max(5) }),
 });
 
 const searchHistoryTool = ({ context, session }: ToolDeps): AgentTool => tool({

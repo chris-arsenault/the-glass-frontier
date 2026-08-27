@@ -1,4 +1,5 @@
 import type { Character, Chronicle, Turn } from '@glass-frontier/dto';
+import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
 import { upsertNodeIdentity } from './nodeIdentity';
@@ -25,9 +26,16 @@ export type TurnSearchInput = {
 };
 
 type PersistChronicle = (client: PoolClient, chronicle: Chronicle) => Promise<void>;
+type PersistTurnInput = {
+  chronicleId: string;
+  chronicleState: Chronicle;
+  sequence: number;
+  turn: Turn;
+};
 type TurnRow = {
   id: string;
   chronicle_id: string;
+  chronicle_state: Chronicle | null;
   turn_sequence: number;
   executed_nodes: Turn['executedNodes'] | null;
   failure: Turn['failure'];
@@ -59,7 +67,7 @@ type TurnRow = {
   world_fronts: Turn['worldFronts'] | null;
 };
 
-const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
+const TURN_SELECT = `SELECT id, chronicle_id, chronicle_state, turn_sequence,
   executed_nodes, failure, advances_timeline,
   player_message_id, player_message_content, player_message_metadata,
   player_intent, scene_context,
@@ -72,7 +80,7 @@ const TURN_SELECT = `SELECT id, chronicle_id, turn_sequence,
   FROM chronicle_turn`;
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
-  id, chronicle_id, turn_sequence, created_at,
+  id, chronicle_id, turn_sequence, created_at, chronicle_state,
   executed_nodes, failure, advances_timeline,
   player_message_id, player_message_content, player_message_metadata,
   player_intent, scene_context,
@@ -83,11 +91,11 @@ const TURN_INSERT = `INSERT INTO chronicle_turn (
   entity_roster, entity_references, entity_usage,
   world_content, world_fronts
 ) VALUES (
-  $1::uuid, $2::uuid, $3, now(), $4, $5, $6,
-  $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12, $13, $14::jsonb, $15,
-  $16, $17, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb,
-  $22::jsonb, $23::jsonb, $24::jsonb, $25::jsonb, $26, $27::jsonb, $28::jsonb, $29::jsonb,
-  $30, $31::jsonb
+  $1::uuid, $2::uuid, $3, now(), $4::jsonb, $5, $6, $7,
+  $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13, $14, $15::jsonb, $16,
+  $17, $18, $19::jsonb, $20::jsonb, $21::jsonb, $22::jsonb,
+  $23::jsonb, $24::jsonb, $25::jsonb, $26::jsonb, $27, $28::jsonb, $29::jsonb, $30::jsonb,
+  $31, $32::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -134,6 +142,7 @@ const toSystemMessage = (row: TurnRow): Turn['systemMessage'] => {
 const toTurn = (row: TurnRow): Turn => ({
   advancesTimeline: optional(row.advances_timeline),
   beatTracker: optional(row.beat_tracker),
+  canBranch: row.chronicle_state !== null,
   chronicleId: row.chronicle_id,
   entityReferences: optional(row.entity_references),
   entityRoster: optional(row.entity_roster),
@@ -164,10 +173,16 @@ const toTurn = (row: TurnRow): Turn => ({
   worldFronts: optional(row.world_fronts),
 });
 
-const turnParameters = (turn: Turn, chronicleId: string, sequence: number): unknown[] => [
+const turnParameters = (
+  turn: Turn,
+  chronicleId: string,
+  sequence: number,
+  chronicleState: Chronicle
+): unknown[] => [
   turn.id,
   chronicleId,
   sequence,
+  serializeJson(chronicleState),
   valueOr(turn.executedNodes, []),
   turn.failure,
   valueOr(turn.advancesTimeline, false),
@@ -219,10 +234,15 @@ export class ChronicleTurnPersistence {
       }
       this.#assertNextSequence(chronicleId, sequence, lastSequence);
       await persistChronicle(client, input.chronicle);
-      await this.#persist(client, input.turn, chronicleId, sequence);
+      await this.#persist(client, {
+        chronicleId,
+        chronicleState: input.chronicle,
+        sequence,
+        turn: input.turn,
+      });
       await this.#updateSessionState(client, input, sequence);
     });
-    return input.turn;
+    return { ...input.turn, canBranch: true };
   }
 
   async list(chronicleId: string): Promise<Turn[]> {
@@ -289,6 +309,66 @@ export class ChronicleTurnPersistence {
     }
   }
 
+  async getCheckpoint(
+    client: PoolClient,
+    chronicleId: string,
+    turnSequence: number
+  ): Promise<Chronicle | null> {
+    const result = await client.query<{ chronicle_state: Chronicle | null }>(
+      `SELECT chronicle_state FROM chronicle_turn
+       WHERE chronicle_id = $1::uuid AND turn_sequence = $2`,
+      [chronicleId, turnSequence]
+    );
+    return result.rows[0]?.chronicle_state ?? null;
+  }
+
+  async copyThroughTurn(
+    client: PoolClient,
+    input: {
+      sourceChronicleId: string;
+      targetChronicle: Chronicle;
+      turnSequence: number;
+    }
+  ): Promise<void> {
+    const result = await client.query<TurnRow>(
+      `${TURN_SELECT} WHERE chronicle_id = $1::uuid AND turn_sequence <= $2
+       ORDER BY turn_sequence ASC`,
+      [input.sourceChronicleId, input.turnSequence]
+    );
+    if (result.rows.at(-1)?.turn_sequence !== input.turnSequence) {
+      throw new Error(`Turn ${input.turnSequence} was not found in the source chronicle.`);
+    }
+    const copies = result.rows.map((row) => this.#copyTurn(row, input.targetChronicle));
+    await this.#persistCopies(client, copies);
+  }
+
+  #copyTurn(row: TurnRow, target: Chronicle): PersistTurnInput {
+    if (row.chronicle_state === null) {
+      throw new Error(`Turn ${row.turn_sequence} predates chronicle branching checkpoints.`);
+    }
+    return {
+      chronicleId: target.id,
+      chronicleState: {
+        ...row.chronicle_state,
+        branch: target.branch,
+        characterId: target.characterId,
+        id: target.id,
+        playerId: target.playerId,
+        status: 'open',
+        summaries: [],
+        targetEndTurn: undefined,
+        title: target.title,
+      },
+      sequence: row.turn_sequence,
+      turn: {
+        ...toTurn(row),
+        chronicleId: target.id,
+        gmTrace: undefined,
+        id: randomUUID(),
+      },
+    };
+  }
+
   async #searchRows(chronicleId: string, query: string, limit: number): Promise<TurnRow[]> {
     const result = await this.#pool.query<TurnRow>(
       `${TURN_SELECT}
@@ -300,11 +380,21 @@ export class ChronicleTurnPersistence {
     return result.rows;
   }
 
-  async #persist(
-    client: PoolClient, turn: Turn, chronicleId: string, sequence: number
-  ): Promise<void> {
-    await upsertNodeIdentity(client, turn.id, 'chronicle_turn');
-    await client.query(TURN_INSERT, turnParameters(turn, chronicleId, sequence));
+  async #persist(client: PoolClient, input: PersistTurnInput): Promise<void> {
+    await upsertNodeIdentity(client, input.turn.id, 'chronicle_turn');
+    await client.query(
+      TURN_INSERT,
+      turnParameters(input.turn, input.chronicleId, input.sequence, input.chronicleState)
+    );
+  }
+
+  async #persistCopies(client: PoolClient, copies: PersistTurnInput[]): Promise<void> {
+    const [copy, ...remainingCopies] = copies;
+    if (copy === undefined) {
+      return;
+    }
+    await this.#persist(client, copy);
+    return this.#persistCopies(client, remainingCopies);
   }
 
   async #lockAndReadSequence(client: PoolClient, chronicleId: string): Promise<number> {
@@ -341,14 +431,14 @@ export class ChronicleTurnPersistence {
   }
 
   async #updateSessionState(
-    client: PoolClient, input: CommitTurnInput, sequence: number
+    client: PoolClient,
+    input: CommitTurnInput,
+    sequence: number
   ): Promise<void> {
     await client.query(
-      `UPDATE chronicle_session_state SET character_state = $2::jsonb,
-       last_turn_sequence = $3, updated_at = now()
+      `UPDATE chronicle_session_state SET last_turn_sequence = $2, updated_at = now()
        WHERE chronicle_id = $1::uuid`,
-      [input.chronicle.id,
-        input.character === null ? null : serializeJson(input.character), sequence]
+      [input.chronicle.id, sequence]
     );
   }
 }

@@ -6,6 +6,7 @@ import type {
 import { IntentType } from '@glass-frontier/dto';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useNavigate } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
 
 import { promptClient } from '../../../lib/promptClient';
@@ -159,10 +160,13 @@ const writeFeedbackCache = (cache: Record<string, true>): void => {
 };
 
 export function ChatCanvas() {
+  const navigate = useNavigate();
   const messages = useChronicleStore((state) => state.messages);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
   const chronicleId = useChronicleStore((state) => state.chronicleId);
+  const chronicleStatus = useChronicleStore((state) => state.chronicleStatus);
   const playerId = useChronicleStore((state) => state.playerId);
+  const branchChronicleFromTurn = useChronicleStore((state) => state.branchChronicleFromTurn);
   const isWaitingForGm = useChronicleStore((state) => state.isSending);
   const turnProgress = useChronicleStore((state) => state.turnProgress);
   const turnViews = useChronicleStore((state) => state.turnViews);
@@ -194,6 +198,7 @@ export function ChatCanvas() {
   const [feedbackLocationNotes, setFeedbackLocationNotes] = useState('');
   const [feedbackInventoryNotes, setFeedbackInventoryNotes] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [branchingTurnSequence, setBranchingTurnSequence] = useState<number | null>(null);
   const beatLookup = useMemo(() => {
     const map = new Map<string, string>();
     beats.forEach((beat) => {
@@ -203,6 +208,33 @@ export function ChatCanvas() {
     });
     return map;
   }, [beats]);
+  const finalEntryIdByTurn = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const message of messages) {
+      if (message.turnKey !== null) {
+        result.set(message.turnKey, message.entry.id);
+      }
+    }
+    return result;
+  }, [messages]);
+
+  const handleBranchFromTurn = async (turnSequence: number): Promise<void> => {
+    const confirmed = window.confirm(
+      `Resume from turn ${turnSequence + 1} in a new chronicle version? The original chronicle will remain unchanged.`
+    );
+    if (!confirmed) {
+      return;
+    }
+    setBranchingTurnSequence(turnSequence);
+    try {
+      const branchedChronicleId = await branchChronicleFromTurn(turnSequence);
+      void navigate(`/chron/${branchedChronicleId}`);
+    } catch {
+      return;
+    } finally {
+      setBranchingTurnSequence(null);
+    }
+  };
 
   const markFeedbackSubmitted = (auditId: string) => {
     setFeedbackCache((prev) => {
@@ -388,6 +420,14 @@ export function ChatCanvas() {
             const auditId = view?.gmTrace?.auditId ?? null;
             const hasSubmitted = auditId ? feedbackCache[auditId] === true : false;
             const hasTurnSequence = typeof view?.turnSequence === 'number';
+            const isFinalEntryForTurn =
+              chatMessage.turnKey !== null &&
+              finalEntryIdByTurn.get(chatMessage.turnKey) === entry.id;
+            const canBranchHere =
+              chronicleStatus === 'open' &&
+              view?.canBranch === true &&
+              hasTurnSequence &&
+              isFinalEntryForTurn;
             const canSubmitFeedback =
               auditId !== null &&
               Boolean(view?.turnId) &&
@@ -531,6 +571,19 @@ export function ChatCanvas() {
                           </button>
                         )}
                       </>
+                    ) : null}
+                    {canBranchHere ? (
+                      <button
+                        type="button"
+                        className="chat-entry-branch-button"
+                        aria-label={`Resume chronicle from turn ${(view?.turnSequence ?? 0) + 1}`}
+                        onClick={() => void handleBranchFromTurn(view?.turnSequence ?? 0)}
+                        disabled={isWaitingForGm || branchingTurnSequence !== null}
+                      >
+                        {branchingTurnSequence === view?.turnSequence
+                          ? 'Creating version…'
+                          : 'Resume from here'}
+                      </button>
                     ) : null}
                   </div>
                 </header>

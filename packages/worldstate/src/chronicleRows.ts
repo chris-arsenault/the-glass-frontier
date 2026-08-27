@@ -1,7 +1,6 @@
 import type { Character, Chronicle, Turn } from '@glass-frontier/dto';
 
 export type SessionStateRow = {
-  character_state: Character | null;
   last_turn_sequence: number;
 };
 

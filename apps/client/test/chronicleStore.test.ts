@@ -14,6 +14,7 @@ function unsubscribe() {
   return undefined;
 }
 const mocks = vi.hoisted(() => ({
+  chronicleBranch: vi.fn(),
   chronicleGet: vi.fn(),
   gmPostMessage: vi.fn(),
   gmSetChronicleTargetEnd: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('../src/lib/progressStream', () => ({
 
 vi.mock('../src/lib/trpcClient', () => ({
   trpcClient: {
+    branchChronicle: { mutate: mocks.chronicleBranch },
     getChronicle: { query: mocks.chronicleGet },
   },
 }));
@@ -357,6 +359,41 @@ describe('chronicleStore turn handling', () => {
       targetEndTurn: 2,
     });
     expect(useChronicleStore.getState().chronicleRecord?.targetEndTurn).toBe(2);
+  });
+
+  it('branches from a checkpoint and hydrates the new chronicle version', async () => {
+    const branchedChronicle: Chronicle = {
+      ...chronicle,
+      branch: {
+        parentChronicleId: CHRONICLE_ID,
+        parentTurnSequence: 1,
+        rootChronicleId: CHRONICLE_ID,
+        version: 2,
+      },
+      id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+      title: `${chronicle.title} v2`,
+    };
+    mocks.chronicleBranch.mockResolvedValue({ chronicle: branchedChronicle });
+    mocks.chronicleGet.mockResolvedValue({
+      character: null,
+      chronicle: branchedChronicle,
+      chronicleId: branchedChronicle.id,
+      locationName: branchedChronicle.locationName,
+      turns: [],
+      turnSequence: 1,
+    });
+
+    const result = await useChronicleStore.getState().branchChronicleFromTurn(1);
+
+    expect(mocks.chronicleBranch).toHaveBeenCalledWith({
+      chronicleId: CHRONICLE_ID,
+      playerId: PLAYER_ID,
+      turnSequence: 1,
+    });
+    expect(result).toBe(branchedChronicle.id);
+    expect(useChronicleStore.getState().chronicleId).toBe(branchedChronicle.id);
+    expect(useChronicleStore.getState().chronicleRecord?.branch?.version).toBe(2);
+    expect(useChronicleStore.getState().availableChronicles).toContainEqual(branchedChronicle);
   });
 
   it('hydrates the generated opening instead of presenting the seed as GM dialogue', async () => {

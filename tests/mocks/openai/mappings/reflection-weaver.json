@@ -5,7 +5,7 @@
     "urlPath": "/v1/responses",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$[?(@.metadata.nodeId == 'reflection-weaver')]"
+        "matchesJsonPath": "$[?(@.metadata.nodeId == 'agent-reflection-weaver')]"
       }
     ]
   },

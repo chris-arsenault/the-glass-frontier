@@ -13,10 +13,20 @@ const EntityFocusState = z.object({
   tagScores: z.record(z.string(), z.number()).default({}),
 });
 
+export const ChronicleBranch = z.object({
+  parentChronicleId: z.string().uuid(),
+  parentTurnSequence: z.number().int().nonnegative(),
+  rootChronicleId: z.string().uuid(),
+  version: z.number().int().min(2),
+});
+export type ChronicleBranch = z.infer<typeof ChronicleBranch>;
+
 export const Chronicle = z.object({
   activeScene: ChronicleScene.nullable().default(null),
   anchorEntityId: z.string().min(1).optional(),
   beats: z.array(ChronicleBeat).default([]),
+  /** The source and version of a non-destructive branch. Originals omit it. */
+  branch: ChronicleBranch.optional(),
   characterId: z.string().min(1).optional(),
   entityFocus: EntityFocusState.default({ entityScores: {}, tagScores: {} }),
   entityRoster: EntityRosterState,

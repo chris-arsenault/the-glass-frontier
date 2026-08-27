@@ -2,9 +2,9 @@ import { MODEL_CATALOG } from '@glass-frontier/app';
 import type { IntentType, ProseAlternate, PromptTemplateId } from '@glass-frontier/dto';
 import { calculateActualCostUsd } from '@glass-frontier/llm-client';
 
-import { buildEntityContext } from '../entity/entitySelector';
 import { PromptComposer } from '../prompts/prompts';
 import type { GraphContext } from '../types';
+import { buildOneShotContext } from './oneShotContext';
 
 const ONE_SHOT_MAX_OUTPUT_TOKENS = 2_000;
 const ONE_SHOT_REASONING_EFFORT = 'low';
@@ -20,34 +20,53 @@ const ONE_SHOT_TEMPLATES = new Map<IntentType, PromptTemplateId>([
 ]);
 
 /**
- * The pre-retrieval narrator, kept as the comparison the panel exists for.
+ * The retrieval-free narrator: the comparison the panel exists to draw.
  *
- * It is the only path left that receives a pre-selected slice of the world and
- * writes in one call, so it is the measure of whether retrieval is earning
- * anything. It builds its own entity context here rather than in the pipeline:
- * the live turn stopped selecting entities up front, and this shadow should
- * not put that cost back on every turn for a response that never drives the
- * story.
+ * It runs on the same model the canonical turn used and differs from it in one
+ * thing only — how the world reaches the page. The agentic path searches,
+ * judges what it is missing, searches again, and composes a brief; this one is
+ * handed everything up front by a graph walk and a vector search and writes in
+ * a single call. Holding the model fixed is what makes the difference
+ * attributable to retrieval instead of to Nova.
+ *
+ * It builds its own context here rather than in the pipeline: the live turn
+ * stopped selecting entities up front, and this shadow should not put that
+ * cost back on every turn for a response that never drives the story.
  */
-export const runOneShotProse = async (
-  context: GraphContext,
-  modelId: string
-): Promise<ProseAlternate> => {
-  const intent = context.playerIntent;
-  if (intent === undefined) {
-    throw new Error('The one-shot narrator requires a classified player intent.');
-  }
-  const templateId = ONE_SHOT_TEMPLATES.get(intent.intentType);
-  if (templateId === undefined) {
-    throw new Error(`No one-shot template for intent type ${intent.intentType}.`);
-  }
+/** The same model the canonical turn used: the panel varies context, not models. */
+const resolveOneShotModel = async (
+  context: GraphContext
+): Promise<NonNullable<(typeof MODEL_CATALOG.models)[number]>> => {
+  const modelId = await context.modelConfigStore.getModelForCategory(
+    'prose', context.chronicleState.chronicle.playerId
+  );
   const model = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
   if (model === undefined) {
     throw new Error(`One-shot model ${modelId} is not in the model catalog.`);
   }
+  return model;
+};
+
+const resolveTemplate = (intentType: IntentType): PromptTemplateId => {
+  const templateId = ONE_SHOT_TEMPLATES.get(intentType);
+  if (templateId === undefined) {
+    throw new Error(`No one-shot template for intent type ${intentType}.`);
+  }
+  return templateId;
+};
+
+export const runOneShotProse = async (context: GraphContext): Promise<ProseAlternate> => {
+  const intent = context.playerIntent;
+  if (intent === undefined) {
+    throw new Error('The one-shot narrator requires a classified player intent.');
+  }
+  const templateId = resolveTemplate(intent.intentType);
+  const model = await resolveOneShotModel(context);
+  const retrieved = await buildOneShotContext(context);
   const withEntities: GraphContext = {
     ...context,
-    entityContext: await buildEntityContext(context),
+    entityContext: retrieved.entityContext,
+    entityRelationships: retrieved.relationships,
   };
   const prompt = await new PromptComposer(context.templates).buildPrompt(
     templateId, withEntities
@@ -63,7 +82,7 @@ export const runOneShotProse = async (
       turnId: context.turnId,
       turnSequence: String(context.turnSequence),
     },
-    model: modelId,
+    model: model.modelId,
     player: context.llmPlayer,
     reasoningEffort: ONE_SHOT_REASONING_EFFORT,
   }, 'string');
@@ -72,7 +91,7 @@ export const runOneShotProse = async (
   }
   return {
     costUsd: calculateActualCostUsd(model, narration.usage),
-    modelId: `${modelId} (one-shot)`,
+    modelId: `${model.modelId} (one-shot)`,
     prose: narration.message.trim(),
     sidecar: [],
     stepCount: 1,

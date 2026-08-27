@@ -39,6 +39,7 @@ export type TurnView = {
   advancesTimeline: boolean | null;
   attributeKey: Attribute | null;
   beatTracker: BeatTracker | null;
+  canBranch: boolean;
   entityReferences: EntityReference[] | null;
   entityRoster: EntityRosterEntry[] | null;
   executedNodes: string[] | null;
@@ -144,6 +145,7 @@ export type ChronicleStore = {
   setPreferredCharacterId: (characterId: string | null) => void;
   refreshPlayerResources: () => Promise<void>;
   createChronicleFromSeed: (details: ChronicleSeedCreationDetails) => Promise<string>;
+  branchChronicleFromTurn: (turnSequence: number) => Promise<string>;
   createCharacterProfile: (draft: CharacterDraft) => Promise<void>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
   clearActiveChronicle: () => void;

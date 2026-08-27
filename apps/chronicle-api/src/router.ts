@@ -73,6 +73,37 @@ const ensurePlayerRecord = async (ctx: Context, playerId: string): Promise<Playe
 };
 
 export const appRouter = t.router({
+  branchChronicle: t.procedure
+    .input(
+      z.object({
+        chronicleId: z.string().uuid(),
+        playerId: z.string().min(1),
+        turnSequence: z.number().int().nonnegative(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const playerId = requireCurrentPlayer(ctx, input.playerId);
+      const source = await ctx.chronicleStore.getChronicle(input.chronicleId);
+      if (source === null) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Chronicle not found.' });
+      }
+      if (source.playerId !== playerId) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      if (source.status !== 'open') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only active chronicles can be branched.',
+        });
+      }
+      const chronicle = await ctx.chronicleStore.branchChronicleFromTurn({
+        chronicleId: source.id,
+        playerId,
+        turnSequence: input.turnSequence,
+      });
+      return { chronicle };
+    }),
+
   createCharacter: t.procedure
     .input(z.object({ draft: CharacterDraft, playerId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {

@@ -182,11 +182,122 @@ describe('Chronicle turn history', () => {
     const snapshot = await worldState.chronicles.getChronicleState(chronicle.id);
 
     expect(chronicle.playerId).toBe(TEST_PLAYER_ID);
+    expect(turn.canBranch).toBe(true);
     expect(turn.turnSequence).toBe(0);
     expect(snapshot?.turns).toHaveLength(1);
     expect(snapshot?.turns[0]?.sceneContext).toBeUndefined();
     expect(snapshot?.character?.id).toBe(character.id);
     expect(snapshot?.locationName).toBe(startingLocation.name);
+  });
+
+  it('branches an active chronicle from an exact checkpoint without copying its character', async () => {
+    const character = await worldState.chronicles.upsertCharacter(defaultCharacter());
+    const source = await worldState.chronicles.upsertChronicle(
+      defaultChronicle('The Start', {
+        characterId: character.id,
+        targetEndTurn: 8,
+        title: 'Branching Test',
+      })
+    );
+    const firstState = { ...source, locationName: 'First Landing' };
+    const secondState = {
+      ...firstState,
+      beats: [
+        {
+          createdAt: 1,
+          description: 'Reach the second landing.',
+          id: 'reach_second_landing',
+          status: 'in_progress' as const,
+          title: 'Reach the Second Landing',
+          updatedAt: 1,
+        },
+      ],
+      locationName: 'Second Landing',
+    };
+    const thirdState = { ...secondState, locationName: 'Third Landing' };
+
+    await worldState.chronicles.commitTurn({
+      character: { ...character, momentum: { ...character.momentum, current: 1 } },
+      chronicle: firstState,
+      turn: defaultTurn(source.id, { gmSummary: 'first', turnSequence: 0 }),
+    });
+    await worldState.chronicles.commitTurn({
+      character: { ...character, momentum: { ...character.momentum, current: -1 } },
+      chronicle: secondState,
+      turn: defaultTurn(source.id, { gmSummary: 'second', turnSequence: 1 }),
+    });
+    await worldState.chronicles.commitTurn({
+      character: { ...character, momentum: { ...character.momentum, current: 2 } },
+      chronicle: thirdState,
+      turn: defaultTurn(source.id, { gmSummary: 'third', turnSequence: 2 }),
+    });
+
+    const branch = await worldState.chronicles.branchChronicleFromTurn({
+      chronicleId: source.id,
+      playerId: TEST_PLAYER_ID,
+      turnSequence: 1,
+    });
+    const [sourceSnapshot, branchSnapshot] = await Promise.all([
+      worldState.chronicles.getChronicleState(source.id),
+      worldState.chronicles.getChronicleState(branch.id),
+    ]);
+    if (sourceSnapshot === null || branchSnapshot === null) {
+      throw new Error('Expected both source and branch snapshots.');
+    }
+    if (branchSnapshot.character === null) {
+      throw new Error('Expected the branch to resolve its shared character.');
+    }
+
+    expect(branch).toMatchObject({
+      branch: {
+        parentChronicleId: source.id,
+        parentTurnSequence: 1,
+        rootChronicleId: source.id,
+        version: 2,
+      },
+      characterId: character.id,
+      locationName: 'Second Landing',
+      status: 'open',
+      targetEndTurn: undefined,
+      title: 'Branching Test v2',
+    });
+    expect(sourceSnapshot.turns).toHaveLength(3);
+    expect(branchSnapshot.turnSequence).toBe(1);
+    expect(branchSnapshot.turns.map((turn) => turn.gmSummary)).toEqual(['first', 'second']);
+    expect(branchSnapshot.turns.every((turn) => turn.canBranch === true)).toBe(true);
+    expect(branchSnapshot.turns.map((turn) => turn.id)).not.toEqual(
+      sourceSnapshot.turns.slice(0, 2).map((turn) => turn.id)
+    );
+    expect(branchSnapshot.character.id).toBe(character.id);
+    expect(branchSnapshot.character.momentum.current).toBe(2);
+
+    const nextBranch = await worldState.chronicles.branchChronicleFromTurn({
+      chronicleId: source.id,
+      playerId: TEST_PLAYER_ID,
+      turnSequence: 0,
+    });
+    expect(nextBranch.branch).toMatchObject({ version: 3 });
+    expect(nextBranch.title).toBe('Branching Test v3');
+
+    const characterRows = await pool.query<{ count: string }>(
+      'SELECT COUNT(*)::text AS count FROM character WHERE id = $1::uuid',
+      [character.id]
+    );
+    const sessionCharacterColumns = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'chronicle_session_state' AND column_name = 'character_state'`
+    );
+    expect(characterRows.rows[0]?.count).toBe('1');
+    expect(sessionCharacterColumns.rowCount).toBe(0);
+
+    await worldState.chronicles.upsertChronicle({ ...thirdState, status: 'closed' });
+    await expect(
+      worldState.chronicles.branchChronicleFromTurn({
+        chronicleId: source.id,
+        playerId: TEST_PLAYER_ID,
+        turnSequence: 1,
+      })
+    ).rejects.toThrow('Only active chronicles can be branched.');
   });
 
   it('persists the turn roster, resolved references, and GM usage', async () => {

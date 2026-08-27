@@ -546,10 +546,31 @@
     "type": "improvement"
   },
   {
+    "id": "2026-08-27-chronicle-branching",
+    "releasedAt": "2026-08-27",
+    "summary": "Resume an active chronicle from an earlier turn",
+    "details": "Every newly completed turn in an active chronicle now offers Resume from here. Confirming it creates the next version of that chronicle, copies its transcript through the selected turn, and restores the story's location, scenes, beats, nearby entities, and world agendas as they stood there. The original remains unchanged, later versions are named v2, v3, and onward, and completed chronicles cannot branch. Characters are never copied or rewound: every version points to the same character record and shares its current progression. Existing chronicles can branch from their current tip after this update; their older turns predate the exact story checkpoints and do not offer the action.",
+    "type": "feature"
+  },
+  {
     "id": "2026-08-28-research-under-judgment",
     "releasedAt": "2026-08-28",
     "summary": "The GM's research runs under a judge instead of grading itself",
     "details": "The pass that reads the world before your turn used to decide for itself when it had read enough, and the same call that would have had to do more work was the call allowed to declare the work done — so it stopped early, reliably, on every model we run. Research is now split from judgment: one invocation retrieves, a separate one inspects everything actually retrieved and either closes the research or names what is still missing, and those gaps drive the next round of retrieval. The brief itself moved out of a tool call: models write measurably worse prose inside escaped JSON arguments, and both of ours had been failing there — one wrote a field as prose where the schema wanted structure, the other abandoned the tool call entirely. The brief is now composed as plain labeled prose, the format models write well, and a small second step files it into the schema. Tool results also stopped arriving as escaped JSON, every tool now says when it should and should not be used, and nothing forces a tool call anymore — forcing turns off the tool-selection reasoning both providers document as load-bearing.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-panel-compares-retrieval",
+    "releasedAt": "2026-08-28",
+    "summary": "The comparison panel measures retrieval instead of a second model",
+    "details": "The panel beside each turn used to run a whole second research pass on a cheaper model. It never finished its own research — it asked for the same things round after round and always ran out its budget rather than concluding — and what it produced answered a question nobody had, since it varied the model and the context at once. It is now a single alternate written by the same model that wrote your turn, on a world assembled without any searching: the story's anchors and place are walked outward through canon's own relationships, your words are matched against canon by meaning to reach what that walk cannot, and everything found is handed over at once, along with how those things stand with each other. The remaining difference between the two responses is retrieval, which is the comparison worth reading. It also cuts roughly forty percent of the work each turn was doing.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-28-world-line-stops-answering-where",
+    "releasedAt": "2026-08-28",
+    "summary": "Two fields the models were reading as the wrong question",
+    "details": "The pass that decides what the world is doing had one field with no description on it, sitting beside blocks naming your location — and on later turns it began answering it as a location, returning the place name where three sentences of what the world was doing belonged. Those turns lost the world's account of itself entirely. The field now says what it wants. Separately, the research pass reads canon passages by a handle it gets back from searching, and that handle was labeled with the same word as an entity's name, so the model kept feeding passage handles to the tool that opens entities: half of all failed lookups in a recent chronicle were this one mistake. The two are now named apart.",
+    "type": "bugfix"
   }
 ]

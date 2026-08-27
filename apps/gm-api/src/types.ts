@@ -13,6 +13,7 @@ import type {
   HardStateStatus,
   HardStateSubkind,
   Intent,
+  LiveRelationship,
   LlmTrace,
   LocationDeltaDecision,
   SceneOutcome,
@@ -139,6 +140,8 @@ export type GraphContext = {
   beatTracker?: BeatTracker;
   executedNodes?: string[];
   entityContext?: EntityContextSlice;
+  /** Live canon edges among `entityContext.offered`, for the RELATIONSHIPS block. */
+  entityRelationships?: LiveRelationship[];
   entityReferences?: EntityReference[];
   /** Public roster snapshot used for this turn, before any narrated transition refreshes it. */
   turnEntityRoster?: EntityRosterEntry[];

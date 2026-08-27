@@ -25,6 +25,7 @@ export type ChronicleFragmentTypes =
   | 'location'
   | 'anchor'
   | 'entities'
+  | 'relationships'
   | 'entity-references'
   | 'beats'
   | 'intent'
@@ -46,8 +47,14 @@ const RECENT_TURN_WINDOW = 10;
 const VERBATIM_TURNS = 5;
 
 const MAX_ANCHOR_LORE = 3;
-const MAX_ENTITY_GM_NOTES = 2;
-const MAX_ENTITY_LORE = 2;
+/**
+ * ENTITIES reaches only the writers that hold no brief, so these caps size the
+ * one-shot's whole view of the world. It has one call and no way to ask for
+ * more, and two notes and two lore summaries was a thinner read of an entity
+ * than the retrieval path takes in a single `open`.
+ */
+const MAX_ENTITY_GM_NOTES = 4;
+const MAX_ENTITY_LORE = 4;
 
 const LEDGER_FRAGMENT: ChronicleFragmentTypes = 'ledger';
 
@@ -81,7 +88,7 @@ export const templateFragmentMapping = new Map<
 PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
-  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   // The writer templates carry no world dump and no raw chronicle context the
   // scout has already read for them: BRIEF replaces ANCHOR, ENTITIES, CHARACTER,
   // LOCATION, LEDGER, RECENT-EVENTS, and INTENT, which is the point of
@@ -94,15 +101,15 @@ ChronicleFragmentTypes[]
   ['agent-reflection-weaver', WRITER_FRAGMENTS],
   ['agent-wrap-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT, 'wrap']],
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
-  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
-  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['turn-judge', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', SKILL_CHECK_FRAGMENT, 'location', ENTITY_REFERENCES_FRAGMENT, 'wrap']],
-  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
+  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
@@ -113,6 +120,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['character', characterFragment],
   [CHRONICLE_TONE_FRAGMENT, chronicleToneFragment],
   ['entities', entitiesFragment],
+  ['relationships', relationshipsFragment],
   [ENTITY_REFERENCES_FRAGMENT, entityReferencesFragment],
   ['intent', intentFragment],
   ['inventory', inventoryFragment],
@@ -208,6 +216,34 @@ type UnwrittenEntity = {
   hook: string | undefined;
   unwritten: true;
 };
+
+/**
+ * How the entities in ENTITIES stand with each other, as canon records it.
+ *
+ * A list of entities is a cast with no ties between them, and the writer that
+ * holds no brief has nowhere else to learn that one of them keeps the other's
+ * accounts. The retrieval path asks for this an edge at a time with
+ * `read_relationship`; here every live edge among the offered set arrives at
+ * once, because the set is already chosen and the query is one round trip.
+ */
+function relationshipsFragment(context: GraphContext): unknown[] {
+  const bySlug = new Map(
+    (context.entityContext?.offered ?? []).map((entry) => [entry.id, entry.slug])
+  );
+  return (context.entityRelationships ?? []).flatMap((edge) => {
+    const source = bySlug.get(edge.srcId);
+    const target = bySlug.get(edge.dstId);
+    if (source === undefined || target === undefined) {
+      return [];
+    }
+    return [{
+      from: source,
+      identity: identityView(edge.descriptiveIdentity),
+      to: target,
+      verb: edge.relationship,
+    }];
+  });
+}
 
 function entitiesFragment(context: GraphContext): Array<EstablishedEntity | UnwrittenEntity> {
   return (context.entityContext?.offered ?? []).map((entry) =>

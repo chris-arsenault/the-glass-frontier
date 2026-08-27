@@ -230,7 +230,7 @@ class GmEngine {
       });
     }
 
-    await this.chronicleStore.commitTurn({
+    const committedTurn = await this.chronicleStore.commitTurn({
       character: finalContext.chronicleState.character,
       chronicle: finalContext.chronicleState.chronicle,
       turn,
@@ -253,7 +253,7 @@ class GmEngine {
       entityFocus,
       entityRoster,
       locationName,
-      turn,
+      turn: committedTurn,
       updatedCharacter,
     };
   }
@@ -336,7 +336,7 @@ class GmEngine {
     if (context.failure || context.gmResponse === undefined || context.playerIntent === undefined) {
       return [];
     }
-    return runProseAgentPanel(context, this.agentLoop);
+    return runProseAgentPanel(context);
   }
 
   #createTemplateRuntime(playerId: string): PromptTemplateRuntime {

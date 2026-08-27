@@ -89,6 +89,11 @@ export type ChronicleStore = {
     limitPerStatus?: number
   ) => Promise<ChronicleActivity[]>;
   listChroniclesByPlayer: (playerId: string) => Promise<Chronicle[]>;
+  branchChronicleFromTurn: (input: {
+    chronicleId: string;
+    playerId: string;
+    turnSequence: number;
+  }) => Promise<Chronicle>;
   deleteChronicle: (chronicleId: string) => Promise<void>;
 
   commitTurn: (input: {

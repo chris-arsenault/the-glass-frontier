@@ -395,6 +395,32 @@
   transition: background 120ms ease, border-color 120ms ease;
 }
 
+.chat-entry-branch-button {
+  padding: 0.0625rem var(--space-2);
+  color: #99f6e4;
+  background: rgb(45 212 191 / 10%);
+  border: 1px solid rgb(45 212 191 / 35%);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.chat-entry-branch-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.chat-entry-branch-button:hover:not(:disabled) {
+  background: rgb(45 212 191 / 18%);
+  border-color: rgb(45 212 191 / 65%);
+}
+
 .chat-entry-feedback-button:disabled {
   cursor: not-allowed;
   opacity: 0.4;

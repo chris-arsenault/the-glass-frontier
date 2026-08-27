@@ -4,7 +4,8 @@ import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
 
 import { runProseAgent } from '../src/proseAgent';
-import { PANEL_MODELS, runProseAgentPanel } from '../src/proseAgent/panel';
+import { buildOneShotContext } from '../src/proseAgent/oneShotContext';
+import { runProseAgentPanel } from '../src/proseAgent/panel';
 import { buildSeedPack } from '../src/proseAgent/seedPack';
 import { createProseAgentTools } from '../src/proseAgent/tools';
 import { ToolSession } from '../src/proseAgent/toolSession';
@@ -64,11 +65,33 @@ const korvath = entity({
 const guild = entity({ id: GUILD_ID, kind: 'faction', slug: GUILD_SLUG });
 const hiddenBroker = entity({ dm: true, id: HIDDEN_ID, slug: 'hidden-broker' });
 
-const worldStore = (): GraphContext['worldSchemaStore'] => {
+/** One slice row per entity, shaped as the store returns it. */
+const sliceRow = (source: HardState, score: number): unknown => ({
+  description: source.description,
+  descriptiveIdentity: source.descriptiveIdentity,
+  facts: source.facts,
+  gmNotes: [],
+  hops: 1,
+  id: source.id,
+  kind: source.kind,
+  lore: [],
+  name: source.name,
+  prominence: 'recognized',
+  reach: 1,
+  score,
+  slug: source.slug,
+  tags: [],
+  unwritten: false,
+});
+
+const worldStore = (
+  overrides: Record<string, unknown> = {}
+): GraphContext['worldSchemaStore'] => {
   const all = new Map([[KORVATH_ID, korvath], [GUILD_ID, guild], [HIDDEN_ID, hiddenBroker]]);
   return {
     findEntityCandidates: () => Promise.resolve([]),
     findLocationByName: () => Promise.resolve(null),
+    getContextSlice: () => Promise.resolve([sliceRow(korvath, 0.9), sliceRow(guild, 0.4)]),
     getEntityBySlug: ({ slug }: { slug: string }) =>
       Promise.resolve([...all.values()].find((candidate) => candidate.slug === slug) ?? null),
     getLoreFragment: () => Promise.resolve(null),
@@ -82,6 +105,7 @@ const worldStore = (): GraphContext['worldSchemaStore'] => {
         : []),
     listRelationshipsAmong: () => Promise.resolve([]),
     searchLoreFragments: () => Promise.resolve([]),
+    ...overrides,
   } as unknown as GraphContext['worldSchemaStore'];
 };
 
@@ -387,38 +411,76 @@ const scriptedLoop = (responses: Array<() => MockGenerateResponse>): AgentLoopCl
 };
 
 describe('prose agent panel', () => {
-  it('runs every panel model and drops only the failed ones', async () => {
-    const attempted: string[] = [];
-    const panelLoop = {
-      run: (request: { model: { modelId: string } }) => {
-        attempted.push(request.model.modelId);
-        return Promise.resolve({
-          stepCount: 2,
-          usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
-        });
-      },
-    } as unknown as AgentLoopClient;
+  it('is one retrieval-free response on the player\'s own prose model', async () => {
     const context = agentContext();
     context.llm = llmStub();
-    const alternates = await runProseAgentPanel(context, panelLoop);
-    const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
-    expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
-    expect(agentic[0]?.prose).toContain(TITHE_COUNTING);
-    expect(agentic.every((alternate) => alternate.costUsd > 0)).toBe(true);
-    expect(alternates.some((alternate) => alternate.modelId.includes('one-shot'))).toBe(true);
+    const alternates = await runProseAgentPanel(context);
+
+    // Varying the model as well as the context measured Nova, not retrieval.
+    expect(alternates).toHaveLength(1);
+    expect(alternates[0]?.modelId).toBe(`${SONNET_MODEL_ID} (one-shot)`);
+    expect(alternates[0]?.stepCount).toBe(1);
+    expect(alternates[0]?.costUsd).toBeGreaterThan(0);
   });
 
-  it('survives a failing research loop by writing from the empty brief', async () => {
-    const failingLoop = {
-      run: () => Promise.reject(new Error('bedrock unavailable')),
-    } as unknown as AgentLoopClient;
+  it('drops its response rather than failing the turn', async () => {
     const context = agentContext();
-    context.llm = llmStub({ extractFails: true });
-    const alternates = await runProseAgentPanel(context, failingLoop);
-    const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
-    expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
-    expect(agentic[0]?.prose).toContain(TITHE_COUNTING);
-    expect(agentic[0]?.sidecar).toEqual([]);
+    context.llm = llmStub();
+    context.playerIntent = undefined;
+
+    await expect(runProseAgentPanel(context)).resolves.toEqual([]);
+  });
+});
+
+describe('one-shot retrieval', () => {
+  it('reaches canon by meaning as well as by graph distance', async () => {
+    const focusIds: string[][] = [];
+    const context = agentContext();
+    context.worldSchemaStore = worldStore({
+      findEntityCandidates: () => Promise.resolve([
+        { id: GUILD_ID, similarity: 0.71 },
+        { id: HIDDEN_ID, similarity: 0.22 },
+      ]),
+      getContextSlice: (input: { focusIds: string[] }) => {
+        focusIds.push(input.focusIds);
+        return Promise.resolve([sliceRow(korvath, 0.9), sliceRow(guild, 0.4)]);
+      },
+    });
+    const retrieved = await buildOneShotContext(context);
+
+    // The vector match joins the walk's starting points; the sub-floor one does
+    // not, because 0.22 against this index is an invented word.
+    expect(focusIds[0]).toContain(GUILD_ID);
+    expect(focusIds[0]).not.toContain(HIDDEN_ID);
+    expect(retrieved.entityContext.offered.map((entry) => entry.slug))
+      .toEqual([KORVATH_SLUG, GUILD_SLUG]);
+  });
+
+  it('hands over the edges among what it retrieved', async () => {
+    const asked: string[][] = [];
+    const context = agentContext();
+    context.worldSchemaStore = worldStore({
+      listRelationshipsAmong: ({ entityIds }: { entityIds: string[] }) => {
+        asked.push(entityIds);
+        return Promise.resolve([
+          { dstId: GUILD_ID, relationship: 'reports_to', srcId: KORVATH_ID },
+        ]);
+      },
+    });
+    const retrieved = await buildOneShotContext(context);
+
+    expect(asked[0]).toEqual([KORVATH_ID, GUILD_ID]);
+    expect(retrieved.relationships).toHaveLength(1);
+  });
+
+  it('writes from the graph alone when the vector search fails', async () => {
+    const context = agentContext();
+    context.embeddings = {
+      embed: () => Promise.reject(new Error('titan unavailable')),
+    };
+    const retrieved = await buildOneShotContext(context);
+
+    expect(retrieved.entityContext.offered).not.toHaveLength(0);
   });
 });
 

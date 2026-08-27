@@ -70,6 +70,7 @@ const emptyTurnView = (): TurnView => ({
   advancesTimeline: null,
   attributeKey: null,
   beatTracker: null,
+  canBranch: false,
   entityReferences: null,
   entityRoster: null,
   executedNodes: null,
@@ -95,6 +96,7 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   advancesTimeline: typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
   attributeKey: turn.skillCheckPlan?.attribute ?? null,
   beatTracker: turn.beatTracker ?? null,
+  canBranch: turn.canBranch === true,
   entityReferences: turn.entityReferences ?? null,
   entityRoster: turn.entityRoster ?? null,
   executedNodes: turn.executedNodes ?? null,
@@ -350,6 +352,37 @@ const createBaseState = () => ({
 
 export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   ...createBaseState(),
+
+  async branchChronicleFromTurn(turnSequence: number) {
+    const chronicleId = get().chronicleId;
+    if (!chronicleId) {
+      throw new Error('Select a chronicle before branching its history.');
+    }
+    if (get().chronicleStatus !== 'open') {
+      throw new Error('Only active chronicles can be branched.');
+    }
+    const identity = resolvePlayerIdentity();
+    try {
+      const result = await trpcClient.branchChronicle.mutate({
+        chronicleId,
+        playerId: identity.playerId,
+        turnSequence,
+      });
+      set((prev) => ({
+        ...prev,
+        availableChronicles: mergeChronicleRecord(prev.availableChronicles, result.chronicle),
+        transportError: null,
+      }));
+      return get().hydrateChronicle(result.chronicle.id);
+    } catch (error: unknown) {
+      const nextError = error instanceof Error ? error : new Error('Failed to branch chronicle.');
+      set((prev) => ({
+        ...prev,
+        transportError: nextError,
+      }));
+      throw nextError;
+    }
+  },
 
   clearActiveChronicle() {
     set((prev) => ({
