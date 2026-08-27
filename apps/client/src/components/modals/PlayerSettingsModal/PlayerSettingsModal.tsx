@@ -49,6 +49,41 @@ const VISIBILITY_LEVELS: Array<{
   },
 ];
 
+type ProseSlot = 1 | 2 | 3;
+
+/**
+ * The primary writes the turn the story keeps. The other two write only the
+ * comparison panel, and each costs two more generations a turn — one that
+ * researches the world and one handed it whole — so leaving them on None is
+ * the cheap default rather than a missing setting.
+ */
+const PROSE_SLOTS: Array<{ description: string; label: string; slot: ProseSlot }> = [
+  {
+    description: 'Writes the turn your chronicle keeps.',
+    label: 'Primary',
+    slot: 1,
+  },
+  {
+    description: 'Shadow only: adds a researched and an unresearched panel beside each turn.',
+    label: 'Secondary',
+    slot: 2,
+  },
+  {
+    description: 'Shadow only: a third pair of panels, for a wider comparison.',
+    label: 'Tertiary',
+    slot: 3,
+  },
+];
+
+const modelLabel = (model: ModelConfig): string =>
+  `${model.displayName} — $${(model.costPer1kInput * 1000).toFixed(2)}`
+  + `/$${(model.costPer1kOutput * 1000).toFixed(2)} per 1M`;
+
+/** The server sends only the slots that are set; the rest read as None. */
+const toSlotValues = (configured: Array<{ modelId: string; slot: number }>): string[] =>
+  PROSE_SLOTS.map((entry) =>
+    configured.find((row) => row.slot === entry.slot)?.modelId ?? '');
+
 const levelIndex = (value: PlayerSettings['feedbackVisibility']) =>
   Math.max(
     0,
@@ -72,7 +107,9 @@ export function PlayerSettingsModal(): React.JSX.Element | null {
 
   // Model configuration state
   const [models, setModels] = useState<ModelConfig[]>([]);
-  const [proseModel, setProseModel] = useState<string>('');
+  // Indexed by slot: the empty string is None, which is a configured choice
+  // rather than a missing one.
+  const [proseModels, setProseModels] = useState<string[]>(['', '', '']);
   const [classificationModel, setClassificationModel] = useState<string>('');
   const [isLoadingModels, setIsLoadingModels] = useState<boolean>(false);
   const [isSavingModel, setIsSavingModel] = useState<boolean>(false);
@@ -94,7 +131,7 @@ export function PlayerSettingsModal(): React.JSX.Element | null {
 
         if (!cancelled) {
           setModels(modelsResult.models);
-          setProseModel(categoriesResult.categories.prose);
+          setProseModels(toSlotValues(categoriesResult.categories.proseSlots));
           setClassificationModel(categoriesResult.categories.classification);
         }
       } catch (error) {
@@ -133,39 +170,54 @@ export function PlayerSettingsModal(): React.JSX.Element | null {
     }
   };
 
-  const handleModelChange = async (category: 'prose' | 'classification', modelId: string) => {
+  const reloadCategories = async () => {
     if (!playerId) {return;}
-
-    // Optimistically update UI
-    if (category === 'prose') {
-      setProseModel(modelId);
-    } else {
-      setClassificationModel(modelId);
+    try {
+      const categoriesResult = await trpcClient.getPlayerModelCategories.query({ playerId });
+      setProseModels(toSlotValues(categoriesResult.categories.proseSlots));
+      setClassificationModel(categoriesResult.categories.classification);
+    } catch (reloadError) {
+      console.error('Failed to reload model data:', reloadError);
     }
+  };
 
+  const saveModelChange = async (
+    category: 'prose' | 'classification',
+    modelId: string,
+    slot: ProseSlot,
+    playerId: string
+  ) => {
     setIsSavingModel(true);
     setModelError(null);
-
     try {
+      // The empty string is None, and clearing a slot is a delete rather than
+      // a write of nothing.
       await trpcClient.setPlayerModelCategory.mutate({
         category,
-        modelId,
+        modelId: modelId === '' ? null : modelId,
         playerId,
+        slot,
       });
     } catch (error) {
       console.error('Failed to update model:', error);
       setModelError('Failed to save model selection');
-      // Revert on error - reload current values
-      try {
-        const categoriesResult = await trpcClient.getPlayerModelCategories.query({ playerId });
-        setProseModel(categoriesResult.categories.prose);
-        setClassificationModel(categoriesResult.categories.classification);
-      } catch (reloadError) {
-        console.error('Failed to reload model data:', reloadError);
-      }
+      await reloadCategories();
     } finally {
       setIsSavingModel(false);
     }
+  };
+
+  const handleProseModelChange = async (slot: ProseSlot, modelId: string) => {
+    if (!playerId) {return;}
+    setProseModels((current) =>
+      current.map((value, index) => index + 1 === slot ? modelId : value));
+    await saveModelChange('prose', modelId, slot, playerId);
+  };
+
+  const handleClassificationModelChange = async (modelId: string) => {
+    if (!playerId) {return;}
+    setClassificationModel(modelId);
+    await saveModelChange('classification', modelId, 1, playerId);
   };
 
   return (
@@ -212,40 +264,47 @@ export function PlayerSettingsModal(): React.JSX.Element | null {
           <div className="player-settings-models">
             <h3>Model Selection</h3>
             <p className="player-settings-description">
-              Choose which AI models to use for different narrative tasks.
+              The primary prose model writes your turns. A secondary or tertiary
+              writes nothing your chronicle keeps — each one adds two comparison
+              panels per turn, so leaving them on None is the cheaper choice.
             </p>
 
-            <div className="player-settings-model-row">
-              <label htmlFor="prose-model">
-                <strong>Prose Generation</strong>
-                <span className="model-description">Used for narrative text and GM responses</span>
-              </label>
-              <select
-                id="prose-model"
-                value={proseModel}
-                onChange={(e) => void handleModelChange('prose', e.target.value)}
-                disabled={isLoadingModels || !models.length}
-              >
-                {isLoadingModels ? (
-                  <option value="">Loading...</option>
-                ) : models.length === 0 ? (
-                  <option value="">No models available</option>
-                ) : (
-                  <>
-                    {!proseModel && <option value="">Select a model...</option>}
-                    {models.map((model) => {
-                      const inputCostPerM = (model.costPer1kInput * 1000).toFixed(2);
-                      const outputCostPerM = (model.costPer1kOutput * 1000).toFixed(2);
-                      return (
-                        <option key={model.modelId} value={model.modelId}>
-                          {model.displayName} — ${inputCostPerM}/${outputCostPerM} per 1M
-                        </option>
-                      );
-                    })}
-                  </>
-                )}
-              </select>
-            </div>
+            {PROSE_SLOTS.map((entry) => {
+              const selected = proseModels[entry.slot - 1] ?? '';
+              return (
+                <div className="player-settings-model-row" key={entry.slot}>
+                  <label htmlFor={`prose-model-${entry.slot}`}>
+                    <strong>Prose — {entry.label}</strong>
+                    <span className="model-description">{entry.description}</span>
+                  </label>
+                  <select
+                    id={`prose-model-${entry.slot}`}
+                    value={selected}
+                    onChange={(e) => void handleProseModelChange(entry.slot, e.target.value)}
+                    disabled={isLoadingModels || !models.length}
+                  >
+                    {isLoadingModels ? (
+                      <option value="">Loading...</option>
+                    ) : models.length === 0 ? (
+                      <option value="">No models available</option>
+                    ) : (
+                      <>
+                        {entry.slot === 1 ? (
+                          !selected && <option value="">Select a model...</option>
+                        ) : (
+                          <option value="">None — no shadow panels</option>
+                        )}
+                        {models.map((model) => (
+                          <option key={model.modelId} value={model.modelId}>
+                            {modelLabel(model)}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
+              );
+            })}
 
             <div className="player-settings-model-row">
               <label htmlFor="classification-model">
@@ -255,7 +314,7 @@ export function PlayerSettingsModal(): React.JSX.Element | null {
               <select
                 id="classification-model"
                 value={classificationModel}
-                onChange={(e) => void handleModelChange('classification', e.target.value)}
+                onChange={(e) => void handleClassificationModelChange(e.target.value)}
                 disabled={isLoadingModels || !models.length}
               >
                 {isLoadingModels ? (
@@ -265,15 +324,11 @@ export function PlayerSettingsModal(): React.JSX.Element | null {
                 ) : (
                   <>
                     {!classificationModel && <option value="">Select a model...</option>}
-                    {models.map((model) => {
-                      const inputCostPerM = (model.costPer1kInput * 1000).toFixed(2);
-                      const outputCostPerM = (model.costPer1kOutput * 1000).toFixed(2);
-                      return (
-                        <option key={model.modelId} value={model.modelId}>
-                          {model.displayName} — ${inputCostPerM}/${outputCostPerM} per 1M
-                        </option>
-                      );
-                    })}
+                    {models.map((model) => (
+                      <option key={model.modelId} value={model.modelId}>
+                        {modelLabel(model)}
+                      </option>
+                    ))}
                   </>
                 )}
               </select>

@@ -21,7 +21,6 @@ type JsonDocument = null | boolean | number | string | JsonDocument[] | {
 
 const CLAUDE_SONNET_5_MODEL_ID = 'us.anthropic.claude-sonnet-5';
 const NOVA_2_LITE_MODEL_ID = 'us.amazon.nova-2-lite-v1:0';
-const NOVA_PRO_MODEL_ID = 'us.amazon.nova-pro-v1:0';
 
 const toJsonDocument = (value: unknown): JsonDocument => {
   if (
@@ -91,10 +90,12 @@ export const mapBedrockRequest = (request: LLMRequest): ConverseCommandInput => 
       },
     };
   }
-  if (request.model === NOVA_PRO_MODEL_ID) {
-    return baseRequest;
-  }
-  throw new Error(`Unsupported Bedrock model: ${request.model}`);
+  // Nova Pro and every open-weight model on Bedrock — GPT OSS, Kimi, Qwen —
+  // take no extra request fields: their reasoning, where they have any, is not
+  // addressable through Converse. Only a model with a documented field of its
+  // own is named above; the rest are a plain Converse call, and rejecting them
+  // by name only ever meant the catalog could not grow.
+  return baseRequest;
 };
 
 export const mapBedrockStructuredRequest = <T>(

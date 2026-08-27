@@ -195,12 +195,14 @@ export const appRouter = t.router({
     .input(z.object({ playerId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const playerId = requireCurrentPlayer(ctx, input.playerId);
-      const prose = await ctx.modelConfigStore.getModelForCategory('prose', playerId);
+      // Prose returns one entry per configured slot, each carrying its slot:
+      // an absent slot is a player declining that shadow, not a gap to close.
+      const prose = await ctx.modelConfigStore.listModelsForCategory('prose', playerId);
       const classification = await ctx.modelConfigStore.getModelForCategory('classification', playerId);
       return {
         categories: {
           classification,
-          prose
+          proseSlots: prose,
         }
       };
     }),
@@ -258,13 +260,28 @@ export const appRouter = t.router({
     .input(
       z.object({
         category: z.enum(['prose', 'classification']),
-        modelId: z.string().min(1),
+        // Null clears the slot. Only a shadow slot may be cleared: a chronicle
+        // with no primary prose model has nothing to write the turn with.
+        modelId: z.string().min(1).nullable(),
         playerId: z.string().min(1),
+        slot: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const playerId = requireCurrentPlayer(ctx, input.playerId);
-      await ctx.modelConfigStore.setCategoryModel(input.category, input.modelId, playerId);
+      if (input.slot !== 1 && input.category !== 'prose') {
+        throw new Error('Only prose has more than one model slot.');
+      }
+      if (input.modelId === null) {
+        if (input.slot === 1) {
+          throw new Error('The primary model writes the turn and cannot be cleared.');
+        }
+        await ctx.modelConfigStore.clearCategoryModel(input.category, playerId, input.slot);
+        return { success: true };
+      }
+      await ctx.modelConfigStore.setCategoryModel(
+        input.category, input.modelId, playerId, input.slot
+      );
       return { success: true };
     }),
 

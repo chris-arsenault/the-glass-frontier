@@ -52,7 +52,7 @@
       "apiModelId": "us.amazon.nova-pro-v1:0",
       "contextWindow": 300000,
       "costPer1kInput": 0.0008,
-      "costPer1kOutput": 0.0032,
+      "costPer1kOutput": 0.0016,
       "displayName": "Amazon Nova Pro",
       "maxOutputTokens": 5000,
       "modelId": "amazon-nova-pro",
@@ -63,12 +63,67 @@
       "apiModelId": "us.amazon.nova-2-lite-v1:0",
       "contextWindow": 1000000,
       "costPer1kInput": 0.0003,
-      "costPer1kOutput": 0.0025,
+      "costPer1kOutput": 0.00125,
       "displayName": "Amazon Nova 2 Lite",
       "maxOutputTokens": 65536,
       "modelId": "amazon-nova-2-lite",
       "providerId": "bedrock",
       "reasoningEfforts": ["low", "medium"]
+    },
+    {
+      "apiModelId": "openai.gpt-oss-120b-1:0",
+      "contextWindow": 128000,
+      "costPer1kInput": 0.00015,
+      "costPer1kOutput": 0.0006,
+      "displayName": "GPT OSS 120B",
+      "maxOutputTokens": 32768,
+      "modelId": "gpt-oss-120b",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
+    },
+    {
+      "apiModelId": "openai.gpt-oss-20b-1:0",
+      "contextWindow": 128000,
+      "costPer1kInput": 0.00007,
+      "costPer1kOutput": 0.0003,
+      "displayName": "GPT OSS 20B",
+      "maxOutputTokens": 32768,
+      "modelId": "gpt-oss-20b",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
+    },
+    {
+      "apiModelId": "moonshot.kimi-k2-thinking",
+      "contextWindow": 262144,
+      "costPer1kInput": 0.0006,
+      "costPer1kOutput": 0.0025,
+      "displayName": "Kimi K2 Thinking",
+      "maxOutputTokens": 32768,
+      "modelId": "kimi-k2-thinking",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
+    },
+    {
+      "apiModelId": "qwen.qwen3-next-80b-a3b",
+      "contextWindow": 262144,
+      "costPer1kInput": 0.00014,
+      "costPer1kOutput": 0.0012,
+      "displayName": "Qwen3 Next 80B A3B",
+      "maxOutputTokens": 32768,
+      "modelId": "qwen3-next-80b",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
+    },
+    {
+      "apiModelId": "qwen.qwen3-32b-v1:0",
+      "contextWindow": 32768,
+      "costPer1kInput": 0.00015,
+      "costPer1kOutput": 0.0003,
+      "displayName": "Qwen3 32B",
+      "maxOutputTokens": 16384,
+      "modelId": "qwen3-32b",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
     }
   ]
 }

@@ -1,32 +1,82 @@
+import { PRIMARY_SLOT } from '@glass-frontier/app';
 import type { ProseAlternate } from '@glass-frontier/dto';
+import type { AgentLoopClient } from '@glass-frontier/llm-client';
 import { log } from '@glass-frontier/utils';
 
 import type { GraphContext } from '../types';
+import { runProseAgent } from './index';
 import { runOneShotProse } from './oneShot';
 
 /**
- * The comparison panel: one response, written without retrieval, on the same
- * model that wrote the canonical turn.
+ * The comparison panel: every configured prose model, told twice.
  *
- * The panel used to run a second full scout — search, evaluate, compose,
- * extract — on Nova Pro. It answered nothing. Its evaluator never returned
- * `sufficient`, so it burned the three-round cap on every turn, and it named
- * gaps as bare nouns (`["foreman","radiator crisis","hidden cargo"]`, returned
- * byte-identical on two consecutive rounds of Radiators Raised in Daylight
- * turn 3) that the searcher could not act on and the evaluator did not notice
- * repeating. Forty percent of the chronicle's input tokens went to a loop that
- * could not converge, and what it produced was a second model's prose rather
- * than an answer about retrieval.
+ * A player configures up to three prose models. The primary writes the turn
+ * the story keeps; the other two write nothing canonical. Each configured
+ * model then appears under both conditions — once having researched the world
+ * through the agent loop, once handed it whole by a graph walk and a vector
+ * search — so the panel answers two questions at once: what a different model
+ * makes of this turn, and what retrieval is worth to it. Reading down a column
+ * compares models; reading across a row prices retrieval.
  *
- * What is left is the question worth asking: does retrieval earn its cost?
- * Holding the model fixed and varying only the context is the comparison that
- * answers it — a different model in the other chair only ever measured the
- * model.
+ * The primary's agentic response is the turn itself and is not repeated here,
+ * so three models cost six generations and one model costs two. A slot left
+ * empty is the off switch — there is no shadow to run and nothing to pay for.
+ *
+ * The panel used to be a second full research pass on Nova Pro, varying model
+ * and context together and so measuring neither. Its evaluator never returned
+ * `sufficient`, and it named gaps as bare nouns the searcher could not act on
+ * and did not notice repeating, so it ran out its round cap every turn for
+ * forty percent of the chronicle's input tokens.
  */
-const oneShotPanelist = async (context: GraphContext): Promise<ProseAlternate | null> => {
+const agenticPanelist = async (
+  context: GraphContext,
+  agentLoop: AgentLoopClient,
+  modelId: string
+): Promise<ProseAlternate | null> => {
   const startedAt = Date.now();
   try {
-    const alternate = await runOneShotProse(context);
+    const outcome = await runProseAgent(context, {
+      agentLoop,
+      metadata: { panel: 'true', panelModel: modelId },
+      modelId,
+      onStep: (step) => {
+        log('info', 'prose-agent.panel.step', {
+          chronicleId: context.chronicleId,
+          modelId,
+          stepNumber: step.stepNumber,
+          toolErrors: JSON.stringify(step.toolErrors),
+          toolNames: step.toolNames.join(','),
+          turnId: context.turnId,
+        });
+      },
+    });
+    log('info', 'prose-agent.panel.completed', {
+      chronicleId: context.chronicleId,
+      durationMs: Date.now() - startedAt,
+      modelId,
+      totalTokens: outcome.usage.totalTokens,
+      turnId: context.turnId,
+    });
+    return {
+      costUsd: outcome.costUsd,
+      modelId,
+      prose: outcome.prose,
+      sidecar: outcome.sidecar,
+      stepCount: outcome.stepCount,
+      totalTokens: outcome.usage.totalTokens,
+    };
+  } catch (error) {
+    return panelFailed(context, startedAt, modelId, error);
+  }
+};
+
+const oneShotPanelist = async (
+  context: GraphContext,
+  modelId: string
+): Promise<ProseAlternate | null> => {
+  const startedAt = Date.now();
+  try {
+    const alternate = await runOneShotProse(context, modelId);
     log('info', 'prose-agent.panel.completed', {
       chronicleId: context.chronicleId,
       durationMs: Date.now() - startedAt,
@@ -36,20 +86,41 @@ const oneShotPanelist = async (context: GraphContext): Promise<ProseAlternate | 
     });
     return alternate;
   } catch (error) {
-    log('warn', 'prose-agent.panel.failed', {
-      chronicleId: context.chronicleId,
-      durationMs: Date.now() - startedAt,
-      message: error instanceof Error ? error.message : 'unknown',
-      turnId: context.turnId,
-    });
-    return null;
+    return panelFailed(context, startedAt, `${modelId} (one-shot)`, error);
   }
 };
 
-/** A panelist failure drops that response only; the panel never fails a turn. */
+const panelFailed = (
+  context: GraphContext,
+  startedAt: number,
+  modelId: string,
+  error: unknown
+): null => {
+  log('warn', 'prose-agent.panel.failed', {
+    chronicleId: context.chronicleId,
+    durationMs: Date.now() - startedAt,
+    message: error instanceof Error ? error.message : 'unknown',
+    modelId,
+    turnId: context.turnId,
+  });
+  return null;
+};
+
+/**
+ * The whole panel at once. A panelist failure drops that response only; the
+ * panel never throws and never fails the turn.
+ */
 export const runProseAgentPanel = async (
-  context: GraphContext
+  context: GraphContext,
+  agentLoop: AgentLoopClient
 ): Promise<ProseAlternate[]> => {
-  const response = await oneShotPanelist(context);
-  return response === null ? [] : [response];
+  const configured = await context.modelConfigStore.listModelsForCategory(
+    'prose', context.chronicleState.chronicle.playerId
+  );
+  const responses = await Promise.all(configured.flatMap((entry) => [
+    oneShotPanelist(context, entry.modelId),
+    // The primary's agentic response is the turn itself, already written.
+    ...entry.slot === PRIMARY_SLOT ? [] : [agenticPanelist(context, agentLoop, entry.modelId)],
+  ]));
+  return responses.filter((response) => response !== null);
 };

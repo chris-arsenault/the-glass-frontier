@@ -572,5 +572,19 @@
     "summary": "Two fields the models were reading as the wrong question",
     "details": "The pass that decides what the world is doing had one field with no description on it, sitting beside blocks naming your location — and on later turns it began answering it as a location, returning the place name where three sentences of what the world was doing belonged. Those turns lost the world's account of itself entirely. The field now says what it wants. Separately, the research pass reads canon passages by a handle it gets back from searching, and that handle was labeled with the same word as an entity's name, so the model kept feeding passage handles to the tool that opens entities: half of all failed lookups in a recent chronicle were this one mistake. The two are now named apart.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-28-three-prose-models",
+    "releasedAt": "2026-08-28",
+    "summary": "Pick up to three prose models and compare them side by side",
+    "details": "Player settings now takes a primary, a secondary, and a tertiary prose model. The primary writes the turns your chronicle keeps and nothing else changes about it. A secondary or tertiary writes nothing canonical: each one appears twice in the comparison panel beside the turn — once having researched the world through the retrieval loop, once handed the world whole with no searching at all. Reading down the panel compares models on the same scene; reading across one model's pair shows what retrieval was worth to it. Both extra slots default to None, which is the off switch: leave them there and a turn costs exactly what it costs today. Classification is unchanged and stays on one model, because every classification call sits on the turn's critical path and a second opinion would decide nothing.",
+    "type": "feature"
+  },
+  {
+    "id": "2026-08-28-open-weight-models",
+    "releasedAt": "2026-08-28",
+    "summary": "Five open-weight models, and Nova's price was wrong",
+    "details": "GPT OSS 120B and 20B, Kimi K2 Thinking, Qwen3 Next 80B, and Qwen3 32B are now selectable. Every one was checked against Bedrock directly rather than taken on reputation: all are on-demand in this region, all handle tool use through the same interface the retrieval loop uses, and all honor a forced tool choice, which is how structured output is produced. Prices come from AWS's own pricing service. Several are genuinely cheaper than what was on offer — GPT OSS 120B costs a fifth of Nova Pro per million input tokens and Qwen3 32B a fifth of its output — though Kimi K2 Thinking is not: its output runs above Nova Pro's. MiniMax M2.5 was measured and left out because it ignores a forced tool choice, which would break structured output. The catalog's Nova prices were also twice the real rate on output for both Nova Pro and Nova 2 Lite, so cost reporting had been overstating them.",
+    "type": "improvement"
   }
 ]

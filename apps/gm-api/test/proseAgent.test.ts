@@ -18,6 +18,8 @@ const HIDDEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KORVATH_SLUG = 'korvath-dockmaster';
 const GUILD_SLUG = 'harbor-guild';
 const SONNET_MODEL_ID = 'claude-sonnet-5';
+const OSS_MODEL_ID = 'gpt-oss-120b';
+const QWEN_MODEL_ID = 'qwen3-32b';
 const TITHE_COUNTING = 'Korvath counts the tithe';
 const SMALL_USAGE = { inputTokens: 50, outputTokens: 30, totalTokens: 80 };
 
@@ -410,25 +412,71 @@ const scriptedLoop = (responses: Array<() => MockGenerateResponse>): AgentLoopCl
   });
 };
 
-describe('prose agent panel', () => {
-  it('is one retrieval-free response on the player\'s own prose model', async () => {
-    const context = agentContext();
-    context.llm = llmStub();
-    const alternates = await runProseAgentPanel(context);
+/** Stands in for the agentic panelist; the canonical turn is written elsewhere. */
+const panelLoop = (): AgentLoopClient => ({
+  run: () => Promise.resolve({
+    stepCount: 2,
+    usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
+  }),
+} as unknown as AgentLoopClient);
 
-    // Varying the model as well as the context measured Nova, not retrieval.
+const slottedContext = (
+  slots: Array<{ modelId: string; slot: number }>
+): GraphContext => {
+  const context = agentContext();
+  context.llm = llmStub();
+  context.modelConfigStore = {
+    getModelForCategory: () => Promise.resolve(SONNET_MODEL_ID),
+    listModelsForCategory: () => Promise.resolve(slots),
+  } as unknown as GraphContext['modelConfigStore'];
+  return context;
+};
+
+describe('prose agent panel', () => {
+  it('pairs every configured model with itself, minus the canonical turn', async () => {
+    const context = slottedContext([
+      { modelId: SONNET_MODEL_ID, slot: 1 },
+      { modelId: OSS_MODEL_ID, slot: 2 },
+      { modelId: QWEN_MODEL_ID, slot: 3 },
+    ]);
+    const alternates = await runProseAgentPanel(context, panelLoop());
+
+    // Three models, six generations: the primary's agentic response is the
+    // turn itself and is not repeated here.
+    expect(alternates.map((alternate) => alternate.modelId).sort()).toEqual([
+      `${OSS_MODEL_ID} (one-shot)`,
+      `${QWEN_MODEL_ID} (one-shot)`,
+      `${SONNET_MODEL_ID} (one-shot)`,
+      OSS_MODEL_ID,
+      QWEN_MODEL_ID,
+    ].sort());
+  });
+
+  it('runs one comparison when only the primary is configured', async () => {
+    const context = slottedContext([{ modelId: SONNET_MODEL_ID, slot: 1 }]);
+    const alternates = await runProseAgentPanel(context, panelLoop());
+
     expect(alternates).toHaveLength(1);
     expect(alternates[0]?.modelId).toBe(`${SONNET_MODEL_ID} (one-shot)`);
-    expect(alternates[0]?.stepCount).toBe(1);
     expect(alternates[0]?.costUsd).toBeGreaterThan(0);
   });
 
+  it('keeps a tertiary in its own slot when the secondary is None', async () => {
+    const context = slottedContext([
+      { modelId: SONNET_MODEL_ID, slot: 1 },
+      { modelId: OSS_MODEL_ID, slot: 3 },
+    ]);
+    const alternates = await runProseAgentPanel(context, panelLoop());
+
+    // A dense list would have promoted the tertiary and skipped its agentic run.
+    expect(alternates.map((alternate) => alternate.modelId)).toContain(OSS_MODEL_ID);
+  });
+
   it('drops its response rather than failing the turn', async () => {
-    const context = agentContext();
-    context.llm = llmStub();
+    const context = slottedContext([{ modelId: SONNET_MODEL_ID, slot: 1 }]);
     context.playerIntent = undefined;
 
-    await expect(runProseAgentPanel(context)).resolves.toEqual([]);
+    await expect(runProseAgentPanel(context, panelLoop())).resolves.toEqual([]);
   });
 });
 

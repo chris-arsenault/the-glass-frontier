@@ -7,8 +7,16 @@ VALUES
   ('gpt-5.6-terra', 'gpt-5.6-terra', 'GPT-5.6 Terra', 'openai', true, 1050000, 128000, 0.002, 0.012, ARRAY['low', 'medium', 'high']),
   ('gpt-5.6-sol', 'gpt-5.6-sol', 'GPT-5.6 Sol', 'openai', true, 1050000, 128000, 0.005, 0.03, ARRAY['low', 'medium', 'high']),
   ('claude-sonnet-5', 'us.anthropic.claude-sonnet-5', 'Claude Sonnet 5', 'bedrock', true, 1000000, 128000, 0.003, 0.015, ARRAY['low', 'medium', 'high']),
-  ('amazon-nova-pro', 'us.amazon.nova-pro-v1:0', 'Amazon Nova Pro', 'bedrock', true, 300000, 5000, 0.0008, 0.0032, ARRAY['low']),
-  ('amazon-nova-2-lite', 'us.amazon.nova-2-lite-v1:0', 'Amazon Nova 2 Lite', 'bedrock', true, 1000000, 65536, 0.0003, 0.0025, ARRAY['low', 'medium'])
+  ('amazon-nova-pro', 'us.amazon.nova-pro-v1:0', 'Amazon Nova Pro', 'bedrock', true, 300000, 5000, 0.0008, 0.0016, ARRAY['low']),
+  ('amazon-nova-2-lite', 'us.amazon.nova-2-lite-v1:0', 'Amazon Nova 2 Lite', 'bedrock', true, 1000000, 65536, 0.0003, 0.00125, ARRAY['low', 'medium']),
+  -- Open-weight models, measured against Bedrock us-east-1 on 2026-08-27: all
+  -- on-demand, all accept Converse tool use and a forced tool choice, none take
+  -- a reasoning field. Prices are the AWS Pricing API's own, per 1k tokens.
+  ('gpt-oss-120b', 'openai.gpt-oss-120b-1:0', 'GPT OSS 120B', 'bedrock', true, 128000, 32768, 0.00015, 0.0006, ARRAY['low']),
+  ('gpt-oss-20b', 'openai.gpt-oss-20b-1:0', 'GPT OSS 20B', 'bedrock', true, 128000, 32768, 0.00007, 0.0003, ARRAY['low']),
+  ('kimi-k2-thinking', 'moonshot.kimi-k2-thinking', 'Kimi K2 Thinking', 'bedrock', true, 262144, 32768, 0.0006, 0.0025, ARRAY['low']),
+  ('qwen3-next-80b', 'qwen.qwen3-next-80b-a3b', 'Qwen3 Next 80B A3B', 'bedrock', true, 262144, 32768, 0.00014, 0.0012, ARRAY['low']),
+  ('qwen3-32b', 'qwen.qwen3-32b-v1:0', 'Qwen3 32B', 'bedrock', true, 32768, 16384, 0.00015, 0.0003, ARRAY['low'])
 ON CONFLICT (model_id) DO UPDATE SET
   api_model_id = EXCLUDED.api_model_id,
   display_name = EXCLUDED.display_name,
@@ -21,11 +29,13 @@ ON CONFLICT (model_id) DO UPDATE SET
   reasoning_efforts = EXCLUDED.reasoning_efforts,
   updated_at = now();
 
-INSERT INTO app.model_category_config (category, model_id, player_id)
+-- Slot 1 only. The shadow slots are a per-player choice with no sensible
+-- default: leaving them unset is what keeps a turn at two generations.
+INSERT INTO app.model_category_config (category, model_id, player_id, slot)
 VALUES
-  ('classification', 'amazon-nova-2-lite', NULL),
-  ('prose', 'claude-sonnet-5', NULL)
-ON CONFLICT (category, player_id) DO UPDATE SET
+  ('classification', 'amazon-nova-2-lite', NULL, 1),
+  ('prose', 'claude-sonnet-5', NULL, 1)
+ON CONFLICT (category, player_id, slot) DO UPDATE SET
   model_id = EXCLUDED.model_id,
   updated_at = now();
 

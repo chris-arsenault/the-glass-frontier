@@ -18,11 +18,23 @@ export type ModelConfig = {
 
 export type ModelCategory = 'prose' | 'classification';
 
+/**
+ * Which of a category's models this row configures.
+ *
+ * Prose has three: the primary writes the turn the story keeps, and the other
+ * two write only panels. Every other category has a primary and nothing else,
+ * which the schema enforces rather than trusting.
+ */
+export const MODEL_SLOTS = [1, 2, 3] as const;
+export type ModelSlot = (typeof MODEL_SLOTS)[number];
+export const PRIMARY_SLOT: ModelSlot = 1;
+
 export type ModelCategoryConfig = {
   id: string;
   category: ModelCategory;
   modelId: string;
   playerId: string | null;
+  slot: ModelSlot;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -144,34 +156,66 @@ export class ModelConfigStore {
   }
 
   async getModelForCategory(category: ModelCategory, playerId?: string): Promise<string> {
-    const result = await this.#pool.query<{ model_id: string }>(
-      `SELECT mcc.model_id
-       FROM app.model_category_config mcc
-       WHERE mcc.category = $1
-         AND (mcc.player_id = $2 OR mcc.player_id IS NULL)
-       ORDER BY mcc.player_id NULLS LAST
-       LIMIT 1`,
-      [category, playerId ?? null]
-    );
-
-    if (result.rows.length === 0) {
+    const modelId = await this.#findSlotModel(category, PRIMARY_SLOT, playerId);
+    if (modelId === null) {
       throw new Error(`No model configured for category: ${category}`);
     }
+    return modelId;
+  }
 
-    return result.rows[0].model_id;
+  /**
+   * Every model configured for a category, primary first, each with the slot
+   * it fills.
+   *
+   * The slot travels with the model because it is not recoverable from
+   * position: a player may set a tertiary and leave the secondary on None, and
+   * a dense list would silently promote it.
+   */
+  async listModelsForCategory(
+    category: ModelCategory,
+    playerId?: string
+  ): Promise<Array<{ modelId: string; slot: ModelSlot }>> {
+    const found = await Promise.all(MODEL_SLOTS.map(async (slot) => {
+      const modelId = await this.#findSlotModel(category, slot, playerId);
+      return modelId === null ? null : { modelId, slot };
+    }));
+    const configured = found.filter((entry): entry is { modelId: string; slot: ModelSlot } =>
+      entry !== null);
+    if (configured.length === 0) {
+      throw new Error(`No model configured for category: ${category}`);
+    }
+    return configured;
   }
 
   async setCategoryModel(
     category: ModelCategory,
     modelId: string,
-    playerId?: string
+    playerId?: string,
+    slot: ModelSlot = PRIMARY_SLOT
   ): Promise<void> {
     await this.#pool.query(
-      `INSERT INTO app.model_category_config (category, model_id, player_id)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (category, player_id)
+      `INSERT INTO app.model_category_config (category, model_id, player_id, slot)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (category, player_id, slot)
        DO UPDATE SET model_id = EXCLUDED.model_id, updated_at = now()`,
-      [category, modelId, playerId ?? null]
+      [category, modelId, playerId ?? null, slot]
+    );
+  }
+
+  /**
+   * Clearing a shadow slot deletes the player's row rather than writing an
+   * empty one, so the fallback to the shared default is the same mechanism
+   * that serves a player who never chose at all.
+   */
+  async clearCategoryModel(
+    category: ModelCategory,
+    playerId: string,
+    slot: ModelSlot
+  ): Promise<void> {
+    await this.#pool.query(
+      `DELETE FROM app.model_category_config
+       WHERE category = $1 AND player_id = $2 AND slot = $3`,
+      [category, playerId, slot]
     );
   }
 
@@ -260,5 +304,24 @@ export class ModelConfigStore {
     );
 
     return summarizeUsage(result.rows.map(toUsageWithCost));
+  }
+
+  /** A player's own row wins over the shared default for the same slot. */
+  async #findSlotModel(
+    category: ModelCategory,
+    slot: ModelSlot,
+    playerId?: string
+  ): Promise<string | null> {
+    const result = await this.#pool.query<{ model_id: string }>(
+      `SELECT mcc.model_id
+       FROM app.model_category_config mcc
+       WHERE mcc.category = $1
+         AND mcc.slot = $2
+         AND (mcc.player_id = $3 OR mcc.player_id IS NULL)
+       ORDER BY mcc.player_id NULLS LAST
+       LIMIT 1`,
+      [category, slot, playerId ?? null]
+    );
+    return result.rows.at(0)?.model_id ?? null;
   }
 }

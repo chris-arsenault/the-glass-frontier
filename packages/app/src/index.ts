@@ -4,9 +4,12 @@ export { PromptTemplateManager, OFFICIAL_VARIANT_ID } from './promptTemplates/Pr
 export { PromptTemplateRuntime } from './promptTemplates/PromptTemplateRuntime';
 export {
   ModelConfigStore,
+  MODEL_SLOTS,
+  PRIMARY_SLOT,
   type ModelConfig,
   type ModelCategory,
   type ModelCategoryConfig,
+  type ModelSlot,
   type ModelUsage,
   type ModelUsageWithCost,
   type UsageCostSummary,

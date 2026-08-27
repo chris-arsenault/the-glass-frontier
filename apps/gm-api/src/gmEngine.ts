@@ -336,7 +336,7 @@ class GmEngine {
     if (context.failure || context.gmResponse === undefined || context.playerIntent === undefined) {
       return [];
     }
-    return runProseAgentPanel(context);
+    return runProseAgentPanel(context, this.agentLoop);
   }
 
   #createTemplateRuntime(playerId: string): PromptTemplateRuntime {

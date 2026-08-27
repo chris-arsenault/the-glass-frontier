@@ -33,13 +33,15 @@ const ONE_SHOT_TEMPLATES = new Map<IntentType, PromptTemplateId>([
  * stopped selecting entities up front, and this shadow should not put that
  * cost back on every turn for a response that never drives the story.
  */
-/** The same model the canonical turn used: the panel varies context, not models. */
+/** The primary unless a slot names another: the panel pairs each model with itself. */
 const resolveOneShotModel = async (
-  context: GraphContext
+  context: GraphContext,
+  overrideModelId?: string
 ): Promise<NonNullable<(typeof MODEL_CATALOG.models)[number]>> => {
-  const modelId = await context.modelConfigStore.getModelForCategory(
-    'prose', context.chronicleState.chronicle.playerId
-  );
+  const modelId = overrideModelId
+    ?? await context.modelConfigStore.getModelForCategory(
+      'prose', context.chronicleState.chronicle.playerId
+    );
   const model = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
   if (model === undefined) {
     throw new Error(`One-shot model ${modelId} is not in the model catalog.`);
@@ -55,13 +57,16 @@ const resolveTemplate = (intentType: IntentType): PromptTemplateId => {
   return templateId;
 };
 
-export const runOneShotProse = async (context: GraphContext): Promise<ProseAlternate> => {
+export const runOneShotProse = async (
+  context: GraphContext,
+  modelIdOverride?: string
+): Promise<ProseAlternate> => {
   const intent = context.playerIntent;
   if (intent === undefined) {
     throw new Error('The one-shot narrator requires a classified player intent.');
   }
   const templateId = resolveTemplate(intent.intentType);
-  const model = await resolveOneShotModel(context);
+  const model = await resolveOneShotModel(context, modelIdOverride);
   const retrieved = await buildOneShotContext(context);
   const withEntities: GraphContext = {
     ...context,
