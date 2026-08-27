@@ -1,10 +1,9 @@
-import { MODEL_CATALOG } from '@glass-frontier/app';
-import { type Front, WorldTurn } from '@glass-frontier/dto';
-import { log } from '@glass-frontier/utils';
+import { entityView, renderBlock } from '@glass-frontier/app';
+import type { Front, HardState } from '@glass-frontier/dto';
+import { WorldTurn } from '@glass-frontier/dto';
+import { isNonEmptyString, log } from '@glass-frontier/utils';
 
-import { buildSeedPack, renderSeedPack } from '../../proseAgent/seedPack';
-import { createProseAgentTools } from '../../proseAgent/tools';
-import { ToolSession } from '../../proseAgent/toolSession';
+import { extractFragment } from '../../prompts/chronicleFragments';
 import type { GraphContext } from '../../types';
 import {
   ENVIRONMENT_INSTRUCTIONS,
@@ -13,18 +12,22 @@ import {
 import { applyWorldTurn, visibleFronts } from '../../world/fronts';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
 
-const MAX_STEPS = 4;
 const MAX_OUTPUT_TOKENS = 1_500;
 const REASONING_EFFORT = 'low';
+/** The world's own prior lines; three turns of record is continuity enough. */
+const WORLD_RECORD_TURNS = 3;
+/** Every note an entity publishes — the notes are the front material. */
+const CANON_NOTE_LIMIT = 8;
 
 /**
  * The GM's turn as the world.
  *
- * It runs before `check-planner` on purpose: the world moves, and only then is
- * the player's action planned and rolled against the situation as it now
- * stands. Placed after the roll it would write world action as consequence of
- * the player's failure, which is the reactive habit this stage exists to
- * break.
+ * One structured call on the prose model, fed a player-free view of the turn:
+ * the fronts, the canon of the place and the front agents (pre-fetched — the
+ * stage knows exactly which entities matter, so it holds no tools), the last
+ * narration, and its own prior record. The player's message, intent, sheet,
+ * and check never enter, so the world cannot complete the player's action —
+ * the failure this stage kept producing when it read the full seed pack.
  *
  * Its failure is never the turn's failure. A world that could not be reached
  * this turn is a world that held still.
@@ -50,14 +53,12 @@ export class EnvironmentNode implements GraphNode {
 
   async #run(context: GraphContext): Promise<GraphNodeDelta> {
     const fronts = context.chronicleState.chronicle.fronts;
-    const result = await this.#ask(context, fronts);
-    const report = WorldTurn.parse(result.finishToolInput);
+    const report = await vetProposal(context, await this.#ask(context, fronts));
     const nextFronts = applyWorldTurn(fronts, report, context.turnSequence);
     log('info', 'gm.environment', {
       chronicleId: context.chronicleId,
       fired: report.firedFrontId ?? '',
       liveFronts: nextFronts.filter((front) => front.status === 'active').length,
-      stepCount: result.stepCount,
       turnId: context.turnId,
     });
     return {
@@ -70,44 +71,130 @@ export class EnvironmentNode implements GraphNode {
     };
   }
 
-  async #ask(
-    context: GraphContext,
-    fronts: Front[]
-  ): Promise<{ finishToolInput: unknown; stepCount: number }> {
-    const pack = await buildSeedPack(context);
-    const session = new ToolSession({
-      finishTool: 'submit_world',
-      maxSteps: MAX_STEPS,
-      seedEntities: pack.seedEntities,
-    });
-    const playerId = context.chronicleState.chronicle.playerId;
-    const modelId = await context.modelConfigStore.getModelForCategory('prose', playerId);
-    const model = MODEL_CATALOG.models.find((entry) => entry.modelId === modelId);
-    if (model === undefined) {
-      throw new Error('The environment stage has no prose model in the catalog.');
-    }
+  async #ask(context: GraphContext, fronts: Front[]): Promise<WorldTurn> {
     const live = visibleFronts(fronts);
-    return context.agentLoop.run({
-      finishToolName: 'submit_world',
-      instructions: live.length === 0
-        ? `${ENVIRONMENT_INSTRUCTIONS}\n\n${FIRST_FRONT_NUDGE}`
-        : ENVIRONMENT_INSTRUCTIONS,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      maxSteps: MAX_STEPS,
-      // FRONTS rides in the seed pack now, so the scout and the world read
-      // the same block rather than two shapes of the same thing.
-      messages: [{ content: renderSeedPack(pack, context.playerMessage.content), role: 'user' }],
-      metadata: {
-        chronicleId: context.chronicleId,
-        nodeId: this.id,
-        playerId,
-        turnId: context.turnId,
-        turnSequence: String(context.turnSequence),
+    const playerId = context.chronicleState.chronicle.playerId;
+    const model = await context.modelConfigStore.getModelForCategory('prose', playerId);
+    const response = await context.llm.generateStructured(
+      {
+        input: [{
+          content: [{ text: await renderWorldInput(context, live), type: 'input_text' }],
+          role: 'user',
+        }],
+        instructions: live.length === 0
+          ? `${ENVIRONMENT_INSTRUCTIONS}\n\n${FIRST_FRONT_NUDGE}`
+          : ENVIRONMENT_INSTRUCTIONS,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        metadata: {
+          chronicleId: context.chronicleId,
+          nodeId: this.id,
+          playerId,
+          turnId: context.turnId,
+          turnSequence: String(context.turnSequence),
+        },
+        model,
+        player: context.llmPlayer,
+        reasoningEffort: REASONING_EFFORT,
       },
-      model,
-      player: context.llmPlayer,
-      reasoningEffort: REASONING_EFFORT,
-      tools: createProseAgentTools({ context, session }),
-    });
+      WorldTurn,
+      'world_turn_schema'
+    );
+    return response.data;
   }
 }
+
+/**
+ * A proposal is only as real as its agent. The schema asks for a canon slug,
+ * but the first front this stage ever proposed named the player character —
+ * not canon, not the world's to run. An agent that does not resolve to a
+ * visible canon entity drops the proposal; the fronts already running are
+ * untouched.
+ */
+const vetProposal = async (context: GraphContext, report: WorldTurn): Promise<WorldTurn> => {
+  if (report.proposal === null) {
+    return report;
+  }
+  const agent = await context.worldSchemaStore.getEntityBySlug({
+    slug: report.proposal.agentSlug,
+  });
+  if (agent !== null && !agent.dm) {
+    return report;
+  }
+  log('warn', 'gm.environment.proposal-dropped', {
+    agentSlug: report.proposal.agentSlug,
+    chronicleId: context.chronicleId,
+    turnId: context.turnId,
+  });
+  return { ...report, proposal: null };
+};
+
+/** The canon this turn's world move can draw on: the place and the front agents. */
+const worldCanon = async (context: GraphContext, fronts: Front[]): Promise<string> => {
+  const store = context.worldSchemaStore;
+  const [location, agents] = await Promise.all([
+    store.findLocationByName({ name: context.chronicleState.locationName }),
+    Promise.all(fronts.map((front) => store.getEntityBySlug({ slug: front.agentSlug }))),
+  ]);
+  const seen = new Set<string>();
+  const entities = [location, ...agents].filter((entity): entity is HardState => {
+    if (entity === null || entity.dm || seen.has(entity.id)) {
+      return false;
+    }
+    seen.add(entity.id);
+    return true;
+  });
+  return entities
+    .map((entity) => renderBlock(entityView(entity, [], { noteLimit: CANON_NOTE_LIMIT })))
+    .join('\n\n');
+};
+
+/** The ledger's present figures without the player: the world's own cast. */
+const npcPresent = (context: GraphContext): unknown => {
+  const ledger = context.chronicleState.chronicle.sceneLedger;
+  if (ledger === null || ledger === undefined) {
+    return undefined;
+  }
+  const characterName = context.chronicleState.character.name.trim().toLowerCase();
+  const others = ledger.present.filter(
+    (entry) => !characterName.startsWith(entry.name.trim().toLowerCase())
+      && !entry.name.trim().toLowerCase().startsWith(characterName)
+  );
+  return others.length === 0 ? undefined : others;
+};
+
+/** The world's own prior lines, oldest first, as a record to continue. */
+const worldRecord = (context: GraphContext): string | undefined => {
+  const lines = context.chronicleState.turns
+    .slice(-WORLD_RECORD_TURNS)
+    .flatMap((turn) => isNonEmptyString(turn.worldContent)
+      ? [`Turn ${turn.turnSequence}: ${turn.worldContent}`]
+      : []);
+  return lines.length === 0 ? undefined : lines.join('\n');
+};
+
+const isEmpty = (value: unknown): boolean =>
+  value === undefined
+  || value === null
+  || (typeof value === 'string' && value.trim().length === 0)
+  || (typeof value === 'object' && value !== null && Object.values(value).every(
+    (inner) => inner === undefined || inner === null
+  ));
+
+/** The player-free view of the turn; the instructions name these blocks. */
+const renderWorldInput = async (context: GraphContext, fronts: Front[]): Promise<string> => {
+  const sections: Array<{ name: string; value: unknown }> = [
+    { name: 'FRONTS', value: await extractFragment('fronts', context) },
+    { name: 'WORLD-CANON', value: await worldCanon(context, fronts) },
+    { name: 'LOCATION', value: await extractFragment('location', context) },
+    { name: 'SCENE', value: await extractFragment('scene', context) },
+    { name: 'PRESENT', value: npcPresent(context) },
+    { name: 'LAST-REPLY', value: await extractFragment('last-reply', context) },
+    { name: 'WORLD-RECORD', value: worldRecord(context) },
+  ];
+  return sections
+    .filter((section) => !isEmpty(section.value))
+    .map((section) => `### ${section.name}\n${
+      typeof section.value === 'string' ? section.value : renderBlock(section.value)
+    }`)
+    .join('\n\n');
+};

@@ -69,16 +69,18 @@ const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'chara
 /**
  * Nothing selects the GM's world material before the turn. What survives ahead
  * of prose is only what later stages need: what the player named, and what the
- * world decided to do — which happens before the check so it can never be a
- * consequence of the roll.
+ * world decided to do. The environment sits after the check because nothing in
+ * the check pipeline reads it — its dice-blindness is an input property (it
+ * receives neither the player's move nor the roll), not an ordering one — and
+ * this way the writer takes the world's move at its freshest.
  */
 const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'intent-classifier', type: 'sequential' },
   { nodeId: 'scene-subject-resolver', type: 'sequential' },
   { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
-  { nodeId: 'environment', type: 'sequential' },
   { nodeId: 'check-planner', type: 'sequential' },
   { nodeId: 'check-runner', type: 'sequential' },
+  { nodeId: 'environment', type: 'sequential' },
   { nodeId: 'gm-response-node', type: 'sequential' },
   {
     nodeIds: ['inventory-delta', 'turn-judge'],
