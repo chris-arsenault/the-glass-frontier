@@ -79,6 +79,19 @@ const partText = (part: unknown): string => {
   if (typeof record.text === 'string') {
     return record.text;
   }
+  if (record.type === 'tool-call') {
+    const input = typeof record.input === 'string'
+      ? record.input
+      : JSON.stringify(record.input);
+    return `${String(record.toolName)}(${input})`;
+  }
+  if (record.type === 'tool-result') {
+    const output = record.output as Record<string, unknown> | undefined;
+    const value = output !== undefined && 'value' in output ? output.value : record.output;
+    return `${String(record.toolName)} → ${
+      typeof value === 'string' ? value : JSON.stringify(value)
+    }`;
+  }
   try {
     return JSON.stringify(part);
   } catch {
@@ -86,26 +99,42 @@ const partText = (part: unknown): string => {
   }
 };
 
+/** The system messages of a provider-level prompt, as the audit's instructions. */
+const promptInstructions = (prompt: unknown): string => {
+  if (!Array.isArray(prompt)) {
+    return '';
+  }
+  return prompt
+    .filter((message: { role: string }) => message.role === 'system')
+    .map((message: { content: unknown }) =>
+      typeof message.content === 'string' ? message.content : partText(message.content))
+    .join('\n\n');
+};
+
 /**
  * Renders the provider-level prompt into the audit request shape. Also the
- * basis for the budget reservation's input-size estimate.
+ * basis for the budget reservation's input-size estimate. System messages are
+ * recorded through `promptInstructions` instead, so the audit request reads
+ * like the wire: instructions once, then the conversation.
  */
 const renderPrompt = (prompt: unknown): PromptInput[] => {
   if (!Array.isArray(prompt)) {
     return [];
   }
-  return prompt.map((message: { role: string; content: unknown }) => {
-    const content = Array.isArray(message.content)
-      ? message.content.map(partText)
-      : [partText(message.content)];
-    return {
-      content: content.map((text) => ({
-        text: message.role === 'user' ? text : `[${message.role}] ${text}`,
-        type: 'input_text' as const,
-      })),
-      role: message.role === 'user' ? ('user' as const) : ('developer' as const),
-    };
-  });
+  return prompt
+    .filter((message: { role: string }) => message.role !== 'system')
+    .map((message: { role: string; content: unknown }) => {
+      const content = Array.isArray(message.content)
+        ? message.content.map(partText)
+        : [partText(message.content)];
+      return {
+        content: content.map((text) => ({
+          text: message.role === 'user' ? text : `[${message.role}] ${text}`,
+          type: 'input_text' as const,
+        })),
+        role: message.role === 'user' ? ('user' as const) : ('developer' as const),
+      };
+    });
 };
 
 /**
@@ -133,6 +162,27 @@ export class AgentLoopClient {
     const region = process.env.AWS_REGION?.trim() ?? 'us-east-1';
     const bedrock = createAmazonBedrock({ region });
     return (apiModelId) => bedrock(apiModelId);
+  }
+
+  /**
+   * The final permitted step must finish, and the first step must retrieve:
+   * shallow turns come from loops that go straight to the finish tool with
+   * nothing read. Every step between is the model's.
+   */
+  static #prepareStep(request: AgentLoopRequest): Parameters<typeof generateText>[0]['prepareStep'] {
+    return ({ stepNumber: current }) => {
+      if (current >= request.maxSteps - 1) {
+        return { toolChoice: { toolName: request.finishToolName, type: 'tool' } };
+      }
+      if (current === 0) {
+        return {
+          activeTools: Object.keys(request.tools)
+            .filter((name) => name !== request.finishToolName),
+          toolChoice: 'required',
+        };
+      }
+      return { toolChoice: 'auto' };
+    };
   }
 
   async run(request: AgentLoopRequest): Promise<AgentLoopResult> {
@@ -167,13 +217,13 @@ export class AgentLoopClient {
         });
         stepNumber += 1;
       },
-      prepareStep: ({ stepNumber: current }) =>
-        current >= request.maxSteps - 1
-          ? { toolChoice: { toolName: request.finishToolName, type: 'tool' } }
-          : { toolChoice: 'auto' },
+      prepareStep: AgentLoopClient.#prepareStep(request),
       providerOptions: this.#providerOptions(request),
       stopWhen: [stepCountIs(request.maxSteps), hasToolCall(request.finishToolName)],
       system: request.instructions,
+      // AWS recommends greedy decoding for Nova tool calling; Anthropic models
+      // run adaptive reasoning, which owns its own sampling.
+      ...request.model.apiModelId.includes('anthropic.') ? {} : { temperature: 0 },
       tools: request.tools,
     });
     return {
@@ -230,7 +280,7 @@ export class AgentLoopClient {
         const rendered = renderPrompt(params.prompt);
         const llmRequest: LLMRequest = {
           input: rendered,
-          instructions: '',
+          instructions: promptInstructions(params.prompt),
           maxOutputTokens: request.maxOutputTokens,
           metadata: request.metadata,
           model: request.model.modelId,

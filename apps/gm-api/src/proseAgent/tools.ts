@@ -10,14 +10,32 @@ import { buildTocEntries, renderWorldIndex } from './seedPack';
 import type { ToolSession } from './toolSession';
 
 const UNKNOWN_ENTITY_POLICY =
-  'If it exists under another name, find its slug with search. If nothing '
-  + 'matches, it has no canon entry: do not present it as established canon; '
-  + 'the template\'s invention rules govern whether it may appear as new fiction.';
+  'If it exists under another name, find its slug with search; if the player '
+  + 'coined the name, search_history finds where the chronicle established it. '
+  + 'A name with no canon entry and no history is new fiction: brief it as '
+  + 'unwritten, never as established canon.';
 
 const LORE_EXCERPT_LENGTH = 200;
 const MAX_EXPAND_NEIGHBORS = 8;
 /** Shadewell has eleven passages; a whole-entity read must still fit a round. */
 const MAX_OPEN_LORE = 6;
+/**
+ * Below this cosine similarity a "match" is embedding noise. Measured against
+ * the production canon (Titan v2, 256 dims): invented words top out at
+ * 0.29–0.34 ("globitz", "flurbotron xyzzy"), topical paraphrases reach
+ * 0.34–0.36 ("pressure valve"), and real names score 0.53–0.83 ("Vask",
+ * "port city on Ashvane"). 0.4 keeps every legitimate result observed and
+ * rejects every invented one.
+ */
+const SEARCH_SIMILARITY_FLOOR = 0.4;
+
+/**
+ * A retrieval miss is an error, not a result: as text it reads as world-fact
+ * and has ended up in a brief verbatim ("The Globitz entity does not exist in
+ * the current canon"). The loop surfaces a thrown error to the model as a
+ * failed call, which it answers by trying another tool instead of briefing it.
+ */
+class RetrievalMissError extends Error {}
 
 const OPEN_INCLUDE = ['notes', 'lore', 'both'] as const;
 type OpenInclude = (typeof OPEN_INCLUDE)[number];
@@ -68,7 +86,7 @@ const openTool = ({ context, session }: ToolDeps): AgentTool => tool({
     const want = include ?? 'both';
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
-      return session.wrapResult(`open:${slug}`, () => unknownEntity(slug));
+      throw new RetrievalMissError(unknownEntity(slug));
     }
     session.recordServedEntity({ id: entity.id, slug: entity.slug });
     const lore = want === 'notes'
@@ -110,8 +128,7 @@ const readRelationshipTool = ({ context, session }: ToolDeps): AgentTool => tool
       resolveVisible(store, targetSlug),
     ]);
     if (entity === null || target === null) {
-      return session.wrapResult(`relationship:${slug}:${targetSlug}`, () =>
-        unknownEntity(entity === null ? slug : targetSlug));
+      throw new RetrievalMissError(unknownEntity(entity === null ? slug : targetSlug));
     }
     const edges = entity.links.filter(
       (link) => link.live !== false && link.targetId === target.id
@@ -144,7 +161,7 @@ const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
   execute: async ({ slug }: { slug: string }) => {
     const entity = await resolveVisible(context.worldSchemaStore, slug);
     if (entity === null) {
-      return session.wrapResult(`expand:${slug}`, () => unknownEntity(slug));
+      throw new RetrievalMissError(unknownEntity(slug));
     }
     const targetIds = entity.links
       .filter((link) => link.live !== false)
@@ -159,22 +176,35 @@ const expandTool = ({ context, session }: ToolDeps): AgentTool => tool({
 
 const searchTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Find canon entities by meaning — a name, a role, a place. Returns slugs '
-    + 'for open, read_relationship, and expand.',
+    'Find canon entities by meaning — a name, a role, a phrase of the '
+    + 'player\'s. Most of the world is not in WORLD-INDEX, and things often '
+    + 'live under another name than the player used; this is how the rest of '
+    + 'the canon is reached. Returns slugs with a similarity score for open, '
+    + 'read_relationship, and expand.',
   execute: async ({ query }: { query: string }) => {
     const embedding = await context.embeddings.embed(query);
     const candidates = await context.worldSchemaStore.findEntityCandidates({
       embedding,
       limit: 5,
     });
+    const matches = candidates.filter(
+      (candidate) => candidate.similarity >= SEARCH_SIMILARITY_FLOOR
+    );
+    if (matches.length === 0) {
+      const nearest = candidates.map((candidate) => candidate.name).join(', ');
+      throw new RetrievalMissError(
+        `Nothing in canon matches "${query}"`
+        + `${nearest.length === 0 ? '' : ` (nearest, all unrelated: ${nearest})`}. `
+        + UNKNOWN_ENTITY_POLICY
+      );
+    }
     return session.wrapResult(`search:${query}`, () =>
-      candidates.length === 0
-        ? `No canon entity resembles "${query}". ${UNKNOWN_ENTITY_POLICY}`
-        : JSON.stringify(candidates.map((candidate) => ({
-          kind: candidate.kind,
-          name: candidate.name,
-          slug: candidate.slug,
-        }))));
+      JSON.stringify(matches.map((candidate) => ({
+        kind: candidate.kind,
+        name: candidate.name,
+        similarity: Math.round(candidate.similarity * 100) / 100,
+        slug: candidate.slug,
+      }))));
   },
   inputSchema: z.object({ query: z.string().min(2) }),
 });
@@ -188,14 +218,18 @@ const searchLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
       limit: 5,
       query,
     });
+    if (fragments.length === 0) {
+      throw new RetrievalMissError(
+        `No lore matches "${query}". Search again with different words, or `
+        + 'search entities by meaning instead.'
+      );
+    }
     return session.wrapResult(`search-lore:${query}`, () =>
-      fragments.length === 0
-        ? `No lore matches "${query}".`
-        : JSON.stringify(fragments.map((fragment) => ({
-          excerpt: fragment.prose.slice(0, LORE_EXCERPT_LENGTH),
-          slug: fragment.slug,
-          title: fragment.title,
-        }))));
+      JSON.stringify(fragments.map((fragment) => ({
+        excerpt: fragment.prose.slice(0, LORE_EXCERPT_LENGTH),
+        slug: fragment.slug,
+        title: fragment.title,
+      }))));
   },
   inputSchema: z.object({ query: z.string().min(2) }),
 });
@@ -215,6 +249,12 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
     const missing = wanted.filter(
       (slug) => !fragments.some((fragment) => fragment.slug === slug)
     );
+    if (fragments.length === 0) {
+      throw new RetrievalMissError(
+        `No lore fragment has the slug ${missing.join(', ')}. `
+        + 'Use a slug exactly as search_lore returned it.'
+      );
+    }
     return session.wrapResult(`lore:${[...wanted].sort().join(',')}`, () => JSON.stringify({
       fragments: fragments.map((fragment) => ({
         entitySlug: fragment.entitySlug,
@@ -232,18 +272,26 @@ const readLoreTool = ({ context, session }: ToolDeps): AgentTool => tool({
 
 const searchHistoryTool = ({ context, session }: ToolDeps): AgentTool => tool({
   description:
-    'Full-text search this chronicle\'s past turns for an event or phrase. '
-    + 'Returns turn sequence numbers for read_turns.',
+    'Full-text search this chronicle\'s past turns for an event, name, or '
+    + 'phrase. The chronicle\'s memory beyond RECENT-EVENTS lives here: names '
+    + 'the player coined and things that happened to them were established in '
+    + 'past narration, not in canon, and a brief written without them repeats '
+    + 'or contradicts what the story already settled. Returns turn sequence '
+    + 'numbers for read_turns.',
   execute: async ({ query }: { query: string }) => {
     const turns = await context.chronicleStore.searchTurns({
       chronicleId: context.chronicleId,
       limit: 5,
       query,
     });
+    if (turns.length === 0) {
+      throw new RetrievalMissError(
+        `No past turn mentions "${query}". Search again with different words, `
+        + 'or read_turns for the stretch of play where it would have happened.'
+      );
+    }
     return session.wrapResult(`search-history:${query}`, () =>
-      turns.length === 0
-        ? `No past turn matches "${query}".`
-        : JSON.stringify(turns.map(renderTurn)));
+      JSON.stringify(turns.map(renderTurn)));
   },
   inputSchema: z.object({ query: z.string().min(2) }),
 });
@@ -309,7 +357,7 @@ const withCallLogging = (
         });
         return result;
       } catch (error) {
-        log('warn', 'prose-agent.tool.threw', {
+        log(error instanceof RetrievalMissError ? 'info' : 'warn', 'prose-agent.tool.threw', {
           chronicleId: context.chronicleId,
           durationMs: Date.now() - startedAt,
           input: JSON.stringify(input).slice(0, 300),

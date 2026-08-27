@@ -16,7 +16,7 @@ import { log } from '@glass-frontier/utils';
 import { PromptComposer } from '../prompts/prompts';
 import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
-import { agentTemplateFor, SCOUT_INSTRUCTIONS, scoutFocus } from './policy';
+import { agentTemplateFor, SCOUT_CLOSING, SCOUT_INSTRUCTIONS, scoutFocus } from './policy';
 import { buildSeedPack, renderSeedPack } from './seedPack';
 import { createProseAgentTools } from './tools';
 import { ToolSession } from './toolSession';
@@ -150,6 +150,44 @@ const EMPTY_BRIEF: TurnBrief = {
   scene: { changed: UNESTABLISHED, endsWhen: UNESTABLISHED, stakes: UNESTABLISHED },
 };
 
+/**
+ * A brief that fails whole-object validation still carries its valid fields.
+ * On The Silent Test a scout wrote `scene` as prose instead of the object and
+ * the writer received the empty fallback — six good fields discarded over one
+ * bad one. Each field is parsed on its own; only the ones that fail fall back.
+ */
+const salvageBrief = (context: GraphContext, input: unknown): TurnBrief => {
+  const direct = TurnBrief.safeParse(input);
+  if (direct.success) {
+    return direct.data;
+  }
+  const source: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+  if (source === null || typeof source !== 'object') {
+    throw new Error('submit_brief input is not an object.');
+  }
+  const submitted = new Map<string, unknown>(
+    Object.entries(source as Record<string, unknown>)
+  );
+  const fallbacks = new Map<string, unknown>(Object.entries(EMPTY_BRIEF));
+  const dropped: string[] = [];
+  const brief = Object.fromEntries(
+    Object.entries(TurnBrief.shape).map(([key, schema]) => {
+      const parsed = schema.safeParse(submitted.get(key));
+      if (parsed.success) {
+        return [key, parsed.data];
+      }
+      dropped.push(key);
+      return [key, fallbacks.get(key)];
+    })
+  );
+  log('warn', 'prose-agent.brief.salvaged', {
+    chronicleId: context.chronicleId,
+    droppedFields: dropped.join(','),
+    turnId: context.turnId,
+  });
+  return TurnBrief.parse(brief);
+};
+
 const runScout = async (
   context: GraphContext,
   deps: ProseAgentDeps,
@@ -198,7 +236,7 @@ const scoutRound = async (
     maxOutputTokens: SCOUT_MAX_OUTPUT_TOKENS,
     maxSteps: PROSE_AGENT_MAX_STEPS,
     messages: [{
-      content: renderSeedPack(pack, context.playerMessage.content),
+      content: `${renderSeedPack(pack, context.playerMessage.content)}\n\n${SCOUT_CLOSING}`,
       role: 'user',
     }],
     metadata: callMetadata(context, deps, playerId, 'scout'),
@@ -209,7 +247,7 @@ const scoutRound = async (
     tools: createProseAgentTools({ context, session }),
   });
   return {
-    brief: TurnBrief.parse(result.finishToolInput),
+    brief: salvageBrief(context, result.finishToolInput),
     session,
     stepCount: result.stepCount,
     usage: result.usage,

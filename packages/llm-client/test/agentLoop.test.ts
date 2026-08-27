@@ -212,13 +212,45 @@ describe('agent loop', () => {
     expect(loop.mockModel.doGenerateCalls[1]?.toolChoice).toEqual({ type: 'auto' });
   });
 
-  it('leaves tool use to the model on every step before the cap', async () => {
+  it('forces retrieval on the first step and frees the steps between', async () => {
     const loop = client({
-      responses: [() => toolCallResponse('submit_turn', { prose: 'Immediate.' })],
+      responses: [
+        () => toolCallResponse('read_identity', { entityId: 'korvath' }),
+        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+      ],
       store: budgetStore(),
     });
     await loop.client.run(loopRequest());
-    expect(loop.mockModel.doGenerateCalls[0]?.toolChoice).toEqual({ type: 'auto' });
+    const first = loop.mockModel.doGenerateCalls[0];
+    expect(first?.toolChoice).toEqual({ type: 'required' });
+    expect(first?.tools?.map((entry) => entry.name)).toEqual(['read_identity']);
+    const second = loop.mockModel.doGenerateCalls[1];
+    expect(second?.toolChoice).toEqual({ type: 'auto' });
+    expect(second?.tools?.map((entry) => entry.name))
+      .toEqual(['read_identity', 'submit_turn']);
+  });
+
+  it('runs non-Anthropic models greedy and Anthropic models on their reasoning defaults', async () => {
+    const nova: CatalogModel = { ...model, apiModelId: 'us.amazon.nova-pro-v1:0' };
+    const novaLoop = client({
+      responses: [
+        () => toolCallResponse('read_identity', { entityId: 'korvath' }),
+        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+      ],
+      store: budgetStore(),
+    });
+    await novaLoop.client.run(loopRequest({ model: nova }));
+    expect(novaLoop.mockModel.doGenerateCalls[0]?.temperature).toBe(0);
+
+    const anthropicLoop = client({
+      responses: [
+        () => toolCallResponse('read_identity', { entityId: 'korvath' }),
+        () => toolCallResponse('submit_turn', { prose: 'Done.' }),
+      ],
+      store: budgetStore(),
+    });
+    await anthropicLoop.client.run(loopRequest());
+    expect(anthropicLoop.mockModel.doGenerateCalls[0]?.temperature).toBeUndefined();
   });
 
   it('releases the reservation when a model call fails mid-loop', async () => {

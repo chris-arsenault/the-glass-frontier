@@ -17,6 +17,7 @@ const HIDDEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KORVATH_SLUG = 'korvath-dockmaster';
 const GUILD_SLUG = 'harbor-guild';
 const BUDGET_REMINDER_TEXT = '[reminder] The retrieval budget';
+const TITHE_COUNTING = 'Korvath counts the tithe';
 const SONNET_MODEL_ID = 'claude-sonnet-5';
 
 const runTool = async (agentTool: unknown, input: unknown): Promise<string> => {
@@ -208,11 +209,39 @@ describe('prose agent tools', () => {
     expect(raw).not.toContain('wary');
   });
 
-  it('search returns corrective guidance when nothing matches', async () => {
-    const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
-    const raw = await runTool(tools.search, { query: 'glasshouse' });
-    expect(raw).toContain('No canon entity resembles');
-    expect(raw).toContain('no canon entry');
+  it('search fails as an error when nothing matches, naming the noise it rejected', async () => {
+    const context = agentContext();
+    context.worldSchemaStore.findEntityCandidates = () => Promise.resolve([
+      { id: KORVATH_ID, kind: 'npc', name: 'Korvath', similarity: 0.29, slug: KORVATH_SLUG },
+    ]);
+    const tools = createProseAgentTools({ context, session: freshSession() });
+    await expect(runTool(tools.search, { query: 'globitz' }))
+      .rejects.toThrow(/Nothing in canon matches "globitz".*Korvath/u);
+  });
+
+  it('search keeps matches above the similarity floor and reports their score', async () => {
+    const context = agentContext();
+    context.worldSchemaStore.findEntityCandidates = () => Promise.resolve([
+      { id: KORVATH_ID, kind: 'npc', name: 'Korvath', similarity: 0.83, slug: KORVATH_SLUG },
+      { id: GUILD_ID, kind: 'faction', name: 'Harbor Guild', similarity: 0.31, slug: GUILD_SLUG },
+    ]);
+    const tools = createProseAgentTools({ context, session: freshSession() });
+    const raw = await runTool(tools.search, { query: 'the dockmaster' });
+    expect(raw).toContain(KORVATH_SLUG);
+    expect(raw).toContain('0.83');
+    expect(raw).not.toContain(GUILD_SLUG);
+  });
+
+  it('open and search_history fail as errors on misses instead of returning prose', async () => {
+    const context = agentContext();
+    context.chronicleStore = {
+      searchTurns: () => Promise.resolve([]),
+    } as unknown as GraphContext['chronicleStore'];
+    const tools = createProseAgentTools({ context, session: freshSession() });
+    await expect(runTool(tools.open, { slug: 'globitz' }))
+      .rejects.toThrow('No canon entity with slug "globitz"');
+    await expect(runTool(tools.search_history, { query: 'globitz' }))
+      .rejects.toThrow('No past turn mentions "globitz"');
   });
 
   it('read_turns reads a fixed window in play order', async () => {
@@ -304,7 +333,7 @@ describe('prose agent panel', () => {
     expect(attempted.sort()).toEqual([...PANEL_MODELS].sort());
     const agentic = alternates.filter((alternate) => !alternate.modelId.includes('one-shot'));
     expect(agentic.map((alternate) => alternate.modelId)).toEqual([...PANEL_MODELS]);
-    expect(agentic[0]?.prose).toContain('Korvath counts the tithe');
+    expect(agentic[0]?.prose).toContain(TITHE_COUNTING);
     expect(agentic.every((alternate) => alternate.costUsd > 0)).toBe(true);
     expect(alternates.some((alternate) => alternate.modelId.includes('one-shot'))).toBe(true);
   });
@@ -317,35 +346,38 @@ describe('prose agent panel', () => {
   });
 });
 
+const scriptedLoop = (responses: Array<() => MockGenerateResponse>): AgentLoopClient => {
+  let call = 0;
+  const mockModel = new MockLanguageModelV4({
+    doGenerate: () => {
+      const respond = responses.at(call);
+      call += 1;
+      if (respond === undefined) {
+        throw new Error('Mock model ran out of scripted responses.');
+      }
+      return Promise.resolve(respond());
+    },
+  });
+  return new AgentLoopClient({
+    budgetManager: null,
+    modelFactory: () => mockModel,
+    successHandler: null,
+  });
+};
+
 describe('runProseAgent', () => {
   it('produces prose with a provenance-checked sidecar', async () => {
-    const responses = [
+    const agentLoop = scriptedLoop([
       () => toolCallResponse('open', { slug: KORVATH_SLUG }),
       () => toolCallResponse('submit_brief', briefInput()),
-    ];
-    let call = 0;
-    const mockModel = new MockLanguageModelV4({
-      doGenerate: () => {
-        const respond = responses.at(call);
-        call += 1;
-        if (respond === undefined) {
-          throw new Error('Mock model ran out of scripted responses.');
-        }
-        return Promise.resolve(respond());
-      },
-    });
-    const agentLoop = new AgentLoopClient({
-      budgetManager: null,
-      modelFactory: () => mockModel,
-      successHandler: null,
-    });
+    ]);
     const steps: number[] = [];
     const outcome = await runProseAgent(writerContext(), {
       agentLoop,
       onStep: (step) => steps.push(step.stepNumber),
     });
     expect(outcome.prose).toContain('counts the tithe');
-    expect(outcome.brief.present).toContain('Korvath counts the tithe');
+    expect(outcome.brief.present).toContain(TITHE_COUNTING);
     expect(outcome.sidecar).toEqual([
       {
         emergentTags: ['tithe'],
@@ -356,5 +388,23 @@ describe('runProseAgent', () => {
     ]);
     expect(outcome.stepCount).toBe(2);
     expect(steps).toEqual([0, 1]);
+  });
+
+  /**
+   * On The Silent Test a scout wrote `scene` as prose and the writer received
+   * the empty fallback — six good fields discarded over one bad one.
+   */
+  it('salvages the valid fields of a brief whose shape is partly wrong', async () => {
+    const agentLoop = scriptedLoop([
+      () => toolCallResponse('open', { slug: KORVATH_SLUG }),
+      () => toolCallResponse('submit_brief', {
+        ...briefInput(),
+        scene: 'Stakes: the tithe. The scene ends when it is settled.',
+      }),
+    ]);
+    const outcome = await runProseAgent(writerContext(), { agentLoop });
+    expect(outcome.brief.present).toContain(TITHE_COUNTING);
+    expect(outcome.brief.character).toContain('glasswright');
+    expect(outcome.brief.scene.changed).toBe('not established this turn');
   });
 });

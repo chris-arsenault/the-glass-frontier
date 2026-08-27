@@ -174,10 +174,35 @@ export class LLMSuccessHandler {
     if (message === null || message === undefined) {
       return null;
     }
+    if (Array.isArray(message)) {
+      const preview = message.map((part) => this.#formatPart(part)).join('\n').trim();
+      return preview.length > 0 ? preview : null;
+    }
     try {
       return JSON.stringify(message);
     } catch {
       return null;
+    }
+  }
+
+  /** Agent-loop responses arrive as content parts; the archived `content`
+   * field keeps the structured record, so the preview reads as text instead
+   * of string-escaped JSON of the same parts. */
+  #formatPart(part: unknown): string {
+    const record = part as Record<string, unknown>;
+    if (typeof record?.text === 'string') {
+      return record.text;
+    }
+    if (record?.type === 'tool-call') {
+      const input = typeof record.input === 'string'
+        ? record.input
+        : JSON.stringify(record.input);
+      return `${String(record.toolName)}(${input})`;
+    }
+    try {
+      return JSON.stringify(part);
+    } catch {
+      return String(part);
     }
   }
 
