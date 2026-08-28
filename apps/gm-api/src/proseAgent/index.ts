@@ -25,6 +25,7 @@ import {
   SEARCH_INSTRUCTIONS,
   searchFocus,
 } from './policy';
+import { runResearch } from './research';
 import {
   describeError,
   EMPTY_BRIEF,
@@ -33,17 +34,24 @@ import {
 } from './scoutResult';
 import { buildSeedPack, renderSeedPack } from './seedPack';
 import { createProseAgentTools } from './tools';
-import { RETRIEVED_TOKEN_BUDGET, ToolSession } from './toolSession';
+import { ToolSession } from './toolSession';
 
 /** Steps per search invocation; the evaluator, not the cap, ends research. */
 const SEARCH_MAX_STEPS = 2;
-/** Research iterations (search + evaluate) before composing regardless. */
-const MAX_RESEARCH_ITERATIONS = 3;
-const SEARCH_MAX_OUTPUT_TOKENS = 2_000;
-const EVALUATOR_MAX_OUTPUT_TOKENS = 1_000;
-const COMPOSE_MAX_OUTPUT_TOKENS = 4_000;
-const EXTRACT_MAX_OUTPUT_TOKENS = 4_000;
-const PROSE_MAX_OUTPUT_TOKENS = 2_000;
+/**
+ * Headroom, not length. Every one of these used to be a real budget, and a
+ * reasoning model spends output tokens on reasoning before it writes anything
+ * — so a 1,000-token evaluator ceiling meant kimi-k2-thinking hit `max_tokens`
+ * mid-thought and returned no tool call, three retries deep, on every turn of
+ * The train that runs on Warm Argument's ore. The registry clamps these to
+ * whatever each model actually allows; how long the answer should be is stated
+ * in the instructions, where a model can read it.
+ */
+const SEARCH_MAX_OUTPUT_TOKENS = 16_000;
+const EVALUATOR_MAX_OUTPUT_TOKENS = 16_000;
+const COMPOSE_MAX_OUTPUT_TOKENS = 16_000;
+const EXTRACT_MAX_OUTPUT_TOKENS = 16_000;
+const PROSE_MAX_OUTPUT_TOKENS = 16_000;
 const SCOUT_REASONING_EFFORT = 'low';
 const PROSE_REASONING_EFFORT = 'low';
 
@@ -303,41 +311,6 @@ const extractBrief = async (
  * stopping the cheapest answer, and both models took it at two or three
  * calls. The harness owns the hard limits: iteration cap and token budget.
  */
-const runResearch = async (
-  context: GraphContext,
-  deps: ProseAgentDeps,
-  target: ResearchTarget
-): Promise<{ stepCount: number; usages: TokenUsage[] }> => {
-  const usages: TokenUsage[] = [];
-  let stepCount = 0;
-  let gaps: string[] = [];
-  for (let iteration = 1; iteration <= MAX_RESEARCH_ITERATIONS; iteration += 1) {
-    // eslint-disable-next-line no-await-in-loop -- each round builds on the last
-    const search = await runSearch(context, deps, target, gaps);
-    stepCount += search.stepCount;
-    usages.push(search.usage);
-    if (iteration === MAX_RESEARCH_ITERATIONS
-      || target.session.spentTokens >= RETRIEVED_TOKEN_BUDGET) {
-      break;
-    }
-    // eslint-disable-next-line no-await-in-loop -- the verdict gates the next round
-    const evaluated = await evaluateResearch(context, deps, target);
-    usages.push(evaluated.usage);
-    log('info', 'prose-agent.research.verdict', {
-      chronicleId: context.chronicleId,
-      gaps: evaluated.verdict.gaps.join(' | ').slice(0, 300),
-      iteration,
-      status: evaluated.verdict.status,
-      turnId: context.turnId,
-    });
-    if (evaluated.verdict.status === 'sufficient' || evaluated.verdict.gaps.length === 0) {
-      break;
-    }
-    gaps = evaluated.verdict.gaps;
-  }
-  return { stepCount, usages };
-};
-
 /** The whole path a brief takes when nothing throws. */
 const composeAndExtract = async (
   context: GraphContext,
@@ -345,7 +318,11 @@ const composeAndExtract = async (
   target: ResearchTarget,
   progress: ScoutProgress
 ): Promise<ScoutOutcome> => {
-  const research = await runResearch(context, deps, target);
+  const research = await runResearch(context, {
+    evaluate: async () => evaluateResearch(context, deps, target),
+    search: async (gaps) => runSearch(context, deps, target, gaps),
+    spentTokens: () => target.session.spentTokens,
+  });
   progress.stepCount = research.stepCount;
   progress.usages.push(...research.usages);
 

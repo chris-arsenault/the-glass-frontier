@@ -358,6 +358,7 @@ type Verdict = { gaps: string[]; status: 'sufficient' | 'continue' };
  */
 const llmStub = (options?: {
   extractFails?: boolean;
+  verdictFails?: boolean;
   verdicts?: Verdict[];
 }): GraphContext['llm'] => {
   let verdictIndex = 0;
@@ -382,6 +383,9 @@ const llmStub = (options?: {
       schemaName: string
     ) => {
       if (schemaName === 'retrieval_verdict_schema') {
+        if (options?.verdictFails === true) {
+          return Promise.reject(new Error('No toolUse block in Bedrock response.'));
+        }
         const verdicts = options?.verdicts ?? [{ gaps: [], status: 'sufficient' as const }];
         const verdict = verdicts[Math.min(verdictIndex, verdicts.length - 1)];
         verdictIndex += 1;
@@ -629,5 +633,26 @@ describe('runProseAgent', () => {
     expect(outcome.brief.character).toBe('not established this turn');
     expect(outcome.prose).toContain('counts the tithe');
     expect(outcome.sidecar).toEqual([]);
+    expect(outcome.briefFailed).toBe(true);
+  });
+
+  it('still writes the brief when the judge throws mid-research', async () => {
+    const stubLoop = {
+      run: () => Promise.resolve({
+        stepCount: 2,
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      }),
+    } as unknown as AgentLoopClient;
+    const context = agentContext();
+    // Kimi's evaluator threw on every turn of Warm Argument's ore and took ten
+    // tool calls' worth of retrieved canon with it. Research is best-effort;
+    // the brief is not.
+    context.llm = llmStub({ verdictFails: true });
+
+    const outcome = await runProseAgent(context, { agentLoop: stubLoop });
+
+    expect(outcome.briefFailed).toBe(false);
+    expect(outcome.brief.character).not.toBe('not established this turn');
+    expect(outcome.stepCount).toBe(2);
   });
 });

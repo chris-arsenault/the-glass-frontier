@@ -16,7 +16,13 @@ type LlmClassifierOptions<TParsed> = {
   maxOutputTokens?: number;
 };
 
-const CLASSIFIER_MAX_TOKEN = 1500;
+/**
+ * Headroom, not length. At 1,500 the inventory-delta classifier ran out of
+ * output mid-response on turn 0 of The train that runs on Warm Argument's ore,
+ * three retries deep, and failed the whole turn back to the player. Schemas
+ * bound these answers; a ceiling only decides whether one arrives.
+ */
+const CLASSIFIER_MAX_TOKEN = 16_000;
 const CLASSIFIER_REASONING_EFFORT = 'low';
 
 export class LlmClassifierNode<TParsed> implements GraphNode {

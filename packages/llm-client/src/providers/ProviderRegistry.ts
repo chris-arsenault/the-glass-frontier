@@ -52,22 +52,22 @@ export class ProviderRegistry {
         status: 400,
       });
     }
-    if (request.maxOutputTokens > config.maxOutputTokens) {
-      throw new ProviderError({
-        code: 'max_output_tokens_exceeded',
-        details: {
-          maxOutputTokens: config.maxOutputTokens,
-          modelId: config.modelId,
-          requestedTokens: request.maxOutputTokens,
-        },
-        message: `${config.modelId} accepts at most ${config.maxOutputTokens} output tokens`,
-        status: 400,
-      });
-    }
     return {
       model: config,
       provider: this.#getProvider(config),
-      request: { ...request, model: config.apiModelId },
+      request: {
+        ...request,
+        // Clamp rather than reject. A caller asking for more headroom than a
+        // model has is asking for "as much as you will give me", and failing
+        // the turn over it forced every caller to pick a cap small enough for
+        // the smallest model in the catalog. Those caps then starved the
+        // reasoning models: at 1,000 tokens kimi-k2-thinking spent its whole
+        // allowance thinking and returned no tool call at all, three retries
+        // deep, on every turn of The train that runs on Warm Argument's ore.
+        // Output length is the instructions' business, not a ceiling's.
+        maxOutputTokens: Math.min(request.maxOutputTokens, config.maxOutputTokens),
+        model: config.apiModelId,
+      },
     };
   }
 

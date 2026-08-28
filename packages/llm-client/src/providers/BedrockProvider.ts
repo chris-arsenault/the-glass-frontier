@@ -221,6 +221,12 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
     return new ProviderError({
       code,
       details: { message },
+      // Without this the message went only into `details`, and ProviderError
+      // fell back to naming itself after `code` — so every plain Error became
+      // the string "ProviderError: Error" in the logs. Three retries and two
+      // chronicles were spent tracing one of those back to its real text,
+      // which was "No toolUse block in Bedrock response."
+      message,
       retryable,
       status,
     });

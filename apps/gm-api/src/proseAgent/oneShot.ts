@@ -6,7 +6,8 @@ import { PromptComposer } from '../prompts/prompts';
 import type { GraphContext } from '../types';
 import { buildOneShotContext } from './oneShotContext';
 
-const ONE_SHOT_MAX_OUTPUT_TOKENS = 2_000;
+/** Headroom, not length: the template states the paragraph count. */
+const ONE_SHOT_MAX_OUTPUT_TOKENS = 16_000;
 const ONE_SHOT_REASONING_EFFORT = 'low';
 
 const ONE_SHOT_TEMPLATES = new Map<IntentType, PromptTemplateId>([
@@ -57,6 +58,36 @@ const resolveTemplate = (intentType: IntentType): PromptTemplateId => {
   return templateId;
 };
 
+const narrate = async (
+  context: GraphContext,
+  withEntities: GraphContext,
+  templateId: PromptTemplateId,
+  modelId: string
+): ReturnType<GraphContext['llm']['generate']> => {
+  const prompt = await new PromptComposer(context.templates).buildPrompt(
+    templateId, withEntities
+  );
+  return context.llm.generate({
+    ...prompt,
+    maxOutputTokens: ONE_SHOT_MAX_OUTPUT_TOKENS,
+    metadata: {
+      chronicleId: context.chronicleId,
+      nodeId: templateId,
+      panel: 'one-shot',
+      // Without this every one-shot lands in the audit as a bare
+      // `action-resolver` with no model on it, so three panelists writing the
+      // same turn are indistinguishable from each other in the record.
+      panelModel: modelId,
+      playerId: context.chronicleState.chronicle.playerId,
+      turnId: context.turnId,
+      turnSequence: String(context.turnSequence),
+    },
+    model: modelId,
+    player: context.llmPlayer,
+    reasoningEffort: ONE_SHOT_REASONING_EFFORT,
+  }, 'string');
+};
+
 export const runOneShotProse = async (
   context: GraphContext,
   modelIdOverride?: string
@@ -73,24 +104,7 @@ export const runOneShotProse = async (
     entityContext: retrieved.entityContext,
     entityRelationships: retrieved.relationships,
   };
-  const prompt = await new PromptComposer(context.templates).buildPrompt(
-    templateId, withEntities
-  );
-  const narration = await context.llm.generate({
-    ...prompt,
-    maxOutputTokens: ONE_SHOT_MAX_OUTPUT_TOKENS,
-    metadata: {
-      chronicleId: context.chronicleId,
-      nodeId: templateId,
-      panel: 'one-shot',
-      playerId: context.chronicleState.chronicle.playerId,
-      turnId: context.turnId,
-      turnSequence: String(context.turnSequence),
-    },
-    model: model.modelId,
-    player: context.llmPlayer,
-    reasoningEffort: ONE_SHOT_REASONING_EFFORT,
-  }, 'string');
+  const narration = await narrate(context, withEntities, templateId, model.modelId);
   if (typeof narration.message !== 'string') {
     throw new Error('The one-shot narrator returned a non-text narration.');
   }

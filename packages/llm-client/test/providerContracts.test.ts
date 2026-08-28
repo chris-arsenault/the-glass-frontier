@@ -175,18 +175,37 @@ describe('model resolution', () => {
       .toThrow('is not registered');
   });
 
-  it('rejects unsupported effort and output limits before provider invocation', () => {
+  it('rejects an effort the model does not have, and a nonsensical limit', () => {
     expect(() => registry().resolve({
       ...request(NOVA_MODEL_ID),
       reasoningEffort: 'high',
     })).toThrow('does not support high reasoning effort');
     expect(() => registry().resolve({
       ...request(NOVA_MODEL_ID),
-      maxOutputTokens: 65_537,
-    })).toThrow('accepts at most 65536 output tokens');
-    expect(() => registry().resolve({
-      ...request(NOVA_MODEL_ID),
       maxOutputTokens: 0,
     })).toThrow('must be a positive integer');
+  });
+
+  it('clamps an over-large output request to what the model allows', () => {
+    // Asking for more headroom than a model has is a request for "as much as
+    // you will give me". Rejecting it forced every caller down to the smallest
+    // model in the catalog, and those caps then starved the reasoning models
+    // mid-thought.
+    const resolved = registry().resolve({
+      ...request(NOVA_MODEL_ID),
+      maxOutputTokens: 65_537,
+    });
+
+    expect(resolved.request.maxOutputTokens).toBe(65_536);
+    expect(resolved.model.maxOutputTokens).toBe(65_536);
+  });
+
+  it('leaves a request inside the model\'s ceiling untouched', () => {
+    const resolved = registry().resolve({
+      ...request(NOVA_MODEL_ID),
+      maxOutputTokens: 4_000,
+    });
+
+    expect(resolved.request.maxOutputTokens).toBe(4_000);
   });
 });

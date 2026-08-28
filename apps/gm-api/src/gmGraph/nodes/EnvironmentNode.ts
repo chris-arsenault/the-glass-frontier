@@ -12,7 +12,8 @@ import {
 import { applyWorldTurn, visibleFronts } from '../../world/fronts';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
 
-const MAX_OUTPUT_TOKENS = 1_500;
+/** Headroom, not length: the instructions ask for two or three sentences. */
+const MAX_OUTPUT_TOKENS = 16_000;
 const REASONING_EFFORT = 'low';
 /** The world's own prior lines; three turns of record is continuity enough. */
 const WORLD_RECORD_TURNS = 3;

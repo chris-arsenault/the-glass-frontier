@@ -30,6 +30,7 @@ export type ChronicleFragmentTypes =
   | 'beats'
   | 'intent'
   | 'skill-check'
+  | 'skill-check-record'
   | 'user-message'
   | 'recent-events'
   | 'last-reply'
@@ -108,7 +109,7 @@ ChronicleFragmentTypes[]
   ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['turn-judge', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', SKILL_CHECK_FRAGMENT, 'location', ENTITY_REFERENCES_FRAGMENT, 'wrap']],
+  ['turn-judge', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', 'skill-check-record', 'location', ENTITY_REFERENCES_FRAGMENT, 'wrap']],
   ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 
@@ -133,6 +134,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['scene', sceneFragment],
   ['seed', seedFragment],
   [SKILL_CHECK_FRAGMENT, skillCheckFragment],
+  ['skill-check-record', skillCheckRecordFragment],
   ['tone', toneFragment],
   [USER_MESSAGE_FRAGMENT, userMessageFragment],
   ['wrap', wrapFragment],
@@ -391,6 +393,22 @@ function chronicleToneFragment(context: GraphContext): string {
 
 function skillCheckFragment(context: GraphContext): Record<string, unknown> {
   return formatSkillCheck(context.skillCheckPlan, context.skillCheckResult);
+}
+
+/**
+ * The check as a recorder needs it, tier and all.
+ *
+ * Narrators get the framing sentence and no vocabulary, which is right for
+ * prose and wrong for the turn judge: asked to label the outcome in its own
+ * words it read a narration that sounded like success and wrote "(it worked)"
+ * onto a regress. A log line is not prose, and the tier is the fact it is
+ * recording.
+ */
+function skillCheckRecordFragment(context: GraphContext): Record<string, unknown> {
+  return {
+    ...formatSkillCheck(context.skillCheckPlan, context.skillCheckResult),
+    tier: context.skillCheckResult?.outcomeTier,
+  };
 }
 
 /**

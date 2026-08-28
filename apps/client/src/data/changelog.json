@@ -628,5 +628,26 @@
     "summary": "The GM stops reading the rulebook out loud, and a failed research pass says why",
     "details": "One narrator wrote your 'fledgling negotiate deals skill' straight into the story. The rule against naming the machinery — drive, flaw, instinct, skill, check, tier, momentum — existed in exactly one of the thirteen prompts that write prose; it is now in all of them, and the line describing how a roll went no longer quotes the skill's internal name either. Separately, when the GM's research pass fails the turn still continues on what it has, but the record of that failure said only 'Error' with no further detail, and reported the work as though none had been done — so a pass that searched and lost its findings looked identical to one that never searched. It now names the stage that failed and what it rejected, keeps the honest count of what was retrieved, and marks the resulting narration so the two can be told apart.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-29-room-to-think",
+    "releasedAt": "2026-08-29",
+    "summary": "Turns stop failing because a model ran out of room to think",
+    "details": "Every stage of a turn had a hard ceiling on how much it could produce, and those ceilings were set small — small enough that a model which thinks before it answers spent the whole allowance thinking and returned nothing usable. That is what failed a turn outright with 'the turn could not be completed', and what silently emptied the GM's research on one of the three models every single turn. The ceilings are now generous everywhere and are clamped automatically to whatever each model actually supports; how long an answer should be is stated in the instructions, where a model can read it, instead of enforced by a cutoff it cannot see. Research also became best-effort: if the pass that judges whether enough has been found fails, the turn is now written from whatever was already retrieved rather than throwing all of it away. And the error records that hid all of this behind the single word 'Error' now carry the actual reason.",
+    "type": "bugfix"
+  },
+  {
+    "id": "2026-08-29-your-inventions-are-real",
+    "releasedAt": "2026-08-29",
+    "summary": "The GM stops arguing with things you said you did",
+    "details": "You wrote that you cast a ward, and the GM replied 'You didn't cast Ward—you never do.' A GM may decide your attempt failed; it may never decide it didn't happen. When you name a capability, a device, or a piece of craft the world has never written down, it is yours and it is real, and the narration now has to say what it does. The same instinct was making the GM's research chase its own tail: it treated every name you invented as a missing piece of world lore and spent its whole research budget hunting for a definition that was never going to exist. A name with no history is simply new — the story is free to make it, and the research moves on.",
+    "type": "improvement"
+  },
+  {
+    "id": "2026-08-29-honest-turn-records",
+    "releasedAt": "2026-08-29",
+    "summary": "Turn summaries record the roll instead of guessing at it",
+    "details": "A turn that went badly was being logged as '(it worked)', because the part of the engine that writes the one-line summary had been asked to judge the outcome from how the narration read — and narration about a discovery reads like success even when the dice said otherwise. It now copies the recorded result instead of interpreting it. Story beats also get another push: the judge is asked outright what the story now owes an ending that it didn't owe before this turn, and told not to talk itself out of the answer because the chronicle's opening premise could be stretched to cover it. Comparison panels also record which model wrote each one, which they previously did not.",
+    "type": "bugfix"
   }
 ]

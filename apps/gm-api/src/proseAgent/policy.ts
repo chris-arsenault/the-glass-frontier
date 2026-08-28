@@ -50,10 +50,17 @@ are the turn it serves.
 
 Sufficient means a writer who has never seen this world could write the scene
 from this material alone: what the place does to whoever stands in it, who is
-present and what each wants, what past turns established about whatever the
-player touches, and the canon behind every name the player used. A name the
-player treats as established that appears in neither RETRIEVED nor
-WORLD-INDEX is a gap: what the chronicle has already said about it.
+present and what each wants, and what past turns established about whatever
+the player touches.
+
+A name the player used that canon does not hold and past turns have not
+established is not a gap. It is new fiction, and the answer is already in
+hand: nothing is written, so the story is free to make it. Searching again
+cannot close it, and listing it as a gap spends a round that will come back
+empty — every research loop of The train that runs on Warm Argument's ore ran
+its full budget asking what a "rail-spine" and a "lift timer" are in canon,
+and the answer was always going to be nothing. A gap is something the world
+knows and the researcher has not yet asked for.
 
 You deliver the verdict by calling the retrieval_verdict tool, and that call is
 your whole response: prose written beside it is discarded unread.

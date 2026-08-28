@@ -37,7 +37,8 @@ const TurnJudgeSchema = z.object({
 
 type TurnJudgeResponse = z.infer<typeof TurnJudgeSchema>;
 
-const TURN_JUDGE_MAX_TOKENS = 3000;
+/** Headroom, not length: the template bounds every field it asks for. */
+const TURN_JUDGE_MAX_TOKENS = 16_000;
 
 class TurnJudgeNode extends LlmClassifierNode<TurnJudgeResponse> {
   readonly id = 'turn-judge';
