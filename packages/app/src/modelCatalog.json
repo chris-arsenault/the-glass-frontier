@@ -1,7 +1,7 @@
 {
   "defaults": {
-    "classification": "amazon-nova-2-lite",
-    "prose": "claude-sonnet-5"
+    "classification": "amazon-nova-lite",
+    "prose": "kimi-k2-thinking"
   },
   "models": [
     {
@@ -56,6 +56,17 @@
       "displayName": "Amazon Nova Pro",
       "maxOutputTokens": 5000,
       "modelId": "amazon-nova-pro",
+      "providerId": "bedrock",
+      "reasoningEfforts": ["low"]
+    },
+    {
+      "apiModelId": "us.amazon.nova-lite-v1:0",
+      "contextWindow": 300000,
+      "costPer1kInput": 0.00006,
+      "costPer1kOutput": 0.00012,
+      "displayName": "Amazon Nova Lite",
+      "maxOutputTokens": 10000,
+      "modelId": "amazon-nova-lite",
       "providerId": "bedrock",
       "reasoningEfforts": ["low"]
     },

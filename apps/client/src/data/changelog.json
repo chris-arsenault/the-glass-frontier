@@ -649,5 +649,12 @@
     "summary": "Turn summaries record the roll instead of guessing at it",
     "details": "A turn that went badly was being logged as '(it worked)', because the part of the engine that writes the one-line summary had been asked to judge the outcome from how the narration read — and narration about a discovery reads like success even when the dice said otherwise. It now copies the recorded result instead of interpreting it. Story beats also get another push: the judge is asked outright what the story now owes an ending that it didn't owe before this turn, and told not to talk itself out of the answer because the chronicle's opening premise could be stretched to cover it. Comparison panels also record which model wrote each one, which they previously did not.",
     "type": "bugfix"
+  },
+  {
+    "id": "2026-08-29-faster-cheaper-defaults",
+    "releasedAt": "2026-08-29",
+    "summary": "New default models: quicker bookkeeping, better prose",
+    "details": "The work a turn does behind the narration — classifying what you attempted, planning the roll, recording what changed, tracking your inventory — accounts for around thirty seconds of every turn. That work now runs on Amazon Nova Lite, measured at 3.4 seconds against the previous default's 4.2 on the heaviest of those calls, and costing a fraction as much. Narration now defaults to Kimi K2 Thinking, which wrote the strongest prose across every chronicle we compared: concrete images, endings that hand you a choice instead of a portent, and the fewest lapses into restating what you just typed. Both defaults apply to new players. If you have already chosen your own models in settings, your choices are untouched.",
+    "type": "improvement"
   }
 ]

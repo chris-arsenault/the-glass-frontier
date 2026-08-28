@@ -152,9 +152,11 @@ data "aws_iam_policy_document" "bedrock_invoke" {
     resources = [
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.anthropic.claude-sonnet-5",
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-2-lite-v1:0",
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-lite-v1:0",
       "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/us.amazon.nova-pro-v1:0",
       "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5",
       "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
       "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
       "arn:aws:bedrock:*::foundation-model/cohere.embed-v4:0",
       "arn:aws:bedrock:*::foundation-model/moonshot.kimi-k2-thinking",

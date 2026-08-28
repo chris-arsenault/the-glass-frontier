@@ -8,6 +8,10 @@ VALUES
   ('gpt-5.6-sol', 'gpt-5.6-sol', 'GPT-5.6 Sol', 'openai', true, 1050000, 128000, 0.005, 0.03, ARRAY['low', 'medium', 'high']),
   ('claude-sonnet-5', 'us.anthropic.claude-sonnet-5', 'Claude Sonnet 5', 'bedrock', true, 1000000, 128000, 0.003, 0.015, ARRAY['low', 'medium', 'high']),
   ('amazon-nova-pro', 'us.amazon.nova-pro-v1:0', 'Amazon Nova Pro', 'bedrock', true, 300000, 5000, 0.0008, 0.0016, ARRAY['low']),
+  -- Nova Lite v1 takes no reasoning configuration at all — it rejects one as
+  -- malformed — and the provider only sends that field for Nova 2 Lite. Its
+  -- output ceiling is 10k, measured; the registry clamps callers to it.
+  ('amazon-nova-lite', 'us.amazon.nova-lite-v1:0', 'Amazon Nova Lite', 'bedrock', true, 300000, 10000, 0.00006, 0.00012, ARRAY['low']),
   ('amazon-nova-2-lite', 'us.amazon.nova-2-lite-v1:0', 'Amazon Nova 2 Lite', 'bedrock', true, 1000000, 65536, 0.0003, 0.00125, ARRAY['low', 'medium']),
   -- Open-weight models, measured against Bedrock us-east-1 on 2026-08-27: all
   -- on-demand, all accept Converse tool use and a forced tool choice, none take
@@ -33,8 +37,8 @@ ON CONFLICT (model_id) DO UPDATE SET
 -- default: leaving them unset is what keeps a turn at two generations.
 INSERT INTO app.model_category_config (category, model_id, player_id, slot)
 VALUES
-  ('classification', 'amazon-nova-2-lite', NULL, 1),
-  ('prose', 'claude-sonnet-5', NULL, 1)
+  ('classification', 'amazon-nova-lite', NULL, 1),
+  ('prose', 'kimi-k2-thinking', NULL, 1)
 ON CONFLICT (category, player_id, slot) DO UPDATE SET
   model_id = EXCLUDED.model_id,
   updated_at = now();
