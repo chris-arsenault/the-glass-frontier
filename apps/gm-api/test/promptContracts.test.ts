@@ -37,7 +37,7 @@ describe('narration prompt contracts', () => {
       expect(prompt).toContain('requiresCheck');
       // The outcome reaches every narrator as a sentence to follow, never as a
       // tier name it was never taught to read.
-      expect(prompt).toContain('one sentence telling you how the turn went');
+      expect(prompt).toContain('one sentence describing how the turn went');
       expect(prompt).not.toContain('complication seeds');
     }
   });

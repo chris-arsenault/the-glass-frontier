@@ -76,7 +76,7 @@ describe('environment node', () => {
     expect(captured.text).not.toContain('pry the access panel');
     expect(captured.text).not.toContain('Vex');
     expect(captured.text).not.toContain('INTENT');
-    expect(captured.instructions).toContain('Nothing is running yet');
+    expect(captured.instructions).toContain('No fronts are running yet');
   });
 
   it('starts a front for a figure canon has never written down', async () => {
