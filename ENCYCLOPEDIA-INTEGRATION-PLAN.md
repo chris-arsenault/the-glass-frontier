@@ -1,1352 +1,959 @@
 # Encyclopedia integration plan
 
-Status: planned; implementation not started
+Status: implemented and verified locally; production reset pending
 
 Created: 2026-08-27
 
+Updated from source and implementation: 2026-08-31
+
 Sulion plan: `9f4946db-b23d-4f2b-9dac-e051812537cb`
 
-Production data strategy: reset and rebuild the Glass Frontier database; do
-not migrate or restore legacy rows into the new schema.
+Reviewed source: `tsonu-canon@48e77f513839`, site schema version 13
 
-This is the implementation plan for adding a first-class Encyclopedia to
-Glass Frontier. The accepted domain model and authoring contract live in
+Production data strategy: reset the Glass Frontier production database and
+rebuild it through the normal migration and seed path. Do not migrate or
+restore legacy rows into the new schema.
+
+The accepted domain and source contract live in
 [the Encyclopedia reference catalog design](docs/design/encyclopedia-reference-catalog.md).
-This plan covers the game-side integration: database ownership, canon import,
-character origin, Chronicle creation, GM retrieval, player UI, a clean
-production database reset, and verification.
+This file is the executable Glass Frontier plan.
 
 ## Outcome
 
-The Encyclopedia is a separate catalog of reusable world material. It gives
-the GM concrete organisms, roles, practices, techniques, technology, vehicle
-classes, resources, phenomena, cultures, and ordinary place features without
-turning those subjects into named Atlas entities.
+Glass Frontier imports the authored Encyclopedia beside the Atlas and uses it
+for character origin, Chronicle grounding, GM retrieval, and player browsing.
+Reusable material never enters the named-entity graph.
 
-The shipped system must preserve three namespaces:
+The system preserves three namespaces:
 
 | Namespace | Contains | Chronicle anchor | Mutable through play |
 |---|---|---:|---:|
-| Atlas | Particular places, people, factions, vessels, artifacts, and events | When explicitly eligible | Yes |
-| Encyclopedia | Reusable types, practices, organisms, materials, and patterns | Never | No |
-| Chronicle | People, places, objects, and concepts established only in one play history | Never a global anchor | Within that Chronicle |
+| Atlas | Particular places, people, factions, vessels, artifacts, and events | When eligible | Yes |
+| Encyclopedia | Reusable types and recurring patterns | Never | No |
+| Chronicle | Facts and inventions established in one play history | Never a global anchor | Within that Chronicle |
 
-`Reference` is not a fourth content namespace. It describes the runtime use of
-an Encyclopedia entry: a reference match, reference usage, or reference
-mention.
+`Reference` is not a fourth namespace. It names how an Encyclopedia entry was
+used or mentioned during play.
 
-The end-to-end path is:
+The runtime path is:
 
 ```text
-tsonu-canon snapshot
-        |
-        v
-atomic canon importer
-   |                  |
-   v                  v
-Atlas tables      Encyclopedia tables
-   |                  |
-WorldSchemaStore  EncyclopediaStore
-   \                  /
-    \                /
- typed WORLD-INDEX and lookup_world
+tsonu-canon internal site bundle
               |
-        Chronicle GM
-           |
-           v
-named entity focus and separate reference usage
+              v
+       snapshot translator
+        /       |        \
+       v        v         v
+    Atlas   Encyclopedia  context tags
+       \        |        /
+        \       v       /
+         unified search/open
+                |
+          Chronicle GM
+                |
+     entity focus + reference usage
 ```
 
 ## Required boundaries
 
-These constraints define correctness. They are not implementation
-preferences.
+- Encyclopedia entries never become `HardState`, `node`, `entity`, `edge`, or
+  `lore_fragment` records.
+- The Encyclopedia has no relationship graph.
+- Atlas `type_of` and membership declarations are classifications, not graph
+  edges.
+- Encyclopedia entries never become locations, anchors, scene subjects, front
+  agents, entity-roster entries, entity-focus entries, or closer proposals.
+- Named-entity resolution remains Atlas-only. Encyclopedia mention resolution
+  never steals an Atlas span.
+- A contextual match is a candidate, not proof that an instance is present.
+- No match says nothing about what may exist. Players and the GM may invent new
+  material.
+- Topic tags never act as applicability tags.
+- Character behavior is never inferred from species or culture.
+- Player APIs exclude DM entries, GM sections, usage instructions, selection
+  evidence, and private reference usage.
+- Game code treats Encyclopedia kinds and subkinds as opaque strings.
+- Model-facing retrieval uses slugs only. It never accepts or returns database
+  UUIDs.
 
-- Encyclopedia entries do not become `HardState` records.
-- Encyclopedia entries do not receive `node`, `entity`, `edge`, or
-  `lore_fragment` rows.
-- Atlas and Encyclopedia retain separate persistence, slug, relationship,
-  embedding, named-resolution, and API namespaces. The GM retrieves both
-  through one typed `lookup_world` facade.
-- Encyclopedia entries cannot become Chronicle locations, anchors, scene
-  subjects, target entities, front agents, entity-roster entries, entity-focus
-  entries, or Chronicle-closer entity proposals.
-- Atlas named-entity lookup never falls back to Encyclopedia lookup, and
-  Encyclopedia mention lookup never falls back to Atlas lookup. A
-  `lookup_world` search intentionally queries both and labels every result.
-- A matching Encyclopedia entry is a candidate, not an assertion that an
-  instance is present.
-- No match says nothing about what is possible. Players and the GM may always
-  invent new material.
-- Topic tags never double as applicability tags.
-- Character behavior is never inferred deterministically from species or
-  culture.
-- Player APIs exclude GM-only entries, sections, selection evidence, and
-  private reference usage.
-- The implementation does not branch on the current set of Encyclopedia
-  kinds. Imported capabilities drive behavior.
+## Authoritative source state
 
-## Current assumptions that must change
+Generate the source artifact in `../tsonu-canon` with:
 
-### Canon import
+```text
+SITE_WORLD=glass-frontier make site-data
+```
 
-`packages/worldstate/src/tsonuBundle.ts` currently converts every source entry
-to `ProposedEntity`, every owned prose section to `ProposedLoreFragment`, and
-every outgoing source connection to an Atlas relationship. The checked-in
-artifact is a single `CanonProposal`, and `CanonWriter` reconciles that proposal
-as the authoritative import snapshot.
+The current Glass importer already consumes:
 
-The new importer must receive explicit Atlas, Encyclopedia, and guide
-collections. It must not classify source entries by kind or title.
+```text
+../tsonu-canon/build/site-internal/worlds/glass-frontier.json
+```
 
-### Persistence
+That single file now contains the private Atlas records, context-tag registry,
+and Encyclopedia bundle needed for the first integration.
 
-`WorldSchemaStore` currently owns Atlas entities, graph relationships, lore,
-context slices, schema vocabulary, and entity embeddings. Encyclopedia
-operations need a distinct `EncyclopediaStore`; adding reference methods to
-`WorldSchemaStore` would erase the boundary at the main persistence interface.
+At the reviewed revision:
 
-The repository's active persistence package is `packages/worldstate`. New
-storage belongs there unless that package is deliberately renamed in a
-separate change.
+- schema version: 13;
+- internal Encyclopedia records: 283;
+- complete and player-visible: 283;
+- draft: zero;
+- shell: zero;
+- kinds: seven;
+- context tags: 21, currently all place-scoped;
+- global player entries: 79;
+- contextual player entries: 204;
+- Atlas primary `type_of` declarations: 290;
+- Atlas additional memberships: 64;
+- playable origins: five species and four cultures, all complete;
+- GM-only whole Encyclopedia entries: zero currently;
+- entries with GM prose sections: three.
 
-### Character origin
+`make check WORLD=glass-frontier` passes with zero errors, warnings, futures,
+or conversions.
 
-`CharacterOrigin` currently stores four IDs described and resolved as Atlas
-entity IDs. That assumption is repeated in:
+## Source findings that change the old plan
 
-- `packages/dto/src/Character.ts`
-- `packages/app/src/promptContext/promptViews.ts`
-- `apps/chronicle-api/src/router.ts`
-- `apps/chronicle-api/src/services/chronicleSeedService.ts`
-- `apps/client/src/components/wizards/CharacterCreationWizard`
-- `apps/client/src/components/overview/CharacterOverview`
-- character persistence mirrors
+### No Encyclopedia relationship graph
 
-Species and culture must move to Encyclopedia references. Homeland and
-allegiance remain Atlas entities.
+The old plan proposed Encyclopedia relationship vocabularies and relationship
+tables. The source deliberately removed that model.
 
-### Chronicle creation
+An Atlas record may declare:
 
-Chronicle start currently selects an Atlas location and a one-hop eligible
-Atlas anchor, then generates seeds and an opening from location lore, anchor
-lore, tone, and four origin names. The Encyclopedia should enrich this flow
-without becoming another required selection step.
+- one primary `encyclopedia_type`, sourced from `type_of`;
+- repeatable `encyclopedia_memberships`, each carrying an Encyclopedia kind and
+  external key.
 
-### GM retrieval
+The Encyclopedia export includes derived `instances` and `members` lists for
+display. Glass persists the Atlas declarations and derives reverse queries. It
+does not persist the reverse lists as separate authority.
 
-The canonical GM already uses an agentic prose-retrieval subsystem:
+### Seven opaque kinds
 
-- a compact `WORLD-INDEX`;
-- Atlas and history tools;
-- bounded search/evaluation rounds;
-- a composed `TurnBrief`;
-- provenance-filtered entity sidecars;
-- a storyteller with no retrieval tools.
+The source merged the earlier practice, institution, vehicle, and place-feature
+ideas into seven kinds:
 
-The Encyclopedia extends that subsystem. The existing source-specific search,
-open, lore, relationship, and history tools should collapse behind one typed
-`lookup_world` facade rather than adding Encyclopedia-specific tools. This
-does not restore a broad fixed entity roster or replace the rest of the turn
-graph.
+- `lifeform`
+- `role`
+- `technology`
+- `resource`
+- `ability`
+- `phenomenon`
+- `culture`
 
-### Player UI
+The internal bundle does not export kind descriptions, classification
+definitions, field definitions, tier definitions, or a relationship
+vocabulary. The game therefore derives facets from imported entries and does
+not add vocabulary tables.
 
-The current player-facing world reader is the Atlas. Character origin, Atlas
-entity popovers, the Nearby Entities panel, Chronicle start, and entity links
-all assume one world namespace. The UI needs separate Atlas and Encyclopedia
-destinations while retaining one coherent World Guide.
+### Status policy is dormant for the current corpus
 
-## Contract adjustments before content production
+The schema supports draft and shell entries, but the completed content set has
+neither. The runtime still excludes drafts and shells from proactive context
+and excludes shells from retrieval, so later partial authoring does not require
+a game schema change. These statuses do not otherwise affect this cutover.
 
-The entry and applicability contract in the design document remains the base.
-The game integration requires four targeted additions and one change.
+### Sections have no independent identity
 
-### Dynamic Encyclopedia schema
+Encyclopedia sections carry heading, text, and audience but no stable source
+key. This is intentional. The importer replaces the complete ordered section
+array with its owning entry, so no `encyclopedia_section` table or positional
+reconciliation is needed.
 
-The game must not compile the current kinds into a Zod enum. Import their
-definitions with the snapshot:
+### Guide pages are a separate source surface
+
+`Life in the System` and the home page are emitted in the public multi-file site
+tree, not the internal single-file bundle. Guide ingestion is outside this
+integration. The initial World Guide has Atlas and Encyclopedia surfaces only.
+Adding Guides later requires either an internal guide collection in Tsonu or an
+explicit second artifact input.
+
+## Glass data contract
+
+### Imported source slice
+
+Extend `TsonuBundle` and `TsonuEntry` in
+`packages/worldstate/src/tsonuBundle.ts` to parse the fields that now exist:
 
 ```ts
-type EncyclopediaSchema = {
-  kinds: Array<{
-    id: string;
-    displayName: string;
-    description?: string;
-    sortOrder: number;
-  }>;
+type TsonuBundle = {
+  schema_version: number;
+  revision: string;
+  context_tags: TsonuContextTag[];
+  encyclopedia: {
+    entries: TsonuEncyclopediaEntry[];
+  };
+  entries: Record<string, { entry: TsonuEntry }>;
+};
 
-  relationshipTypes: Array<{
-    id: string;
-    displayName: string;
-    inverseDisplayName?: string;
-    description?: string;
-  }>;
-
-  contextTags: Array<{
-    id: string;
-    description: string;
-    scopes: ContextScope[];
+type TsonuEntry = {
+  // existing fields
+  context_tags: string[];
+  encyclopedia_type: string | null;
+  encyclopedia_memberships: Array<{
+    kind: string;
+    external_key: string;
   }>;
 };
 ```
 
-`EncyclopediaEntry.kind` and `ReferenceRelationship.relationship` are nonempty
-strings validated against this imported schema. Changing or merging a kind
-then requires a canon import, not a Glass Frontier deployment.
+Define the full Encyclopedia source shape from the reviewed schema in the
+durable design. Parse it with Zod rather than casting raw JSON to a TypeScript
+type. `status: 'shell'` makes summary, availability, and prevalence nullable.
 
-Closed runtime capabilities remain typed:
+### Runtime DTOs
 
-- `characterRole`
-- `visibility`
-- `prevalence`
-- `audience`
-- applicability quantifiers and scopes
-- reference-usage roles
+Add shared DTOs under `packages/dto/src/world` for:
 
-### Entry visibility
+- `EncyclopediaEntry`;
+- `EncyclopediaEntrySummary`;
+- `EncyclopediaAvailability` and selectors;
+- `ContextTagDefinition`;
+- `EncyclopediaClassification`;
+- public list, detail, applicability, and character-option responses;
+- reference usage and public mention snapshots.
 
-Add:
-
-```ts
-visibility: 'player' | 'gm';
-```
-
-Section audience cannot hide an entry's title and summary. A GM-only entry is
-available to internal retrieval but absent from player list, search, detail,
-association, and applicability endpoints.
-
-### Stable section identity
-
-Each section needs a stable source key:
+The runtime entry maps source names to camelCase:
 
 ```ts
-type EncyclopediaSection = {
+type EncyclopediaEntry = {
+  id: string; // internal persistence only
   externalKey: string;
-  heading: string;
-  text: string;
-  audience: 'player' | 'gm';
+  slug: string;
+  title: string;
+  aliases: string[];
+  kind: string;
+  subkind: string;
+  status: 'shell' | 'draft' | 'complete';
+  dm: boolean;
+  summary?: string;
+  topics: string[];
+  availability?: EncyclopediaAvailability;
+  prevalence?: 'common' | 'uncommon' | 'rare';
+  characterRole?: 'species' | 'culture';
+  originBlurb?: string;
+  facts: Record<string, string | number>;
+  descriptiveIdentity: Record<string, string>;
+  tiers: EncyclopediaAbilityTier[];
+  usage: EncyclopediaUsage;
+  sections: EncyclopediaSection[];
 };
 ```
 
-Heading text and array position are not durable import identities.
+Database IDs remain internal. Player APIs may use them where existing
+application persistence requires them. GM prompts, tool parameters, tool
+results, indexes, and sidecars never include them.
 
-### Character selection copy
+## Persistence
 
-Add `characterBlurb?: string`. Source validation requires it when
-`characterRole` is present. This replaces the concise `originBlurb` currently
-used by character-origin cards without forcing the wizard to truncate a full
-summary.
+Keep the first implementation small. The reviewed corpus has 283 records and
+does not require a normalized rule engine.
 
-### Atlas context tags
+### Tables
 
-Add `contextTags: string[]` to `HardState` and `ProposedEntity`. These values
-are imported source metadata and validated against the Encyclopedia context
-tag registry. They are separate from lore-fragment tags and entity-focus tags.
+Add `encyclopedia_entry`:
 
-## Persistence design
+- UUID primary key;
+- source and stable `external_key`;
+- unique bare `slug` within the Encyclopedia namespace;
+- title and aliases;
+- opaque kind and subkind;
+- status and DM flag;
+- nullable summary, availability, and prevalence;
+- topics;
+- character role and origin blurb;
+- facts, descriptive identity, tiers, usage, and sections as JSONB;
+- source revision and timestamps.
 
-### Vocabulary tables
+Store the 1,024-dimension search embedding, model name, and update time directly
+on `encyclopedia_entry`. The embedding document contains title, kind, subkind,
+summary, facts, descriptive identity, and usage.
 
-Add:
+Add `reference_context_tag` from the imported context-tag registry:
 
-- `encyclopedia_kind`
-- `encyclopedia_relationship_kind`
-- `reference_context_tag`
+- tag id;
+- description;
+- scopes;
+- optional parent;
+- compatible tags.
 
-These are imported, read-only vocabularies. Entry and relationship records use
-foreign keys to them, but application code treats their IDs as opaque strings.
+Add `atlas_encyclopedia_classification`:
 
-### Encyclopedia entries
+- Atlas entity FK;
+- Encyclopedia entry FK;
+- role: `type` or `membership`;
+- membership kind when role is `membership`;
+- import metadata.
 
-Add `encyclopedia_entry` with:
+Constraints permit one primary type per Atlas entity and reject duplicate
+memberships. This table never enters Atlas graph traversal.
 
-- `id uuid primary key`
-- `slug text unique not null`
-- `external_key text not null`
-- `source`, `source_id`, and `batch_id`
-- `title text not null`
-- `aliases text[] not null`
-- `kind text not null`
-- `subkind text`
-- `status text not null`
-- `visibility text not null`
-- `summary text not null`
-- `topics text[] not null`
-- `prevalence text not null`
-- `character_role text`
-- `character_blurb text`
-- `usage jsonb not null`
-- `embedding vector(1024)`
-- `embedding_model text`
-- `embedding_content_hash text`
-- `embedding_updated_at timestamptz`
-- source and update timestamps
+Add `entity.context_tags text[] not null default '{}'` with a GIN index. These
+values come directly from the source bundle.
 
-Use a unique partial index on `(source, external_key)`, matching existing
-Atlas import identity. Use GIN indexes for aliases and topics and an HNSW index
-for embeddings.
+Add three columns to `chronicle_turn`:
 
-The Encyclopedia table does not reference `node`. Separate namespaces permit
-the same UUID or slug to exist temporarily or permanently in Atlas and
-Encyclopedia without generic lookup ambiguity.
+- `player_reference_slugs text[]`;
+- `reference_usage jsonb` containing qualified Encyclopedia slugs and roles;
+- `reference_mentions jsonb` containing exact spans and safe title/summary snapshots.
 
-### Sections and search
+The existing turn copy transaction carries these fields when branching.
 
-Add `encyclopedia_section` with a stable source external key, entry FK,
-heading, body, audience, order, batch/source metadata, and its own full-text
-search vector.
+### Store boundary
 
-Entry search combines:
+Add `EncyclopediaStore` in `packages/worldstate`. It owns:
 
-- exact title and alias matches;
-- full-text title, summary, topic, and section search;
-- semantic entry embedding search.
+- exact external-key and slug reads;
+- list/search reads;
+- complete-entry applicability reads;
+- Atlas classification and reverse-list reads;
+- character-role reads;
 
-The embedding document contains title, aliases, summary, topics, usage cues,
-affordances, pressures, variations, and relevant sections. The Encyclopedia
-corpus receives its own measured semantic threshold rather than inheriting
-the entity threshold.
+`WorldSchemaStore` continues to own Atlas entities, graph relationships, lore,
+and entity embeddings. The cross-source GM facade composes both stores without
+merging their persistence interfaces.
 
-### Applicability index
+### Applicability implementation
 
-Keep the authored `availability` object on `encyclopedia_entry` as JSON. During
-the same write, derive:
+Store authored availability as JSONB. Load the bounded complete-entry set and
+evaluate selectors in application code. Do not create selector and selector-term
+tables initially.
 
-- `encyclopedia_selector(entry_id, selector_index)`
-- `encyclopedia_selector_term(entry_id, selector_index, quantifier, scope,
-  term_kind, value)`
+The matcher:
 
-The derived rows make `all`, `any`, and `none` matching indexed and
-explainable. They are rebuilt from the canonical JSON on every entry write and
-are never edited independently.
+- excludes shell, draft, and DM entries from proactive player-visible use;
+- includes complete global entries;
+- evaluates `all`, `any`, and `none` exactly;
+- validates term scope against the imported tag registry;
+- supports Encyclopedia-identity terms even though the current corpus does not
+  use them;
+- unions exact applicability with direct classifications of the active Atlas
+  record;
+- orders Chronicle prompt material deterministically, preferring direct and
+  contextual entries while preserving kind variety;
+- remains deterministic for the same Chronicle, turn, and context.
 
-The matcher returns the selector and terms that qualified an entry.
+The initial context profile uses the current location's imported place tags.
+The contract can later add world, scene, and participant terms without changing
+storage.
 
-### Reference relationships
+## Authoritative import
 
-Use two tables rather than the generic `edge` table or polymorphic UUID
-columns:
+### Artifact
 
-- `encyclopedia_entry_relationship`
-  - source entry FK
-  - destination entry FK
-  - relationship type FK
-  - optional note
-  - import metadata
-- `atlas_encyclopedia_relationship`
-  - Atlas entity FK
-  - Encyclopedia entry FK
-  - relationship type FK
-  - direction identifying whether Atlas is source or destination
-  - optional note
-  - import metadata
+Replace `tsonuCanonProposal.json` with an authoritative
+`tsonuCanonSnapshot.json` containing:
 
-This allows database-enforced endpoints without making Encyclopedia entries
-traversable through ordinary Atlas relationships.
+- the existing Atlas proposal;
+- context-tag definitions;
+- all Encyclopedia records;
+- Atlas classifications;
+- source schema version and revision;
+- a content-derived source ID covering every collection.
 
-### Atlas context tags
+The snapshot translator is import-only. Chronicle closer proposals continue to
+use the existing mutable `CanonProposal` contract and cannot create or edit
+Encyclopedia records.
 
-Add `entity.context_tags text[] not null default '{}'` and a GIN index. The
-importer writes these tags from `ProposedEntity.contextTags`.
+### Validation
 
-Context aggregation follows explicit containment relationships. It does not
-inherit tags from arbitrary graph neighbors.
+Reject artifact generation before writing the checked-in snapshot when:
 
-### Character origin
+- the bundle schema does not carry the reviewed fields;
+- required collections are missing;
+- external keys or slugs duplicate within a namespace;
+- a non-shell entry lacks summary, availability, or prevalence;
+- a complete entry lacks its usage requirements;
+- a shell contains character-origin behavior;
+- a selector uses an unknown context tag or an invalid scope;
+- an Atlas classification target is missing;
+- a membership kind does not match its target entry kind;
+- a character role is not on a complete, non-DM entry with `origin_blurb`;
+- a section lacks a valid audience;
+- an Atlas source entry would still be imported from the Encyclopedia
+  collection.
 
-The target DTO is:
+Allow the same bare slug in Atlas and Encyclopedia. That is a valid
+cross-namespace collision handled by qualified tool slugs.
+
+### Transaction
+
+Add an authoritative `commitSnapshot` path in `CanonWriter`:
+
+1. Begin one database transaction.
+2. Record the ingest batch.
+3. Upsert context tags.
+4. Upsert Encyclopedia records.
+5. Upsert Atlas entities and context tags.
+6. Resolve and write Atlas classifications.
+7. Write Atlas relationships and lore.
+8. Reconcile stale imported classifications, Encyclopedia records, context
+   tags, Atlas relationships, lore, and entities.
+9. Mark the batch committed.
+10. Commit.
+
+An unresolved classification rolls back the entire snapshot.
+
+The production reset removes any need for legacy entity-to-reference
+conversion. Authoritative reconciliation still matters for later canon imports.
+
+### Embeddings
+
+Backfill Encyclopedia embeddings through the existing deployment embedding
+step. Hash the complete search document so relationship-free metadata changes
+invalidate only affected entries.
+
+Complete entries receive embeddings. The store retains the status filters
+needed to omit future shells and keep future drafts out of proactive matching.
+
+## Character origin
+
+Change the mixed origin contract to name its namespaces:
 
 ```ts
 type CharacterOrigin = {
-  speciesRefId: string;
-  cultureRefId: string;
-  homelandEntityId: string;
-  allegianceEntityId: string;
+  speciesReferenceId: string;
+  cultureReferenceId: string;
+  homelandId: string;
+  allegianceId: string;
   allegianceStance: AllegianceStance;
 };
 ```
 
-Rename the scalar character mirrors accordingly. They remain deliberately
-without FKs because authoritative import reconciliation may remove and
-replace canon rows.
+Species and culture resolve through `EncyclopediaStore`; homeland and allegiance
+resolve through `WorldSchemaStore`.
 
-Add one shared resolver:
+Update:
 
-```ts
-type ResolvedCharacterOrigin = {
-  species: EncyclopediaEntry;
-  culture: EncyclopediaEntry;
-  homeland: HardState;
-  allegiance: HardState;
-};
-```
+- `packages/dto/src/Character.ts`;
+- character persistence and Chronicle props;
+- `apps/chronicle-api` validation and seed services;
+- prompt views;
+- Character Creation Wizard;
+- Character Overview.
 
-It validates `characterRole` for the first two records and `playableAs` for the
-last two. All prompt, UI, and validation callers use this resolver. There is no
-cross-namespace fallback.
+The server validates character role and visibility. Prompts receive resolved
+title, origin blurb, summary, and relevant identity prose, never UUIDs.
 
-### Chronicle usage and mentions
-
-Reference usage is distinct from entity focus and player-visible mentions.
-
-Add private `chronicle_encyclopedia_usage` rows containing:
-
-- Chronicle ID
-- optional turn ID
-- phase: `opening`, `environment`, or `narration`
-- turn sequence
-- reference UUID, external key, and slug snapshot
-- role: `texture`, `interaction`, `character_origin`, or `instance_basis`
-- whether the entry was explicitly named in player-visible prose
-
-Do not use a live FK to `encyclopedia_entry`; usage history must survive canon
-correction or deletion.
-
-Persist player-safe `EncyclopediaMention` snapshots with turn text:
-
-- reference ID and slug
-- safe title, kind, and summary snapshot
-- transcript entry and speaker
-- exact span
-- resolution method
-
-Candidate entries and hidden usage never enter public turn DTOs. Branching
-copies usage and mentions through the selected turn.
-
-### Ingest batches
-
-Extend `ingest_batch` and commit results with:
-
-- Encyclopedia entry count
-- Encyclopedia relationship count
-- guide count
-
-Do not add per-kind counters. Kind changes must remain data-only changes.
-
-## Import architecture
-
-### Generated artifact
-
-Replace the single imported `CanonProposal` artifact with an authoritative
-snapshot:
-
-```ts
-type WorldCanonSnapshot = {
-  source: 'import';
-  sourceId: string;
-
-  atlas: {
-    entities: ProposedEntity[];
-    lore: ProposedLoreFragment[];
-    relationships: ProposedRelationship[];
-  };
-
-  encyclopedia: {
-    schema: EncyclopediaSchema;
-    entries: EncyclopediaEntry[];
-    relationships: ReferenceRelationship[];
-  };
-
-  guides: WorldGuide[];
-};
-```
-
-The source bundle declares the namespace. The Glass Frontier importer does
-not infer it from kind, subkind, source path, relationship count, or
-`isArticle`.
-
-Keep `CanonWriter.commitBatch` for incremental Atlas proposals from play or
-authoring. Add a dedicated authoritative snapshot writer for production canon
-imports.
-
-### Snapshot validation
-
-Reject the complete snapshot before writing if it contains:
-
-- duplicate external keys or slugs within a namespace;
-- entries whose kinds are absent from the imported schema;
-- relationship types absent from the imported schema;
-- invalid context tags or scope/tag combinations;
-- unresolved selector reference terms;
-- unresolved relationship endpoints;
-- Atlas-to-Atlas endpoints in the reference relationship collection;
-- contextual availability without a selector;
-- character roles without player visibility and a character blurb;
-- sections without stable identity or audience;
-- invalid prevalence, visibility, audience, scope, or quantifier values.
-
-Report every violation with its precise artifact path.
-
-### Transaction order
-
-Under the existing canon advisory lock and one transaction:
-
-1. Insert the ingest-batch record.
-2. Upsert Encyclopedia vocabulary.
-3. Plan stable Atlas and Encyclopedia UUIDs.
-4. Upsert Atlas entities.
-5. Upsert Encyclopedia entries and sections.
-6. Resolve and write Encyclopedia and cross-namespace relationships.
-7. Write Atlas relationships and lore.
-8. Rebuild selector-term rows.
-9. Reconcile stale imported rows in every namespace.
-10. Delete stale vocabulary after dependent rows are gone.
-11. Commit.
-
-An unresolved cross-namespace endpoint rolls back Atlas and Encyclopedia
-writes together.
-
-### Stable identity after reset
-
-The first production import runs against an empty database. It does not reuse
-UUIDs from the current Atlas representation and does not carry an identity map
-from old entities to new Encyclopedia entries. Each namespace receives fresh
-UUIDs, and subsequent reimports preserve them by `(source, external_key)`.
-
-If an entry is split or merged after the new system launches, `tsonu-canon`
-must declare the new source identities explicitly. The importer never guesses
-replacement identity by title or slug.
-
-### Reconciliation
-
-Authoritative import reconciliation independently removes stale:
-
-- Atlas edges
-- Atlas lore
-- Atlas entities
-- Encyclopedia cross-links
-- Encyclopedia entry relationships
-- selector terms and selectors
-- Encyclopedia sections
-- Encyclopedia entries
-- guide pages
-- imported vocabulary definitions
-
-Deletion order must respect FKs. Runtime or historical usage records do not
-block canon reconciliation.
-
-### Artifact identity
-
-The checked-in artifact digest includes:
-
-- Atlas entities, relationships, and lore
-- Encyclopedia schema, entries, selectors, sections, and relationships
-- guide pages
-
-This preserves the existing invariant that a changed generated artifact is a
-new import even when the upstream source revision string did not change.
-
-### Embedding backfill
-
-After import, the canon-seed Lambda backfills missing Atlas and Encyclopedia
-embeddings. Entry content hashes invalidate embeddings only when searchable
-entry content changes. Relationship-only changes preserve them.
-
-Record both embedded counts in the seed result and completion log.
-
-## Encyclopedia store
-
-Add an `EncyclopediaStore` interface and PostgreSQL implementation in
-`packages/worldstate`.
-
-The read surface should include:
-
-```ts
-getEntry({ id }): Promise<EncyclopediaEntry | null>
-getEntryBySlug({ slug }): Promise<EncyclopediaEntry | null>
-listEntries(input): Promise<EncyclopediaEntrySummary[]>
-listEntriesByIds(ids): Promise<EncyclopediaEntry[]>
-listCharacterOptions(role): Promise<EncyclopediaEntrySummary[]>
-listForAtlasEntities(entityIds): Promise<ApplicableReference[]>
-matchApplicable(input): Promise<ApplicableReference[]>
-search(input): Promise<EncyclopediaSearchResult[]>
-listMissingEmbeddings(limit?): Promise<EncyclopediaEmbeddingSource[]>
-saveEmbedding(id, embedding): Promise<void>
-```
-
-Keep canonical and public projections distinct. Internal GM readers may load
-GM entries and sections. Public application readers always enforce visibility
-and section audience at the store or router boundary rather than relying on
-the client to hide fields.
-
-## Context matching
-
-### Context profile
-
-Create a shared server-side builder producing:
-
-```ts
-type ReferenceContextProfile = {
-  atlasEntityIds: string[];
-
-  scopes: Record<ContextScope, {
-    tags: string[];
-    referenceExternalKeys: string[];
-  }>;
-
-  recentReferenceIds: string[];
-  semanticQuery?: string;
-  seed: string;
-};
-```
-
-Inputs are:
-
-- stable world tags;
-- current canonical place and explicit containment ancestors;
-- selected anchor;
-- scene subject and current conditions;
-- present or directly relevant Atlas participants;
-- character species and culture references;
-- relevant affiliations;
-- player message and intent summary;
-- reference usage from recent turns.
-
-The current place resolves by exact canonical identity. A Chronicle-local place
-does not inherit the Chronicle's starting-place tags. It may still receive
-world, scene, participant, and global material.
-
-The client never submits arbitrary context tags.
-
-### Selector semantics
-
-For each selector:
-
-- every `all` term must match;
-- one `any` term must match unless the list is empty;
-- no `none` term may match.
-
-An entry is contextually applicable if it is global or at least one selector
-matches. Exact Atlas associations form a second candidate arm. The GM receives
-the union with match evidence kept separate.
-
-### Ranking
-
-Rank candidates by:
-
-- selector specificity;
-- exact Atlas association;
-- semantic relevance to the current action or question;
-- prevalence;
-- recent actual-use penalty;
-- variety across kinds.
-
-Explicit player mentions and character-origin entries bypass the repetition
-penalty. Candidate selection is deterministic for the same context and seed.
-The seed derives from stable request identity such as Chronicle ID and turn
-sequence.
-
-Initial bounded results:
-
-- Encyclopedia portion of the typed agentic `WORLD-INDEX`: 8–12 summaries;
-- one-shot context: 4–6 compact entries;
-- Environment node: 3–5 entries;
-- Chronicle-start preview: 4–6 player entries.
-
-These are tuning values, not DTO limits.
-
-## GM integration
-
-### Retrieval seed
-
-Extend `WORLD-INDEX` with typed Atlas and applicable Encyclopedia entries.
-Each entry contains:
-
-- namespace-qualified opaque handle
-- namespace and `useAs` semantics
-- title
-- Atlas type or Encyclopedia kind
-- one-sentence summary
-- compact match reason for Encyclopedia candidates
-- related-entry count or handles when useful
-
-Atlas entries are established particulars. Encyclopedia entries are reusable
-candidates, not claims about the scene. Chronicle history remains in the
-bounded `HISTORY` prompt block and is also available through `lookup_world`
-search.
-
-### Unified world lookup
-
-Replace the GM's source-specific discovery tools with one tool using a
-discriminated request:
-
-```ts
-type WorldLookupRequest =
-  | {
-      action: 'search';
-      query: string;
-    }
-  | {
-      action: 'open';
-      handles: string[];
-    };
-```
-
-`lookup_world` search fans out across Atlas content, Encyclopedia content, and
-Chronicle history. It returns a bounded list in which every result includes:
-
-- an opaque namespace-qualified handle;
-- `namespace: 'atlas' | 'encyclopedia' | 'chronicle'`;
-- a record type;
-- title and compact excerpt;
-- `useAs: 'particular' | 'reusable' | 'chronicle_evidence'`.
-
-Each corpus keeps its own search policy and semantic threshold. The facade
-merges bounded results without comparing raw similarity scores from unlike
-indexes and puts exact matches ahead of approximate matches.
-
-`lookup_world` open dispatches handles to their owning stores. Atlas opens
-include relevant lore and related handles. Encyclopedia opens include cues,
-affordances, pressures, variations, relevant sections, and related handles.
-Chronicle opens include the established history evidence. Relationships and
-additional records are followed by opening returned handles rather than by
-choosing another source-specific tool.
-
-Do not expose `search_reference`, `open_reference`, or `match_references`.
-Applicability is deterministic application policy already represented in the
-typed world index. Retire the existing separate search, open, expand, lore,
-relationship, and history tools from the GM surface once `lookup_world`
-provides their required retrieval coverage.
-
-### Tool-session provenance
-
-Track every served handle in one registry with its namespace, record type, and
-whether it was supplied by the index, returned by search, or fully opened.
-Source-specific sidecar validation uses this typed provenance; the unified
-registry does not merge Atlas focus with Encyclopedia usage.
-
-A reference sidecar is valid only when the corresponding entry was supplied
-or opened. `interaction`, `character_origin`, and `instance_basis` should
-normally require a full open; `texture` may rely on a sufficiently descriptive
-index result.
-
-### Turn brief
-
-Extend `TurnBrief` with a separate reference sidecar:
-
-```ts
-type ReferenceSidecarEntry = {
-  referenceSlug: string;
-  role:
-    | 'texture'
-    | 'interaction'
-    | 'character_origin'
-    | 'instance_basis';
-};
-```
-
-These roles mean:
-
-- `texture`: sensory or background material;
-- `interaction`: a player handled, used, learned from, or acted on it;
-- `character_origin`: species or culture materially shaped the scene;
-- `instance_basis`: the narration introduced a concrete instance of the type.
-
-Reference roles never map to entity `mentioned` or `central` and never update
-entity focus.
-
-The researcher incorporates reference material into `CHARACTER`, `LOCATION`,
-`PRESENT`, `HISTORY`, or `COMPLICATION`. The storyteller receives usable
-fiction rather than an Encyclopedia dump. The sidecar remains provenance and
-state.
-
-### Mention resolution
-
-Add a separate Encyclopedia mention resolver with these inputs:
-
-- exact title and alias matches;
-- entries supplied or opened this turn;
-- verified sidecar entries.
-
-Do not perform whole-catalog semantic mention classification over common
-nouns. Semantic search finds relevant content; it does not prove that a text
-span names an entry.
-
-Resolve Atlas entity spans first. Encyclopedia mentions annotate only
-remaining spans. This prevents a common type name from stealing a named-entity
-link.
-
-### Environment node
-
-Provide a small `WORLD-REFERENCE` block built from current place and active
-front-agent context. The Environment node remains tool-free. A proposed front
-agent must still resolve to a visible Atlas entity.
-
-If the Environment node uses a reference in a world action, record private
-usage even when the final narration leaves that action offscreen. Do not emit a
-public mention without a player-visible text span.
-
-### One-shot comparison
-
-Add a bounded Encyclopedia context to the one-shot comparison path. Without
-it, the model panel would compare an agent with reference access against a
-one-shot narrator that never received the new corpus.
-
-Reference context shares the existing one-shot budget. It does not add an LLM
-call.
-
-### Open-world invention
-
-A `lookup_world` search with no Encyclopedia result reports only that nothing
-matching is written in that corpus. The researcher may then establish new
-fiction. It must not turn the absence into an in-world fact that the subject
-cannot exist.
-
-Initially, invented common material remains in Chronicle history, where
-`lookup_world` can retrieve it as Chronicle evidence. Do not automatically
-create or promote an Encyclopedia entry from narration. Add Chronicle-local
-reference records later only if measured continuity failures justify them and
-an explicit editorial workflow exists.
+The production reset means there is no existing-character conversion path.
 
 ## Chronicle creation
 
-### Character origin
+Location and anchor selection stay Atlas-only. Encyclopedia material enriches
+the existing flow without adding another required choice.
 
-Species and culture cards query Encyclopedia entries by `characterRole`.
-Homeland and allegiance cards continue to query Atlas entities by
-`playableAs`.
+For the selected location:
 
-Character review and overview links are namespace-aware:
+1. Build a place context from imported `contextTags`.
+2. Match complete player-visible Encyclopedia entries.
+3. Include any complete type or membership directly associated with the
+   selected Atlas location or anchor.
+4. Show the complete player-safe applicable set in the `Common here` browser.
+5. Rank a small, varied subset of those visible entries for prompt context.
+6. Supply that subset to seed and opening generation.
+7. Record only references actually used by the generated opening.
 
-- species and culture open Encyclopedia pages;
-- homeland and allegiance open Atlas pages.
+Render `Common here` with the same contextual-reference tree used during play.
+In Chronicle creation it runs in browse-only mode because there is no pending
+player message to attach a reference to.
 
-The server independently validates all four records before creating a
-character.
+Seed and opening generation receive compact title, kind, summary, cues,
+affordances, pressures, and variations. An opening sidecar returns qualified
+Encyclopedia slugs and usage roles. The server accepts only entries it supplied.
 
-### Start wizard
+## GM retrieval
 
-Keep the existing required flow:
+### Two cross-source tools
 
-1. Atlas location
-2. Atlas anchor
-3. tone
-4. generated or custom seed
-5. Chronicle creation
+Keep the existing names `search` and `open`:
 
-Once location, anchor, and character are known, show a player-safe `Common
-here` preview with 4–6 entries. The preview is informational and links to the
-Encyclopedia. It is not another picker, anchor, focus, or required motif.
+```ts
+search({ query: string })
+open({ slug: string })
+```
 
-Do not add a reference-selection field in the first implementation.
+Both tools cover Atlas, Encyclopedia, and Chronicle history.
 
-### Seed generation
+Search results contain:
 
-The seed service:
+```ts
+type SearchResult = {
+  slug: string;
+  title: string;
+  kind: string;
+  excerpt: string;
+};
+```
 
-1. resolves the character through the mixed origin resolver;
-2. builds a server-owned context profile;
-3. matches player-visible entries;
-4. adds a bounded `REFERENCE` developer block;
-5. generates the existing seed result shape.
+`slug` is always fully qualified:
 
-Seed teasers receive only player-visible reference material. A custom seed may
-name something outside the pre-match; opening generation semantically searches
-the seed text before composing.
+- `atlas:blue-meridian`
+- `encyclopedia:flitter`
+- `chronicle:turn-12`
 
-### Opening generation
+There is no separate source field, UUID, opaque handle, or model-side string
+construction. The result's slug is copied directly into `open`.
 
-Opening generation may use the full GM view because it creates an in-world
-revelation rather than public selection copy.
+Search fans out internally:
 
-Change its response from a bare string to structured prose plus a reference
-sidecar. Verify returned slugs against supplied material, persist opening usage
-privately, and include that usage in first-turn repetition control.
+- Atlas entity embeddings and lore text;
+- Encyclopedia embeddings and exact/title/alias search;
+- Chronicle turn full-text search.
 
-Chronicle `location_id`, `anchor_entity_id`, entity focus, entity roster, scene
-subject, and front agent remain Atlas-only.
+Each corpus applies its own threshold. Merge bounded results with exact matches
+first; do not compare raw similarity scores from different indexes. Atlas lore
+matches return the owning Atlas entity slug.
 
-## API boundary
+`open` resolution:
 
-Do not create another Lambda. The current Atlas deployment already owns
-authenticated world reads and Chronicle creation. Another database-connected
-Lambda would add connection and deployment pressure without strengthening the
-content boundary.
+- qualified slug: query only the named store;
+- bare slug with one match across stores: open it;
+- bare slug with multiple matches: return an ambiguity error containing the
+  qualified alternatives;
+- no match: throw a retrieval miss;
+- no qualified fallback to another store.
 
-Keep `apps/atlas-api` as the deployment unit for this implementation, but split
-its code into independent routers and clients:
+Opening an Atlas entity returns its useful identity, notes, facts, lore, and
+related qualified slugs. Opening an Encyclopedia entry returns its GM-visible
+facts, identity, tiers, usage, sections, and classified Atlas examples. Opening
+a Chronicle turn returns the established player and GM record.
 
-- `atlasRouter`
-- `encyclopediaRouter`
-- `worldAtlasClient`
-- `encyclopediaClient`
+Retire source-specific `search_lore`, `read_lore`, `search_history`,
+`read_turns`, `expand`, and relationship-reading tools only after `search` and
+`open` cover their required information. Do not rename `search` to
+`lookup_world`.
 
-Public procedures:
+### Seed index and provenance
 
-- `listEncyclopediaEntries`
-- `getEncyclopediaEntry`
-- `searchEncyclopedia`
-- `listApplicableEncyclopedia`
-- `listEncyclopediaForAtlasEntity`
-- `listCharacterReferenceOptions`
+`WORLD-INDEX` contains fully qualified slugs for its Atlas and complete
+Encyclopedia entries. Encyclopedia lines state that the entry is reusable
+material, not an asserted instance. `HISTORY` remains the recent Chronicle
+record.
 
-The applicability endpoint accepts canonical identifiers, not arbitrary
-client tags. The server builds the context profile and filters visibility.
+`ToolSession` records served material by qualified slug and how it was served:
+index, search, or open. Internally it may resolve database IDs, but none appear
+in model input or output.
 
-Internal GM callers use `EncyclopediaStore` directly and can request GM
-material.
+Extend `TurnBrief` with a distinct Encyclopedia sidecar:
 
-## Player UI
+```ts
+type ReferenceSidecarEntry = {
+  slug: string;
+  role: 'texture' | 'interaction' | 'character_origin' | 'instance_basis';
+};
+```
 
-### Information architecture
+The server resolves each qualified slug against the session. Reference roles
+never map to entity `mentioned` or `central` and never update entity focus.
 
-Use `World Guide` as the navigation container with two primary surfaces:
+### Mention resolution
+
+Resolve Atlas spans first. Resolve Encyclopedia spans only from entries served
+this turn and only through exact titles or aliases. Do not perform whole-catalog
+semantic mention classification over common nouns.
+
+Public mention payloads contain a safe title, qualified slug, kind, and summary
+snapshot. Private candidates never appear in player turn data.
+
+### One-shot and Environment paths
+
+The tool-free Environment node and one-shot comparison receive bounded complete
+Encyclopedia context from the same matcher. This does not add an LLM call.
+
+Record private usage when the Environment path materially uses a reference,
+even if no public text span names it. Emit a public mention only for visible
+narration.
+
+## API and UI
+
+Use `World Guide` as the navigation container with two surfaces:
 
 - Atlas
 - Encyclopedia
 
-Keep `/atlas/:slug?` and add `/encyclopedia/:slug?`. Both pages share a tab
-header. Do not add a top-level `Reference` page.
+`Reference` is not a page. `Guides` are deferred because the current internal
+source artifact does not contain them.
 
-### Encyclopedia index
+### Player API
 
-Provide:
+Add an Encyclopedia router and client for:
+
+- list/search summaries;
+- detail by slug;
+- complete applicable entries for a canonical Atlas context;
+- classifications for an Atlas entity;
+- Atlas examples for an Encyclopedia entry;
+- character-role options.
+
+The applicable-entry response remains a flat list of qualified-slug summaries.
+The reusable client browser groups that list by kind and prevalence; the API
+does not introduce a second tree-shaped content contract.
+
+The server builds context from canonical records. It does not accept arbitrary
+client-supplied context tags.
+
+Public projections exclude:
+
+- shell and DM entries;
+- GM sections;
+- usage arrays;
+- private usage history.
+
+Drafts are visible and labeled but do not appear in `Common here`.
+
+### Encyclopedia UI
+
+Add `/encyclopedia/:slug?` beside `/atlas/:slug?`.
+
+The index provides:
 
 - text search;
-- dynamic kind facets from imported vocabulary;
-- topic facets;
-- prevalence filtering;
-- compact entry cards;
-- an explicit non-exhaustive empty state.
+- facets derived from imported kind and subkind values;
+- topic and prevalence filters;
+- draft labels;
+- compact cards;
+- a non-exhaustive empty state.
 
-Do not build a reference graph visualization initially. Typed related-entry
-lists serve play better and do not imply that graph degree measures
-importance.
-
-### Encyclopedia detail
-
-Show:
+The detail page shows:
 
 - title, summary, kind, subkind, prevalence, and topics;
-- player-audience sections;
-- related Encyclopedia entries;
-- named Atlas examples, institutions, artifacts, and places;
-- `Appears around` Atlas links where exact associations exist.
+- public facts and descriptive identity;
+- player sections;
+- named Atlas instances and members;
+- links back to associated Atlas records.
 
-There is no `Start Chronicle` button on an Encyclopedia entry. Associated
-Atlas locations may carry that action.
+There is no `Start Chronicle` action on an Encyclopedia entry and no reference
+graph visualization.
 
-### Atlas additions
+### Contextual reference browser
 
-Atlas location detail gains `Common here`, backed by player-visible
-applicability matching. Other Atlas entities gain `Common knowledge` or `Type`
-for exact cross-namespace associations.
+Add one reusable `ContextReferenceBrowser` for complete, player-visible entries
+applicable to a canonical Atlas context. Mount it in two places:
 
-Atlas registry, maps, relationships, focus choices, and start actions remain
-Atlas-only.
+- as the `Common here` preview during Chronicle creation;
+- in the Chronicle left rail, immediately below the named Atlas items in
+  `Nearby entities`.
 
-### Chronicle UI
+The browser is a three-level tree:
 
-`Nearby entities` remains Atlas-only. Privately matched Encyclopedia
-candidates never appear there.
+1. kind;
+2. rarity, using the source `prevalence` value;
+3. Encyclopedia entry.
 
-Actual narrated mentions receive a distinct Encyclopedia popover and link.
-Expanded turns may show a compact `From the Encyclopedia` row containing only
-exact public mentions.
+Kind and rarity branches support independent expand/collapse. Rarity groups
+sort `common`, `uncommon`, then `rare`; entry labels sort by title. The browser
+updates when the Chronicle's canonical location context changes. It presents
+every complete, player-safe match returned for that context, but remains a
+non-exhaustive claim about what can exist there.
 
-A cue that never names its source entry does not reveal that entry through the
-UI.
+A single click on an entry opens its Encyclopedia detail in the shared World
+Guide modal. The same modal presenter opens Atlas content for named Atlas items,
+using the item's qualified slug to choose the surface.
 
-### Existing articles
+Generalize the existing `AtlasModal` and its UI-store state into this
+qualified-slug World Guide modal. Do not mount independent Atlas and
+Encyclopedia modals that can compete for global overlay state.
 
-Current `isArticle` records are non-runtime guide pages, not Atlas entities or
-applicable Encyclopedia entries. Move them to guide storage and display them
-inside an Encyclopedia `Guides` section.
+During Chronicle play, double-clicking or right-clicking an Encyclopedia entry
+attaches it to the pending player message as a direct reference. The shared
+interaction handler distinguishes a single click from a double click so the
+modal does not open when the player's intent is to attach. The context-menu
+handler prevents the browser menu and performs the same attachment action.
+Chronicle creation mounts the tree without attachment gestures.
 
-Guides do not enter GM matching or `lookup_world` unless runtime reference
-content explicitly incorporates their material.
+Generalize the existing Atlas-only composer target state and request field into
+a mixed direct-reference list of qualified slugs. Attached Atlas and
+Encyclopedia references appear as the same removable composer chips. On submit,
+the server resolves each qualified slug in its declared store and supplies the
+resolved material to the GM; Encyclopedia references never enter entity focus
+or Atlas relationship state.
 
-## Production database reset
+Atlas detail pages show type and membership references as a separate
+classification section. These links do not enter Atlas maps, relationship
+lists, Nearby Entities, focus, or start actions.
 
-Do not migrate the current production data. Once the feature is complete,
-reset the Glass Frontier production database and run the normal deployment
-pipeline against the empty database:
+Actual narrated Encyclopedia mentions receive a distinct popover and link.
+Only the explicit player-safe `Common here` projection appears in the Chronicle
+UI. Additional GM candidates and private usage do not.
+
+## Production reset
+
+After implementation and repository verification:
 
 1. Reset the Glass Frontier production database.
-2. Run the repository schema migrations.
+2. Run schema migrations.
 3. Seed application data.
 4. Deploy the application.
-5. Seed Atlas, Encyclopedia, and guide canon.
+5. Seed the authoritative canon snapshot.
 6. Backfill Atlas and Encyclopedia embeddings.
 
-All current database-resident player, character, Chronicle, turn, operations,
-and canon records are discarded. Nothing is converted or restored. Schema
-changes remain ordinary repository migration files so every new database is
-built deterministically.
+Do not add a legacy migration, snapshot, restoration path, or compatibility
+shim.
 
-## Phases and exit gates
+## Implementation phases
 
 ### Phase 1: Contract and storage foundation
 
-Sulion status: in progress.
+- Add source-bundle Zod parsing for schema version 13 fields.
+- Add runtime Encyclopedia DTOs with opaque kind/subkind strings.
+- Add migrations for entries, embeddings, context tags, classifications,
+  context tags on Atlas entities, usage, and mentions.
+- Add the Postgres-backed `EncyclopediaStore` beside the Atlas store.
+- Add JSON applicability evaluation.
 
-Deliverables:
-
-- dynamic Encyclopedia schema DTOs;
-- visibility, stable section identity, and character blurb contract fields;
-- Atlas context tags;
-- Encyclopedia schema migrations and indexes;
-- `EncyclopediaStore` and readers;
-- applicability matcher and evidence DTOs;
-- isolated full-text and embedding search;
-- unit and database tests.
-
-Exit gate:
-
-- A fixture catalog imports and can be queried, matched, searched, and opened
-  without creating any Atlas node, edge, lore, focus, or roster record.
+Exit: the reviewed source shapes round-trip through DTO and store tests without
+creating Atlas nodes or edges.
 
 ### Phase 2: Authoritative snapshot import
 
-Deliverables:
+- Replace the proposal artifact with the mixed snapshot.
+- Extend the translator for context tags, Encyclopedia entries, and Atlas
+  classifications.
+- Validate complete, draft, shell, selector, character-role, and classification
+  invariants.
+- Commit and reconcile the whole snapshot atomically.
+- Include all collections in artifact identity.
 
-- explicit Atlas, Encyclopedia, and guide artifact collections;
-- whole-snapshot validation;
-- one-transaction snapshot writer;
-- independent reconciliation;
-- artifact digest coverage;
-- Encyclopedia embedding backfill;
-- batch counts and logs.
+Exit: a fresh database imports revision `48e77f513839` with the measured source
+counts and every classification resolved.
 
-Exit gate:
+### Phase 3: Imported corpus audit
 
-- Reimport is idempotent, content edits preserve IDs, searchable edits
-  invalidate embeddings, omitted imported rows are removed, and any invalid
-  cross-namespace endpoint rolls back the whole snapshot.
+- Confirm 283 complete entries and no draft or shell entries.
+- Confirm 290 primary and 64 membership classifications resolve.
+- Confirm five species and four culture choices.
+- Confirm every playable Chronicle location has context tags.
+- Confirm no former reference-class source entry appears as an Atlas entity.
+- Generate Encyclopedia embeddings for all 283 complete entries.
 
-### Phase 3: Populate and audit canon
+Exit: database counts and visibility match the source artifact exactly.
 
-Deliverables:
+### Phase 4: Character origin cutover
 
-- direct fresh-database import from `tsonu-canon`;
-- explicit classification manifest for current reference-like entries;
-- converted cross-namespace relationships;
-- context tags on every selectable Chronicle location;
-- representative mundane entries across recurring play contexts;
-- coverage report.
+- Replace species and culture Atlas fields with Encyclopedia references.
+- Keep homeland and allegiance Atlas-only.
+- Update persistence, APIs, prompts, wizard, and overview.
 
-Exit gate:
-
-- Every selectable Chronicle location matches player-safe material from at
-  least five useful kinds, including living material, ordinary work, something
-  usable or consumable, a place feature, and a pressure or phenomenon.
-
-### Phase 4: Character origin contract
-
-Deliverables:
-
-- explicit mixed-namespace `CharacterOrigin` fields;
-- final scalar-column and props schema for newly created characters;
-- shared origin resolver;
-- server validation;
-- character creation, review, overview, prompt, and seed-service changes;
-- namespace-correct links.
-
-Exit gate:
-
-- Species and culture can resolve only through Encyclopedia, homeland and
-  allegiance only through Atlas, and a fresh character can be created, open a
-  Chronicle, and complete a turn.
+Exit: a new character can be created with each mixed-namespace field validated
+against its owning store.
 
 ### Phase 5: World Guide and Chronicle start
 
-Deliverables:
+- Add Encyclopedia player API and UI.
+- Add Atlas classification links.
+- Add the reusable kind / rarity / entry context tree.
+- Mount it as a browse-only `Common here` preview during Chronicle creation and
+  below named Atlas items in the live Chronicle rail.
+- Open Atlas and Encyclopedia records through the shared qualified-slug modal.
+- Ground seed and opening generation in complete entries.
+- Persist verified opening usage.
 
-- Encyclopedia public router and client;
-- World Guide navigation;
-- index and detail pages;
-- Atlas cross-reference sections;
-- Chronicle-start `Common here` preview;
-- reference-aware seed generation;
-- structured opening sidecar and usage persistence.
-
-Exit gate:
-
-- A player can browse and link between both namespaces, create a character,
-  generate seeds grounded in applicable material, and open a Chronicle without
-  ever selecting an Encyclopedia entry as an anchor.
+Exit: players can browse both catalogs and start a grounded Chronicle without
+selecting an Encyclopedia entry as an anchor.
 
 ### Phase 6: GM retrieval integration
 
-Deliverables:
+- Make `search` cross-source and return fully qualified slugs.
+- Make `open` cross-source and accept the returned slug verbatim.
+- Add bare-slug uniqueness and ambiguity behavior.
+- Remove GUIDs and separate source fields from the model-facing contract.
+- Add complete Encyclopedia entries to `WORLD-INDEX`.
+- Add slug-based served provenance and the reference sidecar.
+- Replace the Atlas-only composer target field with mixed qualified-slug direct
+  references and resolve each attachment through its owning store.
+- Wire Encyclopedia tree double-click and right-click to the shared composer
+  attachment action without triggering the single-click modal.
+- Add usage persistence, mention resolution, Environment context, and one-shot
+  parity.
+- Retire superseded source-specific tools after coverage tests pass.
 
-- shared `ReferenceContextBuilder`;
-- deterministic matcher and recent-use penalty;
-- typed mixed-source `WORLD-INDEX`;
-- `lookup_world` search and open actions;
-- typed ToolSession provenance;
-- TurnBrief reference sidecar;
-- private usage and public mention persistence;
-- Environment and one-shot reference context;
-- Chronicle chat annotation;
-- branch copying.
+Exit: Atlas, Encyclopedia, and Chronicle material are discoverable through
+`search` and readable through `open`; reference use never changes entity focus.
 
-Exit gate:
+### Phase 7: Fresh Atlas cutover
 
-- Reference material appears in narration with verified provenance, does not
-  change entity focus, survives branching, stays within existing LLM call and
-  retrieval budgets, and never exposes private candidates to the player.
+- Verify source Encyclopedia entries are absent from the generated Atlas
+  collection.
+- Verify classifications do not appear as graph edges.
+- Remove obsolete game vocabulary and assumptions tied to former reference
+  entities.
+- Keep general guide ingestion deferred.
 
-### Phase 7: Ontology cleanup
+Exit: the fresh snapshot contains one coherent Atlas and one coherent
+Encyclopedia with no compatibility layer.
 
-Deliverables:
+### Phase 9: Production database reset
 
-- reference-class entries absent from the generated Atlas collection;
-- obsolete Atlas lore and edges absent from the generated snapshot;
-- article content emitted as guides;
-- old vocabulary removed;
-- fresh-database verification completed;
-- documentation and bundled changelog updated for shipped behavior.
+- Run the six reset and seed steps above.
 
-Exit gate:
-
-- No Encyclopedia entry is present in the Atlas import or returned by any
-  Atlas lookup, search, traversal, picker, focus, roster, or closure path.
-
-### Phase 8: Production database reset and cutover
-
-Deliverables:
-
-- production database reset;
-- schema migration replay;
-- application and canon seed;
-- embedding backfill;
-
-Exit gate:
-
-- The normal deployment finishes against the fresh production database and no
-  legacy gameplay or operations rows were restored.
+Exit: production runs only the new schema and source snapshot.
 
 ## Verification matrix
 
-### Contract and validation
+### Source and import
 
-- Kinds can be added, renamed, or merged by changing imported vocabulary only.
-- Unknown kinds, relationship types, context tags, endpoints, and character
-  roles reject the snapshot with precise paths.
-- Player-visible and GM-only projections contain exactly the allowed fields.
-- Section audience filtering occurs server-side.
+- Schema 13 bundle parses through Zod.
+- Duplicate external keys and same-namespace slugs reject the artifact.
+- Cross-namespace duplicate bare slugs are accepted.
+- Shell nullability is accepted; shell content and character roles are not.
+- Complete-entry requirements are enforced.
+- Draft incompleteness does not fail import.
+- Every context tag and classification target resolves.
+- Membership kinds match targets.
+- Failed writes leave no partial catalog.
+- Artifact identity changes with any imported collection.
 
-### Persistence and import
+### Persistence
 
-- Atlas and Encyclopedia may use the same slug and UUID without ambiguous
-  lookup.
-- Encyclopedia import never writes `node`, `entity`, `edge`, or
-  `lore_fragment`.
-- Stable external keys preserve UUIDs across imports.
-- Stale rows reconcile in dependency order.
-- Failed validation and failed writes leave no partial Atlas or Encyclopedia
-  state.
-- Searchable content invalidates embeddings; relationship-only changes do not.
-- Artifact identity changes when any imported collection changes.
-
-### Applicability
-
-- Global entries match every profile.
-- `all`, `any`, and `none` pass full truth-table tests.
-- Scope separation prevents a place tag from satisfying a participant term.
-- Reference-identity terms match exact external keys.
-- Exact Atlas associations return separate evidence.
-- Recent use lowers ordinary candidates but not explicit mentions or origins.
-- Same profile and seed produce the same ranking.
-- Zero matches do not produce an error or closed-world instruction.
+- Encyclopedia import writes no `node`, `entity`, `edge`, or `lore_fragment`.
+- Shells persist but are absent from all retrieval paths.
+- Drafts are absent from proactive matching.
+- Classification reverse reads reproduce source instances and members.
+- Stale records reconcile in dependency order.
+- Embeddings invalidate only when their search document changes.
 
 ### Character origin
 
-- The wizard lists only entries with the requested `characterRole`.
-- GM-only entries cannot be chosen.
-- The server rejects a reference in an Atlas field and an entity in a
-  reference field.
-- Overview and prompt names come from one mixed resolver.
-- Persisted origin columns and props remain consistent.
+- The wizard lists only complete, non-DM entries with the requested role.
+- The server rejects an Atlas ID in a reference field and a reference ID in an
+  Atlas field.
+- Prompts receive resolved names and prose, not IDs.
 
 ### Chronicle start
 
 - Location and anchor remain Atlas-only.
 - Applicability is recomputed server-side.
-- Preview exposes only player entries and player sections.
-- Seed generation receives a bounded reference block.
-- A custom seed can retrieve a relevant entry outside the initial match.
-- Opening usage contains only verified supplied slugs.
-- No reference ID enters Chronicle entity fields.
+- Preview contains complete player-visible entries only.
+- Preview uses the reusable kind / rarity / entry tree in browse-only mode.
+- Every entry supplied to opening generation came from the visible tree.
+- Opening usage contains only supplied qualified slugs.
+- No reference enters Chronicle entity fields.
+
+### Context browser and direct references
+
+- The same browser renders during creation and below `Nearby entities` during
+  play.
+- Kind and rarity branches expand and collapse independently.
+- A single entry click opens the correct Atlas or Encyclopedia modal from its
+  qualified slug.
+- Double-click and right-click attach an Encyclopedia entry without also
+  opening the modal.
+- Composer chips and the turn request preserve qualified slugs and accept both
+  Atlas and Encyclopedia attachments.
+- Encyclopedia attachments reach GM context and usage tracking but never
+  entity focus or Atlas graph updates.
 
 ### GM runtime
 
-- Search results always identify their namespace and `useAs` semantics.
-- Open dispatches only opaque handles already returned or supplied to the
-  session; malformed and unknown handles fail explicitly.
-- Atlas records cannot enter reference sidecars, and Encyclopedia records
-  cannot enter entity sidecars or focus.
-- Unserved reference sidecar entries are discarded.
+- Search results contain fully qualified slugs and no ID or source field.
+- `open` accepts a search result slug without transformation.
+- Qualified open never falls back.
+- Unique bare open succeeds across stores.
+- Ambiguous bare open returns qualified alternatives.
+- Lore matches resolve to an openable Atlas slug.
+- Chronicle results use readable turn slugs.
+- Unserved reference sidecars are discarded.
 - Reference usage never updates entity focus.
-- Entity mention spans take precedence over overlapping reference spans.
-- Environment reference use stays private when not narrated.
-- One-shot and agentic comparison paths receive equivalent reference coverage.
-- Existing research-round, result, and total retrieved-token caps remain
-  enforced.
-- Reference misses support invention rather than asserting nonexistence.
+- Atlas mention spans take precedence.
+- Existing round and retrieved-token budgets remain enforced.
+- A miss supports invention and never becomes a nonexistence claim.
 
-### UI
+### Player boundary
 
-- Atlas and Encyclopedia routes resolve duplicate slugs correctly.
-- Dynamic facets come from imported vocabulary.
-- Encyclopedia detail excludes GM sections.
-- Encyclopedia entries have no Chronicle-start action.
-- Atlas cross-links do not enter the Atlas map or relationship graph.
-- Nearby Entities remains Atlas-only.
-- Only exact narrated Encyclopedia mentions receive popovers.
-- Keyboard, focus, and screen-reader behavior matches existing Atlas popovers
-  and navigation.
+- Shell and DM entries are absent.
+- GM sections and usage instructions are absent.
+- Drafts are labeled and never shown as `Common here`.
+- Duplicate bare slugs route correctly because UI routes state the catalog.
+- Atlas classifications do not enter graph or Nearby Entities.
+- Only exact narrated mentions receive popovers.
 
-### Branching and history
+### Repository checks
 
-- Branches copy reference usage and mention history through the branch point.
-- Repetition control reads the branched history, not later parent turns.
-- Historical mention snapshots remain renderable after canon correction.
+Run focused tests during each phase. Before implementation handoff, run the
+repository's normal lint, format, typecheck, database, unit, client, and
+integration checks through `make ci` or its current canonical replacement.
 
-### Repository verification
+## Observability
 
-Each phase runs its focused package tests. Before handoff, run the repository's
-standard format, lint, typecheck, database, unit, client, and integration
-verification through `make ci` or the current canonical equivalent.
+Record counts and timings, not hidden prose:
 
-No phase may weaken or suppress an existing test to accommodate mixed
-namespace behavior.
-
-## Observability and evaluation
-
-Record counts and timings, not full hidden content:
-
-- applicability candidates by source arm;
-- Encyclopedia entries supplied in `WORLD-INDEX`;
-- Encyclopedia results, opens, and misses through `lookup_world`;
+- imported entries by status and kind;
+- imported entry and classification counts;
+- applicability candidates and selected complete entries;
+- cross-source search results by slug prefix;
+- open calls and misses;
+- bare-slug ambiguities;
 - opened-to-used ratio;
-- usage count and roles;
-- distinct references per Chronicle;
+- reference usage roles;
 - repeat rate over recent turns;
-- zero-match rate;
-- matcher and search duration;
-- retrieved tokens attributable to references;
-- Chronicle seed and opening reference counts;
-- player visits from Atlas, Chronicle mentions, and direct search.
+- matcher, search, and open duration;
+- retrieved tokens attributable to Encyclopedia entries.
 
-Compare representative Chronicles before and after integration for:
-
-- ordinary material introduced per scene;
-- repeated generic imagery;
-- unsupported invented technology or ecology;
-- direct player interaction with world material;
-- retrieval cost and end-to-end turn time.
-
-The goal is not maximum reference usage. It is more concrete, locally
-appropriate material when the turn needs it.
-
-## Content readiness gates
-
-Before runtime cutover:
-
-- Every selectable Chronicle location has explicit `contextTags`.
-- Every completed entry has at least two cues, one affordance, one pressure,
-  two variations, and global or contextual availability.
-- Culture entries contain internal variation and avoid deterministic personal
-  traits.
-- Species and culture character options are player-visible and have character
-  blurbs.
-- Every selector and relationship endpoint resolves.
-- Entries classified as Atlas or Encyclopedia have been reviewed individually;
-  no kind-wide automatic reclassification remains.
-- Player-facing contexts have enough breadth that the matcher does not return
-  one repeated kind for every scene.
-
-Initial authoring priority remains:
-
-1. ordinary roles and practices;
-2. place features and services;
-3. resources, food, tools, and consumables;
-4. common lifeforms;
-5. vehicle classes;
-6. resonant techniques and recurring phenomena;
-7. missing technology.
+The goal is concrete, locally appropriate material when a turn needs it, not
+maximum reference usage.
 
 ## Risks and controls
 
-### Reference material becomes another entity graph
+### Encyclopedia becomes another entity graph
 
-Control: separate tables, stores, endpoints, relationships, usage, mentions,
-and typed result semantics; the single GM retrieval facade does not create
-`node` or generic `edge` rows or merge downstream state.
+Control: separate storage, a classification table rather than edges, no
+`HardState`, and separate reference usage from entity focus.
 
-### Applicability becomes a closed-world rule system
+### Drafts recreate thin narration
 
-Control: prompts and API semantics define matches as candidates; misses never
-forbid invention; negative terms exclude one entry rather than close a
-context.
+Control: drafts remain available to explicit search/open but cannot enter
+automatic context, starts, or `WORLD-INDEX`.
 
-### Tags become vague or overloaded
+### Shells leak empty records
 
-Control: imported context-tag vocabulary with declared scopes; topics remain a
-separate field; selectors use exact tags or reference identity.
+Control: persist them solely for classification integrity and exclude them in
+the store's shared visible-query predicate.
 
-### The model receives more text but no more useful texture
+### Applicability becomes a closed-world rules engine
 
-Control: bounded candidate indexes, open-on-demand retrieval, recent-use
-penalty, kind diversity, and opened-to-used telemetry.
+Control: matches are candidates, misses never forbid invention, and the small
+JSON matcher implements only authored selectors.
 
 ### Common nouns steal named-entity links
 
-Control: separate resolvers and stores; Atlas span precedence; Encyclopedia
-mention resolution limited to served entries and exact aliases.
+Control: Atlas span precedence and exact served-entry titles or aliases only.
 
-### GM-only content leaks through public APIs or turn payloads
+### GM material leaks to players
 
-Control: public projections and private usage storage; server-side visibility
-and audience filtering; public mentions contain safe snapshots only.
+Control: server-side entry and section projection; player APIs never return
+usage arrays or selection evidence.
 
-### Canon classification removes something that should remain an Atlas actor
+### Future kind changes require a game deployment
 
-Control: review every current reference-like entry individually, validate the
-final fresh snapshot before production, and reclassify the source entry before
-cutover. The reset leaves no active Chronicle references to transform.
+Control: kinds and subkinds are opaque strings, facets derive from data, and
+compound facts and tiers remain authored JSON.
 
-### New embeddings extend canon-seed runtime
+### Guide content silently disappears
 
-Control: content-hash invalidation, bounded batching, separate counts and
-timing, and no re-embedding for relationship-only changes.
-
-## Decisions intentionally deferred
-
-These do not block the first complete integration:
-
-- Chronicle-local reference records for recurring inventions. Chronicle
-  history remains canonical until measured retrieval failures justify another
-  record type.
-- In-game authoring or promotion of Encyclopedia entries. Promotion remains an
-  explicit editorial change in `tsonu-canon`.
-- A reference graph visualization. Typed relation lists ship first.
-- Player-selected reference motifs during Chronicle start. The first version
-  provides preview and grounding without another required choice.
-- Renaming the `apps/atlas-api` deployment unit. Router and store separation is
-  sufficient; a service rename would add deployment work without changing the
-  domain boundary.
+Control: Guides are explicitly out of scope until the authoritative import has
+a defined guide input. Do not pretend the current internal bundle contains it.
 
 ## Definition of complete
 
-The integration is complete when:
-
-- content authors can add or change Encyclopedia kinds without a game code
-  change;
-- authoritative import preserves separate Atlas, Encyclopedia, and guide
-  namespaces atomically;
-- character species and culture use Encyclopedia references exclusively;
-- Chronicle start and the GM receive bounded, contextually appropriate
-  reference material;
-- actual use is durable and auditable but never becomes entity focus;
-- players can browse and follow narrated entries without seeing private
-  candidates;
-- absence from the catalog never restricts invention;
-- reference-class material is absent from the fresh Atlas graph;
-- production was rebuilt from an empty Glass Frontier database and no legacy
-  gameplay or operations rows were restored;
-- repository and production validation pass with acceptable retrieval cost,
-  latency, variety, and repetition.
+- The schema-13 Tsonu snapshot imports Atlas, Encyclopedia, classifications,
+  and context tags atomically.
+- Encyclopedia material is absent from Atlas nodes, lore, edges, focus, and
+  anchors.
+- Status visibility policy remains enforced even though the current corpus is
+  entirely complete.
+- Character species and culture use Encyclopedia references exclusively.
+- Chronicle start uses complete applicable material without another required
+  choice.
+- `Common here` is one reusable tree in Chronicle creation and the live left
+  rail, grouped by kind, rarity, and entry.
+- Players can open a tree entry or attach it directly to their next message
+  through the same composer reference path used for Atlas material.
+- `search` and `open` cover Atlas, Encyclopedia, and Chronicle with fully
+  qualified slugs and no model-facing IDs.
+- Actual usage is durable and auditable but never becomes entity focus.
+- Players can browse and follow public entries without seeing private material.
+- Absence from the catalog never restricts invention.
+- Production was rebuilt from an empty database and seeded from the new
+  authoritative snapshot.

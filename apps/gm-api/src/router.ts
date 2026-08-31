@@ -1,5 +1,6 @@
 import {
   TranscriptEntry,
+  WorldReferenceSlug,
 } from '@glass-frontier/dto';
 import { toLLMPlayer } from '@glass-frontier/llm-client';
 import { initTRPC, TRPCError } from '@trpc/server';
@@ -16,7 +17,7 @@ export const appRouter = t.router({
       z.object({
         chronicleId: z.uuid(),
         content: TranscriptEntry,
-        entityTargetIds: z.array(z.string().uuid()).max(3).default([]),
+        referenceSlugs: z.array(WorldReferenceSlug).max(3).default([]),
         requestId: z.string().min(1).max(128),
       })
     )
@@ -38,7 +39,7 @@ export const appRouter = t.router({
         input.requestId,
         {
           llmPlayer: toLLMPlayer(ctx.identity),
-          targetEntityIds: input.entityTargetIds,
+          referenceSlugs: input.referenceSlugs,
         }
       );
       return {

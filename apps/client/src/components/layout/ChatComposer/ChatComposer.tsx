@@ -8,9 +8,8 @@ import './ChatComposer.css';
 export function ChatComposer() {
   const sendPlayerMessage = useChronicleStore((state) => state.sendPlayerMessage);
   const isSending = useChronicleStore((state) => state.isSending);
-  const entityRoster = useChronicleStore((state) => state.chronicleRecord?.entityRoster.entries ?? []);
-  const selectedEntityIds = useChronicleStore((state) => state.selectedEntityIds);
-  const toggleEntityTarget = useChronicleStore((state) => state.toggleEntityTarget);
+  const selectedReferences = useChronicleStore((state) => state.selectedReferences);
+  const toggleReference = useChronicleStore((state) => state.toggleReference);
   const chronicleStatus = useChronicleStore((state) => state.chronicleStatus);
   const hasChronicle = useChronicleStore((state) => Boolean(state.chronicleId));
   const wrapTargetTurn = useChronicleStore(
@@ -90,23 +89,20 @@ export function ChatComposer() {
           This chronicle has ended. Its story is complete.
         </p>
       ) : null}
-      {selectedEntityIds.length > 0 ? (
-        <div className="chat-entity-targets" aria-label="Entities attached to this move">
-          <span>Interacting with</span>
-          {selectedEntityIds.map((entityId) => {
-            const entity = entityRoster.find((entry) => entry.id === entityId);
-            return entity === undefined ? null : (
-              <button
-                type="button"
-                key={entity.id}
-                onClick={() => toggleEntityTarget(entity.id)}
-                disabled={isSending}
-                aria-label={`Remove ${entity.name}`}
-              >
-                {entity.name} ×
-              </button>
-            );
-          })}
+      {selectedReferences.length > 0 ? (
+        <div className="chat-entity-targets" aria-label="World references attached to this move">
+          <span>Referencing</span>
+          {selectedReferences.map((reference) => (
+            <button
+              type="button"
+              key={reference.slug}
+              onClick={() => toggleReference(reference)}
+              disabled={isSending}
+              aria-label={`Remove ${reference.title}`}
+            >
+              {reference.title} ×
+            </button>
+          ))}
         </div>
       ) : null}
       <label htmlFor="chat-input" className="visually-hidden">

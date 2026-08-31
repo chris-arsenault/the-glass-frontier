@@ -173,11 +173,11 @@ const OriginPanel = ({ names, origin }: OriginPanelProps): React.JSX.Element => 
     <dl className="panel-list">
       <div className="panel-list-row">
         <dt>species</dt>
-        <dd>{names.get(origin.speciesId)}</dd>
+        <dd>{names.get(origin.speciesReferenceId)}</dd>
       </div>
       <div className="panel-list-row">
         <dt>culture</dt>
-        <dd>{names.get(origin.cultureId)}</dd>
+        <dd>{names.get(origin.cultureReferenceId)}</dd>
       </div>
       <div className="panel-list-row">
         <dt>homeland</dt>
@@ -300,7 +300,7 @@ type OverviewData = {
   topSkills: NormalizedSkill[];
 };
 
-/** Resolves the character's four canon origin ids to their entity names. */
+/** Resolves the character's Atlas and Encyclopedia origin references to names. */
 const useOriginNames = (origin: Character['origin'] | undefined): Map<string, string> => {
   const [names, setNames] = useState<Map<string, string>>(new Map());
 
@@ -309,19 +309,22 @@ const useOriginNames = (origin: Character['origin'] | undefined): Map<string, st
       return;
     }
     let active = true;
-    void worldAtlasClient
-      .batchGetEntities([
-        origin.speciesId,
-        origin.cultureId,
-        origin.homelandId,
-        origin.allegianceId,
-      ])
-      .then((entities) => {
-        if (active) {
-          setNames(new Map(entities.map((entity) => [entity.id, entity.name])));
-        }
-        return entities;
-      });
+    void Promise.all([
+      worldAtlasClient.batchGetEntities([origin.homelandId, origin.allegianceId]),
+      worldAtlasClient.listEncyclopediaCharacterOptions('species'),
+      worldAtlasClient.listEncyclopediaCharacterOptions('culture'),
+    ]).then(([entities, species, cultures]) => {
+      if (active) {
+        setNames(
+          new Map([
+            ...entities.map((entity) => [entity.id, entity.name] as const),
+            ...species.map((entry) => [entry.referenceId, entry.title] as const),
+            ...cultures.map((entry) => [entry.referenceId, entry.title] as const),
+          ])
+        );
+      }
+      return entities;
+    });
     return () => {
       active = false;
     };

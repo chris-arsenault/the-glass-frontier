@@ -82,6 +82,8 @@ INSERT INTO world_subkind (id, kind_id)
 VALUES
   ('learned_ability', 'ability'),
   ('innate_ability', 'ability'),
+  ('the_adversary', 'ability'),
+  ('the_three', 'ability'),
   ('instrument', 'artifact'),
   ('record', 'artifact'),
   ('relic', 'artifact'),
@@ -156,7 +158,8 @@ VALUES
   ('infrastructure', 'resource'),
   ('sapient_species', 'species'),
   ('overview', 'species'),
-  ('vessel', 'transport')
+  ('vessel', 'transport'),
+  ('route', 'transport')
 ON CONFLICT ON CONSTRAINT world_subkind_pk DO NOTHING;
 
 INSERT INTO world_relationship_kind (id, description, category, default_strength)

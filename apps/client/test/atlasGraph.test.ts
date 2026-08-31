@@ -31,6 +31,7 @@ const entity = (
   updatedAt: 0,
   veiled: false,
   ...overrides,
+  contextTags: overrides.contextTags ?? [],
 });
 
 const out = (relationship: HardStateLink['relationship'], targetId: string): HardStateLink => ({

@@ -1,6 +1,7 @@
 import type { TranscriptEntry, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 
+import { buildSceneContext } from './scenes/sceneLifecycle';
 import type { GraphContext } from './types';
 
 export const buildSystemErrorEntry = (message: string): TranscriptEntry => ({
@@ -58,3 +59,53 @@ export const narrativeFields = (graphResult: GraphContext, failure: boolean): Na
       inventoryDelta: graphResult.inventoryDelta,
       locationDelta: graphResult.locationDelta,
     };
+
+const governingSceneContext = (
+  graphResult: GraphContext,
+  failure: boolean
+): ReturnType<typeof buildSceneContext> => {
+  const scene = failure
+    ? graphResult.chronicleState.chronicle.activeScene
+    : graphResult.effectiveScene;
+  return buildSceneContext(
+    scene,
+    failure ? 'continue' : graphResult.sceneOutcome,
+    failure ? null : graphResult.sceneOutcomeReason
+  );
+};
+
+export const buildTurn = (input: {
+  chronicleId: string;
+  graphResult: GraphContext;
+  playerMessage: TranscriptEntry;
+  systemMessage?: TranscriptEntry;
+  turnId: string;
+  turnSequence: number;
+}): Turn => {
+  const failure = input.graphResult.failure || input.systemMessage !== undefined;
+  return {
+    ...narrativeFields(input.graphResult, failure),
+    advancesTimeline: input.graphResult.advancesTimeline,
+    chronicleId: input.chronicleId,
+    entityReferences: input.graphResult.entityReferences,
+    entityRoster: input.graphResult.turnEntityRoster,
+    entityUsage: input.graphResult.entityUsage,
+    executedNodes: input.graphResult.executedNodes,
+    failure,
+    gmTrace: input.graphResult.gmTrace === null ? undefined : input.graphResult.gmTrace,
+    id: input.turnId,
+    playerIntent: input.graphResult.playerIntent,
+    playerMessage: input.playerMessage,
+    playerReferenceSlugs: input.graphResult.playerReferenceSlugs,
+    proseCostUsd: failure ? undefined : input.graphResult.proseCostUsd,
+    referenceMentions: input.graphResult.referenceMentions,
+    referenceUsage: input.graphResult.referenceUsage,
+    sceneContext: governingSceneContext(input.graphResult, failure),
+    skillCheckPlan: input.graphResult.skillCheckPlan,
+    skillCheckResult: input.graphResult.skillCheckResult,
+    systemMessage: input.systemMessage,
+    turnSequence: input.turnSequence,
+    worldContent: input.graphResult.worldContent,
+    worldFronts: input.graphResult.worldFronts,
+  };
+};

@@ -144,9 +144,9 @@ export const defaultCharacter = (overrides?: Partial<Character>): Character => (
   origin: {
     allegianceId: '00000000-0000-0000-0000-000000000001',
     allegianceStance: 'member',
-    cultureId: '00000000-0000-0000-0000-000000000002',
+    cultureReferenceId: '00000000-0000-0000-0000-000000000002',
     homelandId: '00000000-0000-0000-0000-000000000003',
-    speciesId: '00000000-0000-0000-0000-000000000004',
+    speciesReferenceId: '00000000-0000-0000-0000-000000000004',
   },
   playerId: TEST_PLAYER_ID,
   pronouns: 'they/them',
@@ -185,6 +185,7 @@ export const defaultChronicle = (
   toneChips: [],
   toneNotes: '',
   ...overrides,
+  openingReferenceSlugs: overrides?.openingReferenceSlugs ?? [],
 });
 
 export const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Turn => ({

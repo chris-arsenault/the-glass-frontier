@@ -656,5 +656,12 @@
     "summary": "New default models: quicker bookkeeping, better prose",
     "details": "The work a turn does behind the narration — classifying what you attempted, planning the roll, recording what changed, tracking your inventory — accounts for around thirty seconds of every turn. That work now runs on Amazon Nova Lite, measured at 3.4 seconds against the previous default's 4.2 on the heaviest of those calls, and costing a fraction as much. Narration now defaults to Kimi K2 Thinking, which wrote the strongest prose across every chronicle we compared: concrete images, endings that hand you a choice instead of a portent, and the fewest lapses into restating what you just typed. Both defaults apply to new players. If you have already chosen your own models in settings, your choices are untouched.",
     "type": "improvement"
+  },
+  {
+    "id": "2026-08-31-world-encyclopedia",
+    "releasedAt": "2026-08-31",
+    "summary": "The World Guide now carries the ordinary life of the setting",
+    "details": "The new Encyclopedia adds creatures, resources, abilities, technologies, roles, cultures, and recurring phenomena beside the Atlas's named people and places. Chronicle creation and the live left rail show a collapsible Common here field guide for the current location. Click an entry to read it; during play, double-click or right-click any Atlas or Encyclopedia item to attach it to your next move. The GM searches both catalogs and Chronicle history through one reference system, while the Encyclopedia remains suggestive rather than exhaustive — unlisted inventions are still welcome. Species and culture now come from this reusable catalog, and narrated Encyclopedia terms open the same World Guide as Atlas references.",
+    "type": "feature"
   }
 ]

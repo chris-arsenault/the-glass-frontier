@@ -8,6 +8,7 @@ import type {
   ChronicleClosureEvent,
   ChronicleSummaryKind,
   ProseAlternate,
+  WorldReferenceSlug,
 } from '@glass-frontier/dto';
 import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
 import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
@@ -24,10 +25,12 @@ import type {
 import { formatTurnJobId, isDefined, isNonEmptyString, log } from '@glass-frontier/utils';
 import {
   type ChronicleStore,
+  type EncyclopediaStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 
+import { resolveDirectReferences } from './directReferences';
 import { withDerivedRoster } from './entity/derivedRoster';
 import {
   type ChronicleClosurePublisher,
@@ -40,18 +43,19 @@ import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceReso
 import { EnvironmentNode } from './gmGraph/nodes/EnvironmentNode';
 import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
 import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
+import { buildGraphInput } from './graphInput';
 import { runProseAgentPanel } from './proseAgent/panel';
-import { buildSceneContext } from './scenes/sceneLifecycle';
 import { ChronicleTelemetry } from './telemetry';
 import {
+  buildTurn,
   buildSystemErrorEntry,
   ensureFailureNotice,
-  narrativeFields,
 } from './turnAssembly';
 import type { GraphContext, ChronicleState } from './types';
 
 type GmEngineOptions = {
   chronicleStore: ChronicleStore;
+  encyclopediaStore: EncyclopediaStore;
   worldSchemaStore: WorldSchemaStore;
   templateManager: PromptTemplateManager;
   llmClient: RetryLLMClient;
@@ -62,7 +66,7 @@ type GmEngineOptions = {
 
 type HandlePlayerMessageOptions = {
   llmPlayer: LLMPlayer;
-  targetEntityIds?: string[];
+  referenceSlugs?: WorldReferenceSlug[];
 };
 
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
@@ -115,6 +119,7 @@ const logResolvedTurn = (
 class GmEngine {
   readonly chronicleStore: ChronicleStore;
   readonly worldSchemaStore: WorldSchemaStore;
+  readonly encyclopediaStore: EncyclopediaStore;
   readonly telemetry: ChronicleTelemetry;
   readonly graph: GmGraphOrchestrator;
   readonly llm: RetryLLMClient;
@@ -128,6 +133,7 @@ class GmEngine {
   constructor(options: GmEngineOptions) {
     this.templateManager = options.templateManager;
     this.chronicleStore = options.chronicleStore;
+    this.encyclopediaStore = options.encyclopediaStore;
     this.worldSchemaStore = options.worldSchemaStore;
     this.telemetry = new ChronicleTelemetry();
     this.llm = options.llmClient;
@@ -155,7 +161,7 @@ class GmEngine {
     activeScene: Chronicle['activeScene'];
     entityRoster: Chronicle['entityRoster'];
   }> {
-    const { llmPlayer, targetEntityIds = [] } = options;
+    const { llmPlayer, referenceSlugs = [] } = options;
     this.#assertChronicleId(chronicleId);
     const chronicleState = await this.#loadChronicleState(chronicleId);
     this.#ensureChronicleOpen(chronicleState);
@@ -167,13 +173,26 @@ class GmEngine {
     }
     const jobId = formatTurnJobId(chronicleId, turnSequence, requestId);
     const templateRuntime = this.#createTemplateRuntime(playerId);
-    const graphInput = this.#buildGraphInput({
+    const directReferences = await resolveDirectReferences(
+      this.worldSchemaStore,
+      this.encyclopediaStore,
+      referenceSlugs
+    );
+    const graphInput = buildGraphInput({
+      agentLoop: this.agentLoop,
       chronicleId,
       chronicleState,
       chronicleStore: this.chronicleStore,
+      directEncyclopediaEntries: directReferences.encyclopediaEntries,
+      embeddings: this.embeddings,
+      encyclopediaStore: this.encyclopediaStore,
+      llm: this.llm,
       llmPlayer,
+      modelConfigStore: this.modelConfigStore,
       playerMessage,
-      targetEntityIds,
+      playerReferenceSlugs: directReferences.slugs,
+      targetEntityIds: directReferences.atlasEntityIds,
+      telemetry: this.telemetry,
       templateRuntime,
       turnId,
       turnSequence,
@@ -212,7 +231,7 @@ class GmEngine {
       : updatedContext;
 
     const proseAlternates = await panelPromise;
-    const turn = this.#buildTurn({
+    const turn = buildTurn({
       chronicleId,
       graphResult: finalContext,
       playerMessage,
@@ -352,56 +371,6 @@ class GmEngine {
     }
   }
 
-  #buildGraphInput({
-    chronicleId,
-    chronicleState,
-    chronicleStore,
-    llmPlayer,
-    playerMessage,
-    targetEntityIds,
-    templateRuntime,
-    turnId,
-    turnSequence,
-    worldSchemaStore,
-  }: {
-    authorizationHeader?: string;
-    chronicleId: string;
-    turnId: string;
-    chronicleState: ChronicleState;
-    playerMessage: TranscriptEntry;
-    targetEntityIds: string[];
-    templateRuntime: PromptTemplateRuntime;
-    turnSequence: number;
-    chronicleStore: ChronicleStore;
-    llmPlayer: LLMPlayer;
-    worldSchemaStore: WorldSchemaStore;
-  }): GraphContext {
-    return {
-      advancesTimeline: false,
-      agentLoop: this.agentLoop,
-      chronicleId,
-      chronicleState,
-      chronicleStore,
-      effectiveScene: chronicleState.chronicle.activeScene,
-      embeddings: this.embeddings,
-      failure: false,
-      llm: this.llm,
-      llmPlayer,
-      modelConfigStore: this.modelConfigStore,
-      playerIntent: undefined,
-      playerMessage,
-      sceneOutcome: 'continue',
-      sceneOutcomeReason: null,
-      shouldCloseChronicle: false,
-      targetEntityIds,
-      telemetry: this.telemetry,
-      templates: templateRuntime,
-      turnId,
-      turnSequence,
-      worldSchemaStore,
-    };
-  }
-
   async #executeGraph(
     input: GraphContext,
     jobId: string
@@ -420,56 +389,6 @@ class GmEngine {
         systemMessage: buildSystemErrorEntry(message),
       };
     }
-  }
-
-
-  #buildTurn({
-    chronicleId,
-    graphResult,
-    playerMessage,
-    systemMessage,
-    turnId,
-    turnSequence,
-  }: {
-    chronicleId: string;
-    turnId: string;
-    graphResult: GraphContext;
-    playerMessage: TranscriptEntry;
-    systemMessage?: TranscriptEntry;
-    turnSequence: number;
-  }): Turn {
-    const failure = graphResult.failure || systemMessage !== undefined;
-    const governingScene = failure
-      ? graphResult.chronicleState.chronicle.activeScene
-      : graphResult.effectiveScene;
-    return {
-      ...narrativeFields(graphResult, failure),
-      advancesTimeline: graphResult.advancesTimeline,
-      chronicleId,
-      entityReferences: graphResult.entityReferences,
-      entityRoster: graphResult.turnEntityRoster,
-      entityUsage: graphResult.entityUsage,
-      executedNodes: graphResult.executedNodes,
-      failure,
-      gmTrace: graphResult.gmTrace === null ? undefined : graphResult.gmTrace,
-      id: turnId,
-      playerIntent: graphResult.playerIntent,
-      playerMessage,
-      proseCostUsd: failure ? undefined : graphResult.proseCostUsd,
-      sceneContext: buildSceneContext(
-        governingScene,
-        failure ? 'continue' : graphResult.sceneOutcome,
-        failure ? null : graphResult.sceneOutcomeReason
-      ),
-      skillCheckPlan: graphResult.skillCheckPlan,
-      skillCheckResult: graphResult.skillCheckResult,
-      systemMessage,
-      turnSequence,
-      // Kept even on a failed turn: the world moved before the failure, and
-      // the next turn should know it.
-      worldContent: graphResult.worldContent,
-      worldFronts: graphResult.worldFronts,
-    };
   }
 
   async #emitClosureEvent(input: {

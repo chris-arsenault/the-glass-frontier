@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { Metadata } from '../Metadata';
+import { WorldReferenceSlug } from '../world/Encyclopedia';
 import { ChronicleBeat } from './ChronicleBeat';
 import { ChronicleSummaryEntry } from './ChronicleSummary';
 import { EntityRosterState } from './EntityReference';
@@ -42,6 +43,8 @@ export const Chronicle = z.object({
   /** Where the chronicle is now. A name, nothing more. */
   locationName: z.string().min(1),
   metadata: Metadata.optional(),
+  /** Encyclopedia entries actually named in the generated opening. */
+  openingReferenceSlugs: z.array(WorldReferenceSlug).default([]),
   /** The GM-authored scene opener. The seed remains selection copy only. */
   openingText: z.string(),
   playerId: z.string().min(1),

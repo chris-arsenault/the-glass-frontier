@@ -44,6 +44,7 @@ export type EntityStats = {
 };
 
 type EntityRow = {
+  context_tags: string[];
   id: string;
   slug: string;
   kind: HardStateKind;
@@ -91,7 +92,7 @@ const PROMINENCE_RANK = new Map<HardStateProminence, number>([
 
 const ENTITY_SELECT = `SELECT e.id, e.slug, e.kind, e.subkind, e.name,
   e.description, e.prominence, e.status, e.props, e.external_key, e.dm, e.is_article,
-  e.is_location, e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline,
+  e.is_location, e.origin_blurb, e.playable_as, e.veiled, e.veil_tagline, e.context_tags,
   e.created_at, e.updated_at
   FROM entity e
   JOIN world_prominence wp ON wp.id = e.prominence`;
@@ -126,6 +127,7 @@ const rowGmNotes = (row: EntityRow): GmNote[] => row.props?.gmNotes ?? [];
 const rowTimestamp = (value: Date | null): number => value?.getTime() ?? now();
 
 const toEntity = (row: EntityRow, links: HardStateLink[]): HardState => ({
+  contextTags: row.context_tags,
   createdAt: rowTimestamp(row.created_at),
   description: optional(row.description),
   descriptiveIdentity: row.props?.descriptiveIdentity,

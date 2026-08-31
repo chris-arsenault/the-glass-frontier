@@ -4,6 +4,7 @@ import type {
   CharacterDraft,
   Chronicle,
   ChronicleBeat,
+  DirectWorldReference,
   Intent,
   SceneContext,
   SkillCheckPlan,
@@ -15,6 +16,7 @@ import type {
   LlmTrace,
   PlayerFeedbackVisibilityLevel,
   EntityReference,
+  EncyclopediaMention,
   EntityRosterEntry,
   Front,
   ProseAlternate,
@@ -41,6 +43,7 @@ export type TurnView = {
   beatTracker: BeatTracker | null;
   canBranch: boolean;
   entityReferences: EntityReference[] | null;
+  referenceMentions: EncyclopediaMention[] | null;
   entityRoster: EntityRosterEntry[] | null;
   executedNodes: string[] | null;
   gmSummary: string | null;
@@ -136,7 +139,7 @@ export type ChronicleState = {
   playerSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
   playerSettingsError: Error | null;
   isUpdatingPlayerSettings: boolean;
-  selectedEntityIds: string[];
+  selectedReferences: DirectWorldReference[];
 }
 
 export type ChronicleStore = {
@@ -153,7 +156,7 @@ export type ChronicleStore = {
   resetStore: () => void;
   loadPlayerSettings: () => Promise<void>;
   updatePlayerSettings: (settings: PlayerSettings) => Promise<void>;
-  toggleEntityTarget: (entityId: string) => void;
+  toggleReference: (reference: DirectWorldReference) => void;
 } & ChronicleState
 
 export type ChronicleSeedCreationDetails = {

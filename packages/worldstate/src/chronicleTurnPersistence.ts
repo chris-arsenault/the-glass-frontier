@@ -63,6 +63,9 @@ type TurnRow = {
   entity_references: Turn['entityReferences'] | null;
   entity_roster: Turn['entityRoster'] | null;
   entity_usage: Turn['entityUsage'] | null;
+  player_reference_slugs: Turn['playerReferenceSlugs'] | null;
+  reference_usage: Turn['referenceUsage'] | null;
+  reference_mentions: Turn['referenceMentions'] | null;
   world_content: string | null;
   world_fronts: Turn['worldFronts'] | null;
 };
@@ -76,6 +79,7 @@ const TURN_SELECT = `SELECT id, chronicle_id, chronicle_state, turn_sequence,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
   beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
   entity_roster, entity_references, entity_usage,
+  player_reference_slugs, reference_usage, reference_mentions,
   world_content, world_fronts
   FROM chronicle_turn`;
 
@@ -89,13 +93,14 @@ const TURN_INSERT = `INSERT INTO chronicle_turn (
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
   beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
   entity_roster, entity_references, entity_usage,
+  player_reference_slugs, reference_usage, reference_mentions,
   world_content, world_fronts
 ) VALUES (
   $1::uuid, $2::uuid, $3, now(), $4::jsonb, $5, $6, $7,
   $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13, $14, $15::jsonb, $16,
   $17, $18, $19::jsonb, $20::jsonb, $21::jsonb, $22::jsonb,
   $23::jsonb, $24::jsonb, $25::jsonb, $26::jsonb, $27, $28::jsonb, $29::jsonb, $30::jsonb,
-  $31, $32::jsonb
+  $31::text[], $32::jsonb, $33::jsonb, $34, $35::jsonb
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
@@ -162,8 +167,11 @@ const toTurn = (row: TurnRow): Turn => ({
     metadata: row.player_message_metadata ?? defaultMetadata(),
     role: 'player',
   },
+  playerReferenceSlugs: optional(row.player_reference_slugs),
   proseAlternates: optional(row.prose_alternates),
   proseCostUsd: optional(row.prose_cost_usd),
+  referenceMentions: optional(row.reference_mentions),
+  referenceUsage: optional(row.reference_usage),
   sceneContext: optional(row.scene_context),
   skillCheckPlan: optional(row.skill_check_plan),
   skillCheckResult: optional(row.skill_check_result),
@@ -209,6 +217,9 @@ const turnParameters = (
   optionalJson(turn.entityRoster),
   optionalJson(turn.entityReferences),
   optionalJson(turn.entityUsage),
+  valueOr(turn.playerReferenceSlugs, []),
+  serializeJson(valueOr(turn.referenceUsage, [])),
+  serializeJson(valueOr(turn.referenceMentions, [])),
   valueOr(turn.worldContent, null),
   optionalJson(turn.worldFronts),
 ];

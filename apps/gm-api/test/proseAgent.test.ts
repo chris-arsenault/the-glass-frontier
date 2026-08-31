@@ -1,5 +1,5 @@
 import { MODEL_CATALOG } from '@glass-frontier/app';
-import type { HardState } from '@glass-frontier/dto';
+import type { EncyclopediaEntry, HardState } from '@glass-frontier/dto';
 import { AgentLoopClient, calculateActualCostUsd } from '@glass-frontier/llm-client';
 import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
@@ -18,6 +18,7 @@ const GUILD_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const HIDDEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KORVATH_SLUG = 'korvath-dockmaster';
 const GUILD_SLUG = 'harbor-guild';
+const FLITTER_SLUG = 'flitter';
 const SONNET_MODEL_ID = 'claude-sonnet-5';
 const CLASSIFICATION_MODEL_ID = 'amazon-nova-2-lite';
 const OSS_MODEL_ID = 'gpt-oss-120b';
@@ -30,7 +31,7 @@ const runTool = async (agentTool: unknown, input: unknown): Promise<string> => {
   return executable.execute(input, {});
 };
 
-const freshSession = (): ToolSession => new ToolSession({ seedEntities: [] });
+const freshSession = (): ToolSession => new ToolSession({ seedReferences: [] });
 
 const entity = (overrides: Partial<HardState> & { id: string; slug: string }): HardState =>
   ({
@@ -69,6 +70,55 @@ const korvath = entity({
 const guild = entity({ id: GUILD_ID, kind: 'faction', slug: GUILD_SLUG });
 const hiddenBroker = entity({ dm: true, id: HIDDEN_ID, slug: 'hidden-broker' });
 
+const flitter = (
+  overrides: Partial<EncyclopediaEntry & { id: string }> = {}
+): EncyclopediaEntry & { id: string } => ({
+  aliases: ['glass-wing'],
+  availability: { mode: 'global' as const },
+  descriptiveIdentity: { motion: 'skittish' },
+  dm: false,
+  externalKey: 'creature:flitter',
+  facts: { diet: 'resonant pollen' },
+  id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  instances: [],
+  kind: 'creature',
+  members: [],
+  prevalence: 'common' as const,
+  sections: [{ audience: 'gm' as const, heading: 'Use', text: 'They expose vibration.' }],
+  slug: FLITTER_SLUG,
+  status: 'complete' as const,
+  subkind: 'animal',
+  summary: 'A glass-winged scavenger drawn to resonant machinery.',
+  tiers: [],
+  title: 'Flitter',
+  topics: ['resonance'],
+  usage: {
+    affordances: ['Follow it to active machinery.'],
+    cues: ['Glass wings tick against metal.'],
+    pressures: [],
+    variations: [],
+  },
+  ...overrides,
+});
+
+const encyclopediaStore = (
+  overrides: Record<string, unknown> = {}
+): GraphContext['encyclopediaStore'] => (({
+  findCandidates: () => Promise.resolve([]),
+  findMentionedEntries: () => Promise.resolve([]),
+  getEntry: ({ slug }: { slug: string }) =>
+    Promise.resolve(slug.replace(/^encyclopedia:/u, '') === FLITTER_SLUG ? flitter() : null),
+  getEntryById: () => Promise.resolve(flitter()),
+  listApplicable: () => Promise.resolve([]),
+  listAtlasExamplesForEntry: () => Promise.resolve([]),
+  listCharacterOptions: () => Promise.resolve([]),
+  listClassificationsForEntity: () => Promise.resolve([]),
+  listEntries: () => Promise.resolve([]),
+  listMissingEmbeddings: () => Promise.resolve([]),
+  saveEmbedding: () => Promise.resolve(),
+  ...overrides,
+}));
+
 /** One slice row per entity, shaped as the store returns it. */
 const sliceRow = (source: HardState, score: number): unknown => ({
   description: source.description,
@@ -93,6 +143,7 @@ const worldStore = (
 ): GraphContext['worldSchemaStore'] => {
   const all = new Map([[KORVATH_ID, korvath], [GUILD_ID, guild], [HIDDEN_ID, hiddenBroker]]);
   return {
+    findEntitiesByName: () => Promise.resolve([]),
     findEntityCandidates: () => Promise.resolve([]),
     findLocationByName: () => Promise.resolve(null),
     getContextSlice: () => Promise.resolve([sliceRow(korvath, 0.9), sliceRow(guild, 0.4)]),
@@ -115,6 +166,8 @@ const worldStore = (
 
 const agentContext = (): GraphContext => {
   const context = buildContext({
+    embeddings: { embed: () => Promise.resolve([0.1]) },
+    encyclopediaStore: encyclopediaStore(),
     playerIntent: buildIntent(),
     // Korvath reaches the index because this turn names him, not because a
     // scorer put him on a roster — the roster no longer seeds anything.
@@ -170,13 +223,14 @@ describe('tool session', () => {
 describe('seed pack', () => {
   it('counts what can be opened without naming fields or values', async () => {
     const pack = await buildSeedPack(agentContext());
-    const korvathEntry = pack.toc.find((entry) => entry.slug === KORVATH_SLUG);
+    const korvathEntry = pack.toc.find((entry) => entry.slug === `atlas:${KORVATH_SLUG}`);
     expect(korvathEntry?.noteCount).toBe(3);
     const rendered = JSON.stringify(pack.toc);
     expect(rendered).not.toContain('wary');
     // Field names are as unusable to a chooser as field values are cheap to leak.
     expect(rendered).not.toContain('disposition');
-    expect(korvathEntry?.relationships.map((rel) => rel.targetSlug)).toEqual([GUILD_SLUG]);
+    expect(korvathEntry?.relationships.map((rel) => rel.targetSlug))
+      .toEqual([`atlas:${GUILD_SLUG}`]);
     expect(korvathEntry?.loreCount).toBe(3);
   });
 
@@ -194,104 +248,130 @@ describe('seed pack', () => {
     const pack = await buildSeedPack(context);
 
     expect(pack.toc).toStrictEqual([]);
-    expect(pack.seedEntities).toStrictEqual([]);
+    expect(pack.seedReferences).toStrictEqual([]);
   });
 });
 
 describe('prose agent tools', () => {
-  it('open returns every identity field and note as labeled text, not JSON', async () => {
+  it('exposes only cross-catalog search and open', () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
-    const raw = await runTool(tools.open, { slug: KORVATH_SLUG });
+    expect(Object.keys(tools).sort()).toEqual(['open', 'search']);
+  });
+
+  it('opens a qualified Atlas slug with its full record', async () => {
+    const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
+    const raw = await runTool(tools.open, { slug: `atlas:${KORVATH_SLUG}` });
 
     expect(raw).toContain('clipped');
     expect(raw).toContain('wary');
+    expect(raw).toContain('quarterly tithe');
     expect(raw).not.toContain('{"');
   });
 
-  it('open narrows to lore or to notes when asked', async () => {
+  it('opens a qualified Encyclopedia slug without exposing an id or source field', async () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
-    const notes = await runTool(tools.open, { include: 'notes', slug: KORVATH_SLUG });
-    const lore = await runTool(tools.open, { include: 'lore', slug: KORVATH_SLUG });
+    const raw = await runTool(tools.open, { slug: `encyclopedia:${FLITTER_SLUG}` });
 
-    expect(notes).toContain('clipped');
-    expect(notes).not.toContain('lore:');
-    expect(lore).toContain('lore:');
-    expect(lore).not.toContain('clipped');
+    expect(raw).toContain('resonant pollen');
+    expect(raw).toContain(`encyclopedia:${FLITTER_SLUG}`);
+    expect(raw).not.toContain(flitter().id);
+    expect(raw).not.toContain('source:');
   });
 
-  it('read_relationship returns one edge with its fields', async () => {
+  it('accepts a bare slug only when it is unique across repositories', async () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
-    const raw = await runTool(tools.read_relationship, {
-      slug: KORVATH_SLUG,
-      targetSlug: GUILD_SLUG,
+    const raw = await runTool(tools.open, { slug: FLITTER_SLUG });
+    expect(raw).toContain(`encyclopedia:${FLITTER_SLUG}`);
+  });
+
+  it('returns qualified alternatives for a cross-repository slug collision', async () => {
+    const context = agentContext();
+    context.encyclopediaStore = encyclopediaStore({
+      getEntry: ({ slug }: { slug: string }) => Promise.resolve(
+        slug.replace(/^encyclopedia:/u, '') === GUILD_SLUG
+          ? flitter({ slug: GUILD_SLUG, title: 'Harbor Guild Practice' })
+          : null
+      ),
     });
-    expect(raw).toContain('quarterly tithe');
-    expect(raw).toContain('reports_to');
-    expect(raw).not.toContain('old grudge');
+    const tools = createProseAgentTools({ context, session: freshSession() });
+    await expect(runTool(tools.open, { slug: GUILD_SLUG })).rejects.toThrow(
+      `atlas:${GUILD_SLUG}, encyclopedia:${GUILD_SLUG}`
+    );
   });
 
-  it('expand returns index entries without field content, hiding dm targets', async () => {
+  it('does not fall through to another repository for a qualified miss', async () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
-    const raw = await runTool(tools.expand, { slug: KORVATH_SLUG });
-    expect(raw).toContain(GUILD_SLUG);
-    expect(raw).toContain('notes: 3');
-    expect(raw).not.toContain('disposition');
-    expect(raw).not.toContain('"');
-    expect(raw).not.toContain('relationships');
-    expect(raw).not.toContain('hidden-broker');
-    expect(raw).not.toContain('wary');
+    await expect(runTool(tools.open, { slug: `atlas:${FLITTER_SLUG}` }))
+      .rejects.toThrow(`No reference has slug "atlas:${FLITTER_SLUG}"`);
   });
 
-  it('search fails as an error when nothing matches, naming the noise it rejected', async () => {
+  it('fails a search miss with the non-exhaustive invention policy', async () => {
     const context = agentContext();
     context.worldSchemaStore.findEntityCandidates = () => Promise.resolve([
       { id: KORVATH_ID, kind: 'npc', name: 'Korvath', similarity: 0.29, slug: KORVATH_SLUG },
     ]);
     const tools = createProseAgentTools({ context, session: freshSession() });
     await expect(runTool(tools.search, { query: 'globitz' }))
-      .rejects.toThrow(/Nothing in canon matches "globitz".*Korvath/u);
+      .rejects.toThrow(/Nothing matches "globitz".*treat it as new fiction/u);
   });
 
-  it('search keeps matches above the similarity floor and reports their score', async () => {
+  it('returns fully qualified slugs without ids, source fields, or scores', async () => {
     const context = agentContext();
     context.worldSchemaStore.findEntityCandidates = () => Promise.resolve([
       { id: KORVATH_ID, kind: 'npc', name: 'Korvath', similarity: 0.83, slug: KORVATH_SLUG },
       { id: GUILD_ID, kind: 'faction', name: 'Harbor Guild', similarity: 0.31, slug: GUILD_SLUG },
     ]);
+    context.encyclopediaStore = encyclopediaStore({
+      findCandidates: () => Promise.resolve([{
+        kind: 'creature',
+        prevalence: 'common',
+        similarity: 0.78,
+        slug: `encyclopedia:${FLITTER_SLUG}`,
+        status: 'complete',
+        subkind: 'animal',
+        summary: flitter().summary,
+        title: 'Flitter',
+        topics: ['resonance'],
+      }]),
+    });
     const tools = createProseAgentTools({ context, session: freshSession() });
     const raw = await runTool(tools.search, { query: 'the dockmaster' });
-    expect(raw).toContain(KORVATH_SLUG);
-    expect(raw).toContain('0.83');
-    expect(raw).not.toContain(GUILD_SLUG);
+    expect(raw).toContain(`atlas:${KORVATH_SLUG}`);
+    expect(raw).toContain(`encyclopedia:${FLITTER_SLUG}`);
+    expect(raw).not.toContain(KORVATH_ID);
+    expect(raw).not.toContain('source:');
+    expect(raw).not.toContain('0.83');
+    expect(raw).not.toContain(`atlas:${GUILD_SLUG}`);
   });
 
-  it('open and search_history fail as errors on misses, and the record keeps the miss', async () => {
+  it('searches Chronicle turns and opens the returned slug unchanged', async () => {
     const context = agentContext();
     context.chronicleStore = {
-      searchTurns: () => Promise.resolve([]),
-    } as unknown as GraphContext['chronicleStore'];
-    const session = freshSession();
-    const tools = createProseAgentTools({ context, session });
-    await expect(runTool(tools.open, { slug: 'globitz' }))
-      .rejects.toThrow('No canon entity with slug "globitz"');
-    await expect(runTool(tools.search_history, { query: 'globitz' }))
-      .rejects.toThrow('No past turn mentions "globitz"');
-    expect(session.renderRecord()).toContain('MISS: No canon entity with slug "globitz"');
-    expect(session.callCount).toBe(2);
-  });
-
-  it('read_turns reads a fixed window in play order', async () => {
-    const context = agentContext();
-    context.chronicleStore = {
-      listTurnWindow: (input: { fromSequence?: number; toSequence?: number }) => {
-        expect(input.fromSequence).toBe(4);
-        expect(input.toSequence).toBe(13);
-        return Promise.resolve([]);
-      },
+      listTurnWindow: () => Promise.resolve([{
+        gmResponse: { content: 'The relay answered in Vex\'s voice.' },
+        playerMessage: { content: 'I call the drowned relay.', role: 'player' },
+        turnSequence: 4,
+      }]),
+      searchTurns: () => Promise.resolve([{
+        gmResponse: { content: 'The relay answered in Vex\'s voice.' },
+        playerMessage: { content: 'I call the drowned relay.', role: 'player' },
+        turnSequence: 4,
+      }]),
     } as unknown as GraphContext['chronicleStore'];
     const tools = createProseAgentTools({ context, session: freshSession() });
-    const raw = await runTool(tools.read_turns, { fromSequence: 4 });
-    expect(raw).toBe('');
+    const results = await runTool(tools.search, { query: 'drowned relay' });
+    expect(results).toContain('chronicle:turn-4');
+    const opened = await runTool(tools.open, { slug: 'chronicle:turn-4' });
+    expect(opened).toContain('The relay answered');
+  });
+
+  it('records misses without exposing another tool surface', async () => {
+    const session = freshSession();
+    const tools = createProseAgentTools({ context: agentContext(), session });
+    await expect(runTool(tools.open, { slug: 'globitz' }))
+      .rejects.toThrow('No reference has slug "globitz"');
+    expect(session.renderRecord()).toContain('MISS: No reference has slug "globitz"');
+    expect(session.callCount).toBe(1);
   });
 });
 
@@ -336,13 +416,13 @@ const textResponse = (text: string): MockGenerateResponse => ({
 const briefInput = (): Record<string, unknown> => ({
   character: 'A glasswright whose hands answer before their voice does.',
   complication: null,
-  entities: [
-    { emergentTags: ['tithe'], entitySlug: KORVATH_SLUG, usage: 'central' },
-    { emergentTags: [], entitySlug: 'never-served-slug', usage: 'mentioned' },
-  ],
   history: null,
   location: 'The tithe yards, where every crate is counted twice before dark.',
   present: 'Korvath counts the tithe, wanting it settled before dark.',
+  references: [
+    { emergentTags: ['tithe'], slug: `atlas:${KORVATH_SLUG}`, usage: 'central' },
+    { emergentTags: [], slug: 'atlas:never-served-slug', usage: 'mentioned' },
+  ],
   scene: {
     changed: 'nothing yet',
     endsWhen: 'the tithe is settled or refused',
@@ -357,6 +437,7 @@ type Verdict = { gaps: string[]; status: 'sufficient' | 'continue' };
  * dispatched the way production tells them apart: schema name and node id.
  */
 const llmStub = (options?: {
+  brief?: Record<string, unknown>;
   extractFails?: boolean;
   verdictFails?: boolean;
   verdicts?: Verdict[];
@@ -394,7 +475,11 @@ const llmStub = (options?: {
       if (options?.extractFails === true) {
         return Promise.reject(new Error('extraction failed'));
       }
-      return Promise.resolve({ data: briefInput(), rawResponse: {}, usage: SMALL_USAGE });
+      return Promise.resolve({
+        data: options?.brief ?? briefInput(),
+        rawResponse: {},
+        usage: SMALL_USAGE,
+      });
     },
   } as unknown as GraphContext['llm'];
 };
@@ -570,7 +655,7 @@ describe('runProseAgent', () => {
 
   it('researches, composes, extracts, and writes with a provenance-checked sidecar', async () => {
     const agentLoop = scriptedLoop([
-      () => toolCallResponse('open', { slug: KORVATH_SLUG }),
+      () => toolCallResponse('open', { slug: `atlas:${KORVATH_SLUG}` }),
       () => textResponse('That covers the yard.'),
     ]);
     const context = agentContext();
@@ -592,6 +677,32 @@ describe('runProseAgent', () => {
     ]);
     expect(outcome.stepCount).toBe(2);
     expect(steps).toEqual([0, 1]);
+  });
+
+  it('records served Encyclopedia material without adding it to entity focus', async () => {
+    const agentLoop = scriptedLoop([
+      () => toolCallResponse('open', { slug: `encyclopedia:${FLITTER_SLUG}` }),
+      () => textResponse('That covers the local life.'),
+    ]);
+    const context = agentContext();
+    context.llm = llmStub({
+      brief: {
+        ...briefInput(),
+        references: [{
+          emergentTags: [],
+          slug: `encyclopedia:${FLITTER_SLUG}`,
+          usage: 'central',
+        }],
+      },
+    });
+
+    const outcome = await runProseAgent(context, { agentLoop });
+
+    expect(outcome.referenceUsage).toEqual([{
+      role: 'interaction',
+      slug: `encyclopedia:${FLITTER_SLUG}`,
+    }]);
+    expect(outcome.sidecar).toEqual([]);
   });
 
   it('feeds evaluator gaps into the next search round', async () => {

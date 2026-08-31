@@ -12,9 +12,11 @@ import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-front
 import { createOpsStore, type OpsStore } from '@glass-frontier/ops';
 import {
   createChronicleStore,
+  createEncyclopediaStore,
   createWorldSchemaStore,
   type WorldSchemaStore,
   type ChronicleStore,
+  type EncyclopediaStore,
 } from '@glass-frontier/worldstate';
 // context.ts
 import type { Pool } from 'pg';
@@ -32,6 +34,7 @@ export type Context = {
   tokenUsageStore: OpsStore['tokenUsageStore'];
   worldSchemaStore: WorldSchemaStore;
   chronicleStore: ChronicleStore;
+  encyclopediaStore: EncyclopediaStore;
 };
 
 // Singleton instances - initialized lazily
@@ -40,7 +43,46 @@ let appStore: AppStore | undefined;
 let opsStore: OpsStore | undefined;
 let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
+let encyclopediaStore: EncyclopediaStore | undefined;
 let seedService: ChronicleSeedService | undefined;
+
+type InitializedStores = {
+  appStore: AppStore;
+  chronicleStore: ChronicleStore;
+  encyclopediaStore: EncyclopediaStore;
+  opsStore: OpsStore;
+  seedService: ChronicleSeedService;
+  worldSchemaStore: WorldSchemaStore;
+};
+
+const requireInitializedStores = (): InitializedStores => {
+  if (appStore === undefined) {
+    throw new Error('Context app store is not initialized.');
+  }
+  if (chronicleStore === undefined) {
+    throw new Error('Context Chronicle store is not initialized.');
+  }
+  if (encyclopediaStore === undefined) {
+    throw new Error('Context Encyclopedia store is not initialized.');
+  }
+  if (opsStore === undefined) {
+    throw new Error('Context operations store is not initialized.');
+  }
+  if (seedService === undefined) {
+    throw new Error('Context seed service is not initialized.');
+  }
+  if (worldSchemaStore === undefined) {
+    throw new Error('Context Atlas store is not initialized.');
+  }
+  return {
+    appStore,
+    chronicleStore,
+    encyclopediaStore,
+    opsStore,
+    seedService,
+    worldSchemaStore,
+  };
+};
 
 /**
  * Initialize context for the Lambda runtime.
@@ -58,7 +100,9 @@ export async function initializeForLambda(): Promise<void> {
   opsStore = createOpsStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  encyclopediaStore = createEncyclopediaStore({ pool });
   seedService = new ChronicleSeedService({
+    encyclopediaStore,
     llmClient: createLLMClient({ pool }),
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
@@ -85,7 +129,9 @@ function initializeLocal(): void {
   opsStore = createOpsStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  encyclopediaStore = createEncyclopediaStore({ pool });
   seedService = new ChronicleSeedService({
+    encyclopediaStore,
     llmClient: createLLMClient(),
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
@@ -99,29 +145,19 @@ export async function createContext(options?: { authorizationHeader?: string }):
     initializeLocal();
   }
 
-  if (
-    appStore === undefined ||
-    opsStore === undefined ||
-    worldSchemaStore === undefined ||
-    chronicleStore === undefined ||
-    seedService === undefined
-  ) {
-    throw new Error(
-      'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
-    );
-  }
-
+  const stores = requireInitializedStores();
   const identity = await verifyAuthorizationHeader(options?.authorizationHeader);
   return {
-    appStore,
+    appStore: stores.appStore,
     authorizationHeader: options?.authorizationHeader,
-    bugReportStore: opsStore.bugReportStore,
-    chronicleStore,
+    bugReportStore: stores.opsStore.bugReportStore,
+    chronicleStore: stores.chronicleStore,
+    encyclopediaStore: stores.encyclopediaStore,
     identity,
-    modelConfigStore: appStore.modelConfigStore,
-    playerStore: appStore.playerStore,
-    seedService,
-    tokenUsageStore: opsStore.tokenUsageStore,
-    worldSchemaStore,
+    modelConfigStore: stores.appStore.modelConfigStore,
+    playerStore: stores.appStore.playerStore,
+    seedService: stores.seedService,
+    tokenUsageStore: stores.opsStore.tokenUsageStore,
+    worldSchemaStore: stores.worldSchemaStore,
   };
 }

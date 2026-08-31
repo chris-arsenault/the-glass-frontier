@@ -1,11 +1,11 @@
 import { CohereTextEmbeddingClient } from '@glass-frontier/llm-client/embeddings';
 import { log } from '@glass-frontier/utils';
-import { createWorldSchemaStore } from '@glass-frontier/worldstate';
+import { createEncyclopediaStore, createWorldSchemaStore } from '@glass-frontier/worldstate';
 import { createLambdaPool } from '@glass-frontier/worldstate/pg';
 import { seedCanon, type CanonSeedResult } from '@glass-frontier/worldstate/seedCanon';
 import type { Handler } from 'aws-lambda';
 
-import { embedMissingEntities } from './embedEntities';
+import { embedMissingEncyclopediaEntries, embedMissingEntities } from './embedEntities';
 
 type CanonSeedEvent = {
   operation: 'seed-canon';
@@ -35,8 +35,13 @@ export const handler: Handler<unknown, CanonSeedResult> = async (event) => {
     createWorldSchemaStore({ pool: getPool() }),
     embeddings
   );
+  const embeddedEncyclopediaCount = await embedMissingEncyclopediaEntries(
+    createEncyclopediaStore({ pool: getPool() }),
+    embeddings
+  );
   log('info', 'canon-seed.completed', {
     batchId: result.batchId,
+    embeddedEncyclopediaCount,
     embeddedEntityCount,
     entityCount: result.entityCount,
     loreCount: result.loreCount,

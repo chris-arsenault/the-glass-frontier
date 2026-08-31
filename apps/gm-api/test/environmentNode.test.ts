@@ -8,6 +8,7 @@ import { buildContext, buildIntent } from './harness';
 const YARD_SLUG = 'splinter-yards';
 
 const YARD: HardState = {
+  contextTags: [],
   description: 'A salvage yard stacked with dead relay masts.',
   descriptiveIdentity: { activity: 'Crews strip masts through the cold hours.' },
   dm: false,

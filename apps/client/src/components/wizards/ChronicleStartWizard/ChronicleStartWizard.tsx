@@ -15,6 +15,7 @@ import {
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { buildAtlasGraph } from '../../atlas/atlasGraph';
 import { AtlasLocationBrowser } from '../../atlas/AtlasLocationBrowser';
+import { ContextReferenceBrowser } from '../../encyclopedia/ContextReferenceBrowser';
 import './ChronicleStartWizard.css';
 
 const toneOptions = [
@@ -408,7 +409,10 @@ export function ChronicleStartWizard() {
         </button>
       </header>
       <Stepper currentStep={step} onNavigate={setStep} />
-      <div className="chronicle-wizard-body">{currentStepComponent}</div>
+      <div className="chronicle-wizard-body">
+        {currentStepComponent}
+        <ContextReferenceBrowser locationId={selectedLocation?.id ?? null} />
+      </div>
       <footer className="chronicle-wizard-footer">
         <button type="button" className="secondary" onClick={handleBack}>
           {step === 'location' ? 'Cancel' : 'Back'}

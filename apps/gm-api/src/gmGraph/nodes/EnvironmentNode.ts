@@ -2,6 +2,7 @@ import { entityView, renderBlock } from '@glass-frontier/app';
 import type { Front, HardState } from '@glass-frontier/dto';
 import { WorldTurn } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
+import type { StoredEncyclopediaEntry } from '@glass-frontier/worldstate';
 
 import { extractFragment } from '../../prompts/chronicleFragments';
 import type { GraphContext } from '../../types';
@@ -154,6 +155,49 @@ const worldCanon = async (context: GraphContext, fronts: Front[]): Promise<strin
     .join('\n\n');
 };
 
+/** Contextual and classified reusable material the world can put into motion. */
+const worldTexture = async (context: GraphContext, fronts: Front[]): Promise<unknown> => {
+  const store = context.worldSchemaStore;
+  const [location, agents] = await Promise.all([
+    store.findLocationByName({ name: context.chronicleState.locationName }),
+    Promise.all(fronts.map((front) => store.getEntityBySlug({ slug: front.agentSlug }))),
+  ]);
+  const entities = [location, ...agents].filter((entity): entity is HardState =>
+    entity !== null && !entity.dm
+  );
+  const [applicable, classificationLists] = await Promise.all([
+    location === null
+      ? Promise.resolve([])
+      : context.encyclopediaStore.listApplicable({
+        terms: location.contextTags.map((tag) => ({
+          scope: 'place' as const,
+          tag,
+          type: 'tag' as const,
+        })),
+      }),
+    Promise.all(entities.map((entity) =>
+      context.encyclopediaStore.listClassificationsForEntity(entity.id)
+    )),
+  ]);
+  const direct = await Promise.all(classificationLists.flat().map((classification) =>
+    context.encyclopediaStore.getEntry({ slug: classification.encyclopediaSlug })
+  ));
+  return [...new Map(
+    [...direct, ...applicable.filter((entry) => entry.availability?.mode === 'contextual')]
+      .filter((entry): entry is StoredEncyclopediaEntry =>
+        entry !== null && entry.status === 'complete' && !entry.dm
+      )
+      .map((entry) => [entry.slug, entry])
+  ).values()].slice(0, 12).map((entry) => ({
+    affordance: entry.usage.affordances[0],
+    cue: entry.usage.cues[0],
+    kind: entry.kind,
+    slug: `encyclopedia:${entry.slug}`,
+    summary: entry.summary,
+    title: entry.title,
+  }));
+};
+
 /** The ledger's present figures without the player: the world's own cast. */
 const npcPresent = (context: GraphContext): unknown => {
   const ledger = context.chronicleState.chronicle.sceneLedger;
@@ -191,6 +235,7 @@ const renderWorldInput = async (context: GraphContext, fronts: Front[]): Promise
   const sections: Array<{ name: string; value: unknown }> = [
     { name: 'FRONTS', value: await extractFragment('fronts', context) },
     { name: 'WORLD-CANON', value: await worldCanon(context, fronts) },
+    { name: 'WORLD-TEXTURE', value: await worldTexture(context, fronts) },
     { name: 'LOCATION', value: await extractFragment('location', context) },
     { name: 'SCENE', value: await extractFragment('scene', context) },
     { name: 'PRESENT', value: npcPresent(context) },

@@ -81,6 +81,7 @@ const chronicle: Chronicle = {
   fronts: [],
   id: CHRONICLE_ID,
   locationName: 'Luminous Quay',
+  openingReferenceSlugs: [],
   openingText: 'You wait beneath the quay lights.',
   playerId: PLAYER_ID,
   sceneLedger: null,
@@ -323,9 +324,9 @@ describe('chronicleStore turn handling', () => {
     expect(state.turnViews).not.toHaveProperty(jobId);
   });
 
-  it('attaches selected entity ids and clears them only after a committed turn', async () => {
-    const entityId = '11111111-2222-4333-8444-555555555555';
-    useChronicleStore.getState().toggleEntityTarget(entityId);
+  it('attaches qualified world references and clears them only after a committed turn', async () => {
+    const reference = { kind: 'faction', slug: 'atlas:glass_wardens', title: 'Glass Wardens' };
+    useChronicleStore.getState().toggleReference(reference);
     mocks.gmPostMessage.mockImplementation(
       ({ content }: { content: TranscriptEntry }) => Promise.resolve(turnResult(content))
     );
@@ -333,16 +334,16 @@ describe('chronicleStore turn handling', () => {
     await useChronicleStore.getState().sendPlayerMessage({ content: 'Ask about passage.' });
 
     expect(mocks.gmPostMessage).toHaveBeenCalledWith(expect.objectContaining({
-      entityTargetIds: [entityId],
+      referenceSlugs: [reference.slug],
     }));
-    expect(useChronicleStore.getState().selectedEntityIds).toEqual([]);
+    expect(useChronicleStore.getState().selectedReferences).toEqual([]);
 
-    useChronicleStore.getState().toggleEntityTarget(entityId);
+    useChronicleStore.getState().toggleReference(reference);
     mocks.gmPostMessage.mockRejectedValueOnce(new Error(NETWORK_FAILURE));
     await expect(
       useChronicleStore.getState().sendPlayerMessage({ content: 'Try again.' })
     ).rejects.toThrow(NETWORK_FAILURE);
-    expect(useChronicleStore.getState().selectedEntityIds).toEqual([entityId]);
+    expect(useChronicleStore.getState().selectedReferences).toEqual([reference]);
   });
 
   it('targets the third upcoming turn when wrap is requested before play begins', async () => {

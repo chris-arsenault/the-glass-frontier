@@ -22,6 +22,8 @@ WORLD-CANON — what canon records about the location and about the agents of
 any running agendas: how the place treats people in it, what its keepers and
 rivals want, what is already overdue, strained, or shut. Start agendas from
 what is written here.
+WORLD-TEXTURE — reusable creatures, materials, practices, and technologies
+that are classified here or contextually established here. It is non-exhaustive.
 LOCATION and PRESENT — where this is happening, and which non-player figures
 are in the scene.
 LAST-REPLY — the narration the player saw last turn. This is the observable

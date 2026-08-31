@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDeltaSchema } from '../Inventory';
+import { EncyclopediaMention, EncyclopediaUsageRecord, WorldReferenceSlug } from '../world/Encyclopedia';
 import { BeatTrackerSchema } from './ChronicleBeat';
 import { EntityReference, EntityRosterEntry, EntityUsageEntry } from './EntityReference';
 import { Front } from './Front';
@@ -31,10 +32,13 @@ export const TurnSchema = z.object({
   locationDelta: LocationDeltaDecision.optional(),
   playerIntent: Intent.optional(),
   playerMessage: TranscriptEntry,
+  playerReferenceSlugs: z.array(WorldReferenceSlug).optional(),
   /** Agent-panel narrations recorded next to the canonical one during evaluation. */
   proseAlternates: z.array(ProseAlternate).optional(),
   /** USD cost of the canonical narration call, for comparison with the panel. */
   proseCostUsd: z.number().nonnegative().optional(),
+  referenceMentions: z.array(EncyclopediaMention).optional(),
+  referenceUsage: z.array(EncyclopediaUsageRecord).optional(),
   sceneContext: SceneContext.nullable().optional(),
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),

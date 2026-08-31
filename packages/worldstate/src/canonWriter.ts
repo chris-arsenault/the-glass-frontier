@@ -53,50 +53,56 @@ export class CanonWriter {
   }
 
   async commitBatch(proposal: CanonProposal): Promise<CommitBatchResult> {
-    return withTransaction(this.#pool, async (client) => {
-      await client.query(CANON_WRITE_LOCK_SQL);
-      const existing = await loadReferencedEntities(client, proposal);
-      const { violations } = validateProposal(proposal, existing);
-      if (violations.length > 0) {
-        throw new ProposalRejected(violations);
+    return withTransaction(this.#pool, (client) => this.commitBatchWithClient(client, proposal));
+  }
+
+  /** Commits inside an existing transaction so the Tsonu snapshot stays atomic. */
+  async commitBatchWithClient(
+    client: PoolClient,
+    proposal: CanonProposal
+  ): Promise<CommitBatchResult> {
+    await client.query(CANON_WRITE_LOCK_SQL);
+    const existing = await loadReferencedEntities(client, proposal);
+    const { violations } = validateProposal(proposal, existing);
+    if (violations.length > 0) {
+      throw new ProposalRejected(violations);
+    }
+
+    const batchId = randomUUID();
+    await insertBatchRecord(client, batchId, proposal);
+
+    const writes = await planEntityWrites(client, proposal, existing);
+    await insertEntities(client, writes, batchId, proposal);
+
+    const resolved = resolveIds(writes, existing);
+    const relationshipWrites = planRelationshipWrites(proposal, resolved);
+    await insertRelationships(client, relationshipWrites, proposal, batchId);
+
+    const loreWrites = await planLoreWrites(client, proposal, resolved);
+    await insertLore(client, loreWrites, batchId, proposal);
+
+    if (proposal.source === 'import') {
+      await reconcileImportSnapshot(client, {
+        entityIds: writes.map((write) => write.id),
+        loreIds: loreWrites.map((write) => write.id),
+        relationships: relationshipWrites,
+      });
+    }
+
+    const entityIdsByRef: Record<string, string> = {};
+    for (const write of writes) {
+      if (write.proposed.ref !== undefined) {
+        entityIdsByRef[write.proposed.ref] = write.id;
       }
+    }
 
-      const batchId = randomUUID();
-      await insertBatchRecord(client, batchId, proposal);
-
-      const writes = await planEntityWrites(client, proposal, existing);
-      await insertEntities(client, writes, batchId, proposal);
-
-      const resolved = resolveIds(writes, existing);
-      const relationshipWrites = planRelationshipWrites(proposal, resolved);
-      await insertRelationships(client, relationshipWrites, proposal, batchId);
-
-      const loreWrites = await planLoreWrites(client, proposal, resolved);
-      await insertLore(client, loreWrites, batchId, proposal);
-
-      if (proposal.source === 'import') {
-        await reconcileImportSnapshot(client, {
-          entityIds: writes.map((write) => write.id),
-          loreIds: loreWrites.map((write) => write.id),
-          relationships: relationshipWrites,
-        });
-      }
-
-      const entityIdsByRef: Record<string, string> = {};
-      for (const write of writes) {
-        if (write.proposed.ref !== undefined) {
-          entityIdsByRef[write.proposed.ref] = write.id;
-        }
-      }
-
-      return {
-        batchId,
-        entityCount: proposal.entities.length,
-        entityIdsByRef,
-        loreCount: proposal.lore.length,
-        relationshipCount: proposal.relationships.length,
-      };
-    });
+    return {
+      batchId,
+      entityCount: proposal.entities.length,
+      entityIdsByRef,
+      loreCount: proposal.lore.length,
+      relationshipCount: proposal.relationships.length,
+    };
   }
 
   /**
@@ -270,6 +276,7 @@ const insertEntities = async (
     writes.map((write) => write.proposed.veiled ?? false),
     writes.map((write) => write.proposed.veilTagline ?? null),
     writes.map((write) => write.proposed.dm ?? false),
+    writes.map((write) => JSON.stringify(normalizeTags(write.proposed.contextTags, 64))),
   ]);
 };
 

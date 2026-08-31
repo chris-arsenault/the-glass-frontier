@@ -16,8 +16,10 @@ import {
 import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-frontier/node-utils';
 import {
   createChronicleStore,
+  createEncyclopediaStore,
   createWorldSchemaStore,
   type ChronicleStore,
+  type EncyclopediaStore,
   type WorldSchemaStore,
 } from '@glass-frontier/worldstate';
 // context.ts
@@ -34,6 +36,7 @@ export type Context = {
   playerStore: PlayerStore;
   templateManager: PromptTemplateManager;
   chronicleStore: ChronicleStore;
+  encyclopediaStore: EncyclopediaStore;
 };
 
 // Singleton instances - initialized lazily
@@ -41,6 +44,7 @@ let pool: Pool | undefined;
 let appStore: AppStore | undefined;
 let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
+let encyclopediaStore: EncyclopediaStore | undefined;
 let engine: GmEngine | undefined;
 const embeddings = new CohereTextEmbeddingClient();
 
@@ -59,6 +63,7 @@ export async function initializeForLambda(): Promise<void> {
   appStore = createAppStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  encyclopediaStore = createEncyclopediaStore({ pool });
 
   // Pass one shared pool to stores and LLM accounting.
   const llmClient = createLLMClient({ pool });
@@ -67,6 +72,7 @@ export async function initializeForLambda(): Promise<void> {
     agentLoop: createAgentLoopClient({ pool }),
     chronicleStore,
     embeddings,
+    encyclopediaStore,
     llmClient,
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
@@ -92,6 +98,7 @@ function initializeLocal(): void {
   appStore = createAppStore({ pool });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  encyclopediaStore = createEncyclopediaStore({ pool });
 
   const llmClient = createLLMClient();
 
@@ -99,6 +106,7 @@ function initializeLocal(): void {
     agentLoop: createAgentLoopClient(),
     chronicleStore,
     embeddings,
+    encyclopediaStore,
     llmClient,
     modelConfigStore: appStore.modelConfigStore,
     templateManager: appStore.promptTemplateManager,
@@ -116,6 +124,7 @@ export async function createContext(options?: { authorizationHeader?: string }):
     appStore === undefined ||
     worldSchemaStore === undefined ||
     chronicleStore === undefined ||
+    encyclopediaStore === undefined ||
     engine === undefined
   ) {
     throw new Error(
@@ -128,6 +137,7 @@ export async function createContext(options?: { authorizationHeader?: string }):
     appStore,
     authorizationHeader: options?.authorizationHeader,
     chronicleStore,
+    encyclopediaStore,
     engine,
     identity,
     playerStore: appStore.playerStore,

@@ -7,8 +7,10 @@ import { verifyAuthorizationHeader, type AuthorizedIdentity } from '@glass-front
 import {
   createWorldSchemaStore,
   createChronicleStore,
+  createEncyclopediaStore,
   type WorldSchemaStore,
   type ChronicleStore,
+  type EncyclopediaStore,
 } from '@glass-frontier/worldstate';
 // context.ts
 import type { Pool } from 'pg';
@@ -18,12 +20,14 @@ export type Context = {
   identity: AuthorizedIdentity;
   worldSchemaStore: WorldSchemaStore;
   chronicleStore: ChronicleStore;
+  encyclopediaStore: EncyclopediaStore;
 };
 
 // Singleton instances - initialized lazily
 let pool: Pool | undefined;
 let worldSchemaStore: WorldSchemaStore | undefined;
 let chronicleStore: ChronicleStore | undefined;
+let encyclopediaStore: EncyclopediaStore | undefined;
 
 /**
  * Initialize context for the Lambda runtime.
@@ -37,6 +41,7 @@ export function initializeForLambda(): Promise<void> {
   pool = createLambdaPool();
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  encyclopediaStore = createEncyclopediaStore({ pool });
   return Promise.resolve();
 }
 
@@ -56,6 +61,7 @@ function initializeLocal(): void {
   pool = createPool({ connectionString });
   worldSchemaStore = createWorldSchemaStore({ pool });
   chronicleStore = createChronicleStore({ pool });
+  encyclopediaStore = createEncyclopediaStore({ pool });
 }
 
 /**
@@ -67,7 +73,11 @@ export async function createContext(options?: { authorizationHeader?: string }):
     initializeLocal();
   }
 
-  if (worldSchemaStore === undefined || chronicleStore === undefined) {
+  if (
+    worldSchemaStore === undefined
+    || chronicleStore === undefined
+    || encyclopediaStore === undefined
+  ) {
     throw new Error(
       'Context not initialized. For Lambda, call initializeForLambda() at cold start.'
     );
@@ -77,6 +87,7 @@ export async function createContext(options?: { authorizationHeader?: string }):
   return {
     authorizationHeader: options?.authorizationHeader,
     chronicleStore,
+    encyclopediaStore,
     identity,
     worldSchemaStore,
   };

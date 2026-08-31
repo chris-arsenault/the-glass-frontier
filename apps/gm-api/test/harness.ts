@@ -1,9 +1,31 @@
-import type { Intent } from '@glass-frontier/dto';
+import type { EncyclopediaEntry, Intent } from '@glass-frontier/dto';
 
 import { ChronicleTelemetry } from '../src/telemetry';
 import type { GraphContext } from '../src/types';
 
 export const telemetry = new ChronicleTelemetry();
+
+const originEntry = (id: string): EncyclopediaEntry & { id: string } => ({
+  aliases: [],
+  descriptiveIdentity: {},
+  dm: false,
+  externalKey: `test:${id}`,
+  facts: {},
+  id,
+  instances: [],
+  kind: 'people',
+  members: [],
+  prevalence: 'common',
+  sections: [],
+  slug: `origin-${id.slice(0, 4)}`,
+  status: 'complete',
+  subkind: 'origin',
+  summary: 'A test origin.',
+  tiers: [],
+  title: `Origin ${id.slice(0, 4)}`,
+  topics: [],
+  usage: { affordances: [], cues: [], pressures: [], variations: [] },
+});
 
 export const buildIntent = (overrides?: Partial<Intent>): Intent => ({
   beatDirective: {
@@ -41,9 +63,9 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
       origin: {
         allegianceId: '11111111-1111-4111-8111-111111111111',
         allegianceStance: 'indebted',
-        cultureId: '22222222-2222-4222-8222-222222222222',
+        cultureReferenceId: '22222222-2222-4222-8222-222222222222',
         homelandId: '33333333-3333-4333-8333-333333333333',
-        speciesId: '44444444-4444-4444-8444-444444444444',
+        speciesReferenceId: '44444444-4444-4444-8444-444444444444',
       },
       skills: {
         hold_a_hostile_room: {
@@ -74,10 +96,26 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     turns: [],
     turnSequence: 0,
   } as unknown as GraphContext['chronicleState'],
-  chronicleStore: {} as GraphContext['chronicleStore'],
+  chronicleStore: {
+    listTurnWindow: () => Promise.resolve([]),
+    searchTurns: () => Promise.resolve([]),
+  } as unknown as GraphContext['chronicleStore'],
   effectiveScene: null,
   embeddings: {
     embed: () => Promise.resolve([]),
+  },
+  encyclopediaStore: {
+    findCandidates: () => Promise.resolve([]),
+    findMentionedEntries: () => Promise.resolve([]),
+    getEntry: () => Promise.resolve(null),
+    getEntryById: (id: string) => Promise.resolve(originEntry(id)),
+    listApplicable: () => Promise.resolve([]),
+    listAtlasExamplesForEntry: () => Promise.resolve([]),
+    listCharacterOptions: () => Promise.resolve([]),
+    listClassificationsForEntity: () => Promise.resolve([]),
+    listEntries: () => Promise.resolve([]),
+    listMissingEmbeddings: () => Promise.resolve([]),
+    saveEmbedding: () => Promise.resolve(),
   },
   failure: false,
   llm: {} as GraphContext['llm'],
@@ -104,4 +142,6 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
       Promise.resolve(ids.map((id) => ({ id, name: `entity-${id.slice(0, 4)}` }))),
   } as unknown as GraphContext['worldSchemaStore'],
   ...overrides,
+  directEncyclopediaEntries: overrides?.directEncyclopediaEntries ?? [],
+  playerReferenceSlugs: overrides?.playerReferenceSlugs ?? [],
 });

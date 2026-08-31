@@ -2,6 +2,7 @@ import type { IntentType, PromptTemplateId, TranscriptEntry } from '@glass-front
 import { isLlmBudgetExceededError } from '@glass-frontier/llm-client';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
+import { encyclopediaMentions } from '../../entity/referenceSidecarApply';
 import { applySidecar } from '../../entity/sidecarApply';
 import { runProseAgent } from '../../proseAgent';
 import type { GraphContext } from '../../types';
@@ -111,6 +112,13 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         return this.#filteredNarrationDelta(context);
       }
       const gmResponse = this.#buildTranscript(context, cleanedContent);
+      const sidecarDelta = await applySidecar(context, outcome.sidecar, gmResponse);
+      const referenceMentions = await encyclopediaMentions(
+        context,
+        outcome.referenceUsage,
+        gmResponse,
+        sidecarDelta.entityReferences ?? []
+      );
       return {
         advancesTimeline: this.options.advancesTimeline,
         gmResponse,
@@ -120,8 +128,10 @@ abstract class BaseIntentHandlerNode implements GraphNode {
           requestId: outcome.requestId,
         },
         proseCostUsd: outcome.costUsd,
+        referenceMentions,
+        referenceUsage: outcome.referenceUsage,
         turnBrief: outcome.brief,
-        ...await applySidecar(context, outcome.sidecar, gmResponse),
+        ...sidecarDelta,
       };
 
     } catch (error) {

@@ -6,6 +6,8 @@ import type {
   ChronicleScene,
   DescriptiveIdentity,
   EntityReference,
+  EncyclopediaMention,
+  EncyclopediaUsageRecord,
   EntityRosterEntry,
   Front,
   GmNote,
@@ -22,6 +24,7 @@ import type {
   TranscriptEntry,
   Turn,
   TurnBrief,
+  WorldReferenceSlug,
 } from '@glass-frontier/dto';
 import type {
   AgentLoopClient,
@@ -29,7 +32,12 @@ import type {
   RetryLLMClient,
   TextEmbeddingClient,
 } from '@glass-frontier/llm-client';
-import type { WorldSchemaStore, ChronicleStore } from '@glass-frontier/worldstate';
+import type {
+  ChronicleStore,
+  EncyclopediaStore,
+  StoredEncyclopediaEntry,
+  WorldSchemaStore,
+} from '@glass-frontier/worldstate';
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
 import type { SceneLedgerUpdate } from './scenes/sceneLedger';
@@ -94,8 +102,11 @@ export type GraphContext = {
   turnSequence: number;
   chronicleState: ChronicleState;
   playerMessage: TranscriptEntry;
+  playerReferenceSlugs: WorldReferenceSlug[];
+  directEncyclopediaEntries: StoredEncyclopediaEntry[];
   targetEntityIds: string[];
   chronicleStore: ChronicleStore;
+  encyclopediaStore: EncyclopediaStore;
   worldSchemaStore: WorldSchemaStore;
 
   //operations
@@ -140,9 +151,12 @@ export type GraphContext = {
   beatTracker?: BeatTracker;
   executedNodes?: string[];
   entityContext?: EntityContextSlice;
+  encyclopediaContext?: StoredEncyclopediaEntry[];
   /** Live canon edges among `entityContext.offered`, for the RELATIONSHIPS block. */
   entityRelationships?: LiveRelationship[];
   entityReferences?: EntityReference[];
+  referenceMentions?: EncyclopediaMention[];
+  referenceUsage?: EncyclopediaUsageRecord[];
   /** Public roster snapshot used for this turn, before any narrated transition refreshes it. */
   turnEntityRoster?: EntityRosterEntry[];
   entityUsage?: Array<{

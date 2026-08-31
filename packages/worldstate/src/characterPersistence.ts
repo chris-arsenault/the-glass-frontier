@@ -13,7 +13,7 @@ const UPSERT_CHARACTER = `
   INSERT INTO character (
     id, player_id, name, tags, archetype, pronouns, bio,
     attributes, skills, inventory, momentum, props,
-    species_id, culture_id, homeland_id, allegiance_id, allegiance_stance,
+    species_reference_id, culture_reference_id, homeland_id, allegiance_id, allegiance_stance,
     callings, drive, flaw, instinct, unique_thing, created_at, updated_at
   ) VALUES (
     $1::uuid, $2, $3, $4::text[], $5, $6, $7,
@@ -27,7 +27,8 @@ const UPSERT_CHARACTER = `
     attributes = EXCLUDED.attributes, skills = EXCLUDED.skills,
     inventory = EXCLUDED.inventory, momentum = EXCLUDED.momentum,
     props = EXCLUDED.props,
-    species_id = EXCLUDED.species_id, culture_id = EXCLUDED.culture_id,
+    species_reference_id = EXCLUDED.species_reference_id,
+    culture_reference_id = EXCLUDED.culture_reference_id,
     homeland_id = EXCLUDED.homeland_id, allegiance_id = EXCLUDED.allegiance_id,
     allegiance_stance = EXCLUDED.allegiance_stance, callings = EXCLUDED.callings,
     drive = EXCLUDED.drive, flaw = EXCLUDED.flaw, instinct = EXCLUDED.instinct,
@@ -46,8 +47,8 @@ const characterValues = (character: Character): unknown[] => [
   serializeJson(character.inventory),
   serializeJson(character.momentum),
   serializeJson(character),
-  character.origin.speciesId,
-  character.origin.cultureId,
+  character.origin.speciesReferenceId,
+  character.origin.cultureReferenceId,
   character.origin.homelandId,
   character.origin.allegianceId,
   character.origin.allegianceStance,

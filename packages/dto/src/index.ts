@@ -32,6 +32,7 @@ export * from './world/vocabulary';
 export * from './world/HardState';
 export * from './world/ContextSlice';
 export * from './world/EntityActivity';
+export * from './world/Encyclopedia';
 export * from './world/IngestBatch';
 export * from './world/LoreFragment';
 export * from './world/WorldSchema';

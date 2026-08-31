@@ -6,11 +6,23 @@ import {
   PromptTemplateRuntime,
   renderBlock,
 } from '@glass-frontier/app';
-import type { Character, ChronicleSeed, HardState, LoreFragment } from '@glass-frontier/dto';
+import type {
+  Character,
+  ChronicleSeed,
+  HardState,
+  LoreFragment,
+  WorldReferenceSlug,
+} from '@glass-frontier/dto';
 import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
-import type { WorldSchemaStore } from '@glass-frontier/worldstate';
+import type {
+  EncyclopediaStore,
+  StoredEncyclopediaEntry,
+  WorldSchemaStore,
+} from '@glass-frontier/worldstate';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+
+import { loadGroundingEntries } from './encyclopediaGrounding';
 
 type GenerateSeedRequest = {
   playerId: string;
@@ -56,6 +68,7 @@ type GenerateAllSeedsOptions = {
   anchorLore: LoreFragment[];
   character: Character;
   count: number;
+  encyclopediaEntries: StoredEncyclopediaEntry[];
   instructions: string;
   location: HardState;
   locationLore: LoreFragment[];
@@ -68,17 +81,20 @@ type GenerateAllSeedsOptions = {
 };
 
 export class ChronicleSeedService {
+  readonly #encyclopedia: EncyclopediaStore;
   readonly #world: WorldSchemaStore;
   readonly #modelConfigStore: ModelConfigStore;
   readonly #templateManager: PromptTemplateManager;
   readonly #llm: RetryLLMClient;
 
   constructor(options: {
+    encyclopediaStore: EncyclopediaStore;
     worldStore: WorldSchemaStore;
     modelConfigStore: ModelConfigStore;
     templateManager: PromptTemplateManager;
     llmClient: RetryLLMClient;
   }) {
+    this.#encyclopedia = options.encyclopediaStore;
     this.#world = options.worldStore;
     this.#modelConfigStore = options.modelConfigStore;
     this.#templateManager = options.templateManager;
@@ -90,10 +106,11 @@ export class ChronicleSeedService {
     const anchor = await this.#ensureAnchor(location.id, request.anchorId);
 
     // Load lore fragments for context
-    const [locationLore, anchorLore, originNames] = await Promise.all([
+    const [locationLore, anchorLore, originNames, encyclopediaEntries] = await Promise.all([
       this.#world.listLoreFragmentsByEntity({ entityId: location.id, limit: 5 }),
       this.#world.listLoreFragmentsByEntity({ entityId: anchor.id, limit: 5 }),
       this.#resolveOriginNames(request.character),
+      this.#loadGroundingEntries(location),
     ]);
 
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
@@ -108,6 +125,7 @@ export class ChronicleSeedService {
       anchorLore,
       character: request.character,
       count: requested,
+      encyclopediaEntries,
       instructions,
       location,
       locationLore,
@@ -120,37 +138,55 @@ export class ChronicleSeedService {
     });
   }
 
-  async generateOpening(request: GenerateOpeningRequest): Promise<string> {
+  async generateOpening(request: GenerateOpeningRequest): Promise<{
+    openingReferenceSlugs: WorldReferenceSlug[];
+    text: string;
+  }> {
     const location = await this.#ensurePlace(request.locationId);
     const anchor = request.anchorId === undefined
       ? null
       : await this.#ensureAnchor(location.id, request.anchorId);
-    const [locationLore, anchorLore, instructions, proseModel, originNames] = await Promise.all([
+    const [
+      locationLore,
+      anchorLore,
+      instructions,
+      proseModel,
+      originNames,
+      encyclopediaEntries,
+    ] = await Promise.all([
       this.#world.listLoreFragmentsByEntity({ entityId: location.id, limit: 5 }),
       anchor === null
         ? Promise.resolve([])
         : this.#world.listLoreFragmentsByEntity({ entityId: anchor.id, limit: 5 }),
       this.#createTemplateRuntime(request.playerId).render('chronicle-opening', {}),
       this.#modelConfigStore.getModelForCategory('prose', request.playerId),
-      // The opening used to ship the character record untouched, so its
-      // species, culture, homeland, and allegiance arrived as four uuids.
       this.#resolveOriginNames(request.character),
+      this.#loadGroundingEntries(location),
     ]);
     const developerMessages = this.#buildOpeningDeveloperMessages({
       anchor,
       anchorLore,
+      encyclopediaEntries,
       location,
       locationLore,
       originNames,
       request,
     });
-    return this.#generateOpeningText({
+    const text = await this.#generateOpeningText({
       developerMessages,
       instructions,
       location,
       model: proseModel,
       request,
     });
+    const supplied = new Set(encyclopediaEntries.map((entry) => entry.slug));
+    const mentioned = await this.#encyclopedia.findMentionedEntries(text);
+    return {
+      openingReferenceSlugs: mentioned
+        .filter((entry) => supplied.has(entry.slug))
+        .map((entry) => `encyclopedia:${entry.slug}`),
+      text,
+    };
   }
 
   #buildOpeningDeveloperMessages(options: {
@@ -159,6 +195,7 @@ export class ChronicleSeedService {
     location: HardState;
     locationLore: LoreFragment[];
     originNames: Map<string, string>;
+    encyclopediaEntries: StoredEncyclopediaEntry[];
     request: GenerateOpeningRequest;
   }): DeveloperMessage[] {
     const developerMessages: DeveloperMessage[] = [
@@ -171,6 +208,12 @@ export class ChronicleSeedService {
       developerMessages.push(this.#createDeveloperMessage(
         'ANCHOR',
         this.#buildEntityContext(options.anchor, options.anchorLore)
+      ));
+    }
+    if (options.encyclopediaEntries.length > 0) {
+      developerMessages.push(this.#createDeveloperMessage(
+        'ENCYCLOPEDIA',
+        this.#encyclopediaContext(options.encyclopediaEntries)
       ));
     }
     const tone = this.#formatTone(options.request.toneChips, options.request.toneNotes);
@@ -267,14 +310,21 @@ export class ChronicleSeedService {
 
   /** The origin ids on the sheet become names the seed writer can use. */
   async #resolveOriginNames(character: Character): Promise<Map<string, string>> {
-    const { allegianceId, cultureId, homelandId, speciesId } = character.origin;
-    const entities = await this.#world.listEntitiesByIds([
-      speciesId,
-      cultureId,
-      homelandId,
+    const {
       allegianceId,
+      cultureReferenceId,
+      homelandId,
+      speciesReferenceId,
+    } = character.origin;
+    const [entities, species, culture] = await Promise.all([
+      this.#world.listEntitiesByIds([homelandId, allegianceId]),
+      this.#encyclopedia.getEntryById(speciesReferenceId),
+      this.#encyclopedia.getEntryById(cultureReferenceId),
     ]);
-    return new Map(entities.map((entity) => [entity.id, entity.name]));
+    const names = new Map(entities.map((entity) => [entity.id, entity.name]));
+    if (species !== null) {names.set(species.id, species.title);}
+    if (culture !== null) {names.set(culture.id, culture.title);}
+    return names;
   }
 
   #buildDeveloperMessages(options: GenerateAllSeedsOptions): DeveloperMessage[] {
@@ -292,6 +342,12 @@ export class ChronicleSeedService {
         this.#formatSeedCharacter(options.character, options.originNames)
       ),
     ];
+    if (options.encyclopediaEntries.length > 0) {
+      messages.push(this.#createDeveloperMessage(
+        'ENCYCLOPEDIA',
+        this.#encyclopediaContext(options.encyclopediaEntries)
+      ));
+    }
     const toneDescription = this.#formatTone(options.toneChips, options.toneNotes);
     if (toneDescription.length > 0) {
       messages.push(this.#createDeveloperMessage('TONE', toneDescription));
@@ -307,6 +363,25 @@ export class ChronicleSeedService {
    */
   #buildEntityContext(entity: HardState, lore: LoreFragment[]): Record<string, unknown> {
     return { ...entityView(entity, lore) };
+  }
+
+  #encyclopediaContext(entries: StoredEncyclopediaEntry[]): Record<string, unknown> {
+    return {
+      entries: entries.map((entry) => ({
+        affordance: entry.usage.affordances[0],
+        cue: entry.usage.cues[0],
+        kind: entry.kind,
+        slug: `encyclopedia:${entry.slug}`,
+        subkind: entry.subkind,
+        summary: entry.summary,
+        title: entry.title,
+      })),
+      note: 'These are established examples, not an exhaustive inventory of what may exist.',
+    };
+  }
+
+  async #loadGroundingEntries(location: HardState): Promise<StoredEncyclopediaEntry[]> {
+    return loadGroundingEntries(this.#encyclopedia, location);
   }
 
   #buildUserMessage(options: GenerateAllSeedsOptions): string {

@@ -1,5 +1,5 @@
 import { useChronicleStore } from '../../../stores/chronicleStore';
-import { AtlasLink } from '../../atlas/AtlasLink';
+import { WorldReferenceButton } from '../../encyclopedia/WorldReferenceButton';
 import './AvailableEntitiesPanel.css';
 
 export function AvailableEntitiesPanel(): React.JSX.Element | null {
@@ -19,14 +19,19 @@ export function AvailableEntitiesPanel(): React.JSX.Element | null {
         <ul className="available-entities-list">
           {entries.map((entity) => (
             <li className="available-entity" key={entity.id}>
-              <AtlasLink
+              <WorldReferenceButton
+                attachable
                 className="available-entity-atlas"
-                slug={entity.slug}
+                reference={{
+                  kind: entity.kind,
+                  slug: `atlas:${entity.slug}`,
+                  title: entity.name,
+                }}
                 title={`Open ${entity.name} in World Atlas`}
               >
                 <span className="available-entity-name">{entity.name}</span>
                 <span className="available-entity-kind">{entity.subkind ?? entity.kind}</span>
-              </AtlasLink>
+              </WorldReferenceButton>
             </li>
           ))}
         </ul>

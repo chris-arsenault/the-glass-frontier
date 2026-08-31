@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../src/stores/uiStore';
 
-describe('uiStore Atlas modal', () => {
+describe('uiStore World Guide modal', () => {
   beforeEach(() => {
-    useUiStore.setState({ atlasModalSlug: null });
+    useUiStore.setState({ worldGuideModalSlug: null });
   });
 
-  it('opens an Atlas entry by slug and closes it without route state', () => {
-    useUiStore.getState().openAtlasModal('oracle_vessel');
+  it('opens a qualified entry and closes it without route state', () => {
+    useUiStore.getState().openWorldGuide('atlas:oracle_vessel');
 
-    expect(useUiStore.getState().atlasModalSlug).toBe('oracle_vessel');
+    expect(useUiStore.getState().worldGuideModalSlug).toBe('atlas:oracle_vessel');
 
-    useUiStore.getState().closeAtlasModal();
+    useUiStore.getState().closeWorldGuide();
 
-    expect(useUiStore.getState().atlasModalSlug).toBeNull();
+    expect(useUiStore.getState().worldGuideModalSlug).toBeNull();
   });
 });

@@ -1,16 +1,18 @@
 import { renderBlock } from '@glass-frontier/app';
 import type {
+  EncyclopediaEntrySummary,
   HardState,
   HardStateKind,
   HardStateProminence,
   HardStateStatus,
 } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
+import { encyclopediaSummary } from '@glass-frontier/worldstate';
 
 import type { ChronicleFragmentTypes } from '../prompts/chronicleFragments';
 import { extractFragment } from '../prompts/chronicleFragments';
 import type { GraphContext } from '../types';
-import type { ServedEntity } from './toolSession';
+import type { ServedReference } from './toolSession';
 
 const INDENT = '  ';
 
@@ -47,8 +49,9 @@ export type SeedTocEntry = {
 };
 
 export type SeedPack = {
+  encyclopediaToc: EncyclopediaEntrySummary[];
   sections: Array<{ name: string; value: unknown }>;
-  seedEntities: ServedEntity[];
+  seedReferences: ServedReference[];
   toc: SeedTocEntry[];
 };
 
@@ -91,6 +94,20 @@ const firstSentence = (text: string | undefined): string | undefined => {
   }
   const period = text.indexOf('. ');
   return period === -1 ? text : text.slice(0, period + 1);
+};
+
+const compareEncyclopediaEntries = (
+  left: Parameters<typeof encyclopediaSummary>[0],
+  right: Parameters<typeof encyclopediaSummary>[0],
+  directSlugs: Set<string>
+): number => {
+  const directOrder = Number(directSlugs.has(right.slug)) - Number(directSlugs.has(left.slug));
+  if (directOrder !== 0) {
+    return directOrder;
+  }
+  const contextOrder = Number(right.availability?.mode === 'contextual')
+    - Number(left.availability?.mode === 'contextual');
+  return contextOrder !== 0 ? contextOrder : left.title.localeCompare(right.title);
 };
 
 /**
@@ -142,11 +159,11 @@ const tocEntry = (
       return [{
         direction: link.direction,
         targetName: target.name,
-        targetSlug: target.slug,
+        targetSlug: `atlas:${target.slug}`,
         verb: link.relationship,
       }];
     }),
-  slug: entity.slug,
+  slug: `atlas:${entity.slug}`,
   status: entity.status,
   unwritten: entity.veiled && loreCount === 0,
 });
@@ -171,7 +188,10 @@ export const buildTocEntries = async (
 
 export const buildSeedPack = async (context: GraphContext): Promise<SeedPack> => {
   const seedEntityIds = await collectSeedIds(context);
-  const [entities, sectionValues] = await Promise.all([
+  const location = await context.worldSchemaStore.findLocationByName({
+    name: context.chronicleState.locationName,
+  });
+  const [entities, sectionValues, applicable] = await Promise.all([
     context.worldSchemaStore.listEntitiesByIds(seedEntityIds),
     Promise.all(
       SHARED_SECTIONS.map(async ({ fragment, name }) => ({
@@ -179,11 +199,37 @@ export const buildSeedPack = async (context: GraphContext): Promise<SeedPack> =>
         value: await extractFragment(fragment, context),
       }))
     ),
+    location === null
+      ? Promise.resolve([])
+      : context.encyclopediaStore.listApplicable({
+        terms: location.contextTags.map((tag) => ({
+          scope: 'place' as const,
+          tag,
+          type: 'tag' as const,
+        })),
+      }),
   ]);
   const visible = entities.filter((entity) => !entity.dm);
+  const directSlugs = new Set(context.directEncyclopediaEntries.map((entry) => entry.slug));
+  const encyclopediaToc = [...new Map(
+    [...context.directEncyclopediaEntries, ...applicable]
+      .filter((entry) => entry.status === 'complete' && !entry.dm)
+      .map((entry) => [entry.slug, entry])
+  ).values()]
+    .sort((left, right) => compareEncyclopediaEntries(left, right, directSlugs))
+    .slice(0, 16)
+    .map(encyclopediaSummary);
   return {
+    encyclopediaToc,
     sections: sectionValues,
-    seedEntities: visible.map((entity) => ({ id: entity.id, slug: entity.slug })),
+    seedReferences: [
+      ...visible.map((entity) => ({
+        atlasEntityId: entity.id,
+        atlasSlug: entity.slug,
+        slug: `atlas:${entity.slug}`,
+      })),
+      ...encyclopediaToc.map((entry) => ({ slug: entry.slug })),
+    ],
     toc: await buildTocEntries(context.worldSchemaStore, visible),
   };
 };
@@ -227,8 +273,15 @@ const tocStanza = (entry: SeedTocEntry): string => {
   return [heading, ...detail].join('\n');
 };
 
-export const renderWorldIndex = (toc: SeedTocEntry[]): string =>
-  toc.map(tocStanza).join('\n');
+export const renderWorldIndex = (
+  toc: SeedTocEntry[],
+  encyclopediaToc: EncyclopediaEntrySummary[] = []
+): string => [
+  ...toc.map(tocStanza),
+  ...encyclopediaToc.map((entry) =>
+    `${entry.slug} · ${entry.kind}/${entry.subkind} · ${entry.prevalence} — ${entry.summary}`
+  ),
+].join('\n');
 
 /** One user message: the seed sections, the world index, then the player message. */
 export const renderSeedPack = (pack: SeedPack, playerMessage: string): string => {
@@ -238,7 +291,7 @@ export const renderSeedPack = (pack: SeedPack, playerMessage: string): string =>
       parts.push(`### ${section.name}\n${renderBlock(section.value)}`);
     }
   }
-  parts.push(`### WORLD-INDEX\n${renderWorldIndex(pack.toc)}`);
+  parts.push(`### WORLD-INDEX\n${renderWorldIndex(pack.toc, pack.encyclopediaToc)}`);
   parts.push(`### PLAYER-MESSAGE\n${playerMessage}`);
   return parts.join('\n\n');
 };

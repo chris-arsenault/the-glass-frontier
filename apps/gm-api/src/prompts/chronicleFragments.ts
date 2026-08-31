@@ -1,7 +1,8 @@
 import {
   characterView,
   identityView,
-  originEntityIds,
+  originAtlasEntityIds,
+  originEncyclopediaIds,
   originNamesFrom,
   plainProse,
 } from '@glass-frontier/app';
@@ -19,12 +20,14 @@ import {
   recordedPlayerMessage,
   trimBeatsList,
 } from './contextFormaters';
+import { encyclopediaFragment, entityReferencesFragment } from './referenceFragments';
 
 export type ChronicleFragmentTypes =
   | 'character'
   | 'location'
   | 'anchor'
   | 'entities'
+  | 'encyclopedia'
   | 'relationships'
   | 'entity-references'
   | 'beats'
@@ -89,7 +92,7 @@ export const templateFragmentMapping = new Map<
 PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
-  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   // The writer templates carry no world dump and no raw chronicle context the
   // scout has already read for them: BRIEF replaces ANCHOR, ENTITIES, CHARACTER,
   // LOCATION, LEDGER, RECENT-EVENTS, and INTENT, which is the point of
@@ -102,15 +105,15 @@ ChronicleFragmentTypes[]
   ['agent-reflection-weaver', WRITER_FRAGMENTS],
   ['agent-wrap-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT, 'wrap']],
   ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
-  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
-  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   ['turn-judge', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', 'skill-check-record', 'location', ENTITY_REFERENCES_FRAGMENT, 'wrap']],
-  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
+  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
@@ -121,6 +124,7 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['character', characterFragment],
   [CHRONICLE_TONE_FRAGMENT, chronicleToneFragment],
   ['entities', entitiesFragment],
+  ['encyclopedia', encyclopediaFragment],
   ['relationships', relationshipsFragment],
   [ENTITY_REFERENCES_FRAGMENT, entityReferencesFragment],
   ['intent', intentFragment],
@@ -157,8 +161,18 @@ function userMessageFragment(context: GraphContext): string {
 
 async function characterFragment(context: GraphContext): Promise<Record<string, unknown>> {
   const character = context.chronicleState.character;
-  const entities = await context.worldSchemaStore.listEntitiesByIds(originEntityIds(character));
-  const names = new Map(entities.map((entity) => [entity.id, entity.name]));
+  const [entities, encyclopediaEntries] = await Promise.all([
+    context.worldSchemaStore.listEntitiesByIds(originAtlasEntityIds(character)),
+    Promise.all(
+      originEncyclopediaIds(character).map((id) => context.encyclopediaStore.getEntryById(id))
+    ),
+  ]);
+  const names = new Map([
+    ...entities.map((entity) => [entity.id, entity.name] as const),
+    ...encyclopediaEntries
+      .filter((entry) => entry !== null)
+      .map((entry) => [entry.id, entry.title] as const),
+  ]);
   return characterView(character, originNamesFrom(character, names));
 }
 
@@ -224,9 +238,9 @@ type UnwrittenEntity = {
  *
  * A list of entities is a cast with no ties between them, and the writer that
  * holds no brief has nowhere else to learn that one of them keeps the other's
- * accounts. The retrieval path asks for this an edge at a time with
- * `read_relationship`; here every live edge among the offered set arrives at
- * once, because the set is already chosen and the query is one round trip.
+ * accounts. The retrieval path gets these edges when it opens an Atlas entry;
+ * here every live edge among the offered set arrives at once, because the set
+ * is already chosen and the query is one round trip.
  */
 function relationshipsFragment(context: GraphContext): unknown[] {
   const bySlug = new Map(
@@ -275,15 +289,6 @@ function entitiesFragment(context: GraphContext): Array<EstablishedEntity | Unwr
         status: entry.status,
       }
   );
-}
-
-function entityReferencesFragment(context: GraphContext): Array<Record<string, unknown>> {
-  return (context.entityReferences ?? []).map((reference) => ({
-    entitySlug: reference.entitySlug,
-    method: reference.method,
-    speaker: reference.speaker,
-    text: reference.span?.text ?? null,
-  }));
 }
 
 /**

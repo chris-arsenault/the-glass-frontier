@@ -35,10 +35,10 @@ const UNESTABLISHED = 'not established this turn';
 export const EMPTY_BRIEF: TurnBrief = {
   character: UNESTABLISHED,
   complication: null,
-  entities: [],
   history: null,
   location: UNESTABLISHED,
   present: UNESTABLISHED,
+  references: [],
   scene: { changed: UNESTABLISHED, endsWhen: UNESTABLISHED, stakes: UNESTABLISHED },
 };
 

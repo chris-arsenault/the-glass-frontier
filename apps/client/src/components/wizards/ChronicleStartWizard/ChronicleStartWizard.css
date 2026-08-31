@@ -137,6 +137,14 @@
   overflow-y: auto;
 }
 
+.chronicle-wizard-body > .context-reference-browser {
+  padding: var(--space-3);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-4);
+}
+
 .chronicle-wizard-footer {
   display: flex;
   gap: var(--space-2);

@@ -11,6 +11,7 @@ export type EnsureChronicleParams = {
   locationId?: string | null;
   locationName: string;
   openingText?: string;
+  openingReferenceSlugs?: Chronicle['openingReferenceSlugs'];
   playerId: string;
   seedText?: string | null;
   status?: Chronicle['status'];
@@ -34,6 +35,7 @@ export const buildChronicleRecord = (
     id: chronicleId,
     locationId: params.locationId ?? undefined,
     locationName: params.locationName,
+    openingReferenceSlugs: params.openingReferenceSlugs ?? [],
     openingText: params.openingText ?? '',
     playerId: params.playerId,
     sceneLedger: null,

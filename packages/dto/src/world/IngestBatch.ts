@@ -39,6 +39,8 @@ export const EntityRef = z.union([
 export type EntityRef = z.infer<typeof EntityRef>;
 
 export const ProposedEntity = z.object({
+  /** Authored applicability terms contributed by this Atlas entity. */
+  contextTags: z.array(z.string().min(1)).optional(),
   description: z.string().max(2000).optional(),
   /** The resolved descriptive-identity snapshot from the source canon. */
   descriptiveIdentity: DescriptiveIdentity.optional(),

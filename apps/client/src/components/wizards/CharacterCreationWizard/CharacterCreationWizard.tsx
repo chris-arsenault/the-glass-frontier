@@ -3,7 +3,7 @@ import type {
   Attribute as AttributeName,
   CharacterAttributes,
   CharacterDraft,
-  HardState,
+  EncyclopediaCharacterOption,
   PlayableRole,
 } from '@glass-frontier/dto';
 import {
@@ -63,33 +63,44 @@ type OriginPick = {
   field: keyof Omit<OriginDraft, 'allegianceStance'>;
   heading: string;
   hint: string;
-  role: PlayableRole;
+  role: PlayableRole | 'culture' | 'species';
+  source: 'atlas' | 'encyclopedia';
+};
+
+type OriginChoice = {
+  description: string | null;
+  id: string;
+  title: string;
 };
 
 const ORIGIN_PICKS: OriginPick[] = [
   {
-    field: 'speciesId',
+    field: 'speciesReferenceId',
     heading: 'Species',
     hint: 'Species affects fiction only. It carries no attribute or skill modifiers.',
     role: 'species',
+    source: 'encyclopedia',
   },
   {
-    field: 'cultureId',
+    field: 'cultureReferenceId',
     heading: 'Culture',
     hint: 'Upbringing, naming and manners. Independent of species.',
     role: 'culture',
+    source: 'encyclopedia',
   },
   {
     field: 'homelandId',
     heading: 'Homeland',
     hint: 'Where the character is from. The GM uses it for contacts, familiarity and travel.',
     role: 'homeland',
+    source: 'atlas',
   },
   {
     field: 'allegianceId',
     heading: 'Allegiance',
     hint: 'One faction with a claim on the character.',
     role: 'allegiance',
+    source: 'atlas',
   },
 ];
 
@@ -98,7 +109,7 @@ export function CharacterCreationWizard(): React.JSX.Element {
   const state = useCharacterCreationStore();
   const createCharacter = useChronicleStore((store) => store.createCharacterProfile);
 
-  const [entitiesByPick, setEntitiesByPick] = useState<Map<string, HardState[]>>(new Map());
+  const [choicesByPick, setChoicesByPick] = useState<Map<string, OriginChoice[]>>(new Map());
   const [originError, setOriginError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,15 +118,33 @@ export function CharacterCreationWizard(): React.JSX.Element {
     let active = true;
     Promise.all(
       ORIGIN_PICKS.map(async (pick) => {
-        const entities = await worldAtlasClient.listEntities({
-          playableAs: pick.role,
-        });
-        return [pick.field, entities] as const;
+        if (pick.source === 'encyclopedia') {
+          const entries = await worldAtlasClient.listEncyclopediaCharacterOptions(
+            pick.role as EncyclopediaCharacterOption['role']
+          );
+          return [
+            pick.field,
+            entries.map((entry) => ({
+              description: entry.originBlurb,
+              id: entry.referenceId,
+              title: entry.title,
+            })),
+          ] as const;
+        }
+        const entities = await worldAtlasClient.listEntities({ playableAs: pick.role as PlayableRole });
+        return [
+          pick.field,
+          entities.map((entity) => ({
+            description: entity.originBlurb ?? null,
+            id: entity.id,
+            title: entity.name,
+          })),
+        ] as const;
       })
     )
       .then((pairs) => {
         if (active) {
-          setEntitiesByPick(new Map(pairs));
+          setChoicesByPick(new Map(pairs));
         }
         return pairs;
       })
@@ -226,13 +255,13 @@ export function CharacterCreationWizard(): React.JSX.Element {
 
       <div className="character-wizard-body">
         {state.step === 'origin' ? (
-          <OriginStep entitiesByPick={entitiesByPick} error={originError} />
+          <OriginStep choicesByPick={choicesByPick} error={originError} />
         ) : null}
         {state.step === 'concept' ? <ConceptStep /> : null}
         {state.step === 'aptitudes' ? <AptitudesStep issues={attributeIssues} /> : null}
         {state.step === 'skills' ? <SkillsStep issues={skillIssues} /> : null}
         {state.step === 'nature' ? <NatureStep /> : null}
-        {state.step === 'review' ? <ReviewStep entitiesByPick={entitiesByPick} /> : null}
+        {state.step === 'review' ? <ReviewStep choicesByPick={choicesByPick} /> : null}
       </div>
 
       <footer className="character-wizard-footer">
@@ -254,10 +283,10 @@ export function CharacterCreationWizard(): React.JSX.Element {
 }
 
 function OriginStep({
-  entitiesByPick,
+  choicesByPick,
   error,
 }: {
-  entitiesByPick: Map<string, HardState[]>;
+  choicesByPick: Map<string, OriginChoice[]>;
   error: string | null;
 }): React.JSX.Element {
   const origin = useCharacterCreationStore((state) => state.origin);
@@ -271,23 +300,23 @@ function OriginStep({
     <div className="wizard-step-body">
       {error ? <p className="wizard-error">{error}</p> : null}
       {ORIGIN_PICKS.map((pick) => {
-        const entities = entitiesByPick.get(pick.field) ?? [];
+        const choices = choicesByPick.get(pick.field) ?? [];
         return (
           <section key={pick.field} className="wizard-section">
             <h2>{pick.heading}</h2>
             <p className="wizard-hint">{pick.hint}</p>
             <div className="entity-card-grid">
-              {entities.map((entity) => (
+              {choices.map((choice) => (
                 <button
-                  key={entity.id}
+                  key={choice.id}
                   type="button"
-                  aria-pressed={origin[pick.field] === entity.id}
-                  className={`entity-card${origin[pick.field] === entity.id ? ' selected' : ''}`}
-                  onClick={() => select(pick.field, entity.id)}
+                  aria-pressed={origin[pick.field] === choice.id}
+                  className={`entity-card${origin[pick.field] === choice.id ? ' selected' : ''}`}
+                  onClick={() => select(pick.field, choice.id)}
                 >
-                  <span className="entity-card-name">{entity.name}</span>
-                  {entity.originBlurb ? (
-                    <span className="entity-card-description">{entity.originBlurb}</span>
+                  <span className="entity-card-name">{choice.title}</span>
+                  {choice.description ? (
+                    <span className="entity-card-description">{choice.description}</span>
                   ) : null}
                 </button>
               ))}
@@ -563,15 +592,15 @@ function NatureStep(): React.JSX.Element {
 }
 
 function ReviewStep({
-  entitiesByPick,
+  choicesByPick,
 }: {
-  entitiesByPick: Map<string, HardState[]>;
+  choicesByPick: Map<string, OriginChoice[]>;
 }): React.JSX.Element {
   const state = useCharacterCreationStore();
   const modifiers = buildModifierSummary({ attributes: state.attributes, skills: state.skills });
 
   const nameFor = (field: OriginPick['field']): string | undefined =>
-    entitiesByPick.get(field)?.find((entity) => entity.id === state.origin[field])?.name;
+    choicesByPick.get(field)?.find((choice) => choice.id === state.origin[field])?.title;
 
   const natureRows = [
     ...state.callings.map((calling, index) => ({
@@ -589,7 +618,8 @@ function ReviewStep({
       <section className="wizard-section">
         <h2>{state.name}</h2>
         <p className="wizard-hint">
-          {state.archetype} · {state.pronouns} · {nameFor('speciesId')} of {nameFor('cultureId')}
+          {state.archetype} · {state.pronouns} · {nameFor('speciesReferenceId')} of{' '}
+          {nameFor('cultureReferenceId')}
         </p>
         <p className="review-bio">{state.bio}</p>
       </section>

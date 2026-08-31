@@ -700,6 +700,9 @@ importers:
       pg:
         specifier: ^8.13.1
         version: 8.23.0
+      zod:
+        specifier: ^4.1.12
+        version: 4.4.3
     devDependencies:
       '@types/pg':
         specifier: ^8.11.10
@@ -6169,7 +6172,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(vite@7.2.7(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12))
+      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@7.2.7(@types/node@24.13.3)(jiti@2.7.0)(tsx@4.23.12))
 
   '@vitest/expect@4.1.11':
     dependencies:

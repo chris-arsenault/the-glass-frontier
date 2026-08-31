@@ -24,9 +24,9 @@ export const CHARACTER_WIZARD_STEPS: CharacterWizardStep[] = [
 export type OriginDraft = {
   allegianceId: string;
   allegianceStance: AllegianceStance;
-  cultureId: string;
+  cultureReferenceId: string;
   homelandId: string;
-  speciesId: string;
+  speciesReferenceId: string;
 };
 
 export type CharacterCreationState = {
@@ -74,9 +74,9 @@ const initialState: CharacterCreationState = {
   origin: {
     allegianceId: '',
     allegianceStance: 'member',
-    cultureId: '',
+    cultureReferenceId: '',
     homelandId: '',
-    speciesId: '',
+    speciesReferenceId: '',
   },
   presetId: null,
   pronouns: '',

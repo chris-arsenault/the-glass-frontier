@@ -42,11 +42,15 @@ export const applyBeatDispositions = (
 export const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
   const beats = Array.isArray(chronicle.beats) ? chronicle.beats : [];
   const summaries = Array.isArray(chronicle.summaries) ? chronicle.summaries : [];
+  const openingReferenceSlugs = Array.isArray(chronicle.openingReferenceSlugs)
+    ? chronicle.openingReferenceSlugs
+    : [];
   return {
     ...chronicle,
     activeScene: chronicle.activeScene ?? null,
     beats,
     entityRoster: chronicle.entityRoster,
+    openingReferenceSlugs,
     sceneLedger: chronicle.sceneLedger ?? null,
     summaries,
   };

@@ -143,12 +143,16 @@ export const characterView = (
   uniqueThing: character.nature.uniqueThing,
 });
 
-/** The ids a caller must resolve to fill `OriginNames`. */
-export const originEntityIds = (character: Character): string[] => [
-  character.origin.speciesId,
-  character.origin.cultureId,
+/** Atlas ids a caller must resolve to fill `OriginNames`. */
+export const originAtlasEntityIds = (character: Character): string[] => [
   character.origin.homelandId,
   character.origin.allegianceId,
+];
+
+/** Encyclopedia ids a caller must resolve to fill `OriginNames`. */
+export const originEncyclopediaIds = (character: Character): string[] => [
+  character.origin.speciesReferenceId,
+  character.origin.cultureReferenceId,
 ];
 
 /** Names keyed by id, as the resolving caller gets them back from a store. */
@@ -157,7 +161,7 @@ export const originNamesFrom = (
   names: Map<string, string>
 ): OriginNames => ({
   allegiance: names.get(character.origin.allegianceId),
-  culture: names.get(character.origin.cultureId),
+  culture: names.get(character.origin.cultureReferenceId),
   homeland: names.get(character.origin.homelandId),
-  species: names.get(character.origin.speciesId),
+  species: names.get(character.origin.speciesReferenceId),
 });

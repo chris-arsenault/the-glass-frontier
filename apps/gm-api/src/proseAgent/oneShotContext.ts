@@ -1,5 +1,6 @@
 import type { ContextSliceEntity, LiveRelationship } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
+import type { StoredEncyclopediaEntry } from '@glass-frontier/worldstate';
 
 import type { EntityContextSlice, EntitySnippet, GraphContext } from '../types';
 import { SEARCH_SIMILARITY_FLOOR } from './tools';
@@ -18,6 +19,12 @@ const FOCUS_ENTITY_COUNT = 4;
 const FOCUS_TAG_COUNT = 5;
 const VECTOR_MATCH_COUNT = 8;
 const MAX_HOPS = 2;
+
+type OneShotContext = {
+  encyclopediaContext: GraphContext['encyclopediaContext'];
+  entityContext: EntityContextSlice;
+  relationships: LiveRelationship[];
+};
 
 const topScored = (scores: Record<string, number> | undefined, count: number): string[] =>
   Object.entries(scores ?? {})
@@ -80,12 +87,7 @@ const seedIds = (context: GraphContext, locationId: null | string): string[] => 
  * is the measured one: invented words score 0.29–0.34 against this index and
  * must not come back as canon.
  */
-const vectorMatches = async (context: GraphContext): Promise<string[]> => {
-  const query = searchText(context);
-  if (query.trim().length === 0) {
-    return [];
-  }
-  const embedding = await context.embeddings.embed(query, 'query');
+const vectorMatches = async (context: GraphContext, embedding: number[]): Promise<string[]> => {
   const candidates = await context.worldSchemaStore.findEntityCandidates({
     embedding,
     limit: VECTOR_MATCH_COUNT,
@@ -122,14 +124,104 @@ const orderOffered = (
  * A failed vector arm is not a failed turn: the graph result stands on its own
  * and this response is a comparison, never the story.
  */
-const survivedVectorMatches = async (context: GraphContext): Promise<string[]> =>
-  vectorMatches(context).catch((error: unknown) => {
+const survivedVectorMatches = async (context: GraphContext, embedding: number[]): Promise<string[]> =>
+  vectorMatches(context, embedding).catch((error: unknown) => {
     log('warn', 'one-shot.vector-search-failed', {
       chronicleId: context.chronicleId,
       message: error instanceof Error ? error.message : 'unknown',
       turnId: context.turnId,
     });
     return [];
+  });
+
+const encyclopediaMatches = async (
+  context: GraphContext,
+  location: Awaited<ReturnType<GraphContext['worldSchemaStore']['findLocationByName']>>,
+  embedding: number[]
+): Promise<GraphContext['encyclopediaContext']> => {
+  const [semantic, applicable] = await Promise.all([
+    context.encyclopediaStore.findCandidates({
+      embedding,
+      includeDrafts: false,
+      limit: VECTOR_MATCH_COUNT,
+    }),
+    location === null
+      ? Promise.resolve([])
+      : context.encyclopediaStore.listApplicable({
+        terms: location.contextTags.map((tag) => ({
+          scope: 'place' as const,
+          tag,
+          type: 'tag' as const,
+        })),
+      }),
+  ]);
+  const semanticMatches = semantic.filter(
+    (candidate) => candidate.similarity >= SEARCH_SIMILARITY_FLOOR
+  );
+  const semanticEntries = await Promise.all(
+    semanticMatches.map((candidate) =>
+      context.encyclopediaStore.getEntry({ slug: candidate.slug })
+    )
+  );
+  return [...new Map(
+    [...context.directEncyclopediaEntries, ...semanticEntries, ...applicable]
+      .filter((entry): entry is StoredEncyclopediaEntry =>
+        entry !== null && entry.status === 'complete' && !entry.dm
+      )
+      .map((entry) => [entry.slug, entry])
+  ).values()].slice(0, OFFERED_COUNT);
+};
+
+const queryEmbedding = async (context: GraphContext): Promise<number[]> => {
+  const query = searchText(context);
+  if (query.trim().length === 0) {
+    return [];
+  }
+  return context.embeddings.embed(query, 'query').catch((error: unknown) => {
+    log('warn', 'one-shot.embedding-failed', {
+      chronicleId: context.chronicleId,
+      message: error instanceof Error ? error.message : 'unknown',
+      turnId: context.turnId,
+    });
+    return [];
+  });
+};
+
+const emptyOneShotContext = (
+  context: GraphContext,
+  focusEntities: string[],
+  focusTags: string[]
+): OneShotContext => ({
+  encyclopediaContext: context.directEncyclopediaEntries,
+  entityContext: { candidates: [], focusEntities, focusTags, offered: [], roster: [] },
+  relationships: [],
+});
+
+const logOneShotContext = (
+  context: GraphContext,
+  counts: {
+    candidates: number;
+    offered: number;
+    relationships: number;
+    vectorMatches: number;
+  }
+): void => {
+  log('info', 'one-shot.context', {
+    candidates: counts.candidates,
+    chronicleId: context.chronicleId,
+    offered: counts.offered,
+    relationships: counts.relationships,
+    turnId: context.turnId,
+    vectorMatches: counts.vectorMatches,
+  });
+};
+
+const loadRelationships = (
+  context: GraphContext,
+  offered: ContextSliceEntity[]
+): Promise<LiveRelationship[]> =>
+  context.worldSchemaStore.listRelationshipsAmong({
+    entityIds: offered.map((entry) => entry.id),
   });
 
 /**
@@ -144,7 +236,7 @@ const survivedVectorMatches = async (context: GraphContext): Promise<string[]> =
  */
 export const buildOneShotContext = async (
   context: GraphContext
-): Promise<{ entityContext: EntityContextSlice; relationships: LiveRelationship[] }> => {
+): Promise<OneShotContext> => {
   const { anchorEntityId, entityFocus } = context.chronicleState.chronicle;
   const location = await context.worldSchemaStore.findLocationByName({
     name: context.chronicleState.locationName,
@@ -152,13 +244,16 @@ export const buildOneShotContext = async (
   const focusEntities = seedIds(context, location?.id ?? null);
   const focusTags = topScored(entityFocus?.tagScores, FOCUS_TAG_COUNT);
   if (focusEntities.length === 0) {
-    return {
-      entityContext: { candidates: [], focusEntities, focusTags, offered: [], roster: [] },
-      relationships: [],
-    };
+    return emptyOneShotContext(context, focusEntities, focusTags);
   }
 
-  const matched = await survivedVectorMatches(context);
+  const embedding = await queryEmbedding(context);
+  const [matched, encyclopediaContext] = embedding.length === 0
+    ? [[], context.directEncyclopediaEntries]
+    : await Promise.all([
+      survivedVectorMatches(context, embedding),
+      encyclopediaMatches(context, location, embedding),
+    ]);
   const slice = await context.worldSchemaStore.getContextSlice({
     anchorId: context.effectiveScene?.subjectEntityId ?? anchorEntityId,
     focusIds: [...new Set([...focusEntities, ...matched])],
@@ -170,18 +265,15 @@ export const buildOneShotContext = async (
   });
 
   const offered = orderOffered(slice, focusEntities, matched);
-  const relationships = await context.worldSchemaStore.listRelationshipsAmong({
-    entityIds: offered.map((entry) => entry.id),
-  });
-  log('info', 'one-shot.context', {
+  const relationships = await loadRelationships(context, offered);
+  logOneShotContext(context, {
     candidates: slice.length,
-    chronicleId: context.chronicleId,
     offered: offered.length,
     relationships: relationships.length,
-    turnId: context.turnId,
     vectorMatches: matched.length,
   });
   return {
+    encyclopediaContext,
     entityContext: {
       candidates: slice.map(toSnippet),
       focusEntities,

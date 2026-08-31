@@ -8,6 +8,10 @@ import type {
   CommitBatchResult,
   ContextSliceEntity,
   EntityActivityFeed,
+  EncyclopediaCharacterRole,
+  EncyclopediaClassification,
+  EncyclopediaEntry,
+  EncyclopediaEntrySummary,
   ContextSliceInput,
   HardState,
   HardStateProminence,
@@ -17,6 +21,7 @@ import type {
   Turn,
   LoreFragment,
   WorldSchema,
+  ContextTerm,
 } from '@glass-frontier/dto';
 
 import type { TurnSearchInput, TurnWindowInput } from './chronicleTurnPersistence';
@@ -34,6 +39,50 @@ export type WorldNeighbor = {
   hops: number;
   neighbor: HardState;
   via?: { id: string; relationship: string; direction: 'out' | 'in' };
+};
+
+export type StoredEncyclopediaEntry = EncyclopediaEntry & { id: string };
+
+export type EncyclopediaEmbeddingSource = {
+  id: string;
+  text: string;
+};
+
+export type EncyclopediaSearchCandidate = EncyclopediaEntrySummary & {
+  similarity: number;
+};
+
+export type EncyclopediaStore = {
+  getEntry: (input: {
+    slug: string;
+    includeDm?: boolean;
+    includeShell?: boolean;
+  }) => Promise<StoredEncyclopediaEntry | null>;
+  getEntryById: (id: string) => Promise<StoredEncyclopediaEntry | null>;
+  listEntries: (input?: {
+    includeDm?: boolean;
+    kind?: string;
+    limit?: number;
+    prevalence?: 'common' | 'uncommon' | 'rare';
+    query?: string;
+    status?: 'draft' | 'complete';
+    subkind?: string;
+    topic?: string;
+  }) => Promise<StoredEncyclopediaEntry[]>;
+  listApplicable: (input: { terms: ContextTerm[] }) => Promise<StoredEncyclopediaEntry[]>;
+  listCharacterOptions: (
+    role: EncyclopediaCharacterRole
+  ) => Promise<StoredEncyclopediaEntry[]>;
+  listClassificationsForEntity: (entityId: string) => Promise<EncyclopediaClassification[]>;
+  listAtlasExamplesForEntry: (slug: string) => Promise<EncyclopediaClassification[]>;
+  findMentionedEntries: (text: string) => Promise<StoredEncyclopediaEntry[]>;
+  listMissingEmbeddings: (limit?: number) => Promise<EncyclopediaEmbeddingSource[]>;
+  saveEmbedding: (id: string, embedding: number[]) => Promise<void>;
+  findCandidates: (input: {
+    embedding: number[];
+    includeDrafts?: boolean;
+    limit?: number;
+  }) => Promise<EncyclopediaSearchCandidate[]>;
 };
 
 export type ChronicleSnapshot = {
@@ -54,6 +103,7 @@ export type ChronicleStore = {
     locationId?: string | null;
     characterId?: string;
     openingText?: string;
+    openingReferenceSlugs?: Chronicle['openingReferenceSlugs'];
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;

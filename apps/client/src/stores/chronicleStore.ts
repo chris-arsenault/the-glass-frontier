@@ -3,6 +3,7 @@ import type {
   CharacterDraft,
   Chronicle,
   ChronicleBeat,
+  DirectWorldReference,
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
@@ -81,6 +82,7 @@ const emptyTurnView = (): TurnView => ({
   playerIntent: null,
   proseAlternates: null,
   proseCostUsd: null,
+  referenceMentions: null,
   sceneContext: null,
   skillCheckPlan: null,
   skillCheckResult: null,
@@ -107,6 +109,7 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   playerIntent: turn.playerIntent ?? null,
   proseAlternates: turn.proseAlternates ?? null,
   proseCostUsd: turn.proseCostUsd ?? null,
+  referenceMentions: turn.referenceMentions ?? null,
   sceneContext: turn.sceneContext ?? null,
   skillCheckPlan: turn.skillCheckPlan ?? null,
   skillCheckResult: turn.skillCheckResult ?? null,
@@ -342,7 +345,7 @@ const createBaseState = () => ({
   playerSettingsError: null as Error | null,
   playerSettingsStatus: 'idle' as const,
   preferredCharacterId: null as string | null,
-  selectedEntityIds: [] as string[],
+  selectedReferences: [] as DirectWorldReference[],
   startLocationName: null as string | null,
   transportError: null as Error | null,
   turnProgress: null as TurnProgress | null,
@@ -402,7 +405,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       momentumTrend: null,
       pendingPlayerMessageId: null,
       pendingTurnJobId: null,
-      selectedEntityIds: [],
+      selectedReferences: [],
       startLocationName: null,
       transportError: null,
       turnProgress: null,
@@ -565,7 +568,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         messages: messageHistory,
         momentumTrend: prev.chronicleId === chronicleState.chronicleId ? prev.momentumTrend : null,
         playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
-        selectedEntityIds: [],
+        selectedReferences: [],
         startLocationName: null,
         transportError: null,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
@@ -722,7 +725,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     progressStream.subscribe(jobId);
 
     try {
-      const targetEntityIds = get().selectedEntityIds;
+      const referenceSlugs = get().selectedReferences.map((reference) => reference.slug);
       const {
         activeScene,
         beats,
@@ -736,7 +739,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         await gmClient.postMessage.mutate({
           chronicleId,
           content: playerEntry,
-          entityTargetIds: targetEntityIds,
+          referenceSlugs,
           requestId: playerEntry.id,
         });
       progressStream.markComplete(jobId);
@@ -798,7 +801,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           pendingPlayerMessageId:
             prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
           pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
-          selectedEntityIds: [],
+          selectedReferences: [],
           transportError: null,
           turnProgress: null,
           turnSequence: Math.max(prev.turnSequence, turn.turnSequence),
@@ -890,18 +893,20 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
     }));
   },
 
-  toggleEntityTarget(entityId) {
+  toggleReference(reference) {
     set((prev) => {
-      if (prev.selectedEntityIds.includes(entityId)) {
+      if (prev.selectedReferences.some((selected) => selected.slug === reference.slug)) {
         return {
           ...prev,
-          selectedEntityIds: prev.selectedEntityIds.filter((id) => id !== entityId),
+          selectedReferences: prev.selectedReferences.filter(
+            (selected) => selected.slug !== reference.slug
+          ),
         };
       }
-      if (prev.selectedEntityIds.length >= 3) {
+      if (prev.selectedReferences.length >= 3) {
         return prev;
       }
-      return { ...prev, selectedEntityIds: [...prev.selectedEntityIds, entityId] };
+      return { ...prev, selectedReferences: [...prev.selectedReferences, reference] };
     });
   },
 

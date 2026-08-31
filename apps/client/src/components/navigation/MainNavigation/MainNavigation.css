@@ -11,6 +11,42 @@
   overflow-y: auto;
 }
 
+.world-guide-navigation {
+  display: grid;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-1);
+  grid-template-columns: 1fr 1fr;
+}
+
+.world-guide-navigation h2 {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-2xs);
+  grid-column: 1 / -1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.world-guide-navigation a {
+  padding: var(--space-2);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  text-align: center;
+  text-decoration: none;
+}
+
+.world-guide-navigation a:hover,
+.world-guide-navigation a:focus-visible,
+.world-guide-navigation a.active {
+  color: var(--text-accent);
+  border-color: var(--border-accent);
+  outline: none;
+}
+
 @media (width <= 800px) {
   .main-navigation {
     width: 100%;

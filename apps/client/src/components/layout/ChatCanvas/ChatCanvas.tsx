@@ -22,9 +22,11 @@ import { InventoryDeltaBadge } from '../../badges/InventoryDeltaBadge/InventoryD
 import { SkillCheckBadge } from '../../badges/SkillCheckBadge/SkillCheckBadge';
 import {
   AnnotatedEntityText,
-  EntityReferenceLink,
-  entityReferenceRemarkPlugin,
 } from '../../entities/EntityReferencePopover/EntityReferencePopover';
+import {
+  WorldReferenceLink,
+  worldReferenceRemarkPlugin,
+} from '../../entities/WorldReferencePopover';
 import { useFeedbackVisibility } from '../../feedbackVisibility/FeedbackVisibilityGate';
 import './ChatCanvas.css';
 import { WorldPanel } from './WorldPanel';
@@ -464,8 +466,14 @@ export function ChatCanvas() {
             const entityReferences = (view?.entityReferences ?? []).filter(
               (reference) => reference.transcriptEntryId === entry.id
             );
+            const encyclopediaMentions = (view?.referenceMentions ?? []).filter(
+              (mention) => mention.transcriptEntryId === entry.id
+            );
             const entityRoster = view?.entityRoster ?? [];
             const entityById = new Map(entityRoster.map((entity) => [entity.id, entity]));
+            const encyclopediaBySlug = new Map(
+              encyclopediaMentions.map((mention) => [mention.slug, mention])
+            );
             const proseAlternates = entry.role === 'gm' ? (view?.proseAlternates ?? []) : [];
             const responseCount = 1 + proseAlternates.length;
             const selectedResponse = Math.min(
@@ -645,12 +653,16 @@ export function ChatCanvas() {
                           <ReactMarkdown
                             components={{
                               a: (props) => (
-                                <EntityReferenceLink {...props} entityById={entityById} />
+                                <WorldReferenceLink
+                                  {...props}
+                                  encyclopediaBySlug={encyclopediaBySlug}
+                                  entityById={entityById}
+                                />
                               ),
                             }}
                             remarkPlugins={[
                               remarkGfm,
-                              entityReferenceRemarkPlugin(entityReferences),
+                              worldReferenceRemarkPlugin(entityReferences, encyclopediaMentions),
                             ]}
                           >
                             {displayedContent}

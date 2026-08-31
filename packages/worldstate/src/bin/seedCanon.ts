@@ -9,6 +9,8 @@ const main = async (): Promise<void> => {
     const result = await seedCanon(pool);
     log('info', 'worldstate.canon-seeded', {
       batchId: result.batchId,
+      classificationCount: result.classificationCount,
+      encyclopediaCount: result.encyclopediaCount,
       entityCount: result.entityCount,
       loreCount: result.loreCount,
       relationshipCount: result.relationshipCount,

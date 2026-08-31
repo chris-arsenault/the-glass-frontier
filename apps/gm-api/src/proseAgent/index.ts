@@ -1,6 +1,7 @@
 import { type CatalogModel, MODEL_CATALOG, renderBlock } from '@glass-frontier/app';
 import {
   type IntentType,
+  type EncyclopediaUsageRecord,
   type PromptTemplateId,
   type ProseSidecarEntry,
   TurnBrief,
@@ -83,6 +84,7 @@ export type ProseAgentOutcome = {
   /** The writer's audit id, so the turn trace still points at a real record. */
   requestId: string;
   sidecar: ProseSidecarEntry[];
+  referenceUsage: EncyclopediaUsageRecord[];
   stepCount: number;
   usage: TokenUsage;
 };
@@ -156,20 +158,37 @@ const userMessage = (text: string): {
  */
 const provenanceFiltered = (
   context: GraphContext,
-  entries: TurnBrief['entities'],
+  entries: TurnBrief['references'],
   session: ToolSession
-): ProseSidecarEntry[] => entries.flatMap(({ entitySlug, ...entry }) => {
-  const served = session.resolveServed(entitySlug);
-  if (served !== undefined) {
-    return [{ ...entry, entityId: served.id, entitySlug: served.slug }];
+): { referenceUsage: EncyclopediaUsageRecord[]; sidecar: ProseSidecarEntry[] } => {
+  const referenceUsage: EncyclopediaUsageRecord[] = [];
+  const sidecar: ProseSidecarEntry[] = [];
+  for (const { emergentTags, slug, usage } of entries) {
+    const served = session.resolveServed(slug);
+    if (served?.atlasEntityId !== undefined && served.atlasSlug !== undefined) {
+      sidecar.push({
+        emergentTags,
+        entityId: served.atlasEntityId,
+        entitySlug: served.atlasSlug,
+        usage,
+      });
+      continue;
+    }
+    if (served !== undefined && slug.startsWith('encyclopedia:')) {
+      referenceUsage.push({
+        role: usage === 'central' ? 'interaction' : 'texture',
+        slug,
+      });
+      continue;
+    }
+    log('warn', 'prose-agent.sidecar.unserved_reference', {
+      chronicleId: context.chronicleId,
+      slug,
+      turnId: context.turnId,
+    });
   }
-  log('warn', 'prose-agent.sidecar.unserved_entity', {
-    chronicleId: context.chronicleId,
-    entitySlug,
-    turnId: context.turnId,
-  });
-  return [];
-});
+  return { referenceUsage, sidecar };
+};
 
 /**
  * Everything the research judged, as the writer's one authored block, plus
@@ -350,7 +369,7 @@ const runScout = async (
 ): Promise<ScoutOutcome> => {
   const { intentType, model, playerId } = input;
   const pack = await buildSeedPack(context);
-  const session = new ToolSession({ seedEntities: pack.seedEntities });
+  const session = new ToolSession({ seedReferences: pack.seedReferences });
   const target: ResearchTarget = {
     intentType,
     model,
@@ -460,13 +479,15 @@ export const runProseAgent = async (
     templateId: agentTemplateFor(intent.intentType),
   });
   const usage = sumUsage([scout.usage, written.usage]);
+  const provenance = provenanceFiltered(context, scout.brief.references, scout.session);
   return {
     brief: scout.brief,
     briefFailed: scout.briefFailed,
     costUsd: scout.costUsd + calculateActualCostUsd(model, written.usage),
     prose: written.prose,
+    referenceUsage: provenance.referenceUsage,
     requestId: written.requestId,
-    sidecar: provenanceFiltered(context, scout.brief.entities, scout.session),
+    sidecar: provenance.sidecar,
     stepCount: scout.stepCount,
     usage,
   };

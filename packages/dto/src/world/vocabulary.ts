@@ -93,7 +93,7 @@ const KIND_DEFS = [
     displayName: 'Ability',
     id: 'ability',
     isLocation: false,
-    subkinds: ['learned_ability', 'innate_ability'],
+    subkinds: ['learned_ability', 'innate_ability', 'the_adversary', 'the_three'],
   },
   {
     displayName: 'Artifact',
@@ -217,7 +217,7 @@ const KIND_DEFS = [
     displayName: 'Transport',
     id: 'transport',
     isLocation: false,
-    subkinds: ['vessel'],
+    subkinds: ['vessel', 'route'],
   },
 ] as const;
 

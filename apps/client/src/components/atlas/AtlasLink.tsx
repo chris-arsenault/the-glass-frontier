@@ -8,7 +8,7 @@ type AtlasLinkProps = Omit<LinkProps, 'to'> & {
 };
 
 export function AtlasLink({ onClick, slug, target, ...props }: AtlasLinkProps): React.JSX.Element {
-  const openAtlasModal = useUiStore((state) => state.openAtlasModal);
+  const openWorldGuide = useUiStore((state) => state.openWorldGuide);
 
   return (
     <Link
@@ -29,7 +29,7 @@ export function AtlasLink({ onClick, slug, target, ...props }: AtlasLinkProps): 
           return;
         }
         event.preventDefault();
-        openAtlasModal(slug);
+        openWorldGuide(`atlas:${slug}`);
       }}
     />
   );

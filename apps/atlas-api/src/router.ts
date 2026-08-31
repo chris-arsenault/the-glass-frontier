@@ -1,11 +1,16 @@
 import {
+  EncyclopediaCharacterOption,
   HardStateKind,
   HardStateProminence,
   PlayableRole,
   type HardState,
 } from '@glass-frontier/dto';
 import { log } from '@glass-frontier/utils';
-import { buildInitialEntityRoster } from '@glass-frontier/worldstate';
+import {
+  buildInitialEntityRoster,
+  encyclopediaSummary,
+  playerEncyclopediaEntry,
+} from '@glass-frontier/worldstate';
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -127,6 +132,19 @@ export const appRouter = t.router({
       });
     }),
 
+  getEncyclopediaEntry: t.procedure
+    .input(z.object({ slug: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const entry = await ctx.encyclopediaStore.getEntry({ slug: input.slug });
+      if (entry === null) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Encyclopedia entry not found.' });
+      }
+      return {
+        classifications: await ctx.encyclopediaStore.listAtlasExamplesForEntry(entry.slug),
+        entry: playerEncyclopediaEntry(entry),
+      };
+    }),
+
   // GET /entities/:identifier
   getEntity: t.procedure
     .input(z.object({ identifier: z.string().min(1) }))
@@ -142,11 +160,11 @@ export const appRouter = t.router({
         throw new Error(ENTITY_NOT_FOUND);
       }
 
-      const fragments = await ctx.worldSchemaStore.listLoreFragmentsByEntity({
-        entityId: entity.id,
-        limit: 200,
-      });
-      return { entity, fragments };
+      const [fragments, classifications] = await Promise.all([
+        ctx.worldSchemaStore.listLoreFragmentsByEntity({ entityId: entity.id, limit: 200 }),
+        ctx.encyclopediaStore.listClassificationsForEntity(entity.id),
+      ]);
+      return { classifications, entity, fragments };
     }),
 
   getEntityActivity: t.procedure
@@ -182,6 +200,73 @@ export const appRouter = t.router({
         neighbors:
           kind === undefined ? neighbors : neighbors.filter((entry) => entry.kind === kind),
       };
+    }),
+
+  listApplicableEncyclopediaEntries: t.procedure
+    .input(
+      z.object({
+        locationId: z.string().uuid().optional(),
+        locationName: z.string().min(1).max(200).optional(),
+      }).refine((input) => input.locationId !== undefined || input.locationName !== undefined, {
+        message: 'A canonical location id or name is required.',
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const location = input.locationId === undefined
+        ? await ctx.worldSchemaStore.findLocationByName({ name: input.locationName ?? '' })
+        : await ctx.worldSchemaStore.getEntity({ id: input.locationId });
+      if (location === null && input.locationId === undefined) {
+        return [];
+      }
+      if (location === null || location.dm || !location.isLocation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Atlas location not found.' });
+      }
+      const applicable = await ctx.encyclopediaStore.listApplicable({
+        terms: location.contextTags.map((tag) => ({ scope: 'place' as const, tag, type: 'tag' as const })),
+      });
+      const direct = await ctx.encyclopediaStore.listClassificationsForEntity(location.id);
+      const directEntries = await Promise.all(
+        direct.map((classification) =>
+          ctx.encyclopediaStore.getEntry({ slug: classification.encyclopediaSlug })
+        )
+      );
+      const bySlug = new Map(
+        [...applicable, ...directEntries.filter((entry) => entry?.status === 'complete')]
+          .filter((entry) => entry !== null)
+          .map((entry) => [entry.slug, entry])
+      );
+      return [...bySlug.values()].map(encyclopediaSummary);
+    }),
+
+  listEncyclopediaCharacterOptions: t.procedure
+    .input(z.object({ role: z.enum(['species', 'culture']) }))
+    .query(async ({ ctx, input }) => {
+      const entries = await ctx.encyclopediaStore.listCharacterOptions(input.role);
+      return entries.map((entry) => EncyclopediaCharacterOption.parse({
+        originBlurb: entry.originBlurb,
+        referenceId: entry.id,
+        role: input.role,
+        slug: `encyclopedia:${entry.slug}` as const,
+        summary: entry.summary,
+        title: entry.title,
+      }));
+    }),
+
+  listEncyclopediaEntries: t.procedure
+    .input(
+      z.object({
+        kind: z.string().min(1).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+        prevalence: z.enum(['common', 'uncommon', 'rare']).optional(),
+        query: z.string().max(160).optional(),
+        status: z.enum(['draft', 'complete']).optional(),
+        subkind: z.string().min(1).optional(),
+        topic: z.string().min(1).optional(),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const entries = await ctx.encyclopediaStore.listEntries(input);
+      return entries.map(encyclopediaSummary);
     }),
 
   // GET /entities

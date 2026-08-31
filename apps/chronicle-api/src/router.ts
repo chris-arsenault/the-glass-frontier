@@ -1,15 +1,9 @@
 import type {
-  CharacterOrigin,
-  HardState,
-  PlayableRole,
   Player,
   PlayerPreferences,
 } from '@glass-frontier/dto';
 import {
   CharacterDraft,
-  createStartingMomentum,
-  skillKey,
-  validateCharacterBuild,
   type Character,
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
@@ -23,6 +17,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
+import { buildCharacter } from './characterCreation';
 import type { Context } from './context';
 
 type EnsureChronicleResult = Awaited<
@@ -349,7 +344,7 @@ async function createChronicleHandler(
   ensureCharacterOwnership(character, playerId);
 
   const chronicleId = input.chronicleId ?? randomUUID();
-  const [openingText, entityRoster] = await Promise.all([
+  const [opening, entityRoster] = await Promise.all([
     ctx.seedService.generateOpening({
       anchorId: input.anchorEntityId,
       character,
@@ -375,7 +370,8 @@ async function createChronicleHandler(
     entityRoster,
     locationId: input.locationId,
     locationName: input.location.locale.trim(),
-    openingText,
+    openingReferenceSlugs: opening.openingReferenceSlugs,
+    openingText: opening.text,
     playerId,
     seedText: input.seedText,
     status: input.status,
@@ -386,81 +382,6 @@ async function createChronicleHandler(
 
   log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`);
   return { chronicle };
-}
-
-/**
- * What each canon origin id has to be. The wizard filters its pickers this way
- * and the server re-checks it, because a draft is player input.
- */
-const originChecks = (
-  origin: CharacterOrigin
-): Array<{ id: string; label: string; role: PlayableRole }> => [
-  { id: origin.speciesId, label: 'species', role: 'species' },
-  { id: origin.cultureId, label: 'culture', role: 'culture' },
-  { id: origin.homelandId, label: 'homeland', role: 'homeland' },
-  { id: origin.allegianceId, label: 'allegiance', role: 'allegiance' },
-];
-
-async function resolveOrigin(ctx: Context, origin: CharacterOrigin): Promise<HardState[]> {
-  const checks = originChecks(origin);
-  const entities = await ctx.worldSchemaStore.listEntitiesByIds(checks.map((check) => check.id));
-  const byId = new Map(entities.map((entity) => [entity.id, entity]));
-
-  return checks.map((check) => {
-    const entity = byId.get(check.id);
-    if (entity === undefined) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: `Unknown ${check.label} in canon.` });
-    }
-    if (!entity.playableAs.includes(check.role)) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `${entity.name} cannot be a character's ${check.label}.`,
-      });
-    }
-    return entity;
-  });
-}
-
-/**
- * Turns a player-authored draft into a character. The server owns the id,
- * starting momentum, the empty pack and the derived tags, so the only thing a
- * client can decide is what the draft schema and the creation budget allow.
- */
-async function buildCharacter(
-  ctx: Context,
-  draft: CharacterDraft,
-  playerId: string
-): Promise<Character> {
-  const issues = validateCharacterBuild({ attributes: draft.attributes, skills: draft.skills });
-  if (issues.length > 0) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: issues.map((issue) => issue.message).join(' '),
-    });
-  }
-
-  const [species, culture, homeland] = await resolveOrigin(ctx, draft.origin);
-
-  return {
-    archetype: draft.archetype.trim(),
-    attributes: draft.attributes,
-    bio: draft.bio.trim(),
-    id: randomUUID(),
-    inventory: [],
-    momentum: createStartingMomentum(),
-    name: draft.name.trim(),
-    nature: draft.nature,
-    origin: draft.origin,
-    playerId,
-    pronouns: draft.pronouns.trim(),
-    skills: Object.fromEntries(
-      draft.skills.map((skill) => [
-        skillKey(skill.name),
-        { attribute: skill.attribute, name: skill.name.trim(), tier: skill.tier, xp: 0 },
-      ])
-    ),
-    tags: [species.name, culture.name, homeland.name, draft.archetype.trim()],
-  };
 }
 
 async function requireCharacter(ctx: Context, characterId: string): Promise<Character> {

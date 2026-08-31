@@ -18,6 +18,8 @@ let worldState: WorldState;
 const DIALOG_SCENE_ID = 'scene:turn-0';
 const DIALOG_SUBJECT = 'Amaya Venn';
 const OFFER_ROOT_NAME = 'Offer Root';
+const ASH_SKATER_SLUG = 'encyclopedia:ash-skater';
+const ASH_SKATER_TITLE = 'Ash Skater';
 
 beforeAll(async () => {
   ({ pool, worldState } = await startHarness());
@@ -224,7 +226,21 @@ describe('Chronicle turn history', () => {
     await worldState.chronicles.commitTurn({
       character: { ...character, momentum: { ...character.momentum, current: -1 } },
       chronicle: secondState,
-      turn: defaultTurn(source.id, { gmSummary: 'second', turnSequence: 1 }),
+      turn: defaultTurn(source.id, {
+        gmSummary: 'second',
+        playerReferenceSlugs: ['atlas:second-landing', ASH_SKATER_SLUG],
+        referenceMentions: [{
+          end: 10,
+          kind: 'creature',
+          slug: ASH_SKATER_SLUG,
+          start: 0,
+          summary: 'A heat-fed skater.',
+          title: ASH_SKATER_TITLE,
+          transcriptEntryId: 'gm-second',
+        }],
+        referenceUsage: [{ role: 'interaction', slug: ASH_SKATER_SLUG }],
+        turnSequence: 1,
+      }),
     });
     await worldState.chronicles.commitTurn({
       character: { ...character, momentum: { ...character.momentum, current: 2 } },
@@ -265,6 +281,14 @@ describe('Chronicle turn history', () => {
     expect(branchSnapshot.turnSequence).toBe(1);
     expect(branchSnapshot.turns.map((turn) => turn.gmSummary)).toEqual(['first', 'second']);
     expect(branchSnapshot.turns.every((turn) => turn.canBranch === true)).toBe(true);
+    expect(branchSnapshot.turns[1]?.playerReferenceSlugs).toEqual([
+      'atlas:second-landing',
+      ASH_SKATER_SLUG,
+    ]);
+    expect(branchSnapshot.turns[1]?.referenceUsage).toEqual([
+      { role: 'interaction', slug: ASH_SKATER_SLUG },
+    ]);
+    expect(branchSnapshot.turns[1]?.referenceMentions?.[0]?.title).toBe(ASH_SKATER_TITLE);
     expect(branchSnapshot.turns.map((turn) => turn.id)).not.toEqual(
       sourceSnapshot.turns.slice(0, 2).map((turn) => turn.id)
     );
@@ -344,14 +368,30 @@ describe('Chronicle turn history', () => {
             usage: 'central',
           },
         ],
+        playerReferenceSlugs: [`atlas:${location.slug}`, ASH_SKATER_SLUG],
+        referenceMentions: [{
+          end: 10,
+          kind: 'creature',
+          slug: ASH_SKATER_SLUG,
+          start: 0,
+          summary: 'A heat-fed skater.',
+          title: ASH_SKATER_TITLE,
+          transcriptEntryId: 'gm-message',
+        }],
+        referenceUsage: [{ role: 'texture', slug: ASH_SKATER_SLUG }],
         turnSequence: 0,
       })
     );
 
     const turns = await worldState.chronicles.listChronicleTurns(chronicle.id);
-    expect(turns[0]?.entityRoster?.[0]?.slug).toBe(location.slug);
-    expect(turns[0]?.entityReferences?.[0]?.entityId).toBe(location.id);
-    expect(turns[0]?.entityUsage?.[0]?.usage).toBe('central');
+    expect(turns).toMatchObject([{
+      entityReferences: [{ entityId: location.id }],
+      entityRoster: [{ slug: location.slug }],
+      entityUsage: [{ usage: 'central' }],
+      playerReferenceSlugs: [`atlas:${location.slug}`, ASH_SKATER_SLUG],
+      referenceMentions: [{ title: ASH_SKATER_TITLE }],
+      referenceUsage: [{ role: 'texture', slug: ASH_SKATER_SLUG }],
+    }]);
   });
 
   it('persists the minimal scene context that governed a turn', async () => {

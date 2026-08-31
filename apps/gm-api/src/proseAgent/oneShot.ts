@@ -101,6 +101,7 @@ export const runOneShotProse = async (
   const retrieved = await buildOneShotContext(context);
   const withEntities: GraphContext = {
     ...context,
+    encyclopediaContext: retrieved.encyclopediaContext,
     entityContext: retrieved.entityContext,
     entityRelationships: retrieved.relationships,
   };

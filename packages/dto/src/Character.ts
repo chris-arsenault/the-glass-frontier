@@ -19,16 +19,15 @@ export const AllegianceStance = z.enum(['member', 'indebted', 'estranged', 'hunt
 export type AllegianceStance = z.infer<typeof AllegianceStance>;
 
 /**
- * The canon entities a character is rooted in. These are `hard_state` ids, so
- * the narrator can hydrate the real species, culture, homeland and faction
- * rather than inventing them turn by turn.
+ * The canon records a character is rooted in. Species and culture are reusable
+ * Encyclopedia entries; homeland and allegiance are particular Atlas entities.
  */
 export const CharacterOrigin = z.object({
   allegianceId: z.string().uuid(),
   allegianceStance: AllegianceStance,
-  cultureId: z.string().uuid(),
+  cultureReferenceId: z.string().uuid(),
   homelandId: z.string().uuid(),
-  speciesId: z.string().uuid(),
+  speciesReferenceId: z.string().uuid(),
 });
 export type CharacterOrigin = z.infer<typeof CharacterOrigin>;
 

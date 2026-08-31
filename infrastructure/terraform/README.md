@@ -12,7 +12,7 @@ The platform migration service owns the `glass_frontier` logical database and pu
 
 ## Data ownership
 
-`db/migrations/seed` contains production bootstrap SQL for application configuration and world vocabulary. The authored world dataset lives at `packages/worldstate/src/canon/tsonuCanonProposal.json` and is compiled into the private canon-seed Lambda. Tests create a separate database through `WORLDSTATE_TEST_DATABASE_URL` and use synthetic proposals; neither test fixtures nor the production canon cross that boundary.
+`db/migrations/seed` contains production bootstrap SQL for application configuration and world vocabulary. The authored world dataset lives at `packages/worldstate/src/canon/tsonuCanonSnapshot.json` and is compiled into the private canon-seed Lambda. Tests create a separate database through `WORLDSTATE_TEST_DATABASE_URL` and use synthetic snapshots; neither test fixtures nor the production canon cross that boundary.
 
 Canon refreshes use stable external keys and a source revision. They update only rows present in the incoming artifact and never interpret an omitted row as a deletion. Live-play relationships take ownership when they supersede an imported relationship, so a later source refresh cannot overwrite what chronicle closure recorded.
 

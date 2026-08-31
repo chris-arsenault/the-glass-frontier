@@ -205,6 +205,8 @@ export const LiveRelationship = z.object({
 export type LiveRelationship = z.infer<typeof LiveRelationship>;
 
 export const HardState = z.object({
+  /** Authored applicability terms contributed by this Atlas entity. */
+  contextTags: z.array(z.string().min(1)).default([]),
   createdAt: z
     .number()
     .int()

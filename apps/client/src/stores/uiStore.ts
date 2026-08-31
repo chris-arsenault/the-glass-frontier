@@ -3,8 +3,8 @@ import { create } from 'zustand';
 type ExpandedMessages = Record<string, boolean>;
 
 type UiState = {
-  atlasModalSlug: string | null;
-  closeAtlasModal: () => void;
+  worldGuideModalSlug: string | null;
+  closeWorldGuide: () => void;
   closeBugReportModal: () => void;
   closeChangelogModal: () => void;
   closeCharacterDrawer: () => void;
@@ -22,7 +22,7 @@ type UiState = {
   isPlayerMenuOpen: boolean;
   isPlayerSettingsModalOpen: boolean;
   isTemplateDrawerOpen: boolean;
-  openAtlasModal: (slug: string) => void;
+  openWorldGuide: (qualifiedSlug: string) => void;
   openBugReportModal: () => void;
   openChangelogModal: () => void;
   openGuideModal: () => void;
@@ -39,8 +39,6 @@ type UiState = {
 };
 
 export const useUiStore = create<UiState>((set) => ({
-  atlasModalSlug: null,
-  closeAtlasModal: () => set({ atlasModalSlug: null }),
   closeBugReportModal: () => set({ isBugReportModalOpen: false }),
   closeChangelogModal: () => set({ isChangelogModalOpen: false }),
   closeCharacterDrawer: () => set({ isCharacterDrawerOpen: false }),
@@ -49,6 +47,7 @@ export const useUiStore = create<UiState>((set) => ({
   closePlayerMenu: () => set({ isPlayerMenuOpen: false }),
   closePlayerSettingsModal: () => set({ isPlayerSettingsModalOpen: false }),
   closeTemplateDrawer: () => set({ isTemplateDrawerOpen: false }),
+  closeWorldGuide: () => set({ worldGuideModalSlug: null }),
   expandedMessages: {},
   isBugReportModalOpen: false,
   isChangelogModalOpen: false,
@@ -58,11 +57,11 @@ export const useUiStore = create<UiState>((set) => ({
   isPlayerMenuOpen: false,
   isPlayerSettingsModalOpen: false,
   isTemplateDrawerOpen: false,
-  openAtlasModal: (slug) => set({ atlasModalSlug: slug }),
   openBugReportModal: () => set({ isBugReportModalOpen: true }),
   openChangelogModal: () => set({ isChangelogModalOpen: true }),
   openGuideModal: () => set({ isGuideModalOpen: true }),
   openPlayerSettingsModal: () => set({ isPlayerSettingsModalOpen: true }),
+  openWorldGuide: (qualifiedSlug) => set({ worldGuideModalSlug: qualifiedSlug }),
   resetExpandedMessages: () => set({ expandedMessages: {} }),
   setExpandedMessages: (next) =>
     set((state) => ({
@@ -94,4 +93,5 @@ export const useUiStore = create<UiState>((set) => ({
     set((state) => ({
       isTemplateDrawerOpen: !state.isTemplateDrawerOpen,
     })),
+  worldGuideModalSlug: null,
 }));

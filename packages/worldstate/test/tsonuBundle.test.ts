@@ -5,7 +5,10 @@ import { buildTsonuProposal, type TsonuBundle, type TsonuEntry } from '../src/ts
 const entry = (overrides: Partial<TsonuEntry> & { id: string }): TsonuEntry => ({
   aliases: [],
   connections: [],
+  context_tags: [],
   dm: false,
+  encyclopedia_memberships: [],
+  encyclopedia_type: null,
   facts: [],
   is_article: false,
   kind: 'installation',
@@ -21,9 +24,11 @@ const entry = (overrides: Partial<TsonuEntry> & { id: string }): TsonuEntry => (
 });
 
 const bundle = (entries: TsonuEntry[]): TsonuBundle => ({
+  context_tags: [],
+  encyclopedia: { entries: [] },
   entries: Object.fromEntries(entries.map((each) => [each.id, { entry: each }])),
   revision: 'abc123',
-  schema_version: 6,
+  schema_version: 13,
 });
 
 const CAROM_KEY = 'tsonu:carom';
@@ -361,9 +366,9 @@ describe('buildTsonuProposal', () => {
     });
   });
 
-  it('rejects a bundle from before canon metadata became required', () => {
-    expect(() => buildTsonuProposal({ ...bundle([]), schema_version: 5 })).toThrow(
-      'does not include canon metadata'
+  it('rejects a bundle from before Encyclopedia metadata became required', () => {
+    expect(() => buildTsonuProposal({ ...bundle([]), schema_version: 12 })).toThrow(
+      'does not include Encyclopedia data'
     );
   });
 

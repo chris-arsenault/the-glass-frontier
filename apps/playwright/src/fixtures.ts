@@ -58,9 +58,9 @@ const BASE_CHARACTER: Character = {
   origin: {
     allegianceId: GLASS_WARDENS_ID,
     allegianceStance: 'estranged',
-    cultureId: QUAY_CULTURE_ID,
+    cultureReferenceId: QUAY_CULTURE_ID,
     homelandId: LOCATION_ROOT_ID,
-    speciesId: SITHARIAN_SPECIES_ID,
+    speciesReferenceId: SITHARIAN_SPECIES_ID,
   },
   playerId: PLAYWRIGHT_PLAYER_ID,
   pronouns: 'they/them',
@@ -104,6 +104,7 @@ const BASE_CHRONICLE: Chronicle = {
   locationId: LOCATION_ROOT_ID,
   locationName: 'Luminous Quay',
   openingText: 'You stand beneath the signal gantries of Luminous Quay as the next alarm begins.',
+  openingReferenceSlugs: [],
   playerId: PLAYWRIGHT_PLAYER_ID,
   sceneLedger: null,
   status: 'open',
@@ -114,6 +115,7 @@ const BASE_CHRONICLE: Chronicle = {
 };
 
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {
+  contextTags: [],
   dm: false,
   facts: { population: 'a few hundred keepers and dockhands' },
   id: LOCATION_ROOT_ID,
@@ -134,6 +136,7 @@ const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {
 
 const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | 'links'>> = [
   {
+    contextTags: [],
     dm: false,
     facts: { founded: 2101 },
     id: GLASS_WARDENS_ID,
@@ -152,6 +155,7 @@ const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | '
     veiled: false,
   },
   {
+    contextTags: [],
     dm: false,
     facts: { function: 'whispers coordinates to hidden gates when attuned' },
     id: ORACLE_VESSEL_ID,
@@ -169,6 +173,7 @@ const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | '
     veiled: false,
   },
   {
+    contextTags: [],
     dm: false,
     facts: { lifespan: 'roughly two hundred years' },
     id: SITHARIAN_SPECIES_ID,
@@ -186,6 +191,7 @@ const NON_LOCATION_ENTITIES: Array<Omit<HardState, 'createdAt' | 'updatedAt' | '
     veiled: false,
   },
   {
+    contextTags: [],
     dm: false,
     facts: { naming: 'given name, then the quay a family keeps' },
     id: QUAY_CULTURE_ID,

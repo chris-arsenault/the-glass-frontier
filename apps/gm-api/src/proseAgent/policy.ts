@@ -19,15 +19,15 @@ either ends the research or tells you what is still missing.
 Your input:
 
 CHARACTER — the player character, described in full. Whatever the player calls
-themselves is correct. Their origins list four canon entities (species,
-culture, homeland, allegiance) worth opening when who they are matters to this
-turn.
+themselves is correct. Species and culture are Encyclopedia references;
+homeland and allegiance are Atlas entities. Open the relevant records when who
+they are matters to this turn.
 PLAYER-MESSAGE and INTENT — what the player is attempting. Spend your calls on
 what the attempt involves.
 LOCATION — where it happens. Open it.
 SCENE, LEDGER, RECENT-EVENTS — what is already established.
 FRONTS — what the world is doing independently of the player.
-WORLD-INDEX — entities already in play, and how much material each one has.
+WORLD-INDEX — Atlas and Encyclopedia records already in play or common here.
 Most of the world is not listed here; search reaches the rest.
 GAPS — when present, what the evaluator found missing. Each gap names a fact;
 you decide which tools will find it.
@@ -43,8 +43,8 @@ Look things up rather than relying on what you remember.
 
 When the player uses a name WORLD-INDEX does not list, it often still exists.
 Canon may record it under different words, and names the player coined earlier
-live in this chronicle's own past turns. Search canon for it, then search the
-turn history.`;
+live in this chronicle's own past turns. The same search covers all three
+sources. Copy a result's qualified slug directly into open.`;
 
 export const EVALUATOR_INSTRUCTIONS = `Your job is to decide whether enough has been researched to
 write this turn's brief. Base the decision only on RETRIEVED, which lists
@@ -110,23 +110,24 @@ condition, not what you expect to happen.
 SCENE-CHANGED: what this turn changed about the situation. If nothing changed,
 write that plainly.
 
-ENTITIES: one line for each canon entity that appears in RETRIEVED, written as
+REFERENCES: one line for each Atlas or Encyclopedia record that appears in RETRIEVED, written as
 "slug — central" if it drives this turn or "slug — mentioned" otherwise. Copy
-each slug exactly as the tools spelled it.`;
+each fully qualified slug exactly as the tools spelled it. Chronicle turn slugs
+do not belong in this section.`;
 
 export const EXTRACT_INSTRUCTIONS = `You copy a labeled brief into a schema by calling the
 turn_brief_schema tool. The tool call is your entire response; every section
 goes into its arguments. Text written outside the call is discarded.
 
 The brief has sections labeled CHARACTER, LOCATION, PRESENT, HISTORY,
-COMPLICATION, SCENE-STAKES, SCENE-ENDS-WHEN, SCENE-CHANGED, and ENTITIES.
+COMPLICATION, SCENE-STAKES, SCENE-ENDS-WHEN, SCENE-CHANGED, and REFERENCES.
 
 Copy each section's text into the matching field and keep the wording as
 written. You are moving text, not editing or improving it; someone else made
 the judgements it contains.
 
 Set HISTORY or COMPLICATION to null when that section says "none". Turn each
-ENTITIES line into an entry using the slug exactly as written and the usage the
+REFERENCES line into an entry using the qualified slug exactly as written and the usage the
 line gives. When the brief has no section for a field, use the closest
 material it does have.`;
 

@@ -12,8 +12,12 @@ const BYTES_PER_TOKEN = 4;
 
 const estimateTokens = (text: string): number => Math.ceil(text.length / BYTES_PER_TOKEN);
 
-/** What the session knows about an entity it has served to the agent. */
-export type ServedEntity = { id: string; slug: string };
+/** A qualified reference whose material was actually served to the agent. */
+export type ServedReference = {
+  atlasEntityId?: string;
+  atlasSlug?: string;
+  slug: string;
+};
 
 /** One tool call as it actually went: the result it returned or the miss. */
 export type RetrievalCall = {
@@ -24,16 +28,14 @@ export type RetrievalCall = {
 
 export class ToolSession {
   readonly #served = new Map<string, number>();
-  readonly #servedEntityIds = new Set<string>();
-  readonly #servedSlugToId = new Map<string, string>();
-  readonly #servedEntities = new Map<string, ServedEntity>();
+  readonly #servedReferences = new Map<string, ServedReference>();
   readonly #record: RetrievalCall[] = [];
   #spentTokens = 0;
   #currentStep = 0;
 
-  constructor(options: { seedEntities: ServedEntity[] }) {
-    for (const entity of options.seedEntities) {
-      this.recordServedEntity(entity);
+  constructor(options: { seedReferences: ServedReference[] }) {
+    for (const reference of options.seedReferences) {
+      this.recordServedReference(reference);
     }
   }
 
@@ -46,17 +48,11 @@ export class ToolSession {
   }
 
   /**
-   * Resolves a sidecar reference — models declare entities by slug as the
-   * tools name them, but ids are accepted too — to the entity as served, or
-   * undefined when no served material matches. This is what makes the sidecar
-   * a record of what was read: the judge that used to re-score the offered
-   * list against the narration is gone, so nothing else vouches for it.
+   * Resolves only the qualified slug exactly as the model saw it. Database ids
+   * never enter the model-facing contract.
    */
-  resolveServed(reference: string): ServedEntity | undefined {
-    const id = this.#servedEntityIds.has(reference)
-      ? reference
-      : this.#servedSlugToId.get(reference);
-    return id === undefined ? undefined : this.#servedEntities.get(id);
+  resolveServed(reference: string): ServedReference | undefined {
+    return this.#servedReferences.get(reference);
   }
 
   /** Fed from the loop's onStep so repeat suppression can name the round. */
@@ -64,10 +60,8 @@ export class ToolSession {
     this.#currentStep = stepNumber;
   }
 
-  recordServedEntity(entity: ServedEntity): void {
-    this.#servedEntityIds.add(entity.id);
-    this.#servedSlugToId.set(entity.slug, entity.id);
-    this.#servedEntities.set(entity.id, entity);
+  recordServedReference(reference: ServedReference): void {
+    this.#servedReferences.set(reference.slug, reference);
   }
 
   recordCall(call: RetrievalCall): void {

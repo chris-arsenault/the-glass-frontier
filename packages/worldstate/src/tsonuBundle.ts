@@ -9,6 +9,27 @@ import {
   type PlayableRole,
 } from '@glass-frontier/dto';
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
+
+import {
+  buildTsonuEncyclopedia,
+  TsonuContextTagSchema,
+  TsonuEncyclopediaEntrySchema,
+} from './tsonuEncyclopedia';
+import type {
+  TsonuCanonSnapshot,
+  TsonuContextTag,
+  TsonuEncyclopediaEntry,
+} from './tsonuEncyclopedia';
+
+export { parseTsonuSnapshot } from './tsonuEncyclopedia';
+export type {
+  TsonuCanonSnapshot,
+  TsonuClassification,
+  TsonuContextTag,
+  TsonuContextTerm,
+  TsonuEncyclopediaEntry,
+} from './tsonuEncyclopedia';
 
 /**
  * The slice of tsonu-canon's internal site bundle
@@ -113,12 +134,33 @@ export type TsonuEntry = TsonuIdentityOwner & {
   veil_tagline?: string;
   /** How to run the entry, declared on the source entity. */
   gm_notes?: GmNote[];
+  context_tags: string[];
+  encyclopedia_type?: string | null;
+  encyclopedia_memberships: Array<{ kind: string; external_key: string }>;
 };
 
 export type TsonuBundle = {
   schema_version: number;
   revision: string;
+  context_tags: TsonuContextTag[];
+  encyclopedia: { entries: TsonuEncyclopediaEntry[] };
   entries: Record<string, { entry: TsonuEntry }>;
+};
+
+/** Parses the schema-13 source envelope and every Encyclopedia-owned field. */
+export const parseTsonuBundle = (input: unknown): TsonuBundle => {
+  const envelope = z.object({
+    context_tags: z.array(TsonuContextTagSchema),
+    encyclopedia: z.object({ entries: z.array(TsonuEncyclopediaEntrySchema) }),
+    entries: z.record(z.string(), z.object({ entry: z.unknown() })),
+    revision: z.string().min(1),
+    schema_version: z.number().int().min(13),
+  }).parse(input);
+  return {
+    ...envelope,
+    encyclopedia: { entries: envelope.encyclopedia.entries },
+    entries: envelope.entries as Record<string, { entry: TsonuEntry }>,
+  };
 };
 
 /** Stable import identity: the tsonu entity or section id under a source prefix. */
@@ -133,15 +175,12 @@ const key = (id: string): string => `tsonu:${id}`;
  * 237 resolved identities the database never received. A revision alone
  * describes where the canon came from, not what was built from it.
  */
-const artifactSourceId = (revision: string, proposal: CanonProposal): string => {
+const artifactSourceId = (
+  revision: string,
+  content: Omit<TsonuCanonSnapshot, 'sourceId' | 'atlas'> & { atlas: CanonProposal }
+): string => {
   const digest = createHash('sha256')
-    .update(
-      JSON.stringify({
-        entities: proposal.entities,
-        lore: proposal.lore,
-        relationships: proposal.relationships,
-      })
-    )
+    .update(JSON.stringify(content))
     .digest('hex')
     .slice(0, 12);
   return `tsonu-canon@${revision}+${digest}`;
@@ -158,9 +197,9 @@ const artifactSourceId = (revision: string, proposal: CanonProposal): string => 
  * nothing in the bundle) renders on exactly one page and imports there, keyed
  * by its owner id so re-ingest updates in place.
  */
-export const buildTsonuProposal = (bundle: TsonuBundle): CanonProposal => {
-  if (!Number.isInteger(bundle.schema_version) || bundle.schema_version < 6) {
-    throw new Error(`Tsonu bundle schema ${bundle.schema_version} does not include canon metadata`);
+const buildAtlasProposal = (bundle: TsonuBundle): CanonProposal => {
+  if (!Number.isInteger(bundle.schema_version) || bundle.schema_version < 13) {
+    throw new Error(`Tsonu bundle schema ${bundle.schema_version} does not include Encyclopedia data`);
   }
   const entries = Object.values(bundle.entries)
     .map(({ entry }) => entry)
@@ -185,10 +224,38 @@ export const buildTsonuProposal = (bundle: TsonuBundle): CanonProposal => {
     source: 'import',
     sourceId: `tsonu-canon@${bundle.revision}`,
   });
-  return { ...proposal, sourceId: artifactSourceId(bundle.revision, proposal) };
+  return proposal;
 };
 
+export const buildTsonuSnapshot = (bundle: TsonuBundle): TsonuCanonSnapshot => {
+  const atlasEntries = Object.values(bundle.entries)
+    .map(({ entry }) => entry)
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const encyclopedia = buildTsonuEncyclopedia({
+    contextTags: bundle.context_tags,
+    encyclopedia: bundle.encyclopedia.entries,
+    entries: atlasEntries,
+  });
+  const content = {
+    atlas: buildAtlasProposal(bundle),
+    ...encyclopedia,
+    revision: bundle.revision,
+    schemaVersion: bundle.schema_version,
+  };
+  const sourceId = artifactSourceId(bundle.revision, content);
+  return {
+    ...content,
+    atlas: { ...content.atlas, sourceId },
+    sourceId,
+  };
+};
+
+/** Atlas projection used by focused imports that do not own the Encyclopedia catalog. */
+export const buildTsonuProposal = (bundle: TsonuBundle): CanonProposal =>
+  buildTsonuSnapshot(bundle).atlas;
+
 const buildEntity = (entry: TsonuEntry): unknown => ({
+  ...(entry.context_tags.length > 0 ? { contextTags: entry.context_tags } : {}),
   description: entry.summary ?? undefined,
   dm: entry.dm,
   externalKey: key(entry.id),

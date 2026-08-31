@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 
-import { AtlasModal } from './components/atlas/AtlasModal';
 import { WorldAtlasPage } from './components/atlas/WorldAtlasPage';
+import { WorldGuideModal } from './components/atlas/WorldGuideModal';
 import { LoginScreen } from './components/auth/LoginScreen/LoginScreen';
 import { CharacterDrawer } from './components/drawers/CharacterDrawer/CharacterDrawer';
 import { ChronicleDrawer } from './components/drawers/ChronicleDrawer/ChronicleDrawer';
 import { TemplateDrawer } from './components/drawers/TemplateDrawer/TemplateDrawer';
+import { WorldEncyclopediaPage } from './components/encyclopedia/WorldEncyclopediaPage';
 import { ChatCanvas } from './components/layout/ChatCanvas/ChatCanvas';
 import { ChatComposer } from './components/layout/ChatComposer/ChatComposer';
 import { ChronicleHeader } from './components/layout/ChronicleHeader/ChronicleHeader';
@@ -293,6 +294,7 @@ export function App(): React.JSX.Element {
               <Route path="/moderation/bugs" element={<BugModerationPage />} />
               <Route path="/moderation/worldSchema" element={<WorldSchemaPage />} />
               <Route path="/atlas/:slug?" element={<WorldAtlasPage />} />
+              <Route path="/encyclopedia/:slug?" element={<WorldEncyclopediaPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
             <Route path="/chron/:chronicleId" element={<ChronicleRoute />} />
@@ -303,7 +305,7 @@ export function App(): React.JSX.Element {
       <CharacterDrawer />
       <ChronicleDrawer />
       <TemplateDrawer />
-      <AtlasModal />
+      <WorldGuideModal />
       <BugReportModal />
       <ChangelogModal />
       <PlayerSettingsModal />

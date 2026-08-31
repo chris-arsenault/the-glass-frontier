@@ -1,4 +1,9 @@
-import type { HardState, HardStateLink, LoreFragment } from '@glass-frontier/dto';
+import type {
+  EncyclopediaClassification,
+  HardState,
+  HardStateLink,
+  LoreFragment,
+} from '@glass-frontier/dto';
 import { WORLD_KINDS, getRelationshipType, getWorldKind } from '@glass-frontier/dto';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -7,6 +12,7 @@ import remarkGfm from 'remark-gfm';
 
 import { worldAtlasClient } from '../../lib/worldAtlasClient';
 import { useChronicleStartStore } from '../../stores/chronicleStartWizardStore';
+import { WorldReferenceButton } from '../encyclopedia/WorldReferenceButton';
 import { AtlasBodyMap } from './AtlasBodyMap';
 import type { AtlasGraph } from './atlasGraph';
 import { breadcrumbIds, buildAtlasGraph, descendantCount } from './atlasGraph';
@@ -302,6 +308,7 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
   const initFromAtlas = useChronicleStartStore((state) => state.initFromAtlas);
   const [entity, setEntity] = useState<HardState | null>(null);
   const [fragments, setFragments] = useState<LoreFragment[]>([]);
+  const [classifications, setClassifications] = useState<EncyclopediaClassification[]>([]);
   const [linkedById, setLinkedById] = useState<Map<string, HardState>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -314,6 +321,7 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
         if (!cancelled) {
           setEntity(view.entity);
           setFragments(view.fragments);
+          setClassifications(view.classifications);
           setError(null);
           setIsLoading(false);
         }
@@ -629,6 +637,28 @@ function AtlasEntity({ onSelect, slug, world }: AtlasEntityProps): React.JSX.Ele
             </div>
           ))}
         </dl>
+      ) : null}
+
+      {classifications.length > 0 ? (
+        <section className="atlas-section atlas-classifications">
+          <h3>Encyclopedia classifications</h3>
+          <ul>
+            {classifications.map((classification) => (
+              <li key={`${classification.role}:${classification.encyclopediaSlug}`}>
+                <WorldReferenceButton
+                  reference={{
+                    kind: classification.encyclopediaKind,
+                    slug: classification.encyclopediaSlug,
+                    title: classification.encyclopediaTitle,
+                  }}
+                >
+                  {classification.encyclopediaTitle}
+                </WorldReferenceButton>
+                <span>{classification.role}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {/* The sun's neighborhood IS the system: show the system chart for both. */}

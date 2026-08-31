@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { WorldReferenceSlug } from '../world/Encyclopedia';
+
 /**
  * What the scout hands the writer.
  *
@@ -31,13 +33,6 @@ export const TurnBrief = z.object({
    */
   complication: z.string().min(1).nullable()
     .describe('One grounded complication when the check went badly; null otherwise.'),
-  /** Provenance: canon entities whose material the scout actually opened. */
-  entities: z.array(z.object({
-    emergentTags: z.array(z.string()).default([]),
-    entitySlug: z.string().min(1)
-      .describe('The entity\'s slug exactly as the index or tools spelled it.'),
-    usage: z.enum(['mentioned', 'central']),
-  })),
   /**
    * The story so far as it bears on this turn. The writer keeps last turn's
    * narration verbatim so it cannot contradict its own words; everything
@@ -58,6 +53,13 @@ export const TurnBrief = z.object({
    */
   present: z.string().min(1)
     .describe('Who and what is in the scene, what they want, what they are like.'),
+  /** Provenance: world references whose material the scout actually received. */
+  references: z.array(z.object({
+    emergentTags: z.array(z.string()).default([]),
+    slug: WorldReferenceSlug
+      .describe('The qualified slug exactly as the index or tools spelled it.'),
+    usage: z.enum(['mentioned', 'central']),
+  })),
   /**
    * The scout's read of where the scene stands. Drives scene and beat state
    * through `applySceneRead`; the writer receives the scene's own record

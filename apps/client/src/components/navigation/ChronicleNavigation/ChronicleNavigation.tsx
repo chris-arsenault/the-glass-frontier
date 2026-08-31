@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { ContextReferenceBrowser } from '../../encyclopedia/ContextReferenceBrowser';
 import { AvailableEntitiesPanel } from '../../entities/AvailableEntitiesPanel/AvailableEntitiesPanel';
 import './ChronicleNavigation.css';
 
@@ -26,6 +27,7 @@ export function ChronicleNavigation(): React.JSX.Element {
   const character = useChronicleStore((state) => state.character);
   const beats = useChronicleStore((state) => state.beats);
   const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
+  const locationName = useChronicleStore((state) => state.locationName);
   const isCharacterDrawerOpen = useUiStore((state) => state.isCharacterDrawerOpen);
   const isChronicleDrawerOpen = useUiStore((state) => state.isChronicleDrawerOpen);
   const toggleCharacterDrawer = useUiStore((state) => state.toggleCharacterDrawer);
@@ -88,6 +90,7 @@ export function ChronicleNavigation(): React.JSX.Element {
       </section>
 
       <AvailableEntitiesPanel />
+      <ContextReferenceBrowser attachable locationName={locationName} />
     </nav>
   );
 }
