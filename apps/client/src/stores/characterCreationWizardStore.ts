@@ -62,7 +62,7 @@ const emptySkills = (): CharacterSkillDraft[] => [
   { attribute: 'focus', name: '', tier: 'apprentice' },
 ];
 
-const initialState: CharacterCreationState = {
+const initialState = (): CharacterCreationState => ({
   archetype: '',
   attributes: createDefaultCreationAttributes(),
   bio: '',
@@ -83,15 +83,21 @@ const initialState: CharacterCreationState = {
   skills: emptySkills(),
   step: 'origin',
   uniqueThing: '',
-};
+});
+
+/**
+ * The Encyclopedia cutover changed both origin namespaces and every canon UUID.
+ * A saved draft from before that cutover cannot retain a valid origin selection.
+ */
+export const migrateCharacterCreationState = (): CharacterCreationState => initialState();
 
 export const useCharacterCreationStore = create<
   CharacterCreationState & CharacterCreationActions
 >()(
   persist(
     (set) => ({
-      ...initialState,
-      reset: () => set({ ...initialState, attributes: createDefaultCreationAttributes(), skills: emptySkills() }),
+      ...initialState(),
+      reset: () => set(initialState()),
       setAttribute: (name, tier) =>
         set((state) => ({ attributes: { ...state.attributes, [name]: tier } })),
       setCalling: (index, value) =>
@@ -109,6 +115,10 @@ export const useCharacterCreationStore = create<
       setStep: (step) => set({ step }),
       update: (patch) => set(patch),
     }),
-    { name: 'glass-frontier-character-creation' }
+    {
+      migrate: migrateCharacterCreationState,
+      name: 'glass-frontier-character-creation',
+      version: 1,
+    }
   )
 );
