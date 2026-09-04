@@ -197,6 +197,7 @@ CREATE TABLE chronicle (
   location_id uuid REFERENCES entity(id) ON DELETE SET NULL,
   anchor_entity_id uuid REFERENCES entity(id) ON DELETE SET NULL,
   seed_text text,
+  beats_enabled boolean NOT NULL DEFAULT true,
   entity_focus jsonb NOT NULL DEFAULT '{"entityScores":{},"tagScores":{}}'::jsonb,
   props jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -211,6 +212,7 @@ CREATE TABLE lore_fragment (
   id uuid PRIMARY KEY REFERENCES node(id) ON DELETE CASCADE,
   entity_id uuid NOT NULL REFERENCES entity(id) ON DELETE CASCADE,
   chronicle_id uuid REFERENCES chronicle(id) ON DELETE SET NULL,
+  beat_id text,
   slug text NOT NULL UNIQUE,
   title text NOT NULL,
   prose text NOT NULL,
@@ -258,6 +260,7 @@ CREATE TABLE chronicle_turn (
   skill_check_result jsonb,
   inventory_delta jsonb,
   location_delta jsonb,
+  beat_tracker jsonb,
   gm_trace jsonb,
   entity_offered jsonb,
   entity_usage jsonb

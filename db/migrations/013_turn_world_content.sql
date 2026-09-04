@@ -1,10 +1,14 @@
 -- What the world did on a turn, whether or not the narration showed it.
 --
--- The environment stage advances one world thread at a story boundary. Keeping
--- its prose beside the player message and narration gives later turns a direct
--- record of offstage movement without imposing a structured world ledger.
+-- The environment stage runs before the check and records what everything that
+-- is not the player was doing. Keeping it beside the player message and the
+-- narration gives the world a continuous life in the transcript: a front that
+-- stirred quietly on turn 3 is still there to be found on turn 9.
 ALTER TABLE chronicle_turn
-  ADD COLUMN IF NOT EXISTS world_content text;
+  ADD COLUMN IF NOT EXISTS world_content text,
+  -- The state of the world's agendas as this turn left them, so a chronicle's
+  -- history shows what was building and when, not only the current clocks.
+  ADD COLUMN IF NOT EXISTS world_fronts jsonb;
 
 -- The search column is GENERATED ALWAYS, so it cannot be extended in place.
 -- World text carries the same weight as the player's message: both are things
