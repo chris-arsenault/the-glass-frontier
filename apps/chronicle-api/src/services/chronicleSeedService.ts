@@ -13,6 +13,7 @@ import type {
   LoreFragment,
   WorldReferenceSlug,
 } from '@glass-frontier/dto';
+import { WorldThreadSeed } from '@glass-frontier/dto';
 import type { LLMPlayer, RetryLLMClient } from '@glass-frontier/llm-client';
 import type {
   EncyclopediaStore,
@@ -42,16 +43,20 @@ type GenerateOpeningRequest = {
   locationId: string;
   playerId: string;
   player: LLMPlayer;
+  playerGoal: string;
   seedText: string;
   title: string;
   toneChips?: string[];
   toneNotes?: string;
+  worldThread: WorldThreadSeed;
 };
 
 const SingleSeedSchema = z.object({
+  playerGoal: z.string().min(1).max(240),
   tags: z.array(z.string()).min(1).max(4),
   teaser: z.string().min(200).max(800),
   title: z.string().min(1).max(120),
+  worldThread: WorldThreadSeed,
 });
 
 const SeedArraySchema = z.object({
@@ -115,7 +120,7 @@ export class ChronicleSeedService {
 
     const requested = Math.min(Math.max(request.count ?? 3, 1), 5);
     // Seeds are the most creativity-demanding text in the product, and the
-    // chosen one becomes the founding beat: they get the prose model.
+    // chosen one becomes the founding player thread: they get the prose model.
     const [instructions, proseModel] = await Promise.all([
       this.#createTemplateRuntime(request.playerId).render('chronicle-seed', {}),
       this.#modelConfigStore.getModelForCategory('prose', request.playerId),
@@ -223,9 +228,11 @@ export class ChronicleSeedService {
         this.#formatSeedCharacter(options.request.character, options.originNames)
       ),
       this.#createDeveloperMessage('CHRONICLE', {
+        playerGoal: options.request.playerGoal,
         seed: options.request.seedText.trim(),
         title: options.request.title,
         tone: tone.length > 0 ? tone : 'none specified',
+        worldThread: options.request.worldThread,
       })
     );
     return developerMessages;
@@ -302,9 +309,11 @@ export class ChronicleSeedService {
 
     return response.data.seeds.map((seed) => ({
       id: randomUUID(),
+      playerGoal: seed.playerGoal,
       tags: seed.tags.slice(0, 4),
       teaser: seed.teaser.slice(0, 800),
       title: seed.title.slice(0, 120),
+      worldThread: seed.worldThread,
     }));
   }
 

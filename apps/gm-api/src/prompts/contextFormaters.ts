@@ -1,5 +1,4 @@
 import type {
-  ChronicleBeat,
   InventoryEntry,
   Intent,
   OutcomeTier,
@@ -104,28 +103,6 @@ export function recordedPlayerMessage(
   return `${content.slice(0, MAX_RECORDED_PLAYER_CHARS)} […message continues]`;
 }
 
-export function trimBeatsList(beats: ChronicleBeat[]): Array<{
-  description: string;
-  id: string;
-  lastProgressTurn: number | null;
-  status: string;
-  title: string;
-}> {
-  return beats
-    .filter((b) => {
-      return b.status === 'in_progress';
-    })
-    .map((b) => {
-      return {
-        description: b.description,
-        id: b.id,
-        lastProgressTurn: b.lastProgressTurn ?? null,
-        status: b.status,
-        title: b.title,
-      };
-    });
-}
-
 /** The canon entities behind a character's origin ids, resolved to names. */
 export type OriginNames = {
   allegiance: string | undefined;
@@ -138,19 +115,10 @@ export type OriginNames = {
 // which never went through this file, produce the same shape.
 
 export function formatIntent(
-  intent: Intent | null | undefined,
-  beats?: ChronicleBeat[]
+  intent: Intent | null | undefined
 ): Record<string, unknown> {
-  const targetBeatId = intent?.beatDirective.targetBeatId;
-  const targetBeat =
-    targetBeatId !== null && targetBeatId !== undefined && beats !== undefined
-      ? beats.find((beat) => beat.id === targetBeatId)
-      : undefined;
-
   return {
-    beatDirective: intent?.beatDirective.summary,
     summary: intent?.intentSummary,
-    targetBeat: targetBeat?.id ?? null,
     type: intent?.intentType,
   };
 }

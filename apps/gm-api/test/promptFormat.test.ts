@@ -107,7 +107,7 @@ describe('composed prompt format', () => {
 describe('the writer/scout contract', () => {
   const writerTemplates = templateIds.filter((id) => id.startsWith('agent-'));
   const scoutAnswersFor: ChronicleFragmentTypes[] = [
-    'character', 'location', 'ledger', 'recent-events', 'intent', 'entity-references',
+    'character', 'location', 'recent-events', 'intent', 'entity-references',
   ];
 
   it.each(writerTemplates)('%s takes no block the scout answers for', (templateId) => {

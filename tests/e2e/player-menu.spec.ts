@@ -31,7 +31,7 @@ test.describe('Player menu moderation shortcuts', () => {
     await sendTurn(
       page,
       chatInput,
-      'Record a quick audit turn for moderation. #beat:update #mock:beat:update'
+      'Record a quick audit turn for moderation.'
     );
 
     const auditPanel = await openPlayerMenu(page);

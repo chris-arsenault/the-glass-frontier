@@ -1,4 +1,3 @@
-import type { ChronicleBeat } from '@glass-frontier/dto';
 import React from 'react';
 
 import { useChronicleStore } from '../../../stores/chronicleStore';
@@ -7,31 +6,17 @@ import { ContextReferenceBrowser } from '../../encyclopedia/ContextReferenceBrow
 import { AvailableEntitiesPanel } from '../../entities/AvailableEntitiesPanel/AvailableEntitiesPanel';
 import './ChronicleNavigation.css';
 
-const formatBeatStatus = (status: ChronicleBeat['status']): string => {
-  switch (status) {
-  case 'succeeded':
-    return 'Succeeded';
-  case 'failed':
-    return 'Failed';
-  case 'superseded':
-    return 'Superseded';
-  case 'abandoned':
-    return 'Abandoned';
-  default:
-    return 'In progress';
-  }
-};
-
 export function ChronicleNavigation(): React.JSX.Element {
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
   const character = useChronicleStore((state) => state.character);
-  const beats = useChronicleStore((state) => state.beats);
-  const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
+  const threads = useChronicleStore((state) => state.threads);
+  const focusedThreadId = useChronicleStore((state) => state.focusedThreadId);
   const locationName = useChronicleStore((state) => state.locationName);
   const isCharacterDrawerOpen = useUiStore((state) => state.isCharacterDrawerOpen);
   const isChronicleDrawerOpen = useUiStore((state) => state.isChronicleDrawerOpen);
   const toggleCharacterDrawer = useUiStore((state) => state.toggleCharacterDrawer);
   const toggleChronicleDrawer = useUiStore((state) => state.toggleChronicleDrawer);
+  const playerThreads = threads.filter((thread) => thread.perspective === 'player');
 
   return (
     <nav className="chronicle-navigation" aria-label="Chronicle">
@@ -61,27 +46,27 @@ export function ChronicleNavigation(): React.JSX.Element {
         </div>
       </header>
 
-      <section className="chronicle-navigation-section" aria-labelledby="chronicle-beats-title">
-        <h2 id="chronicle-beats-title">Beats</h2>
-        {beats.length === 0 ? (
-          <p className="chronicle-navigation-empty">
-            No beats yet — the story&apos;s goals appear here.
-          </p>
+      <section className="chronicle-navigation-section" aria-labelledby="chronicle-threads-title">
+        <h2 id="chronicle-threads-title">Player threads</h2>
+        {playerThreads.length === 0 ? (
+          <p className="chronicle-navigation-empty">No long-horizon goal is recorded.</p>
         ) : (
-          <ul className="chronicle-beat-list">
-            {beats.map((beat) => (
+          <ul className="chronicle-thread-list">
+            {playerThreads.map((thread) => (
               <li
-                key={beat.id}
-                className={`chronicle-beat${beat.id === focusedBeatId ? ' is-focused' : ''}`}
-                data-status={beat.status}
+                key={thread.id}
+                className={`chronicle-thread${thread.id === focusedThreadId ? ' is-focused' : ''}`}
                 tabIndex={0}
               >
-                <div className="chronicle-beat-heading">
-                  <span className="chronicle-beat-title">{beat.title}</span>
-                  <span className="chronicle-beat-status">{formatBeatStatus(beat.status)}</span>
+                <div className="chronicle-thread-heading">
+                  <span className="chronicle-thread-title">{thread.title}</span>
+                  {thread.id === focusedThreadId ? (
+                    <span className="chronicle-thread-status">Focused</span>
+                  ) : null}
                 </div>
-                <div className="chronicle-beat-detail" role="note" aria-hidden="true">
-                  <p>{beat.description}</p>
+                <div className="chronicle-thread-detail" role="note" aria-hidden="true">
+                  <p>{thread.goal}</p>
+                  <p>{thread.position}</p>
                 </div>
               </li>
             ))}

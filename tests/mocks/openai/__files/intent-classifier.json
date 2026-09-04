@@ -3,14 +3,14 @@
     {
       "content": [
         {
-          "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Survey the vault antechamber\",\"intentType\":\"action\",\"requiresCheck\":true,\"routerConfidence\":0.92,\"routerRationale\":\"mock-classifier\",\"sceneChange\":null,\"sceneRationale\":\"No typed scene opens for this isolated action.\",\"tone\":\"focused\"}"
+          "text": "{\"creativeSpark\":false,\"intentSummary\":\"Survey the vault antechamber\",\"intentType\":\"action\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
         }
       ],
       "role": "assistant"
     }
   ],
   "output_text": [
-    "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Survey the vault antechamber\",\"intentType\":\"action\",\"requiresCheck\":true,\"routerConfidence\":0.92,\"routerRationale\":\"mock-classifier\",\"sceneChange\":null,\"sceneRationale\":\"No typed scene opens for this isolated action.\",\"tone\":\"focused\"}"
+    "{\"creativeSpark\":false,\"intentSummary\":\"Survey the vault antechamber\",\"intentType\":\"action\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
   ],
   "stop_reason": "stop",
   "usage": {

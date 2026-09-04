@@ -64,7 +64,7 @@ const searchText = (context: GraphContext): string => [
 
 /**
  * The entities the turn is anchored on before anything is searched: the
- * chronicle's anchor, the place, the scene's subject, whatever the player's
+ * chronicle's anchor, the place, whatever the player's
  * message resolved to, and what recent turns have been leaning on.
  */
 const seedIds = (context: GraphContext, locationId: null | string): string[] => {
@@ -72,7 +72,6 @@ const seedIds = (context: GraphContext, locationId: null | string): string[] => 
   return [...new Set([
     anchorEntityId,
     locationId,
-    context.effectiveScene?.subjectEntityId,
     ...context.targetEntityIds,
     ...topScored(entityFocus?.entityScores, FOCUS_ENTITY_COUNT),
   ].filter((id): id is string => id !== null && id !== undefined))];
@@ -255,7 +254,7 @@ export const buildOneShotContext = async (
       encyclopediaMatches(context, location, embedding),
     ]);
   const slice = await context.worldSchemaStore.getContextSlice({
-    anchorId: context.effectiveScene?.subjectEntityId ?? anchorEntityId,
+    anchorId: anchorEntityId,
     focusIds: [...new Set([...focusEntities, ...matched])],
     focusTags,
     limit: CANDIDATE_COUNT,

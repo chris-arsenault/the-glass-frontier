@@ -12,7 +12,7 @@ const ROSTER_LIMIT = 12;
  * chronicle ended up carrying a pilgrim bead and a Tuner guild for its whole
  * run. Retrieval decides what the GM knows now, so the roster is only what it
  * still is to the player: a record of who is in play. It reads the entities
- * the narration used, the scene's subject, the anchor, and the location, in
+ * the narration used, the anchor, and the location, in
  * that order of claim. The persisted shape is unchanged — the client panel,
  * targeting chips, and the closer all still read it.
  */
@@ -41,14 +41,12 @@ export const withDerivedRoster = async (context: GraphContext): Promise<GraphCon
 
 const deriveRoster = async (context: GraphContext): Promise<EntityRosterEntry[]> => {
   const anchorId = context.chronicleState.chronicle.anchorEntityId;
-  const sceneSubjectId = context.chronicleState.chronicle.activeScene?.subjectEntityId;
   const location = await context.worldSchemaStore.findLocationByName({
     name: context.chronicleState.locationName,
   });
   const usedIds = (context.entityUsage ?? []).map((entry) => entry.entityId);
   const ids = [...new Set([
     ...usedIds,
-    ...sceneSubjectId === undefined ? [] : [sceneSubjectId],
     ...anchorId === undefined || anchorId === null ? [] : [anchorId],
     ...location === null ? [] : [location.id],
   ])].slice(0, ROSTER_LIMIT);
@@ -62,7 +60,6 @@ const deriveRoster = async (context: GraphContext): Promise<EntityRosterEntry[]>
     return entity === undefined || entity.dm ? [] : [rosterEntry(entity, {
       anchorId: anchorId ?? null,
       locationId: location?.id ?? null,
-      sceneSubjectId: sceneSubjectId ?? null,
       used: usedIds.includes(id),
     })];
   });
@@ -73,7 +70,6 @@ const rosterEntry = (
   claim: {
     anchorId: string | null;
     locationId: string | null;
-    sceneSubjectId: string | null;
     used: boolean;
   }
 ): EntityRosterEntry => {
@@ -83,9 +79,6 @@ const rosterEntry = (
   }
   if (entity.id === claim.locationId) {
     availability.push('location');
-  }
-  if (entity.id === claim.sceneSubjectId) {
-    availability.push('scene');
   }
   if (claim.used) {
     availability.push('recent');

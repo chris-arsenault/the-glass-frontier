@@ -1,25 +1,10 @@
-import type { ChronicleBeat, Chronicle, SceneLedger } from '@glass-frontier/dto';
+import type { Chronicle, LocalContinuity, NarrativeThread } from '@glass-frontier/dto';
 import React, { useMemo, useState, useEffect } from 'react';
 
 import { worldAtlasClient } from '../../../lib/worldAtlasClient';
 import type { TurnView } from '../../../state/chronicleState';
 import { useChronicleStore } from '../../../stores/chronicleStore';
 import './ChronicleOverview.css';
-
-const formatBeatStatus = (status: ChronicleBeat['status']): string => {
-  switch (status) {
-  case 'succeeded':
-    return 'Succeeded';
-  case 'failed':
-    return 'Failed';
-  case 'superseded':
-    return 'Superseded';
-  case 'abandoned':
-    return 'Abandoned';
-  default:
-    return 'In Progress';
-  }
-};
 
 type ChronicleHeaderProps = {
   chronicle: Chronicle;
@@ -96,38 +81,39 @@ const AnchorEntityPanel = ({ anchorEntity }: AnchorEntityPanelProps): React.JSX.
   );
 };
 
-type BeatsPanelProps = {
-  beats: ChronicleBeat[];
-  focusedBeatId: string | null;
+type ThreadsPanelProps = {
+  focusedThreadId: string | null;
+  threads: NarrativeThread[];
 };
 
-const BeatsPanel = ({ beats, focusedBeatId }: BeatsPanelProps): React.JSX.Element => {
-  if (beats.length === 0) {
+const ThreadsPanel = ({ focusedThreadId, threads }: ThreadsPanelProps): React.JSX.Element => {
+  const playerThreads = threads.filter((thread) => thread.perspective === 'player');
+  if (playerThreads.length === 0) {
     return (
       <div>
-        <h3 className="panel-label">Chronicle Beats</h3>
-        <p className="session-panel-empty">
-          No beats yet — the story&apos;s goals appear here.
-        </p>
+        <h3 className="panel-label">Player Threads</h3>
+        <p className="session-panel-empty">No long-horizon goal is recorded.</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h3 className="panel-label">Chronicle Beats</h3>
-      <ul className="beat-list">
-        {beats.map((beat) => (
+      <h3 className="panel-label">Player Threads</h3>
+      <ul className="thread-list">
+        {playerThreads.map((thread) => (
           <li
-            key={beat.id}
-            className={`beat-item${beat.id === focusedBeatId ? ' beat-item-focused' : ''}`}
-            data-status={beat.status}
+            key={thread.id}
+            className={`thread-item${thread.id === focusedThreadId ? ' thread-item-focused' : ''}`}
           >
-            <div className="beat-header">
-              <span className="beat-title">{beat.title}</span>
-              <span className="beat-status">{formatBeatStatus(beat.status)}</span>
+            <div className="thread-header">
+              <span className="thread-title">{thread.title}</span>
+              {thread.id === focusedThreadId ? (
+                <span className="thread-status">Focused</span>
+              ) : null}
             </div>
-            <p className="beat-description">{beat.description}</p>
+            <p className="thread-goal">{thread.goal}</p>
+            <p className="thread-position">{thread.position}</p>
           </li>
         ))}
       </ul>
@@ -157,41 +143,17 @@ type WrapTargetPanelProps = {
   currentTurn: number;
 };
 
-/**
- * The GM's working memory of the current scene, surfaced read-only: what kind
- * of place this is, who is present, and what just happened. Beta window into
- * the state that keeps the narration consistent.
- */
-const SceneNotebookPanel = ({ ledger }: { ledger: SceneLedger | null }): React.JSX.Element | null => {
-  if (ledger === null) {
+const LocalContinuityPanel = ({
+  continuity,
+}: { continuity: LocalContinuity | null }): React.JSX.Element | null => {
+  if (continuity === null) {
     return null;
   }
   return (
     <div>
-      <h3 className="panel-label">GM Notebook</h3>
-      {ledger.place !== null ? (
-        <p className="scene-notebook-place">
-          <strong>{ledger.place.name}</strong> · {ledger.place.kind}
-          <br />
-          {ledger.place.detail}
-        </p>
-      ) : null}
-      {ledger.present.length > 0 ? (
-        <ul className="scene-notebook-list">
-          {ledger.present.map((presence) => (
-            <li key={presence.name}>
-              <strong>{presence.name}</strong> — {presence.detail}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {ledger.interactions.length > 0 ? (
-        <ul className="scene-notebook-list scene-notebook-interactions">
-          {ledger.interactions.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : null}
+      <h3 className="panel-label">Current Situation</h3>
+      <p className="local-continuity-location">{continuity.locationName}</p>
+      <p className="local-continuity-note">{continuity.note}</p>
     </div>
   );
 };
@@ -230,8 +192,8 @@ export function ChronicleOverview({
   showEmptyState = true,
 }: ChronicleOverviewProps): React.JSX.Element | null {
   const chronicle = useChronicleStore((state) => state.chronicleRecord);
-  const beats = useChronicleStore((state) => state.beats);
-  const focusedBeatId = useChronicleStore((state) => state.focusedBeatId);
+  const threads = useChronicleStore((state) => state.threads);
+  const focusedThreadId = useChronicleStore((state) => state.focusedThreadId);
   const turnSequence = useChronicleStore((state) => state.turnSequence);
   const turnViews = useChronicleStore((state) => state.turnViews);
 
@@ -292,9 +254,9 @@ export function ChronicleOverview({
 
       <AnchorEntityPanel anchorEntity={anchorEntity} />
 
-      <BeatsPanel beats={beats} focusedBeatId={focusedBeatId} />
+      <ThreadsPanel threads={threads} focusedThreadId={focusedThreadId} />
 
-      <SceneNotebookPanel ledger={chronicle.sceneLedger} />
+      <LocalContinuityPanel continuity={chronicle.localContinuity} />
 
       <WrapTargetPanel targetEndTurn={chronicle.targetEndTurn} currentTurn={turnSequence} />
     </section>

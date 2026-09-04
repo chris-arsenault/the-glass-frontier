@@ -30,6 +30,53 @@ const isFilterBlockedNarration = (content: string): boolean => {
   return FILTER_MARKERS.some((marker) => normalized.includes(marker));
 };
 
+const SUMMARY_LIMIT = 180;
+
+/** A deterministic log line derived from the narration that the turn keeps. */
+export const summarizeNarration = (content: string): string => {
+  const compact = content.replace(/\s+/gu, ' ').trim();
+  const sentence = /^.*?[.!?](?=\s|$)/u.exec(compact)?.[0] ?? compact;
+  return sentence.length <= SUMMARY_LIMIT
+    ? sentence
+    : `${sentence.slice(0, SUMMARY_LIMIT - 1).trimEnd()}…`;
+};
+
+const narratedReferenceUsage = (
+  usage: Awaited<ReturnType<typeof runProseAgent>>['referenceUsage'],
+  mentions: Awaited<ReturnType<typeof encyclopediaMentions>>
+): Awaited<ReturnType<typeof runProseAgent>>['referenceUsage'] => {
+  const mentionedSlugs = new Set(mentions.map((mention) => mention.slug));
+  return usage.filter((record) => mentionedSlugs.has(record.slug));
+};
+
+const projectNarratedReferences = async (
+  context: GraphContext,
+  outcome: Awaited<ReturnType<typeof runProseAgent>>,
+  gmResponse: TranscriptEntry
+): Promise<GraphNodeDelta> => {
+  try {
+    const sidecarDelta = await applySidecar(context, outcome.sidecar, gmResponse);
+    const referenceMentions = await encyclopediaMentions(
+      context,
+      outcome.referenceUsage,
+      gmResponse,
+      sidecarDelta.entityReferences ?? []
+    );
+    return {
+      referenceMentions,
+      referenceUsage: narratedReferenceUsage(outcome.referenceUsage, referenceMentions),
+      ...sidecarDelta,
+    };
+  } catch (error) {
+    log('warn', 'gm.reference-tracking-failed', {
+      chronicleId: context.chronicleId,
+      message: error instanceof Error ? error.message : 'unknown',
+      turnId: context.turnId,
+    });
+    return { referenceMentions: [], referenceUsage: [] };
+  }
+};
+
 class GmResponseNode implements GraphNode {
   readonly id: string;
   readonly #handlers: BaseIntentHandlerNode[];
@@ -112,26 +159,19 @@ abstract class BaseIntentHandlerNode implements GraphNode {
         return this.#filteredNarrationDelta(context);
       }
       const gmResponse = this.#buildTranscript(context, cleanedContent);
-      const sidecarDelta = await applySidecar(context, outcome.sidecar, gmResponse);
-      const referenceMentions = await encyclopediaMentions(
-        context,
-        outcome.referenceUsage,
-        gmResponse,
-        sidecarDelta.entityReferences ?? []
-      );
+      const referenceDelta = await projectNarratedReferences(context, outcome, gmResponse);
       return {
         advancesTimeline: this.options.advancesTimeline,
         gmResponse,
+        gmSummary: summarizeNarration(cleanedContent),
         gmTrace: {
           auditId: outcome.requestId,
           nodeId: this.options.id,
           requestId: outcome.requestId,
         },
         proseCostUsd: outcome.costUsd,
-        referenceMentions,
-        referenceUsage: outcome.referenceUsage,
         turnBrief: outcome.brief,
-        ...sidecarDelta,
+        ...referenceDelta,
       };
 
     } catch (error) {

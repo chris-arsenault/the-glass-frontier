@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
+              "text": "{\"creativeSpark\":false,\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"scene\":{\"action\":\"open\",\"question\":\"Will Amaya Venn reveal what she knows?\",\"type\":\"dialog\"},\"thread\":{\"action\":\"keep\"}}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"routerRationale\":\"The player approaches a named NPC and begins a direct conversation.\",\"sceneChange\":{\"subject\":\"Amaya Venn\",\"subjectKind\":\"npc\",\"type\":\"dialog\"},\"tone\":\"guarded\"}"
+        "{\"creativeSpark\":false,\"intentSummary\":\"scene-dialog-start\",\"intentType\":\"action\",\"scene\":{\"action\":\"open\",\"question\":\"Will Amaya Venn reveal what she knows?\",\"type\":\"dialog\"},\"thread\":{\"action\":\"keep\"}}"
       ],
       "stop_reason": "stop",
       "usage": {

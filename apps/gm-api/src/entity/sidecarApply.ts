@@ -1,6 +1,7 @@
 import type {
   EntityReference,
   EntityReferenceSpan,
+  HardState,
   ProseSidecarEntry,
   TranscriptEntry,
 } from '@glass-frontier/dto';
@@ -15,11 +16,9 @@ import { findSpan } from './spans';
  *
  * Two model calls used to do this after the fact: a judge re-read the
  * narration and scored the seven offered entities, and a resolver asked a
- * model which spans of GM prose referred to which of them. Both were guessing
- * at something the retrieving agent already knew — it opened those entities on
- * purpose. The sidecar is authoritative now, and the only inference left is
- * finding where each entity's name appears in the prose, which is a string
- * search.
+ * model which spans of GM prose referred to which of them. Retrieval proves
+ * what material the writer received; the final prose proves what it used. We
+ * keep only entries whose canonical name or slug appears in that prose.
  */
 export const applySidecar = async (
   context: GraphContext,
@@ -29,16 +28,26 @@ export const applySidecar = async (
   const playerReferenceIds = (context.entityReferences ?? [])
     .filter((reference) => reference.speaker === 'player')
     .map((reference) => reference.entityId);
-  const tagsById = await context.worldSchemaStore.listTagsByEntities({
-    entityIds: [...new Set([...sidecar.map((entry) => entry.entityId), ...playerReferenceIds])],
-  });
-  const usage: EntityUsageClassification[] = sidecar.map((entry) => ({
-    emergentTags: entry.emergentTags.length > 0 ? entry.emergentTags : null,
-    entityId: entry.entityId,
-    entitySlug: entry.entitySlug,
-    tags: tagsById.get(entry.entityId) ?? [],
-    usage: entry.usage,
-  }));
+  const entityIds = [...new Set([
+    ...sidecar.map((entry) => entry.entityId),
+    ...playerReferenceIds,
+  ])];
+  const [tagsById, entities] = await Promise.all([
+    context.worldSchemaStore.listTagsByEntities({ entityIds }),
+    context.worldSchemaStore.listEntitiesByIds(sidecar.map((entry) => entry.entityId)),
+  ]);
+  const entitiesById = new Map(entities.map((entity) => [entity.id, entity]));
+  const gmReferences = gmSpanReferences(sidecar, gmResponse, entitiesById);
+  const narratedIds = new Set(gmReferences.map((reference) => reference.entityId));
+  const usage: EntityUsageClassification[] = sidecar
+    .filter((entry) => narratedIds.has(entry.entityId))
+    .map((entry) => ({
+      emergentTags: entry.emergentTags.length > 0 ? entry.emergentTags : null,
+      entityId: entry.entityId,
+      entitySlug: entry.entitySlug,
+      tags: tagsById.get(entry.entityId) ?? [],
+      usage: entry.usage,
+    }));
   const playerReferences = playerReferenceIds.map((entityId) => ({
     entityId,
     tags: tagsById.get(entityId) ?? [],
@@ -55,7 +64,7 @@ export const applySidecar = async (
     },
     entityReferences: [
       ...(context.entityReferences ?? []),
-      ...gmSpanReferences(sidecar, gmResponse),
+      ...gmReferences,
     ],
     entityUsage: usage,
   };
@@ -67,11 +76,22 @@ const overlaps = (left: EntityReferenceSpan, right: EntityReferenceSpan): boolea
 /** Where each retrieved entity is named in the narration, first mention only. */
 const gmSpanReferences = (
   sidecar: ProseSidecarEntry[],
-  gmResponse: TranscriptEntry
+  gmResponse: TranscriptEntry,
+  entitiesById: Map<string, HardState>
 ): EntityReference[] => {
   const references: EntityReference[] = [];
   for (const entry of sidecar) {
-    const span = findSpan(gmResponse.content, entry.entitySlug.replaceAll('_', ' '));
+    const entity = entitiesById.get(entry.entityId);
+    if (entity === undefined) {
+      continue;
+    }
+    const span = [entity.name, entry.entitySlug.replaceAll(/[-_]/gu, ' ')]
+      .map((name) => findSpan(gmResponse.content, name))
+      .filter((candidate): candidate is EntityReferenceSpan => candidate !== null)
+      .sort((left, right) => {
+        const startOrder = left.start - right.start;
+        return startOrder !== 0 ? startOrder : right.end - left.end;
+      })[0] ?? null;
     if (span === null) {
       continue;
     }

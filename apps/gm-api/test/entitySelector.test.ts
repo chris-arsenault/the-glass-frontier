@@ -7,7 +7,6 @@ import { buildContext } from './harness';
 
 const LOCATION_ID = '11111111-2222-4333-8444-555555555555';
 const ANCHOR_ID = '99999999-8888-4777-8666-555555555555';
-const SUBJECT_ID = '77777777-6666-4555-8444-333333333333';
 const ARTICLE_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const NPC_ID = '12345678-1234-4234-8234-123456789abc';
 
@@ -91,29 +90,6 @@ describe('buildEntityContext', () => {
 
     expect(result.offered.map((entry) => entry.id)).toEqual([ANCHOR_ID]);
     expect(result.roster[0]?.availability).toContain('anchor');
-  });
-
-  it('seeds retrieval from a resolved scene subject', async () => {
-    const { sliceInputs, store } = stubWorldStore({ locationId: null });
-    const context = buildContext({
-      effectiveScene: {
-        id: 'scene:turn-1',
-        progress: 0,
-        progressTarget: 4,
-        startedAtTurn: 1,
-        subject: 'Amaya Venn',
-        subjectEntityId: SUBJECT_ID,
-        subjectKind: 'npc',
-        type: 'dialog',
-      },
-      worldSchemaStore: store,
-    });
-
-    const result = await buildEntityContext(context);
-
-    expect(result.focusEntities).toEqual([SUBJECT_ID]);
-    expect(sliceInputs[0]?.focusIds).toContain(SUBJECT_ID);
-    expect(sliceInputs[0]?.anchorId).toBe(SUBJECT_ID);
   });
 
   it('does not let the previous roster seed the next scene selection', async () => {

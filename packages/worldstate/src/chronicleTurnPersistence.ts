@@ -2,6 +2,7 @@ import type { Character, Chronicle, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
+import { normalizeChronicle } from './chronicleNormalization';
 import { upsertNodeIdentity } from './nodeIdentity';
 import { withTransaction } from './pg';
 import { orSearchQuery } from './utils';
@@ -44,7 +45,6 @@ type TurnRow = {
   player_message_content: string;
   player_message_metadata: Turn['playerMessage']['metadata'] | null;
   player_intent: Turn['playerIntent'] | null;
-  scene_context: Turn['sceneContext'] | null;
   gm_response_id: string | null;
   gm_response_content: string | null;
   gm_response_metadata: NonNullable<Turn['gmResponse']>['metadata'] | null;
@@ -56,7 +56,6 @@ type TurnRow = {
   skill_check_result: Turn['skillCheckResult'] | null;
   inventory_delta: Turn['inventoryDelta'] | null;
   location_delta: Turn['locationDelta'] | null;
-  beat_tracker: Turn['beatTracker'] | null;
   gm_trace: Turn['gmTrace'] | null;
   prose_alternates: Turn['proseAlternates'] | null;
   prose_cost_usd: number | null;
@@ -67,47 +66,44 @@ type TurnRow = {
   reference_usage: Turn['referenceUsage'] | null;
   reference_mentions: Turn['referenceMentions'] | null;
   world_content: string | null;
-  world_fronts: Turn['worldFronts'] | null;
 };
 
 const TURN_SELECT = `SELECT id, chronicle_id, chronicle_state, turn_sequence,
   executed_nodes, failure, advances_timeline,
   player_message_id, player_message_content, player_message_metadata,
-  player_intent, scene_context,
+  player_intent,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
+  gm_trace, prose_alternates, prose_cost_usd,
   entity_roster, entity_references, entity_usage,
   player_reference_slugs, reference_usage, reference_mentions,
-  world_content, world_fronts
+  world_content
   FROM chronicle_turn`;
 
 const TURN_INSERT = `INSERT INTO chronicle_turn (
   id, chronicle_id, turn_sequence, created_at, chronicle_state,
   executed_nodes, failure, advances_timeline,
   player_message_id, player_message_content, player_message_metadata,
-  player_intent, scene_context,
+  player_intent,
   gm_response_id, gm_response_content, gm_response_metadata, gm_summary,
   system_message_id, system_message_content, system_message_metadata,
   skill_check_plan, skill_check_result, inventory_delta, location_delta,
-  beat_tracker, gm_trace, prose_alternates, prose_cost_usd,
+  gm_trace, prose_alternates, prose_cost_usd,
   entity_roster, entity_references, entity_usage,
   player_reference_slugs, reference_usage, reference_mentions,
-  world_content, world_fronts
+  world_content
 ) VALUES (
   $1::uuid, $2::uuid, $3, now(), $4::jsonb, $5, $6, $7,
-  $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13, $14, $15::jsonb, $16,
-  $17, $18, $19::jsonb, $20::jsonb, $21::jsonb, $22::jsonb,
-  $23::jsonb, $24::jsonb, $25::jsonb, $26::jsonb, $27, $28::jsonb, $29::jsonb, $30::jsonb,
-  $31::text[], $32::jsonb, $33::jsonb, $34, $35::jsonb
+  $8, $9, $10::jsonb, $11::jsonb, $12, $13, $14::jsonb, $15,
+  $16, $17, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb, $22::jsonb,
+  $23::jsonb, $24::jsonb, $25, $26::jsonb, $27::jsonb, $28::jsonb,
+  $29::text[], $30::jsonb, $31::jsonb, $32
 )`;
 
 const serializeJson = (value: unknown): string => JSON.stringify(value ?? {});
 const optionalJson = (value: unknown): string | null =>
   value === undefined ? null : serializeJson(value);
-const nullableJson = (value: unknown): string | null =>
-  value === undefined || value === null ? null : serializeJson(value);
 const optional = <T>(value: T | null): T | undefined => value ?? undefined;
 const valueOr = <T>(value: T | undefined, fallback: T): T =>
   value === undefined ? fallback : value;
@@ -146,7 +142,6 @@ const toSystemMessage = (row: TurnRow): Turn['systemMessage'] => {
 
 const toTurn = (row: TurnRow): Turn => ({
   advancesTimeline: optional(row.advances_timeline),
-  beatTracker: optional(row.beat_tracker),
   canBranch: row.chronicle_state !== null,
   chronicleId: row.chronicle_id,
   entityReferences: optional(row.entity_references),
@@ -172,13 +167,11 @@ const toTurn = (row: TurnRow): Turn => ({
   proseCostUsd: optional(row.prose_cost_usd),
   referenceMentions: optional(row.reference_mentions),
   referenceUsage: optional(row.reference_usage),
-  sceneContext: optional(row.scene_context),
   skillCheckPlan: optional(row.skill_check_plan),
   skillCheckResult: optional(row.skill_check_result),
   systemMessage: toSystemMessage(row),
   turnSequence: row.turn_sequence,
   worldContent: optional(row.world_content),
-  worldFronts: optional(row.world_fronts),
 });
 
 const turnParameters = (
@@ -198,7 +191,6 @@ const turnParameters = (
   turn.playerMessage.content,
   serializeJson(turn.playerMessage.metadata),
   optionalJson(turn.playerIntent),
-  nullableJson(turn.sceneContext),
   valueOr(turn.gmResponse?.id, null),
   valueOr(turn.gmResponse?.content, null),
   optionalJson(turn.gmResponse?.metadata),
@@ -210,7 +202,6 @@ const turnParameters = (
   optionalJson(turn.skillCheckResult),
   optionalJson(turn.inventoryDelta),
   optionalJson(turn.locationDelta),
-  optionalJson(turn.beatTracker),
   optionalJson(turn.gmTrace),
   optionalJson(turn.proseAlternates),
   valueOr(turn.proseCostUsd, null),
@@ -221,7 +212,6 @@ const turnParameters = (
   serializeJson(valueOr(turn.referenceUsage, [])),
   serializeJson(valueOr(turn.referenceMentions, [])),
   valueOr(turn.worldContent, null),
-  optionalJson(turn.worldFronts),
 ];
 
 export class ChronicleTurnPersistence {
@@ -330,7 +320,10 @@ export class ChronicleTurnPersistence {
        WHERE chronicle_id = $1::uuid AND turn_sequence = $2`,
       [chronicleId, turnSequence]
     );
-    return result.rows[0]?.chronicle_state ?? null;
+    const checkpoint = result.rows[0]?.chronicle_state;
+    return checkpoint === null || checkpoint === undefined
+      ? null
+      : normalizeChronicle(checkpoint);
   }
 
   async copyThroughTurn(
@@ -359,7 +352,7 @@ export class ChronicleTurnPersistence {
     }
     return {
       chronicleId: target.id,
-      chronicleState: {
+      chronicleState: normalizeChronicle({
         ...row.chronicle_state,
         branch: target.branch,
         characterId: target.characterId,
@@ -369,7 +362,7 @@ export class ChronicleTurnPersistence {
         summaries: [],
         targetEndTurn: undefined,
         title: target.title,
-      },
+      }),
       sequence: row.turn_sequence,
       turn: {
         ...toTurn(row),

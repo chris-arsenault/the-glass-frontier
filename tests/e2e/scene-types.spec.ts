@@ -9,7 +9,7 @@ import {
 
 const DIALOG_LABEL = 'Dialog';
 const DIALOG_SUBJECT = 'Amaya Venn';
-const ROLE_SELECTOR = '.chat-entry-role';
+const DIALOG_QUESTION = 'Will Amaya Venn reveal what she knows?';
 
 test.describe('Curated scene types', () => {
   test.beforeEach(async ({ request }) => {
@@ -32,12 +32,8 @@ test.describe('Curated scene types', () => {
       page.getByText('Amaya Venn folds her hands over the quay ledger. "Ask what you came to ask."')
     ).toBeVisible({ timeout: 15_000 });
     const stage = page.getByTestId('scene-stage');
-    await expect(stage).toContainText(DIALOG_SUBJECT);
+    await expect(stage).toContainText(DIALOG_QUESTION);
     await expect(stage).toContainText(DIALOG_LABEL);
-    const firstGmEntry = page.locator('.chat-entry-gm').last();
-    await expect(firstGmEntry.locator(ROLE_SELECTOR)).toHaveText(DIALOG_SUBJECT);
-    await expect(firstGmEntry.locator('.chat-entry-scene-tag')).toContainText('dialog');
-
     await chatInput.fill('I thank her, say goodbye, and leave. #scene:dialog:end');
     await page.getByTestId('chat-submit').click();
 
@@ -45,8 +41,5 @@ test.describe('Curated scene types', () => {
       page.getByText('Amaya gives one curt nod and turns back to the ledger as you leave.')
     ).toBeVisible({ timeout: 15_000 });
     await expect(stage).toHaveCount(0);
-    const finalGmEntry = page.locator('.chat-entry-gm').last();
-    await expect(finalGmEntry.locator(ROLE_SELECTOR)).toHaveText(DIALOG_SUBJECT);
-    await expect(firstGmEntry.locator(ROLE_SELECTOR)).toHaveText(DIALOG_SUBJECT);
   });
 });

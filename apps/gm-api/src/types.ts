@@ -1,15 +1,13 @@
 import type { ModelConfigStore, PromptTemplateRuntime } from '@glass-frontier/app';
 import type {
-  BeatTracker,
+  ActiveScene,
   Character,
   Chronicle,
-  ChronicleScene,
   DescriptiveIdentity,
   EntityReference,
   EncyclopediaMention,
   EncyclopediaUsageRecord,
   EntityRosterEntry,
-  Front,
   GmNote,
   HardStateKind,
   HardStateStatus,
@@ -18,7 +16,8 @@ import type {
   LiveRelationship,
   LlmTrace,
   LocationDeltaDecision,
-  SceneOutcome,
+  LocalContinuity,
+  NarrativeThread,
   SkillCheckPlan,
   SkillCheckResult,
   TranscriptEntry,
@@ -40,7 +39,6 @@ import type {
 } from '@glass-frontier/worldstate';
 
 import type { InventoryDelta } from './gmGraph/nodes/classifiers/InventoryDeltaNode';
-import type { SceneLedgerUpdate } from './scenes/sceneLedger';
 
 export type ChronicleState = {
   chronicleId: string;
@@ -120,8 +118,6 @@ export type GraphContext = {
   failure: boolean;
   /** Why the turn failed, when it did: drives the player-facing notice. */
   failureReason?: 'content_filter' | 'generation_error';
-  /** This turn's scene working-memory report, merged into the chronicle. */
-  sceneLedgerUpdate?: SceneLedgerUpdate;
 
   //stage results
   playerIntent?: Intent;
@@ -134,21 +130,20 @@ export type GraphContext = {
   proseCostUsd?: number;
   /** What the scout found for this turn: material, who is present, scene read. */
   turnBrief?: TurnBrief;
-  /** What the world did this turn, decided before the check was planned. */
+  /** What the world did at this story boundary. */
   worldContent?: string;
-  /** The world's agendas as this turn left them. */
-  worldFronts?: Front[];
-  effectiveScene: ChronicleScene | null;
-  /** How far the turn judge says this turn moved the scene, 0 to 3. */
-  sceneClockSegments?: number;
-  sceneOutcome: SceneOutcome;
-  sceneOutcomeReason: string | null;
-  shouldCloseChronicle: boolean;
+  effectiveScene: ActiveScene | null;
+  effectiveFocusedThreadId: string | null;
+  effectiveThreads: NarrativeThread[];
+  sceneBoundary: boolean;
+  sceneWillClose: boolean;
+  threadPositionUpdate?: { position: string; threadId: string };
+  worldThreadUpdate?: { position: string; threadId: string };
+  localContinuityUpdate?: LocalContinuity;
   advancesTimeline: boolean;
 
   locationDelta?: LocationDeltaDecision;
   inventoryDelta?: InventoryDelta;
-  beatTracker?: BeatTracker;
   executedNodes?: string[];
   entityContext?: EntityContextSlice;
   encyclopediaContext?: StoredEncyclopediaEntry[];

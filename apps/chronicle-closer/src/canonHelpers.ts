@@ -1,4 +1,4 @@
-import type { Chronicle, HardStateProminence, Turn } from '@glass-frontier/dto';
+import type { HardStateProminence, Turn } from '@glass-frontier/dto';
 import {
   HardStateKind,
   HardStateSubkind,
@@ -213,71 +213,8 @@ export const buildRoster = (turns: Turn[]): RosterEntry[] => {
   return [...entries.values()].sort(compareRosterEntries);
 };
 
-/**
- * Roster entities that were central at least once may receive closure lore —
- * as may any entity a scene revolved around, central or not: being a scene
- * subject is significance by construction.
- */
-export const isEligibleForLore = (
-  entry: RosterEntry,
-  sceneSubjects: ReadonlySet<string>
-): boolean => entry.centralCount >= 1 || sceneSubjects.has(entry.name.trim().toLowerCase());
-
-export type SceneSummary = {
-  firstTurn: number;
-  lastTurn: number;
-  outcome: 'abandoned' | 'complete' | 'continue';
-  subject: string;
-  subjectKind: string;
-  type: string;
-};
-
-/**
- * One entry per scene the chronicle played through, in order: the subject the
- * scene revolved around, its final outcome, and the turn span. A scene still
- * open at closure (the chronicle's activeScene) is included as `continue`.
- */
-export const collectScenes = (
-  turns: Turn[],
-  activeScene: Chronicle['activeScene']
-): SceneSummary[] => {
-  const scenes = new Map<string, SceneSummary>();
-  const ordered = [...turns].sort((a, b) => a.turnSequence - b.turnSequence);
-  for (const turn of ordered) {
-    const context = turn.sceneContext;
-    if (context === undefined || context === null) {
-      continue;
-    }
-    const existing = scenes.get(context.sceneId);
-    if (existing === undefined) {
-      scenes.set(context.sceneId, {
-        firstTurn: turn.turnSequence,
-        lastTurn: turn.turnSequence,
-        outcome: context.outcome,
-        subject: context.subject,
-        subjectKind: context.subjectKind,
-        type: context.type,
-      });
-    } else {
-      existing.lastTurn = turn.turnSequence;
-      existing.outcome = context.outcome;
-    }
-  }
-  if (activeScene !== null && activeScene !== undefined && !scenes.has(activeScene.id)) {
-    scenes.set(activeScene.id, {
-      firstTurn: activeScene.startedAtTurn,
-      lastTurn: activeScene.startedAtTurn,
-      outcome: 'continue',
-      subject: activeScene.subject,
-      subjectKind: activeScene.subjectKind,
-      type: activeScene.type,
-    });
-  }
-  return [...scenes.values()].sort((a, b) => a.firstTurn - b.firstTurn);
-};
-
-export const sceneSubjectNames = (scenes: SceneSummary[]): ReadonlySet<string> =>
-  new Set(scenes.map((scene) => scene.subject.trim().toLowerCase()));
+/** Roster entities central to at least one turn may receive closure lore. */
+export const isEligibleForLore = (entry: RosterEntry): boolean => entry.centralCount >= 1;
 
 const sanitizeTags = (tags: string[] | null | undefined): string[] =>
   (tags ?? []).filter((tag) => WORLD_TAG_IDS.has(tag)).slice(0, 3);
@@ -417,7 +354,6 @@ export const sanitizeExtraction = (
   extraction: CanonExtraction,
   roster: RosterEntry[],
   cap: number,
-  sceneSubjects: ReadonlySet<string> = new Set()
 ): { candidates: SanitizedNewEntity[]; drops: CanonDrop[]; knownLore: SanitizedKnownLore[] } => {
   const rosterByName = new Map(roster.map((entry) => [entry.name.toLowerCase(), entry]));
   const rosterBySlug = new Map(roster.map((entry) => [entry.slug, entry]));
@@ -428,7 +364,7 @@ export const sanitizeExtraction = (
     rosterEntry: RosterEntry,
     entry: Omit<KnownEntityLore, 'slug'>
   ): string | null => {
-    if (!isEligibleForLore(rosterEntry, sceneSubjects)) {
+    if (!isEligibleForLore(rosterEntry)) {
       return 'not_eligible_for_lore';
     }
     if (knownBySlug.has(rosterEntry.slug)) {

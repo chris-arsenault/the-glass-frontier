@@ -5,7 +5,7 @@ for different reasons:
 
 - **Canon** — the world's entities, the typed relationships between them, and
   the lore attached to them. Written only by ingest, read on every turn.
-- **Chronicle state** — one player's session: character, turns, beats, where
+- **Chronicle state** — one player's session: character, turns, narrative threads, where
   they are, and what they have found. Written constantly during play, and never
   promoted to canon except by an ingest batch.
 

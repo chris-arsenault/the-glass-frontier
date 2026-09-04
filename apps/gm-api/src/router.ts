@@ -44,12 +44,13 @@ export const appRouter = t.router({
       );
       return {
         activeScene: result.activeScene,
-        beats: result.beats,
         character: result.updatedCharacter,
         chronicleStatus: result.chronicleStatus,
         entityFocus: result.entityFocus,
         entityRoster: result.entityRoster,
+        focusedThreadId: result.focusedThreadId,
         locationName: result.locationName,
+        threads: result.threads,
         turn: result.turn,
       };
     }),

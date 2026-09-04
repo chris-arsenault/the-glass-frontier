@@ -6,7 +6,7 @@ import { WorldReferenceSlug } from '../world/Encyclopedia';
  * What the scout hands the writer.
  *
  * The writer holds the things a paraphrase would break — the player's own
- * words, the check another node already decided, the scene clock, the item
+ * words, the check another node already decided, the scene bound, the item
  * manifest, the reply it wrote last turn — and this for everything else. The
  * scout is the only stage that has read both the chronicle and the world, so
  * it is the one that exercises judgement, and it does that here in prose
@@ -60,18 +60,5 @@ export const TurnBrief = z.object({
       .describe('The qualified slug exactly as the index or tools spelled it.'),
     usage: z.enum(['mentioned', 'central']),
   })),
-  /**
-   * The scout's read of where the scene stands. Drives scene and beat state
-   * through `applySceneRead`; the writer receives the scene's own record
-   * instead, because a clock is a number and does not paraphrase.
-   */
-  scene: z.object({
-    changed: z.string().min(1)
-      .describe('What this turn changed about the situation, or that nothing changed.'),
-    endsWhen: z.string().min(1)
-      .describe('What would end this scene — the condition, not a guess at the outcome.'),
-    stakes: z.string().min(1)
-      .describe('What is at stake right now, in one line.'),
-  }).describe('The scout\'s read of where the scene stands, as three short statements.'),
 });
 export type TurnBrief = z.infer<typeof TurnBrief>;

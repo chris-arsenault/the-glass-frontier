@@ -1,4 +1,11 @@
-import type { Character, Chronicle } from '@glass-frontier/dto';
+import {
+  ActiveScene,
+  type Character,
+  type Chronicle,
+  Chronicle as ChronicleSchema,
+  LocalContinuity,
+  NarrativeThread,
+} from '@glass-frontier/dto';
 
 export const ensureInventory = (character: Character): Character => {
   if (character.inventory !== undefined) {
@@ -21,37 +28,26 @@ export const initialEntityRoster = (
     updatedAtTurn: 0,
   };
 
-/** Close-time dispositions apply only to beats that are still open. */
-export const applyBeatDispositions = (
-  beats: Chronicle['beats'],
-  statusByBeatId: Map<string, 'abandoned' | 'failed' | 'succeeded'>,
-  now: number
-): { beats: Chronicle['beats']; changed: boolean } => {
-  let changed = false;
-  const next = beats.map((beat) => {
-    const status = statusByBeatId.get(beat.id);
-    if (status === undefined || beat.status !== 'in_progress') {
-      return beat;
-    }
-    changed = true;
-    return { ...beat, resolvedAt: now, status, updatedAt: now };
-  });
-  return { beats: next, changed };
-};
-
 export const normalizeChronicle = (chronicle: Chronicle): Chronicle => {
-  const beats = Array.isArray(chronicle.beats) ? chronicle.beats : [];
-  const summaries = Array.isArray(chronicle.summaries) ? chronicle.summaries : [];
-  const openingReferenceSlugs = Array.isArray(chronicle.openingReferenceSlugs)
-    ? chronicle.openingReferenceSlugs
-    : [];
-  return {
+  const activeScene = ActiveScene.safeParse(chronicle.activeScene);
+  const localContinuity = LocalContinuity.safeParse(chronicle.localContinuity);
+  const threads = NarrativeThread.array().safeParse(chronicle.threads);
+  const normalized = ChronicleSchema.parse({
     ...chronicle,
-    activeScene: chronicle.activeScene ?? null,
-    beats,
+    activeScene: activeScene.success ? activeScene.data : null,
     entityRoster: chronicle.entityRoster,
-    openingReferenceSlugs,
-    sceneLedger: chronicle.sceneLedger ?? null,
-    summaries,
-  };
+    focusedThreadId: chronicle.focusedThreadId ?? null,
+    localContinuity: localContinuity.success ? localContinuity.data : null,
+    openingReferenceSlugs: Array.isArray(chronicle.openingReferenceSlugs)
+      ? chronicle.openingReferenceSlugs
+      : [],
+    summaries: Array.isArray(chronicle.summaries) ? chronicle.summaries : [],
+    threads: threads.success ? threads.data : [],
+  });
+  const focusedThreadExists = normalized.threads.some(
+    (thread) => thread.id === normalized.focusedThreadId && thread.perspective === 'player'
+  );
+  return focusedThreadExists
+    ? normalized
+    : { ...normalized, focusedThreadId: null };
 };

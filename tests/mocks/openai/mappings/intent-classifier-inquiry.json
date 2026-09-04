@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Listen beyond the vault door\",\"intentType\":\"inquiry\",\"routerRationale\":\"The player requests sensory information without changing the scene.\",\"tone\":\"watchful\"}"
+              "text": "{\"creativeSpark\":false,\"intentSummary\":\"Listen beyond the vault door\",\"intentType\":\"inquiry\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Listen beyond the vault door\",\"intentType\":\"inquiry\",\"routerRationale\":\"The player requests sensory information without changing the scene.\",\"tone\":\"watchful\"}"
+        "{\"creativeSpark\":false,\"intentSummary\":\"Listen beyond the vault door\",\"intentType\":\"inquiry\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
       ],
       "stop_reason": "stop",
       "usage": {

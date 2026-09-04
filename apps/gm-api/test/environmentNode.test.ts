@@ -1,13 +1,11 @@
-import type { Front, HardState, WorldTurn } from '@glass-frontier/dto';
+import type { HardState, NarrativeThread } from '@glass-frontier/dto';
 import { describe, expect, it } from 'vitest';
 
 import { EnvironmentNode } from '../src/gmGraph/nodes/EnvironmentNode';
 import type { GraphContext } from '../src/types';
 import { buildContext, buildIntent } from './harness';
 
-const YARD_SLUG = 'splinter-yards';
-
-const YARD: HardState = {
+const YARD = {
   contextTags: [],
   description: 'A salvage yard stacked with dead relay masts.',
   descriptiveIdentity: { activity: 'Crews strip masts through the cold hours.' },
@@ -19,103 +17,81 @@ const YARD: HardState = {
   links: [],
   name: 'The Splinter Yards',
   prominence: 'recognized',
-  slug: YARD_SLUG,
+  slug: 'splinter-yards',
   veiled: false,
 } as unknown as HardState;
 
-const worldReport = (overrides?: Partial<WorldTurn>): WorldTurn => ({
-  abandonedFrontIds: [],
-  firedFrontId: null,
-  proposal: null,
-  ticks: [],
-  world: 'Yard crews reroute power toward the relay mast.',
-  ...overrides,
-});
+const WORLD_THREAD: NarrativeThread = {
+  goal: 'Reopen the south hoist before inspection.',
+  id: 'world-thread',
+  owner: 'The night crew',
+  perspective: 'world',
+  position: 'The hoist remains red-tagged.',
+  title: 'The south hoist',
+  updatedAtTurn: 0,
+};
 
-const environmentContext = (options: {
-  agentEntity: HardState | null;
-  fronts?: Front[];
-  report: WorldTurn;
-  captured: { instructions?: string; text?: string };
-}): GraphContext => {
-  const context = buildContext({ playerIntent: buildIntent() });
-  context.chronicleState.chronicle.fronts = options.fronts ?? [];
+const environmentContext = (
+  captured: { instructions?: string; text?: string },
+  prose: string
+): GraphContext => {
+  const context = buildContext({
+    effectiveThreads: [WORLD_THREAD],
+    gmResponse: {
+      content: 'The access panel opens.',
+      id: 'gm-1',
+      metadata: { tags: [], timestamp: 0 },
+      role: 'gm',
+    },
+    playerIntent: buildIntent(),
+    sceneBoundary: true,
+  });
   context.llm = {
-    generateStructured: (request: {
+    generate: (request: {
       input: Array<{ content: Array<{ text: string }> }>;
       instructions: string;
     }) => {
-      options.captured.instructions = request.instructions;
-      options.captured.text = request.input[0]?.content[0]?.text;
-      return Promise.resolve({ data: options.report });
+      captured.instructions = request.instructions;
+      captured.text = request.input[0]?.content[0]?.text;
+      return Promise.resolve({
+        message: prose,
+        requestId: 'environment-request',
+        usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
+      });
     },
   } as unknown as GraphContext['llm'];
   context.modelConfigStore = {
-    getModelForCategory: (category: string) => {
-      expect(category).toBe('prose');
-      return Promise.resolve('amazon-nova-pro');
-    },
+    getModelForCategory: () => Promise.resolve('amazon-nova-pro'),
   } as unknown as GraphContext['modelConfigStore'];
   context.worldSchemaStore = {
+    findEntitiesByName: () => Promise.resolve([]),
     findLocationByName: () => Promise.resolve(YARD),
-    getEntityBySlug: () => Promise.resolve(options.agentEntity),
   } as unknown as GraphContext['worldSchemaStore'];
   return context;
 };
 
 describe('environment node', () => {
-  it('feeds the world a player-free view and records its move', async () => {
+  it('advances one world thread with player-free prose at a scene boundary', async () => {
     const captured: { instructions?: string; text?: string } = {};
-    const context = environmentContext({ agentEntity: null, captured, report: worldReport() });
-
-    const delta = await new EnvironmentNode().execute(context);
+    const delta = await new EnvironmentNode().execute(environmentContext(
+      captured,
+      'Yard crews reroute power toward the relay mast.'
+    ));
 
     expect(delta.worldContent).toContain('reroute power');
-    expect(captured.text).toContain('### WORLD-CANON');
-    expect(captured.text).toContain('red-tagged');
-    // The player's message, intent, and sheet never reach the world.
+    expect(delta.worldThreadUpdate).toEqual({
+      position: 'Yard crews reroute power toward the relay mast.',
+      threadId: 'world-thread',
+    });
+    expect(captured.text).toContain('### WORLD THREAD');
+    expect(captured.text).toContain('The south hoist');
     expect(captured.text).not.toContain('pry the access panel');
-    expect(captured.text).not.toContain('Vex');
-    expect(captured.text).not.toContain('INTENT');
-    expect(captured.instructions).toContain('No fronts are running yet');
+    expect(captured.instructions).toContain('Return prose only');
   });
 
-  it('starts a front for a figure canon has never written down', async () => {
-    const proposal = {
-      // No such entity exists. A world that may only be pursued by figures
-      // someone already indexed cannot introduce the crew that makes a place
-      // feel bigger than its index.
-      agentSlug: 'south_hoist_night_crew',
-      intent: 'Reopen the south hoist before inspection',
-      nextSign: 'A crew chief argues with the red tag',
-      size: 4,
-    };
-    const captured: { instructions?: string; text?: string } = {};
-    const delta = await new EnvironmentNode().execute(environmentContext({
-      agentEntity: null,
-      captured,
-      report: worldReport({ proposal }),
-    }));
+  it('treats an empty response as a nonfatal tracking failure', async () => {
+    const delta = await new EnvironmentNode().execute(environmentContext({}, '   '));
 
-    expect(delta.worldFronts?.map((front) => front.agentSlug))
-      .toStrictEqual(['south_hoist_night_crew']);
-  });
-
-  it('refuses only the front that would run the player\'s own agenda', async () => {
-    const captured: { instructions?: string; text?: string } = {};
-    const delta = await new EnvironmentNode().execute(environmentContext({
-      agentEntity: YARD,
-      captured,
-      report: worldReport({
-        proposal: {
-          agentSlug: 'vex',
-          intent: 'Pry the access panel open before anyone notices',
-          nextSign: 'The panel bolts sit looser than they did',
-          size: 4,
-        },
-      }),
-    }));
-
-    expect(delta.worldFronts).toStrictEqual([]);
+    expect(delta).toEqual({});
   });
 });

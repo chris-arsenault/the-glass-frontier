@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[\"final\"],\"intentSummary\":\"Bring the expedition to its reckoning\",\"intentType\":\"wrap\",\"routerRationale\":\"The player explicitly asks to conclude the story.\",\"tone\":\"final\"}"
+              "text": "{\"creativeSpark\":false,\"intentSummary\":\"Bring the expedition to its reckoning\",\"intentType\":\"wrap\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[\"final\"],\"intentSummary\":\"Bring the expedition to its reckoning\",\"intentType\":\"wrap\",\"routerRationale\":\"The player explicitly asks to conclude the story.\",\"tone\":\"final\"}"
+        "{\"creativeSpark\":false,\"intentSummary\":\"Bring the expedition to its reckoning\",\"intentType\":\"wrap\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
       ],
       "stop_reason": "stop",
       "usage": {

@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-end\",\"intentType\":\"action\",\"routerRationale\":\"The player says goodbye and leaves the conversation.\",\"sceneChange\":null,\"tone\":\"final\"}"
+              "text": "{\"creativeSpark\":false,\"intentSummary\":\"scene-dialog-end\",\"intentType\":\"action\",\"scene\":{\"action\":\"leave\"},\"thread\":{\"action\":\"keep\"}}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"scene-dialog-end\",\"intentType\":\"action\",\"routerRationale\":\"The player says goodbye and leaves the conversation.\",\"sceneChange\":null,\"tone\":\"final\"}"
+        "{\"creativeSpark\":false,\"intentSummary\":\"scene-dialog-end\",\"intentType\":\"action\",\"scene\":{\"action\":\"leave\"},\"thread\":{\"action\":\"keep\"}}"
       ],
       "stop_reason": "stop",
       "usage": {

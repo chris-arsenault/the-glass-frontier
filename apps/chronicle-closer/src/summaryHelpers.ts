@@ -4,7 +4,7 @@ export type SummaryContext = {
   chronicle: Chronicle;
   character: Character | null;
   locationName: string;
-  beatLines: string[];
+  threadLines: string[];
   inventoryHighlights: string[];
   skillHighlights: string[];
   transcript: string;
@@ -14,7 +14,7 @@ export const NO_LASTING_CHARACTER_CHANGE = 'NO_LASTING_CHANGE';
 
 export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
   const chronicle = context.chronicle;
-  const beatsBlock = formatListBlock('Chronicle beats', context.beatLines);
+  const threadsBlock = formatListBlock('Player threads', context.threadLines);
   const skillBlock = formatListBlock('Skill checks', context.skillHighlights);
   const inventoryBlock = formatListBlock('Inventory changes', context.inventoryHighlights);
   return [
@@ -23,9 +23,9 @@ export const buildChronicleStoryPrompt = (context: SummaryContext): string => {
     buildCharacterDescription(context.character),
     `The chronicle ends at ${context.locationName}. This is the final scene location, not a destination. Do not add travel to or from it unless the transcript records that travel.`,
     'Treat the transcript timeline and recorded deltas as the complete history. Preserve the player\'s explicit decisions and chronology. Do not invent actions, motives, equipment, injuries, weakened abilities, destinations, consequences, or facts.',
-    'Honor every listed beat, skill check, and inventory change. A planned check without a recorded result is not an outcome.',
-    'Beat statuses are canon: succeeded and failed beats are the story\'s earned arcs; a superseded beat is a goal the story drifted away from toward its successor; an abandoned beat is a thread left behind — it may be mentioned as unresolved but never resolved by invention.',
-    beatsBlock,
+    'Honor every listed player thread, skill check, and inventory change. A planned check without a recorded result is not an outcome.',
+    'Thread positions are GM continuity notes about where the player stood relative to a goal; do not invent a resolution beyond the transcript.',
+    threadsBlock,
     skillBlock,
     inventoryBlock,
     'Transcript timeline:',
@@ -58,8 +58,8 @@ const formatCharacterSheet = (character: Character | null): string => {
 
 export const buildCharacterImpactPrompt = (context: SummaryContext): string => {
   const characterName = context.character?.name ?? 'the character';
-  const beats =
-    context.beatLines.length === 0 ? 'none' : context.beatLines.join(' | ');
+  const threads =
+    context.threadLines.length === 0 ? 'none' : context.threadLines.join(' | ');
   const skillBlock = formatListBlock('Skill checks', context.skillHighlights);
   const inventoryBlock = formatListBlock('Inventory changes', context.inventoryHighlights);
   return [
@@ -70,7 +70,7 @@ export const buildCharacterImpactPrompt = (context: SummaryContext): string => {
     formatCharacterSheet(context.character),
     skillBlock,
     inventoryBlock,
-    `Beat recap: ${beats}`,
+    `Player thread recap: ${threads}`,
     'Transcript timeline:',
     context.transcript,
   ].join('\n');
@@ -110,19 +110,7 @@ const formatTurn = (turn: Turn): string => {
   if (skill !== null) {
     lines.push(`Skill Check: ${skill}`);
   }
-  const scene = describeScene(turn);
-  if (scene !== null) {
-    lines.push(scene);
-  }
   return lines.join('\n');
-};
-
-const describeScene = (turn: Turn): string | null => {
-  const scene = turn.sceneContext;
-  if (scene === undefined || scene === null) {
-    return null;
-  }
-  return `Scene: ${scene.type} — subject "${scene.subject}" (${scene.subjectKind}), ${scene.outcome}`;
 };
 
 const appendIf = (lines: string[], label: string, value: string): void => {
@@ -224,17 +212,10 @@ const formatMargin = (value?: number): string => {
   return '';
 };
 
-export const buildBeatLines = (chronicle: Chronicle): string[] => {
-  if (!Array.isArray(chronicle.beats) || chronicle.beats.length === 0) {
-    return [];
-  }
-  return chronicle.beats.map((beat) => {
-    const status = beat.status ?? 'in_progress';
-    const succession =
-      beat.supersededBy === undefined ? '' : ` (superseded by ${beat.supersededBy})`;
-    return `[${status}]${succession} ${beat.title} — ${beat.description}`;
-  });
-};
+export const buildThreadLines = (chronicle: Chronicle): string[] =>
+  chronicle.threads
+    .filter((thread) => thread.perspective === 'player')
+    .map((thread) => `${thread.title} — goal: ${thread.goal}; position: ${thread.position}`);
 
 const formatTags = (tags: Character['tags'] | undefined): string => {
   if (!Array.isArray(tags) || tags.length === 0) {

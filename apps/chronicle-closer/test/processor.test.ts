@@ -49,7 +49,6 @@ const character: Character = {
 
 const chronicle: Chronicle = {
   activeScene: null,
-  beats: [],
   characterId: character.id,
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {
@@ -58,15 +57,16 @@ const chronicle: Chronicle = {
     sceneId: null,
     updatedAtTurn: 0,
   },
-  fronts: [],
+  focusedThreadId: null,
   id: 'chronicle-1',
+  localContinuity: null,
   locationName: 'Brake',
   openingReferenceSlugs: [],
   openingText: 'You wait on Brake as the quartet tunes.',
   playerId: character.playerId,
-  sceneLedger: null,
   status: 'closed',
   summaries: [],
+  threads: [],
   title: 'Quarantine Quartet',
   toneChips: [],
   toneNotes: '',
@@ -87,12 +87,12 @@ const event: ChronicleClosureEvent = {
 describe('ChronicleClosureProcessor', () => {
   it('treats the final location and recorded timeline as fixed closure facts', () => {
     const context = {
-      beatLines: [],
       character,
       chronicle,
       inventoryHighlights: [],
       locationName: chronicle.locationName,
       skillHighlights: [],
+      threadLines: [],
       transcript: 'Player: I remain on Brake and end the performance.',
     };
 

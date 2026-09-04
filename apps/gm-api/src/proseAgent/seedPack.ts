@@ -63,7 +63,7 @@ const MAX_INDEX_EDGES = 6;
  * The fragments the seed pack shares with the one-shot prompt, in the order
  * they matter to the scout.
  *
- * CHARACTER leads. It used to sit ninth, below tone and fronts, and the scout
+ * CHARACTER leads. It used to sit ninth, below world tracking, and the scout
  * read the turn from the top down as a world with an unnamed actor in it: on
  * The Silent Test it looked the player up in canon, found nothing, and put the
  * one NPC it could read in their place. The player is the subject of the turn
@@ -74,16 +74,15 @@ const MAX_INDEX_EDGES = 6;
 const SHARED_SECTIONS: Array<{ name: string; fragment: ChronicleFragmentTypes }> = [
   { fragment: 'character', name: 'CHARACTER' },
   { fragment: 'intent', name: 'INTENT' },
+  { fragment: 'entity-references', name: 'PLAYER-REFERENCES' },
   { fragment: 'location', name: 'LOCATION' },
   { fragment: 'skill-check', name: 'SKILL-CHECK' },
+  { fragment: 'threads', name: 'THREADS' },
   { fragment: 'scene', name: 'SCENE' },
-  { fragment: 'ledger', name: 'LEDGER' },
+  { fragment: 'local-continuity', name: 'LOCAL-CONTINUITY' },
   { fragment: 'recent-events', name: 'RECENT-EVENTS' },
-  { fragment: 'fronts', name: 'FRONTS' },
-  { fragment: 'entity-references', name: 'PLAYER-REFERENCES' },
   { fragment: 'inventory-detail', name: 'INVENTORY-DETAIL' },
   { fragment: 'seed', name: 'SEED' },
-  { fragment: 'tone', name: 'TONE' },
   { fragment: 'chronicle-tone', name: 'CHRONICLE-TONE' },
   { fragment: 'wrap', name: 'WRAP' },
 ];
@@ -98,13 +97,8 @@ const firstSentence = (text: string | undefined): string | undefined => {
 
 const compareEncyclopediaEntries = (
   left: Parameters<typeof encyclopediaSummary>[0],
-  right: Parameters<typeof encyclopediaSummary>[0],
-  directSlugs: Set<string>
+  right: Parameters<typeof encyclopediaSummary>[0]
 ): number => {
-  const directOrder = Number(directSlugs.has(right.slug)) - Number(directSlugs.has(left.slug));
-  if (directOrder !== 0) {
-    return directOrder;
-  }
   const contextOrder = Number(right.availability?.mode === 'contextual')
     - Number(left.availability?.mode === 'contextual');
   return contextOrder !== 0 ? contextOrder : left.title.localeCompare(right.title);
@@ -117,8 +111,8 @@ const compareEncyclopediaEntries = (
  * scorer before anyone knew what the turn was about — and a chronicle about
  * hunting animals in a gas giant carried a pilgrim bead, a Tuner guild, and a
  * region of orbital reality tears for its whole run. The roster is gone: what
- * seeds the index is the place, the anchor, the scene's subject, and whatever
- * the player or the scene named. Everything else is the scout's to discover
+ * seeds the index is the place, the anchor, and whatever the player named.
+ * Everything else is the scout's to discover
  * with `search`, which is the entire point of giving it tools.
  */
 export const collectSeedIds = async (context: GraphContext): Promise<string[]> => {
@@ -128,7 +122,6 @@ export const collectSeedIds = async (context: GraphContext): Promise<string[]> =
   });
   const candidates = [
     chronicle.anchorEntityId,
-    context.effectiveScene?.subjectEntityId,
     ...(context.entityReferences ?? []).map((reference) => reference.entityId),
     ...context.targetEntityIds,
     location?.id,
@@ -186,6 +179,23 @@ export const buildTocEntries = async (
   return visible.map((entity) => tocEntry(entity, loreCounts.get(entity.id) ?? 0, targets));
 };
 
+const buildEncyclopediaToc = (
+  applicable: Array<GraphContext['directEncyclopediaEntries'][number]>,
+  directEntries: GraphContext['directEncyclopediaEntries']
+): EncyclopediaEntrySummary[] => {
+  const directSlugs = new Set(directEntries.map((entry) => entry.slug));
+  return [...new Map(
+    applicable
+      .filter((entry) =>
+        entry.status === 'complete' && !entry.dm && !directSlugs.has(entry.slug)
+      )
+      .map((entry) => [entry.slug, entry])
+  ).values()]
+    .sort(compareEncyclopediaEntries)
+    .slice(0, 16)
+    .map(encyclopediaSummary);
+};
+
 export const buildSeedPack = async (context: GraphContext): Promise<SeedPack> => {
   const seedEntityIds = await collectSeedIds(context);
   const location = await context.worldSchemaStore.findLocationByName({
@@ -210,27 +220,28 @@ export const buildSeedPack = async (context: GraphContext): Promise<SeedPack> =>
       }),
   ]);
   const visible = entities.filter((entity) => !entity.dm);
-  const directSlugs = new Set(context.directEncyclopediaEntries.map((entry) => entry.slug));
-  const encyclopediaToc = [...new Map(
-    [...context.directEncyclopediaEntries, ...applicable]
-      .filter((entry) => entry.status === 'complete' && !entry.dm)
-      .map((entry) => [entry.slug, entry])
-  ).values()]
-    .sort((left, right) => compareEncyclopediaEntries(left, right, directSlugs))
-    .slice(0, 16)
-    .map(encyclopediaSummary);
+  const directAtlasIds = new Set(context.targetEntityIds);
+  const encyclopediaToc = buildEncyclopediaToc(
+    applicable,
+    context.directEncyclopediaEntries
+  );
   return {
     encyclopediaToc,
     sections: sectionValues,
     seedReferences: [
-      ...visible.map((entity) => ({
+      ...visible.filter((entity) => directAtlasIds.has(entity.id)).map((entity) => ({
         atlasEntityId: entity.id,
         atlasSlug: entity.slug,
         slug: `atlas:${entity.slug}`,
       })),
-      ...encyclopediaToc.map((entry) => ({ slug: entry.slug })),
+      ...context.directEncyclopediaEntries.map((entry) => ({
+        slug: `encyclopedia:${entry.slug}`,
+      })),
     ],
-    toc: await buildTocEntries(context.worldSchemaStore, visible),
+    toc: await buildTocEntries(
+      context.worldSchemaStore,
+      visible.filter((entity) => !directAtlasIds.has(entity.id))
+    ),
   };
 };
 

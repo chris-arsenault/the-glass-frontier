@@ -22,14 +22,14 @@
         {
           "content": [
             {
-              "text": "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Confirm where the Oracle Vessel remains\",\"intentType\":\"clarification\",\"routerRationale\":\"The player checks an established fact from the fiction.\",\"tone\":\"measured\"}"
+              "text": "{\"creativeSpark\":false,\"intentSummary\":\"Confirm where the Oracle Vessel remains\",\"intentType\":\"clarification\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
             }
           ],
           "role": "assistant"
         }
       ],
       "output_text": [
-        "{\"beatDirective\":{\"kind\":\"independent\",\"summary\":\"The mock turn is independent.\",\"targetBeatId\":null},\"creativeSpark\":false,\"handlerHints\":[],\"intentSummary\":\"Confirm where the Oracle Vessel remains\",\"intentType\":\"clarification\",\"routerRationale\":\"The player checks an established fact from the fiction.\",\"tone\":\"measured\"}"
+        "{\"creativeSpark\":false,\"intentSummary\":\"Confirm where the Oracle Vessel remains\",\"intentType\":\"clarification\",\"scene\":{\"action\":\"continue\"},\"thread\":{\"action\":\"keep\"}}"
       ],
       "stop_reason": "stop",
       "usage": {

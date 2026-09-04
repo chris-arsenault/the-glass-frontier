@@ -24,6 +24,8 @@ const CLASSIFICATION_MODEL_ID = 'amazon-nova-2-lite';
 const OSS_MODEL_ID = 'gpt-oss-120b';
 const QWEN_MODEL_ID = 'qwen3-32b';
 const TITHE_COUNTING = 'Korvath counts the tithe';
+const RESONANT_POLLEN = 'resonant pollen';
+const PLAYER_REFERENCES = 'PLAYER-REFERENCES';
 const SMALL_USAGE = { inputTokens: 50, outputTokens: 30, totalTokens: 80 };
 
 const runTool = async (agentTool: unknown, input: unknown): Promise<string> => {
@@ -78,7 +80,7 @@ const flitter = (
   descriptiveIdentity: { motion: 'skittish' },
   dm: false,
   externalKey: 'creature:flitter',
-  facts: { diet: 'resonant pollen' },
+  facts: { diet: RESONANT_POLLEN },
   id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   instances: [],
   kind: 'creature',
@@ -222,7 +224,18 @@ describe('tool session', () => {
 
 describe('seed pack', () => {
   it('counts what can be opened without naming fields or values', async () => {
-    const pack = await buildSeedPack(agentContext());
+    const context = agentContext();
+    context.targetEntityIds = [];
+    context.entityReferences = [{
+      confidence: 1,
+      entityId: KORVATH_ID,
+      entitySlug: KORVATH_SLUG,
+      method: 'exact',
+      span: { end: 7, start: 0, text: 'Korvath' },
+      speaker: 'player',
+      transcriptEntryId: context.playerMessage.id,
+    }];
+    const pack = await buildSeedPack(context);
     const korvathEntry = pack.toc.find((entry) => entry.slug === `atlas:${KORVATH_SLUG}`);
     expect(korvathEntry?.noteCount).toBe(3);
     const rendered = JSON.stringify(pack.toc);
@@ -239,7 +252,37 @@ describe('seed pack', () => {
     const named = pack.sections.map((section) => section.name);
 
     expect(named[0]).toBe('CHARACTER');
-    expect(named.indexOf('CHARACTER')).toBeLessThan(named.indexOf('FRONTS'));
+    expect(named.indexOf('CHARACTER')).toBeLessThan(named.indexOf('THREADS'));
+    expect(named.indexOf(PLAYER_REFERENCES)).toBeLessThan(named.indexOf('LOCATION'));
+  });
+
+  it('serves attached references in full instead of duplicating them in the index', async () => {
+    const pack = await buildSeedPack(agentContext());
+    const references = pack.sections.find((section) => section.name === PLAYER_REFERENCES);
+
+    expect(JSON.stringify(references?.value)).toContain('clipped');
+    expect(JSON.stringify(references?.value)).toContain(`atlas:${KORVATH_SLUG}`);
+    expect(pack.toc).toStrictEqual([]);
+    expect(pack.seedReferences).toEqual([{
+      atlasEntityId: KORVATH_ID,
+      atlasSlug: KORVATH_SLUG,
+      slug: `atlas:${KORVATH_SLUG}`,
+    }]);
+  });
+
+  it('keeps an attached Encyclopedia record out of Common here', async () => {
+    const context = agentContext();
+    context.targetEntityIds = [];
+    context.directEncyclopediaEntries = [flitter()];
+    context.encyclopediaStore = encyclopediaStore({
+      listApplicable: () => Promise.resolve([flitter()]),
+    });
+    const pack = await buildSeedPack(context);
+    const references = pack.sections.find((section) => section.name === PLAYER_REFERENCES);
+
+    expect(JSON.stringify(references?.value)).toContain(RESONANT_POLLEN);
+    expect(pack.encyclopediaToc).toStrictEqual([]);
+    expect(pack.seedReferences).toEqual([{ slug: `encyclopedia:${FLITTER_SLUG}` }]);
   });
 
   it('leaves roster entries out of the index unless the turn touches them', async () => {
@@ -272,7 +315,7 @@ describe('prose agent tools', () => {
     const tools = createProseAgentTools({ context: agentContext(), session: freshSession() });
     const raw = await runTool(tools.open, { slug: `encyclopedia:${FLITTER_SLUG}` });
 
-    expect(raw).toContain('resonant pollen');
+    expect(raw).toContain(RESONANT_POLLEN);
     expect(raw).toContain(`encyclopedia:${FLITTER_SLUG}`);
     expect(raw).not.toContain(flitter().id);
     expect(raw).not.toContain('source:');
@@ -423,11 +466,6 @@ const briefInput = (): Record<string, unknown> => ({
     { emergentTags: ['tithe'], slug: `atlas:${KORVATH_SLUG}`, usage: 'central' },
     { emergentTags: [], slug: 'atlas:never-served-slug', usage: 'mentioned' },
   ],
-  scene: {
-    changed: 'nothing yet',
-    endsWhen: 'the tithe is settled or refused',
-    stakes: 'the tithe',
-  },
 });
 
 type Verdict = { gaps: string[]; status: 'sufficient' | 'continue' };

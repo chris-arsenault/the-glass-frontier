@@ -966,7 +966,7 @@ Location: `apps/client/src/stores/chronicleStore.ts` (900 lines)
 **Concerns:**
 1. **God Store Anti-Pattern:**
    - 900 lines in a single store
-   - Manages: characters, chronicles, messages, inventory, beats, location
+   - Manages: characters, chronicles, messages, inventory, narrative threads, location
    - Should be split into domain stores
 
 2. **No state persistence:**

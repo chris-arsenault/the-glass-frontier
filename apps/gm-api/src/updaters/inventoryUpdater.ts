@@ -29,7 +29,9 @@ function applyOperation(inventory: Inventory, operation: InventoryDeltaOp): Inve
     ? {
       ...entry,
       description: operation.description,
-      effect: operation.effect ?? entry.effect,
+      effect: operation.effect === undefined
+        ? entry.effect
+        : normalizeEffect(operation.effect),
       quantity: operation.quantity,
     }
     : entry);
@@ -39,31 +41,75 @@ function resolveOperation(
   operation: InventoryDeltaOp,
   exists: boolean
 ): InventoryDeltaOp['op'] | 'skip' {
-  if (!exists && operation.op === 'update') {
-    log('warn', `Trying to update non-existent item ${operation.name}, adding instead.`);
-    return 'add';
+  if (operation.op === 'add') {
+    return resolveAdd(operation, exists);
   }
-  if (!exists && operation.op === 'remove') {
-    log('warn', `Trying to remove non-existent item ${operation.name}, doing nothing.`);
+  if (operation.op === 'update') {
+    return resolveUpdate(operation, exists);
+  }
+  return resolveRemove(operation, exists);
+}
+
+const resolveAdd = (
+  operation: InventoryDeltaOp,
+  exists: boolean
+): InventoryDeltaOp['op'] | 'skip' => {
+  if (operation.quantity === 0) {
+    log('warn', `Trying to add zero ${operation.name}, doing nothing.`);
     return 'skip';
   }
-  if (exists && operation.op === 'add') {
+  if (exists) {
     log('warn', `Trying to add existent item ${operation.name}, updating instead.`);
     return 'update';
   }
-  return operation.op;
-}
+  return 'add';
+};
+
+const resolveUpdate = (
+  operation: InventoryDeltaOp,
+  exists: boolean
+): InventoryDeltaOp['op'] | 'skip' => {
+  if (!exists) {
+    log('warn', `Trying to update non-existent item ${operation.name}, doing nothing.`);
+    return 'skip';
+  }
+  if (operation.quantity === 0) {
+    return 'remove';
+  }
+  return 'update';
+};
+
+const resolveRemove = (
+  operation: InventoryDeltaOp,
+  exists: boolean
+): InventoryDeltaOp['op'] | 'skip' => {
+  if (!exists) {
+    log('warn', `Trying to remove non-existent item ${operation.name}, doing nothing.`);
+    return 'skip';
+  }
+  return 'remove';
+};
 
 function createInventoryEntry(operation: InventoryDeltaOp): InventoryEntry {
   return {
     description: operation.description,
-    effect: operation.effect ?? undefined,
+    effect: normalizeEffect(operation.effect),
     id: toSnakeCase(operation.name),
     kind: operation.kind,
     name: operation.name,
     quantity: operation.quantity,
   };
 }
+
+const normalizeEffect = (effect: string | null | undefined): string | undefined => {
+  if (effect === null || effect === undefined) {
+    return undefined;
+  }
+  const normalized = effect.trim();
+  return /^(?:null|none)$/iu.test(normalized) || normalized.length === 0
+    ? undefined
+    : normalized;
+};
 
 function itemIndex(inventory: Inventory, item: InventoryDeltaOp): number {
   const id = toSnakeCase(item.name);

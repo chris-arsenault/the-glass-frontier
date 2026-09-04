@@ -16,17 +16,15 @@ import {
 import { log } from '@glass-frontier/utils';
 import type { ChronicleSnapshot, WorldSchemaStore } from '@glass-frontier/worldstate';
 
-import type { CanonDrop, RosterEntry, SanitizedNewEntity, SceneSummary } from './canonHelpers';
+import type { CanonDrop, RosterEntry, SanitizedNewEntity } from './canonHelpers';
 import {
   CanonExtractionSchema,
   CanonResolutionSchema,
   buildRoster,
-  collectScenes,
   derivedProminence,
   isEligibleForLore,
   newEntityCap,
   sanitizeExtraction,
-  sceneSubjectNames,
 } from './canonHelpers';
 import type { DeriveTarget, ProposalPlan, Resolution } from './canonProposalBuilder';
 import {
@@ -57,25 +55,25 @@ const vocabularyPayload = (): LLMRequest['input'][number] =>
     })),
   });
 
-const beatsPayload = (chronicle: ChronicleSnapshot['chronicle']): LLMRequest['input'][number] =>
+const threadsPayload = (chronicle: ChronicleSnapshot['chronicle']): LLMRequest['input'][number] =>
   developerMessage({
-    beats: chronicle.beats.map((beat) => ({
-      description: beat.description,
-      id: beat.id,
-      status: beat.status,
-      supersededBy: beat.supersededBy ?? null,
-      title: beat.title,
-    })),
+    playerThreads: chronicle.threads
+      .filter((thread) => thread.perspective === 'player')
+      .map((thread) => ({
+        focused: chronicle.focusedThreadId === thread.id,
+        goal: thread.goal,
+        position: thread.position,
+        title: thread.title,
+      })),
   });
 
 const rosterPayload = (
-  roster: RosterEntry[],
-  sceneSubjects: ReadonlySet<string>
+  roster: RosterEntry[]
 ): LLMRequest['input'][number] =>
   developerMessage({
     knownEntities: roster.map((entry) => ({
       centralTurns: entry.centralCount,
-      eligibleForLore: isEligibleForLore(entry, sceneSubjects),
+      eligibleForLore: isEligibleForLore(entry),
       gmReferences: entry.gmReferenceCount,
       kind: entry.kind,
       mentionedTurns: entry.mentionedCount,
@@ -115,7 +113,6 @@ const logCanonDiagnostics = (input: {
   kept: { candidates: SanitizedNewEntity[]; knownLore: unknown[]; relationships: number };
   plan: ProposalPlan;
   resolutions: Map<string, Resolution>;
-  scenes: SceneSummary[];
 }): void => {
   const resolutionSummary = input.kept.candidates.map((candidate) => {
     const resolution = input.resolutions.get(candidate.name.toLowerCase());
@@ -134,9 +131,6 @@ const logCanonDiagnostics = (input: {
     proposedNewEntities: input.extraction.newEntities.length,
     proposedRelationships: input.plan.proposedRelationshipCount,
     resolutions: resolutionSummary.join('; '),
-    scenes: input.scenes
-      .map((scene) => `${scene.type}:${scene.subject}:${scene.outcome}`)
-      .join('; '),
   });
 };
 
@@ -224,18 +218,16 @@ class CanonPipeline {
       return;
     }
     const roster = buildRoster(snapshot.turns);
-    const scenes = collectScenes(snapshot.turns, chronicle.activeScene);
     const runtime = new PromptTemplateRuntime({
       manager: this.#templateManager,
       playerId: chronicle.playerId,
     });
-    const extraction = await this.#extract({ player, roster, runtime, scenes, snapshot });
+    const extraction = await this.#extract({ player, roster, runtime, snapshot });
     const cap = newEntityCap(snapshot.turns.length);
     const { candidates, drops, knownLore } = sanitizeExtraction(
       extraction,
       roster,
-      cap,
-      sceneSubjectNames(scenes)
+      cap
     );
     const resolutions = await this.#resolve(candidates, runtime, snapshot, player);
     const plan = buildProposalPlan({
@@ -253,7 +245,6 @@ class CanonPipeline {
       kept: { candidates, knownLore, relationships: plan.relationships.length },
       plan,
       resolutions,
-      scenes,
     });
     appendPlayEntityTargets(plan, await this.#loadTouchedPlayEntities(plan));
     await this.#applyDerivedFields(plan.targets, runtime, snapshot, player);
@@ -284,10 +275,9 @@ class CanonPipeline {
     player: LLMPlayer;
     roster: RosterEntry[];
     runtime: PromptTemplateRuntime;
-    scenes: SceneSummary[];
     snapshot: ChronicleSnapshot;
   }): Promise<ReturnType<typeof CanonExtractionSchema.parse>> {
-    const { player, roster, runtime, scenes, snapshot } = input;
+    const { player, roster, runtime, snapshot } = input;
     const chronicle = snapshot.chronicle;
     const [instructions, model] = await Promise.all([
       runtime.render('canon-extractor', {}),
@@ -297,9 +287,8 @@ class CanonPipeline {
       {
         input: [
           vocabularyPayload(),
-          rosterPayload(roster, sceneSubjectNames(scenes)),
-          developerMessage({ scenes }),
-          beatsPayload(chronicle),
+          rosterPayload(roster),
+          threadsPayload(chronicle),
           developerMessage({ transcript: buildTurnArtifacts(snapshot.turns).transcript }),
           userMessage(
             `Archive the chronicle '${chronicle.title}' now, proposing at most ${newEntityCap(snapshot.turns.length)} new entities.`

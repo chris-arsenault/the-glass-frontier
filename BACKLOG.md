@@ -5,27 +5,8 @@ when they ship or when we decide against them.
 
 ## GM behavior
 
-**Let the player disengage.** From turn 0 of Shadowed Cargo the player steered
-away from the broker and toward the cargo, and every turn pulled them back into
-the fight. Some resistance is the point; a real GM reads the room and moves on.
-Now that `lastProgressTurn` only advances on genuine beat progress, the distance
-between it and the current turn measures how long the story has been away from
-its goal — that number is the signal to build on. Related: the confrontation had
-no exit because nothing in the pipeline ever decides a scene has run long enough.
-
-**Persistent GM scene plan.** A durable plan the turn judge maintains and the
-player never sees, extending the scene ledger: where the scene is heading, what
-would end it, what is being held back. Designed after the current prompt round
-is judged.
-
 **Writer word floors are too low.** Raise once, deliberately, after the input
 work lands — not as a reaction to one short turn.
-
-**Scene ledger hygiene.** `sceneLedger.ts:33` concatenates `interactions` with
-no dedup, and A Beautiful Thing Bought as Ringglass recorded "Hundson sets up a
-resonant screen around the crate" twice from one event — the judge restated a
-prior turn's line and nothing caught it. The same ledger lists the player
-character in `present`, which is the roster of who acts when the player pauses.
 
 ## Retrieval
 
@@ -44,12 +25,10 @@ written down — "Globbin", "globitz" — leaves `entity_references` empty, so t
 name exists only in that turn's prose and is gone by the next. The evaluator now
 at least notices (it asked whether Globbin had any canon basis), but nothing
 persists a coinage. Agreed shape, never built: a `coinedNames` list on chronicle
-state alongside `fronts`, written by the entity-reference resolver when a
+state alongside narrative threads, written by the entity-reference resolver when a
 definite referent matches no candidate, surfaced as one seed-pack block.
 Promotion of a coinage to real canon at chronicle closure is a separate
-question. Supersedes the older "entity aliases" framing, which tried to hang the
-alias off scene-ledger `present` entries and stalled on where the alias points
-when the figure was never minted.
+question.
 
 **Skills the sheet cannot serve.** Zale's three skills forced Bow hunting for a
 stun piston and Manipulate others for a smoke-bomb escape, at rudimentary

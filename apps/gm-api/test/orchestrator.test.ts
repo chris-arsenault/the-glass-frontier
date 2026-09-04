@@ -22,11 +22,7 @@ describe('GmGraphOrchestrator', () => {
     const detector = node('detector', (current) => ({
       playerIntent: {
         ...current.playerIntent!,
-        beatDirective: {
-          kind: 'existing',
-          summary: 'Advances the relay heist.',
-          targetBeatId: 'beat-1',
-        },
+        thread: { action: 'focus', title: 'Relay heist' },
       },
     }));
     const planner = node('planner', () => ({
@@ -34,7 +30,7 @@ describe('GmGraphOrchestrator', () => {
     }));
     const closer = node('closer', () => ({
       gmSummary: 'Vex opens the relay core.',
-      shouldCloseChronicle: true,
+      worldContent: 'The factor seals the inner relay.',
     }));
     const focus = node('focus', (current) => ({
       chronicleState: {
@@ -53,11 +49,10 @@ describe('GmGraphOrchestrator', () => {
       context
     );
 
-    expect(result.playerIntent?.beatDirective.kind).toBe('existing');
-    expect(result.playerIntent?.beatDirective.targetBeatId).toBe('beat-1');
+    expect(result.playerIntent?.thread).toEqual({ action: 'focus', title: 'Relay heist' });
     expect(result.skillCheckPlan?.skill).toBe('Salvage');
     expect(result.gmSummary).toBe('Vex opens the relay core.');
-    expect(result.shouldCloseChronicle).toBe(true);
+    expect(result.worldContent).toBe('The factor seals the inner relay.');
     expect(result.chronicleState.chronicle.entityFocus).toEqual({
       entityScores: { 'entity-1': 1 },
       tagScores: {},

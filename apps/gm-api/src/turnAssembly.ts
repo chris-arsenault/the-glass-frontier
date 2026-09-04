@@ -1,7 +1,6 @@
 import type { TranscriptEntry, Turn } from '@glass-frontier/dto';
 import { randomUUID } from 'node:crypto';
 
-import { buildSceneContext } from './scenes/sceneLifecycle';
 import type { GraphContext } from './types';
 
 export const buildSystemErrorEntry = (message: string): TranscriptEntry => ({
@@ -35,7 +34,7 @@ export const ensureFailureNotice = (
 
 type NarrativeFields = Pick<
   Turn,
-  'beatTracker' | 'gmResponse' | 'gmSummary' | 'inventoryDelta' | 'locationDelta'
+  'gmResponse' | 'gmSummary' | 'inventoryDelta' | 'locationDelta'
 >;
 
 /**
@@ -46,33 +45,17 @@ type NarrativeFields = Pick<
 export const narrativeFields = (graphResult: GraphContext, failure: boolean): NarrativeFields =>
   failure
     ? {
-      beatTracker: undefined,
       gmResponse: undefined,
       gmSummary: undefined,
       inventoryDelta: undefined,
       locationDelta: undefined,
     }
     : {
-      beatTracker: graphResult.beatTracker,
       gmResponse: graphResult.gmResponse,
       gmSummary: graphResult.gmSummary,
       inventoryDelta: graphResult.inventoryDelta,
       locationDelta: graphResult.locationDelta,
     };
-
-const governingSceneContext = (
-  graphResult: GraphContext,
-  failure: boolean
-): ReturnType<typeof buildSceneContext> => {
-  const scene = failure
-    ? graphResult.chronicleState.chronicle.activeScene
-    : graphResult.effectiveScene;
-  return buildSceneContext(
-    scene,
-    failure ? 'continue' : graphResult.sceneOutcome,
-    failure ? null : graphResult.sceneOutcomeReason
-  );
-};
 
 export const buildTurn = (input: {
   chronicleId: string;
@@ -100,12 +83,10 @@ export const buildTurn = (input: {
     proseCostUsd: failure ? undefined : input.graphResult.proseCostUsd,
     referenceMentions: input.graphResult.referenceMentions,
     referenceUsage: input.graphResult.referenceUsage,
-    sceneContext: governingSceneContext(input.graphResult, failure),
     skillCheckPlan: input.graphResult.skillCheckPlan,
     skillCheckResult: input.graphResult.skillCheckResult,
     systemMessage: input.systemMessage,
     turnSequence: input.turnSequence,
     worldContent: input.graphResult.worldContent,
-    worldFronts: input.graphResult.worldFronts,
   };
 };

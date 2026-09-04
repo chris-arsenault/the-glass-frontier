@@ -10,7 +10,6 @@ export const PromptTemplateIds = [
   'agent-reflection-weaver',
   'agent-wrap-resolver',
   'wrap-resolver',
-  'beat-reconciler',
   'canon-extractor',
   'canon-resolver',
   'check-planner',
@@ -23,6 +22,8 @@ export const PromptTemplateIds = [
   'inquiry-describer',
   'intent-classifier',
   'inventory-delta',
+  'local-continuity',
+  'location-delta',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
@@ -31,7 +32,7 @@ export const PromptTemplateIds = [
   'scene-dialog',
   'scene-hunt',
   'scene-search',
-  'turn-judge',
+  'thread-position',
 ] as const;
 
 export type PromptTemplateId = (typeof PromptTemplateIds)[number];
@@ -101,13 +102,6 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'agent-wrap-resolver',
     label: 'Agent Wrap Resolver',
     officialObjectKey: 'official/agent-wrap-resolver.hbs',
-    supportsVariants: true,
-  },
-  'beat-reconciler': {
-    description: 'Gives every still-open beat a final disposition when a chronicle closes.',
-    id: 'beat-reconciler',
-    label: 'Beat Reconciler',
-    officialObjectKey: 'official/beat-reconciler.hbs',
     supportsVariants: true,
   },
   'canon-extractor': {
@@ -194,6 +188,20 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/inventory-delta.hbs',
     supportsVariants: true,
   },
+  'local-continuity': {
+    description: 'Updates a short prose note about the immediate local situation.',
+    id: 'local-continuity',
+    label: 'Local Continuity',
+    officialObjectKey: 'official/local-continuity.hbs',
+    supportsVariants: true,
+  },
+  'location-delta': {
+    description: 'Records a location change only when completed narration establishes arrival.',
+    id: 'location-delta',
+    label: 'Location Delta',
+    officialObjectKey: 'official/location-delta.hbs',
+    supportsVariants: true,
+  },
   'planning-narrator': {
     description: 'Summarizes transitional planning/prep scenes with light deltas.',
     id: 'planning-narrator',
@@ -250,11 +258,11 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     officialObjectKey: 'official/scene-search.hbs',
     supportsVariants: true,
   },
-  'turn-judge': {
-    description: 'Judges the narrated turn in one pass: summary, close decision, scene outcome, beats, ledger, and location.',
-    id: 'turn-judge',
-    label: 'Turn Judge',
-    officialObjectKey: 'official/turn-judge.hbs',
+  'thread-position': {
+    description: 'Summarizes the player\'s new position toward the focused long-horizon goal.',
+    id: 'thread-position',
+    label: 'Thread Position',
+    officialObjectKey: 'official/thread-position.hbs',
     supportsVariants: true,
   },
   'wrap-resolver': {

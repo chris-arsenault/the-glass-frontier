@@ -39,7 +39,6 @@ export const EMPTY_BRIEF: TurnBrief = {
   location: UNESTABLISHED,
   present: UNESTABLISHED,
   references: [],
-  scene: { changed: UNESTABLISHED, endsWhen: UNESTABLISHED, stakes: UNESTABLISHED },
 };
 
 /**

@@ -90,7 +90,6 @@ const BASE_CHARACTER: Character = {
 const BASE_CHRONICLE: Chronicle = {
   activeScene: null,
   anchorEntityId: GLASS_WARDENS_ID,
-  beats: [],
   characterId: PLAYWRIGHT_CHARACTER_ID,
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {
@@ -99,19 +98,20 @@ const BASE_CHRONICLE: Chronicle = {
     sceneId: null,
     updatedAtTurn: 0,
   },
-  fronts: [],
+  focusedThreadId: null,
   id: PLAYWRIGHT_CHRONICLE_ID,
   locationId: LOCATION_ROOT_ID,
   locationName: 'Luminous Quay',
+  localContinuity: null,
   openingText: 'You stand beneath the signal gantries of Luminous Quay as the next alarm begins.',
   openingReferenceSlugs: [],
   playerId: PLAYWRIGHT_PLAYER_ID,
-  sceneLedger: null,
   status: 'open',
   summaries: [],
   title: 'Playwright Chronicle',
   toneChips: [],
   toneNotes: '',
+  threads: [],
 };
 
 const LOCATION_ROOT: Omit<HardState, 'createdAt' | 'updatedAt' | 'links'> = {

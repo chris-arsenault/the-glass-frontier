@@ -24,11 +24,16 @@ homeland and allegiance are Atlas entities. Open the relevant records when who
 they are matters to this turn.
 PLAYER-MESSAGE and INTENT — what the player is attempting. Spend your calls on
 what the attempt involves.
+PLAYER-REFERENCES — full Atlas or Encyclopedia records the player attached to
+this move. They are already open; consider them first and do not spend a call
+opening them again. Unattached mentions in this section are handles only.
 LOCATION — where it happens. Open it.
-SCENE, LEDGER, RECENT-EVENTS — what is already established.
-FRONTS — what the world is doing independently of the player.
+SCENE, THREADS, LOCAL-CONTINUITY, and RECENT-EVENTS — what is already established
+and what long-horizon player goal the GM should keep moving toward.
 WORLD-INDEX — Atlas and Encyclopedia records already in play or common here.
-Most of the world is not listed here; search reaches the rest.
+These are index cards, not opened evidence. Open a relevant record before
+using its contents. Most of the world is not listed here; search reaches the
+rest.
 GAPS — when present, what the evaluator found missing. Each gap names a fact;
 you decide which tools will find it.
 RETRIEVED — when present, what you already gathered. Look for new material
@@ -47,13 +52,14 @@ live in this chronicle's own past turns. The same search covers all three
 sources. Copy a result's qualified slug directly into open.`;
 
 export const EVALUATOR_INSTRUCTIONS = `Your job is to decide whether enough has been researched to
-write this turn's brief. Base the decision only on RETRIEVED, which lists
-every search that was run and what each one returned.
+write this turn's brief. Base the decision on PLAYER-REFERENCES and RETRIEVED.
+PLAYER-REFERENCES contains full records deliberately attached by the player;
+RETRIEVED lists every search and open call and what each one returned.
 
 Call the retrieval_verdict tool. The tool call is your entire response. Text
 written outside the call is discarded.
 
-Answer "sufficient" when RETRIEVED contains all three of these:
+Answer "sufficient" when those sources contain all three of these:
 1. What the location is like for someone standing in it.
 2. Who and what is in the scene, and what each of them wants.
 3. What earlier turns established about whatever the player is acting on.
@@ -78,7 +84,7 @@ Write in your own words, in prose paragraphs. When you state something canon
 established, say so. When you are filling a gap canon left open, say that too.
 Keep the two apart so the GM knows which is which.
 
-Write these nine sections. Start each one with its label alone on a line.
+Write these six sections. Start each one with its label alone on a line.
 
 CHARACTER: who this person is and how they behave in this situation. The sheet
 gives you their flaw, instinct, drive, and callings as bare labels — describe
@@ -102,25 +108,19 @@ did not get what they were after, describe what that failure costs them, using
 the places, people, and events in RETRIEVED. If it says they succeeded, or no
 check ran, write "none". Do not write a complication for a successful turn.
 
-SCENE-STAKES: what is at risk right now, in one line.
-
-SCENE-ENDS-WHEN: the condition that would end this scene. Describe the
-condition, not what you expect to happen.
-
-SCENE-CHANGED: what this turn changed about the situation. If nothing changed,
-write that plainly.
-
-REFERENCES: one line for each Atlas or Encyclopedia record that appears in RETRIEVED, written as
-"slug — central" if it drives this turn or "slug — mentioned" otherwise. Copy
-each fully qualified slug exactly as the tools spelled it. Chronicle turn slugs
-do not belong in this section.`;
+REFERENCES: one line for each full Atlas or Encyclopedia record you actually
+used, written as "slug — central" if it drives this turn or "slug — mentioned"
+otherwise. Include only records supplied in PLAYER-REFERENCES and records returned by open
+that you actually used. Search-result cards are candidates, not evidence, and
+do not belong here. Copy each fully qualified slug exactly as supplied.
+Chronicle turn slugs do not belong in this section.`;
 
 export const EXTRACT_INSTRUCTIONS = `You copy a labeled brief into a schema by calling the
 turn_brief_schema tool. The tool call is your entire response; every section
 goes into its arguments. Text written outside the call is discarded.
 
 The brief has sections labeled CHARACTER, LOCATION, PRESENT, HISTORY,
-COMPLICATION, SCENE-STAKES, SCENE-ENDS-WHEN, SCENE-CHANGED, and REFERENCES.
+COMPLICATION, and REFERENCES.
 
 Copy each section's text into the matching field and keep the wording as
 written. You are moving text, not editing or improving it; someone else made

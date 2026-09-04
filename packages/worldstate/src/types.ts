@@ -22,6 +22,7 @@ import type {
   LoreFragment,
   WorldSchema,
   ContextTerm,
+  WorldThreadSeed,
 } from '@glass-frontier/dto';
 
 import type { TurnSearchInput, TurnWindowInput } from './chronicleTurnPersistence';
@@ -104,6 +105,7 @@ export type ChronicleStore = {
     characterId?: string;
     openingText?: string;
     openingReferenceSlugs?: Chronicle['openingReferenceSlugs'];
+    playerGoal?: string | null;
     title?: string;
     status?: Chronicle['status'];
     seedText?: string | null;
@@ -111,6 +113,7 @@ export type ChronicleStore = {
     toneChips?: string[];
     toneNotes?: string;
     entityRoster?: Chronicle['entityRoster'];
+    worldThread?: WorldThreadSeed | null;
   }) => Promise<Chronicle>;
 
   getChronicleState: (chronicleId: string) => Promise<ChronicleSnapshot | null>;
@@ -124,10 +127,6 @@ export type ChronicleStore = {
     chronicleId: string,
     targetEndTurn: number | null
   ) => Promise<Chronicle>;
-  finalizeBeats: (input: {
-    chronicleId: string;
-    dispositions: Array<{ beatId: string; status: 'abandoned' | 'failed' | 'succeeded' }>;
-  }) => Promise<boolean>;
   commitClosureSummary: (input: {
     character?: Character;
     chronicleId: string;

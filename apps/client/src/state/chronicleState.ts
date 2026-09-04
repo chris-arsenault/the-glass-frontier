@@ -3,22 +3,20 @@ import type {
   Character,
   CharacterDraft,
   Chronicle,
-  ChronicleBeat,
   DirectWorldReference,
   Intent,
-  SceneContext,
   SkillCheckPlan,
   SkillCheckResult,
   SkillTier,
   TranscriptEntry,
-  BeatTracker,
   InventoryDelta,
   LlmTrace,
   PlayerFeedbackVisibilityLevel,
   EntityReference,
   EncyclopediaMention,
   EntityRosterEntry,
-  Front,
+  NarrativeThread,
+  WorldThreadSeed,
   ProseAlternate,
 } from '@glass-frontier/dto';
 
@@ -40,7 +38,6 @@ export type ChatMessage = {
 export type TurnView = {
   advancesTimeline: boolean | null;
   attributeKey: Attribute | null;
-  beatTracker: BeatTracker | null;
   canBranch: boolean;
   entityReferences: EntityReference[] | null;
   referenceMentions: EncyclopediaMention[] | null;
@@ -53,7 +50,6 @@ export type TurnView = {
   playerIntent: Intent | null;
   proseAlternates: ProseAlternate[] | null;
   proseCostUsd: number | null;
-  sceneContext: SceneContext | null;
   skillCheckPlan: SkillCheckPlan | null;
   skillCheckResult: SkillCheckResult | null;
   skillKey: string | null;
@@ -62,8 +58,6 @@ export type TurnView = {
   turnSequence: number | null;
   /** What the world was doing this turn, whether or not the narration showed it. */
   worldContent: string | null;
-  /** The world's own agendas as this turn left them. */
-  worldFronts: Front[] | null;
 }
 
 export type SkillProgressBadge =
@@ -102,8 +96,8 @@ export type TurnProgress = {
 };
 
 export type ChronicleState = {
-  beats: ChronicleBeat[];
-  focusedBeatId: string | null;
+  focusedThreadId: string | null;
+  threads: NarrativeThread[];
   chronicleId: string | null;
   chronicleRecord: Chronicle | null;
   playerId: string | null;
@@ -166,6 +160,8 @@ export type ChronicleSeedCreationDetails = {
   locationName: string;
   title?: string | null;
   seedText: string;
+  playerGoal: string;
   toneChips?: string[];
   toneNotes?: string;
+  worldThread: WorldThreadSeed;
 }

@@ -28,20 +28,12 @@ const originEntry = (id: string): EncyclopediaEntry & { id: string } => ({
 });
 
 export const buildIntent = (overrides?: Partial<Intent>): Intent => ({
-  beatDirective: {
-    kind: 'independent',
-    summary: 'No beat directive assigned.',
-    targetBeatId: null,
-  },
   creativeSpark: false,
-  handlerHints: [],
   intentSummary: 'Pry the access panel open.',
   intentType: 'action',
   metadata: { tags: [], timestamp: 0 },
-  routerRationale: 'Concrete verb aimed at the world.',
-  sceneChange: null,
-  sceneRationale: 'Battle considered: one action against no active opposition.',
-  tone: 'tense',
+  scene: { action: 'continue' },
+  thread: { action: 'keep' },
   ...overrides,
 });
 
@@ -78,7 +70,6 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     },
     chronicle: {
       activeScene: null,
-      beats: [],
       entityFocus: { entityScores: {}, tagScores: {} },
       entityRoster: {
         entries: [],
@@ -86,8 +77,10 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
         sceneId: null,
         updatedAtTurn: 0,
       },
-      fronts: [],
+      focusedThreadId: null,
+      localContinuity: null,
       seedText: 'A derelict relay station hums back to life.',
+      threads: [],
       toneChips: [],
       toneNotes: '',
     },
@@ -100,7 +93,9 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     listTurnWindow: () => Promise.resolve([]),
     searchTurns: () => Promise.resolve([]),
   } as unknown as GraphContext['chronicleStore'],
+  effectiveFocusedThreadId: null,
   effectiveScene: null,
+  effectiveThreads: [],
   embeddings: {
     embed: () => Promise.resolve([]),
   },
@@ -128,9 +123,8 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     metadata: { tags: [], timestamp: 0 },
     role: 'player',
   },
-  sceneOutcome: 'continue',
-  sceneOutcomeReason: null,
-  shouldCloseChronicle: false,
+  sceneBoundary: false,
+  sceneWillClose: false,
   targetEntityIds: [],
   telemetry,
   templates: {} as GraphContext['templates'],

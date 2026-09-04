@@ -3,19 +3,15 @@ import { z } from 'zod';
 import { LlmTraceSchema } from '../audit/LlmAudit';
 import { InventoryDeltaSchema } from '../Inventory';
 import { EncyclopediaMention, EncyclopediaUsageRecord, WorldReferenceSlug } from '../world/Encyclopedia';
-import { BeatTrackerSchema } from './ChronicleBeat';
 import { EntityReference, EntityRosterEntry, EntityUsageEntry } from './EntityReference';
-import { Front } from './Front';
 import { Intent } from './Intent';
 import { LocationDeltaDecision } from './LocationDelta';
 import { ProseAlternate } from './ProseAgent';
-import { SceneContext } from './Scene';
 import { SkillCheckPlan, SkillCheckResult } from './SkillCheck';
 import { TranscriptEntry } from './TranscriptEntry';
 
 export const TurnSchema = z.object({
   advancesTimeline: z.boolean().optional(),
-  beatTracker: BeatTrackerSchema.optional(),
   /** Whether persistence has the chronicle checkpoint required to branch here. */
   canBranch: z.boolean().optional(),
   chronicleId: z.string().min(1),
@@ -39,7 +35,6 @@ export const TurnSchema = z.object({
   proseCostUsd: z.number().nonnegative().optional(),
   referenceMentions: z.array(EncyclopediaMention).optional(),
   referenceUsage: z.array(EncyclopediaUsageRecord).optional(),
-  sceneContext: SceneContext.nullable().optional(),
   skillCheckPlan: SkillCheckPlan.optional(),
   skillCheckResult: SkillCheckResult.optional(),
   systemMessage: TranscriptEntry.optional(),
@@ -50,7 +45,5 @@ export const TurnSchema = z.object({
    * when it lands on another.
    */
   worldContent: z.string().optional(),
-  /** The state of the world's own agendas as this turn left them. */
-  worldFronts: z.array(Front).optional(),
 });
 export type Turn = z.infer<typeof TurnSchema>;

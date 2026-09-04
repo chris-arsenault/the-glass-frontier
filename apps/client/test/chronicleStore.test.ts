@@ -1,6 +1,6 @@
 import type {
   Chronicle,
-  ChronicleBeat,
+  NarrativeThread,
   TranscriptEntry,
   Turn,
   TurnProgressEvent,
@@ -63,14 +63,12 @@ vi.mock('../src/stores/authStore', () => ({
 
 const CHRONICLE_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const DIALOG_SCENE_ID = 'scene:turn-3';
-const DIALOG_SUBJECT = 'Amaya Venn';
 const GM_RESPONSE_NODE = 'gm-response-node';
 const NETWORK_FAILURE = 'Network unavailable.';
 const PLAYER_ID = 'player-test';
 
 const chronicle: Chronicle = {
   activeScene: null,
-  beats: [],
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {
     entries: [],
@@ -78,27 +76,29 @@ const chronicle: Chronicle = {
     sceneId: null,
     updatedAtTurn: 0,
   },
-  fronts: [],
+  focusedThreadId: null,
   id: CHRONICLE_ID,
+  localContinuity: null,
   locationName: 'Luminous Quay',
   openingReferenceSlugs: [],
   openingText: 'You wait beneath the quay lights.',
   playerId: PLAYER_ID,
-  sceneLedger: null,
   status: 'open',
   summaries: [],
+  threads: [],
   title: 'Store Test Chronicle',
   toneChips: [],
   toneNotes: '',
 };
 
-const beat: ChronicleBeat = {
-  createdAt: 1,
-  description: 'Trace the signal through the eastern vault.',
+const thread: NarrativeThread = {
+  goal: 'Trace the signal through the eastern vault.',
   id: 'shattered_chorus',
-  status: 'in_progress',
+  owner: 'Vex',
+  perspective: 'player',
+  position: 'The signal reaches the eastern vault.',
   title: 'Shattered Chorus',
-  updatedAt: 1,
+  updatedAtTurn: 3,
 };
 
 const entry = (
@@ -114,13 +114,14 @@ const entry = (
 
 type TurnResult = {
   activeScene: Chronicle['activeScene'];
-  beats: ChronicleBeat[];
   character: null;
   chronicleStatus: Chronicle['status'];
   entityFocus: Chronicle['entityFocus'];
   entityRoster: Chronicle['entityRoster'];
+  focusedThreadId: string | null;
   locationName: string;
   turn: Turn;
+  threads: NarrativeThread[];
 };
 
 const turnResult = (
@@ -129,24 +130,23 @@ const turnResult = (
     activeScene?: Chronicle['activeScene'];
     failure?: boolean;
     gmResponse?: TranscriptEntry;
-    sceneContext?: Turn['sceneContext'];
     systemMessage?: TranscriptEntry;
   }
 ): TurnResult => ({
   activeScene: options?.activeScene ?? null,
-  beats: options?.failure ? [] : [beat],
   character: null,
   chronicleStatus: 'open',
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: chronicle.entityRoster,
+  focusedThreadId: options?.failure ? null : thread.id,
   locationName: 'Auric Causeway',
+  threads: options?.failure ? [] : [thread],
   turn: {
     chronicleId: CHRONICLE_ID,
     failure: options?.failure ?? false,
     gmResponse: options?.gmResponse,
     id: 'turn-3',
     playerMessage,
-    sceneContext: options?.sceneContext,
     systemMessage: options?.systemMessage,
     turnSequence: 3,
   },
@@ -241,21 +241,12 @@ describe('chronicleStore turn handling', () => {
     resolveTurn(turnResult(posted.content, {
       activeScene: {
         id: DIALOG_SCENE_ID,
-        progress: 0,
-        progressTarget: 4,
-        startedAtTurn: 3,
-        subject: DIALOG_SUBJECT,
-        subjectKind: 'npc',
+        question: 'Will Amaya Venn reveal the route?',
+        threadId: thread.id,
+        turnsRemaining: 3,
         type: 'dialog',
       },
       gmResponse: finalResponse,
-      sceneContext: {
-        outcome: 'continue',
-        sceneId: DIALOG_SCENE_ID,
-        subject: DIALOG_SUBJECT,
-        subjectKind: 'npc',
-        type: 'dialog',
-      },
     }));
     await send;
 
@@ -268,10 +259,10 @@ describe('chronicleStore turn handling', () => {
     expect(committed.messages.every((message) => message.turnKey === 'turn-3')).toBe(true);
     expect(committed.messages.find((message) => message.entry.id === preview.id)?.entry.content)
       .toBe('The signal opens a path east.');
-    expect(committed.beats).toEqual([beat]);
-    expect(committed.chronicleRecord?.activeScene?.subject).toBe(DIALOG_SUBJECT);
+    expect(committed.threads).toEqual([thread]);
+    expect(committed.focusedThreadId).toBe(thread.id);
+    expect(committed.chronicleRecord?.activeScene?.question).toContain('Amaya Venn');
     expect(committed.locationName).toBe('Auric Causeway');
-    expect(committed.turnViews['turn-3']?.sceneContext?.type).toBe('dialog');
   });
 
   it('keeps a committed failed turn and its system message', async () => {

@@ -10,16 +10,15 @@ import {
 
 const PIPELINE_ORDER = [
   'intent-classifier',
-  'scene-subject-resolver',
-  'entity-selector',
   'player-entity-reference-resolver',
   'check-planner',
   'check-runner',
   'gm-response-node (action)',
-  'gm-entity-reference-resolver',
-  'entity-judge',
   'inventory-delta',
-  'turn-judge',
+  'location-delta',
+  'thread-position',
+  'local-continuity',
+  'environment',
 ] as const;
 
 test.describe('Chat system', () => {
@@ -48,7 +47,7 @@ test.describe('Chat system', () => {
     const gmEntry = await sendTurn(
       page,
       chatInput,
-      'Sweep the console banks for hidden sensors. #beat:update #mock:beat:update'
+      'Sweep the console banks for hidden sensors.'
     );
 
     const pipelineLocator = gmEntry.locator('.chat-entry-node-trace');

@@ -663,5 +663,12 @@
     "summary": "The World Guide now carries the ordinary life of the setting",
     "details": "The new Encyclopedia adds creatures, resources, abilities, technologies, roles, cultures, and recurring phenomena beside the Atlas's named people and places. The live Chronicle left rail shows a collapsible Common here field guide for the current location. Click an entry to read it; during play, double-click or right-click any Atlas or Encyclopedia item to attach it to your next move. The GM searches both catalogs and Chronicle history through one reference system, while the Encyclopedia remains suggestive rather than exhaustive — unlisted inventions are still welcome. Species and culture now come from this reusable catalog, and narrated Encyclopedia terms open the same World Guide as Atlas references. Character drafts saved before this update now reset cleanly instead of crashing when their obsolete origin selections are loaded.",
     "type": "feature"
+  },
+  {
+    "id": "2026-09-04-threads-and-scenes",
+    "releasedAt": "2026-09-04",
+    "summary": "Chronicles now carry goals forward with threads and bounded scenes",
+    "details": "The GM now keeps one focused player thread — the goal you are working toward and your current position — plus independent world threads that advance in plain prose. Sustained battles, dialogs, hunts, chases, and searches open around one concrete question and close after four consequential turns or when you leave, so a situation cannot hold the story indefinitely. The Chronicle panel shows the focused goal, its progress, the active question, and immediate local continuity without exposing backstage clocks or world plans. The old beat, front, scene-notebook, and judge systems have been removed. Location, inventory, continuity, and thread notes remain advisory: malformed bookkeeping cannot discard completed narration. Attached Atlas and Encyclopedia references reach the GM as full records, while only references named in the final narration are recorded as used.",
+    "type": "feature"
   }
 ]

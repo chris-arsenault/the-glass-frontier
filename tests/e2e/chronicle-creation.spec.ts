@@ -123,9 +123,7 @@ test.describe('Chronicle creation', () => {
     await expect(page.locator('.chat-entry-gm').filter({ hasText: seedText })).toHaveCount(0);
 
     const chatInput = page.getByTestId('chat-input');
-    await chatInput.fill(
-      '#beat:new #mock:beat:new Follow the fractured beacon into the eastern vault.'
-    );
+    await chatInput.fill('Follow the fractured beacon into the eastern vault.');
     await page.getByTestId('chat-submit').click();
 
     await expect(page.locator('.chat-loading-text')).toHaveText(/^GM is (?:composing|working)/u, {
@@ -133,8 +131,6 @@ test.describe('Chronicle creation', () => {
     });
     await expect(page.getByText(GM_RESPONSE_TEXT)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('chat-submit')).toBeEnabled({ timeout: 15_000 });
-    await expect(
-      page.locator('.chronicle-beat').filter({ hasText: 'Shattered Chorus' })
-    ).toBeVisible();
+    await expect(page.locator('.chronicle-thread').filter({ hasText: seedText })).toBeVisible();
   });
 });

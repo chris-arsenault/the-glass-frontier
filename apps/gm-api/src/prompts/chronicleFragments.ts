@@ -9,16 +9,13 @@ import {
 import type { GmNote, PromptTemplateId } from '@glass-frontier/dto';
 import { isNonEmptyString } from '@glass-frontier/utils';
 
-import { advanceSceneClock, isSceneClockFull } from '../scenes/sceneLifecycle';
 import type { GraphContext } from '../types';
-import { visibleFronts } from '../world/fronts';
 import {
   formatIntent,
   formatInventoryItem,
   formatInventoryItemDetail,
   formatSkillCheck,
   recordedPlayerMessage,
-  trimBeatsList,
 } from './contextFormaters';
 import { encyclopediaFragment, entityReferencesFragment } from './referenceFragments';
 
@@ -30,20 +27,17 @@ export type ChronicleFragmentTypes =
   | 'encyclopedia'
   | 'relationships'
   | 'entity-references'
-  | 'beats'
+  | 'threads'
   | 'intent'
   | 'skill-check'
-  | 'skill-check-record'
   | 'user-message'
   | 'recent-events'
   | 'last-reply'
-  | 'tone'
   | 'chronicle-tone'
   | 'wrap'
   | 'inventory'
   | 'inventory-detail'
-  | 'fronts'
-  | 'ledger'
+  | 'local-continuity'
   | 'scene'
   | 'seed';
 
@@ -60,19 +54,18 @@ const MAX_ANCHOR_LORE = 3;
 const MAX_ENTITY_GM_NOTES = 4;
 const MAX_ENTITY_LORE = 4;
 
-const LEDGER_FRAGMENT: ChronicleFragmentTypes = 'ledger';
-
 const CHRONICLE_TONE_FRAGMENT: ChronicleFragmentTypes = 'chronicle-tone';
 const ENTITY_REFERENCES_FRAGMENT: ChronicleFragmentTypes = 'entity-references';
 const INVENTORY_DETAIL_FRAGMENT: ChronicleFragmentTypes = 'inventory-detail';
 const LAST_REPLY_FRAGMENT: ChronicleFragmentTypes = 'last-reply';
+const LOCAL_CONTINUITY_FRAGMENT: ChronicleFragmentTypes = 'local-continuity';
 const RECENT_EVENTS_FRAGMENT: ChronicleFragmentTypes = 'recent-events';
 const SKILL_CHECK_FRAGMENT: ChronicleFragmentTypes = 'skill-check';
 const USER_MESSAGE_FRAGMENT: ChronicleFragmentTypes = 'user-message';
 
 /**
  * What the writer holds in the original, because passing it through the scout
- * would lose or corrupt it: the scene clock is a number, the item list is a
+ * would lose or corrupt it: the scene bound is a number, the item list is a
  * manifest, last turn's narration is the voice this turn must not contradict,
  * the seed is the premise, and tone is an instruction rather than information.
  * Everything the writer needs judgement about — who this person is, where they
@@ -84,7 +77,7 @@ const USER_MESSAGE_FRAGMENT: ChronicleFragmentTypes = 'user-message';
  */
 // prettier-ignore
 const WRITER_FRAGMENTS: ChronicleFragmentTypes[] = [
-  'tone', CHRONICLE_TONE_FRAGMENT, 'scene', LAST_REPLY_FRAGMENT,
+  CHRONICLE_TONE_FRAGMENT, 'threads', 'scene', LOCAL_CONTINUITY_FRAGMENT, LAST_REPLY_FRAGMENT,
   INVENTORY_DETAIL_FRAGMENT, 'seed',
 ];
 
@@ -92,10 +85,10 @@ export const templateFragmentMapping = new Map<
 PromptTemplateId,
 ChronicleFragmentTypes[]
 >([
-  ['action-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['action-resolver', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
   // The writer templates carry no world dump and no raw chronicle context the
   // scout has already read for them: BRIEF replaces ANCHOR, ENTITIES, CHARACTER,
-  // LOCATION, LEDGER, RECENT-EVENTS, and INTENT, which is the point of
+  // LOCATION, LOCAL-CONTINUITY, RECENT-EVENTS, and INTENT, which is the point of
   // retrieving at all.
   ['agent-action-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT]],
   ['agent-clarification-responder', WRITER_FRAGMENTS],
@@ -104,23 +97,24 @@ ChronicleFragmentTypes[]
   ['agent-possibility-advisor', WRITER_FRAGMENTS],
   ['agent-reflection-weaver', WRITER_FRAGMENTS],
   ['agent-wrap-resolver', [...WRITER_FRAGMENTS, SKILL_CHECK_FRAGMENT, 'wrap']],
-  ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
-  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'character', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'character', 'beats', 'wrap']],
+  ['check-planner', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, ENTITY_REFERENCES_FRAGMENT, 'character', 'location']],
+  ['clarification-responder', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['inquiry-describer', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'character', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['intent-classifier', [RECENT_EVENTS_FRAGMENT, 'scene', 'threads', 'wrap']],
   ['inventory-delta', ['intent', USER_MESSAGE_FRAGMENT, 'inventory']],
-  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
-  ['turn-judge', [RECENT_EVENTS_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'beats', 'character', 'skill-check-record', 'location', ENTITY_REFERENCES_FRAGMENT, 'wrap']],
-  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, 'tone', CHRONICLE_TONE_FRAGMENT, 'intent', 'scene', LEDGER_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
+  [LOCAL_CONTINUITY_FRAGMENT, ['scene', LOCAL_CONTINUITY_FRAGMENT, 'location']],
+  ['location-delta', ['location', LOCAL_CONTINUITY_FRAGMENT]],
+  ['planning-narrator', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['possibility-advisor', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['reflection-weaver', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', 'location', INVENTORY_DETAIL_FRAGMENT, 'seed']],
+  ['thread-position', ['threads', 'scene']],
+  ['wrap-resolver', [RECENT_EVENTS_FRAGMENT, CHRONICLE_TONE_FRAGMENT, 'threads', 'intent', 'scene', LOCAL_CONTINUITY_FRAGMENT, 'anchor', 'entities', 'encyclopedia', 'relationships', ENTITY_REFERENCES_FRAGMENT, 'character', SKILL_CHECK_FRAGMENT, 'location', INVENTORY_DETAIL_FRAGMENT, 'wrap', 'seed']],
 ]);
 
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
 
 const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['anchor', anchorFragment],
-  ['beats', beatsFragment],
   ['character', characterFragment],
   [CHRONICLE_TONE_FRAGMENT, chronicleToneFragment],
   ['entities', entitiesFragment],
@@ -130,16 +124,14 @@ const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
   ['intent', intentFragment],
   ['inventory', inventoryFragment],
   [INVENTORY_DETAIL_FRAGMENT, inventoryDetailFragment],
-  ['fronts', frontsFragment],
-  [LEDGER_FRAGMENT, ledgerFragment],
+  [LOCAL_CONTINUITY_FRAGMENT, localContinuityFragment],
   [LAST_REPLY_FRAGMENT, lastReplyFragment],
   ['location', locationFragment],
   [RECENT_EVENTS_FRAGMENT, recentEventsFragment],
   ['scene', sceneFragment],
   ['seed', seedFragment],
   [SKILL_CHECK_FRAGMENT, skillCheckFragment],
-  ['skill-check-record', skillCheckRecordFragment],
-  ['tone', toneFragment],
+  ['threads', threadsFragment],
   [USER_MESSAGE_FRAGMENT, userMessageFragment],
   ['wrap', wrapFragment],
 ]);
@@ -319,68 +311,45 @@ function inventoryDetailFragment(context: GraphContext): Array<Record<string, un
   return context.chronicleState.character.inventory.map(formatInventoryItemDetail);
 }
 
-function beatsFragment(context: GraphContext): unknown {
-  return {
-    currentTurn: context.turnSequence,
-    openBeats: trimBeatsList(context.chronicleState.chronicle.beats),
-  };
-}
-
 function intentFragment(context: GraphContext): Record<string, unknown> {
-  return formatIntent(context.playerIntent, context.chronicleState.chronicle.beats);
+  return formatIntent(context.playerIntent);
 }
 
-/**
- * The active scene as the judges and narrators should see it: subject, where
- * it is set versus where the chronicle is now, and its clock projected through
- * this turn's check, so the completion judgment reads the same number the
- * player does.
- */
 function sceneFragment(context: GraphContext): unknown {
   const scene = context.effectiveScene;
   if (scene === null || scene === undefined) {
     return null;
   }
-  const projected = advanceSceneClock(scene, context.skillCheckResult?.outcomeTier);
   return {
-    changedLastTurn: scene.changed,
-    clockFull: isSceneClockFull(projected),
-    currentLocation: context.chronicleState.locationName,
-    endsWhen: scene.endsWhen,
-    progress: projected.progress,
-    progressTarget: projected.progressTarget,
-    quietTurns: scene.quietTurns,
-    stakes: scene.stakes,
-    startedAtLocation: scene.location ?? null,
-    startedAtTurn: scene.startedAtTurn,
-    subject: scene.subject,
-    subjectKind: scene.subjectKind,
+    mustAnswerThisTurn: context.sceneWillClose,
+    question: scene.question,
+    turnsRemaining: scene.turnsRemaining,
     type: scene.type,
   };
 }
 
-function ledgerFragment(context: GraphContext): unknown {
-  return context.chronicleState.chronicle.sceneLedger;
+function threadsFragment(context: GraphContext): unknown {
+  const playerThreads = context.effectiveThreads.filter(
+    (thread) => thread.perspective === 'player'
+  );
+  const focused = playerThreads.find(
+    (thread) => thread.id === context.effectiveFocusedThreadId
+  );
+  return {
+    focused: focused === undefined
+      ? null
+      : { goal: focused.goal, position: focused.position, title: focused.title },
+    others: playerThreads
+      .filter((thread) => thread.id !== context.effectiveFocusedThreadId)
+      .map(({ goal, position, title }) => ({ goal, position, title })),
+  };
 }
 
-/**
- * What the world is working toward, as retrieval hints — never as a boundary
- * on what may be looked up. Spent and abandoned agendas are left out; a front
- * that has already landed stays visible for the turn it lands on.
- */
-function frontsFragment(context: GraphContext): unknown {
-  return visibleFronts(context.chronicleState.chronicle.fronts).map((front) => ({
-    agent: front.agentSlug,
-    clock: `${front.filled}/${front.size}`,
-    id: front.id,
-    intent: front.intent,
-    nextSign: front.nextSign,
-    ...front.status === 'fired' ? { landing: true } : {},
-  }));
-}
-
-function toneFragment(context: GraphContext): string {
-  return `*IMPORTANT*: ${context.playerIntent?.tone}`;
+function localContinuityFragment(context: GraphContext): string | undefined {
+  const continuity = context.chronicleState.chronicle.localContinuity;
+  return continuity?.locationName === context.chronicleState.locationName
+    ? continuity.note
+    : undefined;
 }
 
 /** The tone the player asked for when the chronicle was created. */
@@ -401,22 +370,6 @@ function skillCheckFragment(context: GraphContext): Record<string, unknown> {
 }
 
 /**
- * The check as a recorder needs it, tier and all.
- *
- * Narrators get the framing sentence and no vocabulary, which is right for
- * prose and wrong for the turn judge: asked to label the outcome in its own
- * words it read a narration that sounded like success and wrote "(it worked)"
- * onto a regress. A log line is not prose, and the tier is the fact it is
- * recording.
- */
-function skillCheckRecordFragment(context: GraphContext): Record<string, unknown> {
-  return {
-    ...formatSkillCheck(context.skillCheckPlan, context.skillCheckResult),
-    tier: context.skillCheckResult?.outcomeTier,
-  };
-}
-
-/**
  * The turn record, most recent last.
  *
  * The player's line is what the player actually typed, always and in full.
@@ -426,7 +379,7 @@ function skillCheckRecordFragment(context: GraphContext): Record<string, unknown
  * the wish to be done with the man vanished from the record entirely.
  *
  * The world's line is what the world was doing that turn, whether or not the
- * narration showed it: a front that stirred quietly on turn three is still
+ * narration showed it: a world thread that stirred quietly on turn three is still
  * here to be found when it lands on turn nine.
  *
  * The recent turns carry the narration itself; older ones fall back to their

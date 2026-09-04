@@ -37,13 +37,13 @@ const VISIBILITY_LEVELS: Array<{
   },
   {
     description:
-      'Reveal tone detections, creative spark markers, and beat tags on player turns in addition to badges.',
+      'Reveal intent classifications and creative spark markers on player turns in addition to badges.',
     label: 'Narrative',
     value: 'narrative',
   },
   {
     description:
-      'Display every internal signal: badges, tone cues, timeline markers, world deltas, and pipeline traces.',
+      'Display every internal signal: badges, timeline markers, world activity, and pipeline traces.',
     label: 'All',
     value: 'all',
   },

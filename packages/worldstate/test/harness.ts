@@ -162,7 +162,6 @@ export const defaultChronicle = (
   overrides?: Partial<Chronicle>
 ): Chronicle => ({
   activeScene: null,
-  beats: [],
   entityFocus: { entityScores: {}, tagScores: {} },
   entityRoster: {
     entries: [],
@@ -170,17 +169,18 @@ export const defaultChronicle = (
     sceneId: null,
     updatedAtTurn: 0,
   },
-  fronts: [],
+  focusedThreadId: null,
   id: randomUUID(),
+  localContinuity: null,
   locationName,
   metadata: undefined,
   openingText: '',
   playerId: TEST_PLAYER_ID,
-  sceneLedger: null,
   seedText: undefined,
   status: 'open',
   summaries: [],
   targetEndTurn: null,
+  threads: [],
   title: 'Journey',
   toneChips: [],
   toneNotes: '',
@@ -190,7 +190,6 @@ export const defaultChronicle = (
 
 export const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Turn => ({
   advancesTimeline: false,
-  beatTracker: undefined,
   chronicleId,
   executedNodes: [],
   failure: false,
@@ -206,7 +205,6 @@ export const defaultTurn = (chronicleId: string, overrides?: Partial<Turn>): Tur
     metadata: { tags: [], timestamp: Date.now() },
     role: 'player',
   },
-  sceneContext: undefined,
   skillCheckPlan: undefined,
   skillCheckResult: undefined,
   systemMessage: undefined,

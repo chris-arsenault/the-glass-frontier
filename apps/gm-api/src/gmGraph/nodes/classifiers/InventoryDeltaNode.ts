@@ -16,6 +16,7 @@ class InventoryDeltaNode extends LlmClassifierNode<InventoryDelta> {
   constructor() {
     super({
       applyResult: (context, result) => this.#saveInventoryDelta(context, result),
+      failureMode: 'advisory',
       id: NODE_ID,
       schema: InventoryDeltaSchema,
       schemaName: 'inventory_delta_response',

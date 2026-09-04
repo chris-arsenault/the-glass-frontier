@@ -196,9 +196,6 @@ const provenanceFiltered = (
  * world's move — the world does what it does, the narration shows what the
  * camera catches — so a quiet turn stays quiet and lands later.
  *
- * `brief.scene` is absent here on purpose: it is the scout's proposed scene
- * state, read by `applySceneRead`, while the writer receives the scene's own
- * record with its clock intact.
  */
 const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string => renderBlock({
   character: brief.character,

@@ -15,8 +15,6 @@ import {
 
 let pool: Pool;
 let worldState: WorldState;
-const DIALOG_SCENE_ID = 'scene:turn-0';
-const DIALOG_SUBJECT = 'Amaya Venn';
 const OFFER_ROOT_NAME = 'Offer Root';
 const ASH_SKATER_SLUG = 'encyclopedia:ash-skater';
 const ASH_SKATER_TITLE = 'Ash Skater';
@@ -187,7 +185,6 @@ describe('Chronicle turn history', () => {
     expect(turn.canBranch).toBe(true);
     expect(turn.turnSequence).toBe(0);
     expect(snapshot?.turns).toHaveLength(1);
-    expect(snapshot?.turns[0]?.sceneContext).toBeUndefined();
     expect(snapshot?.character?.id).toBe(character.id);
     expect(snapshot?.locationName).toBe(startingLocation.name);
   });
@@ -204,17 +201,19 @@ describe('Chronicle turn history', () => {
     const firstState = { ...source, locationName: 'First Landing' };
     const secondState = {
       ...firstState,
-      beats: [
+      focusedThreadId: 'reach_second_landing',
+      locationName: 'Second Landing',
+      threads: [
         {
-          createdAt: 1,
-          description: 'Reach the second landing.',
+          goal: 'Reach the second landing.',
           id: 'reach_second_landing',
-          status: 'in_progress' as const,
+          owner: character.name,
+          perspective: 'player' as const,
+          position: 'The character has reached the second landing.',
           title: 'Reach the Second Landing',
-          updatedAt: 1,
+          updatedAtTurn: 1,
         },
       ],
-      locationName: 'Second Landing',
     };
     const thirdState = { ...secondState, locationName: 'Third Landing' };
 
@@ -394,47 +393,6 @@ describe('Chronicle turn history', () => {
     }]);
   });
 
-  it('persists the minimal scene context that governed a turn', async () => {
-    const chronicle = await worldState.chronicles.upsertChronicle(
-      defaultChronicle('Dialog Test', {
-        activeScene: {
-          id: DIALOG_SCENE_ID,
-          progress: 0,
-          progressTarget: 4,
-          startedAtTurn: 0,
-          subject: DIALOG_SUBJECT,
-          subjectKind: 'npc',
-          type: 'dialog',
-        },
-      })
-    );
-    await commitChronicleTurn(
-      worldState,
-      chronicle,
-      defaultTurn(chronicle.id, {
-        sceneContext: {
-          outcome: 'continue',
-          sceneId: DIALOG_SCENE_ID,
-          subject: DIALOG_SUBJECT,
-          subjectKind: 'npc',
-          type: 'dialog',
-        },
-        turnSequence: 0,
-      })
-    );
-
-    const turns = await worldState.chronicles.listChronicleTurns(chronicle.id);
-    const reloaded = await worldState.chronicles.getChronicle(chronicle.id);
-
-    expect(turns[0]?.sceneContext).toEqual({
-      outcome: 'continue',
-      sceneId: DIALOG_SCENE_ID,
-      subject: DIALOG_SUBJECT,
-      subjectKind: 'npc',
-      type: 'dialog',
-    });
-    expect(reloaded?.activeScene?.subject).toBe(DIALOG_SUBJECT);
-  });
 });
 
 describe('Chronicle retrieval', () => {
@@ -550,79 +508,45 @@ describe('Chronicle activity', () => {
   });
 });
 
-describe('Beat finalization', () => {
-  it('applies dispositions to open beats and leaves terminal beats alone', async () => {
-    const chronicle = await worldState.chronicles.upsertChronicle(
-      defaultChronicle('Finalize Reach', {
-        beats: [
-          {
-            createdAt: 1,
-            description: 'An open goal.',
-            id: 'open_goal',
-            status: 'in_progress',
-            title: 'Open Goal',
-            updatedAt: 1,
-          },
-          {
-            createdAt: 1,
-            description: 'Already done.',
-            id: 'done_goal',
-            resolvedAt: 2,
-            status: 'succeeded',
-            title: 'Done Goal',
-            updatedAt: 2,
-          },
-        ],
-      })
-    );
-
-    const changed = await worldState.chronicles.finalizeBeats({
-      chronicleId: chronicle.id,
-      dispositions: [
-        { beatId: 'open_goal', status: 'abandoned' },
-        { beatId: 'done_goal', status: 'failed' },
-      ],
-    });
-    const stored = await worldState.chronicles.getChronicle(chronicle.id);
-
-    expect(changed).toBe(true);
-    expect(stored?.beats.find((beat) => beat.id === 'open_goal')?.status).toBe('abandoned');
-    expect(stored?.beats.find((beat) => beat.id === 'done_goal')?.status).toBe('succeeded');
-
-    const secondPass = await worldState.chronicles.finalizeBeats({
-      chronicleId: chronicle.id,
-      dispositions: [{ beatId: 'open_goal', status: 'failed' }],
-    });
-    expect(secondPass).toBe(false);
-  });
-});
-
-describe('Founding beat', () => {
-  it('creates a chronicle with its seed as the founding beat', async () => {
+describe('Founding threads', () => {
+  it('creates the player and world directions supplied by the seed', async () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
       locationName: 'Seeded Reach',
+      playerGoal: 'Learn why the convoy vanished.',
       playerId: TEST_PLAYER_ID,
       seedText: 'A convoy vanishes between relays; someone must learn why.',
       title: 'The Vanished Convoy',
+      worldThread: {
+        goal: 'Conceal the missing cargo.',
+        owner: 'The relay factor',
+        position: 'The manifests still appear complete.',
+        title: 'Falsified manifests',
+      },
     });
 
-    expect(chronicle.beats).toEqual([
+    expect(chronicle.threads).toEqual([
       expect.objectContaining({
-        description: 'A convoy vanishes between relays; someone must learn why.',
-        id: 'founding_beat',
-        status: 'in_progress',
+        goal: 'Learn why the convoy vanished.',
+        perspective: 'player',
         title: 'The Vanished Convoy',
       }),
+      expect.objectContaining({
+        owner: 'The relay factor',
+        perspective: 'world',
+        title: 'Falsified manifests',
+      }),
     ]);
+    expect(chronicle.focusedThreadId).toBe(chronicle.threads[0]?.id);
   });
 
-  it('creates no founding beat without a seed', async () => {
+  it('creates no thread without seed directions', async () => {
     const chronicle = await worldState.chronicles.ensureChronicle({
       locationName: 'Bare Reach',
       playerId: TEST_PLAYER_ID,
       title: 'Unseeded',
     });
 
-    expect(chronicle.beats).toEqual([]);
+    expect(chronicle.threads).toEqual([]);
+    expect(chronicle.focusedThreadId).toBeNull();
   });
 });

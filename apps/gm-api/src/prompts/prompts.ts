@@ -6,9 +6,8 @@ import { getSceneTypeDefinition } from '../scenes/sceneRegistry';
 import type { GraphContext } from '../types';
 import { extractFragment, templateFragmentMapping } from './chronicleFragments';
 
-type MessageOrder = 'player' | 'gm' | 'both';
+type MessageOrder = 'player' | 'gm';
 const ACTION_RESOLVER: PromptTemplateId = 'action-resolver';
-const BOTH_MESSAGE_ORDER: MessageOrder = 'both';
 const CLARIFICATION_RESPONDER: PromptTemplateId = 'clarification-responder';
 const GM_MESSAGE_ORDER: MessageOrder = 'gm';
 const INQUIRY_DESCRIBER: PromptTemplateId = 'inquiry-describer';
@@ -31,10 +30,12 @@ const messageOrder = new Map<PromptTemplateId, MessageOrder>([
   [INQUIRY_DESCRIBER, PLAYER_MESSAGE_ORDER],
   ['intent-classifier', PLAYER_MESSAGE_ORDER],
   ['inventory-delta', GM_MESSAGE_ORDER],
+  ['local-continuity', GM_MESSAGE_ORDER],
+  ['location-delta', GM_MESSAGE_ORDER],
   [PLANNING_NARRATOR, PLAYER_MESSAGE_ORDER],
   [POSSIBILITY_ADVISOR, PLAYER_MESSAGE_ORDER],
   [REFLECTION_WEAVER, PLAYER_MESSAGE_ORDER],
-  ['turn-judge', BOTH_MESSAGE_ORDER],
+  ['thread-position', GM_MESSAGE_ORDER],
   [WRAP_RESOLVER, PLAYER_MESSAGE_ORDER],
 ]);
 
@@ -47,7 +48,6 @@ const SCENE_AWARE_TEMPLATES = new Set<PromptTemplateId>([
   PLANNING_NARRATOR,
   POSSIBILITY_ADVISOR,
   REFLECTION_WEAVER,
-  'turn-judge',
   WRAP_RESOLVER,
 ]);
 const ENTITY_AWARE_NARRATIVE_TEMPLATES = new Set<PromptTemplateId>([
@@ -80,7 +80,7 @@ class PromptComposer {
     if (order === undefined) {
       throw new Error(`No message order is registered for ${templateId}.`);
     }
-    if (order === PLAYER_MESSAGE_ORDER || order === BOTH_MESSAGE_ORDER) {
+    if (order === PLAYER_MESSAGE_ORDER) {
       input.push({
         content: [{
           text: this.#userMessage(context),
@@ -89,13 +89,13 @@ class PromptComposer {
         role: 'user'
       });
     }
-    if (order === GM_MESSAGE_ORDER || order === BOTH_MESSAGE_ORDER) {
+    if (order === GM_MESSAGE_ORDER) {
       input.push({
         content: [{
           text: this.#gmMessage(context),
           type: 'input_text'
         }],
-        role: order === GM_MESSAGE_ORDER ? 'user' : 'developer'
+        role: 'user'
       });
     }
     input.push({

@@ -1,5 +1,9 @@
 # M2 — Agentic prose subsystem: execution steps
 
+> Historical implementation record. The seed-pack sketch below predates the
+> narrative-thread and bounded-scene contracts; consult the current DTOs and
+> `seedPack.ts` before changing runtime code.
+
 Expansion of M2 from `GM-PROSE-RETRIEVAL-V2-PLAN.md`. The subsystem is self-contained and
 callable (`runProseAgent`), not wired into the live pipeline (that is M3). Settled inputs:
 new `agent-*` template ids; loop bounds 5 steps / 8K retrieved tokens as constants; no test
@@ -29,9 +33,9 @@ type SeedTocEntry = {
 };
 
 type SeedPack = {
-  scene: { locationName: string; activeScene: ChronicleScene | null; ledger: SceneLedger | null };
+  scene: { locationName: string; activeScene: ActiveScene | null; localContinuity: string | null };
   character: Character;          // rendered via the existing character fragment shape
-  intent: Intent;                // summary, tone, handlerHints, creativeSpark
+  intent: Intent;                // intent, scene direction, thread direction, creative spark
   check?: { plan: SkillCheckPlan; result?: SkillCheckResult };
   playerReferences: EntityReference[];
   recentTurns: Array<{ seq: number; player: string; gm?: string; checkTier?: string }>; // last 10

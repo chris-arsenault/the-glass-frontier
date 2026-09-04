@@ -49,7 +49,6 @@ const buildFocusEntities = (
   return [...new Set([
     anchorEntityId,
     locationId,
-    context.effectiveScene?.subjectEntityId,
     ...topEntities(entityFocus, FOCUS_ENTITY_COUNT),
   ].filter((id): id is string => id !== null && id !== undefined))];
 };
@@ -98,7 +97,6 @@ const rosterContext = (
     anchorId: anchorEntityId,
     locationId,
     recentIds: topEntities(entityFocus, FOCUS_ENTITY_COUNT),
-    sceneSubjectId: context.effectiveScene?.subjectEntityId,
   };
 };
 
@@ -139,7 +137,7 @@ export const buildEntityContext = async (context: GraphContext): Promise<EntityC
   }
 
   const slice = await context.worldSchemaStore.getContextSlice({
-    anchorId: context.effectiveScene?.subjectEntityId ?? anchorEntityId,
+    anchorId: anchorEntityId,
     focusIds: focusEntities,
     focusTags,
     limit: CANDIDATE_COUNT,

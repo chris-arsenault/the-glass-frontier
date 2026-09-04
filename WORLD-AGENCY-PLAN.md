@@ -1,5 +1,9 @@
 # World Agency — Implementation Plan
 
+> Superseded on 2026-09-04. This file preserves the failure evidence and the
+> original front/clock proposal; it is not an implementation source. Current
+> world agency advances one narrative world thread as prose at story boundaries.
+
 Give the world a life the player does not cause. Today every event in a chronicle is a
 reaction to a verb the player supplied: across all seven turns of Shadows of the Deep the
 piston jams when she fires it, the vortex opens when she accelerates, the signal appears when

@@ -38,7 +38,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       'Send intents through the composer; the GM responds with narrative turns and skill outcomes.',
       'Toggle wrap-up to signal you want a chronicle to end in roughly three turns.',
-      'Use the beat list to keep track of long-term goals established by the GM.',
+      'Use player threads to see the long-term goal the GM is carrying forward.',
     ],
     summary: 'Real-time storytelling surface where you trade turns with the GM for your character.',
     title: 'Chronicle Chat',
@@ -48,7 +48,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       'Outside a chronicle, use the main rail to select or create characters and start, resume, or delete chronicles.',
       'Inside a chronicle, the main directory is replaced by the chronicle rail.',
-      'The chronicle rail keeps the active character and story details above its beats and nearby entities.',
+      'The chronicle rail keeps the active character and story details above player threads and nearby entities.',
     ],
     summary: 'Route-specific navigation that separates your directories from the story in progress.',
     title: 'Main and Chronicle Rails',

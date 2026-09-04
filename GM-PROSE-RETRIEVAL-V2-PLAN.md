@@ -1,5 +1,10 @@
 # GM Prose Retrieval V2 — Implementation Plan
 
+> Historical implementation record. The prose retrieval design remains in use,
+> but its tracker and pipeline inventory was superseded by narrative threads and
+> bounded scenes on 2026-09-04. Current contracts live in the DTOs and
+> `apps/gm-api/src/gmEngine.ts`.
+
 Replace the pre-selected prose context in `apps/gm-api` with an agentic subsystem: the prose
 model retrieves world canon, relationships, lore, and chronicle history through tools during
 generation, and returns prose plus a structured entity-usage sidecar. Everything that prepares
@@ -25,9 +30,10 @@ client UI redesign beyond progress labels, any second migrations directory.
   revisit first.
 - Replaced at cutover: `entity-selector` as prose-context provider, the one-shot
   `gm-response-node` call, `gm-entity-reference-resolver`, and `entity-judge`.
-- Preserved unchanged: `intent-classifier`, `scene-subject-resolver`, `check-planner`,
-  `check-runner`, `inventory-delta`, `turn-judge`, `WorldUpdater`, closure emission,
-  `commitTurn`, audit/progress plumbing.
+- Preserved at the retrieval cutover: intent classification, check planning and
+  resolution, inventory tracking, closure emission, `commitTurn`, and
+  audit/progress plumbing. The tracker redesign later replaced the old scene
+  resolver and aggregate world updater.
 - `player-entity-reference-resolver` is preserved but re-grounded: it matches the player
   message against the global entity space (existing embedding search) instead of the
   50-candidate slice, and loses its `offered`/roster promotion side effect.

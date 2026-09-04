@@ -11,6 +11,8 @@ type LlmClassifierOptions<TParsed> = {
   schema: ZodType<TParsed> | ((context: GraphContext) => ZodType<TParsed>);
   schemaName: string,
   applyResult: (context: GraphContext, result: TParsed) => GraphNodeDelta;
+  /** Whether a failed projection invalidates the canonical narration. */
+  failureMode?: 'advisory' | 'fatal';
   shouldRun: (context: GraphContext) => boolean;
   telemetryTag?: string;
   maxOutputTokens?: number;
@@ -76,7 +78,10 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
 
       return this.options.applyResult(context, response.data);
     } catch (error) {
-      if (isLlmBudgetExceededError(error)) {
+      if (
+        isLlmBudgetExceededError(error)
+        && this.options.failureMode !== 'advisory'
+      ) {
         throw error;
       }
       context.telemetry.recordToolError({
@@ -85,7 +90,7 @@ export class LlmClassifierNode<TParsed> implements GraphNode {
         message: error instanceof Error ? error.message : 'unknown',
         operation: this.options.telemetryTag ?? this.options.id,
       });
-      return { failure: true };
+      return this.options.failureMode === 'advisory' ? {} : { failure: true };
     }
   }
 }

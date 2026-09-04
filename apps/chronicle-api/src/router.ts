@@ -8,6 +8,7 @@ import {
   BugReportSubmissionSchema,
   BUG_REPORT_STATUSES,
   PlayerPreferencesSchema,
+  WorldThreadSeed,
 } from '@glass-frontier/dto';
 import { toLLMPlayer } from '@glass-frontier/llm-client';
 import { hasAnyGroup } from '@glass-frontier/node-utils';
@@ -54,10 +55,12 @@ const createChronicleInputSchema = z
     chronicleId: z.string().uuid().optional(),
     location: locationDetailsSchema,
     locationId: z.string().uuid(),
+    playerGoal: z.string().trim().min(1).max(240),
     playerId: z.string().min(1),
     seedText: z.string().trim().min(1).max(800),
     status: z.enum(['open', 'closed']).optional(),
     title: z.string().min(1),
+    worldThread: WorldThreadSeed,
   })
   .merge(toneSchema);
 
@@ -334,6 +337,7 @@ export const appRouter = t.router({
 
 });
 
+// eslint-disable-next-line max-lines-per-function
 async function createChronicleHandler(
   ctx: Context,
   input: CreateChronicleInput
@@ -351,11 +355,13 @@ async function createChronicleHandler(
       chronicleId,
       locationId: input.locationId,
       player: toLLMPlayer(ctx.identity),
+      playerGoal: input.playerGoal,
       playerId,
       seedText: input.seedText,
       title: input.title,
       toneChips: input.toneChips,
       toneNotes: input.toneNotes,
+      worldThread: input.worldThread,
     }),
     buildInitialEntityRoster(ctx.worldSchemaStore, {
       anchorId: input.anchorEntityId,
@@ -372,12 +378,14 @@ async function createChronicleHandler(
     locationName: input.location.locale.trim(),
     openingReferenceSlugs: opening.openingReferenceSlugs,
     openingText: opening.text,
+    playerGoal: input.playerGoal,
     playerId,
     seedText: input.seedText,
     status: input.status,
     title: input.title,
     toneChips: input.toneChips,
     toneNotes: input.toneNotes,
+    worldThread: input.worldThread,
   });
 
   log('info', `Chronicle ${chronicle.id} created for player ${chronicle.playerId}`);

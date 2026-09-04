@@ -148,7 +148,7 @@ test.describe('Landing page', () => {
     await expect(page.getByTestId('chat-input')).toBeEnabled();
     await expect(page.getByRole('navigation', { name: 'Chronicle' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Beats' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Player threads' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Nearby entities' })).toBeVisible();
   });
 });

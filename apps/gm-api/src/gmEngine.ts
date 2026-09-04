@@ -13,9 +13,9 @@ import type {
 import { CheckRunnerNode } from '@glass-frontier/gm-api/gmGraph/nodes/CheckRunnerNode';
 import { CheckPlannerNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/CheckPlannerNode';
 import { InventoryDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/InventoryDeltaNode';
-import { TurnJudgeNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/TurnJudgeNode';
+import { LocationDeltaNode } from '@glass-frontier/gm-api/gmGraph/nodes/classifiers/LocationDeltaNode';
 import { GmResponseNode } from '@glass-frontier/gm-api/gmGraph/nodes/IntentHandlerNodes';
-import { WorldUpdater } from '@glass-frontier/gm-api/updaters/WorldUpdater';
+import { ChronicleUpdater } from '@glass-frontier/gm-api/updaters/ChronicleUpdater';
 import type {
   AgentLoopClient,
   LLMPlayer,
@@ -41,7 +41,8 @@ import { createProgressEmitterFromEnv } from './eventEmitters/progressEmitter';
 import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifierNode';
 import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceResolverNode';
 import { EnvironmentNode } from './gmGraph/nodes/EnvironmentNode';
-import { SceneSubjectResolverNode } from './gmGraph/nodes/SceneSubjectResolverNode';
+import { LocalContinuityNode } from './gmGraph/nodes/LocalContinuityNode';
+import { ThreadPositionNode } from './gmGraph/nodes/ThreadPositionNode';
 import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
 import { buildGraphInput } from './graphInput';
 import { runProseAgentPanel } from './proseAgent/panel';
@@ -71,23 +72,22 @@ type HandlePlayerMessageOptions = {
 
 const CLOSURE_SUMMARY_KINDS: ChronicleSummaryKind[] = ['chronicle_story', 'character_bio'];
 /**
- * Nothing selects the GM's world material before the turn. What survives ahead
- * of prose is only what later stages need: what the player named, and what the
- * world decided to do. The environment sits after the check because nothing in
- * the check pipeline reads it — its dice-blindness is an input property (it
- * receives neither the player's move nor the roll), not an ordering one — and
- * this way the writer takes the world's move at its freshest.
+ * Classification projects the scene and focused player thread before prose.
+ * Post-narration nodes record only state the narration actually established;
+ * each is advisory, so tracker failure cannot discard a completed turn.
  */
 const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'intent-classifier', type: 'sequential' },
-  { nodeId: 'scene-subject-resolver', type: 'sequential' },
   { nodeId: 'player-entity-reference-resolver', type: 'sequential' },
   { nodeId: 'check-planner', type: 'sequential' },
   { nodeId: 'check-runner', type: 'sequential' },
-  { nodeId: 'environment', type: 'sequential' },
   { nodeId: 'gm-response-node', type: 'sequential' },
   {
-    nodeIds: ['inventory-delta', 'turn-judge'],
+    nodeIds: ['inventory-delta', 'location-delta'],
+    type: 'parallel',
+  },
+  {
+    nodeIds: ['thread-position', 'local-continuity', 'environment'],
     type: 'parallel',
   },
 ];
@@ -95,7 +95,7 @@ const GM_PIPELINE: PipelineStage[] = [
 const logResolvedTurn = (
   graphResult: GraphContext,
   chronicleId: string,
-  shouldClose: boolean,
+  closesChronicle: boolean,
   turnSequence: number
 ): void => {
   const usageCounts = { central: 0, mentioned: 0, unused: 0 };
@@ -105,13 +105,12 @@ const logResolvedTurn = (
   log('info', 'Narrative engine resolved turn', {
     checkIssued: Boolean(graphResult.skillCheckPlan),
     chronicleId,
+    closesChronicle,
     entitiesCentral: usageCounts.central,
     entitiesMentioned: usageCounts.mentioned,
     entitiesOffered: graphResult.entityContext?.offered.length ?? 0,
     entitiesUnused: usageCounts.unused,
     intentType: graphResult.playerIntent?.intentType ?? 'unknown',
-    sceneOutcome: graphResult.sceneOutcome,
-    shouldCloseChronicle: shouldClose,
     turnSequence,
   });
 };
@@ -156,7 +155,8 @@ class GmEngine {
     updatedCharacter: Character | null;
     locationName: string;
     chronicleStatus: Chronicle['status'];
-    beats: Chronicle['beats'];
+    focusedThreadId: Chronicle['focusedThreadId'];
+    threads: Chronicle['threads'];
     entityFocus: Chronicle['entityFocus'];
     activeScene: Chronicle['activeScene'];
     entityRoster: Chronicle['entityRoster'];
@@ -201,21 +201,20 @@ class GmEngine {
     const { result: graphResult, systemMessage: rawSystemMessage } =
       await this.#executeGraph(graphInput, jobId);
     const systemMessage = ensureFailureNotice(graphResult, rawSystemMessage);
-    // The agent panel runs concurrently with the world update; its responses
+    // The agent panel runs concurrently with state projection; its responses
     // are persisted on the turn so the client can page through them.
     const panelPromise = this.#runPanel(graphResult);
-    const worldUpdater = new WorldUpdater();
-    const worldUpdatedContext = await worldUpdater.update(graphResult);
+    const chronicleUpdater = new ChronicleUpdater();
+    const worldUpdatedContext = chronicleUpdater.update(graphResult);
     const updatedContext = await this.#refreshRosterAfterTransition(worldUpdatedContext);
     const targetEndTurn = updatedContext.chronicleState.chronicle.targetEndTurn;
     const wrapTargetReached =
       typeof targetEndTurn === 'number' &&
       turnSequence >= targetEndTurn &&
       !updatedContext.failure;
-    const shouldClose =
-      (updatedContext.shouldCloseChronicle || wrapTargetReached) &&
-      updatedContext.chronicleState.chronicle.status !== 'closed';
-    const finalContext: GraphContext = shouldClose
+    const closesChronicle = wrapTargetReached
+      && updatedContext.chronicleState.chronicle.status !== 'closed';
+    const finalContext: GraphContext = closesChronicle
       ? {
         ...updatedContext,
         chronicleState: {
@@ -226,7 +225,6 @@ class GmEngine {
             status: 'closed',
           },
         },
-        sceneOutcome: 'complete',
       }
       : updatedContext;
 
@@ -241,7 +239,7 @@ class GmEngine {
     });
     this.#attachPanelResponses(turn, proseAlternates);
 
-    if (shouldClose) {
+    if (closesChronicle) {
       await this.#emitClosureEvent({
         chronicle: finalContext.chronicleState.chronicle,
         closingTurnSequence: turn.turnSequence,
@@ -255,23 +253,25 @@ class GmEngine {
       turn,
     });
 
-    logResolvedTurn(graphResult, chronicleId, shouldClose, turnSequence);
+    logResolvedTurn(graphResult, chronicleId, closesChronicle, turnSequence);
 
     const updatedCharacter = finalContext.chronicleState.character ?? null;
     const locationName = finalContext.chronicleState.locationName;
     const chronicleStatus = finalContext.chronicleState.chronicle.status;
-    const beats = finalContext.chronicleState.chronicle.beats;
+    const focusedThreadId = finalContext.chronicleState.chronicle.focusedThreadId;
+    const threads = finalContext.chronicleState.chronicle.threads;
     const entityFocus = finalContext.chronicleState.chronicle.entityFocus;
     const activeScene = finalContext.chronicleState.chronicle.activeScene;
     const entityRoster = finalContext.chronicleState.chronicle.entityRoster;
 
     return {
       activeScene,
-      beats,
       chronicleStatus,
       entityFocus,
       entityRoster,
+      focusedThreadId,
       locationName,
+      threads,
       turn: committedTurn,
       updatedCharacter,
     };
@@ -279,25 +279,27 @@ class GmEngine {
 
   #createGraph(): GmGraphOrchestrator {
     const intentClassifier = new IntentClassifierNode();
-    const sceneSubjectResolver = new SceneSubjectResolverNode();
     const playerEntityReferenceResolver = new EntityReferenceResolverNode('player');
     const environmentNode = new EnvironmentNode();
     const checkPlanner = new CheckPlannerNode();
     const checkRunner = new CheckRunnerNode();
     const gmResponseNode = new GmResponseNode();
     const inventoryDeltaNode = new InventoryDeltaNode();
-    const turnJudgeNode = new TurnJudgeNode();
+    const locationDeltaNode = new LocationDeltaNode();
+    const threadPositionNode = new ThreadPositionNode();
+    const localContinuityNode = new LocalContinuityNode();
 
     const nodes = [
       intentClassifier,
-      sceneSubjectResolver,
       checkPlanner,
       playerEntityReferenceResolver,
       environmentNode,
       checkRunner,
       gmResponseNode,
       inventoryDeltaNode,
-      turnJudgeNode,
+      locationDeltaNode,
+      threadPositionNode,
+      localContinuityNode,
     ];
 
     return new GmGraphOrchestrator(

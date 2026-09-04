@@ -23,7 +23,6 @@ id: string;
 entityId: string;
 source?: {
 chronicleId: string;
-beatId?: string;
 turnRange?: [number, number];
 };
 title: string;

@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CanonExtraction } from '../src/canonHelpers';
 import {
   buildRoster,
-  collectScenes,
   derivedProminence,
   newEntityCap,
   sanitizeExtraction,
@@ -160,62 +159,6 @@ describe('buildRoster', () => {
   });
 });
 
-describe('collectScenes', () => {
-  it('dedupes by sceneId, tracks the final outcome, and includes the open scene', () => {
-    const turns = [
-      turn({
-        sceneContext: {
-          outcome: 'continue',
-          sceneId: 'scene-1',
-          subject: KEL_NAME,
-          subjectKind: 'npc',
-          type: 'dialog',
-        },
-        turnSequence: 0,
-      }),
-      turn({
-        sceneContext: {
-          outcome: 'complete',
-          sceneId: 'scene-1',
-          subject: KEL_NAME,
-          subjectKind: 'npc',
-          type: 'dialog',
-        },
-        turnSequence: 1,
-      }),
-    ];
-
-    const scenes = collectScenes(turns, {
-      id: 'scene-2',
-      progress: 0,
-      progressTarget: 4,
-      startedAtTurn: 2,
-      subject: TAVERN_NAME,
-      subjectKind: 'installation',
-      type: 'search',
-    });
-
-    expect(scenes).toEqual([
-      {
-        firstTurn: 0,
-        lastTurn: 1,
-        outcome: 'complete',
-        subject: KEL_NAME,
-        subjectKind: 'npc',
-        type: 'dialog',
-      },
-      {
-        firstTurn: 2,
-        lastTurn: 2,
-        outcome: 'continue',
-        subject: TAVERN_NAME,
-        subjectKind: 'installation',
-        type: 'search',
-      },
-    ]);
-  });
-});
-
 describe('sanitizeExtraction', () => {
   const roster = [
     {
@@ -315,25 +258,6 @@ describe('sanitizeExtraction', () => {
     );
   });
 
-  it('makes a scene subject eligible for lore without a central turn', () => {
-    const extraction: CanonExtraction = {
-      knownEntities: [
-        {
-          loreProse: 'Kel bargained through the standoff.',
-          loreTags: [],
-          loreTitle: 'The Bargain',
-          slug: KEL_SLUG,
-        },
-      ],
-      newEntities: [],
-    };
-
-    const withoutScene = sanitizeExtraction(extraction, roster, 5);
-    const withScene = sanitizeExtraction(extraction, roster, 5, new Set(['warden kel']));
-
-    expect(withoutScene.knownLore).toHaveLength(0);
-    expect(withScene.knownLore.map((entry) => entry.roster.slug)).toEqual([KEL_SLUG]);
-  });
 });
 
 describe('buildProposalPlan', () => {
@@ -373,14 +297,19 @@ describe('CanonPipeline', () => {
   const snapshot = {
     character: null,
     chronicle: {
-      beats: [],
+      activeScene: null,
       entityFocus: { entityScores: {}, tagScores: {} },
+      entityRoster: { entries: [], locationName: 'Brake', sceneId: null, updatedAtTurn: 0 },
+      focusedThreadId: null,
       id: CHRONICLE_ID,
+      localContinuity: null,
       locationName: 'Brake',
+      openingReferenceSlugs: [],
       openingText: '',
       playerId: 'player-1',
       status: 'closed',
       summaries: [],
+      threads: [],
       title: 'Quarantine Quartet',
       toneChips: [],
       toneNotes: '',
@@ -388,16 +317,7 @@ describe('CanonPipeline', () => {
     chronicleId: CHRONICLE_ID,
     locationName: 'Brake',
     turns: [
-      {
-        ...usageTurn(0, 'central'),
-        sceneContext: {
-          outcome: 'complete',
-          sceneId: 'scene-1',
-          subject: TAVERN_NAME,
-          subjectKind: 'installation',
-          type: 'search',
-        },
-      },
+      usageTurn(0, 'central'),
     ],
     turnSequence: 0,
   } as unknown as ChronicleSnapshot;
@@ -483,10 +403,8 @@ describe('CanonPipeline', () => {
       extractRequest.input.at(index)?.content[0]?.text ?? '';
     expect(messageText(0)).toContain('"kinds"');
     expect(messageText(0)).toContain('"relationshipVerbs"');
-    expect(messageText(2)).toContain('"scenes"');
-    expect(messageText(2)).toContain(TAVERN_NAME);
-    expect(messageText(3)).toContain('"beats"');
-    expect(messageText(4)).toContain('Scene: search');
+    expect(messageText(2)).toContain('"playerThreads"');
+    expect(messageText(3)).toContain('"transcript"');
 
     expect(commitBatch).toHaveBeenCalledOnce();
     const proposal = commitBatch.mock.calls[0]?.[0] as CanonProposal;

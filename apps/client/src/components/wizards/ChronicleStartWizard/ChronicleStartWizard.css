@@ -745,11 +745,3 @@
   border-color: var(--border-accent);
   outline: none;
 }
-
-.beat-toggle {
-  display: flex;
-  color: var(--text-secondary);
-  align-items: center;
-  font-size: var(--text-sm);
-  gap: var(--space-2);
-}

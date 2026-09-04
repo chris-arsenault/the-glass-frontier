@@ -15,7 +15,6 @@ import {
 } from './chronicleBranchPersistence';
 import { buildChronicleRecord, type EnsureChronicleParams } from './chronicleFactory';
 import {
-  applyBeatDispositions,
   ensureInventory,
   normalizeChronicle,
 } from './chronicleNormalization';
@@ -212,39 +211,6 @@ class PostgresChronicleStore implements ChronicleStore {
         summaries: [...chronicle.summaries, input.entry],
       });
       return true;
-    });
-  }
-
-  /**
-   * Applies close-time dispositions to beats that are still open. A beat that
-   * already reached a terminal state keeps it, so a retried closure changes
-   * nothing on the second pass.
-   */
-  async finalizeBeats(input: {
-    chronicleId: string;
-    dispositions: Array<{ beatId: string; status: 'abandoned' | 'failed' | 'succeeded' }>;
-  }): Promise<boolean> {
-    return withTransaction(this.#pool, async (client) => {
-      const result = await client.query<{ props: Chronicle }>(
-        `SELECT c.props
-         FROM chronicle c
-         WHERE c.id = $1::uuid
-         FOR UPDATE OF c`,
-        [input.chronicleId]
-      );
-      const stored = result.rows[0]?.props;
-      if (stored === undefined) {
-        throw new Error(`Chronicle ${input.chronicleId} not found while finalizing beats.`);
-      }
-      const chronicle = normalizeChronicle(stored);
-      const statusByBeatId = new Map(
-        input.dispositions.map((disposition) => [disposition.beatId, disposition.status])
-      );
-      const { beats, changed } = applyBeatDispositions(chronicle.beats, statusByBeatId, Date.now());
-      if (changed) {
-        await this.#persistChronicle(client, { ...chronicle, beats });
-      }
-      return changed;
     });
   }
 

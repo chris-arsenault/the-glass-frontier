@@ -1,5 +1,10 @@
 # Player Flow Review: Character → Chronicle → Turns → Close
 
+> Historical pre-redesign failure report. Its beat, judge, and scene-ledger
+> symbols describe the system that produced the evidence; they are not current
+> contracts. Narrative threads and bounded scenes replaced that implementation
+> on 2026-09-04.
+
 Scope: the full player path (character creation, chronicle wizard, turn-by-turn play,
 chronicle end), plus the machinery behind it (gm-api graph, chronicle-api, webservice
 progress stream, chronicle-closer, client stores). Findings grouped by kind, ranked

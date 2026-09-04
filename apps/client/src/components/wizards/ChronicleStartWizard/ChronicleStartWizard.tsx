@@ -362,10 +362,17 @@ export function ChronicleStartWizard() {
       characterId: preferredCharacterId,
       locationId: selectedLocation.id,
       locationName: selectedLocation.name,
+      playerGoal: selectedSeed?.playerGoal ?? seedPayload,
       seedText: seedPayload,
       title: customTitle || selectedSeed?.title || selectedLocation.name,
       toneChips,
       toneNotes,
+      worldThread: selectedSeed?.worldThread ?? {
+        goal: `The situation at ${selectedLocation.name} develops independently of the player.`,
+        owner: selectedLocation.name,
+        position: 'The pressure is present but has not yet made its next move.',
+        title: `Pressure at ${selectedLocation.name}`,
+      },
     };
     try {
       const chronicleId = await createChronicleFromSeed(payload);

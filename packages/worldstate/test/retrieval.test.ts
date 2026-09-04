@@ -228,23 +228,11 @@ describe('the world record', () => {
       defaultTurn(chronicle.id, {
         turnSequence: 0,
         worldContent: 'The Pell route factors open an audit of the night manifests.',
-        worldFronts: [{
-          agentSlug: 'pell_freight_assembly',
-          filled: 1,
-          id: 'front-audit',
-          intent: 'Trace the missing manifests to a crew',
-          nextSign: 'A clerk starts asking about last night\'s dock roster',
-          size: 4,
-          startedAtTurn: 0,
-          status: 'active' as const,
-          updatedAtTurn: 0,
-        }],
       })
     );
 
     const [stored] = await worldState.chronicles.listChronicleTurns(chronicle.id);
     expect(stored?.worldContent).toContain('audit of the night manifests');
-    expect(stored?.worldFronts?.[0]?.agentSlug).toBe('pell_freight_assembly');
 
     const found = await worldState.chronicles.searchTurns({
       chronicleId: chronicle.id,

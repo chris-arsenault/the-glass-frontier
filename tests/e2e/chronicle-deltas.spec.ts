@@ -36,7 +36,7 @@ test.describe('Chronicle deltas', () => {
     const gmEntry = await sendTurn(
       page,
       chatInput,
-      '#loc:auric #beat:new #mock:beat:new Sweep the console banks for hidden sensors.'
+      '#loc:auric Sweep the console banks for hidden sensors.'
     );
 
     await expect(locationPill).toContainText('Auric Causeway', { timeout: 15_000 });
@@ -54,11 +54,6 @@ test.describe('Chronicle deltas', () => {
     await expect(deltaRows.filter({ hasText: 'Vault Access Seed' })).toHaveCount(1);
     await expect(deltaRows.filter({ hasText: 'Starlight Draught' })).toHaveCount(1);
 
-    const beatBadge = gmEntry.locator('.beat-tracker-badge');
-    await expect(beatBadge).toBeVisible();
-    await beatBadge.hover();
-    await expect(beatBadge.locator('.beat-tracker-tooltip')).toContainText('Shattered Chorus');
-
     await page
       .getByRole('navigation', { name: 'Chronicle' })
       .getByRole('button', { name: 'E2E Scout', exact: true })
@@ -74,14 +69,14 @@ test.describe('Chronicle deltas', () => {
     await sendTurn(
       page,
       chatInput,
-      '#loc:maintenance #beat:update #mock:beat:update Descend into the maintenance bay.'
+      '#loc:maintenance Descend into the maintenance bay.'
     );
     await expect(locationPill).toContainText('Maintenance Bay', { timeout: 15_000 });
 
     await sendTurn(
       page,
       chatInput,
-      '#loc:quay #beat:update #mock:beat:update Return to the Luminous Quay observation deck.'
+      '#loc:quay Return to the Luminous Quay observation deck.'
     );
     await expect(locationPill).not.toContainText('Maintenance Bay', { timeout: 15_000 });
     await expect(locationPill).toContainText('Luminous Quay', { timeout: 15_000 });
@@ -89,7 +84,7 @@ test.describe('Chronicle deltas', () => {
     await sendTurn(
       page,
       chatInput,
-      '#loc:prism #beat:update #mock:beat:update Stride onto the Prism Walk and signal the towers.'
+      '#loc:prism Stride onto the Prism Walk and signal the towers.'
     );
     await expect(locationPill).toContainText('Prism Walk', { timeout: 15_000 });
 

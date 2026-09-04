@@ -25,8 +25,6 @@ type TurnProgressPublisher = {
 const buildPayload = (context: GraphContext): TurnProgressPayload => {
   const optionalEntries: Array<[keyof TurnProgressPayload, unknown]> = [
     ['advancesTimeline', context.advancesTimeline],
-    ['beatTracker', context.beatTracker],
-    ['chronicleShouldClose', context.shouldCloseChronicle],
     ['executedNodes', context.executedNodes],
     ['gmMessage', context.gmResponse],
     ['gmSummary', context.gmSummary],

@@ -2,7 +2,6 @@ import type {
   Character,
   CharacterDraft,
   Chronicle,
-  ChronicleBeat,
   DirectWorldReference,
   TranscriptEntry,
   Turn,
@@ -51,7 +50,7 @@ const normalizePlayerSettings = (preferences?: PlayerPreferences | null): Player
 
 type ChronicleSnapshot = {
   character: Character | null;
-  chronicle: (Chronicle & { beats?: ChronicleBeat[] }) | null;
+  chronicle: Chronicle | null;
   chronicleId: string;
   locationName: string | null;
   locationId: string | null;
@@ -70,7 +69,6 @@ const generateId = () => {
 const emptyTurnView = (): TurnView => ({
   advancesTimeline: null,
   attributeKey: null,
-  beatTracker: null,
   canBranch: false,
   entityReferences: null,
   entityRoster: null,
@@ -83,7 +81,6 @@ const emptyTurnView = (): TurnView => ({
   proseAlternates: null,
   proseCostUsd: null,
   referenceMentions: null,
-  sceneContext: null,
   skillCheckPlan: null,
   skillCheckResult: null,
   skillKey: null,
@@ -91,13 +88,11 @@ const emptyTurnView = (): TurnView => ({
   turnId: null,
   turnSequence: null,
   worldContent: null,
-  worldFronts: null,
 });
 
 const turnViewFromTurn = (turn: Turn): TurnView => ({
   advancesTimeline: typeof turn.advancesTimeline === 'boolean' ? turn.advancesTimeline : null,
   attributeKey: turn.skillCheckPlan?.attribute ?? null,
-  beatTracker: turn.beatTracker ?? null,
   canBranch: turn.canBranch === true,
   entityReferences: turn.entityReferences ?? null,
   entityRoster: turn.entityRoster ?? null,
@@ -110,7 +105,6 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   proseAlternates: turn.proseAlternates ?? null,
   proseCostUsd: turn.proseCostUsd ?? null,
   referenceMentions: turn.referenceMentions ?? null,
-  sceneContext: turn.sceneContext ?? null,
   skillCheckPlan: turn.skillCheckPlan ?? null,
   skillCheckResult: turn.skillCheckResult ?? null,
   skillKey: turn.skillCheckPlan?.skill ?? null,
@@ -118,7 +112,6 @@ const turnViewFromTurn = (turn: Turn): TurnView => ({
   turnId: turn.id ?? null,
   turnSequence: turn.turnSequence ?? null,
   worldContent: turn.worldContent ?? null,
-  worldFronts: turn.worldFronts ?? null,
 });
 
 const upsertChatEntry = (
@@ -286,7 +279,6 @@ const applyTurnProgressEvent = (
         ? payload.advancesTimeline
         : existing.advancesTimeline,
     attributeKey: payload.skillCheckPlan?.attribute ?? existing.attributeKey,
-    beatTracker: payload.beatTracker ?? existing.beatTracker,
     executedNodes: payload.executedNodes ?? existing.executedNodes,
     gmSummary: payload.gmSummary ?? existing.gmSummary,
     gmTrace: payload.gmTrace ?? existing.gmTrace,
@@ -304,15 +296,8 @@ const applyTurnProgressEvent = (
     nextMessages = upsertChatEntry(nextMessages, payload.gmMessage, turnKey);
   }
 
-  const shouldClose = payload.chronicleShouldClose === true;
   return {
     ...withProgress,
-    chronicleRecord:
-      shouldClose && withProgress.chronicleRecord
-        ? { ...withProgress.chronicleRecord, status: 'closed' }
-        : withProgress.chronicleRecord,
-    chronicleStatus: shouldClose ? 'closed' : withProgress.chronicleStatus,
-    focusedBeatId: payload.beatTracker?.focusBeatId ?? withProgress.focusedBeatId,
     messages: nextMessages,
     turnViews: { ...withProgress.turnViews, [turnKey]: view },
   };
@@ -321,7 +306,6 @@ const applyTurnProgressEvent = (
 const createBaseState = () => ({
   availableCharacters: [] as Character[],
   availableChronicles: [] as Chronicle[],
-  beats: [] as ChronicleBeat[],
   character: null as Character | null,
   chronicleId: null as string | null,
   chronicleRecord: null as Chronicle | null,
@@ -329,7 +313,7 @@ const createBaseState = () => ({
   connectionState: 'idle' as const,
   directoryError: null as Error | null,
   directoryStatus: 'idle' as const,
-  focusedBeatId: null as string | null,
+  focusedThreadId: null as string | null,
   isSending: false,
   isUpdatingPlayerSettings: false,
   locationId: null as string | null,
@@ -347,6 +331,7 @@ const createBaseState = () => ({
   preferredCharacterId: null as string | null,
   selectedReferences: [] as DirectWorldReference[],
   startLocationName: null as string | null,
+  threads: [],
   transportError: null as Error | null,
   turnProgress: null as TurnProgress | null,
   turnSequence: 0,
@@ -390,13 +375,12 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
   clearActiveChronicle() {
     set((prev) => ({
       ...prev,
-      beats: [],
       character: null,
       chronicleId: null,
       chronicleRecord: null,
       chronicleStatus: 'open',
       connectionState: 'idle',
-      focusedBeatId: null,
+      focusedThreadId: null,
       isSending: false,
       locationId: null,
       locationName: null,
@@ -464,12 +448,14 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         characterId: targetCharacterId,
         location: { locale: locationName },
         locationId: details.locationId,
+        playerGoal: details.playerGoal,
         playerId: identity.playerId,
         seedText: trimmedSeed,
         status: 'open',
         title,
         toneChips: details.toneChips,
         toneNotes: details.toneNotes,
+        worldThread: details.worldThread,
       });
       set((prev) => ({
         ...prev,
@@ -537,9 +523,6 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       const chronicleState = chronicleSnapshot;
 
       const { messages: messageHistory, turnViews } = flattenTurns(chronicleState.turns ?? []);
-      const chronicleBeats = chronicleState.chronicle?.beats ?? [];
-      const initialFocusBeatId =
-        chronicleBeats.find((beat) => beat.status === 'in_progress')?.id ?? null;
       // The generated scene opener always starts the transcript. The seed
       // remains visible in the overview as the player's chosen premise.
       if (
@@ -555,13 +538,12 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           chronicleState.chronicle && prev.availableChronicles
             ? mergeChronicleRecord(prev.availableChronicles, chronicleState.chronicle)
             : prev.availableChronicles,
-        beats: chronicleBeats,
         character: chronicleState.character ?? null,
         chronicleId: chronicleState.chronicleId,
         chronicleRecord: chronicleState.chronicle ?? prev.chronicleRecord,
         chronicleStatus: chronicleState.chronicle?.status ?? 'open',
         connectionState: 'connected',
-        focusedBeatId: initialFocusBeatId,
+        focusedThreadId: chronicleState.chronicle?.focusedThreadId ?? null,
         locationId,
         locationName: chronicleState.chronicle?.locationName ?? null,
         locationSlug: null,
@@ -570,6 +552,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
         playerId: chronicleState.chronicle?.playerId ?? prev.playerId,
         selectedReferences: [],
         startLocationName: null,
+        threads: chronicleState.chronicle?.threads ?? [],
         transportError: null,
         turnSequence: chronicleState.turnSequence ?? chronicleState.turns?.length ?? 0,
         turnViews,
@@ -728,12 +711,13 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
       const referenceSlugs = get().selectedReferences.map((reference) => reference.slug);
       const {
         activeScene,
-        beats,
         character,
         chronicleStatus,
         entityFocus,
         entityRoster,
+        focusedThreadId,
         locationName,
+        threads,
         turn,
       } =
         await gmClient.postMessage.mutate({
@@ -770,30 +754,37 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
           nextMessages = upsertChatEntry(nextMessages, turn.systemMessage, turn.id);
         }
 
-        const shouldCloseChronicle = chronicleStatus === 'closed';
+        const closesChronicle = chronicleStatus === 'closed';
         return {
           ...prev,
           availableCharacters: character
             ? mergeCharacterRecord(prev.availableCharacters, character)
             : prev.availableCharacters,
-          beats,
           character: nextCharacter,
           chronicleRecord:
-            shouldCloseChronicle && prev.chronicleRecord
+            closesChronicle && prev.chronicleRecord
               ? {
                 ...prev.chronicleRecord,
                 activeScene,
-                beats,
                 entityFocus,
                 entityRoster,
+                focusedThreadId,
                 status: 'closed',
+                threads,
               }
               : prev.chronicleRecord
-                ? { ...prev.chronicleRecord, activeScene, beats, entityFocus, entityRoster }
+                ? {
+                  ...prev.chronicleRecord,
+                  activeScene,
+                  entityFocus,
+                  entityRoster,
+                  focusedThreadId,
+                  threads,
+                }
                 : prev.chronicleRecord,
           chronicleStatus: chronicleStatus ?? prev.chronicleStatus,
           connectionState: 'connected',
-          focusedBeatId: turn.beatTracker?.focusBeatId ?? prev.focusedBeatId,
+          focusedThreadId,
           isSending: false,
           locationName: locationName ?? prev.locationName,
           messages: nextMessages,
@@ -802,6 +793,7 @@ export const useChronicleStore = create<ChronicleStore>()((set, get) => ({
             prev.pendingPlayerMessageId === playerEntry.id ? null : prev.pendingPlayerMessageId,
           pendingTurnJobId: prev.pendingTurnJobId === jobId ? null : prev.pendingTurnJobId,
           selectedReferences: [],
+          threads,
           transportError: null,
           turnProgress: null,
           turnSequence: Math.max(prev.turnSequence, turn.turnSequence),

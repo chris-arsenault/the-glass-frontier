@@ -1,7 +1,7 @@
-import type { Chronicle } from '@glass-frontier/dto';
+import type { Chronicle, WorldThreadSeed } from '@glass-frontier/dto';
 
 import { initialEntityRoster, normalizeChronicle } from './chronicleNormalization';
-import { foundingBeats } from './foundingBeat';
+import { foundingThreads } from './foundingThreads';
 
 export type EnsureChronicleParams = {
   anchorEntityId?: string | null;
@@ -12,37 +12,42 @@ export type EnsureChronicleParams = {
   locationName: string;
   openingText?: string;
   openingReferenceSlugs?: Chronicle['openingReferenceSlugs'];
+  playerGoal?: string | null;
   playerId: string;
   seedText?: string | null;
   status?: Chronicle['status'];
   title?: string;
   toneChips?: string[];
   toneNotes?: string;
+  worldThread?: WorldThreadSeed | null;
 };
 
 export const buildChronicleRecord = (
   params: EnsureChronicleParams,
   chronicleId: string
-): Chronicle =>
-  normalizeChronicle({
+): Chronicle => {
+  const title = params.title ?? 'Untitled Chronicle';
+  const threadState = foundingThreads(title, params.playerGoal, params.worldThread);
+  return normalizeChronicle({
     activeScene: null,
     anchorEntityId: params.anchorEntityId ?? undefined,
-    beats: foundingBeats(params.title, params.seedText),
     characterId: params.characterId,
     entityFocus: { entityScores: {}, tagScores: {} },
     entityRoster: initialEntityRoster(params.locationName, params.entityRoster),
-    fronts: [],
+    focusedThreadId: threadState.focusedThreadId,
     id: chronicleId,
+    localContinuity: null,
     locationId: params.locationId ?? undefined,
     locationName: params.locationName,
     openingReferenceSlugs: params.openingReferenceSlugs ?? [],
     openingText: params.openingText ?? '',
     playerId: params.playerId,
-    sceneLedger: null,
     seedText: params.seedText ?? undefined,
     status: params.status ?? 'open',
     summaries: [],
-    title: params.title ?? 'Untitled Chronicle',
+    threads: threadState.threads,
+    title,
     toneChips: params.toneChips ?? [],
     toneNotes: params.toneNotes ?? '',
   });
+};
