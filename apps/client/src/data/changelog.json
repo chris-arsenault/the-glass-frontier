@@ -668,7 +668,14 @@
     "id": "2026-09-04-threads-and-scenes",
     "releasedAt": "2026-09-04",
     "summary": "Chronicles now carry goals forward with threads and bounded scenes",
-    "details": "The GM now keeps one focused player thread — the goal you are working toward and your current position — plus independent world threads that advance in plain prose. Sustained battles, dialogs, hunts, chases, and searches open around one concrete question and close after four consequential turns or when you leave, so a situation cannot hold the story indefinitely. The Chronicle panel shows the focused goal, its progress, the active question, and immediate local continuity without exposing backstage clocks or world plans. The old beat, front, scene-notebook, and judge systems have been removed. Location, inventory, continuity, and thread notes remain advisory: malformed bookkeeping cannot discard completed narration. Attached Atlas and Encyclopedia references reach the GM as full records, while only references named in the final narration are recorded as used.",
+    "details": "The GM keeps one focused player thread — the goal you are working toward and your current position — plus independent world threads that advance in plain prose. Sustained battles, dialogs, hunts, chases, and searches open around one concrete question and close when it is answered, after four consequential turns, or when you leave. Switching goals preserves progress on the outgoing scene's linked goal. Thread and local notes read the preceding scene evidence, and historical retrieval can open full narration and world developments across continuation pages. World developments follow completed narration at the resolved location and reach the next writer; planning alone does not imply elapsed time. The Chronicle panel shows the focused goal, its progress, the active question, and immediate local continuity without exposing backstage clocks or world plans. The old beat, front, scene-notebook, and judge systems have been removed. Location, inventory, continuity, and thread notes remain advisory: malformed bookkeeping cannot discard completed narration. Attached Atlas and Encyclopedia references reach the GM as full records, while only references named in the final narration are recorded as used.",
     "type": "feature"
+  },
+  {
+    "id": "2026-09-09-chronicle-creation-headroom",
+    "releasedAt": "2026-09-09",
+    "summary": "Chronicle creation gives reasoning models room to finish",
+    "details": "Seed generation and opening narration now have the same output headroom as turn generation, while prompts retain their prose length limits. Incomplete Bedrock responses report the stop reason and returned block types so an exhausted token budget can be distinguished from a missing structured answer. Truncated openings are rejected instead of being accepted as complete narration.",
+    "type": "bugfix"
   }
 ]

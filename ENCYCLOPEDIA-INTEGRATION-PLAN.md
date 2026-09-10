@@ -1,6 +1,6 @@
 # Encyclopedia integration plan
 
-Status: implemented and verified locally; production reset pending
+Status: historical; completed cutover recorded in the Sulion plan
 
 Created: 2026-08-27
 
@@ -10,13 +10,15 @@ Sulion plan: `9f4946db-b23d-4f2b-9dac-e051812537cb`
 
 Reviewed source: `tsonu-canon@48e77f513839`, site schema version 13
 
-Production data strategy: reset the Glass Frontier production database and
-rebuild it through the normal migration and seed path. Do not migrate or
-restore legacy rows into the new schema.
+The Sulion plan records the completed production reset, deployment, and embedding
+backfills in run 33371844354. Reset instructions below describe that original
+cutover; they are not current maintenance instructions. Subsequent repairs
+preserve Chronicle data and applied migrations. Live state was not rechecked
+for this September 9 documentation correction.
 
 The accepted domain and source contract live in
 [the Encyclopedia reference catalog design](docs/design/encyclopedia-reference-catalog.md).
-This file is the executable Glass Frontier plan.
+This file preserves the original Glass Frontier integration plan.
 
 ## Outcome
 

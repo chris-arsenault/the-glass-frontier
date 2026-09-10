@@ -19,6 +19,18 @@ type JsonDocument = null | boolean | number | string | JsonDocument[] | {
   [key: string]: JsonDocument;
 };
 
+/** Safe response diagnostics: retain termination and usage, never prompt or generated prose. */
+const responseError = (response: ConverseCommandOutput, message: string): ProviderError => {
+  const blockTypes = response.output?.message?.content?.map((block) => Object.keys(block)) ?? [];
+  const stopReason = response.stopReason;
+  return new ProviderError({
+    code: 'bedrock_incomplete_response',
+    details: { blockTypes, stopReason, usage: response.usage },
+    message: `${message} Stop reason: ${stopReason ?? 'unknown'}; blocks: ${JSON.stringify(blockTypes)}.`,
+    retryable: false,
+  });
+};
+
 const CLAUDE_SONNET_5_MODEL_ID = 'us.anthropic.claude-sonnet-5';
 const NOVA_2_LITE_MODEL_ID = 'us.amazon.nova-2-lite-v1:0';
 
@@ -187,25 +199,31 @@ export class BedrockProvider implements IProvider, IStructuredOutputProvider {
   }
 
   #extractText(response: ConverseCommandOutput): string {
+    if (response.stopReason === 'max_tokens') {
+      throw responseError(response, 'Bedrock exhausted the output limit before completing the response.');
+    }
     const text = response.output?.message?.content?.flatMap(
       (block) => block.text === undefined ? [] : [block.text]
     )
       .join('\n')
       .trim();
     if (text === undefined || text.length === 0) {
-      throw new Error('Bedrock returned no text content.');
+      throw responseError(response, 'Bedrock returned no text content.');
     }
     return text;
   }
 
   #extractToolInput(response: ConverseCommandOutput): unknown {
+    if (response.stopReason === 'max_tokens') {
+      throw responseError(response, 'Bedrock exhausted the output limit before completing structured output.');
+    }
     const content = response.output?.message?.content;
     if (content === undefined) {
-      throw new Error('No content in Bedrock response.');
+      throw responseError(response, 'No content in Bedrock response.');
     }
     const toolUse = content.find((block) => block.toolUse !== undefined)?.toolUse;
     if (toolUse === undefined) {
-      throw new Error('No toolUse block in Bedrock response.');
+      throw responseError(response, 'No toolUse block in Bedrock response.');
     }
     return toolUse.input;
   }

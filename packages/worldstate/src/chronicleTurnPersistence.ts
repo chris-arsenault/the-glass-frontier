@@ -254,6 +254,17 @@ export class ChronicleTurnPersistence {
     return result.rows.map(toTurn);
   }
 
+  /** Checkpoints retain scene identity even when branching gives copied turns new ids. */
+  async listScene(input: { chronicleId: string; sceneId: string }): Promise<Turn[]> {
+    const result = await this.#pool.query<TurnRow>(
+      `${TURN_SELECT} WHERE chronicle_id = $1::uuid
+       AND chronicle_state #>> '{activeScene,id}' = $2 AND NOT failure
+       ORDER BY turn_sequence ASC`,
+      [input.chronicleId, input.sceneId]
+    );
+    return result.rows.map(toTurn);
+  }
+
   /**
    * A bounded slice of a chronicle's turns. With sequence bounds, the
    * inclusive range in play order; without bounds, the most recent turns.

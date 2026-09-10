@@ -94,4 +94,36 @@ describe('environment node', () => {
 
     expect(delta).toEqual({});
   });
+
+  it('reads the completed narration and destination rather than the previous turn', async () => {
+    const captured: { instructions?: string; text?: string } = {};
+    const context = environmentContext(captured, 'The crew prepares a replacement hoist.');
+    context.gmResponse!.content = 'You disable the hoist and reach the Upper Relay.';
+    context.locationDelta = { action: 'move', destination: 'Upper Relay' };
+    context.chronicleState.turns = [{
+      gmResponse: { content: 'The hoist is still running.' }, turnSequence: 0,
+    }] as unknown as GraphContext['chronicleState']['turns'];
+    const locations: string[] = [];
+    context.worldSchemaStore.findLocationByName = ({ name }) => {
+      locations.push(name);
+      return Promise.resolve(null);
+    };
+    await new EnvironmentNode().execute(context);
+    expect(locations.every((name) => name === 'Upper Relay')).toBe(true);
+    expect(captured.text).toContain('You disable the hoist');
+    expect(captured.text).not.toContain('The hoist is still running.');
+    expect(context.chronicleState.locationName).toBe('The Splinter Yards');
+  });
+
+  it('uses established time passage independently of the intent label', async () => {
+    const captured: { text?: string } = {};
+    const context = environmentContext(captured, 'The crew completes its repair.');
+    context.sceneBoundary = false;
+    context.timePassed = true;
+    context.playerIntent = buildIntent({ intentType: 'action' });
+    expect((await new EnvironmentNode().execute(context)).worldContent).toContain('completes');
+    context.timePassed = false;
+    context.playerIntent = buildIntent({ intentType: 'planning' });
+    expect(await new EnvironmentNode().execute(context)).toEqual({});
+  });
 });

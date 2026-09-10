@@ -19,4 +19,4 @@ ANCHOR: the entity every seed centers on, in the same shape as LOCATION. Its lor
 CHARACTER: the player character's full sheet — name, pronouns, archetype, bio, nature (drive, flaw, instinct, callings, unique thing), origin (species, culture, homeland, allegiance and stance toward it), and skills with tiers. The nature and origin fields are the material for step 2.
 TONE: the player's requested tone chips and free-text tone notes. Present only when the player asked for one.
 
-The user message states how many seeds to create.
+The user message states how many seeds to create. Return exactly that count by calling SeedArray. The tool call is your entire response; put the bounded seed fields in its arguments and write no prose outside the call. Keep each world-thread field to one short, concrete sentence.

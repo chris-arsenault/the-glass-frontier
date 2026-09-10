@@ -1,5 +1,6 @@
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
+import { localBoundaryEvidence } from '../../scenes/boundaryEvidence';
 import type { GraphContext } from '../../types';
 import { resolveLocationName } from '../../updaters/locationUpdater';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
@@ -18,7 +19,7 @@ const buildContinuityInput = (context: GraphContext, locationName: string): stri
     prior !== null && prior.locationName === locationName
       ? `PRIOR LOCAL CONTINUITY: ${prior.note}`
       : 'PRIOR LOCAL CONTINUITY: none',
-    `GM NARRATION: ${context.gmResponse!.content}`,
+    `COMPLETED TURN RECORD: ${localBoundaryEvidence(context)}`,
   ].join('\n\n');
 };
 

@@ -191,19 +191,15 @@ const provenanceFiltered = (
 };
 
 /**
- * Everything the research judged, as the writer's one authored block, plus
- * what the world did before the dice. The writer is not obliged to show the
- * world's move — the world does what it does, the narration shows what the
- * camera catches — so a quiet turn stays quiet and lands later.
- *
+ * The scout's authored material. Persisted world developments reach the writer
+ * directly through WORLD-DEVELOPMENT after the preceding turn commits them.
  */
-const renderBrief = (brief: TurnBrief, worldContent: string | undefined): string => renderBlock({
+const renderBrief = (brief: TurnBrief): string => renderBlock({
   character: brief.character,
   complication: brief.complication,
   history: brief.history,
   location: brief.location,
   present: brief.present,
-  ...worldContent === undefined ? {} : { world: worldContent },
 });
 
 type ResearchTarget = {
@@ -426,7 +422,7 @@ const writeProse = async (
     ...prompt,
     input: [...prompt.input, {
       content: [{
-        text: `### BRIEF\n${renderBrief(brief, context.worldContent)}`,
+        text: `### BRIEF\n${renderBrief(brief)}`,
         type: 'input_text' as const,
       }],
       role: 'developer' as const,

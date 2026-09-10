@@ -43,10 +43,10 @@ describe('ChronicleUpdater', () => {
       },
       sceneBoundary: true,
       sceneWillClose: true,
-      threadPositionUpdate: {
+      threadPositionUpdates: [{
         position: 'Vex has crossed the gallery.',
         threadId: PLAYER_THREAD_ID,
-      },
+      }],
       worldThreadUpdate: {
         position: 'The factor seals the inner relay instead.',
         threadId: 'world-thread',

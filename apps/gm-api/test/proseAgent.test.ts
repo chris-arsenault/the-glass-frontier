@@ -25,6 +25,7 @@ const OSS_MODEL_ID = 'gpt-oss-120b';
 const QWEN_MODEL_ID = 'qwen3-32b';
 const TITHE_COUNTING = 'Korvath counts the tithe';
 const RESONANT_POLLEN = 'resonant pollen';
+const HISTORY_SLUG = 'chronicle:turn-4';
 const PLAYER_REFERENCES = 'PLAYER-REFERENCES';
 const SMALL_USAGE = { inputTokens: 50, outputTokens: 30, totalTokens: 80 };
 
@@ -391,9 +392,11 @@ describe('prose agent tools', () => {
     const context = agentContext();
     context.chronicleStore = {
       listTurnWindow: () => Promise.resolve([{
-        gmResponse: { content: 'The relay answered in Vex\'s voice.' },
+        gmResponse: { content: 'The relay answered in Vex\'s voice. The vault code is seven bells.' },
+        gmSummary: 'The relay answered.',
         playerMessage: { content: 'I call the drowned relay.', role: 'player' },
         turnSequence: 4,
+        worldContent: 'The factor seals the eastern stair.',
       }]),
       searchTurns: () => Promise.resolve([{
         gmResponse: { content: 'The relay answered in Vex\'s voice.' },
@@ -403,9 +406,28 @@ describe('prose agent tools', () => {
     } as unknown as GraphContext['chronicleStore'];
     const tools = createProseAgentTools({ context, session: freshSession() });
     const results = await runTool(tools.search, { query: 'drowned relay' });
-    expect(results).toContain('chronicle:turn-4');
-    const opened = await runTool(tools.open, { slug: 'chronicle:turn-4' });
+    expect(results).toContain(HISTORY_SLUG);
+    const opened = await runTool(tools.open, { slug: HISTORY_SLUG });
     expect(opened).toContain('The relay answered');
+    expect(opened).toContain('The vault code is seven bells.');
+    expect(opened).toContain('The factor seals the eastern stair.');
+  });
+
+  it('opens the remainder of a long Chronicle record without repeat suppression', async () => {
+    const context = agentContext();
+    context.chronicleStore.listTurnWindow = () => Promise.resolve([{
+      gmResponse: { content: `${'Long narration. '.repeat(350)}The final code is dawn.` },
+      gmSummary: 'Long narration.',
+      playerMessage: { content: 'Read the inscription.' },
+      turnSequence: 4,
+    }] as unknown as GraphContext['chronicleState']['turns']);
+    const tools = createProseAgentTools({ context, session: freshSession() });
+    const first = await runTool(tools.open, { slug: HISTORY_SLUG });
+    const rest = await runTool(tools.open, { offset: 4000, slug: HISTORY_SLUG });
+    expect(first).toContain('offset=4000');
+    expect(first).not.toContain('The final code is dawn.');
+    expect(rest).toContain('The final code is dawn.');
+    expect(rest).not.toContain('already provided');
   });
 
   it('records misses without exposing another tool surface', async () => {

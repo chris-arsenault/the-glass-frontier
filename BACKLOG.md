@@ -10,24 +10,19 @@ work lands — not as a reaction to one short turn.
 
 ## Retrieval
 
-**Say what a similarity score means where it is read.** The `search` floor sits
-at 0.32 with invented phrases topping out at 0.304 — 0.017 of separation, and
-neither a z-score over the query's own background nor a margin-over-p99
-separates the classes any better (both overlap worse; measured). The floor is
-the best single discriminator available, so the mitigation is not a better
-number: the tool already returns the similarity to the model, and the tool
-description should say what the bands mean — at or above 0.5 a named match,
-0.32 to 0.45 a lead to confirm rather than a fact — so a 0.33 hit is discounted
-instead of believed.
+**Evaluate weak retrieval matches in the current tool contract.** Earlier
+measurements put invented phrases at up to 0.304 against a 0.32 search floor.
+The current model-facing search output strips ranking fields, so explaining
+numeric bands to the model would not address the current interface. Evaluate
+whether excerpts and authoritative opens distinguish a weak lead from evidence
+before changing the measured search floor or adding score metadata.
 
-**Coined names never register.** A player naming something the world has not
-written down — "Globbin", "globitz" — leaves `entity_references` empty, so the
-name exists only in that turn's prose and is gone by the next. The evaluator now
-at least notices (it asked whether Globbin had any canon basis), but nothing
-persists a coinage. Agreed shape, never built: a `coinedNames` list on chronicle
-state alongside narrative threads, written by the entity-reference resolver when a
-definite referent matches no candidate, surfaced as one seed-pack block.
-Promotion of a coinage to real canon at chronicle closure is a separate
+**Evaluate recall of coined names after the history repair.** Names without
+canon matches are retained in stored player and GM prose even when
+`entity_references` is empty. Historical open now returns that full prose with
+continuation pages. The earlier proposed `coinedNames` list remains unbuilt;
+measure current retrieval before deciding whether a separate registry is still
+needed. Promotion to shared canon at Chronicle closure remains a separate
 question.
 
 **Skills the sheet cannot serve.** Zale's three skills forced Bow hunting for a
@@ -42,7 +37,9 @@ return near-identical results whatever it was asked, because the place name
 dominated a symmetric embedding — 4 of 5 rounds in Hidden Messages spent on
 searches that added nothing. Cohere Embed v4 with separate query and document
 spaces should fix exactly that, and measured against 400 production entities it
-does. Unverified in play: the canon re-embed has not run.
+does. The completed Encyclopedia plan records production backfills of 553 Atlas
+and 283 Encyclopedia entries. Current-version play quality remains unverified;
+the old claim that re-embedding never ran is superseded by that recorded run.
 
 ## Models and providers
 
@@ -63,8 +60,8 @@ that the provider no longer rejects models by name.
 
 ## Evaluation
 
-**Read retrieval against no retrieval.** The panel's whole purpose, and it has
-never yielded a reading: the one chronicle that could have produced it had its
+**Read retrieval against no retrieval.** The earlier comparison was inconclusive:
+the one chronicle that could have produced it had its
 scout throw on three of three turns, and every alternate reported `stepCount: 0`
 whether it had researched or not. `briefFailed` now distinguishes those, and the
 forced-tool fix should stop the throws. Needs live turns, then a comparison of

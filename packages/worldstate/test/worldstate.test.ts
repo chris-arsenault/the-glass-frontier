@@ -198,7 +198,14 @@ describe('Chronicle turn history', () => {
         title: 'Branching Test',
       })
     );
-    const firstState = { ...source, locationName: 'First Landing' };
+    const firstState = {
+      ...source,
+      activeScene: {
+        id: 'persistent-scene', question: 'Can the character reach the second landing?',
+        threadId: null, turnsRemaining: 3, type: 'search' as const,
+      },
+      locationName: 'First Landing',
+    };
     const secondState = {
       ...firstState,
       focusedThreadId: 'reach_second_landing',
@@ -280,6 +287,11 @@ describe('Chronicle turn history', () => {
     expect(branchSnapshot.turnSequence).toBe(1);
     expect(branchSnapshot.turns.map((turn) => turn.gmSummary)).toEqual(['first', 'second']);
     expect(branchSnapshot.turns.every((turn) => turn.canBranch === true)).toBe(true);
+    const sceneTurns = await worldState.chronicles.listSceneTurns({
+      chronicleId: branch.id, sceneId: 'persistent-scene',
+    });
+    expect(sceneTurns.map((turn) => turn.turnSequence)).toEqual([0, 1]);
+    expect(sceneTurns.map((turn) => turn.id)).toEqual(branchSnapshot.turns.map((turn) => turn.id));
     expect(branchSnapshot.turns[1]?.playerReferenceSlugs).toEqual([
       'atlas:second-landing',
       ASH_SKATER_SLUG,

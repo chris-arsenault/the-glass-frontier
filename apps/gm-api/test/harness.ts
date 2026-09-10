@@ -90,9 +90,11 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
     turnSequence: 0,
   } as unknown as GraphContext['chronicleState'],
   chronicleStore: {
+    listSceneTurns: () => Promise.resolve([]),
     listTurnWindow: () => Promise.resolve([]),
     searchTurns: () => Promise.resolve([]),
   } as unknown as GraphContext['chronicleStore'],
+  completedScenes: [],
   effectiveFocusedThreadId: null,
   effectiveScene: null,
   effectiveThreads: [],
@@ -128,6 +130,7 @@ export const buildContext = (overrides?: Partial<GraphContext>): GraphContext =>
   targetEntityIds: [],
   telemetry,
   templates: {} as GraphContext['templates'],
+  timePassed: false,
   turnId: 'turn-1',
   turnSequence: 1,
   worldSchemaStore: {

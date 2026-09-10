@@ -66,6 +66,7 @@ const PROGRESS_NODE_LABELS: Record<string, string> = {
   'inventory-delta': 'checking your gear',
   'local-continuity': 'recording the local situation',
   'location-delta': 'checking the location',
+  'narrative-boundary': 'checking the scene outcome',
   'player-entity-reference-resolver': 'linking your words to canon',
   scout: 'looking things up',
   'thread-position': 'recording story progress',

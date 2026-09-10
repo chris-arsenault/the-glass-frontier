@@ -132,12 +132,14 @@ export type GraphContext = {
   turnBrief?: TurnBrief;
   /** What the world did at this story boundary. */
   worldContent?: string;
+  completedScenes: ActiveScene[];
   effectiveScene: ActiveScene | null;
   effectiveFocusedThreadId: string | null;
   effectiveThreads: NarrativeThread[];
   sceneBoundary: boolean;
   sceneWillClose: boolean;
-  threadPositionUpdate?: { position: string; threadId: string };
+  threadPositionUpdates?: Array<{ position: string; threadId: string }>;
+  timePassed: boolean;
   worldThreadUpdate?: { position: string; threadId: string };
   localContinuityUpdate?: LocalContinuity;
   advancesTimeline: boolean;

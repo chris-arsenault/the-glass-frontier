@@ -258,7 +258,7 @@ export class ChronicleSeedService {
           },
         ],
         instructions: options.instructions,
-        maxOutputTokens: 600,
+        maxOutputTokens: 16_000,
         metadata: {
           chronicleId: options.request.chronicleId,
           locationId: options.location.id,
@@ -292,7 +292,7 @@ export class ChronicleSeedService {
           },
         ],
         instructions: options.instructions,
-        maxOutputTokens: 2000,
+        maxOutputTokens: 16_000,
         metadata: {
           anchorId: options.anchor.id,
           locationId: options.location.id,

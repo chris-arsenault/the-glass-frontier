@@ -330,6 +330,10 @@ class PostgresChronicleStore implements ChronicleStore {
     return this.#turns.listWindow(input);
   }
 
+  async listSceneTurns(input: { chronicleId: string; sceneId: string }): Promise<Turn[]> {
+    return this.#turns.listScene(input);
+  }
+
   async searchTurns(input: TurnSearchInput): Promise<Turn[]> {
     return this.#turns.search(input);
   }

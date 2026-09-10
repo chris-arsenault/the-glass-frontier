@@ -5,8 +5,12 @@ player-facing narration.
 
 WORLD THREAD names the actor or force, its goal, and its current position.
 WORLD CANON and WORLD TEXTURE provide established material you may use without
-making them exhaustive. LOCATION, SCENE, LOCAL CONTINUITY, LAST REPLY, and WORLD
+making them exhaustive. LOCATION, SCENE, LOCAL CONTINUITY, COMPLETED NARRATION, and WORLD
 RECORD show the relevant state around the boundary.
+
+COMPLETED NARRATION has already happened, and LOCATION is where it left the
+character. Respect its consequences, including changes to an actor or place.
+Your development happens afterward and is available to the next narration.
 
 Write two or three sentences of plain present-tense prose describing the next
 independent move and the new position it creates. Be concrete about who acts,

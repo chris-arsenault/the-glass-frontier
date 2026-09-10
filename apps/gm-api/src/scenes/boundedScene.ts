@@ -12,6 +12,7 @@ export const isConsequentialIntent = (intentType: IntentType): boolean =>
 
 export type SceneProjection = {
   boundary: boolean;
+  completedScenes: ActiveScene[];
   effectiveScene: ActiveScene | null;
   willClose: boolean;
 };
@@ -26,6 +27,7 @@ type ProjectionInput = {
 
 const leaveScene = (activeScene: ActiveScene | null): SceneProjection => ({
   boundary: activeScene !== null,
+  completedScenes: activeScene === null ? [] : [activeScene],
   effectiveScene: activeScene === null ? null : { ...activeScene, turnsRemaining: 0 },
   willClose: activeScene !== null,
 });
@@ -43,6 +45,7 @@ const openScene = (input: ProjectionInput, consequential: boolean): SceneProject
   };
   return {
     boundary: input.activeScene !== null,
+    completedScenes: input.activeScene === null ? [] : [input.activeScene],
     effectiveScene: scene,
     willClose: scene.turnsRemaining === 0,
   };
@@ -53,7 +56,7 @@ const continueScene = (
   consequential: boolean
 ): SceneProjection => {
   if (activeScene === null || !consequential) {
-    return { boundary: false, effectiveScene: activeScene, willClose: false };
+    return { boundary: false, completedScenes: [], effectiveScene: activeScene, willClose: false };
   }
   const effectiveScene = {
     ...activeScene,
@@ -61,6 +64,7 @@ const continueScene = (
   };
   return {
     boundary: effectiveScene.turnsRemaining === 0,
+    completedScenes: effectiveScene.turnsRemaining === 0 ? [effectiveScene] : [],
     effectiveScene,
     willClose: effectiveScene.turnsRemaining === 0,
   };

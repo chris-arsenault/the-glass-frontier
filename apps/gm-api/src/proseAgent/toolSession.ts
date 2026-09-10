@@ -97,7 +97,7 @@ export class ToolSession {
     let text = render();
     const cap = PER_RESULT_TOKEN_CAP * BYTES_PER_TOKEN;
     if (text.length > cap) {
-      text = `${text.slice(0, cap)}\n[truncated — request the remainder by id if it matters]`;
+      text = `${text.slice(0, cap)}\n[truncated by the retrieval limit]`;
     }
     this.#spentTokens += estimateTokens(text);
     return text;

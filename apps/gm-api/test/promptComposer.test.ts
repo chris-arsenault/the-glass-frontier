@@ -82,4 +82,15 @@ describe('PromptComposer', () => {
     expect(developer).toContain('I test the brass key in the gallery door.');
     expect(developer).toContain('The gallery door refuses the first key.');
   });
+
+  it('delivers the preceding completed world development directly to the writer after a failed turn', async () => {
+    const context = buildContext({ playerIntent: buildIntent() });
+    context.chronicleState.turns = [
+      { failure: false, worldContent: 'The crew seals the south gate.' },
+      { failure: true },
+    ] as unknown as GraphContext['chronicleState']['turns'];
+    const prompt = await new PromptComposer(recordingRuntime()).buildPrompt('agent-action-resolver', context);
+    expect(textOf(prompt.input.at(-1)!)).toContain('### WORLD-DEVELOPMENT');
+    expect(textOf(prompt.input.at(-1)!)).toContain('The crew seals the south gate.');
+  });
 });

@@ -3,6 +3,8 @@
 > Superseded on 2026-09-04. This file preserves the failure evidence and the
 > original front/clock proposal; it is not an implementation source. Current
 > world agency advances one narrative world thread as prose at story boundaries.
+> The September 9 repair makes it read the completed narration and resolved
+> location. Its development is stored on that turn and reaches the next writer.
 
 Give the world a life the player does not cause. Today every event in a chronicle is a
 reaction to a verb the player supplied: across all seven turns of Shadows of the Deep the

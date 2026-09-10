@@ -4,6 +4,10 @@
 > but its tracker and pipeline inventory was superseded by narrative threads and
 > bounded scenes on 2026-09-04. Current contracts live in the DTOs and
 > `apps/gm-api/src/gmEngine.ts`.
+> The current scout composes a prose brief from retrieved evidence. Historical
+> opens return full stored narration and world prose, with continuation offsets
+> for long records. Live wire evaluation remains open in Sulion plan
+> `40268ab6-7546-404b-88b3-843945cd3c9a`.
 
 Replace the pre-selected prose context in `apps/gm-api` with an agentic subsystem: the prose
 model retrieves world canon, relationships, lore, and chronicle history through tools during

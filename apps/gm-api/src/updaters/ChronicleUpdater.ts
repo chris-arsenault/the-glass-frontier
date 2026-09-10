@@ -11,7 +11,7 @@ const applyThreadPositions = (
   context: GraphContext
 ): NarrativeThread[] => {
   const updates = new Map(
-    [context.threadPositionUpdate, context.worldThreadUpdate]
+    [...context.threadPositionUpdates ?? [], context.worldThreadUpdate]
       .filter((update): update is NonNullable<typeof update> => update !== undefined)
       .map((update) => [update.threadId, update.position])
   );

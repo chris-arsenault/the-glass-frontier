@@ -42,6 +42,7 @@ import { IntentClassifierNode } from './gmGraph/nodes/classifiers/IntentClassifi
 import { EntityReferenceResolverNode } from './gmGraph/nodes/EntityReferenceResolverNode';
 import { EnvironmentNode } from './gmGraph/nodes/EnvironmentNode';
 import { LocalContinuityNode } from './gmGraph/nodes/LocalContinuityNode';
+import { NarrativeBoundaryNode } from './gmGraph/nodes/NarrativeBoundaryNode';
 import { ThreadPositionNode } from './gmGraph/nodes/ThreadPositionNode';
 import { GmGraphOrchestrator, type PipelineStage } from './gmGraph/orchestrator';
 import { buildGraphInput } from './graphInput';
@@ -83,7 +84,7 @@ const GM_PIPELINE: PipelineStage[] = [
   { nodeId: 'check-runner', type: 'sequential' },
   { nodeId: 'gm-response-node', type: 'sequential' },
   {
-    nodeIds: ['inventory-delta', 'location-delta'],
+    nodeIds: ['inventory-delta', 'location-delta', 'narrative-boundary'],
     type: 'parallel',
   },
   {
@@ -288,6 +289,7 @@ class GmEngine {
     const locationDeltaNode = new LocationDeltaNode();
     const threadPositionNode = new ThreadPositionNode();
     const localContinuityNode = new LocalContinuityNode();
+    const narrativeBoundaryNode = new NarrativeBoundaryNode();
 
     const nodes = [
       intentClassifier,
@@ -300,6 +302,7 @@ class GmEngine {
       locationDeltaNode,
       threadPositionNode,
       localContinuityNode,
+      narrativeBoundaryNode,
     ];
 
     return new GmGraphOrchestrator(

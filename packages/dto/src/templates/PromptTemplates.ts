@@ -24,6 +24,7 @@ export const PromptTemplateIds = [
   'inventory-delta',
   'local-continuity',
   'location-delta',
+  'narrative-boundary',
   'planning-narrator',
   'possibility-advisor',
   'reflection-weaver',
@@ -200,6 +201,13 @@ export const PROMPT_TEMPLATE_DESCRIPTORS: Record<PromptTemplateId, PromptTemplat
     id: 'location-delta',
     label: 'Location Delta',
     officialObjectKey: 'official/location-delta.hbs',
+    supportsVariants: true,
+  },
+  'narrative-boundary': {
+    description: 'Recognizes an answered scene question and meaningful elapsed time in completed narration.',
+    id: 'narrative-boundary',
+    label: 'Narrative Boundary',
+    officialObjectKey: 'official/narrative-boundary.hbs',
     supportsVariants: true,
   },
   'planning-narrator': {

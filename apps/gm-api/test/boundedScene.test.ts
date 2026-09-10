@@ -14,6 +14,7 @@ describe('bounded scenes', () => {
 
     expect(result).toEqual({
       boundary: false,
+      completedScenes: [],
       effectiveScene: {
         id: 'turn-1',
         question: 'Can Vex cross the sealed gallery?',
@@ -40,7 +41,7 @@ describe('bounded scenes', () => {
       focusedThreadId: 'thread-1',
       intentType: 'inquiry',
       turnId: 'turn-2',
-    })).toEqual({ boundary: false, effectiveScene: activeScene, willClose: false });
+    })).toEqual({ boundary: false, completedScenes: [], effectiveScene: activeScene, willClose: false });
   });
 
   it('marks the final consequential turn as a boundary', () => {

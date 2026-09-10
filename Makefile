@@ -1,6 +1,9 @@
-.PHONY: ci lint format-check typecheck test build terraform-check deploy
+.PHONY: ci migration-check lint format-check typecheck test build terraform-check deploy
 
-ci: lint format-check typecheck test build terraform-check
+ci: migration-check lint format-check typecheck test build terraform-check
+
+migration-check:
+	pnpm check:migrations
 
 lint:
 	pnpm run lint

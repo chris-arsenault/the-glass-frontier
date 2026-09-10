@@ -151,6 +151,7 @@ export type ChronicleStore = {
     turn: Turn;
   }) => Promise<Turn>;
   listChronicleTurns: (chronicleId: string) => Promise<Turn[]>;
+  listSceneTurns: (input: { chronicleId: string; sceneId: string }) => Promise<Turn[]>;
   listTurnWindow: (input: TurnWindowInput) => Promise<Turn[]>;
   searchTurns: (input: TurnSearchInput) => Promise<Turn[]>;
 };

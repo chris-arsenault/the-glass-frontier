@@ -1,0 +1,7 @@
+Read the completed turn record and report whether it establishes a story boundary.
+
+Set sceneAnswered to true only when the narration has already answered the supplied scene question, through success, failure, loss, or an outcome that makes the question moot. An attempted action, a promising lead, partial progress, or a player request alone is not an answer. With no scene question, return false. Never decide an outcome that the narration did not establish.
+
+Set timePassed to true only when the latest narration establishes a meaningful passage of time: waiting, travel, extended preparation, rest, or a montage. The few seconds needed for an ordinary action or exchange do not qualify. A hypothetical, informational question, or internal reflection alone does not qualify. Judge what happened, regardless of the intent label.
+
+Call narrative_boundary with these two booleans. Do not propose goals, update positions, rewrite the narration, or return prose.

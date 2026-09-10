@@ -33,6 +33,7 @@ export type ChronicleFragmentTypes =
   | 'user-message'
   | 'recent-events'
   | 'last-reply'
+  | 'world-development'
   | 'chronicle-tone'
   | 'wrap'
   | 'inventory'
@@ -78,7 +79,7 @@ const USER_MESSAGE_FRAGMENT: ChronicleFragmentTypes = 'user-message';
 // prettier-ignore
 const WRITER_FRAGMENTS: ChronicleFragmentTypes[] = [
   CHRONICLE_TONE_FRAGMENT, 'threads', 'scene', LOCAL_CONTINUITY_FRAGMENT, LAST_REPLY_FRAGMENT,
-  INVENTORY_DETAIL_FRAGMENT, 'seed',
+  INVENTORY_DETAIL_FRAGMENT, 'seed', 'world-development',
 ];
 
 export const templateFragmentMapping = new Map<
@@ -114,6 +115,8 @@ ChronicleFragmentTypes[]
 type FragmentHandler = (context: GraphContext) => Promise<unknown> | unknown;
 
 const fragmentHandlers = new Map<ChronicleFragmentTypes, FragmentHandler>([
+  ['world-development', (context) => [...context.chronicleState.turns]
+    .reverse().find((turn) => !turn.failure)?.worldContent],
   ['anchor', anchorFragment],
   ['character', characterFragment],
   [CHRONICLE_TONE_FRAGMENT, chronicleToneFragment],
@@ -403,8 +406,8 @@ function recentEventsFragment(context: GraphContext): string {
         + `\nP: ${recordedPlayerMessage(
           turn.playerMessage.content, turn.playerIntent?.intentSummary
         )}`
-        + world
-        + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`;
+        + `\nG: ${gm ?? '(the turn produced no narration)'}${check}`
+        + world;
     })
     .join('\n\n');
 }

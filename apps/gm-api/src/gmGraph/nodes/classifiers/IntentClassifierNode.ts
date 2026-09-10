@@ -77,6 +77,7 @@ class IntentClassifierNode extends LlmClassifierNode<IntentResponse> {
       willClose: sceneProjection.willClose,
     });
     return {
+      completedScenes: sceneProjection.completedScenes,
       effectiveFocusedThreadId: threadProjection.focusedThreadId,
       effectiveScene: sceneProjection.effectiveScene,
       effectiveThreads: threadProjection.threads,

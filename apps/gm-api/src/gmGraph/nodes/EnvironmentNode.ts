@@ -5,6 +5,7 @@ import type { StoredEncyclopediaEntry } from '@glass-frontier/worldstate';
 
 import { extractFragment } from '../../prompts/chronicleFragments';
 import type { GraphContext } from '../../types';
+import { resolveLocationName } from '../../updaters/locationUpdater';
 import { ENVIRONMENT_INSTRUCTIONS } from '../../world/environmentInstructions';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
 
@@ -22,12 +23,17 @@ export class EnvironmentNode implements GraphNode {
       context.failure
       || context.gmResponse === undefined
       || thread === undefined
-      || (!context.sceneBoundary && !explicitTimePassage(context))
+      || (!context.sceneBoundary && !context.timePassed)
     ) {
       return {};
     }
     try {
-      const worldContent = await this.#ask(context, thread);
+      const locationName = resolveLocationName(context);
+      const worldContext = {
+        ...context,
+        chronicleState: { ...context.chronicleState, locationName },
+      };
+      const worldContent = await this.#ask(worldContext, thread);
       log('info', 'gm.environment', {
         chronicleId: context.chronicleId,
         threadTitle: thread.title,
@@ -74,10 +80,6 @@ export class EnvironmentNode implements GraphNode {
     return response.message.replace(/^#+\s*WORLD(?:\s+REPORT)?\s*\n/iu, '').trim();
   }
 }
-
-const explicitTimePassage = (context: GraphContext): boolean =>
-  context.playerIntent?.intentType === 'planning'
-  || context.playerIntent?.intentType === 'wrap';
 
 const selectWorldThread = (threads: NarrativeThread[]): NarrativeThread | undefined =>
   threads
@@ -179,7 +181,7 @@ const renderWorldInput = async (
         ? continuity.note
         : undefined,
     },
-    { name: 'LAST REPLY', value: await extractFragment('last-reply', context) },
+    { name: 'COMPLETED NARRATION', value: context.gmResponse?.content },
     { name: 'WORLD RECORD', value: worldRecord(context) },
   ];
   return sections

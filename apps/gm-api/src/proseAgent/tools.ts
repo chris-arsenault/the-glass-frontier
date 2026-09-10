@@ -11,6 +11,7 @@ import type { ToolSession } from './toolSession';
 const MAX_OPEN_LORE = 6;
 const MAX_SEARCH_RESULTS = 8;
 const EXCERPT_LENGTH = 240;
+const OPEN_PAGE_CHARACTERS = 4_000;
 
 /** The measured Cohere Embed v4 floor shared with one-shot Atlas retrieval. */
 export const SEARCH_SIMILARITY_FLOOR = 0.32;
@@ -44,13 +45,14 @@ const excerpt = (text: string | undefined): string => {
 };
 
 const renderTurn = (turn: GraphContext['chronicleState']['turns'][number]): unknown => ({
-  gm: turn.gmSummary ?? turn.gmResponse?.content,
+  gm: turn.gmResponse?.content,
   player: recordedPlayerMessage(
     turn.playerMessage.content,
     turn.playerIntent?.intentSummary
   ),
   sequence: turn.turnSequence,
   slug: `chronicle:turn-${turn.turnSequence}`,
+  world: turn.worldContent,
 });
 
 const visibleAtlas = async (
@@ -385,14 +387,20 @@ const openTool = (deps: ToolDeps): AgentTool => tool({
   description:
     'Open one Atlas, Encyclopedia, or Chronicle result. Pass the fully qualified slug from '
     + 'search unchanged. A bare slug is accepted only when it identifies exactly one record '
-    + 'across all three catalogs; a collision returns the qualified alternatives.',
-  execute: async ({ slug }: { slug: string }) => {
+    + 'across all three catalogs; a collision returns the qualified alternatives. '
+    + 'Long records return a continuation offset; open the same slug with that offset to read on.',
+  execute: async ({ offset = 0, slug }: { offset?: number; slug: string }) => {
     const opened = slug.includes(':')
       ? await openQualified(deps, slug)
       : await openBare(deps, slug);
-    return deps.session.wrapResult(`open:${opened.qualifiedSlug}`, () => opened.result);
+    const end = offset + OPEN_PAGE_CHARACTERS;
+    const page = opened.result.slice(offset, end);
+    const continuation = end < opened.result.length
+      ? `\n[Continue with open(slug="${opened.qualifiedSlug}", offset=${end}).]`
+      : '';
+    return deps.session.wrapResult(`open:${opened.qualifiedSlug}:${offset}`, () => page + continuation);
   },
-  inputSchema: z.object({ slug: z.string().min(1) }),
+  inputSchema: z.object({ offset: z.number().int().nonnegative().default(0), slug: z.string().min(1) }),
 });
 
 /** Records every call so the evaluator judges only material actually returned. */

@@ -1,36 +1,27 @@
-import type { NarrativeThread } from '@glass-frontier/dto';
+import type { ActiveScene, NarrativeThread } from '@glass-frontier/dto';
 import { isNonEmptyString, log } from '@glass-frontier/utils';
 
+import { completedSceneEvidence } from '../../scenes/boundaryEvidence';
 import type { GraphContext } from '../../types';
 import type { GraphNode, GraphNodeDelta } from './graphNode';
 
 const MAX_OUTPUT_TOKENS = 4_000;
 
-const focusedPlayerThread = (context: GraphContext): NarrativeThread | undefined =>
-  context.effectiveThreads.find(
-    (candidate) => candidate.id === context.effectiveFocusedThreadId
-      && candidate.perspective === 'player'
-  );
-
-const canUpdatePosition = (
+const buildPositionInput = async (
   context: GraphContext,
-  thread: NarrativeThread | undefined
-): thread is NarrativeThread => !context.failure
-  && context.sceneBoundary
-  && thread !== undefined
-  && isNonEmptyString(context.gmResponse?.content);
-
-const buildPositionInput = (context: GraphContext, thread: NarrativeThread): string => [
+  thread: NarrativeThread,
+  scenes: ActiveScene[]
+): Promise<string> => [
   `THREAD TITLE: ${thread.title}`,
   `GOAL: ${thread.goal}`,
   `PRIOR POSITION: ${thread.position}`,
-  `SCENE QUESTION: ${context.effectiveScene?.question ?? 'The player left the active scene.'}`,
-  `GM NARRATION: ${context.gmResponse!.content}`,
+  ...await Promise.all(scenes.map((scene) => completedSceneEvidence(context, scene))),
 ].join('\n\n');
 
 const requestPosition = async (
   context: GraphContext,
   thread: NarrativeThread,
+  scenes: ActiveScene[],
   nodeId: string
 ): Promise<string> => {
   const playerId = context.chronicleState.chronicle.playerId;
@@ -38,7 +29,7 @@ const requestPosition = async (
   const instructions = await context.templates.render('thread-position', {});
   const response = await context.llm.generate({
     input: [{
-      content: [{ text: buildPositionInput(context, thread), type: 'input_text' }],
+      content: [{ text: await buildPositionInput(context, thread, scenes), type: 'input_text' }],
       role: 'user',
     }],
     instructions,
@@ -61,21 +52,32 @@ export class ThreadPositionNode implements GraphNode {
   readonly id = 'thread-position';
 
   async execute(context: GraphContext): Promise<GraphNodeDelta> {
-    const thread = focusedPlayerThread(context);
-    if (!canUpdatePosition(context, thread)) {
+    if (context.failure || !isNonEmptyString(context.gmResponse?.content)) {
       return {};
     }
+    const threads = context.effectiveThreads.filter((thread) =>
+      thread.perspective === 'player'
+      && context.completedScenes.some((scene) => scene.threadId === thread.id)
+    );
+    const updates = await Promise.all(threads.map((thread) => this.#updateThread(context, thread)));
+    return { threadPositionUpdates: updates.flat() };
+  }
 
+  async #updateThread(
+    context: GraphContext,
+    thread: NarrativeThread
+  ): Promise<Array<{ position: string; threadId: string }>> {
     try {
-      const position = await requestPosition(context, thread, this.id);
-      return position.length === 0 ? {} : { threadPositionUpdate: { position, threadId: thread.id } };
+      const scenes = context.completedScenes.filter((scene) => scene.threadId === thread.id);
+      const position = await requestPosition(context, thread, scenes, this.id);
+      return position.length === 0 ? [] : [{ position, threadId: thread.id }];
     } catch (error) {
       log('warn', 'gm.thread-position-failed', {
         chronicleId: context.chronicleId,
         message: error instanceof Error ? error.message : 'unknown',
         turnId: context.turnId,
       });
-      return {};
+      return [];
     }
   }
 }
