@@ -26,16 +26,16 @@ type StoredEncyclopediaIdentity = {
 const ENCYCLOPEDIA_UPSERT_SQL = `INSERT INTO encyclopedia_entry
   (id, external_key, slug, title, aliases, kind, subkind, status, dm, summary,
    topics, availability, prevalence, character_role, origin_blurb, facts,
-   descriptive_identity, tiers, usage, sections, batch_id, source_revision,
+   descriptive_identity, tier, usage, sections, batch_id, source_revision,
    created_at, updated_at)
  SELECT id, external_key, slug, title, aliases, kind, subkind, status, dm, summary,
    topics, availability, prevalence, character_role, origin_blurb, facts,
-   descriptive_identity, tiers, usage, sections, $2::uuid, $3, now(), now()
+   descriptive_identity, tier, usage, sections, $2::uuid, $3, now(), now()
  FROM jsonb_to_recordset($1::jsonb) AS incoming(
    id uuid, external_key text, slug text, title text, aliases text[], kind text,
    subkind text, status text, dm boolean, summary text, topics text[],
    availability jsonb, prevalence text, character_role text, origin_blurb text,
-   facts jsonb, descriptive_identity jsonb, tiers jsonb, usage jsonb, sections jsonb)
+   facts jsonb, descriptive_identity jsonb, tier text, usage jsonb, sections jsonb)
  ON CONFLICT (external_key) DO UPDATE SET
    slug = EXCLUDED.slug,
    title = EXCLUDED.title,
@@ -52,7 +52,7 @@ const ENCYCLOPEDIA_UPSERT_SQL = `INSERT INTO encyclopedia_entry
    origin_blurb = EXCLUDED.origin_blurb,
    facts = EXCLUDED.facts,
    descriptive_identity = EXCLUDED.descriptive_identity,
-   tiers = EXCLUDED.tiers,
+   tier = EXCLUDED.tier,
    usage = EXCLUDED.usage,
    sections = EXCLUDED.sections,
    batch_id = EXCLUDED.batch_id,
@@ -247,7 +247,7 @@ const encyclopediaRow = (entry: EncyclopediaEntry, id: string): Record<string, u
   status: entry.status,
   subkind: entry.subkind,
   summary: entry.summary ?? null,
-  tiers: entry.tiers,
+  tier: entry.tier ?? null,
   title: entry.title,
   topics: entry.topics,
   usage: entry.usage,

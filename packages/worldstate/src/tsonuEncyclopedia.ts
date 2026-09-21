@@ -1,6 +1,7 @@
 import {
   CanonProposal,
   ContextTagDefinition,
+  EncyclopediaAbilityTier,
   EncyclopediaEntry,
   type CanonProposal as CanonProposalType,
 } from '@glass-frontier/dto';
@@ -59,7 +60,7 @@ export type TsonuEncyclopediaEntry = {
   origin_blurb?: string | null;
   facts: Record<string, string | number>;
   descriptive_identity: Record<string, string>;
-  tiers: Array<{ tier: string; effect: string; cost?: string | null }>;
+  tier?: 'broad' | 'focused' | 'narrow';
   usage: {
     cues: string[];
     affordances: string[];
@@ -142,13 +143,7 @@ export const TsonuEncyclopediaEntrySchema = z.object({
   status: z.enum(['shell', 'draft', 'complete']),
   subkind: z.string().min(1),
   summary: z.string().min(1).nullable(),
-  tiers: z.array(
-    z.object({
-      cost: z.string().min(1).nullish(),
-      effect: z.string().min(1),
-      tier: z.string().min(1),
-    })
-  ),
+  tier: EncyclopediaAbilityTier.optional(),
   title: z.string().min(1),
   topics: z.array(z.string().min(1)),
   usage: z.object({
@@ -243,11 +238,7 @@ const buildEncyclopediaEntry = (entry: TsonuEncyclopediaEntry): EncyclopediaEntr
     status: entry.status,
     subkind: entry.subkind,
     summary: entry.summary ?? undefined,
-    tiers: entry.tiers.map((tier) => ({
-      cost: tier.cost ?? undefined,
-      effect: tier.effect,
-      tier: tier.tier,
-    })),
+    tier: entry.tier,
     title: entry.title,
     topics: entry.topics,
     usage: entry.usage,

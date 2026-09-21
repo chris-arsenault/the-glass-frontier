@@ -23,15 +23,15 @@ describe('Encyclopedia canon snapshot', () => {
     const second = await seedCanon(pool);
 
     expect(first).toMatchObject({
-      classificationCount: 354,
-      encyclopediaCount: 283,
-      entityCount: 553,
+      classificationCount: 394,
+      encyclopediaCount: 368,
+      entityCount: 796,
       status: 'applied',
     });
     expect(second).toMatchObject({
       batchId: first.batchId,
-      classificationCount: 354,
-      encyclopediaCount: 283,
+      classificationCount: 394,
+      encyclopediaCount: 368,
       status: 'unchanged',
     });
 
@@ -46,9 +46,9 @@ describe('Encyclopedia canon snapshot', () => {
          (SELECT count(*) FROM atlas_encyclopedia_classification)::text AS classifications`
     );
     expect(counts.rows[0]).toEqual({
-      classifications: '354',
+      classifications: '394',
       context_tags: '21',
-      encyclopedia: '283',
+      encyclopedia: '368',
     });
   });
 
@@ -57,11 +57,11 @@ describe('Encyclopedia canon snapshot', () => {
     const applicable = await store.listApplicable({
       terms: [{ scope: 'place', tag: 'hot', type: 'tag' }],
     });
-    expect(applicable.some((entry) => entry.slug === 'ash-skater')).toBe(true);
+    expect(applicable.some((entry) => entry.slug === 'skirr')).toBe(true);
 
-    const ashSkater = await store.getEntry({ slug: 'encyclopedia:ash-skater' });
-    expect(ashSkater?.externalKey).toBe('ash_skater');
-    expect(ashSkater?.instances.some((entry) => entry.title === 'The Crucible-Front Skater')).toBe(
+    const skirr = await store.getEntry({ slug: 'encyclopedia:skirr' });
+    expect(skirr?.externalKey).toBe('skirr');
+    expect(skirr?.instances.some((entry) => entry.title === 'The Crucible-Front Skater')).toBe(
       true
     );
 
@@ -86,5 +86,13 @@ describe('Encyclopedia canon snapshot', () => {
     const publicElves = playerEncyclopediaEntry(elves!);
     expect(publicElves.sections.every((section) => section.audience === 'player')).toBe(true);
     expect('usage' in publicElves).toBe(false);
+  });
+
+  it('persists the canonical ability tier in player and GM records', async () => {
+    const store = createEncyclopediaStore({ pool });
+    const mending = await store.getEntry({ slug: 'mending' });
+    expect(mending?.tier).toBe('broad');
+    expect(playerEncyclopediaEntry(mending!).tier).toBe('broad');
+    expect((await store.getEntry({ slug: 'esken' }))?.tier).toBeUndefined();
   });
 });

@@ -635,6 +635,20 @@ describe('Canon batch commit', () => {
     expect(remainingRemovedNodes.rows[0]?.count).toBe('0');
   });
 
+  it('reuses the canonical slug when an authoritative source renames an external key', async () => {
+    const original = await worldState.world.commitBatch(proposal({
+      entities: [{ externalKey: 'tsonu:exchange_c', kind: 'installation', name: 'Rattle', ref: 'rattle' }],
+      source: 'import', sourceId: IMPORT_V1_SOURCE_ID,
+    }));
+    const refreshed = await worldState.world.commitBatch(proposal({
+      entities: [{ externalKey: 'tsonu:rattle', kind: 'installation', name: 'Rattle', ref: 'rattle' }],
+      source: 'import', sourceId: IMPORT_V2_SOURCE_ID,
+    }));
+    expect(await worldState.world.getEntity({ id: original.entityIdsByRef.rattle })).toBeNull();
+    expect(await worldState.world.getEntity({ id: refreshed.entityIdsByRef.rattle }))
+      .toMatchObject({ externalKey: 'tsonu:rattle', slug: 'rattle' });
+  });
+
   it('gives colliding names a counted suffix, not a random one', async () => {
     await seedEntity(worldState, {
       kind: 'geographic_location',

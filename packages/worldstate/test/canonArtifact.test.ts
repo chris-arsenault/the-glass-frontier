@@ -12,8 +12,13 @@ describe('production canon artifact', () => {
     expect(proposal.entities.length).toBeGreaterThan(0);
     expect(proposal.lore.length).toBeGreaterThan(0);
     expect(proposal.relationships.length).toBeGreaterThan(0);
-    expect(snapshot.encyclopedia.length).toBe(283);
+    expect(proposal.entities.length).toBe(796);
+    expect(snapshot.encyclopedia.length).toBe(368);
     expect(snapshot.contextTags.length).toBe(21);
-    expect(snapshot.classifications.length).toBe(354);
+    expect(snapshot.classifications.length).toBe(394);
+    expect(snapshot.encyclopedia.filter((entry) => entry.tier !== undefined)).toHaveLength(22);
+    expect(snapshot.encyclopedia.find((entry) => entry.slug === 'mending')?.tier).toBe('broad');
+    expect(snapshot.encyclopedia.some((entry) => entry.slug === 'esken')).toBe(true);
+    expect(snapshot.encyclopedia.some((entry) => entry.slug === 'ulren')).toBe(false);
   });
 });

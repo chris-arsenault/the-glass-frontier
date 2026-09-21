@@ -92,7 +92,6 @@ const flitter = (
   status: 'complete' as const,
   subkind: 'animal',
   summary: 'A glass-winged scavenger drawn to resonant machinery.',
-  tiers: [],
   title: 'Flitter',
   topics: ['resonance'],
   usage: {

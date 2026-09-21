@@ -7,7 +7,6 @@ type ImportRelationshipIdentity = {
 };
 
 type ImportSnapshot = {
-  entityIds: string[];
   loreIds: string[];
   relationships: ImportRelationshipIdentity[];
 };
@@ -51,7 +50,7 @@ const deleteRemovedImportLore = async (
   );
 };
 
-const deleteRemovedImportEntities = async (
+export const deleteRemovedImportEntities = async (
   client: PoolClient,
   entityIds: string[]
 ): Promise<void> => {
@@ -75,12 +74,11 @@ const deleteRemovedImportEntities = async (
   );
 };
 
-/** Removes import-owned rows omitted from the latest full source snapshot. */
+/** Removes obsolete lore and relationships after the entity snapshot is installed. */
 export const reconcileImportSnapshot = async (
   client: PoolClient,
   snapshot: ImportSnapshot
 ): Promise<void> => {
   await deleteRemovedImportRelationships(client, snapshot.relationships);
   await deleteRemovedImportLore(client, snapshot.loreIds);
-  await deleteRemovedImportEntities(client, snapshot.entityIds);
 };

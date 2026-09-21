@@ -40,7 +40,7 @@ type EncyclopediaRow = {
   status: 'shell' | 'draft' | 'complete';
   subkind: string;
   summary: string | null;
-  tiers: Array<{ tier: string; effect: string; cost?: string }>;
+  tier: string | null;
   title: string;
   topics: string[];
   usage: EncyclopediaUsage;
@@ -59,7 +59,7 @@ type ListEntriesInput = {
 
 const ENTRY_COLUMNS = `id, external_key, slug, title, aliases, kind, subkind,
   status, dm, summary, topics, availability, prevalence, character_role,
-  origin_blurb, facts, descriptive_identity, tiers, usage, sections`;
+  origin_blurb, facts, descriptive_identity, tier, usage, sections`;
 const ENTRY_SELECT = `SELECT ${ENTRY_COLUMNS} FROM encyclopedia_entry`;
 
 const bareSlug = (slug: string): string => slug.replace(/^encyclopedia:/, '');
@@ -86,7 +86,7 @@ const toEntry = (row: EncyclopediaRow): StoredEncyclopediaEntry => ({
     status: row.status,
     subkind: row.subkind,
     summary: row.summary ?? undefined,
-    tiers: row.tiers,
+    tier: row.tier ?? undefined,
     title: row.title,
     topics: row.topics,
     usage: row.usage,

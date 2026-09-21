@@ -29,7 +29,7 @@ const encyclopediaReference = (
   slug: `encyclopedia:${entry.slug}`,
   subkind: entry.subkind,
   summary: entry.summary,
-  tiers: entry.tiers,
+  tier: entry.tier,
   title: entry.title,
   topics: entry.topics,
   usage: entry.usage,

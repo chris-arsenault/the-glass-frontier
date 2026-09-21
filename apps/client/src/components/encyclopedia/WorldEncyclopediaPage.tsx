@@ -229,17 +229,10 @@ function EncyclopediaDetailView({ slug }: { slug: string }): React.JSX.Element {
           </dl>
         </section>
       ) : null}
-      {entry.tiers.length > 0 ? (
+      {entry.tier !== undefined ? (
         <section className="encyclopedia-section">
-          <h2>Tiers</h2>
-          <dl className="encyclopedia-identity">
-            {entry.tiers.map((tier) => (
-              <div key={tier.tier}>
-                <dt>{tier.tier}</dt>
-                <dd>{tier.effect}{tier.cost ? ` Cost: ${tier.cost}` : ''}</dd>
-              </div>
-            ))}
-          </dl>
+          <h2>Tier</h2>
+          <p>{label(entry.tier)}</p>
         </section>
       ) : null}
       {entry.sections.map((section) => (

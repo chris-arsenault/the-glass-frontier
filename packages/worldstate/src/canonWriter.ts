@@ -10,7 +10,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
-import { reconcileImportSnapshot } from './canonImportReconciliation';
+import { deleteRemovedImportEntities, reconcileImportSnapshot } from './canonImportReconciliation';
 import { entityPropsJson } from './canonProps';
 import { insertRelationships, planRelationshipWrites } from './canonRelationshipWrites';
 import {
@@ -83,7 +83,6 @@ export class CanonWriter {
 
     if (proposal.source === 'import') {
       await reconcileImportSnapshot(client, {
-        entityIds: writes.map((write) => write.id),
         loreIds: loreWrites.map((write) => write.id),
         relationships: relationshipWrites,
       });
@@ -229,6 +228,11 @@ const planEntityWrites = async (
     id: idFor(proposed),
     proposed,
   }));
+  if (proposal.source === 'import') {
+    // Release obsolete imported slugs before allocating their replacements.
+    // This runs under the existing write lock and snapshot transaction.
+    await deleteRemovedImportEntities(client, pending.map((entry) => entry.id));
+  }
   const taken = await takenSlugs(
     client,
     'entity',

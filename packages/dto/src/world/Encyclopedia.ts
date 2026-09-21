@@ -46,11 +46,7 @@ export type EncyclopediaPrevalence = z.infer<typeof EncyclopediaPrevalence>;
 export const EncyclopediaCharacterRole = z.enum(['species', 'culture']);
 export type EncyclopediaCharacterRole = z.infer<typeof EncyclopediaCharacterRole>;
 
-export const EncyclopediaAbilityTier = z.object({
-  cost: z.string().min(1).optional(),
-  effect: z.string().min(1),
-  tier: z.string().min(1),
-});
+export const EncyclopediaAbilityTier = z.enum(['broad', 'focused', 'narrow']);
 export type EncyclopediaAbilityTier = z.infer<typeof EncyclopediaAbilityTier>;
 
 export const EncyclopediaUsage = z.object({
@@ -94,7 +90,7 @@ export const EncyclopediaEntry = z.object({
   status: EncyclopediaStatus,
   subkind: z.string().min(1),
   summary: z.string().min(1).optional(),
-  tiers: z.array(EncyclopediaAbilityTier).default([]),
+  tier: EncyclopediaAbilityTier.optional(),
   title: z.string().min(1),
   topics: z.array(z.string().min(1)).default([]),
   usage: EncyclopediaUsage,

@@ -200,6 +200,7 @@ VALUES
   ('succeeded', 'Subject succeeded the target.', 'organizational', 0.5),
   ('supplies', 'Subject supplies the target.', 'organizational', 0.5),
   ('trains', 'Subject trains the target.', 'organizational', 0.5),
+  ('bears', 'A current or former bearer holds a named mantle or designation.', 'social', 0.6),
   ('born_in', 'Subject was born in the target place.', 'social', 0.4),
   ('carries', 'Subject carries the target.', 'social', 0.4),
   ('commemorates', 'Subject commemorates the target.', 'social', 0.4),

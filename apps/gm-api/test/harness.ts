@@ -21,7 +21,6 @@ const originEntry = (id: string): EncyclopediaEntry & { id: string } => ({
   status: 'complete',
   subkind: 'origin',
   summary: 'A test origin.',
-  tiers: [],
   title: `Origin ${id.slice(0, 4)}`,
   topics: [],
   usage: { affordances: [], cues: [], pressures: [], variations: [] },

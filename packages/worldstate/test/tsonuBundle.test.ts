@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildTsonuProposal, type TsonuBundle, type TsonuEntry } from '../src/tsonuBundle';
+import {
+  buildTsonuProposal,
+  buildTsonuSnapshot,
+  parseTsonuBundle,
+  type TsonuBundle,
+  type TsonuEntry,
+} from '../src/tsonuBundle';
 
 const entry = (overrides: Partial<TsonuEntry> & { id: string }): TsonuEntry => ({
   aliases: [],
@@ -34,6 +40,30 @@ const bundle = (entries: TsonuEntry[]): TsonuBundle => ({
 const CAROM_KEY = 'tsonu:carom';
 const RATTLE_KEY = 'tsonu:rattle';
 const RAVEL_KEY = 'tsonu:ravel';
+const MENDING_DESCRIPTION = 'Closes a wound.';
+
+describe('current Encyclopedia export contract', () => {
+  it.each(['broad', 'focused', 'narrow', undefined])('preserves the optional singular tier %s', (tier) => {
+    const source = {
+      ...bundle([]),
+      encyclopedia: { entries: [{
+        aliases: [], availability: { mode: 'global' }, descriptive_identity: {}, dm: false,
+        external_key: 'mending', facts: {}, instances: [], kind: 'ability', members: [],
+        prevalence: 'common', sections: [{ audience: 'player', heading: 'Mending', text: MENDING_DESCRIPTION }],
+        slug: 'mending', status: 'complete', subkind: 'spell', summary: MENDING_DESCRIPTION,
+        tier, title: 'Mending', topics: ['resonance'],
+        usage: { affordances: [], cues: [], pressures: [], variations: [] },
+      }] },
+    };
+    const snapshot = buildTsonuSnapshot(parseTsonuBundle(source));
+    expect(snapshot.encyclopedia[0]?.tier).toBe(tier);
+    expect(snapshot.encyclopedia[0]?.sections[0]?.text).toBe(MENDING_DESCRIPTION);
+    expect(snapshot.encyclopedia[0]).not.toHaveProperty('tiers');
+    expect(() => parseTsonuBundle({
+      ...source, encyclopedia: { entries: [{ ...source.encyclopedia.entries[0], tier: 'invalid' }] },
+    })).toThrow();
+  });
+});
 
 describe('buildTsonuProposal', () => {
   it('maps an entry to an entity with prefixed external key and flattened facts', () => {
