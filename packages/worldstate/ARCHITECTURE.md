@@ -1,150 +1,98 @@
-# WorldState Architecture
+# Worldstate architecture
 
-`@glass-frontier/worldstate` holds two things that change at different rates and
-for different reasons:
+`@glass-frontier/worldstate` owns PostgreSQL persistence for canon and play.
+Shared wire contracts live in `packages/dto`; application configuration and
+prompt stores live in `packages/app`.
 
-- **Canon** — the world's entities, the typed relationships between them, and
-  the lore attached to them. Written only by ingest, read on every turn.
-- **Chronicle state** — one player's session: character, turns, narrative threads, where
-  they are, and what they have found. Written constantly during play, and never
-  promoted to canon except by an ingest batch.
+## Three separate data domains
 
-```
-                      WorldState
-                          │
-        ┌─────────────────┴─────────────────┐
-        │                                   │
-    .world                            .chronicles
-  (canon storage)                  (session storage)
-        │                                   │
-  commitBatch  ← the only writer       commitTurn
-  getContextSlice ← the turn read      getChronicleState
-  listNeighbors / getEntity / lore     upsertCharacter
-        │                                   │
-        └─────────────── Postgres ──────────┘
-```
+| Domain       | Store               | Contents                                                                         |
+| ------------ | ------------------- | -------------------------------------------------------------------------------- |
+| Atlas        | `WorldSchemaStore`  | Particular entities, typed graph edges, owned lore, and embeddings               |
+| Encyclopedia | `EncyclopediaStore` | Reusable entries, applicability, classifications, origin options, and embeddings |
+| Chronicle    | `ChronicleStore`    | Characters, Chronicles, turns, history search, and checkpoints                   |
 
-## Canon has one writer
+Encyclopedia entries never become Atlas nodes, edges, lore, focus, or anchors.
+The classification table connects particular Atlas records to reusable types
+without making those types graph participants. Chronicle-local discoveries
+remain session evidence until a canon proposal explicitly promotes them.
 
-Every change to canon goes through `commitBatch`, which takes a whole proposal —
-entities, the relationships among them, and their lore — validates it against the
-world vocabulary, and commits it in one transaction under a batch id.
+## Canon writes
 
-```ts
-const result = await worldState.world.commitBatch({
-  entities: [
-    { ref: 'cartel', kind: 'faction', name: 'Ash Cartel', subkind: 'cartel' },
-    { ref: 'row', kind: 'location', name: 'Cinder Row', subkind: 'district' },
-  ],
-  relationships: [
-    { src: { ref: 'cartel' }, dst: { ref: 'row' }, relationship: 'controls' },
-  ],
-  lore: [{ entity: { ref: 'cartel' }, title: 'The Ledgers', prose: '…' }],
-  source: 'import',
-  sourceId: 'tsonu-export-2026-08',
-});
-```
+`CanonWriter.commitBatch` validates an Atlas proposal against the shared
+vocabulary and commits under the transaction-level canon advisory lock.
+Within-batch references connect new records; existing identities can be named
+by ID or external key. Non-import proposals affect the records they declare.
 
-Three properties make this the only write path worth having:
+Imports are authoritative. `CanonSnapshotWriter.commit` wraps the Atlas writer,
+context-tag and Encyclopedia upserts, classification replacement, and stale
+record reconciliation in one transaction. It rolls back if a classification
+does not resolve. An unchanged external key preserves identity; a renamed key
+is a replacement. Removed imported entities are deleted before replacement
+slug allocation, allowing a stable name to reuse its canonical slug. Stale
+imported relationships and lore are reconciled after writes.
 
-**Within-batch references.** `ref` names an entity inside the proposal so
-relationships and lore can point at entities that do not exist yet. Entities
-already stored are addressed by `{ id }` or `{ externalKey }`.
+An import cannot overwrite an edge already owned by play or an author.
+Deleting an entity still invokes database constraints for its dependent edges
+and lore. There is no inferred identity mapping for renamed source keys.
 
-**Validation before any write.** The whole proposal is checked first — kinds,
-subkinds, statuses, relationship rules, banned verbs, unresolved references — and
-every failure is reported together as `ProposalRejected.violations`. A proposal
-either lands whole or not at all.
+`revertBatch` deletes batch-attributed Atlas records. It is not a historical
+snapshot restore: overwritten values and the full mixed catalog are not
+restored by that method. Correct authoritative content through the source
+pipeline and a new reviewed snapshot.
 
-**Reversibility.** `revertBatch(batchId)` removes everything a batch wrote. This
-is the correction path: there is no per-entity mutation, because a full-object
-upsert cannot tell an absent relationship from a removed one and has to guess.
+The production `seedCanon` entry point uses the checked-in artifact and skips
+an already-recorded source ID. Embeddings are completed by the private seed
+Lambda after the snapshot transaction, including on unchanged-source retries.
+See [the canon pipeline](../../docs/canon-pipeline.md).
 
-`(source, external_key)` is the import identity. Re-ingesting the same source
-updates the entity it wrote last time rather than duplicating it, and slugs get
-counted suffixes (`grey_harbor_2`) so they stay stable across runs.
+## Reads and visibility
 
-## The per-turn read is one query
+Atlas exposes entity, relationship, lore, neighbor, and context-slice reads.
+`getContextSlice` remains a bounded graph traversal; it is not the canonical
+narrator's complete knowledge boundary. The scout composes discovery from Atlas
+embeddings and lore text, Encyclopedia search, and Chronicle full-text history,
+then opens records through qualified slugs.
 
-`getContextSlice` answers "what should the GM know right now" in a single
-statement: it walks out from the focus set along relationships weighted by
-`COALESCE(edge.strength, world_relationship_kind.default_strength)`, keeps the
-strongest path to each entity, ranks the result, and attaches recent lore.
+Encyclopedia APIs distinguish complete, draft, and shell entries. Complete
+entries are eligible for proactive context. Drafts are available to explicit
+browse/search/open; shells remain stored only for classification integrity.
+Player projections omit DM entries, GM sections, and private usage material.
+The existing JSON selector matcher evaluates applicability without a second
+relationship graph.
 
-```ts
-const slice = await worldState.world.getContextSlice({
-  anchorId: chronicle.anchorEntityId,
-  focusIds: recentlyUsedEntityIds,
-  focusTags: activeTags,
-  limit: 7,
-  maxHops: 2,
-  minProminence: 'recognized',
-});
-```
+The current ability contract is singular optional `tier`, with values
+`broad`, `focused`, or `narrow`. Migration 019 adds its nullable text column;
+the historical `tiers` column has no current application consumer.
 
-Weighting is why this beats a hop count: `leader_of` carries a path further than
-`adjacent_to`, so a defining relationship two steps out can outrank an incidental
-one next door. `listNeighbors` uses the same traversal when a caller wants the
-relationships themselves rather than a ranked slice.
+## Session persistence
 
-## The vocabulary is repo content
+Chronicles store narrative threads, focus, one bounded active scene, and local
+continuity. Turns retain player and GM prose, checks, world prose, direct
+reference slugs, reference usage and mentions, and model comparisons. Checkpoints
+support scene-evidence reads and branching. Branching copies Chronicle history
+while retaining one canonical character record.
 
-Kinds, subkinds, statuses, prominence tiers, relationship types and the rules
-constraining them live in `@glass-frontier/dto` (`world/vocabulary.ts`). That file
-is the authority:
+A Chronicle's current location name can describe a place invented during play.
+Its starting Atlas identity remains separate. Updating the local name does not
+create a global Atlas location. Historical tracker JSON stays inert, while
+canonical fields receive safe defaults.
 
-- the DTO validators are derived from it, so a kind it does not declare cannot
-  reach the wire;
-- `seedVocabulary(pool)` applies it to the database after migrations, so the
-  vocabulary tables are its materialized form;
-- ingest validation reads it to decide what a proposal may say.
+Thread and continuity updates read stored turn evidence rather than treating
+summaries as an authoritative substitute. See the
+[GM runtime](../../docs/design/gm-runtime.md) for boundary cadence and advisory
+failure behavior.
 
-Nothing writes the vocabulary at runtime. Changing the world's shape means
-editing that file and redeploying. Verbs marked `category: 'banned'` — `related_to`
-today — are declared precisely so validation can reject them by name rather than
-by silence.
+## Schema and vocabulary
 
-## Tables
+`db/migrations` is the only schema history. Applied files are immutable; local
+and hosted database checks use that same history. Atlas kinds, subkinds,
+statuses, relationship rules, and tags are declared in
+`packages/dto/src/world/vocabulary.ts` and materialized through the application
+seed. Encyclopedia kinds and subkinds are source-authored strings.
 
-| Table | Holds |
-|---|---|
-| `node` | identity only: `(id, kind)`. The row an edge points at. |
-| `edge` | typed relationships, with strength and batch attribution |
-| `entity` | canon entities, with `source`, `external_key`, `batch_id` |
-| `lore_fragment` | prose attached to an entity, with a generated `tsvector` |
-| `ingest_batch` | one row per commit; the unit of attribution and reversal |
-| `world_kind` / `world_subkind` / `world_kind_status` / `world_prominence` | materialized entity vocabulary |
-| `world_relationship_kind` / `world_relationship_rule` | materialized edge vocabulary |
-| `chronicle` / `chronicle_turn` / `chronicle_session_state` / `character` | session state |
-
-`node` carries no properties. Each domain owns its own table; the shared table
-exists so an edge can span an entity, a character, and a chronicle with one
-foreign key.
-
-## Location is a name
-
-A chronicle carries `location_name` — where the scene is — and, when it started
-from a canon place, the `location_id` it began at. Play only ever changes the
-name.
-
-The GM's location classifier answers one question after a turn: did the scene
-move, and what is the place called. It does not match the answer against the
-graph, create an entity for it, or reason about how places connect. Everything
-the world knows about where the players are reaches the prompt through the
-context slice, which ranks locations alongside every other kind.
-
-That keeps the two halves of this package genuinely separate: `chronicles` never
-reads canon, and canon never learns anything from a turn. A place that play
-invented becomes real only if a close-time batch proposes it.
-
-## Adding a knowledge domain
-
-New canon shapes are vocabulary changes, not code: add the kind, its subkinds and
-statuses, and the relationship rules connecting it to what already exists, then
-redeploy. `commitBatch` accepts it, traversal weights it, and the context slice
-returns it without any new store code.
-
-Code is only needed for a domain that is *not* canon — something with its own
-lifecycle and write pattern, like chronicle state. That gets its own table and
-its own store alongside `chronicles`, and joins the graph through `node` if its
-rows need to be edge endpoints.
+The main storage families are `node` / `entity` / `edge` / `lore_fragment`,
+`ingest_batch`, `encyclopedia_entry`, `reference_context_tag`,
+`atlas_encyclopedia_classification`, and Chronicle/character tables.
+Nodes provide referential identity for graph participants; reusable Encyclopedia
+entries have their own lifecycle and do not enter that identity table.

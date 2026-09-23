@@ -15,7 +15,7 @@
 - Do not add backward-compatibility shims, optional legacy fields, or fallback lookups; use the single canonical field and assume data is present.
 - Never modify or add tests to intentionally hide known bugs. Tests should surface defects so they can be fixed, not suppressed.
 - Only add new environment variables when a value truly needs to be surfaced from Terraform; prefer hardcoded defaults in code for everything else.
-- Use the existing layers: persistence-related functionality belongs in `packages/persistence`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
+- Use the existing layers: world and session persistence belongs in `packages/worldstate`, application configuration and prompt stores belong in `packages/app`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
 - Use declarative programing for sequenced events.
 - Avoid fallback logic or multi-source guessing; rely on the canonical field for any data lookup and do not search in alternate locations.
 
@@ -31,15 +31,19 @@
 
 ### Apps
 - `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the narrative services through tRPC and shared DTOs.
-- `apps/llm-proxy`: Node-based proxy (deployment targets: local or AWS Lambda) that standardizes OpenAI/LLM calls and exposes them to the rest of the stack.
-- `apps/chronicle-api`: Chronicle engine service that runs storytelling logic, handles skill checks, and ships as an AWS Lambda with supporting build scripts.
+- `apps/gm-api`: Turn graph, retrieval, narration, skill checks, and advisory state updates.
+- `apps/chronicle-api`: Character and Chronicle APIs, seed and opening generation, settings, and player operations.
+- `apps/chronicle-closer`: Queued Chronicle summaries and canon proposals.
+- `apps/canon-seed`: Private deployment Lambda that applies the checked-in snapshot and completes missing embeddings.
 - `apps/progress-api`: SQS ingester and authenticated HTTP reader for short-lived turn-progress events served through the shared ALB.
 
 ### Packages
 - `packages/dto`: Shared Zod DTO/type definitions consumed by the client, narrative engine, and proxy for consistent contracts.
 - `packages/skill-check-resolver`: Domain module that encapsulates skill-check math/rules used during narrative resolution.
 - `packages/utils`: Common utility helpers that the other workspaces depend on.
-- `packages/persistence`: Shared world-state persistence layer (in-memory + S3 implementations plus factory) consumed by narrative services, now including the location graph store/index for cross-chronicle navigation state.
+- `packages/worldstate`: PostgreSQL Atlas, Encyclopedia, character, Chronicle, turn, and checkpoint persistence.
+- `packages/app`: Application stores, model configuration, prompt templates, and shared prompt views.
+- `packages/llm-client`: Provider calls, structured output, tool loops, budgets, audit, and embeddings.
 
 ### Infrastructure
 - `infrastructure/terraform`: Terraform project that attaches Glass Frontier to Ahara's shared ALB, VPC, private-subnet NAT path, and RDS while provisioning project-owned Cognito, Lambda, queue, DynamoDB, S3, and CloudFront resources.

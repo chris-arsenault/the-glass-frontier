@@ -15,7 +15,7 @@
 - Do not add backward-compatibility shims, optional legacy fields, or fallback lookups; use the single canonical field and assume data is present.
 - Never modify or add tests to intentionally hide known bugs. Tests should surface defects so they can be fixed, not suppressed.
 - Only add new environment variables when a value truly needs to be surfaced from Terraform; prefer hardcoded defaults in code for everything else.
-- Use the existing layers: persistence-related functionality belongs in `packages/persistence`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
+- Use the existing layers: world and session persistence belongs in `packages/worldstate`, application configuration and prompt stores belong in `packages/app`, shared DTOs or over-the-wire contracts belong in `packages/dto`, and avoid scattering domain logic into app folders when a shared module already exists.
 - Use declarative programing for sequenced events.
 - Avoid fallback logic or multi-source guessing; rely on the canonical field for any data lookup and do not search in alternate locations.
 
@@ -33,7 +33,7 @@
 - `apps/client`: Vite/React front-end that renders the Glass Frontier player experience and talks to the services through tRPC and shared DTOs.
 - `apps/gm-api`: The GM engine. Runs the turn graph (intent classification, skill checks, narration, deltas), emits turn-progress and chronicle-closure events, and ships as an AWS Lambda.
 - `apps/chronicle-api`: Player-facing CRUD for characters, chronicles, seeds, settings, and bug reports.
-- `apps/chronicle-closer`: SQS consumer that generates end-of-chronicle summaries (closure design still in progress).
+- `apps/chronicle-closer`: SQS consumer that generates end-of-Chronicle summaries and submits canon proposals through the shared batch writer.
 - `apps/canon-seed`: Private deployment Lambda that applies the versioned production canon without exposing a public endpoint.
 - `apps/prompt-api`: Prompt-template editing, LLM audit review, and player feedback endpoints.
 - `apps/atlas-api` / `apps/world-schema-api`: Read surfaces over world canon for the Atlas UI and schema pages.

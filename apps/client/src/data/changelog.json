@@ -682,7 +682,7 @@
     "id": "2026-09-21-canon-expansion",
     "releasedAt": "2026-09-21",
     "summary": "Expanded the Atlas and Encyclopedia from the current canon",
-    "details": "Imported the expanded Istravan conflict, Lithren expeditions and settlement history, connected excursions, and everyday creatures, practices, and technologies. The World Guide and GM now draw on 796 Atlas entries and 368 Encyclopedia entries, including revised names and lore. Ability entries carry their canonical broad, focused, or narrow tier, and mantle bearers retain their authored relationships.",
+    "details": "Imported the expanded Istravan conflict, Lithren expeditions and settlement history, connected excursions, and everyday creatures, practices, and technologies. The World Guide and GM now draw on 796 Atlas entries and 368 Encyclopedia entries, including revised names and lore. Ability entries carry their canonical broad, focused, or narrow tier, and mantle bearers retain their authored relationships. Source-key renames retain canonical names without unnecessary URL suffixes. Repository documentation now records the deployed canon pipeline and narrative architecture, with remaining live evaluations preserved in the backlog.",
     "type": "improvement"
   }
 ]

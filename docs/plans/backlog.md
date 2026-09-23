@@ -1,5 +1,8 @@
 # Backlog Snapshot
 
+Historical Session 141 snapshot. Current work is tracked in
+[the root backlog](../../BACKLOG.md); the statuses below are not current.
+
 Updated for Session 141 grooming cycle. Tier 1 emphasis remains on gameplay delivery, offline publishing, and the unified client; side-process and platform automation tracks stay closed.
 
 ## Tier 0 (P0)

@@ -14,7 +14,13 @@ The platform migration service owns the `glass_frontier` logical database and pu
 
 `db/migrations/seed` contains production bootstrap SQL for application configuration and world vocabulary. The authored world dataset lives at `packages/worldstate/src/canon/tsonuCanonSnapshot.json` and is compiled into the private canon-seed Lambda. Tests create a separate database through `WORLDSTATE_TEST_DATABASE_URL` and use synthetic snapshots; neither test fixtures nor the production canon cross that boundary.
 
-Canon refreshes use stable external keys and a source revision. They update only rows present in the incoming artifact and never interpret an omitted row as a deletion. Live-play relationships take ownership when they supersede an imported relationship, so a later source refresh cannot overwrite what chronicle closure recorded.
+Canon refreshes use stable external keys and a source revision plus content hash.
+The snapshot is authoritative: omitted import-owned entities, lore, relationships,
+Encyclopedia entries, classifications, and context tags are reconciled away in one
+transaction. Removed imported entities release their slugs before replacements
+are allocated. Play-owned edges are protected from import overwrites while their
+endpoints survive; endpoint deletion still applies database cascade rules.
+See [the canon pipeline](../../docs/canon-pipeline.md) for the maintenance procedure.
 
 ## Prerequisites
 
@@ -35,6 +41,11 @@ make ci
 ## Deployment
 
 Pushes to `main` run the repository-owned `.github/workflows/ci.yml`. After verification, the job assumes the project OIDC role, uploads and runs database migrations, applies the idempotent configuration/vocabulary seed, applies Terraform, and invokes the private canon-seed Lambda. The Lambda reports the already-applied source revision as unchanged on deployment retries. Every browser-facing API, including turn-progress polling, uses the shared ALB; this project creates no API Gateway.
+
+The canon-seed Lambda awaits missing Atlas and Encyclopedia embeddings before
+returning, including on an unchanged-source retry. Routine refreshes do not reset
+the database. [Release evidence](../../docs/reports/2026-09-21-feature-closeout.md)
+records the verified September 21 deployment.
 
 For a manual deployment in the managed Sulion environment, run the script through the credential broker:
 
