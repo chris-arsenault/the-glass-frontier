@@ -25,6 +25,7 @@
     "db:reset": "pnpm db:drop && pnpm db:migrate",
     "db:migrate": "tsx scripts/dbMigrate.ts",
     "test:e2e": "playwright test",
+    "test:browser": "pnpm -r --filter './packages/*' run build && pnpm test:e2e --project=chromium",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:update-snapshots": "playwright test -u",
     "local": "tsx scripts/run-local-stack.ts",

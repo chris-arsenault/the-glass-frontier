@@ -212,5 +212,13 @@ export default [
       'max-lines': 'off',
       'max-lines-per-function': 'off',
     },
+  },
+  // Playwright requires default exports for its global lifecycle hooks.
+  {
+    files: ['tests/global-setup.ts', 'tests/global-teardown.ts'],
+    rules: {
+      'importPlugin/no-default-export': 'off',
+      'importPlugin/no-extraneous-dependencies': ['error', { devDependencies: true }],
+    },
   }
 ];

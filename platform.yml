@@ -4,3 +4,7 @@ migrations: db/migrations
 stack:
   - typescript
   - terraform
+typescript_dir: .
+browser_tests:
+  engines: [chromium]
+  runtime: host

@@ -46,18 +46,8 @@ const waitResources = [
 
 const withEnv = (): NodeJS.ProcessEnv => ({ ...process.env, ...sharedEnv });
 
-export default async function globalSetup(): Promise<void> {
-  const pidRegistry = new PidRegistry({ persistPath: STACK_STATE_PATH });
-  await pidRegistry.load();
-  if (pidRegistry.list().length > 0) {
-    console.warn('[global-setup] Found stale dev processes; cleaning them up before bootstrapping.');
-    await pidRegistry.killAll();
-    await pidRegistry.clear();
-  } else {
-    await pidRegistry.clear();
-  }
-
-  await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'up', '-d'], {
+async function prepareFixtures(): Promise<void> {
+  await execa('docker', ['compose', '-f', 'docker-compose.e2e.yml', 'up', '-d'], {
     stdio: 'inherit',
   });
 
@@ -81,6 +71,22 @@ export default async function globalSetup(): Promise<void> {
     env: withEnv(),
     stdio: 'inherit',
   });
+}
+
+export default async function globalSetup(): Promise<void> {
+  const pidRegistry = new PidRegistry({ persistPath: STACK_STATE_PATH });
+  await pidRegistry.load();
+  if (pidRegistry.list().length > 0) {
+    console.warn(
+      '[global-setup] Found stale dev processes; cleaning them up before bootstrapping.'
+    );
+    await pidRegistry.killAll();
+    await pidRegistry.clear();
+  } else {
+    await pidRegistry.clear();
+  }
+
+  await prepareFixtures();
 
   const devServer = execa('pnpm', ['dev'], {
     detached: true,

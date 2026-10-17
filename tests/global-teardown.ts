@@ -7,7 +7,7 @@ const STACK_STATE_PATH = path.resolve(process.cwd(), 'tests/.e2e-stack.json');
 
 export default async function globalTeardown(): Promise<void> {
   await stopDevProcesses();
-  await execa('docker-compose', ['-f', 'docker-compose.e2e.yml', 'down', '-v'], {
+  await execa('docker', ['compose', '-f', 'docker-compose.e2e.yml', 'down', '-v'], {
     stdio: 'inherit',
   });
 }
